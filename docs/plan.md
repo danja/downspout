@@ -128,6 +128,19 @@ The first concrete tasks for `downspout` are:
 4. Write a requirements document that turns the plan into implementation constraints.
 5. Begin the `bassgen` audit and identify its reusable core modules.
 
+Progress as of 2026-04-18:
+
+- root planning and requirements documents exist;
+- repository rules and scaffold exist;
+- `bassgen` has a portable core library with deterministic tests;
+- `install.sh` exists as the intended build/install entrypoint for local VST deployment.
+
+Current main gap:
+
+- DPF is now vendored and the first `bassgen` wrapper target builds successfully.
+- `install.sh` now installs a real `bassgen.vst3` bundle.
+- the main remaining gaps are host validation of `bassgen` and adding a `p-mix` wrapper.
+
 ## Non-goals for the first phase
 
 - No attempt to port every `flues` plugin immediately.
