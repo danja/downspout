@@ -28,9 +28,10 @@ This repository now contains:
 - a portable `bassgen` core library with tests;
 - a first DPF-backed `bassgen` VST3 wrapper target with UI;
 - a portable `p-mix` core library with tests;
+- a first DPF-backed `p-mix` VST3 wrapper target;
 - an `install.sh` entrypoint for future VST3 installs.
 
-`bassgen` can now be built and installed as a `.vst3` bundle. `p-mix` is not wrapped yet.
+`bassgen` and `p-mix` can now be built and installed as `.vst3` bundles.
 
 ## Build & Install
 
@@ -57,11 +58,13 @@ DOWNSPOUT_RUN_TESTS=0 ./install.sh
 Current installable plugin:
 
 - `bassgen.vst3`
+- `p_mix.vst3`
 
 ## Next steps
 
-1. Vendor or pin DPF in `third_party/DPF`.
-2. Finish extracting host-agnostic logic from the `flues` LV2 targets into reusable core modules.
-3. Validate `bassgen` in a real VST3 host.
-4. Add the first DPF VST3 build for `p-mix`.
-5. Extend `install.sh` as more wrappers become installable.
+1. Finish host-side validation of `bassgen.vst3` in Reaper and fix any remaining wrapper/UI issues.
+2. Validate `p-mix.vst3` in Reaper and confirm the 8-channel wrapper behaves correctly on multichannel tracks.
+3. Decide whether `p-mix` should remain wrapper-first or gain a minimal UI in the next pass.
+4. Add an explicit release-build workflow and document the expected release artifacts.
+5. Verify `install.sh` and local docs against a clean `Release` build path for both plugins.
+6. Use the `bassgen` and `p-mix` wrapper patterns as the baseline for the next plugin port.

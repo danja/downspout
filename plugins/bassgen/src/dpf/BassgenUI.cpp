@@ -418,6 +418,7 @@ private:
         fillColor(224, 228, 232, 255);
         text(x + 20.0f, y + 18.0f, "Routing", nullptr);
 
+        const float panelBottom = y + h - 20.0f;
         float cy = y + 54.0f;
         for (std::size_t i = 0; i < std::size(kSelectors); ++i) {
             selectorRects_[i] = {x + 20.0f, cy, w - 40.0f, selectorH};
@@ -431,14 +432,21 @@ private:
         text(x + 20.0f, cy + 4.0f, "Actions", nullptr);
         cy += 30.0f;
 
+        const float buttonGap = 10.0f;
+        const float reservedFooter = 68.0f;
+        const float availableForButtons = panelBottom - reservedFooter - cy;
+        const float maxButtonH = (availableForButtons - buttonGap * (static_cast<float>(std::size(kButtons)) - 1.0f))
+            / static_cast<float>(std::size(kButtons));
+        const float drawButtonH = std::min(buttonH, std::max(36.0f, maxButtonH));
+
         for (std::size_t i = 0; i < std::size(kButtons); ++i) {
-            buttonRects_[i] = {x + 20.0f, cy, w - 40.0f, buttonH};
+            buttonRects_[i] = {x + 20.0f, cy, w - 40.0f, drawButtonH};
             drawButton(kButtons[i], buttonRects_[i]);
-            cy += buttonH + 10.0f;
+            cy += drawButtonH + buttonGap;
         }
 
         const float footerY = cy + 6.0f;
-        const float footerH = std::max(0.0f, (y + h - 20.0f) - footerY);
+        const float footerH = std::max(0.0f, panelBottom - footerY);
         footerRect_ = {x + 20.0f, footerY, w - 40.0f, footerH};
         if (footerH >= 56.0f) {
             drawFooter(footerRect_.x, footerRect_.y, footerRect_.w, footerRect_.h);

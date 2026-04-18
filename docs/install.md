@@ -22,13 +22,24 @@
 - `DOWNSPOUT_RUN_TESTS`
   Set to `0` to skip `ctest` during install.
 
-## Current limitation
+## Release builds
 
-The repository currently installs one real wrapper target:
+Release builds are now an explicit project requirement.
+
+Current default behavior already configures with `CMAKE_BUILD_TYPE=Release`, but the broader release workflow still needs follow-up work:
+
+- define expected release artifacts clearly;
+- verify release-mode bundles in host testing;
+- decide whether release packaging should stay in `install.sh` or move to a dedicated release script.
+
+## Current outputs
+
+The repository currently installs two real wrapper targets:
 
 - `bassgen.vst3` with UI
+- `p_mix.vst3` without a custom UI yet
 
-Other plugins may still build only as portable cores until their DPF wrappers are added.
+The next install-related validation is host-side confirmation that both bundles behave correctly in `Release` builds.
 
 ## Verified behavior
 
@@ -39,3 +50,4 @@ The script has been smoke-tested with a temporary install root under `/tmp`:
 - test
 - install
 - confirmed `bassgen.vst3` bundle output and install
+- confirmed `p_mix.vst3` bundle output and install

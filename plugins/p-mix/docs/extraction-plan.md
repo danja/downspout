@@ -45,4 +45,15 @@ Only after the core exists:
 - map state save/restore;
 - add UI work if needed.
 
-Status: not started.
+Status: next priority.
+Completed on 2026-04-18 for the first DPF/VST3 wrapper, including transport mapping and parameter state save/restore.
+
+## Phase 5: wrapper validation and release path
+
+Follow-up work after the first wrapper lands:
+
+- validate stereo and multichannel behavior in Reaper;
+- decide whether to add a minimal UI or keep the first release no-UI;
+- verify `Release` build and install flow as part of the repository-level release workflow.
+
+Status: next priority.
