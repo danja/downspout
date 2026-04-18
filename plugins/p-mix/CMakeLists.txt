@@ -1,0 +1,2 @@
+add_library(downspout_p_mix_port INTERFACE)
+target_link_libraries(downspout_p_mix_port INTERFACE downspout-project-options)

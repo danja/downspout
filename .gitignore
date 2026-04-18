@@ -39,3 +39,11 @@
 
 # debug information files
 *.dwo
+
+# Build trees
+build/
+out/
+dist/
+
+# Dependency checkouts
+third_party/DPF/build/
