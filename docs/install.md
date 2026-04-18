@@ -26,7 +26,7 @@
 
 The repository currently installs one real wrapper target:
 
-- `bassgen.vst3`
+- `bassgen.vst3` with UI
 
 Other plugins may still build only as portable cores until their DPF wrappers are added.
 

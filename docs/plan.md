@@ -133,6 +133,7 @@ Progress as of 2026-04-18:
 - root planning and requirements documents exist;
 - repository rules and scaffold exist;
 - `bassgen` has a portable core library with deterministic tests;
+- `bassgen` now builds as a VST3 bundle with UI via vendored DPF;
 - `install.sh` exists as the intended build/install entrypoint for local VST deployment.
 
 Current main gap:

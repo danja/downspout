@@ -19,5 +19,5 @@ Implementation status:
 - portable core library exists and builds;
 - deterministic tests exist and pass;
 - host-neutral block engine exists for MIDI scheduling;
-- a first no-UI DPF wrapper builds as `bassgen.vst3`;
+- a first DPF wrapper with UI builds as `bassgen.vst3`;
 - wrapper validation in a real host is still pending.

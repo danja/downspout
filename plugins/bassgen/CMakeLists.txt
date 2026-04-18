@@ -22,6 +22,8 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
         TARGETS vst3
         FILES_DSP
             src/dpf/BassgenPlugin.cpp
+        FILES_UI
+            src/dpf/BassgenUI.cpp
     )
     target_link_libraries(bassgen-dsp PUBLIC downspout_bassgen_core)
     target_include_directories(bassgen PUBLIC

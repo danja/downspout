@@ -26,7 +26,7 @@ This repository now contains:
 
 - project planning and scaffolding;
 - a portable `bassgen` core library with tests;
-- a first DPF-backed `bassgen` VST3 wrapper target;
+- a first DPF-backed `bassgen` VST3 wrapper target with UI;
 - a portable `p-mix` core library with tests;
 - an `install.sh` entrypoint for future VST3 installs.
 

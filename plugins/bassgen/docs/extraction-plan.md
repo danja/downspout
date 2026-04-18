@@ -50,7 +50,7 @@ The first host-neutral engine layer now exists and emits scheduled MIDI events f
 Update:
 
 - framework-neutral serialization helpers now exist for controls, pattern state, and variation state.
-- first DPF wrapper work is complete enough to build `bassgen.vst3`.
+- first DPF wrapper work is complete enough to build `bassgen.vst3` with UI.
 - the remaining wrapper work is host validation and any follow-up fixes discovered there.
 
 ## Phase 4: tests
