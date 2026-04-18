@@ -28,7 +28,7 @@ This repository now contains:
 - a portable `bassgen` core library with tests;
 - a first DPF-backed `bassgen` VST3 wrapper target with UI;
 - a portable `p-mix` core library with tests;
-- a first DPF-backed `p-mix` VST3 wrapper target;
+- a first DPF-backed `p-mix` VST3 wrapper target with UI;
 - an `install.sh` entrypoint for future VST3 installs.
 
 `bassgen` and `p-mix` can now be built and installed as `.vst3` bundles.
@@ -63,8 +63,8 @@ Current installable plugin:
 ## Next steps
 
 1. Finish host-side validation of `bassgen.vst3` in Reaper and fix any remaining wrapper/UI issues.
-2. Validate `p-mix.vst3` in Reaper and confirm the 8-channel wrapper behaves correctly on multichannel tracks.
-3. Decide whether `p-mix` should remain wrapper-first or gain a minimal UI in the next pass.
+2. Continue validating the new `p-mix.vst3` UI in Reaper and confirm the 8-channel wrapper behaves correctly on multichannel tracks.
+3. Tighten any remaining host-specific `p-mix` UI or interaction issues beyond the first layout polish pass.
 4. Add an explicit release-build workflow and document the expected release artifacts.
 5. Verify `install.sh` and local docs against a clean `Release` build path for both plugins.
 6. Use the `bassgen` and `p-mix` wrapper patterns as the baseline for the next plugin port.

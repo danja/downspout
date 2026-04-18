@@ -37,7 +37,7 @@ Current default behavior already configures with `CMAKE_BUILD_TYPE=Release`, but
 The repository currently installs two real wrapper targets:
 
 - `bassgen.vst3` with UI
-- `p_mix.vst3` without a custom UI yet
+- `p_mix.vst3` with UI
 
 The next install-related validation is host-side confirmation that both bundles behave correctly in `Release` builds.
 

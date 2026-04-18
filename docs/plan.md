@@ -134,13 +134,13 @@ Progress as of 2026-04-18:
 - repository rules and scaffold exist;
 - `bassgen` has a portable core library with deterministic tests;
 - `bassgen` now builds as a VST3 bundle with UI via vendored DPF;
-- `p-mix` now builds as a first VST3 wrapper via vendored DPF;
+- `p-mix` now builds as a first VST3 wrapper with UI via vendored DPF;
 - `install.sh` exists as the intended build/install entrypoint for local VST deployment.
 
 Current main gap:
 
 - DPF is now vendored and the first `bassgen` wrapper target builds successfully.
-- `install.sh` now installs a real `bassgen.vst3` bundle.
+- `install.sh` now installs real `bassgen.vst3` and `p_mix.vst3` bundles.
 - the main remaining gaps are host validation of `bassgen`, host validation of `p-mix`, and an explicit release-build workflow.
 
 ## Next implementation sequence
@@ -148,8 +148,8 @@ Current main gap:
 The next work should proceed in this order:
 
 1. Continue light host validation of `bassgen.vst3` in Reaper until there are no obvious wrapper/UI regressions.
-2. Validate the first `p-mix` DPF/VST3 wrapper in Reaper, especially transport sync and multichannel routing.
-3. Decide whether the first `p-mix` delivery should stay no-UI or gain a minimal UI immediately.
+2. Continue validating `p-mix.vst3` in Reaper, especially transport sync, multichannel routing, and the new UI.
+3. Tighten any remaining `p-mix` layout or interaction issues discovered in host testing.
 4. Add a release-build workflow so installable bundles can be built reproducibly in `Release` mode.
 5. Confirm `install.sh` and local docs against clean `Release` installs for both current plugins.
 6. Use the wrapper patterns from `bassgen` and `p-mix` to choose the third plugin target.

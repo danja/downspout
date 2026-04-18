@@ -18,6 +18,8 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
         TARGETS vst3
         FILES_DSP
             src/dpf/PMixPlugin.cpp
+        FILES_UI
+            src/dpf/PMixUI.cpp
     )
     target_link_libraries(p_mix-dsp PUBLIC downspout_p_mix_core)
     target_include_directories(p_mix PUBLIC

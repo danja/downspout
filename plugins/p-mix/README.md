@@ -1,13 +1,13 @@
 # p-mix port
 
-This directory will hold the `downspout` port of `~/github/flues/lv2/p-mix`.
+This directory contains the `downspout` port of `~/github/flues/lv2/p-mix`.
 
-Near-term work:
+Current focus:
 
-- isolate transport/time-position handling;
-- extract state and transition logic into portable units;
-- preserve multi-channel routing semantics;
-- add DPF/VST3 wrapper code only after the core behavior is pinned down.
+- validate the Reaper behavior of the transport-aware wrapper and UI;
+- preserve multi-channel routing semantics under host testing;
+- fold any host-specific UI/layout fixes back into the DPF front end;
+- keep the wrapper thin while the release-build workflow is formalized.
 
 Current reference docs:
 
@@ -20,11 +20,11 @@ Implementation status:
 - parameter serialization now exists;
 - deterministic tests now exist and run in CTest;
 - a first DPF/VST3 wrapper now exists;
-- the first wrapper currently ships without a custom UI.
+- a first DPF/NanoVG UI now exists for the VST3 wrapper.
 
 Recommended next steps:
 
-1. validate `p_mix.vst3` in Reaper on stereo and multichannel tracks;
-2. decide whether the first wrapper should remain no-UI or gain a minimal control panel;
+1. validate the new `p_mix.vst3` UI in Reaper on stereo and multichannel tracks;
+2. refine any host-specific layout or interaction issues from that validation pass;
 3. make sure the wrapper installs cleanly in explicit `Release` builds as part of the release-build workflow;
-4. add host-side notes once transport behavior has been confirmed in practice.
+4. add host-side notes once transport and UI behavior have been confirmed in practice.
