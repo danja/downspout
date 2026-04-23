@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-release-build:
+    name: Linux Release Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake \
+            g++ \
+            pkg-config \
+            libdbus-1-dev \
+            libgl1-mesa-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxrandr-dev \
+            libxrender-dev
+
+      - name: Build, test, and package
+        env:
+          DOWNSPOUT_DIST_DIR: ${{ runner.temp }}/downspout-dist
+          DOWNSPOUT_RELEASE_PLATFORM: linux-x86_64
+          DOWNSPOUT_VERSION: ci-${{ github.run_number }}
+        run: bash scripts/package-release.sh
+
+      - name: Upload CI package
+        uses: actions/upload-artifact@v4
+        with:
+          name: downspout-linux-x86_64-vst3
+          path: ${{ runner.temp }}/downspout-dist/*
+          if-no-files-found: error
+          retention-days: 14

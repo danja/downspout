@@ -60,11 +60,20 @@ Current installable plugin:
 - `bassgen.vst3`
 - `p_mix.vst3`
 
+## Releases
+
+Release packaging is handled by `scripts/package-release.sh` and automated on
+GitHub Actions for tags matching `v*`. The initial public artifact is a Linux
+x86_64 VST3 zip containing both current bundles.
+
+See [docs/release.md](docs/release.md) for the release artifact shape and
+workflow details.
+
 ## Next steps
 
 1. Finish host-side validation of `bassgen.vst3` in Reaper and fix any remaining wrapper/UI issues.
 2. Continue validating the new `p-mix.vst3` UI in Reaper and confirm the 8-channel wrapper behaves correctly on multichannel tracks.
 3. Tighten any remaining host-specific `p-mix` UI or interaction issues beyond the first layout polish pass.
-4. Add an explicit release-build workflow and document the expected release artifacts.
+4. Validate the GitHub Actions release workflow on the first public tag.
 5. Verify `install.sh` and local docs against a clean `Release` build path for both plugins.
 6. Use the `bassgen` and `p-mix` wrapper patterns as the baseline for the next plugin port.

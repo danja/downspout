@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  linux-vst3:
+    name: Linux VST3 Release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake \
+            g++ \
+            pkg-config \
+            libdbus-1-dev \
+            libgl1-mesa-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxrandr-dev \
+            libxrender-dev
+
+      - name: Resolve release version
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if [ -z "$version" ]; then
+            echo "Unable to derive version from tag: $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build, test, and package
+        id: package
+        env:
+          DOWNSPOUT_DIST_DIR: ${{ runner.temp }}/downspout-dist
+          DOWNSPOUT_RELEASE_PLATFORM: linux-x86_64
+          DOWNSPOUT_VERSION: ${{ steps.version.outputs.version }}
+        run: bash scripts/package-release.sh
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: downspout-${{ steps.version.outputs.version }}-linux-x86_64-vst3
+          path: ${{ runner.temp }}/downspout-dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT: ${{ steps.package.outputs.artifact }}
+          CHECKSUM: ${{ steps.package.outputs.checksum }}
+        run: |
+          notes_file="$RUNNER_TEMP/release-notes.md"
+          {
+            echo "Linux x86_64 VST3 release build for ${GITHUB_REF_NAME}."
+            echo
+            echo "Included plugin bundles:"
+            echo "- bassgen.vst3"
+            echo "- p_mix.vst3"
+            echo
+            echo "The .sha256 asset contains the checksum for the zip."
+          } > "$notes_file"
+
+          gh release create "$GITHUB_REF_NAME" \
+            "$ARTIFACT" \
+            "$CHECKSUM" \
+            --verify-tag \
+            --title "downspout $GITHUB_REF_NAME" \
+            --notes-file "$notes_file"

@@ -26,11 +26,9 @@
 
 Release builds are now an explicit project requirement.
 
-Current default behavior already configures with `CMAKE_BUILD_TYPE=Release`, but the broader release workflow still needs follow-up work:
-
-- define expected release artifacts clearly;
-- verify release-mode bundles in host testing;
-- decide whether release packaging should stay in `install.sh` or move to a dedicated release script.
+Current default behavior already configures with `CMAKE_BUILD_TYPE=Release`.
+Public release packaging is handled separately by
+`scripts/package-release.sh`; see `docs/release.md`.
 
 ## Current outputs
 
