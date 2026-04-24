@@ -32,13 +32,14 @@ Public release packaging is handled separately by
 
 ## Current outputs
 
-The repository currently installs three real wrapper targets:
+The repository currently installs four real wrapper targets:
 
 - `bassgen.vst3` with UI
 - `p_mix.vst3` with UI
 - `drumgen.vst3` with UI
+- `cadence.vst3` with UI
 
-The next install-related validation is host-side confirmation that all three bundles behave correctly in `Release` builds.
+The next install-related validation is host-side confirmation that all four bundles behave correctly in `Release` builds.
 
 ## Verified behavior
 
@@ -51,3 +52,4 @@ The script has been smoke-tested with a temporary install root under `/tmp`:
 - confirmed `bassgen.vst3` bundle output and install
 - confirmed `p_mix.vst3` bundle output and install
 - confirmed `drumgen.vst3` bundle output and install
+- confirmed `cadence.vst3` bundle output and install

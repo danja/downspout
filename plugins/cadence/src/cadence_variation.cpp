@@ -9,18 +9,6 @@
 namespace downspout::cadence {
 namespace {
 
-inline int clampi(int value, int min_value, int max_value) {
-    if (value < min_value) return min_value;
-    if (value > max_value) return max_value;
-    return value;
-}
-
-inline float clampf(float value, float min_value, float max_value) {
-    if (value < min_value) return min_value;
-    if (value > max_value) return max_value;
-    return value;
-}
-
 int cycles_between_mutations(float vary) {
     const float target_cycles = 1.0f + 7.0f * powf(1.0f - vary, 2.5f);
     return clampi((int)ceilf(target_cycles - 1e-6f), 1, 64);

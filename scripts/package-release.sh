@@ -51,6 +51,7 @@ cmake_args=(
   -S "$repo_root"
   -B "$build_dir"
   -DCMAKE_BUILD_TYPE="$build_type"
+  -DDOWNSPOUT_BUILD_CADENCE=ON
   -DDOWNSPOUT_BUILD_DRUMGEN=ON
   "-DCMAKE_INSTALL_PREFIX=$staging_dir"
 )
@@ -80,7 +81,7 @@ fi
 echo "Installing release payload to $staging_dir"
 cmake --install "$build_dir" --config "$build_type" --prefix "$staging_dir"
 
-required_bundles=(bassgen.vst3 p_mix.vst3 drumgen.vst3)
+required_bundles=(bassgen.vst3 p_mix.vst3 drumgen.vst3 cadence.vst3)
 for bundle in "${required_bundles[@]}"; do
   if [[ ! -d "$staging_dir/$bundle" ]]; then
     echo "Missing expected VST3 bundle: $staging_dir/$bundle" >&2

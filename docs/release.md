@@ -12,6 +12,7 @@ downspout-<version>-linux-x86_64-vst3.zip
 ├── bassgen.vst3/
 ├── p_mix.vst3/
 ├── drumgen.vst3/
+├── cadence.vst3/
 ├── LICENSE
 └── README.md
 ```

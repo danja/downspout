@@ -158,8 +158,8 @@ protected:
             parameter.symbol = "scale";
             parameter.hints |= kParameterIsInteger;
             parameter.ranges.min = 0.0f;
-            parameter.ranges.max = static_cast<float>(SCALE_COUNT - 1);
-            parameter.ranges.def = static_cast<float>(SCALE_NAT_MINOR);
+            parameter.ranges.max = static_cast<float>(downspout::cadence::SCALE_COUNT - 1);
+            parameter.ranges.def = static_cast<float>(downspout::cadence::SCALE_NAT_MINOR);
             break;
         case kParamCycleBars:
             parameter.name = "Cycle Bars";
@@ -175,7 +175,7 @@ protected:
             parameter.hints |= kParameterIsInteger;
             parameter.ranges.min = 0.0f;
             parameter.ranges.max = 2.0f;
-            parameter.ranges.def = static_cast<float>(GRANULARITY_HALF_BAR);
+            parameter.ranges.def = static_cast<float>(downspout::cadence::GRANULARITY_HALF_BAR);
             break;
         case kParamComplexity:
             parameter.name = "Complexity";

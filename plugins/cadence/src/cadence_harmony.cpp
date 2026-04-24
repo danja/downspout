@@ -62,24 +62,6 @@ static const ScaleDef kScales[SCALE_COUNT] = {
     {kScalePhrygianDominant, 7}
 };
 
-inline int clampi(int value, int min_value, int max_value) {
-    if (value < min_value) return min_value;
-    if (value > max_value) return max_value;
-    return value;
-}
-
-inline float clampf(float value, float min_value, float max_value) {
-    if (value < min_value) return min_value;
-    if (value > max_value) return max_value;
-    return value;
-}
-
-inline double clampd(double value, double min_value, double max_value) {
-    if (value < min_value) return min_value;
-    if (value > max_value) return max_value;
-    return value;
-}
-
 inline int wrap12(int value) {
     int out = value % 12;
     if (out < 0) {
@@ -768,7 +750,7 @@ void build_voicing(const Candidate& candidate,
     for (uint8_t i = 0; i < candidate.note_count; ++i) {
         out->notes[i] = (uint8_t)clampi(chosen.notes[i], 0, 127);
     }
-    sort_notes(out->notes, out->note_count);
+    sort_notes(out->notes.data(), out->note_count);
     out->valid = true;
 }
 
@@ -907,10 +889,10 @@ bool cadence_build_progression_from_capture(const SegmentCapture* capture,
     for (int s = 0; s < segment_count; ++s) {
         const Candidate& candidate = candidates[chosen[s]];
         const double activity = cadence_segment_activity(capture[s]);
-        const uint8_t velocity = (uint8_t)clampi((int)lround(76.0 + std::min(28.0, activity * 12.0)), 60, 110);
+        const uint8_t velocity = (uint8_t)clampi((int)std::lround(76.0 + std::min(28.0, activity * 12.0)), 60, 110);
         build_voicing(candidate,
                       controls,
-                      previous_slot.valid ? previous_slot.notes : nullptr,
+                      previous_slot.valid ? previous_slot.notes.data() : nullptr,
                       previous_slot.valid ? previous_slot.note_count : 0,
                       velocity,
                       s,
@@ -947,7 +929,7 @@ bool cadence_revoice_progression(const ChordSlot* source_slots,
 
         build_voicing(candidate,
                       controls,
-                      previous_slot.valid ? previous_slot.notes : nullptr,
+                      previous_slot.valid ? previous_slot.notes.data() : nullptr,
                       previous_slot.valid ? previous_slot.note_count : 0,
                       source_slots[s].velocity,
                       s,

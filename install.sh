@@ -11,6 +11,7 @@ cmake_args=(
   -S "$repo_root"
   -B "$build_dir"
   -DCMAKE_BUILD_TYPE="$build_type"
+  -DDOWNSPOUT_BUILD_CADENCE=ON
   -DDOWNSPOUT_BUILD_DRUMGEN=ON
   "-DCMAKE_INSTALL_PREFIX=$vst3_dir"
 )

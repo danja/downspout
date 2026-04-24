@@ -17,24 +17,6 @@ struct CompCandidate {
     double accent = 0.8;
 };
 
-inline int clampi(int value, int min_value, int max_value) {
-    if (value < min_value) return min_value;
-    if (value > max_value) return max_value;
-    return value;
-}
-
-inline float clampf(float value, float min_value, float max_value) {
-    if (value < min_value) return min_value;
-    if (value > max_value) return max_value;
-    return value;
-}
-
-inline double clampd(double value, double min_value, double max_value) {
-    if (value < min_value) return min_value;
-    if (value > max_value) return max_value;
-    return value;
-}
-
 inline double absd(double value) {
     return value < 0.0 ? -value : value;
 }
@@ -287,9 +269,6 @@ void cadence_plan_segment_comp(const SegmentCapture* learned_segment,
 
     out->hit_count = chosen_count;
 }
-
-}  // namespace downspout::cadence
-
 double cadence_next_comp_hit_beat(const CompPlaybackState* state) {
     if (!state || state->next_hit_index >= state->hit_count) {
         return std::numeric_limits<double>::infinity();
@@ -383,3 +362,5 @@ void cadence_sync_comp_to_position(CompPlaybackState* state,
         cadence_set_comp_release(state, state->hits[sounding_index].off_beat);
     }
 }
+
+}  // namespace downspout::cadence
