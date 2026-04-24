@@ -23,6 +23,22 @@ constexpr int kLaneOpenHat = static_cast<int>(LaneId::openHat);
     return value;
 }
 
+[[nodiscard]] float clampf(float value, float minValue, float maxValue) {
+    if (value < minValue) {
+        return minValue;
+    }
+    if (value > maxValue) {
+        return maxValue;
+    }
+    return value;
+}
+
+[[nodiscard]] Controls controlsForManualFill(const Controls& rawControls) {
+    Controls controls = clampControls(rawControls);
+    controls.fill = clampf(std::max(controls.fill, 0.72f), 0.0f, 1.0f);
+    return controls;
+}
+
 void appendMidi(BlockResult& result,
                 MidiEventType type,
                 std::uint32_t frame,
@@ -97,24 +113,51 @@ void clearPendingNoteOffs(EngineState& state, BlockResult& result, std::uint32_t
     }
 }
 
-void updatePatternIfNeeded(EngineState& state, const Controls& current) {
+struct UpdateDecision {
+    bool fillTriggered = false;
+};
+
+UpdateDecision updatePatternIfNeeded(EngineState& state, const Controls& current) {
+    UpdateDecision decision;
     const bool controlsChanged = structuralControlsChanged(current, state.previousControls);
     const bool newChanged = current.actionNew != state.previousControls.actionNew;
     const bool mutateChanged = current.actionMutate != state.previousControls.actionMutate;
     const bool fillChanged = current.actionFill != state.previousControls.actionFill;
     const bool varyChanged = std::fabs(current.vary - state.previousControls.vary) >= 0.0001f;
 
-    if (!state.patternValid || controlsChanged || newChanged || mutateChanged || fillChanged) {
-        const bool fillOnlyRefresh = fillChanged && !controlsChanged && !newChanged && !mutateChanged;
-        regeneratePattern(state.pattern, current, fillOnlyRefresh);
+    if (!state.patternValid || controlsChanged || newChanged || mutateChanged) {
+        regeneratePattern(state.pattern, current, false);
         state.patternValid = true;
         resetVariationProgress(state.variation);
     } else if (varyChanged) {
         resetVariationProgress(state.variation);
     }
 
+    decision.fillTriggered = fillChanged;
+
     state.controls = current;
     state.previousControls = current;
+    return decision;
+}
+
+int targetBarForFillTrigger(const PatternState& pattern, const Controls& controls, double absStepsStart) {
+    if (pattern.bars <= 1 || pattern.stepsPerBar <= 0 || pattern.totalSteps <= 0) {
+        return 0;
+    }
+
+    const Controls fillControls = controlsForManualFill(controls);
+    const double localStep = localStepFromAbsolute(pattern, absStepsStart);
+    const int currentStep = clampi(static_cast<int>(std::floor(localStep + 1e-9)), 0, pattern.totalSteps - 1);
+    const int currentBar = clampi(currentStep / pattern.stepsPerBar, 0, pattern.bars - 1);
+    const int stepInBar = currentStep % pattern.stepsPerBar;
+    const int fillBeats = fillControls.fill > 0.62f ? 2 : 1;
+    const int fillSteps = clampi(fillBeats * pattern.stepsPerBeat, pattern.stepsPerBeat, pattern.stepsPerBar);
+    const int zoneStart = pattern.stepsPerBar - fillSteps;
+
+    if (stepInBar < zoneStart) {
+        return currentBar;
+    }
+    return (currentBar + 1) % pattern.bars;
 }
 
 void handleStoppedTransport(EngineState& state, BlockResult& result) {
@@ -225,10 +268,22 @@ BlockResult processBlock(EngineState& state,
         return result;
     }
 
-    updatePatternIfNeeded(state, clampControls(controls));
+    const Controls clampedControls = clampControls(controls);
+    const UpdateDecision updateDecision = updatePatternIfNeeded(state, clampedControls);
     processPendingNoteOffs(state, result, nframes);
 
     const bool playing = transport.valid && transport.playing && transport.bpm > 0.0 && transport.beatsPerBar > 0.0;
+    if (updateDecision.fillTriggered && state.patternValid) {
+        if (playing) {
+            const int stepsPerBeat = state.pattern.stepsPerBeat;
+            const double absBeatsStart = transport.bar * transport.beatsPerBar + transport.barBeat;
+            const double absStepsStart = absBeatsStart * static_cast<double>(stepsPerBeat);
+            refreshFillBar(state.pattern, state.controls, targetBarForFillTrigger(state.pattern, state.controls, absStepsStart));
+        } else {
+            refreshFillBar(state.pattern, state.controls, state.pattern.bars - 1);
+        }
+    }
+
     if (!playing || !state.patternValid) {
         handleStoppedTransport(state, result);
         return result;

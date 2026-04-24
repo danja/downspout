@@ -32,3 +32,9 @@ Recommended next steps:
 2. broaden tests to cover legacy state upgrade behavior and wrapper-facing state mapping;
 3. decide whether a preview grid is worth adding after host validation;
 4. keep release packaging aligned with the now-UI-backed wrapper target.
+
+Current wrapper behavior note:
+
+- the manual `Fill` action now targets the current bar when there is still room
+  to hear the fill, otherwise it targets the next bar, and it forces a stronger
+  fill amount than the passive fill slider alone.

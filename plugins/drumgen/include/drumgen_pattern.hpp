@@ -16,4 +16,8 @@ void refreshBar(PatternState& pattern,
                 const Controls& controls,
                 int barIndex);
 
+void refreshFillBar(PatternState& pattern,
+                    const Controls& controls,
+                    int barIndex);
+
 }  // namespace downspout::drumgen

@@ -66,6 +66,12 @@ constexpr std::uint8_t STEP_FLAG_FILL = kStepFlagFill;
     return currentSerial >= INT32_MAX ? 1 : currentSerial + 1;
 }
 
+[[nodiscard]] Controls controlsForManualFill(const Controls& rawControls) {
+    Controls controls = clampControls(rawControls);
+    controls.fill = clampf(std::max(controls.fill, 0.72f), 0.0f, 1.0f);
+    return controls;
+}
+
 [[nodiscard]] std::uint32_t baseSeedForSerial(const Controls& controls, std::int32_t generationSerial) {
     return controls.seed ^
            (static_cast<std::uint32_t>(controls.genre) * 0x45D9F3Bu) ^
@@ -571,7 +577,10 @@ void copyPatternPrefix(PatternState& target, const PatternState& source, int pre
     }
 }
 
-void applyFillOverlay(PatternState& pattern, const Controls& controls, std::uint32_t seedValue) {
+void applyFillOverlayToBar(PatternState& pattern,
+                           const Controls& controls,
+                           std::uint32_t seedValue,
+                           int barIndex) {
     if (pattern.bars <= 0 || pattern.totalSteps <= 0 || controls.fill < 0.08f) {
         return;
     }
@@ -579,8 +588,8 @@ void applyFillOverlay(PatternState& pattern, const Controls& controls, std::uint
     Rng rng;
     const int stepsPerBar = pattern.stepsPerBar;
     const int stepsPerBeat = pattern.stepsPerBeat;
-    const int lastBar = pattern.bars - 1;
-    const int barStart = lastBar * stepsPerBar;
+    const int targetBar = clampi(barIndex, 0, pattern.bars - 1);
+    const int barStart = targetBar * stepsPerBar;
     const int barEnd = clampi(barStart + stepsPerBar, 0, pattern.totalSteps);
     const int fillBeats = controls.fill > 0.62f ? 2 : 1;
     const int fillSteps = clampi(fillBeats * stepsPerBeat, stepsPerBeat, stepsPerBar);
@@ -707,6 +716,10 @@ void applyFillOverlay(PatternState& pattern, const Controls& controls, std::uint
         break;
     }
     }
+}
+
+void applyFillOverlay(PatternState& pattern, const Controls& controls, std::uint32_t seedValue) {
+    applyFillOverlayToBar(pattern, controls, seedValue, pattern.bars - 1);
 }
 
 void buildBar(PatternState& pattern,
@@ -997,6 +1010,46 @@ void refreshBar(PatternState& pattern,
                              fillSeedForSerial(controls, nextSerial) ^
                              0x6D2B79F5u);
     }
+
+    cleanupPattern(nextPattern, controls);
+    pattern = nextPattern;
+}
+
+void refreshFillBar(PatternState& pattern,
+                    const Controls& rawControls,
+                    int barIndex) {
+    const Controls controls = controlsForManualFill(rawControls);
+    if (pattern.bars <= 0 ||
+        pattern.totalSteps <= 0 ||
+        pattern.bars != controls.bars ||
+        pattern.stepsPerBeat != stepsPerBeatForResolution(controls.resolution)) {
+        regeneratePattern(pattern, controls, false);
+        return;
+    }
+
+    const int clampedBar = clampi(barIndex, 0, pattern.bars - 1);
+    const std::int32_t nextSerial = nextGenerationSerial(pattern.generationSerial);
+    PatternState nextPattern = pattern;
+    nextPattern.generationSerial = nextSerial;
+    nextPattern.version = kPatternStateVersion;
+
+    for (int lane = 0; lane < kLaneCount; ++lane) {
+        nextPattern.lanes[lane].midiNote = noteForLane(controls.kitMap, lane);
+    }
+
+    clearBarHits(nextPattern, clampedBar);
+    buildBar(nextPattern,
+             controls,
+             clampedBar,
+             true,
+             barSeedForSerial(controls, nextSerial, clampedBar, true));
+    applyFillOverlayToBar(nextPattern,
+                          controls,
+                          baseSeedForSerial(controls, nextSerial) ^
+                              fillSeedForSerial(controls, nextSerial) ^
+                              0x6D2B79F5u ^
+                              (static_cast<std::uint32_t>(clampedBar + 1) * 0xA24BAED5u),
+                          clampedBar);
 
     cleanupPattern(nextPattern, controls);
     pattern = nextPattern;

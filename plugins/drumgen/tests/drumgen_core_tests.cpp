@@ -125,6 +125,41 @@ void testRefreshBarKeepsOtherBars() {
     }
 }
 
+void testRefreshFillBarTargetsChosenBar() {
+    Controls controls;
+    controls.seed = 123u;
+    controls.genre = GenreId::electro;
+    controls.bars = 4;
+    controls.fill = 0.10f;
+
+    PatternState pattern;
+    regeneratePattern(pattern, controls, false);
+    const PatternState original = pattern;
+
+    refreshFillBar(pattern, controls, 1);
+
+    const int barStart = pattern.stepsPerBar;
+    const int barEnd = barStart + pattern.stepsPerBar;
+    bool sawFillFlag = false;
+
+    for (int lane = 0; lane < kLaneCount; ++lane) {
+        for (int step = 0; step < barStart; ++step) {
+            assert(equalStep(pattern.lanes[lane].steps[step], original.lanes[lane].steps[step]));
+        }
+        for (int step = barEnd; step < pattern.totalSteps; ++step) {
+            assert(equalStep(pattern.lanes[lane].steps[step], original.lanes[lane].steps[step]));
+        }
+        for (int step = barStart; step < barEnd; ++step) {
+            if ((pattern.lanes[lane].steps[step].flags & kStepFlagFill) != 0) {
+                sawFillFlag = true;
+            }
+        }
+    }
+
+    assert(pattern.generationSerial > original.generationSerial);
+    assert(sawFillFlag);
+}
+
 void testTransportHelpers() {
     PatternState pattern;
     pattern.totalSteps = 16;
@@ -346,12 +381,46 @@ void testEngineSchedulesBoundaryHitsWithinBlock() {
            state.pendingNoteOffs[0].remainingSamples == 300);
 }
 
+void testEngineFillTriggerTargetsCurrentBar() {
+    Controls controls;
+    controls.seed = 987u;
+    controls.bars = 4;
+    controls.fill = 0.10f;
+
+    EngineState state;
+    activate(state, controls);
+    const PatternState original = state.pattern;
+
+    controls.actionFill = 1;
+    const auto result = processBlock(state, controls, makePlayingTransport(0.0), 256, 48000.0);
+    (void)result;
+
+    const int barStart = 0;
+    const int barEnd = state.pattern.stepsPerBar;
+    bool sawFillFlag = false;
+
+    for (int lane = 0; lane < kLaneCount; ++lane) {
+        for (int step = barEnd; step < state.pattern.totalSteps; ++step) {
+            assert(equalStep(state.pattern.lanes[lane].steps[step], original.lanes[lane].steps[step]));
+        }
+        for (int step = barStart; step < barEnd; ++step) {
+            if ((state.pattern.lanes[lane].steps[step].flags & kStepFlagFill) != 0) {
+                sawFillFlag = true;
+            }
+        }
+    }
+
+    assert(state.pattern.generationSerial > original.generationSerial);
+    assert(sawFillFlag);
+}
+
 }  // namespace
 
 int main() {
     testDeterministicGeneration();
     testFillRefreshKeepsEarlierBars();
     testRefreshBarKeepsOtherBars();
+    testRefreshFillBarTargetsChosenBar();
     testTransportHelpers();
     testVariationBehavior();
     testStateSanitization();
@@ -360,5 +429,6 @@ int main() {
     testEngineStopClearsPendingNoteOffs();
     testEngineRestartReplaysCurrentStep();
     testEngineSchedulesBoundaryHitsWithinBlock();
+    testEngineFillTriggerTargetsCurrentBar();
     return 0;
 }

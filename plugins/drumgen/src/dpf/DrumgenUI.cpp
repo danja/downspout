@@ -428,9 +428,6 @@ private:
             buttonRects_[i] = {x + 20.0f + static_cast<float>(i) * (buttonW + buttonGap), cy, buttonW, 50.0f};
             drawButton(static_cast<int>(i), kButtons[i], buttonRects_[i]);
         }
-
-        cy += 72.0f;
-        drawSummaryBlock(x + 20.0f, cy, w - 40.0f, h - (cy - y) - 20.0f);
     }
 
     void drawSelector(const int selectorIndex, const SelectorDef& def, const Rect& rect)
@@ -484,60 +481,6 @@ private:
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
         fillColor(245, 247, 248, 255);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f, def.label, nullptr);
-    }
-
-    void drawSummaryBlock(float x, float y, float w, float h)
-    {
-        beginPath();
-        roundedRect(x, y, w, h, 16.0f);
-        fillColor(14, 19, 24, 255);
-        fill();
-        closePath();
-
-        fontSize(12.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(145, 161, 173, 255);
-        text(x + 16.0f, y + 14.0f, "Current setup", nullptr);
-
-        const float statY = y + 40.0f;
-        const float statW = (w - 12.0f) * 0.5f;
-        drawStatPill(x + 16.0f, statY, statW - 16.0f, 28.0f, "Genre", formatSelectorValue(kSelectors[0], values_[kParamGenre]).c_str(), 97, 184, 151);
-        drawStatPill(x + 12.0f + statW, statY, statW - 16.0f, 28.0f, "Kit", formatSelectorValue(kSelectors[1], values_[kParamKitMap]).c_str(), 90, 148, 196);
-        drawStatPill(x + 16.0f, statY + 38.0f, statW - 16.0f, 28.0f, "Loop", formatSelectorValue(kSelectors[3], values_[kParamBars]).c_str(), 202, 145, 71);
-        drawStatPill(x + 12.0f + statW, statY + 38.0f, statW - 16.0f, 28.0f, "Route", formatSelectorValue(kSelectors[4], values_[kParamChannel]).c_str(), 122, 171, 116);
-
-        fontSize(12.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(148, 163, 175, 255);
-        text(x + 16.0f, statY + 84.0f, "Resolution", nullptr);
-        fillColor(231, 236, 239, 255);
-        text(x + 16.0f, statY + 102.0f, formatSelectorValue(kSelectors[2], values_[kParamResolution]).c_str(), nullptr);
-
-        textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(148, 163, 175, 255);
-        text(x + w - 16.0f, statY + 84.0f, "Vary", nullptr);
-        fillColor(231, 236, 239, 255);
-        const std::string varyText = formatSliderValue(kParamVary, values_[kParamVary]);
-        text(x + w - 16.0f, statY + 102.0f, varyText.c_str(), nullptr);
-    }
-
-    void drawStatPill(float x, float y, float w, float h, const char* label, const char* value, int r, int g, int b)
-    {
-        beginPath();
-        roundedRect(x, y, w, h, 14.0f);
-        fillColor(r, g, b, 28);
-        fill();
-        closePath();
-
-        fontSize(11.0f);
-        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(r, g, b, 255);
-        text(x + 12.0f, y + h * 0.5f + 1.0f, label, nullptr);
-
-        fontSize(11.0f);
-        textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
-        fillColor(239, 242, 244, 255);
-        text(x + w - 12.0f, y + h * 0.5f + 1.0f, value, nullptr);
     }
 
     void drawMacroPanel(float x, float y, float w, float h)

@@ -21,5 +21,8 @@ Current wrapper choice:
 
 - the first DPF/VST3 wrapper now has a thin custom control UI with explicit
   `New`, `Mutate`, and `Fill` buttons;
+- the manual `Fill` trigger is intentionally more immediate than the original
+  stored-last-bar refresh: it now targets the current or next bar and boosts the
+  fill amount so the result is audible in host use;
 - the port preserves exact control/state behavior first and still leaves any
   preview-grid UI as follow-up work after host validation.
