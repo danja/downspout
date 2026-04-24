@@ -135,6 +135,7 @@ Progress as of 2026-04-24:
 - `bassgen` has a portable core library with deterministic tests;
 - `bassgen` now builds as a VST3 bundle with UI via vendored DPF;
 - `p-mix` now builds as a first VST3 wrapper with UI via vendored DPF;
+- `e-mix` now has a portable core library, deterministic tests, and a first VST3 wrapper target with a redesigned UI via vendored DPF;
 - `drumgen` now has a portable core library, a host-neutral MIDI engine, text serialization helpers, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `cadence` now has a portable core library, a host-neutral learning/playback engine, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `gremlin` now has a portable core library, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
@@ -144,8 +145,8 @@ Progress as of 2026-04-24:
 Current main gap:
 
 - DPF is now vendored and all current wrapper targets build successfully.
-- `install.sh` now installs real `bassgen.vst3`, `p_mix.vst3`, `drumgen.vst3`, `cadence.vst3`, `gremlin.vst3`, and `gremlin_driver.vst3` bundles.
-- the main remaining gaps are host validation of `bassgen`, host validation of `p-mix`, host validation of `drumgen`, host validation of `cadence`, host validation of `gremlin`, host validation of `gremlin-driver`, and validating the first tagged GitHub Actions release.
+- `install.sh` now installs real `bassgen.vst3`, `p_mix.vst3`, `e_mix.vst3`, `drumgen.vst3`, `cadence.vst3`, `gremlin.vst3`, and `gremlin_driver.vst3` bundles.
+- the main remaining gaps are host validation of `bassgen`, host validation of `p-mix`, host validation of `e-mix`, host validation of `drumgen`, host validation of `cadence`, host validation of `gremlin`, host validation of `gremlin-driver`, and validating the first tagged GitHub Actions release.
 
 ## Next implementation sequence
 
@@ -153,18 +154,20 @@ The next work should proceed in this order:
 
 1. Continue light host validation of `bassgen.vst3` in Reaper until there are no obvious wrapper/UI regressions.
 2. Continue validating `p-mix.vst3` in Reaper, especially transport sync, multichannel routing, and the new UI.
-3. Tighten any remaining `p-mix` layout or interaction issues discovered in host testing.
-4. Validate `cadence.vst3` in Reaper, especially learning, restart/rewind handling, and saved-state restore.
-5. Validate `gremlin.vst3` in Reaper, especially combined note/controller MIDI, scene switching, and level range.
-6. Validate `gremlin_driver.vst3` in Reaper, especially MIDI pass-through, transport sync, and chaining into `gremlin.vst3`.
-7. Validate the release-build workflow on the first public tag so installable bundles can be built reproducibly in `Release` mode.
-8. Confirm `install.sh` and local docs against clean `Release` installs for all current plugins.
-9. Validate `drumgen.vst3` in Reaper, especially the new action-button UI, transport sync, MIDI output behavior, and state restore through the host.
+3. Validate `e_mix.vst3` in Reaper, especially stopped transport behavior, restart handling, and whether the redesigned UI actually clarifies the cycle.
+4. Tighten any remaining `p-mix` layout or interaction issues discovered in host testing.
+5. Validate `cadence.vst3` in Reaper, especially learning, restart/rewind handling, and saved-state restore.
+6. Validate `gremlin.vst3` in Reaper, especially combined note/controller MIDI, scene switching, and level range.
+7. Validate `gremlin_driver.vst3` in Reaper, especially MIDI pass-through, transport sync, and chaining into `gremlin.vst3`.
+8. Validate the release-build workflow on the first public tag so installable bundles can be built reproducibly in `Release` mode.
+9. Confirm `install.sh` and local docs against clean `Release` installs for all current plugins.
+10. Validate `drumgen.vst3` in Reaper, especially the new action-button UI, transport sync, MIDI output behavior, and state restore through the host.
 
 Reasoning:
 
 - `bassgen` is already far enough along that the remaining work is validation and incremental fixes, not architecture.
 - `p-mix` already has portable engine and test coverage, so wrapper integration is now the highest-value missing deliverable.
+- `e-mix` now follows the same portable-core-plus-wrapper pattern, so the next useful work is host feedback on the redesigned UI rather than more extraction.
 - release builds need to become a first-class workflow before the repository is ready for broader use beyond local iteration.
 - `drumgen` has now reached the same core-plus-wrapper milestone as `bassgen`, so the remaining work is validation, polish, and bug-fixing rather than architectural extraction.
 - `cadence` has now reached the same core-plus-wrapper milestone, so the next useful work is host validation and incremental fixes rather than more architectural churn.

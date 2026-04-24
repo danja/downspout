@@ -10,7 +10,7 @@ and one-shot patch randomisation bursts.
 - passes incoming MIDI through unchanged
 - emits Gremlin-compatible macro/master CCs and action notes
 - custom UI for four continuous lanes and two trigger lanes
-- host transport support with free-running fallback BPM mode
+- host-following clock by default, with explicit manual BPM mode when needed
 
 ## Typical chain
 

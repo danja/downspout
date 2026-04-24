@@ -76,6 +76,7 @@ jobs:
             echo "Included plugin bundles:"
             echo "- bassgen.vst3"
             echo "- p_mix.vst3"
+            echo "- e_mix.vst3"
             echo "- drumgen.vst3"
             echo "- cadence.vst3"
             echo "- gremlin.vst3"

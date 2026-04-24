@@ -25,6 +25,7 @@ struct Status {
     std::array<float, kTriggerCount> triggerFlashes {};
     float transportIndicator = 0.0f;
     float effectiveBpm = 120.0f;
+    float randomizeFlash = 0.0f;
 };
 
 inline constexpr std::size_t kMaxProcessEvents = 384;
@@ -64,6 +65,13 @@ public:
                                std::uint32_t inputEventCount);
 
 private:
+    static constexpr std::size_t kRandomizeCcCount = kPrimaryKnobCCs.size() + kHiddenKnobCCs.size();
+
+    struct RandomizeCcEvent {
+        std::uint8_t cc = 0;
+        std::uint8_t value = 0;
+    };
+
     void resetToDefaults();
     void appendEvent(ProcessResult& result,
                      std::uint32_t frame,
@@ -72,7 +80,8 @@ private:
                      std::uint8_t data2);
     void appendPassThrough(ProcessResult& result,
                            const MidiMessage& message);
-    void emitRandomizedPatch(ProcessResult& result);
+    void prepareRandomizeBurst();
+    void emitPendingRandomizeBurst(ProcessResult& result, std::uint32_t frameCount);
     std::uint8_t randomPrimaryKnobValue(std::uint8_t cc);
     std::uint8_t randomHiddenKnobValue(std::uint8_t cc);
     int clampCc(float normalized) const;
@@ -84,9 +93,10 @@ private:
     std::array<LaneConfig, kLaneCount> lanes_ {};
     std::array<TriggerConfig, kTriggerCount> triggers_ {};
     std::array<int, kTargetCount> lastSentCc_ {};
+    std::array<RandomizeCcEvent, kRandomizeCcCount> randomizeBurst_ {};
     std::uint32_t refreshSamples_ = 0;
     std::uint32_t randomState_ = 0x3c6ef372u;
-    bool randomizePending_ = false;
+    int randomizeBlocksRemaining_ = 0;
     int clockMode_ = static_cast<int>(ClockMode::Transport);
     float bpm_ = 120.0f;
     Status status_ {};

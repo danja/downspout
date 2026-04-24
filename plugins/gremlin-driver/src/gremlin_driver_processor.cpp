@@ -36,7 +36,7 @@ void Processor::activate()
     engine_.reset();
     refreshSamples_ = 0;
     randomState_ = 0x3c6ef372u;
-    randomizePending_ = false;
+    randomizeBlocksRemaining_ = 0;
     lastSentCc_.fill(-1);
     resetToDefaults();
 }
@@ -133,7 +133,9 @@ void Processor::setTriggerChance(const std::size_t triggerIndex, const float cha
 
 void Processor::triggerRandomize()
 {
-    randomizePending_ = true;
+    prepareRandomizeBurst();
+    randomizeBlocksRemaining_ = 3;
+    status_.randomizeFlash = 1.0f;
 }
 
 int Processor::getClockMode() const noexcept
@@ -167,6 +169,8 @@ ProcessResult Processor::processBlock(const std::uint32_t frameCount,
                                       const std::uint32_t inputEventCount)
 {
     ProcessResult result {};
+    const float randomizeDrop = static_cast<float>(frameCount) / std::max(1.0, sampleRate_ * 0.18);
+    status_.randomizeFlash = std::max(0.0f, status_.randomizeFlash - randomizeDrop);
 
     flues::gremlindriver::ClockState clock {};
     clock.transportDetected = transport.transportDetected;
@@ -188,13 +192,12 @@ ProcessResult Processor::processBlock(const std::uint32_t frameCount,
     result.status.triggerFlashes = engineResult.triggerFlashes;
     result.status.transportIndicator = engineResult.transportIndicator;
     result.status.effectiveBpm = engineResult.effectiveBpm;
+    result.status.randomizeFlash = status_.randomizeFlash;
     status_ = result.status;
 
-    if (randomizePending_)
-    {
-        emitRandomizedPatch(result);
-        randomizePending_ = false;
-    }
+    emitPendingRandomizeBurst(result, frameCount);
+    result.status.randomizeFlash = status_.randomizeFlash;
+    status_ = result.status;
 
     refreshSamples_ += frameCount;
     const bool forceRefresh = refreshSamples_ >= static_cast<std::uint32_t>(sampleRate_ * 0.25);
@@ -263,13 +266,30 @@ void Processor::appendPassThrough(ProcessResult& result, const MidiMessage& mess
     result.events[result.eventCount++] = message;
 }
 
-void Processor::emitRandomizedPatch(ProcessResult& result)
+void Processor::prepareRandomizeBurst()
 {
+    std::size_t burstIndex = 0;
     for (const std::uint8_t cc : kPrimaryKnobCCs)
-        appendEvent(result, 0, 0xB0u, cc, randomPrimaryKnobValue(cc));
+        randomizeBurst_[burstIndex++] = RandomizeCcEvent {cc, randomPrimaryKnobValue(cc)};
 
     for (const std::uint8_t cc : kHiddenKnobCCs)
-        appendEvent(result, 0, 0xB0u, cc, randomHiddenKnobValue(cc));
+        randomizeBurst_[burstIndex++] = RandomizeCcEvent {cc, randomHiddenKnobValue(cc)};
+}
+
+void Processor::emitPendingRandomizeBurst(ProcessResult& result, const std::uint32_t frameCount)
+{
+    if (randomizeBlocksRemaining_ <= 0)
+        return;
+
+    const std::uint32_t safeFrameCount = std::max(1u, frameCount);
+    const std::uint32_t frameSpan = std::min<std::uint32_t>(safeFrameCount, static_cast<std::uint32_t>(randomizeBurst_.size()));
+    for (std::size_t i = 0; i < randomizeBurst_.size(); ++i)
+    {
+        const std::uint32_t frame = frameSpan > 1u ? static_cast<std::uint32_t>(i % frameSpan) : 0u;
+        appendEvent(result, frame, 0xB0u, randomizeBurst_[i].cc, randomizeBurst_[i].value);
+    }
+
+    --randomizeBlocksRemaining_;
 }
 
 std::uint8_t Processor::randomPrimaryKnobValue(const std::uint8_t cc)

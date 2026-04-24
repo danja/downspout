@@ -38,8 +38,8 @@ using downspout::gremlin_driver::kTriggerParamSpecs;
 using downspout::gremlin_driver::kTriggerStatusNames;
 
 ParameterEnumerationValue kClockModeEnumValues[] = {
-    {0.0f, "Free"},
-    {1.0f, "Transport"},
+    {0.0f, "Manual"},
+    {1.0f, "Host"},
 };
 
 ParameterEnumerationValue kTargetEnumValues[] = {

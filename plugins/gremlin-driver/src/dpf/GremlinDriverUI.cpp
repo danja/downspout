@@ -99,6 +99,8 @@ constexpr std::array<SelectorBinding, 2> kTriggerActionSelectors = {{
     {kParamTriggerStart + 3, kActionNames.data(), static_cast<int>(kActionNames.size())},
 }};
 
+constexpr int kRandomizePulseFrames = 10;
+
 float clampf(const float value, const float minValue, const float maxValue)
 {
     return std::max(minValue, std::min(value, maxValue));
@@ -154,6 +156,15 @@ public:
     }
 
 protected:
+    void uiIdle() override
+    {
+        if (randomizePulse_ > 0)
+        {
+            --randomizePulse_;
+            repaint();
+        }
+    }
+
     void parameterChanged(uint32_t index, float value) override
     {
         if (index < values_.size())
@@ -192,12 +203,12 @@ protected:
 
         if (clockRects_[0].contains(x, y))
         {
-            setValueParameter(kParamClockMode, 0.0f);
+            setValueParameter(kParamClockMode, 1.0f);
             return true;
         }
         if (clockRects_[1].contains(x, y))
         {
-            setValueParameter(kParamClockMode, 1.0f);
+            setValueParameter(kParamClockMode, 0.0f);
             return true;
         }
         if (randomizeRect_.contains(x, y))
@@ -205,7 +216,7 @@ protected:
             triggerParameter(kParamRandomize);
             return true;
         }
-        if (bpmRect_.contains(x, y))
+        if (isManualMode() && bpmRect_.contains(x, y))
         {
             activeSlider_ = kBpmSliderIndex;
             updateSliderFromPosition(activeSlider_, x, y);
@@ -266,7 +277,7 @@ protected:
         const float y = static_cast<float>(ev.pos.getY());
         const int delta = ev.delta.getY() > 0.0f ? 1 : -1;
 
-        if (bpmRect_.contains(x, y))
+        if (isManualMode() && bpmRect_.contains(x, y))
         {
             nudgeSlider(kBpmSliderIndex, static_cast<float>(delta));
             return true;
@@ -319,6 +330,7 @@ private:
     std::array<Rect, kLaneCount> laneShapeRects_ {};
     std::array<Rect, kTriggerCount> triggerActionRects_ {};
     int activeSlider_ = -1;
+    int randomizePulse_ = 0;
 
     void drawBackground(const float width, const float height)
     {
@@ -404,17 +416,36 @@ private:
         fillColor(173, 181, 190, 255);
         text(x + 18.0f, y + 14.0f, "Clock and Patch Flow", nullptr);
 
-        clockRects_[0] = {x + 18.0f, y + 40.0f, 88.0f, 28.0f};
-        clockRects_[1] = {x + 112.0f, y + 40.0f, 112.0f, 28.0f};
-        drawToggleButton(clockRects_[0], "Free", values_[kParamClockMode] < 0.5f, 92, 174, 196);
-        drawToggleButton(clockRects_[1], "Transport", values_[kParamClockMode] >= 0.5f, 92, 174, 196);
+        clockRects_[0] = {x + 18.0f, y + 40.0f, 94.0f, 28.0f};
+        clockRects_[1] = {x + 116.0f, y + 40.0f, 106.0f, 28.0f};
+        drawToggleButton(clockRects_[0], "Host", !isManualMode(), 92, 174, 196);
+        drawToggleButton(clockRects_[1], "Manual", isManualMode(), 92, 174, 196);
 
-        bpmRect_ = {x + 252.0f, y + 42.0f, 420.0f, 24.0f};
+        bpmRect_ = {x + 250.0f, y + 34.0f, 432.0f, 40.0f};
         sliderRects_[kBpmSliderIndex] = bpmRect_;
-        drawHorizontalSlider(bpmRect_, "BPM", values_[kParamBpm], 40.0f, 220.0f, 105, 175, 214);
+        if (isManualMode())
+        {
+            drawHorizontalSlider(bpmRect_, "Manual BPM", values_[kParamBpm], 40.0f, 220.0f, 105, 175, 214, true);
+        }
+        else
+        {
+            const float hostBpm = values_[kParamStatusBpm] > 1.0f ? values_[kParamStatusBpm] : values_[kParamBpm];
+            drawReadOnlyBpm(bpmRect_,
+                            "Host BPM",
+                            hostBpm,
+                            values_[kParamStatusTransport] > 0.5f ? "Following DAW" : "Waiting for DAW",
+                            105,
+                            175,
+                            214);
+        }
 
-        randomizeRect_ = {x + w - 174.0f, y + 34.0f, 156.0f, 40.0f};
-        drawActionButton(randomizeRect_, "Randomise Patch", 213, 126, 85);
+        randomizeRect_ = {x + w - 178.0f, y + 34.0f, 160.0f, 40.0f};
+        drawActionButton(randomizeRect_,
+                         "Randomise Patch",
+                         213,
+                         126,
+                         85,
+                         static_cast<float>(randomizePulse_) / static_cast<float>(kRandomizePulseFrames));
     }
 
     void drawToggleButton(const Rect& rect, const char* label, const bool active, const int r, const int g, const int b)
@@ -434,14 +465,20 @@ private:
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 1.0f, label, nullptr);
     }
 
-    void drawActionButton(const Rect& rect, const char* label, const int r, const int g, const int b)
+    void drawActionButton(const Rect& rect,
+                          const char* label,
+                          const int r,
+                          const int g,
+                          const int b,
+                          const float pulse)
     {
+        const float glow = clampf(pulse, 0.0f, 1.0f);
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 12.0f);
-        fillColor(r, g, b, 44);
+        fillColor(r, g, b, static_cast<int>(44 + glow * 88.0f));
         fill();
-        strokeColor(r, g, b, 180);
-        strokeWidth(1.2f);
+        strokeColor(r, g, b, static_cast<int>(180 + glow * 55.0f));
+        strokeWidth(1.2f + glow * 0.6f);
         stroke();
         closePath();
 
@@ -458,7 +495,8 @@ private:
                               const float maximum,
                               const int r,
                               const int g,
-                              const int b)
+                              const int b,
+                              const bool interactive)
     {
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_BOTTOM);
@@ -467,14 +505,14 @@ private:
 
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 12.0f);
-        fillColor(35, 42, 53, 255);
+        fillColor(interactive ? 35 : 30, interactive ? 42 : 38, interactive ? 53 : 48, 255);
         fill();
         closePath();
 
         const float normalized = clampf((value - minimum) / (maximum - minimum), 0.0f, 1.0f);
         beginPath();
         roundedRect(rect.x, rect.y, rect.w * normalized, rect.h, 12.0f);
-        fillColor(r, g, b, 255);
+        fillColor(r, g, b, interactive ? 255 : 180);
         fill();
         closePath();
 
@@ -483,6 +521,37 @@ private:
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
         fillColor(247, 248, 249, 255);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 1.0f, valueLabel.c_str(), nullptr);
+    }
+
+    void drawReadOnlyBpm(const Rect& rect,
+                         const char* label,
+                         const float value,
+                         const char* status,
+                         const int r,
+                         const int g,
+                         const int b)
+    {
+        beginPath();
+        roundedRect(rect.x, rect.y, rect.w, rect.h, 12.0f);
+        fillColor(30, 38, 48, 255);
+        fill();
+        closePath();
+
+        fontSize(10.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(162, 171, 181, 255);
+        text(rect.x + 12.0f, rect.y + 7.0f, label, nullptr);
+
+        fontSize(10.0f);
+        textAlign(ALIGN_RIGHT | ALIGN_TOP);
+        fillColor(r, g, b, 220);
+        text(rect.x + rect.w - 12.0f, rect.y + 7.0f, status, nullptr);
+
+        const std::string valueLabel = formatBpm(value);
+        fontSize(16.0f);
+        textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+        fillColor(241, 244, 246, 255);
+        text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 5.0f, valueLabel.c_str(), nullptr);
     }
 
     void drawLanes(const float x, const float y, const float w)
@@ -669,6 +738,8 @@ private:
     {
         if (sliderIndex == kBpmSliderIndex)
         {
+            if (!isManualMode())
+                return;
             const float normalized = clampf((x - bpmRect_.x) / bpmRect_.w, 0.0f, 1.0f);
             setValueParameter(kParamBpm, 40.0f + normalized * 180.0f);
             return;
@@ -691,6 +762,8 @@ private:
     {
         if (sliderIndex == kBpmSliderIndex)
         {
+            if (!isManualMode())
+                return;
             setValueParameter(kParamBpm, clampf(values_[kParamBpm] + direction * 1.0f, 40.0f, 220.0f));
             return;
         }
@@ -717,8 +790,16 @@ private:
     {
         editParameter(index, true);
         setParameterValue(index, 1.0f);
+        setParameterValue(index, 0.0f);
         editParameter(index, false);
+        if (index == kParamRandomize)
+            randomizePulse_ = kRandomizePulseFrames;
         repaint();
+    }
+
+    bool isManualMode() const noexcept
+    {
+        return values_[kParamClockMode] < 0.5f;
     }
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GremlinDriverUI)

@@ -29,8 +29,8 @@ struct ParamSpec {
 };
 
 inline constexpr std::array<const char*, 2> kClockModeNames = {{
-    "Free",
-    "Transport",
+    "Manual",
+    "Host",
 }};
 
 inline constexpr std::array<const char*, 10> kTargetNames = {{
@@ -70,7 +70,7 @@ inline constexpr std::array<const char*, 11> kActionNames = {{
 }};
 
 inline constexpr std::array<ParamSpec, 2> kGlobalParamSpecs = {{
-    {"clock_mode", "Clock Mode", 0.0f, 1.0f, 1.0f, true, false},
+    {"clock_mode", "Clock Source", 0.0f, 1.0f, 1.0f, true, false},
     {"bpm", "BPM", 40.0f, 220.0f, 120.0f, false, false},
 }};
 
