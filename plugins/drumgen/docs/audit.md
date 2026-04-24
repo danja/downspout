@@ -191,4 +191,4 @@ Completed in `downspout`:
 Still missing:
 
 - legacy saved-state upgrade coverage
-- custom UI work
+- preview-grid UI follow-up

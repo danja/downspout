@@ -90,8 +90,7 @@ Only after the core phases above pass tests:
 
 Status: completed.
 `drumgen.vst3` now builds through DPF on top of the portable engine,
-serialization, and transport/state adapters. The first wrapper intentionally
-uses the host's generic parameter UI instead of a custom DPF UI.
+serialization, and transport/state adapters.
 
 ## Phase 6: UI follow-up
 
@@ -102,4 +101,7 @@ After a correct wrapper exists:
 - if a pattern preview is added, drive it from core state rather than a separate
   preview-only generator.
 
-Status: not started.
+Status: in progress.
+A first custom DPF UI now exists with selector controls, macro sliders, and
+dedicated `New`, `Mutate`, and `Fill` buttons. Pattern-preview work is still
+deferred.

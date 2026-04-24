@@ -29,7 +29,7 @@ This repository now contains:
 - a first DPF-backed `bassgen` VST3 wrapper target with UI;
 - a portable `p-mix` core library with tests;
 - a first DPF-backed `p-mix` VST3 wrapper target with UI;
-- a portable `drumgen` core library with a host-neutral MIDI engine, serialization helpers, tests, and a first DPF-backed VST3 wrapper target;
+- a portable `drumgen` core library with a host-neutral MIDI engine, serialization helpers, tests, and a first DPF-backed VST3 wrapper target with UI;
 - an `install.sh` entrypoint for local VST3 installs.
 
 `bassgen`, `p_mix`, and `drumgen` can now be built and installed as `.vst3` bundles.
@@ -74,8 +74,8 @@ workflow details.
 ## Drumgen
 
 `drumgen` now builds as `drumgen.vst3` on top of the portable core and engine.
-The first wrapper intentionally relies on the host's generic parameter UI.
-The per-plugin plan lives under `plugins/drumgen/docs/`.
+It now has a first custom DPF UI with dedicated `New`, `Mutate`, and `Fill`
+buttons. The per-plugin plan lives under `plugins/drumgen/docs/`.
 
 ## Next steps
 
@@ -84,4 +84,4 @@ The per-plugin plan lives under `plugins/drumgen/docs/`.
 3. Tighten any remaining host-specific `p-mix` UI or interaction issues beyond the first layout polish pass.
 4. Validate the GitHub Actions release workflow on the first public tag.
 5. Verify `install.sh` and local docs against a clean `Release` build path for all current plugins.
-6. Validate `drumgen.vst3` in Reaper and decide whether a custom UI adds enough value to justify the extra wrapper surface.
+6. Validate `drumgen.vst3` in Reaper, especially the new action-button UI, transport sync, and state restore.

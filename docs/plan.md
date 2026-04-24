@@ -135,14 +135,14 @@ Progress as of 2026-04-24:
 - `bassgen` has a portable core library with deterministic tests;
 - `bassgen` now builds as a VST3 bundle with UI via vendored DPF;
 - `p-mix` now builds as a first VST3 wrapper with UI via vendored DPF;
-- `drumgen` now has a portable core library, a host-neutral MIDI engine, text serialization helpers, deterministic tests, and a first VST3 wrapper target via vendored DPF;
+- `drumgen` now has a portable core library, a host-neutral MIDI engine, text serialization helpers, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `install.sh` exists as the intended build/install entrypoint for local VST deployment.
 
 Current main gap:
 
 - DPF is now vendored and all current wrapper targets build successfully.
 - `install.sh` now installs real `bassgen.vst3`, `p_mix.vst3`, and `drumgen.vst3` bundles.
-- the main remaining gaps are host validation of `bassgen`, host validation of `p-mix`, host validation of `drumgen`, validating the first tagged GitHub Actions release, and deciding whether `drumgen` merits a custom UI.
+- the main remaining gaps are host validation of `bassgen`, host validation of `p-mix`, host validation of `drumgen`, and validating the first tagged GitHub Actions release.
 
 ## Next implementation sequence
 
@@ -153,15 +153,14 @@ The next work should proceed in this order:
 3. Tighten any remaining `p-mix` layout or interaction issues discovered in host testing.
 4. Validate the release-build workflow on the first public tag so installable bundles can be built reproducibly in `Release` mode.
 5. Confirm `install.sh` and local docs against clean `Release` installs for all current plugins.
-6. Validate `drumgen.vst3` in Reaper, especially transport sync, MIDI output behavior, and state restore through the host.
-7. Decide whether `drumgen` needs a custom UI or whether host-generic parameter access is sufficient for the first public release.
+6. Validate `drumgen.vst3` in Reaper, especially the new action-button UI, transport sync, MIDI output behavior, and state restore through the host.
 
 Reasoning:
 
 - `bassgen` is already far enough along that the remaining work is validation and incremental fixes, not architecture.
 - `p-mix` already has portable engine and test coverage, so wrapper integration is now the highest-value missing deliverable.
 - release builds need to become a first-class workflow before the repository is ready for broader use beyond local iteration.
-- `drumgen` has now reached the same core-plus-wrapper milestone as `bassgen`, so the remaining work is validation and UI scope, not architectural extraction.
+- `drumgen` has now reached the same core-plus-wrapper milestone as `bassgen`, so the remaining work is validation, polish, and bug-fixing rather than architectural extraction.
 
 ## Non-goals for the first phase
 

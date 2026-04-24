@@ -24,11 +24,11 @@ Implementation status:
 - a host-neutral MIDI scheduling engine now exists;
 - text serialization for controls, pattern state, and variation state now exists;
 - deterministic core and engine tests now exist and pass;
-- a first DPF-backed `drumgen.vst3` wrapper now builds without a custom UI.
+- a first DPF-backed `drumgen.vst3` wrapper now builds with a custom control UI.
 
 Recommended next steps:
 
-1. validate `drumgen.vst3` in a host before expanding the wrapper surface;
+1. validate `drumgen.vst3` in a host, especially the action buttons and saved-state restore path;
 2. broaden tests to cover legacy state upgrade behavior and wrapper-facing state mapping;
-3. decide whether a custom UI or preview grid is worth adding after host validation;
-4. keep the current generic-host-UI path viable for public release packaging.
+3. decide whether a preview grid is worth adding after host validation;
+4. keep release packaging aligned with the now-UI-backed wrapper target.

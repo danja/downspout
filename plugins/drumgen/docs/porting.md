@@ -19,7 +19,7 @@ Likely reusable source modules:
 
 Current wrapper choice:
 
-- the first DPF/VST3 wrapper is intentionally thin and uses the host's generic
-  parameter UI;
-- the port preserves exact control/state behavior first and leaves any custom
+- the first DPF/VST3 wrapper now has a thin custom control UI with explicit
+  `New`, `Mutate`, and `Fill` buttons;
+- the port preserves exact control/state behavior first and still leaves any
   preview-grid UI as follow-up work after host validation.

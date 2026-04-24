@@ -36,7 +36,7 @@ The repository currently installs three real wrapper targets:
 
 - `bassgen.vst3` with UI
 - `p_mix.vst3` with UI
-- `drumgen.vst3` with host generic parameter UI
+- `drumgen.vst3` with UI
 
 The next install-related validation is host-side confirmation that all three bundles behave correctly in `Release` builds.
 

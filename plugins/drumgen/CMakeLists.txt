@@ -22,6 +22,8 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
         TARGETS vst3
         FILES_DSP
             src/dpf/DrumgenPlugin.cpp
+        FILES_UI
+            src/dpf/DrumgenUI.cpp
     )
     target_link_libraries(drumgen-dsp PUBLIC downspout_drumgen_core)
     target_include_directories(drumgen PUBLIC
