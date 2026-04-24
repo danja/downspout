@@ -1,0 +1,25 @@
+#ifndef DOWNSPOUT_GREMLIN_DRIVER_DISTRHO_PLUGIN_INFO_H_INCLUDED
+#define DOWNSPOUT_GREMLIN_DRIVER_DISTRHO_PLUGIN_INFO_H_INCLUDED
+
+#define DISTRHO_PLUGIN_BRAND   "Downspout"
+#define DISTRHO_PLUGIN_NAME    "GremlinDriver"
+#define DISTRHO_PLUGIN_URI     "https://danja.github.io/downspout/plugins/gremlin-driver"
+#define DISTRHO_PLUGIN_CLAP_ID "it.hyperdata.downspout.gremlin-driver"
+
+#define DISTRHO_PLUGIN_BRAND_ID DnSp
+#define DISTRHO_PLUGIN_UNIQUE_ID GrDv
+
+#define DISTRHO_PLUGIN_HAS_UI           1
+#define DISTRHO_PLUGIN_IS_RT_SAFE       1
+#define DISTRHO_PLUGIN_NUM_INPUTS       0
+#define DISTRHO_PLUGIN_NUM_OUTPUTS      0
+#define DISTRHO_PLUGIN_WANT_MIDI_INPUT  1
+#define DISTRHO_PLUGIN_WANT_MIDI_OUTPUT 1
+#define DISTRHO_PLUGIN_WANT_TIMEPOS     1
+#define DISTRHO_PLUGIN_VST3_CATEGORIES  "Fx|Generator"
+#define DISTRHO_UI_DEFAULT_WIDTH        1120
+#define DISTRHO_UI_DEFAULT_HEIGHT       760
+#define DISTRHO_UI_USE_NANOVG           1
+#define DISTRHO_UI_FILE_BROWSER         0
+
+#endif
