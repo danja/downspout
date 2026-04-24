@@ -29,6 +29,7 @@ This repository now contains:
 - a first DPF-backed `bassgen` VST3 wrapper target with UI;
 - a portable `p-mix` core library with tests;
 - a first DPF-backed `p-mix` VST3 wrapper target with UI;
+- a guarded `drumgen` plugin scaffold with a portable core library, a host-neutral MIDI engine, serialization helpers, and tests;
 - an `install.sh` entrypoint for future VST3 installs.
 
 `bassgen` and `p-mix` can now be built and installed as `.vst3` bundles.
@@ -69,6 +70,12 @@ x86_64 VST3 zip containing both current bundles.
 See [docs/release.md](docs/release.md) for the release artifact shape and
 workflow details.
 
+## Next Port
+
+`drumgen` now has a portable core library, a host-neutral MIDI engine, and
+tests as the next MIDI-generator port candidate. The
+per-plugin plan lives under `plugins/drumgen/docs/`.
+
 ## Next steps
 
 1. Finish host-side validation of `bassgen.vst3` in Reaper and fix any remaining wrapper/UI issues.
@@ -76,4 +83,4 @@ workflow details.
 3. Tighten any remaining host-specific `p-mix` UI or interaction issues beyond the first layout polish pass.
 4. Validate the GitHub Actions release workflow on the first public tag.
 5. Verify `install.sh` and local docs against a clean `Release` build path for both plugins.
-6. Use the `bassgen` and `p-mix` wrapper patterns as the baseline for the next plugin port.
+6. Continue the `drumgen` port with a DPF/VST3 wrapper on top of the new engine and serialization layer.

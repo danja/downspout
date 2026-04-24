@@ -128,20 +128,21 @@ The first concrete tasks for `downspout` are:
 4. Write a requirements document that turns the plan into implementation constraints.
 5. Begin the `bassgen` audit and identify its reusable core modules.
 
-Progress as of 2026-04-18:
+Progress as of 2026-04-24:
 
 - root planning and requirements documents exist;
 - repository rules and scaffold exist;
 - `bassgen` has a portable core library with deterministic tests;
 - `bassgen` now builds as a VST3 bundle with UI via vendored DPF;
 - `p-mix` now builds as a first VST3 wrapper with UI via vendored DPF;
+- `drumgen` now has a guarded scaffold, per-plugin extraction docs, a portable core library, a host-neutral MIDI engine, text serialization helpers, and deterministic tests as the next MIDI-generator candidate;
 - `install.sh` exists as the intended build/install entrypoint for local VST deployment.
 
 Current main gap:
 
 - DPF is now vendored and the first `bassgen` wrapper target builds successfully.
 - `install.sh` now installs real `bassgen.vst3` and `p_mix.vst3` bundles.
-- the main remaining gaps are host validation of `bassgen`, host validation of `p-mix`, and validating the first tagged GitHub Actions release.
+- the main remaining gaps are host validation of `bassgen`, host validation of `p-mix`, validating the first tagged GitHub Actions release, and finishing the `drumgen` wrapper and host-validation path.
 
 ## Next implementation sequence
 
@@ -152,13 +153,14 @@ The next work should proceed in this order:
 3. Tighten any remaining `p-mix` layout or interaction issues discovered in host testing.
 4. Validate the release-build workflow on the first public tag so installable bundles can be built reproducibly in `Release` mode.
 5. Confirm `install.sh` and local docs against clean `Release` installs for both current plugins.
-6. Use the wrapper patterns from `bassgen` and `p-mix` to choose the third plugin target.
+6. Continue the `drumgen` port by adding its DPF/VST3 wrapper on top of the new engine and serialization layer.
 
 Reasoning:
 
 - `bassgen` is already far enough along that the remaining work is validation and incremental fixes, not architecture.
 - `p-mix` already has portable engine and test coverage, so wrapper integration is now the highest-value missing deliverable.
 - release builds need to become a first-class workflow before the repository is ready for broader use beyond local iteration.
+- `drumgen` is the next strong candidate because its portable core and engine now match the existing transport-aware MIDI-generator architecture closely enough that wrapper work is the real remaining step.
 
 ## Non-goals for the first phase
 
