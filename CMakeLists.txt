@@ -14,6 +14,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 option(DOWNSPOUT_BUILD_BASSGEN "Configure the bassgen port target" ON)
 option(DOWNSPOUT_BUILD_PMIX "Configure the p-mix port target" ON)
 option(DOWNSPOUT_BUILD_DRUMGEN "Configure the drumgen port target" ON)
+option(DOWNSPOUT_BUILD_CADENCE "Configure the cadence port target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -46,4 +47,8 @@ endif()
 
 if(DOWNSPOUT_BUILD_DRUMGEN)
     add_subdirectory(plugins/drumgen)
+endif()
+
+if(DOWNSPOUT_BUILD_CADENCE)
+    add_subdirectory(plugins/cadence)
 endif()

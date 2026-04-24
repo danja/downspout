@@ -18,6 +18,7 @@ Initial plugin targets:
 - Build the repository so that incomplete plugins can coexist without breaking unrelated work.
 - Do not vendor new third-party code unless the user asked for it or the task clearly requires it.
 - Document assumptions when mapping LV2 concepts to DPF/VST3, especially transport, state, and UI behavior.
+- On a fresh CMake build directory, do not launch the build command until configure has finished. In this repo, starting `cmake --build` too early regularly races cache generation and fails with `Error: could not load cache`.
 
 ## Repository shape
 
