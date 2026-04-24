@@ -6,7 +6,7 @@ Current focus:
 
 - keep the portable core aligned with the existing `bassgen` MIDI-generator split;
 - preserve exact pattern persistence and loop-boundary variation behavior;
-- map the finished engine onto a thin DPF/VST3 wrapper next;
+- validate the thin DPF/VST3 wrapper against real hosts;
 - keep UI scope behind correct transport, MIDI, and state behavior.
 
 Current reference docs:
@@ -17,18 +17,18 @@ Current reference docs:
 Implementation status:
 
 - plugin scaffold now exists in `downspout`;
-- guarded CMake wiring now exists behind `DOWNSPOUT_BUILD_DRUMGEN`;
+- CMake wiring now exists behind `DOWNSPOUT_BUILD_DRUMGEN` and is now enabled by default;
 - per-plugin audit and extraction docs now exist;
 - portable core type definitions now exist;
 - portable pattern, transport, variation, and state-sanitization code now exists;
 - a host-neutral MIDI scheduling engine now exists;
 - text serialization for controls, pattern state, and variation state now exists;
 - deterministic core and engine tests now exist and pass;
-- no DPF wrapper code exists yet.
+- a first DPF-backed `drumgen.vst3` wrapper now builds without a custom UI.
 
 Recommended next steps:
 
-1. add the DPF/VST3 wrapper on top of the new engine and serialization layer;
+1. validate `drumgen.vst3` in a host before expanding the wrapper surface;
 2. broaden tests to cover legacy state upgrade behavior and wrapper-facing state mapping;
-3. validate the wrapper in a host before deciding on UI expansion;
-4. decide whether to port a preview grid immediately or defer it until the wrapper is host-stable.
+3. decide whether a custom UI or preview grid is worth adding after host validation;
+4. keep the current generic-host-UI path viable for public release packaging.

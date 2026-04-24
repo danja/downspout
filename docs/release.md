@@ -11,6 +11,7 @@ Tagged releases publish:
 downspout-<version>-linux-x86_64-vst3.zip
 ├── bassgen.vst3/
 ├── p_mix.vst3/
+├── drumgen.vst3/
 ├── LICENSE
 └── README.md
 ```
@@ -64,6 +65,8 @@ leading `v`. For example, tag `v0.1.0` produces
 - The VST3 bundles are dynamically linked against normal Linux desktop/plugin
   runtime libraries used by the DPF UI path, including X11/OpenGL-related
   libraries.
+- `drumgen.vst3` currently relies on the host's generic parameter UI; its
+  custom UI work is intentionally deferred until host validation is complete.
 - macOS and Windows artifacts are intentionally deferred until those builds and
   host-validation paths are proven.
 - Host validation remains required before treating a tag as a public-quality

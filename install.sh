@@ -11,6 +11,7 @@ cmake_args=(
   -S "$repo_root"
   -B "$build_dir"
   -DCMAKE_BUILD_TYPE="$build_type"
+  -DDOWNSPOUT_BUILD_DRUMGEN=ON
   "-DCMAKE_INSTALL_PREFIX=$vst3_dir"
 )
 
@@ -45,7 +46,6 @@ else
   cat <<EOF
 No .vst3 bundles were installed.
 
-The install pipeline is ready, but this repo does not yet contain enabled DPF/VST3 wrapper targets.
-Current progress is focused on the portable core and test coverage.
+Check that DPF is available and that the VST3 wrapper targets are enabled.
 EOF
 fi

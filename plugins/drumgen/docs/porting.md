@@ -16,3 +16,10 @@ Likely reusable source modules:
 - variation logic
 - transport interpretation
 - state sanitization
+
+Current wrapper choice:
+
+- the first DPF/VST3 wrapper is intentionally thin and uses the host's generic
+  parameter UI;
+- the port preserves exact control/state behavior first and leaves any custom
+  preview-grid UI as follow-up work after host validation.

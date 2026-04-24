@@ -186,9 +186,9 @@ Completed in `downspout`:
 - host-neutral engine
 - serialization helpers
 - deterministic core and engine tests
+- first DPF/VST3 wrapper target
 
 Still missing:
 
-- DPF/VST3 wrapper
 - legacy saved-state upgrade coverage
-- UI work
+- custom UI work

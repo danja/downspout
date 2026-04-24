@@ -88,7 +88,10 @@ Only after the core phases above pass tests:
 - emit MIDI output from scheduled core events;
 - add a first VST3 target.
 
-Status: not started.
+Status: completed.
+`drumgen.vst3` now builds through DPF on top of the portable engine,
+serialization, and transport/state adapters. The first wrapper intentionally
+uses the host's generic parameter UI instead of a custom DPF UI.
 
 ## Phase 6: UI follow-up
 

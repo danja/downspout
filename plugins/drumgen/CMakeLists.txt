@@ -17,6 +17,24 @@ target_link_libraries(downspout_drumgen_port INTERFACE
     downspout_drumgen_core
 )
 
+if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
+    dpf_add_plugin(drumgen
+        TARGETS vst3
+        FILES_DSP
+            src/dpf/DrumgenPlugin.cpp
+    )
+    target_link_libraries(drumgen-dsp PUBLIC downspout_drumgen_core)
+    target_include_directories(drumgen PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
+    )
+
+    install(DIRECTORY "${PROJECT_BINARY_DIR}/bin/drumgen.vst3"
+        DESTINATION "."
+        OPTIONAL
+    )
+endif()
+
 if(BUILD_TESTING)
     add_executable(downspout_drumgen_core_tests
         tests/drumgen_core_tests.cpp

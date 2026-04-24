@@ -18,7 +18,7 @@
 - `CMAKE_BUILD_TYPE`
   Override the CMake build type. Default is `Release`.
 - `DPF_ROOT`
-  Intended for a future external or vendored DPF location.
+  Override the DPF location if you want to use an external checkout.
 - `DOWNSPOUT_RUN_TESTS`
   Set to `0` to skip `ctest` during install.
 
@@ -32,12 +32,13 @@ Public release packaging is handled separately by
 
 ## Current outputs
 
-The repository currently installs two real wrapper targets:
+The repository currently installs three real wrapper targets:
 
 - `bassgen.vst3` with UI
 - `p_mix.vst3` with UI
+- `drumgen.vst3` with host generic parameter UI
 
-The next install-related validation is host-side confirmation that both bundles behave correctly in `Release` builds.
+The next install-related validation is host-side confirmation that all three bundles behave correctly in `Release` builds.
 
 ## Verified behavior
 
@@ -49,3 +50,4 @@ The script has been smoke-tested with a temporary install root under `/tmp`:
 - install
 - confirmed `bassgen.vst3` bundle output and install
 - confirmed `p_mix.vst3` bundle output and install
+- confirmed `drumgen.vst3` bundle output and install

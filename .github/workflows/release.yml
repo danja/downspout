@@ -76,6 +76,7 @@ jobs:
             echo "Included plugin bundles:"
             echo "- bassgen.vst3"
             echo "- p_mix.vst3"
+            echo "- drumgen.vst3"
             echo
             echo "The .sha256 asset contains the checksum for the zip."
           } > "$notes_file"
