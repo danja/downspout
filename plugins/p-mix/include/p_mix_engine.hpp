@@ -10,6 +10,7 @@ namespace downspout::pmix {
 struct AudioBlock {
     std::array<const float*, kMaxChannels> inputs {};
     std::array<float*, kMaxChannels> outputs {};
+    std::uint32_t channelCount = kMaxChannels;
 };
 
 [[nodiscard]] Parameters clampParameters(const Parameters& raw);

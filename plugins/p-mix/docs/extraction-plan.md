@@ -51,9 +51,10 @@ Completed on 2026-04-18 for the first DPF/VST3 wrapper, including transport mapp
 
 Follow-up work after the first wrapper lands:
 
-- validate stereo and multichannel behavior in Reaper;
+- validate stereo behavior in Reaper first;
 - validate the new DPF UI layout and interaction in Reaper;
 - keep folding small layout fixes back into the UI as host testing exposes them;
+- keep the portable core channel-generic even if the first public wrapper is stereo;
 - verify `Release` build and install flow as part of the repository-level release workflow.
 
-Status: next priority.
+Status: in progress.

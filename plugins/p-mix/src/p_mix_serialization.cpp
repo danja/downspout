@@ -43,13 +43,14 @@ std::vector<std::string_view> split(std::string_view text, char delimiter) {
 }  // namespace
 
 std::string serializeParameters(const Parameters& parameters) {
-    return "version=1\n"
+    return "version=2\n"
            "granularity=" + std::to_string(parameters.granularity) + "\n"
            "maintain=" + std::to_string(parameters.maintain) + "\n"
            "fade=" + std::to_string(parameters.fade) + "\n"
            "cut=" + std::to_string(parameters.cut) + "\n"
            "fadeDurMax=" + std::to_string(parameters.fadeDurMax) + "\n"
-           "bias=" + std::to_string(parameters.bias) + "\n";
+           "bias=" + std::to_string(parameters.bias) + "\n"
+           "mute=" + std::to_string(parameters.mute) + "\n";
 }
 
 std::optional<Parameters> deserializeParameters(const std::string& text) {
@@ -80,6 +81,8 @@ std::optional<Parameters> deserializeParameters(const std::string& text) {
             parameters.fadeDurMax = floatValue;
         } else if (key == "bias" && parseFloat(value, floatValue)) {
             parameters.bias = floatValue;
+        } else if (key == "mute" && parseFloat(value, floatValue)) {
+            parameters.mute = floatValue;
         } else {
             return std::nullopt;
         }

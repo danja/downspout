@@ -80,7 +80,7 @@ buttons. The per-plugin plan lives under `plugins/drumgen/docs/`.
 ## Next steps
 
 1. Finish host-side validation of `bassgen.vst3` in Reaper and fix any remaining wrapper/UI issues.
-2. Continue validating the new `p-mix.vst3` UI in Reaper and confirm the 8-channel wrapper behaves correctly on multichannel tracks.
+2. Continue validating the new stereo `p-mix.vst3` wrapper and its manual mute toggle in Reaper.
 3. Tighten any remaining host-specific `p-mix` UI or interaction issues beyond the first layout polish pass.
 4. Validate the GitHub Actions release workflow on the first public tag.
 5. Verify `install.sh` and local docs against a clean `Release` build path for all current plugins.

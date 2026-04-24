@@ -22,7 +22,7 @@ The first ports will be based on:
 These two plugins were chosen deliberately because together they cover the main migration risks:
 
 - `bassgen` exercises MIDI generation, transport sync, state persistence, and control/UI messaging.
-- `p-mix` exercises audio processing, transport-driven behavior, state, and multi-channel routing.
+- `p-mix` exercises audio processing, transport-driven behavior, state, and host channel-layout decisions.
 
 If these ports succeed, the repository will have a workable pattern for both MIDI-producing and audio-processing plugins.
 

@@ -145,6 +145,7 @@ Parameters clampParameters(const Parameters& raw) {
     parameters.cut = clampf(parameters.cut, 0.0f, 100.0f);
     parameters.fadeDurMax = clampf(parameters.fadeDurMax, kFadeMinFraction, 1.0f);
     parameters.bias = clampf(parameters.bias, 0.0f, 100.0f);
+    parameters.mute = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.mute)), 0, 1));
     return parameters;
 }
 
@@ -166,6 +167,7 @@ void processBlock(EngineState& state,
     }
 
     const Parameters parameters = clampParameters(rawParameters);
+    const bool muted = parameters.mute >= 0.5f;
 
     double framesPerBar = 0.0;
     if (transport.valid && transport.playing && transport.bpm > 0.0) {
@@ -200,8 +202,9 @@ void processBlock(EngineState& state,
             }
         }
 
-        const float gain = state.currentGain;
-        for (std::uint32_t channel = 0; channel < kMaxChannels; ++channel) {
+        const float gain = muted ? 0.0f : state.currentGain;
+        const std::uint32_t channelCount = audio.channelCount < kMaxChannels ? audio.channelCount : kMaxChannels;
+        for (std::uint32_t channel = 0; channel < channelCount; ++channel) {
             float* out = audio.outputs[channel];
             if (!out) {
                 continue;

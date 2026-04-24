@@ -15,7 +15,7 @@ The actual portable logic is compact:
 - probabilistic transition decisions
 - fade scheduling
 - per-sample fade progression
-- uniform gain application across up to eight channels
+- uniform gain application across up to eight channels in the portable core
 
 The first `downspout` task is to split that logic into core modules so the eventual DPF wrapper remains thin.
 
@@ -47,7 +47,7 @@ The first `downspout` task is to split that logic into core modules so the event
 
 - LV2 atom/time parsing
 - LV2 state callback wiring
-- port wiring for 8 audio inputs and outputs
+- public wrapper channel-layout wiring
 - direct host-frame loop integration
 
 ## Proposed portable core split
@@ -80,6 +80,7 @@ The first `downspout` task is to split that logic into core modules so the event
 - optional transition exactly at frame 0 when the host block begins on a bar boundary
 - no new transition while a fade is still in progress
 - shared gain applied identically to every active channel
+- manual mute should be able to force silence immediately without disturbing the transport-driven gain state underneath
 - deterministic state save/restore for user parameters
 
 ## Risks
@@ -103,10 +104,11 @@ Completed in `downspout`:
 - portable parameter, transport, boundary, and engine-state types
 - portable gain-processing engine
 - parameter serialization helpers
-- CTest coverage for stopped transport, boundary cuts, fade progression, and serialization
-
-Still missing:
-
-- host/plugin-framework wrapper code
-- host state bridge for plugin persistence
+- CTest coverage for stopped transport, boundary cuts, fade progression, mute override, and serialization
+- DPF/VST3 wrapper code
+- plugin state bridge for persistence
 - real VST3 bundle target
+
+## 2026-04-24 host note
+
+Reaper testing showed that the first VST3 wrapper's fixed 8-in/8-out declaration was not a good default for ordinary stereo use. The portable core still supports up to 8 channels, but the public VST3 wrapper is now intentionally stereo-first and adds a manual mute toggle for immediate sanity checks in host testing.

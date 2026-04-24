@@ -17,6 +17,7 @@ enum ParameterIndex : uint32_t {
     kParamCut,
     kParamFadeDurMax,
     kParamBias,
+    kParamMute,
     kParameterCount
 };
 
@@ -41,6 +42,11 @@ struct SliderDef {
     bool integer;
 };
 
+struct ButtonDef {
+    uint32_t index;
+    const char* label;
+};
+
 constexpr std::array<SliderDef, 6> kSliders = {{
     {kParamGranularity, "Granularity", "Decision window in bars", 1.0f, 32.0f, true},
     {kParamMaintain, "Maintain", "Keep the current state", 0.0f, 100.0f, true},
@@ -49,6 +55,8 @@ constexpr std::array<SliderDef, 6> kSliders = {{
     {kParamFadeDurMax, "Fade Dur Max", "Longest fade fraction", 0.125f, 1.0f, false},
     {kParamBias, "Bias", "Target audible ratio", 0.0f, 100.0f, true},
 }};
+
+constexpr ButtonDef kMuteButton {kParamMute, "Mute Output"};
 
 [[nodiscard]] float clampf(const float value, const float minValue, const float maxValue)
 {
@@ -73,6 +81,17 @@ constexpr std::array<SliderDef, 6> kSliders = {{
     return std::max(1.0f, values[kParamMaintain] + values[kParamFade] + values[kParamCut]);
 }
 
+[[nodiscard]] const SliderDef* sliderDefForIndex(const uint32_t index)
+{
+    for (const SliderDef& def : kSliders) {
+        if (def.index == index) {
+            return &def;
+        }
+    }
+
+    return nullptr;
+}
+
 } // namespace
 
 class PMixUI : public UI
@@ -88,6 +107,7 @@ public:
         values_[kParamCut] = 25.0f;
         values_[kParamFadeDurMax] = 1.0f;
         values_[kParamBias] = 50.0f;
+        values_[kParamMute] = 0.0f;
 
        #ifdef DGL_NO_SHARED_RESOURCES
         createFontFromFile("sans", "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf");
@@ -137,6 +157,11 @@ protected:
             return false;
         }
 
+        if (muteButtonRect_.contains(x, y)) {
+            toggleMute();
+            return true;
+        }
+
         for (std::size_t i = 0; i < sliderRects_.size(); ++i) {
             if (sliderRects_[i].contains(x, y)) {
                 draggingSlider_ = static_cast<int>(i);
@@ -176,6 +201,7 @@ protected:
 private:
     std::array<float, kParameterCount> values_ {};
     std::array<Rect, kSliders.size()> sliderRects_ {};
+    Rect muteButtonRect_ {};
     int draggingSlider_ = -1;
 
     void drawBackground(const float width, const float height)
@@ -216,7 +242,7 @@ private:
         fillColor(151, 168, 183, 255);
         text(x + 24.0f, y + 50.0f, "Probabilistic transport-locked mixer", nullptr);
 
-        drawPill(x + w - 210.0f, y + 18.0f, 188.0f, 28.0f, "8-channel VST3", 100, 190, 170);
+        drawPill(x + w - 182.0f, y + 18.0f, 160.0f, 28.0f, "Stereo VST3", 100, 190, 170);
     }
 
     void drawPill(float x, float y, float w, float h, const char* label, int r, int g, int b)
@@ -250,7 +276,11 @@ private:
         text(x + 22.0f, y + 18.0f, "Control Surface", nullptr);
 
         const float innerX = x + 22.0f;
-        const float innerY = y + 54.0f;
+        const float buttonY = y + 52.0f;
+        muteButtonRect_ = {innerX, buttonY, w - 44.0f, 40.0f};
+        drawToggleButton(kMuteButton, muteButtonRect_, values_[kParamMute] >= 0.5f);
+
+        const float innerY = buttonY + 62.0f;
         const float innerW = w - 44.0f;
         const float rowGap = 18.0f;
         const float rowH = 56.0f;
@@ -265,6 +295,35 @@ private:
             sliderRects_[i] = {rx, ry + 26.0f, colW, 20.0f};
             drawSlider(kSliders[i], sliderRects_[i], values_[kSliders[i].index], draggingSlider_ == static_cast<int>(i));
         }
+    }
+
+    void drawToggleButton(const ButtonDef& def, const Rect& rect, const bool active)
+    {
+        beginPath();
+        roundedRect(rect.x, rect.y, rect.w, rect.h, 8.0f);
+        fillColor(active ? 186 : 45, active ? 82 : 111, active ? 67 : 71, 255);
+        fill();
+        closePath();
+
+        beginPath();
+        roundedRect(rect.x, rect.y, rect.w, rect.h, 8.0f);
+        strokeColor(active ? 231 : 120, active ? 128 : 180, active ? 118 : 120, 255);
+        strokeWidth(1.0f);
+        stroke();
+        closePath();
+
+        fontSize(13.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        fillColor(240, 243, 246, 255);
+        text(rect.x + 14.0f, rect.y + rect.h * 0.5f + 1.0f, def.label, nullptr);
+
+        fontSize(12.0f);
+        textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
+        fillColor(active ? 255 : 166, active ? 235 : 213, active ? 230 : 185, 255);
+        text(rect.x + rect.w - 14.0f,
+             rect.y + rect.h * 0.5f + 1.0f,
+             active ? "Muted" : "Live",
+             nullptr);
     }
 
     void drawSlider(const SliderDef& def, const Rect& rect, const float value, const bool active)
@@ -413,12 +472,12 @@ private:
 
         fontSize(12.0f);
         fillColor(148, 163, 178, 255);
-        text(x + 14.0f, y + 40.0f, "Maintain, Fade, and Cut", nullptr);
-        text(x + 14.0f, y + 58.0f, "work as relative weights.", nullptr);
-        text(x + 14.0f, y + 80.0f, "Bias sets how often the", nullptr);
-        text(x + 14.0f, y + 98.0f, "track should stay audible.", nullptr);
-        text(x + 14.0f, y + 120.0f, "Fade Dur Max limits how long", nullptr);
-        text(x + 14.0f, y + 138.0f, "a fade can fill the window.", nullptr);
+        text(x + 14.0f, y + 40.0f, "Mute Output forces silence", nullptr);
+        text(x + 14.0f, y + 58.0f, "immediately for a quick check.", nullptr);
+        text(x + 14.0f, y + 80.0f, "Maintain, Fade, and Cut", nullptr);
+        text(x + 14.0f, y + 98.0f, "work as relative weights.", nullptr);
+        text(x + 14.0f, y + 120.0f, "Bias sets how often the", nullptr);
+        text(x + 14.0f, y + 138.0f, "track should stay audible.", nullptr);
     }
 
     void updateSliderFromPosition(int sliderIndex, float mouseX)
@@ -442,12 +501,27 @@ private:
 
     void setParameter(uint32_t index, float value)
     {
-        const SliderDef& def = kSliders[index];
-        const float clamped = clampf(value, def.min, def.max);
+        const SliderDef* def = sliderDefForIndex(index);
+        if (def == nullptr) {
+            return;
+        }
+
+        const float clamped = clampf(value, def->min, def->max);
+        commitParameter(index, clamped);
+    }
+
+    void toggleMute()
+    {
+        const float next = values_[kParamMute] >= 0.5f ? 0.0f : 1.0f;
+        commitParameter(kParamMute, next);
+    }
+
+    void commitParameter(uint32_t index, float value)
+    {
         editParameter(index, true);
-        setParameterValue(index, clamped);
+        setParameterValue(index, value);
         editParameter(index, false);
-        values_[index] = clamped;
+        values_[index] = value;
         repaint();
     }
 

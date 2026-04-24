@@ -17,6 +17,7 @@ enum ParameterIndex : uint32_t {
     kParamCut,
     kParamFadeDurMax,
     kParamBias,
+    kParamMute,
     kParameterCount
 };
 
@@ -31,6 +32,10 @@ using CoreAudioBlock = downspout::pmix::AudioBlock;
 using CoreEngineState = downspout::pmix::EngineState;
 using CoreParameters = downspout::pmix::Parameters;
 using CoreTransport = downspout::pmix::TransportSnapshot;
+
+constexpr uint32_t kWrapperChannelCount = DISTRHO_PLUGIN_NUM_INPUTS < DISTRHO_PLUGIN_NUM_OUTPUTS
+    ? DISTRHO_PLUGIN_NUM_INPUTS
+    : DISTRHO_PLUGIN_NUM_OUTPUTS;
 
 CoreTransport toCoreTransport(const TimePosition& timePos)
 {
@@ -160,6 +165,14 @@ protected:
             parameter.ranges.max = 100.0f;
             parameter.ranges.def = 50.0f;
             break;
+        case kParamMute:
+            parameter.name = "Mute";
+            parameter.symbol = "mute";
+            parameter.hints |= kParameterIsBoolean | kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.0f;
+            break;
         }
     }
 
@@ -184,6 +197,7 @@ protected:
         case kParamCut: return parameters_.cut;
         case kParamFadeDurMax: return parameters_.fadeDurMax;
         case kParamBias: return parameters_.bias;
+        case kParamMute: return parameters_.mute;
         default: return 0.0f;
         }
     }
@@ -198,6 +212,7 @@ protected:
         case kParamCut: parameters_.cut = value; break;
         case kParamFadeDurMax: parameters_.fadeDurMax = value; break;
         case kParamBias: parameters_.bias = value; break;
+        case kParamMute: parameters_.mute = value; break;
         }
 
         parameters_ = downspout::pmix::clampParameters(parameters_);
@@ -232,7 +247,7 @@ protected:
         std::array<const float*, downspout::pmix::kMaxChannels> safeInputs {};
         std::array<float*, downspout::pmix::kMaxChannels> safeOutputs {};
 
-        for (uint32_t channel = 0; channel < downspout::pmix::kMaxChannels; ++channel)
+        for (uint32_t channel = 0; channel < kWrapperChannelCount; ++channel)
         {
             safeInputs[channel] = inputs[channel];
             safeOutputs[channel] = outputs[channel];
@@ -241,6 +256,7 @@ protected:
         CoreAudioBlock audio;
         audio.inputs = safeInputs;
         audio.outputs = safeOutputs;
+        audio.channelCount = kWrapperChannelCount;
 
         downspout::pmix::processBlock(engineState_,
                                       parameters_,
