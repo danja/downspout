@@ -80,6 +80,9 @@ struct EngineState {
     bool transportWasPlaying = false;
     std::int64_t activeBlockSerial = -1;
     BlockSpec activeBlock {};
+    BlockSpec transitionBlock {};
+    std::uint32_t transitionFramesRemaining = 0;
+    std::uint32_t transitionFramesTotal = 0;
 
     std::uint32_t lastScatterSerial = 0;
     std::uint32_t lastRecoverSerial = 0;

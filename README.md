@@ -2,6 +2,13 @@
 
 `downspout` is a from-scratch repository for native plugin ports of selected [flues](https://github.com/danja/flues) LV2 projects, with an initial focus on VST3-capable builds via DPF ([DISTRHO Plugin Framework](https://distrho.github.io/DPF/)).
 
+## Note on authorship
+
+Most of the plugin ideas in this repository came from Danny and the earlier
+`flues` work. `rift` is the exception: it is the one original plugin concept
+proposed and built in `downspout` by the coding agent rather than ported from
+an existing Danny plugin.
+
 ## Install From Releases
 
 On a typical Linux system, download the latest
@@ -111,9 +118,10 @@ directly.
 ## Rift
 
 `rift` now builds as `rift.vst3`. It is an original `downspout` effect rather
-than a `flues` port: a transport-locked stereo buffer disruptor with repeat,
-reverse, skip, smear, and pitch-slip actions plus `Hold`, `Scatter`, and
-`Recover` performance controls.
+than a `flues` port, and it is the one plugin idea in this repository that did
+not originate with Danny: a transport-locked stereo buffer disruptor with
+repeat, reverse, skip, smear, and pitch-slip actions plus `Hold`, `Scatter`,
+and `Recover` performance controls.
 
 ## Drumgen
 

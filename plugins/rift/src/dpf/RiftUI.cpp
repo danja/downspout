@@ -60,6 +60,15 @@ struct ButtonDef {
     int blue;
 };
 
+struct ModePreset {
+    const char* label;
+    const char* detail;
+    int red;
+    int green;
+    int blue;
+    CoreParameters parameters;
+};
+
 constexpr std::array<SliderDef, 7> kSliders = {{
     {kParamGrid, "Grid", "Blocks per bar", 1.0f, 16.0f},
     {kParamDensity, "Density", "How often blocks mutate", 0.0f, 100.0f},
@@ -74,6 +83,15 @@ constexpr std::array<ButtonDef, 3> kButtons = {{
     {kParamHold, "Hold", 198, 161, 78},
     {kParamScatter, "Scatter", 183, 86, 78},
     {kParamRecover, "Recover", 79, 145, 117},
+}};
+
+constexpr std::array<ModePreset, 6> kModes = {{
+    {"Pocket", "low-risk drift", 88, 125, 154, {8.0f, 18.0f, 18.0f, 2.0f, 10.0f, 0.0f, 58.0f, 0.0f}},
+    {"Stutter", "tight repeats", 205, 151, 79, {16.0f, 72.0f, 24.0f, 1.0f, 10.0f, 0.0f, 100.0f, 0.0f}},
+    {"Flip", "harder turns", 145, 110, 208, {8.0f, 56.0f, 70.0f, 2.0f, 26.0f, 0.0f, 100.0f, 0.0f}},
+    {"Smear", "slow melt", 78, 166, 169, {8.0f, 52.0f, 60.0f, 3.0f, 72.0f, 0.0f, 92.0f, 0.0f}},
+    {"Slip", "pitched drag", 93, 149, 224, {8.0f, 58.0f, 58.0f, 2.0f, 48.0f, 7.0f, 92.0f, 0.0f}},
+    {"Ruin", "full wreck", 196, 82, 82, {16.0f, 90.0f, 90.0f, 4.0f, 86.0f, -5.0f, 100.0f, 0.0f}},
 }};
 
 constexpr std::size_t kPreviewBlockCount = 24;
@@ -135,6 +153,11 @@ struct ActionColor {
     return {77, 97, 111};
 }
 
+[[nodiscard]] bool parameterMatches(const float lhs, const float rhs)
+{
+    return std::fabs(lhs - rhs) < 0.01f;
+}
+
 }  // namespace
 
 class RiftUI : public UI
@@ -145,6 +168,7 @@ public:
     {
         values_.fill(0.0f);
         buttonPulse_.fill(0);
+        modePulse_.fill(0);
 
         const CoreParameters defaults = downspout::rift::clampParameters(CoreParameters {});
         values_[kParamGrid] = defaults.grid;
@@ -183,6 +207,12 @@ protected:
                 needsRepaint = true;
             }
         }
+        for (int& pulse : modePulse_) {
+            if (pulse > 0) {
+                --pulse;
+                needsRepaint = true;
+            }
+        }
         if (needsRepaint) {
             repaint();
         }
@@ -194,16 +224,20 @@ protected:
         const float height = static_cast<float>(getHeight());
         const float pad = 24.0f;
         const float headerH = 96.0f;
+        const float modeStripH = 80.0f;
+        const float sectionGap = 18.0f;
         const float contentY = pad + headerH + 18.0f;
         const float contentH = height - contentY - pad;
+        const float mainH = contentH - modeStripH - sectionGap;
         const float leftW = 370.0f;
         const float rightX = pad + leftW + 28.0f;
         const float rightW = width - rightX - pad;
 
         drawBackground(width, height);
         drawHeader(pad, pad, width - pad * 2.0f, headerH);
-        drawControls(pad, contentY, leftW, contentH);
-        drawVisuals(rightX, contentY, rightW, contentH);
+        drawControls(pad, contentY, leftW, mainH);
+        drawVisuals(rightX, contentY, rightW, mainH);
+        drawModeStrip(pad, contentY + mainH + sectionGap, width - pad * 2.0f, modeStripH);
     }
 
     bool onMouse(const MouseEvent& ev) override
@@ -223,6 +257,13 @@ protected:
         for (std::size_t i = 0; i < kButtons.size(); ++i) {
             if (buttonRects_[i].contains(x, y)) {
                 handleButton(kButtons[i].index, static_cast<int>(i));
+                return true;
+            }
+        }
+
+        for (std::size_t i = 0; i < kModes.size(); ++i) {
+            if (modeRects_[i].contains(x, y)) {
+                applyModePreset(static_cast<int>(i));
                 return true;
             }
         }
@@ -267,6 +308,8 @@ private:
     std::array<Rect, kSliders.size()> sliderRects_ {};
     std::array<Rect, kButtons.size()> buttonRects_ {};
     std::array<int, kButtons.size()> buttonPulse_ {};
+    std::array<Rect, kModes.size()> modeRects_ {};
+    std::array<int, kModes.size()> modePulse_ {};
     int draggingSlider_ = -1;
 
     [[nodiscard]] CoreParameters currentParameters() const
@@ -359,21 +402,25 @@ private:
         fillColor(228, 233, 238, 255);
         text(x, y, "Performance Controls", nullptr);
 
-        const float buttonY = y + 36.0f;
+        const float buttonY = y + 30.0f;
         const float buttonGap = 12.0f;
         const float buttonW = (w - buttonGap * 2.0f) / 3.0f;
         for (std::size_t i = 0; i < kButtons.size(); ++i) {
             const float bx = x + static_cast<float>(i) * (buttonW + buttonGap);
-            buttonRects_[i] = {bx, buttonY, buttonW, 44.0f};
+            buttonRects_[i] = {bx, buttonY, buttonW, 40.0f};
             drawButton(kButtons[i], buttonRects_[i], static_cast<int>(i), parameters);
         }
 
-        const float sliderStartY = buttonY + 78.0f;
-        const float rowGap = 24.0f;
-        const float rowH = 74.0f;
+        const float sliderStartY = buttonY + 58.0f;
+        const float rowGap = 10.0f;
+        const float rowH = 46.0f;
         for (std::size_t i = 0; i < kSliders.size(); ++i) {
             const float rowY = sliderStartY + static_cast<float>(i) * (rowH + rowGap);
-            sliderRects_[i] = {x, rowY + 38.0f, w, 18.0f};
+            if (rowY + rowH > y + h) {
+                sliderRects_[i] = {-1000.0f, -1000.0f, 0.0f, 0.0f};
+                continue;
+            }
+            sliderRects_[i] = {x, rowY + 26.0f, w, 14.0f};
             drawSlider(kSliders[i], sliderRects_[i], parameters, draggingSlider_ == static_cast<int>(i));
         }
     }
@@ -409,16 +456,16 @@ private:
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fillColor(227, 232, 236, 255);
-        text(rect.x, rect.y - 34.0f, def.label, nullptr);
+        text(rect.x, rect.y - 24.0f, def.label, nullptr);
 
         fontSize(11.0f);
         fillColor(118, 134, 145, 255);
-        text(rect.x, rect.y - 16.0f, def.hint, nullptr);
+        text(rect.x, rect.y - 10.0f, def.hint, nullptr);
 
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
         fillColor(240, 205, 170, 255);
         const std::string valueText = formatValue(def, value);
-        text(rect.x + rect.w, rect.y - 34.0f, valueText.c_str(), nullptr);
+        text(rect.x + rect.w, rect.y - 24.0f, valueText.c_str(), nullptr);
 
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 8.0f);
@@ -434,7 +481,7 @@ private:
         closePath();
 
         beginPath();
-        circle(rect.x + rect.w * t, rect.y + rect.h * 0.5f, 8.0f);
+        circle(rect.x + rect.w * t, rect.y + rect.h * 0.5f, 7.0f);
         fillColor(248, 239, 229, 255);
         fill();
         closePath();
@@ -443,9 +490,12 @@ private:
     void drawVisuals(const float x, const float y, const float w, const float h)
     {
         const CoreParameters parameters = currentParameters();
-        drawSummary(x, y, w, 114.0f, parameters);
-        drawPreview(x, y + 148.0f, w, 170.0f, parameters);
-        drawWeights(x, y + 354.0f, w, h - 354.0f, parameters);
+        const float gap = 18.0f;
+        const float summaryH = 108.0f;
+        const float previewH = 166.0f;
+        drawSummary(x, y, w, summaryH, parameters);
+        drawPreview(x, y + summaryH + gap, w, previewH, parameters);
+        drawWeights(x, y + summaryH + previewH + gap * 2.0f, w, h - summaryH - previewH - gap * 2.0f, parameters);
     }
 
     void drawSummary(const float x, const float y, const float w, const float h, const CoreParameters& parameters)
@@ -455,9 +505,9 @@ private:
         fillColor(228, 233, 238, 255);
         text(x, y, "Live Summary", nullptr);
 
-        const float top = y + 34.0f;
+        const float top = y + 30.0f;
         beginPath();
-        roundedRect(x, top, w, h - 34.0f, 8.0f);
+        roundedRect(x, top, w, h - 30.0f, 8.0f);
         fillColor(15, 23, 31, 212);
         fill();
         closePath();
@@ -499,9 +549,9 @@ private:
         fillColor(228, 233, 238, 255);
         text(x, y, "Preview Lane", nullptr);
 
-        const float top = y + 34.0f;
+        const float top = y + 30.0f;
         beginPath();
-        roundedRect(x, top, w, h - 34.0f, 8.0f);
+        roundedRect(x, top, w, h - 30.0f, 8.0f);
         fillColor(15, 23, 31, 212);
         fill();
         closePath();
@@ -579,9 +629,9 @@ private:
         fillColor(228, 233, 238, 255);
         text(x, y, "Action Bias", nullptr);
 
-        const float top = y + 34.0f;
+        const float top = y + 30.0f;
         beginPath();
-        roundedRect(x, top, w, h - 34.0f, 8.0f);
+        roundedRect(x, top, w, h - 30.0f, 8.0f);
         fillColor(15, 23, 31, 212);
         fill();
         closePath();
@@ -608,8 +658,8 @@ private:
             ActionType::Repeat, ActionType::Reverse, ActionType::Skip, ActionType::Smear, ActionType::Slip
         }};
 
-        const float rowY0 = top + 24.0f;
-        const float rowGap = 22.0f;
+        const float rowY0 = top + 18.0f;
+        const float rowGap = 18.0f;
         for (std::size_t i = 0; i < rows.size(); ++i) {
             const float rowY = rowY0 + static_cast<float>(i) * rowGap;
             const ActionColor color = actionColor(rowActions[i]);
@@ -619,7 +669,70 @@ private:
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fillColor(119, 135, 146, 255);
-        text(x + 18.0f, top + h - 82.0f, "Density decides whether a block mutates at all. These bars show the split once mutation happens.", nullptr);
+        text(x + 18.0f, top + h - 62.0f, "Density decides if a block mutates at all. These bars show the split once it does.", nullptr);
+    }
+
+    void drawModeStrip(const float x, const float y, const float w, const float h)
+    {
+        const CoreParameters parameters = currentParameters();
+        const int activeMode = matchingModeIndex(parameters);
+
+        fontSize(16.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(228, 233, 238, 255);
+        text(x, y, "Modes", nullptr);
+
+        fontSize(11.0f);
+        fillColor(119, 135, 146, 255);
+        text(x + 62.0f, y + 3.0f, "quick parameter recipes for useful failure states", nullptr);
+
+        const float top = y + 26.0f;
+        beginPath();
+        roundedRect(x, top, w, h - 26.0f, 8.0f);
+        fillColor(15, 23, 31, 212);
+        fill();
+        closePath();
+
+        const float innerX = x + 14.0f;
+        const float innerY = top + 12.0f;
+        const float innerW = w - 28.0f;
+        const float buttonGap = 10.0f;
+        const float buttonW = (innerW - buttonGap * static_cast<float>(kModes.size() - 1)) / static_cast<float>(kModes.size());
+
+        for (std::size_t i = 0; i < kModes.size(); ++i) {
+            const float bx = innerX + static_cast<float>(i) * (buttonW + buttonGap);
+            modeRects_[i] = {bx, innerY, buttonW, 32.0f};
+            drawModeButton(kModes[i], modeRects_[i], static_cast<int>(i), activeMode == static_cast<int>(i));
+        }
+    }
+
+    void drawModeButton(const ModePreset& preset, const Rect& rect, const int modeIndex, const bool active)
+    {
+        const bool pulsing = modePulse_[modeIndex] > 0;
+        const int fillBoost = active ? 18 : (pulsing ? 28 : 0);
+        const int borderAlpha = active ? 220 : (pulsing ? 180 : 90);
+
+        beginPath();
+        roundedRect(rect.x, rect.y, rect.w, rect.h, 8.0f);
+        fillColor(preset.red + fillBoost, preset.green + fillBoost, preset.blue + fillBoost, active ? 80 : 42);
+        fill();
+        closePath();
+
+        beginPath();
+        roundedRect(rect.x, rect.y, rect.w, rect.h, 8.0f);
+        strokeColor(preset.red + fillBoost, preset.green + fillBoost, preset.blue + fillBoost, borderAlpha);
+        strokeWidth(1.0f);
+        stroke();
+        closePath();
+
+        fontSize(12.0f);
+        textAlign(ALIGN_CENTER | ALIGN_TOP);
+        fillColor(241, 243, 246, 255);
+        text(rect.x + rect.w * 0.5f, rect.y + 6.0f, preset.label, nullptr);
+
+        fontSize(10.0f);
+        fillColor(166, 178, 188, 255);
+        text(rect.x + rect.w * 0.5f, rect.y + 18.0f, preset.detail, nullptr);
     }
 
     void drawWeightBar(const float x, const float y, const float w, const char* label, const float weight, const ActionColor color)
@@ -664,6 +777,46 @@ private:
         repaint();
     }
 
+    [[nodiscard]] bool parametersMatchMode(const CoreParameters& parameters, const ModePreset& preset) const
+    {
+        return parameterMatches(parameters.grid, preset.parameters.grid) &&
+               parameterMatches(parameters.density, preset.parameters.density) &&
+               parameterMatches(parameters.damage, preset.parameters.damage) &&
+               parameterMatches(parameters.memoryBars, preset.parameters.memoryBars) &&
+               parameterMatches(parameters.drift, preset.parameters.drift) &&
+               parameterMatches(parameters.pitch, preset.parameters.pitch) &&
+               parameterMatches(parameters.mix, preset.parameters.mix);
+    }
+
+    [[nodiscard]] int matchingModeIndex(const CoreParameters& parameters) const
+    {
+        for (std::size_t i = 0; i < kModes.size(); ++i) {
+            if (parametersMatchMode(parameters, kModes[i])) {
+                return static_cast<int>(i);
+            }
+        }
+        return -1;
+    }
+
+    void applyModePreset(const int modeIndex)
+    {
+        if (modeIndex < 0 || modeIndex >= static_cast<int>(kModes.size())) {
+            return;
+        }
+
+        const ModePreset& preset = kModes[static_cast<std::size_t>(modeIndex)];
+        commitParameter(kParamGrid, preset.parameters.grid, false);
+        commitParameter(kParamDensity, preset.parameters.density, false);
+        commitParameter(kParamDamage, preset.parameters.damage, false);
+        commitParameter(kParamMemoryBars, preset.parameters.memoryBars, false);
+        commitParameter(kParamDrift, preset.parameters.drift, false);
+        commitParameter(kParamPitch, preset.parameters.pitch, false);
+        commitParameter(kParamMix, preset.parameters.mix, false);
+        commitParameter(kParamHold, 0.0f, false);
+        modePulse_[static_cast<std::size_t>(modeIndex)] = 18;
+        repaint();
+    }
+
     [[nodiscard]] float valueForIndex(const uint32_t index, const CoreParameters& parameters) const
     {
         switch (index) {
@@ -705,13 +858,15 @@ private:
         commitParameter(def.index, value);
     }
 
-    void commitParameter(const uint32_t index, const float value)
+    void commitParameter(const uint32_t index, const float value, const bool shouldRepaint = true)
     {
         editParameter(index, true);
         setParameterValue(index, value);
         editParameter(index, false);
         values_[index] = value;
-        repaint();
+        if (shouldRepaint) {
+            repaint();
+        }
     }
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RiftUI)

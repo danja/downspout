@@ -48,7 +48,15 @@ The UI avoids exposing too many microscopic options. Instead it uses:
 
 - a few strong musical macros;
 - three large performance gestures;
+- a bottom strip of named mode recipes for quick direction changes;
 - visual explanations of the block plan and action bias.
 
 That tradeoff matters. This plugin is supposed to spark ideas in a DAW session,
 not ask the user to become a scheduler debugger.
+
+## Transition smoothing
+
+The mutation engine is allowed to jump to a completely different slice at a
+block boundary, but the output should not hard-click when that happens. The
+implementation therefore uses a short boundary crossfade instead of trying to
+solve the problem with full-plugin oversampling.

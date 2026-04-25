@@ -25,6 +25,8 @@ surprises are usually the wrong default.
   rate, channel count, and memory requirement;
 - slice playback always reads from the past, never from future/current samples;
 - input is written into the buffer after output for that frame is rendered.
+- when the selected block changes, the core crossfades from the previous block
+  to the new one for a short fixed window so large read-head jumps do not click.
 
 ## Performance gestures
 

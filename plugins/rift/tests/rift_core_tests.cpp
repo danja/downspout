@@ -156,6 +156,89 @@ void testScatterMutatesAndRecoverReturnsDry() {
     }
 }
 
+void testBlockTransitionsArmCrossfade() {
+    EngineState state;
+    activate(state, 8.0, 1);
+
+    Parameters parameters;
+    parameters.grid = 1.0f;
+    parameters.density = 0.0f;
+    parameters.damage = 100.0f;
+    parameters.memoryBars = 2.0f;
+    parameters.drift = 80.0f;
+    parameters.pitch = 7.0f;
+    parameters.mix = 100.0f;
+
+    std::array<float, 32> historyIn {};
+    std::array<float, 4> mutatedIn {};
+    std::array<float, 4> continuedIn {};
+    std::array<float, 32> historyOut {};
+    std::array<float, 4> mutatedOut {};
+    std::array<float, 4> continuedOut {};
+
+    for (std::size_t i = 0; i < historyIn.size(); ++i) {
+        historyIn[i] = static_cast<float>(i) * 0.1f;
+    }
+    for (std::size_t i = 0; i < mutatedIn.size(); ++i) {
+        mutatedIn[i] = 4.0f + static_cast<float>(i);
+        continuedIn[i] = 8.0f + static_cast<float>(i);
+    }
+
+    AudioBlock audio;
+    audio.inputs[0] = historyIn.data();
+    audio.outputs[0] = historyOut.data();
+    audio.channelCount = 1;
+
+    TransportSnapshot transport;
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 0.0;
+    transport.barBeat = 0.0;
+    transport.beatsPerBar = 4.0;
+    transport.bpm = 60.0;
+
+    const OutputStatus initial = processBlock(state,
+                                              parameters,
+                                              Triggers {},
+                                              transport,
+                                              static_cast<std::uint32_t>(historyIn.size()),
+                                              8.0,
+                                              audio);
+    assert(initial.action == ActionType::Pass);
+
+    audio.inputs[0] = mutatedIn.data();
+    audio.outputs[0] = mutatedOut.data();
+    transport.bar = 1.0;
+    const OutputStatus mutated = processBlock(state,
+                                              parameters,
+                                              Triggers {.scatterSerial = 1},
+                                              transport,
+                                              static_cast<std::uint32_t>(mutatedIn.size()),
+                                              8.0,
+                                              audio);
+
+    assert(mutated.action != ActionType::Pass);
+    assert(state.transitionBlock.valid);
+    assert(state.transitionFramesTotal == 8u);
+    assert(state.transitionFramesRemaining == 4u);
+
+    audio.inputs[0] = continuedIn.data();
+    audio.outputs[0] = continuedOut.data();
+    transport.bar = 1.0;
+    transport.barBeat = 0.5;
+    const OutputStatus continued = processBlock(state,
+                                                parameters,
+                                                Triggers {.scatterSerial = 1},
+                                                transport,
+                                                static_cast<std::uint32_t>(continuedIn.size()),
+                                                8.0,
+                                                audio);
+    assert(continued.action != ActionType::Pass);
+
+    assert(state.transitionFramesRemaining == 0u);
+    assert(!state.transitionBlock.valid);
+}
+
 void testSerializationRoundTrip() {
     Parameters parameters;
     parameters.grid = 5.0f;
@@ -186,6 +269,7 @@ int main() {
     testPreviewActionHonorsZeroDensity();
     testStoppedTransportPassesThrough();
     testScatterMutatesAndRecoverReturnsDry();
+    testBlockTransitionsArmCrossfade();
     testSerializationRoundTrip();
     return 0;
 }

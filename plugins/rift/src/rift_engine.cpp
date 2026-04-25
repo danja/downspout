@@ -6,6 +6,8 @@
 namespace downspout::rift {
 namespace {
 
+constexpr double kHalfPi = 1.5707963267948966;
+
 [[nodiscard]] float clampf(float value, float minValue, float maxValue) {
     if (value < minValue) {
         return minValue;
@@ -92,6 +94,67 @@ namespace {
     return static_cast<std::size_t>(frame) * static_cast<std::size_t>(state.bufferChannels) + static_cast<std::size_t>(channel);
 }
 
+[[nodiscard]] bool nearlyEqual(const double lhs, const double rhs, const double epsilon = 1e-6) {
+    return std::fabs(lhs - rhs) <= epsilon;
+}
+
+[[nodiscard]] bool blocksEquivalent(const BlockSpec& lhs, const BlockSpec& rhs) {
+    return lhs.valid == rhs.valid &&
+           lhs.action == rhs.action &&
+           lhs.sourceStartFrame == rhs.sourceStartFrame &&
+           lhs.sourceLengthFrames == rhs.sourceLengthFrames &&
+           nearlyEqual(lhs.readPosition, rhs.readPosition) &&
+           nearlyEqual(lhs.readRate, rhs.readRate) &&
+           nearlyEqual(lhs.wet, rhs.wet) &&
+           nearlyEqual(lhs.dry, rhs.dry);
+}
+
+[[nodiscard]] std::uint32_t crossfadeFramesFor(const double sampleRate, const std::uint32_t sourceLengthFrames) {
+    const std::uint32_t base = static_cast<std::uint32_t>(std::lround(sampleRate * 0.0015));
+    const std::uint32_t desired = std::clamp(base, 8u, 96u);
+    const std::uint32_t perBlockCap = std::max(1u, sourceLengthFrames / 4u);
+    return std::min(desired, perBlockCap);
+}
+
+void clearTransition(EngineState& state) {
+    state.transitionBlock = {};
+    state.transitionFramesRemaining = 0;
+    state.transitionFramesTotal = 0;
+}
+
+[[nodiscard]] BlockSpec makePassBlock() {
+    BlockSpec block {};
+    block.action = ActionType::Pass;
+    block.valid = true;
+    block.dry = 1.0f;
+    block.wet = 0.0f;
+    return block;
+}
+
+void applySelectedBlock(EngineState& state, const BlockSpec& block, const std::int64_t blockSerial) {
+    const BlockSpec previous = state.activeBlock;
+
+    state.activeBlock = block;
+    state.activeBlock.valid = true;
+    state.activeBlockSerial = blockSerial;
+
+    if (!previous.valid || blocksEquivalent(previous, state.activeBlock)) {
+        clearTransition(state);
+        return;
+    }
+
+    const std::uint32_t referenceFrames = std::max(previous.sourceLengthFrames, state.activeBlock.sourceLengthFrames);
+    const std::uint32_t transitionFrames = crossfadeFramesFor(state.sampleRate, referenceFrames);
+    if (transitionFrames <= 1u) {
+        clearTransition(state);
+        return;
+    }
+
+    state.transitionBlock = previous;
+    state.transitionFramesTotal = transitionFrames;
+    state.transitionFramesRemaining = transitionFrames;
+}
+
 void ensureBuffer(EngineState& state,
                   const Parameters& parameters,
                   const TransportSnapshot& transport,
@@ -120,6 +183,7 @@ void ensureBuffer(EngineState& state,
     state.sampleRate = sampleRate;
     state.activeBlock = {};
     state.activeBlockSerial = -1;
+    clearTransition(state);
 }
 
 void writeInputFrame(EngineState& state, const AudioBlock& audio, const std::uint32_t frame) {
@@ -186,13 +250,6 @@ void armTriggers(EngineState& state, const Triggers& triggers) {
     }
 }
 
-void setPassBlock(EngineState& state, const std::int64_t blockSerial) {
-    state.activeBlock = {};
-    state.activeBlock.action = ActionType::Pass;
-    state.activeBlock.valid = true;
-    state.activeBlockSerial = blockSerial;
-}
-
 void selectBlock(EngineState& state,
                  const Parameters& parameters,
                  const Triggers& triggers,
@@ -202,7 +259,7 @@ void selectBlock(EngineState& state,
     armTriggers(state, triggers);
 
     if (state.recoverBlocksRemaining > 0) {
-        setPassBlock(state, blockSerial);
+        applySelectedBlock(state, makePassBlock(), blockSerial);
         state.recoverBlocksRemaining -= 1u;
         return;
     }
@@ -223,7 +280,7 @@ void selectBlock(EngineState& state,
 
     const ActionType action = chooseAction(parameters, state.rngState, forceMutation);
     if (action == ActionType::Pass) {
-        setPassBlock(state, blockSerial);
+        applySelectedBlock(state, makePassBlock(), blockSerial);
         return;
     }
 
@@ -233,7 +290,7 @@ void selectBlock(EngineState& state,
         static_cast<std::uint32_t>(std::llround(framesPerBar * std::max(1.0f, parameters.memoryBars))));
     const std::uint32_t availableHistory = std::min(state.filledFrames, memoryFrames);
     if (availableHistory <= sourceLength + 8u) {
-        setPassBlock(state, blockSerial);
+        applySelectedBlock(state, makePassBlock(), blockSerial);
         return;
     }
 
@@ -286,8 +343,36 @@ void selectBlock(EngineState& state,
         break;
     }
 
-    state.activeBlock = block;
-    state.activeBlockSerial = blockSerial;
+    applySelectedBlock(state, block, blockSerial);
+}
+
+[[nodiscard]] float renderBlockSample(const EngineState& state,
+                                      const BlockSpec& block,
+                                      const std::uint32_t channel,
+                                      const float live) {
+    switch (block.action) {
+    case ActionType::Pass:
+        return live;
+    case ActionType::Skip:
+        return live * block.dry;
+    case ActionType::Repeat:
+    case ActionType::Reverse:
+    case ActionType::Smear:
+    case ActionType::Slip: {
+        const float effected = readBuffer(state, block, channel, block.readPosition);
+        return live * block.dry + effected * block.wet;
+    }
+    }
+
+    return live;
+}
+
+void advanceBlockReadPosition(BlockSpec& block) {
+    if (block.action == ActionType::Pass || block.action == ActionType::Skip) {
+        return;
+    }
+
+    block.readPosition = wrapReadPosition(block, block.readPosition + block.readRate);
 }
 
 }  // namespace
@@ -354,7 +439,9 @@ OutputStatus processBlock(EngineState& state,
 
     if (!hostPlaying) {
         state.transportWasPlaying = false;
-        setPassBlock(state, -1);
+        state.activeBlock = makePassBlock();
+        state.activeBlockSerial = -1;
+        clearTransition(state);
 
         for (std::uint32_t frame = 0; frame < nframes; ++frame) {
             for (std::uint32_t channel = 0; channel < channelCount; ++channel) {
@@ -431,29 +518,32 @@ OutputStatus processBlock(EngineState& state,
 
             const float* in = audio.inputs[channel];
             const float live = in ? in[frame] : 0.0f;
-            float effected = 0.0f;
+            const float currentOutput = renderBlockSample(state, state.activeBlock, channel, live);
 
-            switch (state.activeBlock.action) {
-            case ActionType::Pass:
-                out[frame] = live;
-                continue;
-            case ActionType::Skip:
-                effected = 0.0f;
-                break;
-            case ActionType::Repeat:
-            case ActionType::Reverse:
-            case ActionType::Smear:
-            case ActionType::Slip:
-                effected = readBuffer(state, state.activeBlock, channel, state.activeBlock.readPosition);
-                break;
+            if (state.transitionFramesRemaining > 0u && state.transitionBlock.valid) {
+                const float previousOutput = renderBlockSample(state, state.transitionBlock, channel, live);
+                const std::uint32_t transitionIndex = state.transitionFramesTotal - state.transitionFramesRemaining + 1u;
+                const double t = clampf(static_cast<float>(transitionIndex) /
+                                            static_cast<float>(std::max(1u, state.transitionFramesTotal)),
+                                        0.0f,
+                                        1.0f);
+                const double phase = t * kHalfPi;
+                const float previousGain = static_cast<float>(std::cos(phase));
+                const float currentGain = static_cast<float>(std::sin(phase));
+                out[frame] = previousOutput * previousGain + currentOutput * currentGain;
+            } else {
+                out[frame] = currentOutput;
             }
-
-            out[frame] = live * state.activeBlock.dry + effected * state.activeBlock.wet;
         }
 
-        if (state.activeBlock.action != ActionType::Pass && state.activeBlock.action != ActionType::Skip) {
-            state.activeBlock.readPosition = wrapReadPosition(state.activeBlock,
-                                                              state.activeBlock.readPosition + state.activeBlock.readRate);
+        advanceBlockReadPosition(state.activeBlock);
+
+        if (state.transitionFramesRemaining > 0u && state.transitionBlock.valid) {
+            advanceBlockReadPosition(state.transitionBlock);
+            state.transitionFramesRemaining -= 1u;
+            if (state.transitionFramesRemaining == 0u) {
+                clearTransition(state);
+            }
         }
 
         writeInputFrame(state, audio, frame);

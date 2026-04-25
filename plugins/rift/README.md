@@ -45,8 +45,16 @@ The UI is intentionally product-style rather than dev-style:
 
 - one macro strip for the playable controls;
 - large `Hold`, `Scatter`, and `Recover` buttons;
+- a bottom `Modes` strip with quick parameter recipes such as `Stutter`,
+  `Smear`, and `Ruin`;
 - a preview lane that shows the next conceptual block pattern;
 - an action-bias panel that makes the musical consequences of the macros legible.
+
+## Transition handling
+
+`rift` now smooths action changes with a short equal-power crossfade at block
+boundaries. That keeps the rhythmic hard cuts, but avoids the worst clicks when
+the read head jumps to a very different slice.
 
 ## Verification status
 
