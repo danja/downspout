@@ -147,6 +147,7 @@ Current main gap:
 
 - DPF is now vendored and all current wrapper targets build successfully.
 - `install.sh` now installs real `bassgen.vst3`, `p_mix.vst3`, `e_mix.vst3`, `rift.vst3`, `drumgen.vst3`, `cadence.vst3`, `gremlin.vst3`, and `gremlin_driver.vst3` bundles.
+- both `install.sh` and `scripts/package-release.sh` now pass clean full-tree smoke runs for all eight bundles.
 - the main remaining gaps are host validation of `bassgen`, host validation of `p-mix`, host validation of `e-mix`, host validation of `rift`, host validation of `drumgen`, host validation of `cadence`, host validation of `gremlin`, host validation of `gremlin-driver`, and validating the first tagged GitHub Actions release.
 
 ## Next implementation sequence
@@ -161,9 +162,8 @@ The next work should proceed in this order:
 6. Validate `cadence.vst3` in Reaper, especially learning, restart/rewind handling, and saved-state restore.
 7. Validate `gremlin.vst3` in Reaper, especially combined note/controller MIDI, scene switching, and level range.
 8. Validate `gremlin_driver.vst3` in Reaper, especially MIDI pass-through, transport sync, and chaining into `gremlin.vst3`.
-9. Validate the release-build workflow on the first public tag so installable bundles can be built reproducibly in `Release` mode.
-10. Confirm `install.sh` and local docs against clean `Release` installs for all current plugins.
-11. Validate `drumgen.vst3` in Reaper, especially the new action-button UI, transport sync, MIDI output behavior, and state restore through the host.
+9. Validate `drumgen.vst3` in Reaper, especially the new action-button UI, transport sync, MIDI output behavior, and state restore through the host.
+10. Validate the release-build workflow on the first public tag so installable bundles can be built reproducibly on GitHub, not just locally.
 
 Reasoning:
 

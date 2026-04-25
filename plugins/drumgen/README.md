@@ -29,7 +29,7 @@ Implementation status:
 Recommended next steps:
 
 1. validate `drumgen.vst3` in a host, especially the action buttons and saved-state restore path;
-2. broaden tests to cover legacy state upgrade behavior and wrapper-facing state mapping;
+2. broaden tests around earlier-state-format handling where it still applies to the current wrapper-facing state mapping;
 3. decide whether a preview grid is worth adding after host validation;
 4. keep release packaging aligned with the now-UI-backed wrapper target.
 

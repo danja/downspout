@@ -85,7 +85,7 @@ Contains two concerns that should be split in `downspout`:
 - validation and upgrade of saved state payloads
 - LV2-specific storage/retrieval callbacks
 
-The data validation and legacy upgrade logic is reusable.
+The data validation and earlier-format upgrade logic is reusable.
 The direct `LV2_State_*` calls are not.
 
 ### `drumgen_plugin.cpp`
@@ -112,7 +112,7 @@ This file should not be ported directly.
 - immediate pending-note cleanup when transport stops or loop mutation replaces hits;
 - open-hat one-sample safety offset on note-on;
 - exact pattern persistence, including lane steps and variation state;
-- legacy control-state upgrade behavior from the older saved-state layout.
+- older control-state upgrade behavior from the earlier saved-state layout.
 
 ## LV2-specific dependencies to replace
 
@@ -190,5 +190,5 @@ Completed in `downspout`:
 
 Still missing:
 
-- legacy saved-state upgrade coverage
+- earlier saved-state compatibility coverage
 - preview-grid UI follow-up

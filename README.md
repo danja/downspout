@@ -176,6 +176,5 @@ randomisation bursts while passing note input through.
 6. Validate `cadence.vst3` in Reaper, especially learning, restart/rewind behavior, and state restore.
 7. Validate `gremlin.vst3` in Reaper, especially controller-style MIDI gestures, scene changes, and output level.
 8. Validate `gremlin_driver.vst3` in Reaper, especially MIDI pass-through, transport sync, and chaining into `gremlin.vst3`.
-9. Validate the GitHub Actions release workflow on the first public tag that includes all current plugins.
-10. Verify `install.sh` and local docs against a clean `Release` build path for all current plugins.
-11. Validate `drumgen.vst3` in Reaper, especially the new action-button UI, transport sync, and state restore.
+9. Validate `drumgen.vst3` in Reaper, especially the new action-button UI, transport sync, and state restore.
+10. Publish the first public `v*` tag and verify the GitHub Actions release assets on GitHub.

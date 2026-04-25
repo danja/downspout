@@ -5,7 +5,7 @@
 - LV2 source: `/home/danny/github/flues/lv2/gremlin`
 - main shell: `src/gremlin_plugin.cpp`
 - engine: `src/GremlinEngine.hpp`
-- legacy UI: `src/ui/gremlin_ui_x11.c`
+- original X11 UI: `src/ui/gremlin_ui_x11.c`
 
 ## Portable core identified
 

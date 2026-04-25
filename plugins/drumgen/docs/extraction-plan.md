@@ -26,7 +26,7 @@ Port the following source modules into portable C++:
 - pattern generation and cleanup
 - transport helpers
 - variation logic
-- state sanitization and legacy upgrade helpers
+- state sanitization and earlier-format upgrade helpers
 - serialization helpers for wrapper-facing state persistence
 
 Exit condition:
@@ -69,14 +69,17 @@ Add deterministic tests for:
 - stopped-transport pending-note cleanup;
 - restart-at-boundary hit resync;
 - serialization round-trips for controls, pattern, and variation;
-- legacy saved-control upgrade behavior.
+- earlier saved-control format behavior where it still applies to the current
+  text-state port.
 
 Status: in progress.
 Initial tests now cover deterministic generation, fill refresh, single-bar
 refresh preservation, transport helpers, variation behavior, state
 sanitization, serialization round-trips, pending note-off carryover, stopped
 transport cleanup, restart-at-boundary resync, and in-block boundary
-scheduling. Legacy saved-control upgrade coverage is still missing.
+scheduling. The current remaining gap is narrower: direct LV2 binary snapshot
+conversion is outside the VST3 text-state path, so the practical test surface is
+host save/restore behavior rather than binary LV2 blob migration.
 
 ## Phase 5: DPF wrapper
 

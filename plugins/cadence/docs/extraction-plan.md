@@ -49,7 +49,7 @@ Add deterministic tests for:
 
 Status: in progress.
 Initial cadence core tests now pass, but wrapper-facing state coverage and
-legacy-state migration coverage are still thin.
+earlier-state-format coverage are still thin.
 
 ## Phase 5: DPF wrapper
 

@@ -45,7 +45,8 @@ Exit condition:
 - the only remaining framework code is parameter I/O, transport adaptation, MIDI sink adaptation, and state bridge code.
 
 Status: in progress.
-The first host-neutral engine layer now exists and emits scheduled MIDI events for a block. The remaining work is to add serialization helpers and then wrap the engine in DPF.
+Completed.
+The host-neutral engine layer now exists and emits scheduled MIDI events for a block.
 
 Update:
 
@@ -75,3 +76,8 @@ Current coverage also includes serialization round-trips for controls, pattern s
 Add DPF plugin code only after the core phases above pass tests.
 
 The first wrapper should target correctness, not UI completeness.
+
+Status: completed.
+`bassgen.vst3` now builds through DPF on top of the portable core, transport,
+serialization, and scheduling code. The remaining work is host validation and
+incremental fixes found during DAW testing.
