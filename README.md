@@ -10,7 +10,7 @@ copy the `.vst3` bundles into `~/.vst3`:
 
 ```bash
 mkdir -p ~/.vst3
-cp -r bassgen.vst3 p_mix.vst3 e_mix.vst3 drumgen.vst3 cadence.vst3 gremlin.vst3 gremlin_driver.vst3 ~/.vst3/
+cp -r bassgen.vst3 p_mix.vst3 e_mix.vst3 rift.vst3 drumgen.vst3 cadence.vst3 gremlin.vst3 gremlin_driver.vst3 ~/.vst3/
 ```
 
 Then restart your DAW or trigger a plugin rescan.
@@ -20,6 +20,7 @@ The immediate targets are:
 - `bassgen`: a transport-aware MIDI generator
 - `p-mix`: a transport-aware probabilistic audio effect
 - `e-mix`: a transport-aware Euclidean audio gate
+- `rift`: an original transport-aware buffer damage effect
 - `drumgen`: a transport-aware MIDI drum generator
 - `cadence`: a transport-aware MIDI harmonizer and comping generator
 - `gremlin`: a chaotic glitch instrument with live performance gestures
@@ -49,13 +50,14 @@ This repository now contains:
 - a first DPF-backed `p-mix` VST3 wrapper target with UI;
 - a portable `e-mix` core library with tests;
 - a first DPF-backed `e_mix.vst3` wrapper target with a redesigned UI;
+- an original `rift` core library with tests and a first DPF-backed `rift.vst3` wrapper target with UI;
 - a portable `drumgen` core library with a host-neutral MIDI engine, serialization helpers, tests, and a first DPF-backed VST3 wrapper target with UI;
 - a portable `cadence` core library with tests and a first DPF-backed `cadence.vst3` wrapper target with UI;
 - a portable `gremlin` core library with tests and a first DPF-backed `gremlin.vst3` wrapper target with UI;
 - a portable `gremlin-driver` MIDI control core with tests and a first DPF-backed `gremlin_driver.vst3` wrapper target with UI;
 - an `install.sh` entrypoint for local VST3 installs.
 
-`bassgen`, `p_mix`, `e_mix`, `drumgen`, `cadence`, `gremlin`, and `gremlin_driver` can now be built and installed as `.vst3` bundles.
+`bassgen`, `p_mix`, `e_mix`, `rift`, `drumgen`, `cadence`, `gremlin`, and `gremlin_driver` can now be built and installed as `.vst3` bundles.
 
 ## Build & Install
 
@@ -84,6 +86,7 @@ Current installable plugin:
 - `bassgen.vst3`
 - `p_mix.vst3`
 - `e_mix.vst3`
+- `rift.vst3`
 - `drumgen.vst3`
 - `cadence.vst3`
 - `gremlin.vst3`
@@ -104,6 +107,13 @@ workflow details.
 gate core. Its custom UI is a deliberate redesign of the old LV2 panel: the
 cycle pattern, block length, density, and fade envelope are all visible
 directly.
+
+## Rift
+
+`rift` now builds as `rift.vst3`. It is an original `downspout` effect rather
+than a `flues` port: a transport-locked stereo buffer disruptor with repeat,
+reverse, skip, smear, and pitch-slip actions plus `Hold`, `Scatter`, and
+`Recover` performance controls.
 
 ## Drumgen
 
@@ -136,10 +146,11 @@ randomisation bursts while passing note input through.
 1. Finish host-side validation of `bassgen.vst3` in Reaper and fix any remaining wrapper/UI issues.
 2. Continue validating the new stereo `p-mix.vst3` wrapper and its manual mute toggle in Reaper.
 3. Validate `e_mix.vst3` in Reaper, especially stopped transport behavior, restart handling, and UI readability.
-4. Tighten any remaining host-specific `p-mix` UI or interaction issues beyond the first layout polish pass.
-5. Validate `cadence.vst3` in Reaper, especially learning, restart/rewind behavior, and state restore.
-6. Validate `gremlin.vst3` in Reaper, especially controller-style MIDI gestures, scene changes, and output level.
-7. Validate `gremlin_driver.vst3` in Reaper, especially MIDI pass-through, transport sync, and chaining into `gremlin.vst3`.
-8. Validate the GitHub Actions release workflow on the first public tag that includes all current plugins.
-9. Verify `install.sh` and local docs against a clean `Release` build path for all current plugins.
-10. Validate `drumgen.vst3` in Reaper, especially the new action-button UI, transport sync, and state restore.
+4. Validate `rift.vst3` in Reaper, especially whether the macro panel and block preview make the effect learnable in practice.
+5. Tighten any remaining host-specific `p-mix` UI or interaction issues beyond the first layout polish pass.
+6. Validate `cadence.vst3` in Reaper, especially learning, restart/rewind behavior, and state restore.
+7. Validate `gremlin.vst3` in Reaper, especially controller-style MIDI gestures, scene changes, and output level.
+8. Validate `gremlin_driver.vst3` in Reaper, especially MIDI pass-through, transport sync, and chaining into `gremlin.vst3`.
+9. Validate the GitHub Actions release workflow on the first public tag that includes all current plugins.
+10. Verify `install.sh` and local docs against a clean `Release` build path for all current plugins.
+11. Validate `drumgen.vst3` in Reaper, especially the new action-button UI, transport sync, and state restore.

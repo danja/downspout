@@ -44,7 +44,8 @@ Initial plugin targets:
 - Treat DPF as the shell, not the architecture.
 - Current working pattern in this repo is: portable core, text state
   serialization, thin DPF wrapper, custom NanoVG UI, and deterministic core
-  tests. `p-mix` and `e-mix` are the reference shapes for audio effects.
+  tests. `p-mix`, `e-mix`, and `rift` are the reference shapes for audio
+  effects.
 - Keep parameter IDs, ranges, defaults, and semantic behavior traceable back to the original plugin.
 - For transport-aware plugins, write explicit tests for stopped transport, loop boundaries, rewind, and tempo/bar changes.
 - For stateful plugins, define a stable serialization contract before UI work.

@@ -14,6 +14,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 option(DOWNSPOUT_BUILD_BASSGEN "Configure the bassgen port target" ON)
 option(DOWNSPOUT_BUILD_PMIX "Configure the p-mix port target" ON)
 option(DOWNSPOUT_BUILD_EMIX "Configure the e-mix port target" ON)
+option(DOWNSPOUT_BUILD_RIFT "Configure the rift original effect target" ON)
 option(DOWNSPOUT_BUILD_DRUMGEN "Configure the drumgen port target" ON)
 option(DOWNSPOUT_BUILD_CADENCE "Configure the cadence port target" ON)
 option(DOWNSPOUT_BUILD_GREMLIN "Configure the gremlin port target" ON)
@@ -50,6 +51,10 @@ endif()
 
 if(DOWNSPOUT_BUILD_EMIX)
     add_subdirectory(plugins/e-mix)
+endif()
+
+if(DOWNSPOUT_BUILD_RIFT)
+    add_subdirectory(plugins/rift)
 endif()
 
 if(DOWNSPOUT_BUILD_DRUMGEN)
