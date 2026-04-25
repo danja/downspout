@@ -108,6 +108,23 @@ x86_64 VST3 zip containing all current bundles.
 See [docs/release.md](docs/release.md) for the release artifact shape and
 workflow details.
 
+## Reference Docs
+
+- [docs/architecture.md](docs/architecture.md)
+  How the repository is wired together, including build graph, dependency
+  direction, core/wrapper/UI split, and install/release flow
+- [docs/install.md](docs/install.md)
+  Local build and installation notes
+- [docs/release.md](docs/release.md)
+  Release packaging and GitHub Release workflow
+- [docs/requirements.md](docs/requirements.md)
+  Build and dependency expectations
+- [docs/plan.md](docs/plan.md)
+  Current project direction and remaining work
+
+Each plugin also has its own `README.md` and `docs/` directory under
+`plugins/<plugin>/` for port-specific notes.
+
 ## EMix
 
 `e_mix` now builds as `e_mix.vst3` on top of a portable stereo-first transport
