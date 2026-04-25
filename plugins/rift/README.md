@@ -30,6 +30,8 @@ source material.
   become.
 - `Pitch`
   Semitone offset used by the slip action.
+- `Blend`
+  Crossfade amount between the end of a slice loop and its next pass.
 - `Mix`
   Wet level of the slice playback layer.
 - `Hold`
@@ -54,7 +56,9 @@ The UI is intentionally product-style rather than dev-style:
 
 `rift` now smooths action changes with a short equal-power crossfade at block
 boundaries. That keeps the rhythmic hard cuts, but avoids the worst clicks when
-the read head jumps to a very different slice.
+the read head jumps to a very different slice. The `Blend` control separately
+crossfades each slice wrap so repeated loops can stay aggressive without
+spitting a click at every restart.
 
 ## Verification status
 

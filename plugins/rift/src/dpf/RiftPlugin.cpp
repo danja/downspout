@@ -26,6 +26,7 @@ using downspout::rift::kParamDensity;
 using downspout::rift::kParamDrift;
 using downspout::rift::kParamGrid;
 using downspout::rift::kParamHold;
+using downspout::rift::kParamBlend;
 using downspout::rift::kParamMemoryBars;
 using downspout::rift::kParamMix;
 using downspout::rift::kParamPitch;
@@ -187,6 +188,14 @@ protected:
             parameter.ranges.max = 100.0f;
             parameter.ranges.def = 100.0f;
             break;
+        case kParamBlend:
+            parameter.name = "Blend";
+            parameter.symbol = "blend";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 100.0f;
+            parameter.ranges.def = 20.0f;
+            break;
         case kParamHold:
             parameter.name = "Hold";
             parameter.symbol = "hold";
@@ -256,6 +265,7 @@ protected:
         case kParamDrift: return parameters_.drift;
         case kParamPitch: return parameters_.pitch;
         case kParamMix: return parameters_.mix;
+        case kParamBlend: return parameters_.blend;
         case kParamHold: return parameters_.hold;
         case kParamScatter: return scatterValue_;
         case kParamRecover: return recoverValue_;
@@ -276,6 +286,7 @@ protected:
         case kParamDrift: parameters_.drift = value; break;
         case kParamPitch: parameters_.pitch = value; break;
         case kParamMix: parameters_.mix = value; break;
+        case kParamBlend: parameters_.blend = value; break;
         case kParamHold: parameters_.hold = value; break;
         case kParamScatter:
             if (value >= 0.5f && scatterValue_ < 0.5f)

@@ -35,7 +35,7 @@ std::vector<std::string_view> split(std::string_view text, const char delimiter)
 }  // namespace
 
 std::string serializeParameters(const Parameters& parameters) {
-    return "version=1\n"
+    return "version=2\n"
            "grid=" + std::to_string(parameters.grid) + "\n"
            "density=" + std::to_string(parameters.density) + "\n"
            "damage=" + std::to_string(parameters.damage) + "\n"
@@ -43,6 +43,7 @@ std::string serializeParameters(const Parameters& parameters) {
            "drift=" + std::to_string(parameters.drift) + "\n"
            "pitch=" + std::to_string(parameters.pitch) + "\n"
            "mix=" + std::to_string(parameters.mix) + "\n"
+           "blend=" + std::to_string(parameters.blend) + "\n"
            "hold=" + std::to_string(parameters.hold) + "\n";
 }
 
@@ -79,6 +80,8 @@ std::optional<Parameters> deserializeParameters(const std::string& text) {
             parameters.pitch = parsed;
         } else if (key == "mix" && parseFloat(value, parsed)) {
             parameters.mix = parsed;
+        } else if (key == "blend" && parseFloat(value, parsed)) {
+            parameters.blend = parsed;
         } else if (key == "hold" && parseFloat(value, parsed)) {
             parameters.hold = parsed;
         } else {

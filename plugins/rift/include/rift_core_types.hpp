@@ -35,6 +35,7 @@ struct Parameters {
     float drift = 20.0f;
     float pitch = 0.0f;
     float mix = 100.0f;
+    float blend = 20.0f;
     float hold = 0.0f;
 };
 
@@ -64,6 +65,7 @@ struct BlockSpec {
     double readRate = 1.0;
     std::uint32_t sourceStartFrame = 0;
     std::uint32_t sourceLengthFrames = 1;
+    std::uint32_t loopBlendFrames = 0;
     float wet = 0.0f;
     float dry = 1.0f;
     bool valid = false;

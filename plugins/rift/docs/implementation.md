@@ -27,6 +27,8 @@ surprises are usually the wrong default.
 - input is written into the buffer after output for that frame is rendered.
 - when the selected block changes, the core crossfades from the previous block
   to the new one for a short fixed window so large read-head jumps do not click.
+- when a slice loops back to its start, the core can also crossfade the tail
+  into the next pass, controlled by the user-facing `Blend` parameter.
 
 ## Performance gestures
 

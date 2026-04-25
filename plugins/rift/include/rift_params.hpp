@@ -15,6 +15,7 @@ enum ParameterIndex : std::uint32_t {
     kParamHold,
     kParamScatter,
     kParamRecover,
+    kParamBlend,
     kParamStatusAction,
     kParamStatusActivity,
     kParameterCount

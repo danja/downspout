@@ -49,6 +49,7 @@ The UI avoids exposing too many microscopic options. Instead it uses:
 - a few strong musical macros;
 - three large performance gestures;
 - a bottom strip of named mode recipes for quick direction changes;
+- an explicit blend control for loop-wrap smoothing;
 - visual explanations of the block plan and action bias.
 
 That tradeoff matters. This plugin is supposed to spark ideas in a DAW session,

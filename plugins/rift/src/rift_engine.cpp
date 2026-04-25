@@ -103,6 +103,7 @@ constexpr double kHalfPi = 1.5707963267948966;
            lhs.action == rhs.action &&
            lhs.sourceStartFrame == rhs.sourceStartFrame &&
            lhs.sourceLengthFrames == rhs.sourceLengthFrames &&
+           lhs.loopBlendFrames == rhs.loopBlendFrames &&
            nearlyEqual(lhs.readPosition, rhs.readPosition) &&
            nearlyEqual(lhs.readRate, rhs.readRate) &&
            nearlyEqual(lhs.wet, rhs.wet) &&
@@ -114,6 +115,24 @@ constexpr double kHalfPi = 1.5707963267948966;
     const std::uint32_t desired = std::clamp(base, 8u, 96u);
     const std::uint32_t perBlockCap = std::max(1u, sourceLengthFrames / 4u);
     return std::min(desired, perBlockCap);
+}
+
+[[nodiscard]] std::uint32_t loopBlendFramesFor(const Parameters& parameters,
+                                               const double sampleRate,
+                                               const std::uint32_t sourceLengthFrames) {
+    const float blendNorm = clampf(parameters.blend * 0.01f, 0.0f, 1.0f);
+    if (blendNorm <= 0.0f || sourceLengthFrames <= 2u) {
+        return 0u;
+    }
+
+    const std::uint32_t maxByTime = static_cast<std::uint32_t>(std::lround(sampleRate * 0.015));
+    const std::uint32_t maxByLoop = std::max(1u, sourceLengthFrames / 3u);
+    const std::uint32_t cap = std::min(maxByTime, maxByLoop);
+    if (cap <= 1u) {
+        return 0u;
+    }
+
+    return std::clamp(static_cast<std::uint32_t>(std::lround(static_cast<double>(cap) * blendNorm)), 0u, cap);
 }
 
 void clearTransition(EngineState& state) {
@@ -201,21 +220,12 @@ void writeInputFrame(EngineState& state, const AudioBlock& audio, const std::uin
     state.filledFrames = std::min(state.filledFrames + 1u, state.bufferFrames);
 }
 
-[[nodiscard]] float readBuffer(const EngineState& state,
-                               const BlockSpec& block,
-                               const std::uint32_t channel,
-                               double position) {
+[[nodiscard]] float readBufferAtPosition(const EngineState& state,
+                                         const std::uint32_t channel,
+                                         double position) {
     if (state.bufferFrames == 0 || state.bufferChannels == 0 || channel >= state.bufferChannels) {
         return 0.0f;
     }
-
-    const double start = static_cast<double>(block.sourceStartFrame);
-    const double length = static_cast<double>(std::max<std::uint32_t>(1u, block.sourceLengthFrames));
-    position = std::fmod(position - start, length);
-    if (position < 0.0) {
-        position += length;
-    }
-    position += start;
 
     const std::int64_t frame0 = static_cast<std::int64_t>(std::floor(position));
     const double frac = position - static_cast<double>(frame0);
@@ -225,6 +235,56 @@ void writeInputFrame(EngineState& state, const AudioBlock& audio, const std::uin
     const float sample0 = state.buffer[bufferIndex(state, channel, index0)];
     const float sample1 = state.buffer[bufferIndex(state, channel, index1)];
     return sample0 + static_cast<float>(frac) * (sample1 - sample0);
+}
+
+[[nodiscard]] float readLoopRelative(const EngineState& state,
+                                     const BlockSpec& block,
+                                     const std::uint32_t channel,
+                                     double relative) {
+    const double length = static_cast<double>(std::max<std::uint32_t>(1u, block.sourceLengthFrames));
+    relative = std::fmod(relative, length);
+    if (relative < 0.0) {
+        relative += length;
+    }
+
+    return readBufferAtPosition(state, channel, static_cast<double>(block.sourceStartFrame) + relative);
+}
+
+[[nodiscard]] float readBuffer(const EngineState& state,
+                               const BlockSpec& block,
+                               const std::uint32_t channel,
+                               double position) {
+    const double length = static_cast<double>(std::max<std::uint32_t>(1u, block.sourceLengthFrames));
+    double relative = std::fmod(position - static_cast<double>(block.sourceStartFrame), length);
+    if (relative < 0.0) {
+        relative += length;
+    }
+
+    const float primary = readLoopRelative(state, block, channel, relative);
+    const std::uint32_t blendFrames = std::min(block.loopBlendFrames, block.sourceLengthFrames > 1u ? block.sourceLengthFrames - 1u : 0u);
+    if (blendFrames <= 1u) {
+        return primary;
+    }
+
+    const double blendLength = static_cast<double>(blendFrames);
+    if (block.readRate >= 0.0) {
+        const double blendStart = length - blendLength;
+        if (relative >= blendStart) {
+            const double t = clampf(static_cast<float>((relative - blendStart) / blendLength), 0.0f, 1.0f);
+            const float next = readLoopRelative(state, block, channel, relative - blendStart);
+            const double phase = t * kHalfPi;
+            return primary * static_cast<float>(std::cos(phase)) +
+                   next * static_cast<float>(std::sin(phase));
+        }
+    } else if (relative < blendLength) {
+        const double t = clampf(static_cast<float>(relative / blendLength), 0.0f, 1.0f);
+        const float next = readLoopRelative(state, block, channel, length - blendLength + relative);
+        const double phase = t * kHalfPi;
+        return next * static_cast<float>(std::cos(phase)) +
+               primary * static_cast<float>(std::sin(phase));
+    }
+
+    return primary;
 }
 
 [[nodiscard]] double wrapReadPosition(const BlockSpec& block, double position) {
@@ -305,6 +365,7 @@ void selectBlock(EngineState& state,
     const std::uint32_t lookback = sourceLength + extra;
     block.sourceStartFrame = wrapFrameIndex(state, static_cast<std::int64_t>(state.writeHead) - static_cast<std::int64_t>(lookback));
     block.sourceLengthFrames = sourceLength;
+    block.loopBlendFrames = loopBlendFramesFor(parameters, state.sampleRate, sourceLength);
     block.action = action;
     block.wet = clampf(parameters.mix * 0.01f, 0.0f, 1.0f);
     block.dry = 1.0f - block.wet;
@@ -386,6 +447,7 @@ Parameters clampParameters(const Parameters& raw) {
     parameters.drift = clampf(parameters.drift, 0.0f, 100.0f);
     parameters.pitch = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.pitch)), -12, 12));
     parameters.mix = clampf(parameters.mix, 0.0f, 100.0f);
+    parameters.blend = clampf(parameters.blend, 0.0f, 100.0f);
     parameters.hold = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.hold)), 0, 1));
     return parameters;
 }

@@ -18,6 +18,7 @@ using downspout::rift::ActionType;
 using downspout::rift::ActionWeights;
 using downspout::rift::kActionCount;
 using downspout::rift::kActionNames;
+using downspout::rift::kParamBlend;
 using downspout::rift::kParamDamage;
 using downspout::rift::kParamDensity;
 using downspout::rift::kParamDrift;
@@ -69,13 +70,14 @@ struct ModePreset {
     CoreParameters parameters;
 };
 
-constexpr std::array<SliderDef, 7> kSliders = {{
+constexpr std::array<SliderDef, 8> kSliders = {{
     {kParamGrid, "Grid", "Blocks per bar", 1.0f, 16.0f},
     {kParamDensity, "Density", "How often blocks mutate", 0.0f, 100.0f},
     {kParamDamage, "Damage", "Bias toward disruptive actions", 0.0f, 100.0f},
     {kParamMemoryBars, "Memory", "Eligible history window", 1.0f, 8.0f},
     {kParamDrift, "Drift", "Slice distance and instability", 0.0f, 100.0f},
     {kParamPitch, "Pitch", "Slip semitone offset", -12.0f, 12.0f},
+    {kParamBlend, "Blend", "Crossfade each slice wrap", 0.0f, 100.0f},
     {kParamMix, "Mix", "Wet layer amount", 0.0f, 100.0f},
 }};
 
@@ -86,12 +88,12 @@ constexpr std::array<ButtonDef, 3> kButtons = {{
 }};
 
 constexpr std::array<ModePreset, 6> kModes = {{
-    {"Pocket", "low-risk drift", 88, 125, 154, {8.0f, 18.0f, 18.0f, 2.0f, 10.0f, 0.0f, 58.0f, 0.0f}},
-    {"Stutter", "tight repeats", 205, 151, 79, {16.0f, 72.0f, 24.0f, 1.0f, 10.0f, 0.0f, 100.0f, 0.0f}},
-    {"Flip", "harder turns", 145, 110, 208, {8.0f, 56.0f, 70.0f, 2.0f, 26.0f, 0.0f, 100.0f, 0.0f}},
-    {"Smear", "slow melt", 78, 166, 169, {8.0f, 52.0f, 60.0f, 3.0f, 72.0f, 0.0f, 92.0f, 0.0f}},
-    {"Slip", "pitched drag", 93, 149, 224, {8.0f, 58.0f, 58.0f, 2.0f, 48.0f, 7.0f, 92.0f, 0.0f}},
-    {"Ruin", "full wreck", 196, 82, 82, {16.0f, 90.0f, 90.0f, 4.0f, 86.0f, -5.0f, 100.0f, 0.0f}},
+    {"Pocket", "low-risk drift", 88, 125, 154, {8.0f, 18.0f, 18.0f, 2.0f, 10.0f, 0.0f, 58.0f, 18.0f, 0.0f}},
+    {"Stutter", "tight repeats", 205, 151, 79, {16.0f, 72.0f, 24.0f, 1.0f, 10.0f, 0.0f, 100.0f, 42.0f, 0.0f}},
+    {"Flip", "harder turns", 145, 110, 208, {8.0f, 56.0f, 70.0f, 2.0f, 26.0f, 0.0f, 100.0f, 22.0f, 0.0f}},
+    {"Smear", "slow melt", 78, 166, 169, {8.0f, 52.0f, 60.0f, 3.0f, 72.0f, 0.0f, 92.0f, 32.0f, 0.0f}},
+    {"Slip", "pitched drag", 93, 149, 224, {8.0f, 58.0f, 58.0f, 2.0f, 48.0f, 7.0f, 92.0f, 26.0f, 0.0f}},
+    {"Ruin", "full wreck", 196, 82, 82, {16.0f, 90.0f, 90.0f, 4.0f, 86.0f, -5.0f, 100.0f, 36.0f, 0.0f}},
 }};
 
 constexpr std::size_t kPreviewBlockCount = 24;
@@ -178,6 +180,7 @@ public:
         values_[kParamDrift] = defaults.drift;
         values_[kParamPitch] = defaults.pitch;
         values_[kParamMix] = defaults.mix;
+        values_[kParamBlend] = defaults.blend;
         values_[kParamHold] = defaults.hold;
         values_[kParamStatusAction] = 0.0f;
         values_[kParamStatusActivity] = 0.0f;
@@ -322,6 +325,7 @@ private:
         parameters.drift = values_[kParamDrift];
         parameters.pitch = values_[kParamPitch];
         parameters.mix = values_[kParamMix];
+        parameters.blend = values_[kParamBlend];
         parameters.hold = values_[kParamHold];
         return downspout::rift::clampParameters(parameters);
     }
@@ -402,25 +406,25 @@ private:
         fillColor(228, 233, 238, 255);
         text(x, y, "Performance Controls", nullptr);
 
-        const float buttonY = y + 30.0f;
+        const float buttonY = y + 28.0f;
         const float buttonGap = 12.0f;
         const float buttonW = (w - buttonGap * 2.0f) / 3.0f;
         for (std::size_t i = 0; i < kButtons.size(); ++i) {
             const float bx = x + static_cast<float>(i) * (buttonW + buttonGap);
-            buttonRects_[i] = {bx, buttonY, buttonW, 40.0f};
+            buttonRects_[i] = {bx, buttonY, buttonW, 38.0f};
             drawButton(kButtons[i], buttonRects_[i], static_cast<int>(i), parameters);
         }
 
-        const float sliderStartY = buttonY + 58.0f;
-        const float rowGap = 10.0f;
-        const float rowH = 46.0f;
+        const float sliderStartY = buttonY + 52.0f;
+        const float rowGap = 8.0f;
+        const float rowH = 42.0f;
         for (std::size_t i = 0; i < kSliders.size(); ++i) {
             const float rowY = sliderStartY + static_cast<float>(i) * (rowH + rowGap);
             if (rowY + rowH > y + h) {
                 sliderRects_[i] = {-1000.0f, -1000.0f, 0.0f, 0.0f};
                 continue;
             }
-            sliderRects_[i] = {x, rowY + 26.0f, w, 14.0f};
+            sliderRects_[i] = {x, rowY + 22.0f, w, 14.0f};
             drawSlider(kSliders[i], sliderRects_[i], parameters, draggingSlider_ == static_cast<int>(i));
         }
     }
@@ -456,16 +460,16 @@ private:
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fillColor(227, 232, 236, 255);
-        text(rect.x, rect.y - 24.0f, def.label, nullptr);
+        text(rect.x, rect.y - 22.0f, def.label, nullptr);
 
         fontSize(11.0f);
         fillColor(118, 134, 145, 255);
-        text(rect.x, rect.y - 10.0f, def.hint, nullptr);
+        text(rect.x, rect.y - 8.0f, def.hint, nullptr);
 
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
         fillColor(240, 205, 170, 255);
         const std::string valueText = formatValue(def, value);
-        text(rect.x + rect.w, rect.y - 24.0f, valueText.c_str(), nullptr);
+        text(rect.x + rect.w, rect.y - 22.0f, valueText.c_str(), nullptr);
 
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 8.0f);
@@ -785,7 +789,8 @@ private:
                parameterMatches(parameters.memoryBars, preset.parameters.memoryBars) &&
                parameterMatches(parameters.drift, preset.parameters.drift) &&
                parameterMatches(parameters.pitch, preset.parameters.pitch) &&
-               parameterMatches(parameters.mix, preset.parameters.mix);
+               parameterMatches(parameters.mix, preset.parameters.mix) &&
+               parameterMatches(parameters.blend, preset.parameters.blend);
     }
 
     [[nodiscard]] int matchingModeIndex(const CoreParameters& parameters) const
@@ -812,6 +817,7 @@ private:
         commitParameter(kParamDrift, preset.parameters.drift, false);
         commitParameter(kParamPitch, preset.parameters.pitch, false);
         commitParameter(kParamMix, preset.parameters.mix, false);
+        commitParameter(kParamBlend, preset.parameters.blend, false);
         commitParameter(kParamHold, 0.0f, false);
         modePulse_[static_cast<std::size_t>(modeIndex)] = 18;
         repaint();
@@ -827,6 +833,7 @@ private:
         case kParamDrift: return parameters.drift;
         case kParamPitch: return parameters.pitch;
         case kParamMix: return parameters.mix;
+        case kParamBlend: return parameters.blend;
         default: return 0.0f;
         }
     }

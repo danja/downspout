@@ -18,6 +18,7 @@ void testClampParameters() {
     parameters.drift = -1.0f;
     parameters.pitch = 99.0f;
     parameters.mix = 140.0f;
+    parameters.blend = 140.0f;
     parameters.hold = 7.0f;
 
     const Parameters clamped = clampParameters(parameters);
@@ -28,6 +29,7 @@ void testClampParameters() {
     assert(std::fabs(clamped.drift) < 1e-6f);
     assert(std::fabs(clamped.pitch - 12.0f) < 1e-6f);
     assert(std::fabs(clamped.mix - 100.0f) < 1e-6f);
+    assert(std::fabs(clamped.blend - 100.0f) < 1e-6f);
     assert(std::fabs(clamped.hold - 1.0f) < 1e-6f);
 }
 
@@ -248,6 +250,7 @@ void testSerializationRoundTrip() {
     parameters.drift = 55.0f;
     parameters.pitch = -7.0f;
     parameters.mix = 84.0f;
+    parameters.blend = 31.0f;
     parameters.hold = 1.0f;
 
     const auto roundTrip = deserializeParameters(serializeParameters(parameters));
@@ -259,7 +262,24 @@ void testSerializationRoundTrip() {
     assert(std::fabs(roundTrip->drift - 55.0f) < 1e-6f);
     assert(std::fabs(roundTrip->pitch + 7.0f) < 1e-6f);
     assert(std::fabs(roundTrip->mix - 84.0f) < 1e-6f);
+    assert(std::fabs(roundTrip->blend - 31.0f) < 1e-6f);
     assert(std::fabs(roundTrip->hold - 1.0f) < 1e-6f);
+}
+
+void testEarlierStateFormatDefaultsBlend() {
+    const auto parsed = deserializeParameters(
+        "version=1\n"
+        "grid=4\n"
+        "density=50\n"
+        "damage=33\n"
+        "memoryBars=2\n"
+        "drift=11\n"
+        "pitch=0\n"
+        "mix=75\n"
+        "hold=0\n");
+
+    assert(parsed.has_value());
+    assert(std::fabs(parsed->blend - 20.0f) < 1e-6f);
 }
 
 }  // namespace
@@ -271,5 +291,6 @@ int main() {
     testScatterMutatesAndRecoverReturnsDry();
     testBlockTransitionsArmCrossfade();
     testSerializationRoundTrip();
+    testEarlierStateFormatDefaultsBlend();
     return 0;
 }
