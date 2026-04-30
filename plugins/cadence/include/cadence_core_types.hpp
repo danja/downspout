@@ -1,5 +1,7 @@
 #pragma once
 
+#include "downspout/meter.hpp"
+
 #include <array>
 #include <cstdint>
 
@@ -130,7 +132,9 @@ struct TransportSnapshot {
     double bar = 0.0;
     double barBeat = 0.0;
     double beatsPerBar = 4.0;
+    double beatType = 4.0;
     double bpm = 120.0;
+    ::downspout::Meter meter {};
 };
 
 struct MidiMessage {

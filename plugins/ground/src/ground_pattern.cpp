@@ -18,9 +18,11 @@ struct ScaleDef {
 };
 
 struct PhraseEventList {
-    std::array<NoteEvent, 128> events {};
+    std::array<NoteEvent, 512> events {};
     int count = 0;
 };
+
+inline constexpr int kMaxPhraseGridSteps = 512;
 
 constexpr int kScaleMinor[] = {0, 2, 3, 5, 7, 8, 10};
 constexpr int kScaleMajor[] = {0, 2, 4, 5, 7, 9, 11};
@@ -56,6 +58,11 @@ constexpr ScaleDef kScales[] = {
 [[nodiscard]] int clampi(const int value, const int minValue, const int maxValue)
 {
     return value < minValue ? minValue : (value > maxValue ? maxValue : value);
+}
+
+[[nodiscard]] int scaledBarStep(const int stepsPerBar, const int legacyStep)
+{
+    return ::downspout::meterScaledStepFromLegacy16th(stepsPerBar, legacyStep);
 }
 
 [[nodiscard]] std::int32_t nextGenerationSerial(const std::int32_t currentSerial)
@@ -220,9 +227,10 @@ constexpr ScaleDef kScales[] = {
                                       const int eventCountEstimate,
                                       const int localStep,
                                       const int phraseSteps,
+                                      const int stepsPerBeat,
                                       const int previousDegree)
 {
-    const bool strongBeat = (localStep % 4) == 0;
+    const bool strongBeat = stepsPerBeat > 0 ? ((localStep % stepsPerBeat) == 0) : true;
     const int base = plan.rootDegree;
 
     switch (plan.role) {
@@ -261,14 +269,14 @@ constexpr ScaleDef kScales[] = {
     return base;
 }
 
-void appendOnset(std::array<bool, 128>& onset, const int localStep)
+void appendOnset(std::array<bool, kMaxPhraseGridSteps>& onset, const int localStep)
 {
     if (localStep >= 0 && localStep < static_cast<int>(onset.size())) {
         onset[static_cast<std::size_t>(localStep)] = true;
     }
 }
 
-void maybeAppendOnset(std::array<bool, 128>& onset,
+void maybeAppendOnset(std::array<bool, kMaxPhraseGridSteps>& onset,
                       Rng& rng,
                       const float probability,
                       const int localStep)
@@ -278,72 +286,78 @@ void maybeAppendOnset(std::array<bool, 128>& onset,
     }
 }
 
-void addRoleSyncopation(std::array<bool, 128>& onset,
+void addRoleSyncopation(std::array<bool, kMaxPhraseGridSteps>& onset,
                         const Controls& controls,
                         const PhrasePlan& plan,
                         Rng& rng,
                         const int barIndex,
                         const int phraseBars,
                         const int localBarStart,
+                        const int stepsPerBar,
                         const float density,
                         const float motion)
 {
     switch (plan.role) {
     case PhraseRoleId::statement:
         if (barIndex > 0 && density > 0.34f) {
-            appendOnset(onset, localBarStart + (((barIndex % 2) == 0 && motion > 0.38f) ? 15 : 7));
+            appendOnset(onset,
+                        localBarStart + scaledBarStep(stepsPerBar, ((barIndex % 2) == 0 && motion > 0.38f) ? 15 : 7));
         }
         break;
     case PhraseRoleId::answer:
         if (density > 0.28f) {
-            appendOnset(onset, localBarStart + (((barIndex % 2) == 0) ? 10 : 15));
+            appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, ((barIndex % 2) == 0) ? 10 : 15));
         }
         break;
     case PhraseRoleId::climb:
         if (motion > 0.32f) {
-            appendOnset(onset, localBarStart + (((barIndex % 2) == 0) ? 6 : 14));
+            appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, ((barIndex % 2) == 0) ? 6 : 14));
         }
-        maybeAppendOnset(onset, rng, density * (0.20f + motion * 0.30f), localBarStart + 15);
+        maybeAppendOnset(onset,
+                         rng,
+                         density * (0.20f + motion * 0.30f),
+                         localBarStart + scaledBarStep(stepsPerBar, 15));
         break;
     case PhraseRoleId::pedal:
         if (density > 0.64f && barIndex < phraseBars - 1) {
-            appendOnset(onset, localBarStart + 15);
+            appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 15));
         }
         break;
     case PhraseRoleId::breakdown:
-        maybeAppendOnset(onset, rng, density * 0.18f, localBarStart + 11);
+        maybeAppendOnset(onset, rng, density * 0.18f, localBarStart + scaledBarStep(stepsPerBar, 11));
         break;
     case PhraseRoleId::cadence:
         if (barIndex == phraseBars - 1) {
-            appendOnset(onset, localBarStart + 10);
-            appendOnset(onset, localBarStart + 14);
+            appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 10));
+            appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 14));
         } else if (density > 0.30f) {
-            appendOnset(onset, localBarStart + 7);
+            appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 7));
         }
         break;
     case PhraseRoleId::release:
         if (barIndex < phraseBars - 1 && density > 0.24f) {
-            appendOnset(onset, localBarStart + (((barIndex % 2) == 0) ? 7 : 15));
+            appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, ((barIndex % 2) == 0) ? 7 : 15));
         }
         break;
     }
 
     if (controls.style == StyleId::grounded && motion > 0.52f) {
-        appendOnset(onset, localBarStart + (((barIndex % 2) == 0) ? 10 : 15));
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, ((barIndex % 2) == 0) ? 10 : 15));
     } else if (controls.style == StyleId::pulse && density > 0.38f) {
-        appendOnset(onset, localBarStart + (((barIndex % 2) == 0) ? 6 : 14));
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, ((barIndex % 2) == 0) ? 6 : 14));
     } else if (controls.style == StyleId::march && motion > 0.46f) {
-        maybeAppendOnset(onset, rng, 0.40f + density * 0.20f, localBarStart + 10);
+        maybeAppendOnset(onset, rng, 0.40f + density * 0.20f, localBarStart + scaledBarStep(stepsPerBar, 10));
     }
 }
 
-void buildBarOnsets(std::array<bool, 128>& onset,
+void buildBarOnsets(std::array<bool, kMaxPhraseGridSteps>& onset,
                     const Controls& controls,
                     const PhrasePlan& plan,
                     Rng& rng,
                     const int barIndex,
                     const int phraseBars,
-                    const int localBarStart)
+                    const int localBarStart,
+                    const int stepsPerBar)
 {
     const float density = clampf(controls.density * plan.intensity, 0.05f, 1.0f);
     const float motion = clampf(plan.motionBias, 0.0f, 1.0f);
@@ -351,7 +365,7 @@ void buildBarOnsets(std::array<bool, 128>& onset,
     if (plan.role == PhraseRoleId::pedal || controls.style == StyleId::drone) {
         appendOnset(onset, localBarStart);
         if (density > 0.72f && (barIndex % 2) == 1) {
-            appendOnset(onset, localBarStart + 8);
+            appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 8));
         }
         return;
     }
@@ -361,7 +375,7 @@ void buildBarOnsets(std::array<bool, 128>& onset,
             appendOnset(onset, localBarStart);
         }
         if (barIndex == phraseBars - 1 && rng.nextFloat() < 0.35f) {
-            appendOnset(onset, localBarStart + 12);
+            appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 12));
         }
         return;
     }
@@ -369,39 +383,43 @@ void buildBarOnsets(std::array<bool, 128>& onset,
     switch (controls.style) {
     case StyleId::grounded:
         appendOnset(onset, localBarStart);
-        if (rng.nextFloat() < density * 0.72f) appendOnset(onset, localBarStart + 8);
-        if (rng.nextFloat() < density * 0.38f) appendOnset(onset, localBarStart + 12);
+        if (rng.nextFloat() < density * 0.72f) appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 8));
+        if (rng.nextFloat() < density * 0.38f) appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 12));
         break;
     case StyleId::ostinato:
         appendOnset(onset, localBarStart);
-        appendOnset(onset, localBarStart + 3);
-        appendOnset(onset, localBarStart + 8);
-        appendOnset(onset, localBarStart + 11);
-        if (rng.nextFloat() < density * 0.45f) appendOnset(onset, localBarStart + 14);
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 3));
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 8));
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 11));
+        if (rng.nextFloat() < density * 0.45f) appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 14));
         break;
     case StyleId::march:
         appendOnset(onset, localBarStart);
-        appendOnset(onset, localBarStart + 4);
-        appendOnset(onset, localBarStart + 8);
-        appendOnset(onset, localBarStart + 12);
-        if (rng.nextFloat() < density * 0.25f) appendOnset(onset, localBarStart + 14);
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 4));
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 8));
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 12));
+        if (rng.nextFloat() < density * 0.25f) appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 14));
         break;
     case StyleId::pulse:
         appendOnset(onset, localBarStart);
-        appendOnset(onset, localBarStart + 8);
-        if (rng.nextFloat() < density * 0.40f) appendOnset(onset, localBarStart + 12);
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 8));
+        if (rng.nextFloat() < density * 0.40f) appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 12));
         break;
     case StyleId::drone:
         appendOnset(onset, localBarStart);
         break;
     case StyleId::climb:
         appendOnset(onset, localBarStart);
-        appendOnset(onset, localBarStart + 4);
-        appendOnset(onset, localBarStart + 8);
-        appendOnset(onset, localBarStart + 12);
-        if (rng.nextFloat() < density * 0.65f) appendOnset(onset, localBarStart + 2);
-        if (rng.nextFloat() < density * (0.35f + motion * 0.55f)) appendOnset(onset, localBarStart + 10);
-        if (rng.nextFloat() < density * motion * 0.45f) appendOnset(onset, localBarStart + 14);
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 4));
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 8));
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 12));
+        if (rng.nextFloat() < density * 0.65f) appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 2));
+        if (rng.nextFloat() < density * (0.35f + motion * 0.55f)) {
+            appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 10));
+        }
+        if (rng.nextFloat() < density * motion * 0.45f) {
+            appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 14));
+        }
         break;
     default:
         break;
@@ -409,17 +427,17 @@ void buildBarOnsets(std::array<bool, 128>& onset,
 
     if (plan.role == PhraseRoleId::cadence && barIndex == phraseBars - 1) {
         appendOnset(onset, localBarStart);
-        appendOnset(onset, localBarStart + 12);
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 12));
     } else if (plan.role == PhraseRoleId::climb && rng.nextFloat() < density * 0.45f) {
-        appendOnset(onset, localBarStart + 6);
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 6));
     } else if (plan.role == PhraseRoleId::release) {
-        if (rng.nextFloat() < density * 0.22f) appendOnset(onset, localBarStart + 8);
+        if (rng.nextFloat() < density * 0.22f) appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 8));
     }
 
-    addRoleSyncopation(onset, controls, plan, rng, barIndex, phraseBars, localBarStart, density, motion);
+    addRoleSyncopation(onset, controls, plan, rng, barIndex, phraseBars, localBarStart, stepsPerBar, density, motion);
 }
 
-[[nodiscard]] int nextOnset(const std::array<bool, 128>& onset, const int totalSteps, const int step)
+[[nodiscard]] int nextOnset(const std::array<bool, kMaxPhraseGridSteps>& onset, const int totalSteps, const int step)
 {
     for (int index = step + 1; index < totalSteps; ++index) {
         if (onset[static_cast<std::size_t>(index)]) {
@@ -581,6 +599,8 @@ void sortEvents(PhraseEventList& list)
 void generatePhraseEvents(PhraseEventList& out,
                           const PhrasePlan& plan,
                           const Controls& controls,
+                          const int stepsPerBeat,
+                          const int stepsPerBar,
                           const PhrasePlan* previousPlan,
                           const PhraseEventList* previousEvents,
                           const bool useSequence,
@@ -620,17 +640,17 @@ void generatePhraseEvents(PhraseEventList& out,
         return;
     }
 
-    std::array<bool, 128> onset {};
+    std::array<bool, kMaxPhraseGridSteps> onset {};
     const int phraseSteps = clampi(plan.stepCount, 1, static_cast<int>(onset.size()));
     const int phraseBars = std::max(1, plan.bars);
 
     for (int bar = 0; bar < phraseBars; ++bar) {
-        buildBarOnsets(onset, controls, plan, rng, bar, phraseBars, bar * 16);
+        buildBarOnsets(onset, controls, plan, rng, bar, phraseBars, bar * stepsPerBar, stepsPerBar);
     }
 
     onset[0] = true;
     if (plan.role == PhraseRoleId::cadence) {
-        onset[phraseSteps - 4] = true;
+        onset[std::max(0, phraseSteps - stepsPerBeat)] = true;
     }
 
     int previousDegree = plan.rootDegree;
@@ -649,6 +669,7 @@ void generatePhraseEvents(PhraseEventList& out,
                                                12,
                                                step,
                                                phraseSteps,
+                                               stepsPerBeat,
                                                previousDegree);
         previousDegree = degree;
 
@@ -657,7 +678,7 @@ void generatePhraseEvents(PhraseEventList& out,
         event.durationSteps = chooseDuration(controls, plan, rng, available, step, phraseSteps);
         event.note = noteFromDegree(controls, degree, plan.registerOffset);
         event.velocity = clampi(static_cast<int>(78.0f + plan.intensity * 28.0f) +
-                                    ((step % 16) == 0 ? 10 : 0) +
+                                    ((step % stepsPerBar) == 0 ? 10 : 0) +
                                     rng.nextInt(-6, 6),
                                 48,
                                 124);
@@ -678,12 +699,14 @@ void generatePhraseEvents(PhraseEventList& out,
     mergeRepeatedNotes(out, plan);
 }
 
-void buildPhrasePlan(FormState& form, const Controls& controls)
+void buildPhrasePlan(FormState& form, const Controls& controls, const ::downspout::Meter& rawMeter)
 {
     form.formBars = normalizeFormBars(controls.formBars);
     form.phraseBars = normalizePhraseBars(controls.phraseBars, form.formBars);
+    form.meter = ::downspout::sanitizeMeter(rawMeter);
     form.stepsPerBeat = 4;
-    form.patternSteps = clampi(form.formBars * 16, 1, kMaxPatternSteps);
+    form.stepsPerBar = ::downspout::meterStepsPerBar(form.meter, form.stepsPerBeat);
+    form.patternSteps = clampi(form.formBars * form.stepsPerBar, 1, kMaxPatternSteps);
     form.phraseCount = clampi(form.formBars / std::max(1, form.phraseBars), 1, kMaxPhraseCount);
 
     Rng plannerRng;
@@ -698,8 +721,8 @@ void buildPhrasePlan(FormState& form, const Controls& controls)
         phrase = {};
         phrase.startBar = index * form.phraseBars;
         phrase.bars = form.phraseBars;
-        phrase.startStep = phrase.startBar * 16;
-        phrase.stepCount = form.phraseBars * 16;
+        phrase.startStep = phrase.startBar * form.stepsPerBar;
+        phrase.stepCount = form.phraseBars * form.stepsPerBar;
         phrase.role = chooseRole(controls, plannerRng, index, form.phraseCount, peakPhrase);
         phrase.rootDegree = roleBaseDegree(phrase.role, plannerRng);
         phrase.registerOffset = phraseRegisterOffset(controls, phrase.role, index, form.phraseCount);
@@ -814,8 +837,12 @@ FormState sanitizeFormState(const FormState& raw, bool* valid)
     form.formBars = normalizeFormBars(form.formBars <= 0 ? 16 : form.formBars);
     form.phraseBars = normalizePhraseBars(form.phraseBars <= 0 ? 4 : form.phraseBars, form.formBars);
     form.phraseCount = clampi(form.phraseCount > 0 ? form.phraseCount : form.formBars / form.phraseBars, 1, kMaxPhraseCount);
-    form.stepsPerBeat = 4;
-    form.patternSteps = clampi(form.patternSteps > 0 ? form.patternSteps : form.formBars * 16, 1, kMaxPatternSteps);
+    form.meter = ::downspout::sanitizeMeter(form.meter);
+    form.stepsPerBeat = clampi(form.stepsPerBeat > 0 ? form.stepsPerBeat : 4, 1, 8);
+    form.stepsPerBar = clampi(::downspout::meterStepsPerBar(form.meter, form.stepsPerBeat),
+                              form.stepsPerBeat,
+                              kMaxPatternSteps);
+    form.patternSteps = clampi(form.formBars * form.stepsPerBar, 1, kMaxPatternSteps);
     form.eventCount = clampi(form.eventCount, 0, kMaxEvents);
 
     for (int phraseIndex = 0; phraseIndex < form.phraseCount; ++phraseIndex) {
@@ -872,14 +899,14 @@ bool structureControlsMatch(const Controls& a, const Controls& b)
            a.seed == b.seed;
 }
 
-void regenerateForm(FormState& form, const Controls& rawControls)
+void regenerateForm(FormState& form, const Controls& rawControls, const ::downspout::Meter& meter)
 {
     const Controls controls = clampControls(rawControls);
     const std::int32_t previousSerial = form.generationSerial;
     form = {};
     form.version = kPatternStateVersion;
     form.generationSerial = nextGenerationSerial(previousSerial);
-    buildPhrasePlan(form, controls);
+    buildPhrasePlan(form, controls, meter);
 
     std::array<PhraseEventList, kMaxPhraseCount> phraseEvents {};
     for (int phraseIndex = 0; phraseIndex < form.phraseCount; ++phraseIndex) {
@@ -895,6 +922,8 @@ void regenerateForm(FormState& form, const Controls& rawControls)
         generatePhraseEvents(phraseEvents[static_cast<std::size_t>(phraseIndex)],
                              form.phrases[static_cast<std::size_t>(phraseIndex)],
                              controls,
+                             form.stepsPerBeat,
+                             form.stepsPerBar,
                              previousPlan,
                              previousEvents,
                              useSequence,
@@ -911,7 +940,7 @@ void refreshPhrase(FormState& form, const Controls& rawControls, const int phras
     bool valid = false;
     form = sanitizeFormState(form, &valid);
     if (!valid) {
-        regenerateForm(form, controls);
+        regenerateForm(form, controls, form.meter);
         return;
     }
 
@@ -938,6 +967,8 @@ void refreshPhrase(FormState& form, const Controls& rawControls, const int phras
     generatePhraseEvents(phraseEvents[static_cast<std::size_t>(index)],
                          form.phrases[static_cast<std::size_t>(index)],
                          controls,
+                         form.stepsPerBeat,
+                         form.stepsPerBar,
                          previousPlan,
                          previousEvents,
                          useSequence,
@@ -952,7 +983,7 @@ void mutatePhraseCell(FormState& form, const Controls& rawControls, const int ph
     bool valid = false;
     form = sanitizeFormState(form, &valid);
     if (!valid) {
-        regenerateForm(form, controls);
+        regenerateForm(form, controls, form.meter);
         return;
     }
 
@@ -967,6 +998,8 @@ void mutatePhraseCell(FormState& form, const Controls& rawControls, const int ph
     generatePhraseEvents(phraseEvents[static_cast<std::size_t>(index)],
                          form.phrases[static_cast<std::size_t>(index)],
                          controls,
+                         form.stepsPerBeat,
+                         form.stepsPerBar,
                          nullptr,
                          nullptr,
                          false,

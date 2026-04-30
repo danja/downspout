@@ -11,6 +11,7 @@ namespace downspout::bassgen {
 
 void regeneratePattern(PatternState& pattern,
                        const Controls& controls,
+                       const ::downspout::Meter& meter,
                        bool regenRhythm,
                        bool regenNotes);
 

@@ -85,16 +85,18 @@ void testScatterMutatesAndRecoverReturnsDry() {
     parameters.pitch = 7.0f;
     parameters.mix = 100.0f;
 
-    std::array<float, 32> firstIn {};
+    std::array<float, 64> firstIn {};
     std::array<float, 32> secondIn {};
     std::array<float, 32> thirdIn {};
     for (std::size_t i = 0; i < firstIn.size(); ++i) {
         firstIn[i] = static_cast<float>(i) * 0.05f;
+    }
+    for (std::size_t i = 0; i < secondIn.size(); ++i) {
         secondIn[i] = 10.0f + static_cast<float>(i) * 0.07f;
         thirdIn[i] = 20.0f + static_cast<float>(i) * 0.09f;
     }
 
-    std::array<float, 32> firstOut {};
+    std::array<float, 64> firstOut {};
     std::array<float, 32> secondOut {};
     std::array<float, 32> thirdOut {};
 
@@ -115,14 +117,26 @@ void testScatterMutatesAndRecoverReturnsDry() {
                                                   parameters,
                                                   Triggers {},
                                                   transport,
-                                                  static_cast<std::uint32_t>(firstIn.size()),
+                                                  32u,
                                                   8.0,
                                                   audio);
     assert(firstStatus.action == ActionType::Pass);
 
+    audio.inputs[0] = firstIn.data() + 32;
+    audio.outputs[0] = firstOut.data() + 32;
+    transport.bar = 1.0;
+    const OutputStatus warmupStatus = processBlock(state,
+                                                   parameters,
+                                                   Triggers {},
+                                                   transport,
+                                                   32u,
+                                                   8.0,
+                                                   audio);
+    assert(warmupStatus.action == ActionType::Pass);
+
     audio.inputs[0] = secondIn.data();
     audio.outputs[0] = secondOut.data();
-    transport.bar = 1.0;
+    transport.bar = 2.0;
     const OutputStatus mutated = processBlock(state,
                                               parameters,
                                               Triggers {.scatterSerial = 1},
@@ -143,7 +157,7 @@ void testScatterMutatesAndRecoverReturnsDry() {
 
     audio.inputs[0] = thirdIn.data();
     audio.outputs[0] = thirdOut.data();
-    transport.bar = 2.0;
+    transport.bar = 3.0;
     const OutputStatus recovered = processBlock(state,
                                                 parameters,
                                                 Triggers {.scatterSerial = 1, .recoverSerial = 1},
@@ -153,7 +167,15 @@ void testScatterMutatesAndRecoverReturnsDry() {
                                                 audio);
 
     assert(recovered.action == ActionType::Pass);
-    for (std::size_t i = 0; i < thirdIn.size(); ++i) {
+    bool recoverTransitionChanged = false;
+    for (std::size_t i = 0; i < 8; ++i) {
+        if (std::fabs(thirdOut[i] - thirdIn[i]) > 1e-4f) {
+            recoverTransitionChanged = true;
+            break;
+        }
+    }
+    assert(recoverTransitionChanged);
+    for (std::size_t i = 8; i < thirdIn.size(); ++i) {
         assert(std::fabs(thirdOut[i] - thirdIn[i]) < 1e-6f);
     }
 }
@@ -171,10 +193,10 @@ void testBlockTransitionsArmCrossfade() {
     parameters.pitch = 7.0f;
     parameters.mix = 100.0f;
 
-    std::array<float, 32> historyIn {};
+    std::array<float, 64> historyIn {};
     std::array<float, 4> mutatedIn {};
     std::array<float, 4> continuedIn {};
-    std::array<float, 32> historyOut {};
+    std::array<float, 64> historyOut {};
     std::array<float, 4> mutatedOut {};
     std::array<float, 4> continuedOut {};
 
@@ -203,14 +225,26 @@ void testBlockTransitionsArmCrossfade() {
                                               parameters,
                                               Triggers {},
                                               transport,
-                                              static_cast<std::uint32_t>(historyIn.size()),
+                                              32u,
                                               8.0,
                                               audio);
     assert(initial.action == ActionType::Pass);
 
+    audio.inputs[0] = historyIn.data() + 32;
+    audio.outputs[0] = historyOut.data() + 32;
+    transport.bar = 1.0;
+    const OutputStatus warmup = processBlock(state,
+                                             parameters,
+                                             Triggers {},
+                                             transport,
+                                             32u,
+                                             8.0,
+                                             audio);
+    assert(warmup.action == ActionType::Pass);
+
     audio.inputs[0] = mutatedIn.data();
     audio.outputs[0] = mutatedOut.data();
-    transport.bar = 1.0;
+    transport.bar = 2.0;
     const OutputStatus mutated = processBlock(state,
                                               parameters,
                                               Triggers {.scatterSerial = 1},
@@ -226,7 +260,7 @@ void testBlockTransitionsArmCrossfade() {
 
     audio.inputs[0] = continuedIn.data();
     audio.outputs[0] = continuedOut.data();
-    transport.bar = 1.0;
+    transport.bar = 2.0;
     transport.barBeat = 0.5;
     const OutputStatus continued = processBlock(state,
                                                 parameters,

@@ -1,15 +1,17 @@
 #pragma once
 
+#include "downspout/meter.hpp"
+
 #include <array>
 #include <cstdint>
 
 namespace downspout::ground {
 
 inline constexpr int kMaxPhraseCount = 32;
-inline constexpr int kMaxPatternSteps = 1024;
-inline constexpr int kMaxEvents = 1024;
+inline constexpr int kMaxPatternSteps = 2048;
+inline constexpr int kMaxEvents = 2048;
 inline constexpr int kMaxScheduledMidiEvents = (kMaxEvents * 2) + 32;
-inline constexpr int kPatternStateVersion = 1;
+inline constexpr int kPatternStateVersion = 2;
 inline constexpr int kVariationStateVersion = 1;
 inline constexpr int kSafetyGapSamples = 1;
 
@@ -98,8 +100,10 @@ struct FormState {
     std::int32_t phraseCount = 0;
     std::int32_t patternSteps = 0;
     std::int32_t stepsPerBeat = 4;
+    std::int32_t stepsPerBar = 16;
     std::int32_t eventCount = 0;
     std::int32_t generationSerial = 0;
+    ::downspout::Meter meter {};
     std::array<PhrasePlan, kMaxPhraseCount> phrases {};
     std::array<NoteEvent, kMaxEvents> events {};
 };
@@ -116,7 +120,9 @@ struct TransportSnapshot {
     double bar = 0.0;
     double barBeat = 0.0;
     double beatsPerBar = 4.0;
+    double beatType = 4.0;
     double bpm = 120.0;
+    ::downspout::Meter meter {};
 };
 
 enum class MidiEventType : std::uint8_t {

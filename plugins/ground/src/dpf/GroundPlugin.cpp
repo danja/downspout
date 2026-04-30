@@ -113,7 +113,9 @@ TransportSnapshot toCoreTransport(const TimePosition& timePos)
                                  ? (timePos.bbt.tick / timePos.bbt.ticksPerBeat)
                                  : 0.0);
         transport.beatsPerBar = timePos.bbt.beatsPerBar;
+        transport.beatType = timePos.bbt.beatType;
         transport.bpm = timePos.bbt.beatsPerMinute;
+        transport.meter = downspout::meterFromTimeSignature(timePos.bbt.beatsPerBar, timePos.bbt.beatType);
     }
 
     return transport;

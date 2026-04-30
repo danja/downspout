@@ -51,6 +51,7 @@ void resetVariationProgress(VariationState& variation) {
 bool applyLoopVariation(PatternState& pattern,
                         VariationState& variation,
                         const Controls& controls,
+                        const ::downspout::Meter& meter,
                         double beatsPerBar) {
     if (variation.version != kVariationStateVersion) {
         resetVariationProgress(variation);
@@ -65,7 +66,8 @@ bool applyLoopVariation(PatternState& pattern,
         return false;
     }
 
-    const double safeBeatsPerBar = beatsPerBar > 0.0 ? beatsPerBar : 4.0;
+    const ::downspout::Meter safeMeter = ::downspout::sanitizeMeter(meter);
+    const double safeBeatsPerBar = beatsPerBar > 0.0 ? beatsPerBar : static_cast<double>(safeMeter.numerator);
     const double barsPerLoop = static_cast<double>(controls.lengthBeats) / safeBeatsPerBar;
     const int intervalLoops = loopsBetweenMutations(vary, barsPerLoop);
     if ((variation.completedLoops - variation.lastMutationLoop) < intervalLoops) {
@@ -75,7 +77,7 @@ bool applyLoopVariation(PatternState& pattern,
     variation.lastMutationLoop = variation.completedLoops;
 
     if (vary >= 0.999f) {
-        regeneratePattern(pattern, controls, true, true);
+        regeneratePattern(pattern, controls, safeMeter, true, true);
         return true;
     }
 
@@ -91,25 +93,25 @@ bool applyLoopVariation(PatternState& pattern,
         if (roll < 0.68f) {
             partialNoteMutation(pattern, controls, partialNoteStrength(vary) * 0.70f);
         } else {
-            regeneratePattern(pattern, controls, false, true);
+            regeneratePattern(pattern, controls, safeMeter, false, true);
         }
     } else if (vary < 0.75f) {
         if (roll < 0.30f) {
             partialNoteMutation(pattern, controls, partialNoteStrength(vary));
         } else if (roll < 0.74f) {
-            regeneratePattern(pattern, controls, false, true);
+            regeneratePattern(pattern, controls, safeMeter, false, true);
         } else {
-            regeneratePattern(pattern, controls, true, false);
+            regeneratePattern(pattern, controls, safeMeter, true, false);
         }
     } else {
         if (roll < 0.16f) {
             partialNoteMutation(pattern, controls, partialNoteStrength(vary));
         } else if (roll < 0.38f) {
-            regeneratePattern(pattern, controls, false, true);
+            regeneratePattern(pattern, controls, safeMeter, false, true);
         } else if (roll < 0.70f) {
-            regeneratePattern(pattern, controls, true, false);
+            regeneratePattern(pattern, controls, safeMeter, true, false);
         } else {
-            regeneratePattern(pattern, controls, true, true);
+            regeneratePattern(pattern, controls, safeMeter, true, true);
         }
     }
 

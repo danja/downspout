@@ -90,9 +90,20 @@ struct UpdateDecision {
 
 [[nodiscard]] int phraseIndexForLocalStep(const FormState& form, const double localStep)
 {
-    const int stepsPerPhrase = std::max(1, form.phraseBars * 16);
+    const int stepsPerPhrase = std::max(1, form.phraseBars * form.stepsPerBar);
     const int phraseIndex = static_cast<int>(std::floor(localStep + 1e-9)) / stepsPerPhrase;
     return clampi(phraseIndex, 0, std::max(0, form.phraseCount - 1));
+}
+
+[[nodiscard]] ::downspout::Meter targetMeterForTransport(const EngineState& state, const TransportSnapshot& transport)
+{
+    if (transport.valid && transport.beatsPerBar > 0.0 && transport.beatType > 0.0) {
+        return ::downspout::sanitizeMeter(transport.meter);
+    }
+    if (state.formValid) {
+        return ::downspout::sanitizeMeter(state.form.meter);
+    }
+    return ::downspout::Meter {};
 }
 
 [[nodiscard]] PhraseRoleId roleForPhraseIndex(const FormState& form, const int phraseIndex)
@@ -195,7 +206,8 @@ void handleTransportRestart(EngineState& state, BlockResult& result, const doubl
 
 UpdateDecision updateFormIfNeeded(EngineState& state,
                                   const Controls& freshControls,
-                                  const int targetPhraseIndex)
+                                  const int targetPhraseIndex,
+                                  const ::downspout::Meter& targetMeter)
 {
     UpdateDecision decision;
     const bool structureChanged = !structureControlsMatch(freshControls, state.previousControls);
@@ -203,11 +215,12 @@ UpdateDecision updateFormIfNeeded(EngineState& state,
     const bool newPhraseTriggered = freshControls.actionNewPhrase != state.previousControls.actionNewPhrase;
     const bool mutateTriggered = freshControls.actionMutateCell != state.previousControls.actionMutateCell;
     const bool varyJustEnabled = state.previousControls.vary <= 0.0001f && freshControls.vary > 0.0001f;
+    const bool meterChanged = !state.formValid || !::downspout::metersEqual(state.form.meter, targetMeter);
 
     state.controls = freshControls;
 
-    if (!state.formValid || structureChanged || newFormTriggered) {
-        regenerateForm(state.form, freshControls);
+    if (!state.formValid || structureChanged || newFormTriggered || meterChanged) {
+        regenerateForm(state.form, freshControls, targetMeter);
         state.formValid = true;
         resetVariationProgress(state.variation);
         decision.forceResync = true;
@@ -268,7 +281,7 @@ void activate(EngineState& state, const Controls& controls)
     state.controls = clampControls(controls);
     state.previousControls = state.controls;
     if (!state.formValid) {
-        regenerateForm(state.form, state.controls);
+        regenerateForm(state.form, state.controls, ::downspout::Meter {});
         state.formValid = true;
         resetVariationProgress(state.variation);
     }
@@ -306,7 +319,8 @@ BlockResult processBlock(EngineState& state,
         targetPhraseIndex = phraseIndexForLocalStep(state.form, localStepFromAbsolute(state.form, absStepsStart));
     }
 
-    const UpdateDecision updateDecision = updateFormIfNeeded(state, freshControls, targetPhraseIndex);
+    const ::downspout::Meter targetMeter = targetMeterForTransport(state, transport);
+    const UpdateDecision updateDecision = updateFormIfNeeded(state, freshControls, targetPhraseIndex, targetMeter);
     result.currentPhraseIndex = state.currentPhraseIndex;
     result.currentRole = state.currentRole;
 

@@ -22,7 +22,12 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
             src/dpf/RiftUI.cpp
     )
     target_link_libraries(rift-dsp PUBLIC downspout_rift_core)
+    target_link_libraries(rift-ui PUBLIC downspout-project-options)
     target_include_directories(rift PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
+    )
+    target_include_directories(rift-ui PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
     )

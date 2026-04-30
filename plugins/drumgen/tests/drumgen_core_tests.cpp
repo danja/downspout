@@ -24,6 +24,7 @@ PatternState makeSingleHitPattern(int step, int note, int velocity) {
     pattern.stepsPerBar = 16;
     pattern.totalSteps = 16;
     pattern.generationSerial = 1;
+    pattern.meter = ::downspout::Meter {};
     pattern.lanes[static_cast<int>(LaneId::kick)].midiNote = note;
     pattern.lanes[static_cast<int>(LaneId::kick)].steps[step].velocity = static_cast<std::uint8_t>(velocity);
     return pattern;
@@ -36,7 +37,22 @@ TransportSnapshot makePlayingTransport(double barBeat) {
     transport.bar = 0.0;
     transport.barBeat = barBeat;
     transport.beatsPerBar = 4.0;
+    transport.beatType = 4.0;
     transport.bpm = 120.0;
+    transport.meter = ::downspout::Meter {};
+    return transport;
+}
+
+TransportSnapshot makePlayingTransportForMeter(double barBeat, double beatsPerBar, double beatType) {
+    TransportSnapshot transport;
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 0.0;
+    transport.barBeat = barBeat;
+    transport.beatsPerBar = beatsPerBar;
+    transport.beatType = beatType;
+    transport.bpm = 120.0;
+    transport.meter = ::downspout::meterFromTimeSignature(beatsPerBar, beatType);
     return transport;
 }
 
@@ -60,8 +76,8 @@ void testDeterministicGeneration() {
 
     PatternState first;
     PatternState second;
-    regeneratePattern(first, controls, false);
-    regeneratePattern(second, controls, false);
+    regeneratePattern(first, controls, ::downspout::Meter {}, false);
+    regeneratePattern(second, controls, ::downspout::Meter {}, false);
 
     assert(first.bars == second.bars);
     assert(first.stepsPerBeat == second.stepsPerBeat);
@@ -84,10 +100,10 @@ void testFillRefreshKeepsEarlierBars() {
     controls.bars = 4;
 
     PatternState pattern;
-    regeneratePattern(pattern, controls, false);
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, false);
     const PatternState original = pattern;
 
-    regeneratePattern(pattern, controls, true);
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, true);
 
     assert(pattern.generationSerial > original.generationSerial);
     assert(pattern.stepsPerBar == original.stepsPerBar);
@@ -101,6 +117,59 @@ void testFillRefreshKeepsEarlierBars() {
     }
 }
 
+void testCompoundMeterShape() {
+    Controls controls;
+    controls.seed = 222u;
+    controls.genre = GenreId::rock;
+    controls.bars = 4;
+    controls.resolution = ResolutionId::sixteenth;
+
+    PatternState pattern;
+    regeneratePattern(pattern, controls, ::downspout::makeMeter(6, 8), false);
+
+    assert(pattern.meter.numerator == 6);
+    assert(pattern.meter.denominator == 8);
+    assert(pattern.stepsPerBeat == 4);
+    assert(pattern.stepsPerBar == 24);
+    assert(pattern.totalSteps == 96);
+}
+
+void testCompoundMeterBackbeatLandsOnSecondPulse() {
+    Controls controls;
+    controls.seed = 333u;
+    controls.genre = GenreId::rock;
+    controls.bars = 2;
+    controls.resolution = ResolutionId::sixteenth;
+    controls.backbeatAmt = 1.0f;
+
+    PatternState pattern;
+    regeneratePattern(pattern, controls, ::downspout::makeMeter(6, 8), false);
+
+    const int secondaryPulseStep = 12;
+    const bool hasBackbeat =
+        pattern.lanes[static_cast<int>(LaneId::snare)].steps[secondaryPulseStep].velocity > 0 ||
+        pattern.lanes[static_cast<int>(LaneId::clap)].steps[secondaryPulseStep].velocity > 0;
+    assert(hasBackbeat);
+}
+
+void testTripleMeterBackbeatLandsOnSecondBeat() {
+    Controls controls;
+    controls.seed = 444u;
+    controls.genre = GenreId::rock;
+    controls.bars = 2;
+    controls.resolution = ResolutionId::sixteenth;
+    controls.backbeatAmt = 1.0f;
+
+    PatternState pattern;
+    regeneratePattern(pattern, controls, ::downspout::makeMeter(3, 4), false);
+
+    const int secondBeatStep = 4;
+    const bool hasBackbeat =
+        pattern.lanes[static_cast<int>(LaneId::snare)].steps[secondBeatStep].velocity > 0 ||
+        pattern.lanes[static_cast<int>(LaneId::clap)].steps[secondBeatStep].velocity > 0;
+    assert(hasBackbeat);
+}
+
 void testRefreshBarKeepsOtherBars() {
     Controls controls;
     controls.seed = 313u;
@@ -108,10 +177,10 @@ void testRefreshBarKeepsOtherBars() {
     controls.bars = 3;
 
     PatternState pattern;
-    regeneratePattern(pattern, controls, false);
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, false);
     const PatternState original = pattern;
 
-    refreshBar(pattern, controls, 1);
+    refreshBar(pattern, controls, ::downspout::Meter {}, 1);
 
     const int barStart = pattern.stepsPerBar;
     const int barEnd = barStart + pattern.stepsPerBar;
@@ -133,10 +202,10 @@ void testRefreshFillBarTargetsChosenBar() {
     controls.fill = 0.10f;
 
     PatternState pattern;
-    regeneratePattern(pattern, controls, false);
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, false);
     const PatternState original = pattern;
 
-    refreshFillBar(pattern, controls, 1);
+    refreshFillBar(pattern, controls, ::downspout::Meter {}, 1);
 
     const int barStart = pattern.stepsPerBar;
     const int barEnd = barStart + pattern.stepsPerBar;
@@ -179,7 +248,7 @@ void testVariationBehavior() {
     controls.vary = 0.0f;
 
     PatternState pattern;
-    regeneratePattern(pattern, controls, false);
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, false);
 
     VariationState variation;
     assert(!applyLoopVariation(pattern, variation, controls));
@@ -197,6 +266,8 @@ void testVariationBehavior() {
 void testStateSanitization() {
     PatternState raw;
     raw.bars = 999;
+    raw.meter.numerator = 6;
+    raw.meter.denominator = 8;
     raw.stepsPerBeat = 99;
     raw.stepsPerBar = 99;
     raw.totalSteps = 999;
@@ -208,9 +279,11 @@ void testStateSanitization() {
     assert(valid);
     assert(sanitized.version == kPatternStateVersion);
     assert(sanitized.bars == kMaxBars);
+    assert(sanitized.meter.numerator == 6);
+    assert(sanitized.meter.denominator == 8);
     assert(sanitized.stepsPerBeat == 4);
-    assert(sanitized.stepsPerBar == 16);
-    assert(sanitized.totalSteps == kMaxPatternSteps);
+    assert(sanitized.stepsPerBar == 24);
+    assert(sanitized.totalSteps == 96);
     assert(sanitized.lanes[0].midiNote == 127);
     assert(sanitized.lanes[0].steps[0].velocity == 127);
 
@@ -232,7 +305,7 @@ void testSerializationRoundTrip() {
     controls.actionMutate = 3;
 
     PatternState pattern;
-    regeneratePattern(pattern, controls, false);
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, false);
 
     VariationState variation;
     variation.completedLoops = 7;
@@ -250,6 +323,8 @@ void testSerializationRoundTrip() {
     assert(controlsRoundTrip->kitMap == controls.kitMap);
     assert(controlsRoundTrip->actionMutate == controls.actionMutate);
     assert(patternRoundTrip->bars == pattern.bars);
+    assert(patternRoundTrip->meter.numerator == pattern.meter.numerator);
+    assert(patternRoundTrip->meter.denominator == pattern.meter.denominator);
     assert(patternRoundTrip->stepsPerBeat == pattern.stepsPerBeat);
     assert(patternRoundTrip->generationSerial == pattern.generationSerial);
     for (int lane = 0; lane < kLaneCount; ++lane) {
@@ -414,11 +489,54 @@ void testEngineFillTriggerTargetsCurrentBar() {
     assert(sawFillFlag);
 }
 
+void testEngineFillTriggerUsesLastPulseInCompoundMeter() {
+    Controls controls;
+    controls.seed = 741u;
+    controls.bars = 4;
+    controls.fill = 0.10f;
+
+    EngineState state;
+    activate(state, controls);
+
+    const ::downspout::Meter jigMeter = ::downspout::makeMeter(6, 8);
+    regeneratePattern(state.pattern, controls, jigMeter, false);
+    state.patternValid = true;
+    const PatternState original = state.pattern;
+
+    controls.actionFill = 1;
+    const auto result = processBlock(state, controls, makePlayingTransportForMeter(4.0, 6.0, 8.0), 256, 48000.0);
+    (void)result;
+
+    const int firstBarStart = 0;
+    const int firstBarEnd = state.pattern.stepsPerBar;
+    const int secondBarEnd = firstBarEnd * 2;
+
+    for (int lane = 0; lane < kLaneCount; ++lane) {
+        for (int step = firstBarStart; step < firstBarEnd; ++step) {
+            assert(equalStep(state.pattern.lanes[lane].steps[step], original.lanes[lane].steps[step]));
+        }
+    }
+
+    bool sawNextBarFill = false;
+    for (int lane = 0; lane < kLaneCount; ++lane) {
+        for (int step = firstBarEnd; step < secondBarEnd; ++step) {
+            if ((state.pattern.lanes[lane].steps[step].flags & kStepFlagFill) != 0) {
+                sawNextBarFill = true;
+            }
+        }
+    }
+
+    assert(sawNextBarFill);
+}
+
 }  // namespace
 
 int main() {
     testDeterministicGeneration();
     testFillRefreshKeepsEarlierBars();
+    testCompoundMeterShape();
+    testCompoundMeterBackbeatLandsOnSecondPulse();
+    testTripleMeterBackbeatLandsOnSecondBeat();
     testRefreshBarKeepsOtherBars();
     testRefreshFillBarTargetsChosenBar();
     testTransportHelpers();
@@ -430,5 +548,6 @@ int main() {
     testEngineRestartReplaysCurrentStep();
     testEngineSchedulesBoundaryHitsWithinBlock();
     testEngineFillTriggerTargetsCurrentBar();
+    testEngineFillTriggerUsesLastPulseInCompoundMeter();
     return 0;
 }

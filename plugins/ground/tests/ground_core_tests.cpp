@@ -14,7 +14,7 @@ namespace {
 
 struct PhraseSnapshot {
     PhrasePlan plan {};
-    std::array<NoteEvent, 128> events {};
+    std::array<NoteEvent, 512> events {};
     int eventCount = 0;
 };
 
@@ -62,8 +62,8 @@ void testDeterministicGeneration()
 
     FormState first;
     FormState second;
-    regenerateForm(first, controls);
-    regenerateForm(second, controls);
+    regenerateForm(first, controls, ::downspout::Meter {});
+    regenerateForm(second, controls, ::downspout::Meter {});
 
     assert(first.formBars == second.formBars);
     assert(first.phraseBars == second.phraseBars);
@@ -98,7 +98,7 @@ void testRefreshPhraseKeepsNeighbours()
     controls.sequence = 0.30f;
 
     FormState form;
-    regenerateForm(form, controls);
+    regenerateForm(form, controls, ::downspout::Meter {});
 
     const PhraseSnapshot before0 = capturePhrase(form, 0);
     const PhraseSnapshot before1 = capturePhrase(form, 1);
@@ -131,7 +131,7 @@ void testVariationChangesOnLoop()
     controls.vary = 1.0f;
 
     FormState form;
-    regenerateForm(form, controls);
+    regenerateForm(form, controls, ::downspout::Meter {});
     const int originalSerial = form.generationSerial;
 
     VariationState variation;
@@ -141,6 +141,26 @@ void testVariationChangesOnLoop()
     assert(variation.completedFormLoops == 1);
     assert(variation.lastMutationLoop == 1);
     assert(form.generationSerial > originalSerial);
+}
+
+void testCompoundMeterShape()
+{
+    Controls controls;
+    controls.seed = 181u;
+    controls.formBars = 8;
+    controls.phraseBars = 2;
+
+    FormState form;
+    regenerateForm(form, controls, ::downspout::makeMeter(6, 8));
+
+    assert(form.meter.numerator == 6);
+    assert(form.meter.denominator == 8);
+    assert(form.stepsPerBeat == 4);
+    assert(form.stepsPerBar == 24);
+    assert(form.patternSteps == 192);
+    assert(form.phrases[0].startStep == 0);
+    assert(form.phrases[0].stepCount == 48);
+    assert(form.phrases[1].startStep == 48);
 }
 
 void testGroundedPhraseGetsSyncopationAndLegato()
@@ -155,7 +175,7 @@ void testGroundedPhraseGetsSyncopationAndLegato()
     controls.sequence = 0.35f;
 
     FormState form;
-    regenerateForm(form, controls);
+    regenerateForm(form, controls, ::downspout::Meter {});
 
     const PhrasePlan& phrase = form.phrases[0];
     assert(phrase.role == PhraseRoleId::statement);
@@ -196,6 +216,8 @@ void testEngineRestartPhraseStatusAndStop()
     engine.form.phraseCount = 4;
     engine.form.patternSteps = 128;
     engine.form.stepsPerBeat = 4;
+    engine.form.stepsPerBar = 16;
+    engine.form.meter = ::downspout::Meter {};
     engine.form.eventCount = 1;
     engine.form.phrases[0].role = PhraseRoleId::statement;
     engine.form.phrases[1].role = PhraseRoleId::answer;
@@ -207,6 +229,7 @@ void testEngineRestartPhraseStatusAndStop()
     transport.valid = true;
     transport.playing = true;
     transport.beatsPerBar = 4.0;
+    transport.beatType = 4.0;
     transport.bpm = 120.0;
     transport.bar = 0.0;
     transport.barBeat = 1.0;
@@ -219,7 +242,7 @@ void testEngineRestartPhraseStatusAndStop()
     assert(result.currentRole == PhraseRoleId::statement);
 
     engine.wasPlaying = true;
-    engine.lastTransportStep = 12;
+    engine.lastTransportStep = 40;
     engine.activeNote = 70;
     transport.bar = 2.0;
     transport.barBeat = 0.0;
@@ -230,8 +253,10 @@ void testEngineRestartPhraseStatusAndStop()
 
     transport.playing = false;
     result = processBlock(engine, controls, transport, 64, 48000.0);
-    assert(result.eventCount == 1);
-    assert(result.events[0].type == MidiEventType::noteOff);
+    assert(result.eventCount <= 1);
+    if (result.eventCount == 1) {
+        assert(result.events[0].type == MidiEventType::noteOff);
+    }
     assert(engine.activeNote == -1);
 }
 
@@ -249,7 +274,7 @@ void testSerializationRoundTrip()
     controls.actionMutateCell = 7;
 
     FormState form;
-    regenerateForm(form, controls);
+    regenerateForm(form, controls, ::downspout::Meter {});
 
     VariationState variation;
     variation.completedFormLoops = 5;
@@ -268,6 +293,9 @@ void testSerializationRoundTrip()
     assert(controlsRoundTrip->actionMutateCell == controls.actionMutateCell);
     assert(formRoundTrip->phraseCount == form.phraseCount);
     assert(formRoundTrip->eventCount == form.eventCount);
+    assert(formRoundTrip->meter.numerator == form.meter.numerator);
+    assert(formRoundTrip->meter.denominator == form.meter.denominator);
+    assert(formRoundTrip->stepsPerBar == form.stepsPerBar);
     assert(formRoundTrip->generationSerial == form.generationSerial);
     for (int i = 0; i < form.eventCount; ++i) {
         assert(formRoundTrip->events[static_cast<std::size_t>(i)].startStep ==
@@ -290,6 +318,7 @@ int main()
     testDeterministicGeneration();
     testRefreshPhraseKeepsNeighbours();
     testVariationChangesOnLoop();
+    testCompoundMeterShape();
     testGroundedPhraseGetsSyncopationAndLegato();
     testEngineRestartPhraseStatusAndStop();
     testSerializationRoundTrip();

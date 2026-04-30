@@ -11,22 +11,37 @@ transport sync is not enough.
 
 ## Current state
 
-`downspout` already has several transport-aware plugins, but transport-aware
-and meter-aware are not the same thing.
+`downspout` now has an initial shared meter layer in
+[include/downspout/meter.hpp](/home/danny/github/downspout/include/downspout/meter.hpp).
+That layer gives the repository one common representation for:
 
-Today, most wrappers pass only:
+- numerator
+- denominator
+- pulse grouping
+
+This closes the first architectural gap. It does not finish the musical work.
+
+Most transport-aware wrappers now preserve:
 
 - `bar`
 - `barBeat`
 - `beatsPerBar`
+- `beatType`
 - `bpm`
+- a normalized portable `Meter`
 
-That is enough for bar-relative timing, but not enough to express:
+That means the repository can now express:
 
 - `3/4` versus `6/8`
 - compound grouping such as `3+3` or `3+3+3`
 - odd-meter grouping such as `2+2+3`
+
+What it still does not express well yet is musical intent on top of that data:
+
 - pickup bars / anacrusis
+- tune-form cadence shapes
+- ornament timing
+- idiomatic folk accompaniment behavior
 
 ## Plugin impact
 
@@ -34,8 +49,8 @@ The current plugins fall into three rough groups.
 
 ### Mostly bar-length aware already
 
-These plugins already derive timing from host `beatsPerBar`, so they are less
-blocked by meter work:
+These plugins already derived timing from host bar information before the shared
+meter refactor, and now also receive richer meter data:
 
 - `p-mix`
 - `e-mix`
@@ -45,24 +60,33 @@ blocked by meter work:
 They still may need UI or semantic work for compound meters, but their timing
 engines are not deeply tied to `4/4`.
 
-### Partly adaptable, but still musically simple-meter oriented
+### Structurally meter-aware, but still style-limited
 
 - `bassgen`
 
-`bassgen` works in beats and subdivisions rather than explicitly multiplying
-everything by `16 steps per bar`, so it is in better shape than `ground` or
-`drumgen`. The limitation is musical vocabulary: its rhythm generation still
-thinks in fairly plain strong-beat/simple-subdivision terms.
+`bassgen` now receives richer meter data from the wrapper, persists it in
+pattern state, regenerates when meter changes, and shapes accents around pulse
+starts for compound meters. That closes the structural gap for `bassgen`, but
+its style layer is still generic rather than explicitly jig/reel/hornpipe
+aware.
 
-### Structurally 4/4 in the core
+### Structural 4/4 blockers that have now been removed
 
 - `ground`
 - `drumgen`
 
-These cores currently encode `4/4` directly enough that true meter support is a
-real refactor, not a wrapper tweak.
+These were the main structural blockers. That first refactor is now done:
 
-Examples:
+- `ground` now derives form and phrase grids from the shared meter model rather
+  than a fixed `16 steps per bar`
+- `drumgen` now derives `stepsPerBar` from `meter.numerator * stepsPerBeat`
+  rather than `stepsPerBeat * 4`, and now has dedicated compound/triple-meter
+  pulse accents for bar generation and fill targeting
+
+That does not mean they are now idiomatic jig/hornpipe generators. It means
+they no longer silently force every bar back into `4/4` shape.
+
+Examples of the old assumptions that were removed:
 
 - `ground` phrase planning currently assumes `4 steps per beat` and
   `16 steps per bar`
@@ -111,9 +135,8 @@ make a convincing generative Irish-folk setup.
 
 ## Recommended shared abstraction
 
-The next useful shared abstraction should be a common meter model.
-
-It should live outside DPF and be portable across plugin cores.
+The shared meter model now exists and should remain portable across plugin
+cores.
 
 Suggested shape:
 
@@ -132,11 +155,10 @@ as `3+3`.
 
 ## Wrapper implications
 
-The DPF wrappers currently pass enough information for bar-relative timing but
-not enough for full meter semantics.
+The DPF wrappers now preserve richer time-signature data when the host provides
+it, but grouping and style semantics still have to be interpreted in the core.
 
-The next transport snapshot revision should try to preserve, when the host
-provides it:
+The transport snapshots now aim to preserve:
 
 - bar numerator
 - denominator / beat unit
@@ -148,17 +170,14 @@ derive useful defaults from numerator/denominator and style.
 
 ## Recommended implementation order
 
-1. Define a shared portable meter type under common code.
-2. Extend transport snapshots so wrappers can pass richer meter data.
-3. Refactor `ground` to use the shared meter model.
-4. Refactor `drumgen` to use the shared meter model.
-5. Expand `bassgen` rhythmic vocabulary for compound-meter styles.
-6. Add folk-specific style logic in `cadence`, `ground`, and `drumgen`.
-7. Add a dedicated melody generator if the goal remains full generative
+1. Add folk-specific style logic in `cadence`, `ground`, `drumgen`, and the
+   higher-level `bassgen` phrasing choices.
+2. Add explicit pickup/anacrusis handling where musically needed.
+3. Add a dedicated melody generator if the goal remains full generative
    Irish-folk arrangement.
 
 ## Documentation consequence
 
-Until this work is done, the root docs should describe the current plugins as
-transport-aware, while being explicit that full compound/odd meter support is
-still uneven across the musical generators.
+The root docs should now describe the repository as having an initial shared
+meter model, while being explicit that compound-meter style behavior is still
+uneven across the musical generators.

@@ -10,14 +10,17 @@ namespace downspout::drumgen {
 
 void regeneratePattern(PatternState& pattern,
                        const Controls& controls,
+                       const ::downspout::Meter& meter,
                        bool fillOnlyRefresh);
 
 void refreshBar(PatternState& pattern,
                 const Controls& controls,
+                const ::downspout::Meter& meter,
                 int barIndex);
 
 void refreshFillBar(PatternState& pattern,
                     const Controls& controls,
+                    const ::downspout::Meter& meter,
                     int barIndex);
 
 }  // namespace downspout::drumgen

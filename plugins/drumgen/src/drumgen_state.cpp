@@ -20,8 +20,11 @@ PatternState sanitizePatternState(const PatternState& raw, bool* valid) {
     pattern.version = kPatternStateVersion;
     pattern.bars = clampi(pattern.bars, kMinBars, kMaxBars);
     pattern.stepsPerBeat = clampi(pattern.stepsPerBeat, 1, 4);
-    pattern.stepsPerBar = clampi(pattern.stepsPerBar, 4, 16);
-    pattern.totalSteps = clampi(pattern.totalSteps, 1, kMaxPatternSteps);
+    pattern.meter = ::downspout::sanitizeMeter(pattern.meter);
+    pattern.stepsPerBar = clampi(::downspout::meterStepsPerBar(pattern.meter, pattern.stepsPerBeat),
+                                 pattern.stepsPerBeat,
+                                 kMaxPatternSteps);
+    pattern.totalSteps = clampi(pattern.bars * pattern.stepsPerBar, 1, kMaxPatternSteps);
 
     for (int lane = 0; lane < kLaneCount; ++lane) {
         pattern.lanes[lane].midiNote = clampi(pattern.lanes[lane].midiNote, 0, 127);

@@ -22,7 +22,12 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
             src/dpf/PMixUI.cpp
     )
     target_link_libraries(p_mix-dsp PUBLIC downspout_p_mix_core)
+    target_link_libraries(p_mix-ui PUBLIC downspout-project-options)
     target_include_directories(p_mix PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
+    )
+    target_include_directories(p_mix-ui PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
     )

@@ -87,7 +87,7 @@ bool applyLoopVariation(PatternState& pattern,
     variation.lastMutationLoop = variation.completedLoops;
 
     if (vary >= 0.999f) {
-        regeneratePattern(pattern, controls, false);
+        regeneratePattern(pattern, controls, pattern.meter, false);
         return true;
     }
 
@@ -98,31 +98,31 @@ bool applyLoopVariation(PatternState& pattern,
 
     const float roll = decisionRng.nextFloat();
     if (vary < 0.20f) {
-        refreshBar(pattern, controls, pickBarIndex(pattern, controls, decisionRng));
+        refreshBar(pattern, controls, pattern.meter, pickBarIndex(pattern, controls, decisionRng));
     } else if (vary < 0.45f) {
         if (roll < 0.60f) {
-            refreshBar(pattern, controls, pickBarIndex(pattern, controls, decisionRng));
+            refreshBar(pattern, controls, pattern.meter, pickBarIndex(pattern, controls, decisionRng));
         } else {
-            regeneratePattern(pattern, controls, true);
+            regeneratePattern(pattern, controls, pattern.meter, true);
         }
     } else if (vary < 0.75f) {
         if (roll < 0.24f) {
-            refreshBar(pattern, controls, pickBarIndex(pattern, controls, decisionRng));
+            refreshBar(pattern, controls, pattern.meter, pickBarIndex(pattern, controls, decisionRng));
             if (pattern.bars > 1 && decisionRng.nextFloat() < 0.35f) {
-                refreshBar(pattern, controls, pickBarIndex(pattern, controls, decisionRng));
+                refreshBar(pattern, controls, pattern.meter, pickBarIndex(pattern, controls, decisionRng));
             }
         } else if (roll < 0.58f) {
-            regeneratePattern(pattern, controls, true);
+            regeneratePattern(pattern, controls, pattern.meter, true);
         } else {
-            regeneratePattern(pattern, controls, false);
+            regeneratePattern(pattern, controls, pattern.meter, false);
         }
     } else {
         if (roll < 0.14f) {
-            refreshBar(pattern, controls, pickBarIndex(pattern, controls, decisionRng));
+            refreshBar(pattern, controls, pattern.meter, pickBarIndex(pattern, controls, decisionRng));
         } else if (roll < 0.34f) {
-            regeneratePattern(pattern, controls, true);
+            regeneratePattern(pattern, controls, pattern.meter, true);
         } else {
-            regeneratePattern(pattern, controls, false);
+            regeneratePattern(pattern, controls, pattern.meter, false);
         }
     }
 

@@ -85,24 +85,37 @@ void handleTransportRestart(EngineState& state, BlockResult& result, double absS
     syncNoteStateToPosition(state, result, localStep);
 }
 
-void updatePatternIfNeeded(EngineState& state, const Controls& fresh) {
+[[nodiscard]] ::downspout::Meter resolvedMeterFor(const EngineState& state, const TransportSnapshot& transport) {
+    if (transport.valid && transport.beatsPerBar > 0.0) {
+        return ::downspout::sanitizeMeter(transport.meter);
+    }
+    if (state.pattern.stepsPerBar > 0) {
+        return ::downspout::sanitizeMeter(state.pattern.meter);
+    }
+    return ::downspout::Meter {};
+}
+
+void updatePatternIfNeeded(EngineState& state,
+                           const Controls& fresh,
+                           const ::downspout::Meter& targetMeter) {
     const bool paramsChanged = structuralControlsChanged(fresh, state.previousControls);
     const bool triggerNew = fresh.actionNew != state.previousControls.actionNew;
     const bool triggerNotes = fresh.actionNotes != state.previousControls.actionNotes;
     const bool triggerRhythm = fresh.actionRhythm != state.previousControls.actionRhythm;
     const bool varyJustEnabled = state.previousControls.vary <= 0.0001f && fresh.vary > 0.0001f;
+    const bool meterChanged = state.patternValid && !::downspout::metersEqual(state.pattern.meter, targetMeter);
 
     state.controls = fresh;
 
-    if (!state.patternValid || paramsChanged || triggerNew) {
-        regeneratePattern(state.pattern, state.controls, true, true);
+    if (!state.patternValid || paramsChanged || triggerNew || meterChanged) {
+        regeneratePattern(state.pattern, state.controls, targetMeter, true, true);
         state.patternValid = true;
         resetVariationProgress(state.variation);
     } else if (triggerRhythm) {
-        regeneratePattern(state.pattern, state.controls, true, false);
+        regeneratePattern(state.pattern, state.controls, targetMeter, true, false);
         resetVariationProgress(state.variation);
     } else if (triggerNotes) {
-        regeneratePattern(state.pattern, state.controls, false, true);
+        regeneratePattern(state.pattern, state.controls, targetMeter, false, true);
         resetVariationProgress(state.variation);
     } else if (varyJustEnabled) {
         resetVariationProgress(state.variation);
@@ -117,11 +130,12 @@ void processBoundary(EngineState& state,
                      double absStepsStart,
                      double absStepsEnd,
                      std::int64_t boundary,
+                     const ::downspout::Meter& meter,
                      double beatsPerBar) {
     const std::uint32_t frame = frameForBoundary(absStepsStart, absStepsEnd, nframes, boundary);
     const int localStep = localStepForBoundary(state.pattern, boundary);
 
-    if (localStep == 0 && applyLoopVariation(state.pattern, state.variation, state.controls, beatsPerBar)) {
+    if (localStep == 0 && applyLoopVariation(state.pattern, state.variation, state.controls, meter, beatsPerBar)) {
         clearActiveNote(state, result, frame);
     }
 
@@ -147,7 +161,7 @@ void activate(EngineState& state, const Controls& controls) {
     state.controls = clampControls(controls);
     state.previousControls = state.controls;
     if (!state.patternValid) {
-        regeneratePattern(state.pattern, state.controls, true, true);
+        regeneratePattern(state.pattern, state.controls, ::downspout::Meter {}, true, true);
         state.patternValid = true;
         resetVariationProgress(state.variation);
     }
@@ -168,7 +182,9 @@ BlockResult processBlock(EngineState& state,
         return result;
     }
 
-    updatePatternIfNeeded(state, clampControls(controls));
+    const Controls freshControls = clampControls(controls);
+    const ::downspout::Meter targetMeter = resolvedMeterFor(state, transport);
+    updatePatternIfNeeded(state, freshControls, targetMeter);
 
     const bool playing = transport.valid && transport.playing && transport.bpm > 0.0 && transport.beatsPerBar > 0.0;
     if (!playing || !state.patternValid) {
@@ -194,7 +210,7 @@ BlockResult processBlock(EngineState& state,
     const std::int64_t boundaryEnd = static_cast<std::int64_t>(std::floor(absStepsEnd + 1e-9));
 
     while (boundary <= boundaryEnd) {
-        processBoundary(state, result, nframes, absStepsStart, absStepsEnd, boundary, transport.beatsPerBar);
+        processBoundary(state, result, nframes, absStepsStart, absStepsEnd, boundary, targetMeter, transport.beatsPerBar);
         boundary += 1;
     }
 

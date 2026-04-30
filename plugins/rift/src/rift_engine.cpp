@@ -189,7 +189,8 @@ void ensureBuffer(EngineState& state,
         requiredFrames = std::max(requiredFrames, sampleRate * std::max(2.0f, parameters.memoryBars * 4.0f));
     }
 
-    const std::uint32_t required = static_cast<std::uint32_t>(std::clamp(requiredFrames, 2048.0, sampleRate * 128.0));
+    const double maxFrames = std::max(2048.0, sampleRate * 128.0);
+    const std::uint32_t required = static_cast<std::uint32_t>(std::clamp(requiredFrames, 2048.0, maxFrames));
     if (state.bufferFrames == required && state.bufferChannels == safeChannels && std::fabs(state.sampleRate - sampleRate) < 0.001) {
         return;
     }

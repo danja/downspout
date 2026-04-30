@@ -83,8 +83,11 @@ std::string serializeFormState(const FormState& rawForm)
     text += "form_bars=" + std::to_string(form.formBars) + "\n";
     text += "phrase_bars=" + std::to_string(form.phraseBars) + "\n";
     text += "phrase_count=" + std::to_string(form.phraseCount) + "\n";
+    text += "meter_numerator=" + std::to_string(form.meter.numerator) + "\n";
+    text += "meter_denominator=" + std::to_string(form.meter.denominator) + "\n";
     text += "pattern_steps=" + std::to_string(form.patternSteps) + "\n";
     text += "steps_per_beat=" + std::to_string(form.stepsPerBeat) + "\n";
+    text += "steps_per_bar=" + std::to_string(form.stepsPerBar) + "\n";
     text += "event_count=" + std::to_string(form.eventCount) + "\n";
     text += "generation_serial=" + std::to_string(form.generationSerial) + "\n";
 
@@ -229,12 +232,24 @@ std::optional<FormState> deserializeFormState(const std::string& text)
             form.phraseCount = intValue;
             continue;
         }
+        if (key == "meter_numerator" && parseInteger(value, intValue)) {
+            form.meter.numerator = intValue;
+            continue;
+        }
+        if (key == "meter_denominator" && parseInteger(value, intValue)) {
+            form.meter.denominator = intValue;
+            continue;
+        }
         if (key == "pattern_steps" && parseInteger(value, intValue)) {
             form.patternSteps = intValue;
             continue;
         }
         if (key == "steps_per_beat" && parseInteger(value, intValue)) {
             form.stepsPerBeat = intValue;
+            continue;
+        }
+        if (key == "steps_per_bar" && parseInteger(value, intValue)) {
+            form.stepsPerBar = intValue;
             continue;
         }
         if (key == "event_count" && parseInteger(value, intValue)) {

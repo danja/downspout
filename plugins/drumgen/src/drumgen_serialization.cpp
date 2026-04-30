@@ -74,6 +74,8 @@ std::string serializePatternState(const PatternState& pattern) {
     std::ostringstream out;
     out << "version=" << pattern.version << '\n';
     out << "bars=" << pattern.bars << '\n';
+    out << "meterNumerator=" << pattern.meter.numerator << '\n';
+    out << "meterDenominator=" << pattern.meter.denominator << '\n';
     out << "stepsPerBeat=" << pattern.stepsPerBeat << '\n';
     out << "stepsPerBar=" << pattern.stepsPerBar << '\n';
     out << "totalSteps=" << pattern.totalSteps << '\n';
@@ -192,6 +194,10 @@ std::optional<PatternState> deserializePatternState(const std::string& text) {
             continue;
         } else if (key == "bars" && parseInteger(value, intValue)) {
             pattern.bars = intValue;
+        } else if (key == "meterNumerator" && parseInteger(value, intValue)) {
+            pattern.meter.numerator = intValue;
+        } else if (key == "meterDenominator" && parseInteger(value, intValue)) {
+            pattern.meter.denominator = intValue;
         } else if (key == "stepsPerBeat" && parseInteger(value, intValue)) {
             pattern.stepsPerBeat = intValue;
         } else if (key == "stepsPerBar" && parseInteger(value, intValue)) {
@@ -202,7 +208,7 @@ std::optional<PatternState> deserializePatternState(const std::string& text) {
             pattern.generationSerial = intValue;
         } else if (key == "lane") {
             const auto parts = split(value, ',');
-            if (parts.size() != static_cast<std::size_t>(kMaxPatternSteps + 2)) {
+            if (parts.size() < 3 || parts.size() > static_cast<std::size_t>(kMaxPatternSteps + 2)) {
                 return std::nullopt;
             }
 
@@ -218,8 +224,9 @@ std::optional<PatternState> deserializePatternState(const std::string& text) {
             pattern.lanes[laneIndex].midiNote = midiNote;
             seenLane[laneIndex] = true;
 
-            for (int step = 0; step < kMaxPatternSteps; ++step) {
-                const auto fields = split(parts[step + 2], ':');
+            const int encodedStepCount = static_cast<int>(parts.size()) - 2;
+            for (int step = 0; step < encodedStepCount; ++step) {
+                const auto fields = split(parts[static_cast<std::size_t>(step + 2)], ':');
                 if (fields.size() != 2) {
                     return std::nullopt;
                 }

@@ -24,5 +24,8 @@ Current wrapper choice:
 - the manual `Fill` trigger is intentionally more immediate than the original
   stored-last-bar refresh: it now targets the current or next bar and boosts the
   fill amount so the result is audible in host use;
+- the portable pattern core now uses shared meter data for more than bar size:
+  `6/8`, `9/8`, `12/8`, and `3/4` get pulse-aware anchor and fill landmarks
+  instead of only scaled `4/4` quarter-slot logic;
 - the port preserves exact control/state behavior first and still leaves any
   preview-grid UI as follow-up work after host validation.

@@ -150,16 +150,21 @@ core snapshot once per block, and the engine handles:
 That pattern is especially visible in `bassgen`, `drumgen`, `cadence`, and
 `rift`.
 
-Current limitation:
+Current state:
 
-- most transport snapshots only preserve `bar`, `barBeat`, `beatsPerBar`, and
-  `bpm`
+- transport snapshots now preserve `bar`, `barBeat`, `beatsPerBar`, `beatType`,
+  `bpm`, and a normalized portable `Meter`
 
-That is enough for bar-relative transport sync, but not enough for full musical
-meter handling. It does not distinguish, for example, between simple and
-compound feel in a way that a core can use directly.
+That is enough for a core to distinguish, for example, between `4/4` and `6/8`
+without guessing from `beatsPerBar` alone.
 
-See [docs/meter.md](docs/meter.md) for the planned shared meter model and the
+Remaining limitation:
+
+- style logic is still uneven across plugins, so carrying richer meter data
+  does not automatically make every generator musically convincing in compound
+  meter
+
+See [docs/meter.md](docs/meter.md) for the shared meter model and the
 current plugin-by-plugin limitations.
 
 ## Testing pattern
@@ -215,6 +220,6 @@ as you build and tag a release from updated code.
 - keep plugin options independently switchable in CMake
 - avoid broad shared abstractions until at least two plugins clearly need them
 
-The next shared abstraction that now clearly qualifies is meter handling:
-`ground` and `drumgen` both need more than ad hoc `4/4` fixes, and Irish-folk
-style work would be weak without a shared pulse/grouping model.
+The shared abstraction that most recently became necessary was meter handling.
+It now lives under `include/downspout/meter.hpp`, and `bassgen`, `ground`, and
+`drumgen` are the first generator cores using it directly.

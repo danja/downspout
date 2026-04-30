@@ -62,6 +62,88 @@ constexpr std::uint8_t STEP_FLAG_FILL = kStepFlagFill;
     return value;
 }
 
+[[nodiscard]] int mappedQuarterBeatIndex(const ::downspout::Meter& meter, const int quarterSlot) {
+    const int beatCount = ::downspout::sanitizeMeter(meter).numerator;
+    if (quarterSlot <= 0) {
+        return 0;
+    }
+    return clampi(static_cast<int>(std::lround((static_cast<double>(quarterSlot) * beatCount) / 4.0)),
+                  0,
+                  beatCount - 1);
+}
+
+[[nodiscard]] bool isBackbeatBeat(const ::downspout::Meter& meter, const int beatIndex) {
+    const ::downspout::Meter normalized = ::downspout::sanitizeMeter(meter);
+    if (!::downspout::meterIsPulseStart(normalized, beatIndex)) {
+        return false;
+    }
+
+    return (::downspout::meterPulseIndexForBeat(normalized, beatIndex) % 2) == 1;
+}
+
+[[nodiscard]] int quarterBeatStartStep(const PatternState& pattern, const int quarterSlot) {
+    return mappedQuarterBeatIndex(pattern.meter, quarterSlot) * pattern.stepsPerBeat;
+}
+
+[[nodiscard]] int collectBackbeatBeats(const ::downspout::Meter& meter, std::array<int, ::downspout::kMaxMeterGroups>& beats) {
+    const ::downspout::Meter normalized = ::downspout::sanitizeMeter(meter);
+    int count = 0;
+
+    for (int beatIndex = 0; beatIndex < normalized.numerator && count < static_cast<int>(beats.size()); ++beatIndex) {
+        if (isBackbeatBeat(normalized, beatIndex)) {
+            beats[static_cast<std::size_t>(count++)] = beatIndex;
+        }
+    }
+
+    if (count == 0 && normalized.numerator > 1) {
+        beats[0] = mappedQuarterBeatIndex(normalized, 1);
+        count = 1;
+    }
+
+    return count;
+}
+
+[[nodiscard]] bool isTripleMeter(const ::downspout::Meter& meter) {
+    const ::downspout::Meter normalized = ::downspout::sanitizeMeter(meter);
+    return normalized.numerator == 3 && !::downspout::meterHasCompoundFeel(normalized);
+}
+
+[[nodiscard]] int lastPulseIndex(const ::downspout::Meter& meter) {
+    return std::max(0, ::downspout::meterPulseCount(meter) - 1);
+}
+
+[[nodiscard]] bool isPulseStartBeat(const ::downspout::Meter& meter, const int beatIndex) {
+    return ::downspout::meterIsPulseStart(::downspout::sanitizeMeter(meter), beatIndex);
+}
+
+[[nodiscard]] int preferredFillBeats(const ::downspout::Meter& meter, const float fillAmount) {
+    const ::downspout::Meter normalized = ::downspout::sanitizeMeter(meter);
+    if (::downspout::meterHasCompoundFeel(normalized)) {
+        return ::downspout::meterGroupSize(normalized, lastPulseIndex(normalized));
+    }
+    if (isTripleMeter(normalized)) {
+        return fillAmount > 0.62f ? 2 : 1;
+    }
+    return fillAmount > 0.62f ? 2 : 1;
+}
+
+[[nodiscard]] bool isFinalPulseBeat(const ::downspout::Meter& meter, const int beatIndex) {
+    const ::downspout::Meter normalized = ::downspout::sanitizeMeter(meter);
+    return ::downspout::meterPulseIndexForBeat(normalized, beatIndex) == lastPulseIndex(normalized);
+}
+
+[[nodiscard]] bool isPulsePickupSub(const ::downspout::Meter& meter,
+                                    const int beatIndex,
+                                    const int subIndex,
+                                    const int stepsPerBeat) {
+    if (stepsPerBeat <= 0 || subIndex != (stepsPerBeat - 1)) {
+        return false;
+    }
+    const ::downspout::Meter normalized = ::downspout::sanitizeMeter(meter);
+    const int nextBeat = (beatIndex + 1) % normalized.numerator;
+    return isPulseStartBeat(normalized, nextBeat);
+}
+
 [[nodiscard]] int nextGenerationSerial(std::int32_t currentSerial) {
     return currentSerial >= INT32_MAX ? 1 : currentSerial + 1;
 }
@@ -133,8 +215,12 @@ constexpr std::uint8_t STEP_FLAG_FILL = kStepFlagFill;
     return (stepInBar % stepsPerBeat) == (stepsPerBeat / 2);
 }
 
-[[nodiscard]] bool isFillZoneStep(int stepInBar, int stepsPerBar, int stepsPerBeat, float fill) {
-    const int fillBeats = fill > 0.62f ? 2 : 1;
+[[nodiscard]] bool isFillZoneStep(int stepInBar,
+                                  int stepsPerBar,
+                                  int stepsPerBeat,
+                                  const ::downspout::Meter& meter,
+                                  float fill) {
+    const int fillBeats = preferredFillBeats(meter, fill);
     const int fillSteps = clampi(fillBeats * stepsPerBeat, stepsPerBeat, stepsPerBar);
     return stepInBar >= stepsPerBar - fillSteps;
 }
@@ -151,16 +237,209 @@ constexpr std::uint8_t STEP_FLAG_FILL = kStepFlagFill;
     return ((baseStep * pulses) % length) < pulses;
 }
 
+[[nodiscard]] float compoundAnchorProbability(const Controls& controls,
+                                              const ::downspout::Meter& meter,
+                                              int lane,
+                                              int beatIndex,
+                                              int subIndex,
+                                              int stepsPerBeat,
+                                              bool fillBar) {
+    const ::downspout::Meter normalized = ::downspout::sanitizeMeter(meter);
+    const bool beatStart = subIndex == 0;
+    const bool pulseStart = beatStart && isPulseStartBeat(normalized, beatIndex);
+    const int pulseIndex = ::downspout::meterPulseIndexForBeat(normalized, beatIndex);
+    const bool secondaryPulse = pulseStart && pulseIndex == std::min(1, lastPulseIndex(normalized));
+    const bool finalPulse = isFinalPulseBeat(normalized, beatIndex);
+    const bool pulsePickup = isPulsePickupSub(normalized, beatIndex, subIndex, stepsPerBeat);
+    const bool lateSub = subIndex == stepsPerBeat - 1;
+    const float kick = controls.kickAmt;
+    const float backbeat = controls.backbeatAmt;
+    const float hat = controls.hatAmt;
+    const float tom = controls.tomAmt;
+    const float metal = controls.metalAmt;
+    const float perc = controls.auxAmt;
+    const float fill = controls.fill;
+
+    switch (lane) {
+    case LANE_KICK:
+        if (pulseStart && pulseIndex == 0) return 0.96f;
+        if (pulseStart) {
+            if (controls.genre == GENRE_DISCO || controls.genre == GENRE_MOTORIK) return 0.72f + 0.20f * kick;
+            if (controls.genre == GENRE_ELECTRO) return 0.54f + 0.24f * kick;
+            return 0.46f + 0.20f * kick;
+        }
+        if (pulsePickup && (controls.genre == GENRE_SHUFFLE || controls.genre == GENRE_DUB || controls.genre == GENRE_AFRO)) {
+            return 0.12f + 0.14f * controls.variation;
+        }
+        break;
+
+    case LANE_SNARE:
+        if (secondaryPulse) return 0.78f + 0.18f * backbeat;
+        if (fillBar && finalPulse && lateSub) return 0.10f + 0.24f * fill * backbeat;
+        break;
+
+    case LANE_CLAP:
+        if (secondaryPulse) {
+            if (controls.genre == GENRE_DISCO) return 0.68f + 0.18f * backbeat;
+            if (controls.genre == GENRE_ELECTRO) return 0.42f + 0.22f * backbeat;
+            return 0.12f + 0.24f * backbeat;
+        }
+        if (fillBar && finalPulse && !beatStart) return 0.08f + 0.18f * fill * backbeat;
+        break;
+
+    case LANE_CRASH:
+        if (beatIndex == 0 && beatStart) return 0.18f + 0.18f * metal;
+        if (fillBar && finalPulse && beatStart) return 0.12f + 0.20f * fill * metal;
+        break;
+
+    case LANE_CLOSED_HAT:
+        if (beatStart) return pulseStart ? 0.82f + 0.16f * hat : 0.66f + 0.18f * hat;
+        if (pulsePickup) return 0.30f + 0.18f * hat;
+        return 0.10f + 0.16f * hat * controls.variation;
+
+    case LANE_OPEN_HAT:
+        if (pulsePickup) return 0.24f + 0.18f * hat;
+        if (pulseStart && pulseIndex > 0) return 0.14f + 0.16f * hat;
+        if (fillBar && finalPulse && lateSub) return 0.16f + 0.16f * fill;
+        break;
+
+    case LANE_LOW_TOM:
+        if (fillBar && finalPulse && (pulsePickup || lateSub)) return 0.10f + 0.30f * fill + 0.12f * tom;
+        break;
+
+    case LANE_HIGH_TOM:
+        if (fillBar && finalPulse && !beatStart) return 0.10f + 0.28f * fill + 0.12f * tom;
+        break;
+
+    case LANE_BASH:
+        if (fillBar && finalPulse && (beatStart || lateSub)) return 0.10f + 0.22f * fill * metal;
+        if ((controls.genre == GENRE_DUB || controls.genre == GENRE_ELECTRO) && pulsePickup) return 0.08f + 0.16f * metal;
+        break;
+
+    case LANE_COWBELL:
+        if (pulseStart && pulseIndex > 0) return 0.12f + 0.20f * perc;
+        if (pulsePickup) return 0.16f + 0.18f * perc;
+        break;
+
+    case LANE_CLAVE:
+        if (pulseStart && (secondaryPulse || finalPulse)) return 0.14f + 0.18f * perc;
+        if (pulsePickup) return 0.16f + 0.18f * perc;
+        break;
+
+    default:
+        break;
+    }
+
+    return 0.0f;
+}
+
+[[nodiscard]] float tripleAnchorProbability(const Controls& controls,
+                                            int lane,
+                                            int beatIndex,
+                                            int subIndex,
+                                            int stepsPerBeat,
+                                            bool fillBar) {
+    const bool beatStart = subIndex == 0;
+    const bool offbeat = isOffbeatStep(beatIndex * stepsPerBeat + subIndex, stepsPerBeat);
+    const bool lateSub = subIndex == stepsPerBeat - 1;
+    const bool beatOne = beatIndex == 0;
+    const bool beatTwo = beatIndex == 1;
+    const bool beatThree = beatIndex == 2;
+    const float kick = controls.kickAmt;
+    const float backbeat = controls.backbeatAmt;
+    const float hat = controls.hatAmt;
+    const float tom = controls.tomAmt;
+    const float metal = controls.metalAmt;
+    const float perc = controls.auxAmt;
+    const float fill = controls.fill;
+
+    switch (lane) {
+    case LANE_KICK:
+        if (beatOne && beatStart) return 0.96f;
+        if (beatThree && beatStart) return 0.46f + 0.20f * kick;
+        if (beatTwo && lateSub && controls.genre == GENRE_SHUFFLE) return 0.10f + 0.12f * controls.variation;
+        break;
+
+    case LANE_SNARE:
+        if (beatTwo && beatStart) return 0.72f + 0.18f * backbeat;
+        if (fillBar && beatThree && lateSub) return 0.08f + 0.22f * fill * backbeat;
+        break;
+
+    case LANE_CLAP:
+        if (beatTwo && beatStart) return 0.16f + 0.22f * backbeat;
+        if (controls.genre == GENRE_DISCO && beatThree && offbeat) return 0.08f + 0.12f * controls.variation;
+        break;
+
+    case LANE_CRASH:
+        if (beatOne && beatStart) return 0.18f + 0.16f * metal;
+        if (fillBar && beatThree && beatStart) return 0.10f + 0.18f * fill * metal;
+        break;
+
+    case LANE_CLOSED_HAT:
+        if (beatStart) return beatOne ? 0.82f + 0.16f * hat : 0.68f + 0.18f * hat;
+        if (offbeat) return 0.16f + 0.14f * hat;
+        return 0.08f + 0.10f * hat * controls.variation;
+
+    case LANE_OPEN_HAT:
+        if (beatThree && offbeat) return 0.20f + 0.18f * hat;
+        if (fillBar && beatThree && lateSub) return 0.14f + 0.16f * fill;
+        break;
+
+    case LANE_LOW_TOM:
+        if (fillBar && beatThree && (offbeat || lateSub)) return 0.10f + 0.28f * fill + 0.12f * tom;
+        break;
+
+    case LANE_HIGH_TOM:
+        if (fillBar && beatThree && !beatStart) return 0.10f + 0.26f * fill + 0.12f * tom;
+        break;
+
+    case LANE_BASH:
+        if (fillBar && beatThree && (beatStart || lateSub)) return 0.10f + 0.20f * fill * metal;
+        break;
+
+    case LANE_COWBELL:
+        if (beatTwo && beatStart) return 0.12f + 0.18f * perc;
+        if (beatThree && offbeat) return 0.14f + 0.18f * perc;
+        break;
+
+    case LANE_CLAVE:
+        if (beatOne && beatStart) return 0.16f + 0.16f * perc;
+        if (beatTwo && lateSub) return 0.14f + 0.18f * perc;
+        if (beatThree && beatStart) return 0.16f + 0.16f * perc;
+        break;
+
+    default:
+        break;
+    }
+
+    return 0.0f;
+}
+
 [[nodiscard]] float anchorProbability(const Controls& controls,
+                                      const ::downspout::Meter& meter,
                                       int lane,
                                       int barIndex,
                                       int beatIndex,
                                       int subIndex,
                                       int stepsPerBeat,
                                       bool fillBar) {
+    if (::downspout::meterHasCompoundFeel(meter)) {
+        return compoundAnchorProbability(controls, meter, lane, beatIndex, subIndex, stepsPerBeat, fillBar);
+    }
+    if (isTripleMeter(meter)) {
+        return tripleAnchorProbability(controls, lane, beatIndex, subIndex, stepsPerBeat, fillBar);
+    }
+
     const bool beatStart = subIndex == 0;
     const bool offbeat = isOffbeatStep(beatIndex * stepsPerBeat + subIndex, stepsPerBeat);
     const bool lateSub = subIndex == stepsPerBeat - 1;
+    const int q1Beat = mappedQuarterBeatIndex(meter, 1);
+    const int q2Beat = mappedQuarterBeatIndex(meter, 2);
+    const int q3Beat = mappedQuarterBeatIndex(meter, 3);
+    const bool onQ1 = beatIndex == q1Beat;
+    const bool onQ2 = beatIndex == q2Beat;
+    const bool onQ3 = beatIndex == q3Beat;
+    const bool backbeatStart = beatStart && isBackbeatBeat(meter, beatIndex);
     const float kick = controls.kickAmt;
     const float backbeat = controls.backbeatAmt;
     const float hat = controls.hatAmt;
@@ -175,47 +454,47 @@ constexpr std::uint8_t STEP_FLAG_FILL = kStepFlagFill;
         case GENRE_DISCO:
         case GENRE_MOTORIK:
             if (beatStart) return 0.86f + 0.12f * kick;
-            if (offbeat && beatIndex == 3) return 0.12f + 0.10f * controls.variation;
+            if (offbeat && onQ3) return 0.12f + 0.10f * controls.variation;
             break;
         case GENRE_SHUFFLE:
             if (beatIndex == 0 && beatStart) return 0.96f;
-            if (beatIndex == 2 && beatStart) return 0.62f + 0.18f * kick;
-            if (offbeat && (beatIndex == 1 || beatIndex == 3)) return 0.16f + 0.10f * controls.variation;
+            if (onQ2 && beatStart) return 0.62f + 0.18f * kick;
+            if (offbeat && (onQ1 || onQ3)) return 0.16f + 0.10f * controls.variation;
             break;
         case GENRE_ELECTRO:
             if (beatIndex == 0 && beatStart) return 0.94f;
-            if (beatIndex == 2 && beatStart) return 0.40f + 0.22f * kick;
+            if (onQ2 && beatStart) return 0.40f + 0.22f * kick;
             if (lateSub) return 0.12f + 0.22f * controls.variation;
             break;
         case GENRE_DUB:
             if (beatIndex == 0 && beatStart) return 0.96f;
-            if (beatIndex == 2 && beatStart) return 0.24f + 0.18f * kick;
-            if (offbeat && beatIndex == 3) return 0.10f + 0.10f * controls.variation;
+            if (onQ2 && beatStart) return 0.24f + 0.18f * kick;
+            if (offbeat && onQ3) return 0.10f + 0.10f * controls.variation;
             break;
         case GENRE_BOSSA:
             if (beatIndex == 0 && beatStart) return 0.82f;
-            if (beatIndex == 1 && lateSub) return 0.34f;
-            if (beatIndex == 2 && beatStart) return 0.56f;
-            if (beatIndex == 3 && offbeat) return 0.42f;
+            if (onQ1 && lateSub) return 0.34f;
+            if (onQ2 && beatStart) return 0.56f;
+            if (onQ3 && offbeat) return 0.42f;
             break;
         case GENRE_AFRO:
             if (beatIndex == 0 && beatStart) return 0.84f;
-            if (beatIndex == 1 && offbeat) return 0.34f;
-            if (beatIndex == 2 && beatStart) return 0.58f;
-            if (beatIndex == 3 && offbeat) return 0.38f;
+            if (onQ1 && offbeat) return 0.34f;
+            if (onQ2 && beatStart) return 0.58f;
+            if (onQ3 && offbeat) return 0.38f;
             break;
         case GENRE_ROCK:
         default:
             if (beatIndex == 0 && beatStart) return 0.98f;
-            if (beatIndex == 2 && beatStart) return 0.68f + 0.18f * kick;
-            if (beatIndex == 3 && lateSub) return 0.10f + 0.18f * controls.variation;
-            if (beatIndex == 1 && beatStart) return 0.12f + 0.10f * kick;
+            if (onQ2 && beatStart) return 0.68f + 0.18f * kick;
+            if (onQ3 && lateSub) return 0.10f + 0.18f * controls.variation;
+            if (onQ1 && beatStart) return 0.12f + 0.10f * kick;
             break;
         }
         break;
 
     case LANE_SNARE:
-        if ((beatIndex == 1 || beatIndex == 3) && beatStart) {
+        if (backbeatStart) {
             switch (controls.genre) {
             case GENRE_DISCO: return 0.76f + 0.18f * backbeat;
             case GENRE_ELECTRO: return 0.72f + 0.18f * backbeat;
@@ -223,13 +502,13 @@ constexpr std::uint8_t STEP_FLAG_FILL = kStepFlagFill;
             default: return 0.84f + 0.12f * backbeat;
             }
         }
-        if (fillBar && beatIndex >= 2 && lateSub) return 0.08f + 0.24f * fill * backbeat;
+        if (fillBar && beatIndex >= q2Beat && lateSub) return 0.08f + 0.24f * fill * backbeat;
         if (controls.genre == GENRE_AFRO && offbeat) return 0.08f + 0.10f * controls.variation;
         if (controls.genre == GENRE_SHUFFLE && lateSub) return 0.06f + 0.10f * controls.variation;
         break;
 
     case LANE_CLAP:
-        if ((beatIndex == 1 || beatIndex == 3) && beatStart) {
+        if (backbeatStart) {
             switch (controls.genre) {
             case GENRE_DISCO: return 0.78f + 0.16f * backbeat;
             case GENRE_ELECTRO: return 0.52f + 0.20f * backbeat;
@@ -238,14 +517,14 @@ constexpr std::uint8_t STEP_FLAG_FILL = kStepFlagFill;
             }
         }
         if (controls.genre == GENRE_DISCO && offbeat) return 0.08f + 0.14f * controls.variation;
-        if (fillBar && beatIndex == 3 && !beatStart) return 0.06f + 0.18f * fill * backbeat;
+        if (fillBar && onQ3 && !beatStart) return 0.06f + 0.18f * fill * backbeat;
         break;
 
     case LANE_CRASH:
         if (beatStart && beatIndex == 0) {
             return (barIndex == 0 ? 0.34f : 0.16f) + 0.18f * metal;
         }
-        if (fillBar && beatStart && beatIndex >= 2) {
+        if (fillBar && beatStart && beatIndex >= q2Beat) {
             return 0.08f + 0.18f * fill * (0.55f + 0.45f * metal);
         }
         break;
@@ -271,17 +550,17 @@ constexpr std::uint8_t STEP_FLAG_FILL = kStepFlagFill;
             default: return 0.18f + 0.20f * hat;
             }
         }
-        if (fillBar && beatIndex == 3 && lateSub) return 0.16f + 0.14f * fill;
+        if (fillBar && onQ3 && lateSub) return 0.16f + 0.14f * fill;
         break;
 
     case LANE_LOW_TOM:
-        if (fillBar && beatIndex >= 2 && (offbeat || lateSub)) {
+        if (fillBar && beatIndex >= q2Beat && (offbeat || lateSub)) {
             return 0.08f + 0.28f * fill + 0.12f * tom;
         }
         break;
 
     case LANE_HIGH_TOM:
-        if (fillBar && beatIndex >= 2 && !beatStart) {
+        if (fillBar && beatIndex >= q2Beat && !beatStart) {
             return 0.08f + 0.26f * fill + 0.12f * tom;
         }
         break;
@@ -290,19 +569,19 @@ constexpr std::uint8_t STEP_FLAG_FILL = kStepFlagFill;
         switch (controls.genre) {
         case GENRE_ELECTRO:
             if (beatStart && beatIndex == 0) return 0.14f + 0.16f * metal;
-            if (fillBar && beatIndex >= 2 && (beatStart || lateSub)) return 0.10f + 0.26f * fill * metal;
-            if (lateSub && beatIndex == 3) return 0.08f + 0.14f * controls.variation;
+            if (fillBar && beatIndex >= q2Beat && (beatStart || lateSub)) return 0.10f + 0.26f * fill * metal;
+            if (lateSub && onQ3) return 0.08f + 0.14f * controls.variation;
             break;
         case GENRE_MOTORIK:
             if (beatStart && beatIndex == 0) return 0.12f + 0.18f * metal;
-            if (fillBar && beatIndex == 3 && beatStart) return 0.10f + 0.22f * fill * metal;
+            if (fillBar && onQ3 && beatStart) return 0.10f + 0.22f * fill * metal;
             break;
         case GENRE_DUB:
-            if ((offbeat && beatIndex == 3) || (lateSub && beatIndex == 2)) return 0.10f + 0.18f * metal;
-            if (fillBar && beatIndex == 3) return 0.10f + 0.18f * fill * metal;
+            if ((offbeat && onQ3) || (lateSub && onQ2)) return 0.10f + 0.18f * metal;
+            if (fillBar && onQ3) return 0.10f + 0.18f * fill * metal;
             break;
         default:
-            if (fillBar && beatIndex >= 3 && (offbeat || lateSub)) return 0.06f + 0.18f * fill * metal;
+            if (fillBar && beatIndex >= q3Beat && (offbeat || lateSub)) return 0.06f + 0.18f * fill * metal;
             break;
         }
         break;
@@ -311,21 +590,21 @@ constexpr std::uint8_t STEP_FLAG_FILL = kStepFlagFill;
         switch (controls.genre) {
         case GENRE_DISCO:
             if (offbeat) return 0.16f + 0.24f * perc;
-            if (beatStart && (beatIndex == 1 || beatIndex == 3)) return 0.08f + 0.14f * perc;
+            if (beatStart && (onQ1 || onQ3)) return 0.08f + 0.14f * perc;
             break;
         case GENRE_MOTORIK:
-            if (beatStart && (beatIndex == 0 || beatIndex == 2)) return 0.10f + 0.18f * perc;
+            if (beatStart && (beatIndex == 0 || onQ2)) return 0.10f + 0.18f * perc;
             if (offbeat) return 0.10f + 0.16f * perc;
             break;
         case GENRE_BOSSA:
-            if ((beatIndex == 0 || beatIndex == 2) && lateSub) return 0.16f + 0.18f * perc;
-            if ((beatIndex == 1 || beatIndex == 3) && offbeat) return 0.16f + 0.20f * perc;
+            if ((beatIndex == 0 || onQ2) && lateSub) return 0.16f + 0.18f * perc;
+            if ((onQ1 || onQ3) && offbeat) return 0.16f + 0.20f * perc;
             break;
         case GENRE_AFRO:
             if (offbeat || lateSub) return 0.14f + 0.20f * perc;
             break;
         default:
-            if (fillBar && beatIndex >= 2 && offbeat) return 0.06f + 0.16f * fill * perc;
+            if (fillBar && beatIndex >= q2Beat && offbeat) return 0.06f + 0.16f * fill * perc;
             break;
         }
         break;
@@ -334,22 +613,22 @@ constexpr std::uint8_t STEP_FLAG_FILL = kStepFlagFill;
         switch (controls.genre) {
         case GENRE_BOSSA:
             if (beatIndex == 0 && beatStart) return 0.26f + 0.16f * perc;
-            if (beatIndex == 1 && offbeat) return 0.22f + 0.16f * perc;
-            if (beatIndex == 2 && lateSub) return 0.22f + 0.16f * perc;
-            if (beatIndex == 3 && beatStart) return 0.24f + 0.16f * perc;
+            if (onQ1 && offbeat) return 0.22f + 0.16f * perc;
+            if (onQ2 && lateSub) return 0.22f + 0.16f * perc;
+            if (onQ3 && beatStart) return 0.24f + 0.16f * perc;
             break;
         case GENRE_AFRO:
             if (beatIndex == 0 && beatStart) return 0.20f + 0.18f * perc;
-            if (beatIndex == 1 && lateSub) return 0.18f + 0.18f * perc;
-            if (beatIndex == 2 && offbeat) return 0.22f + 0.18f * perc;
-            if (beatIndex == 3 && beatStart) return 0.18f + 0.16f * perc;
+            if (onQ1 && lateSub) return 0.18f + 0.18f * perc;
+            if (onQ2 && offbeat) return 0.22f + 0.18f * perc;
+            if (onQ3 && beatStart) return 0.18f + 0.16f * perc;
             break;
         case GENRE_SHUFFLE:
-            if (beatIndex == 1 && lateSub) return 0.10f + 0.14f * perc;
-            if (beatIndex == 3 && offbeat) return 0.10f + 0.14f * perc;
+            if (onQ1 && lateSub) return 0.10f + 0.14f * perc;
+            if (onQ3 && offbeat) return 0.10f + 0.14f * perc;
             break;
         default:
-            if (fillBar && beatIndex == 3 && !beatStart) return 0.06f + 0.14f * fill * perc;
+            if (fillBar && onQ3 && !beatStart) return 0.06f + 0.14f * fill * perc;
             break;
         }
         break;
@@ -456,6 +735,7 @@ constexpr std::uint8_t STEP_FLAG_FILL = kStepFlagFill;
 }
 
 [[nodiscard]] int stepVelocity(const Controls& controls,
+                               const ::downspout::Meter& meter,
                                int lane,
                                int beatIndex,
                                int subIndex,
@@ -487,9 +767,21 @@ constexpr std::uint8_t STEP_FLAG_FILL = kStepFlagFill;
         velocity -= 4;
     }
 
-    if ((lane == LANE_SNARE || lane == LANE_CLAP) && (beatIndex == 1 || beatIndex == 3) && subIndex == 0) {
+    if ((lane == LANE_SNARE || lane == LANE_CLAP) && isBackbeatBeat(meter, beatIndex) && subIndex == 0) {
         velocity += 10;
         flags |= STEP_FLAG_ACCENT;
+    }
+    if (::downspout::meterHasCompoundFeel(meter) && subIndex == 0 && isPulseStartBeat(meter, beatIndex)) {
+        velocity += (lane == LANE_KICK || lane == LANE_SNARE || lane == LANE_CLAP) ? 8 : 5;
+        flags |= STEP_FLAG_ACCENT;
+    }
+    if (isTripleMeter(meter) && subIndex == 0) {
+        if (beatIndex == 0) {
+            velocity += 7;
+            flags |= STEP_FLAG_ACCENT;
+        } else if (beatIndex == 1 && (lane == LANE_SNARE || lane == LANE_CLAP || lane == LANE_COWBELL)) {
+            velocity += 4;
+        }
     }
     if (lane == LANE_KICK && beatIndex == 0 && subIndex == 0) {
         velocity += 8;
@@ -559,11 +851,19 @@ void clearPattern(PatternState& pattern, const Controls& controls) {
     pattern.version = kPatternStateVersion;
     pattern.bars = controls.bars;
     pattern.stepsPerBeat = stepsPerBeatForResolution(controls.resolution);
-    pattern.stepsPerBar = pattern.stepsPerBeat * 4;
+    pattern.meter = ::downspout::Meter {};
+    pattern.stepsPerBar = ::downspout::meterStepsPerBar(pattern.meter, pattern.stepsPerBeat);
     pattern.totalSteps = clampi(pattern.bars * pattern.stepsPerBar, 1, kMaxPatternSteps);
     for (int lane = 0; lane < kLaneCount; ++lane) {
         pattern.lanes[lane].midiNote = noteForLane(controls.kitMap, lane);
     }
+}
+
+void clearPattern(PatternState& pattern, const Controls& controls, const ::downspout::Meter& meter) {
+    clearPattern(pattern, controls);
+    pattern.meter = ::downspout::sanitizeMeter(meter);
+    pattern.stepsPerBar = ::downspout::meterStepsPerBar(pattern.meter, pattern.stepsPerBeat);
+    pattern.totalSteps = clampi(pattern.bars * pattern.stepsPerBar, 1, kMaxPatternSteps);
 }
 
 void copyPatternPrefix(PatternState& target, const PatternState& source, int prefixSteps) {
@@ -591,7 +891,7 @@ void applyFillOverlayToBar(PatternState& pattern,
     const int targetBar = clampi(barIndex, 0, pattern.bars - 1);
     const int barStart = targetBar * stepsPerBar;
     const int barEnd = clampi(barStart + stepsPerBar, 0, pattern.totalSteps);
-    const int fillBeats = controls.fill > 0.62f ? 2 : 1;
+    const int fillBeats = preferredFillBeats(pattern.meter, controls.fill);
     const int fillSteps = clampi(fillBeats * stepsPerBeat, stepsPerBeat, stepsPerBar);
     const int zoneStart = clampi(barEnd - fillSteps, barStart, barEnd);
     int motif = 0;
@@ -749,8 +1049,10 @@ void buildBar(PatternState& pattern,
         const int subIndex = step % stepsPerBeat;
 
         for (int lane = 0; lane < kLaneCount; ++lane) {
-            const float anchorProb = anchorProbability(controls, lane, barIndex, beatIndex, subIndex, stepsPerBeat, fillBar);
-            const bool anchor = anchorProb > 0.0f && rng.nextFloat() < clampf(anchorProb, 0.0f, 1.0f);
+            const float anchorProbabilityValue =
+                anchorProbability(controls, pattern.meter, lane, barIndex, beatIndex, subIndex, stepsPerBeat, fillBar);
+            const bool anchor =
+                anchorProbabilityValue > 0.0f && rng.nextFloat() < clampf(anchorProbabilityValue, 0.0f, 1.0f);
             const bool euclid = euclidHit(step, pulses[lane], offsets[lane], stepsPerBar);
             bool hit = anchor;
 
@@ -764,7 +1066,8 @@ void buildBar(PatternState& pattern,
             }
 
             std::uint8_t flags = 0;
-            const int velocity = stepVelocity(controls, lane, beatIndex, subIndex, stepsPerBeat, fillBar, rng, &flags);
+            const int velocity =
+                stepVelocity(controls, pattern.meter, lane, beatIndex, subIndex, stepsPerBeat, fillBar, rng, &flags);
             pattern.lanes[lane].steps[globalStep].velocity = static_cast<std::uint8_t>(velocity);
             pattern.lanes[lane].steps[globalStep].flags = flags;
         }
@@ -834,7 +1137,7 @@ void cleanupPattern(PatternState& pattern, const Controls& controls) {
                 }
             }
 
-            if (isFillZoneStep(step, stepsPerBar, stepsPerBeat, controls.fill)) {
+            if (isFillZoneStep(step, stepsPerBar, stepsPerBeat, pattern.meter, controls.fill)) {
                 const bool fillActivity =
                     pattern.lanes[LANE_LOW_TOM].steps[barStart + step].velocity > 0 ||
                     pattern.lanes[LANE_HIGH_TOM].steps[barStart + step].velocity > 0 ||
@@ -851,21 +1154,18 @@ void cleanupPattern(PatternState& pattern, const Controls& controls) {
             }
         }
 
-        const int backbeat1 = barStart + stepsPerBeat;
-        const int backbeat2 = barStart + stepsPerBeat * 3;
         const bool needsBackbeat = controls.backbeatAmt > 0.30f;
         if (needsBackbeat) {
-            if (backbeat1 < pattern.totalSteps &&
-                pattern.lanes[LANE_SNARE].steps[backbeat1].velocity == 0 &&
-                pattern.lanes[LANE_CLAP].steps[backbeat1].velocity == 0) {
-                pattern.lanes[LANE_SNARE].steps[backbeat1].velocity = 102;
-                pattern.lanes[LANE_SNARE].steps[backbeat1].flags = STEP_FLAG_ACCENT;
-            }
-            if (backbeat2 < pattern.totalSteps &&
-                pattern.lanes[LANE_SNARE].steps[backbeat2].velocity == 0 &&
-                pattern.lanes[LANE_CLAP].steps[backbeat2].velocity == 0) {
-                pattern.lanes[LANE_SNARE].steps[backbeat2].velocity = 104;
-                pattern.lanes[LANE_SNARE].steps[backbeat2].flags = STEP_FLAG_ACCENT;
+            std::array<int, ::downspout::kMaxMeterGroups> backbeatBeats {};
+            const int backbeatCount = collectBackbeatBeats(pattern.meter, backbeatBeats);
+            for (int index = 0; index < backbeatCount; ++index) {
+                const int backbeatStep = barStart + (backbeatBeats[static_cast<std::size_t>(index)] * stepsPerBeat);
+                if (backbeatStep < pattern.totalSteps &&
+                    pattern.lanes[LANE_SNARE].steps[backbeatStep].velocity == 0 &&
+                    pattern.lanes[LANE_CLAP].steps[backbeatStep].velocity == 0) {
+                    pattern.lanes[LANE_SNARE].steps[backbeatStep].velocity = static_cast<std::uint8_t>(102 + (index * 2));
+                    pattern.lanes[LANE_SNARE].steps[backbeatStep].flags = STEP_FLAG_ACCENT;
+                }
             }
         }
     }
@@ -928,18 +1228,20 @@ int stepsPerBeatForResolution(ResolutionId resolution) {
 
 void regeneratePattern(PatternState& pattern,
                        const Controls& rawControls,
+                       const ::downspout::Meter& meter,
                        bool fillOnlyRefresh) {
     const Controls controls = clampControls(rawControls);
     const PatternState previousPattern = pattern;
     const bool hadPreviousPattern = previousPattern.totalSteps > 0;
     PatternState nextPattern {};
-    clearPattern(nextPattern, controls);
+    clearPattern(nextPattern, controls, meter);
 
     const std::int32_t nextSerial = nextGenerationSerial(previousPattern.generationSerial);
     nextPattern.generationSerial = nextSerial;
 
     const bool compatibleShape = hadPreviousPattern &&
                                  previousPattern.bars == nextPattern.bars &&
+                                 ::downspout::metersEqual(previousPattern.meter, nextPattern.meter) &&
                                  previousPattern.stepsPerBar == nextPattern.stepsPerBar &&
                                  previousPattern.totalSteps == nextPattern.totalSteps;
 
@@ -976,13 +1278,15 @@ void regeneratePattern(PatternState& pattern,
 
 void refreshBar(PatternState& pattern,
                 const Controls& rawControls,
+                const ::downspout::Meter& meter,
                 int barIndex) {
     const Controls controls = clampControls(rawControls);
     if (pattern.bars <= 0 ||
         pattern.totalSteps <= 0 ||
         pattern.bars != controls.bars ||
+        !::downspout::metersEqual(pattern.meter, meter) ||
         pattern.stepsPerBeat != stepsPerBeatForResolution(controls.resolution)) {
-        regeneratePattern(pattern, controls, false);
+        regeneratePattern(pattern, controls, meter, false);
         return;
     }
 
@@ -1017,13 +1321,15 @@ void refreshBar(PatternState& pattern,
 
 void refreshFillBar(PatternState& pattern,
                     const Controls& rawControls,
+                    const ::downspout::Meter& meter,
                     int barIndex) {
     const Controls controls = controlsForManualFill(rawControls);
     if (pattern.bars <= 0 ||
         pattern.totalSteps <= 0 ||
         pattern.bars != controls.bars ||
+        !::downspout::metersEqual(pattern.meter, meter) ||
         pattern.stepsPerBeat != stepsPerBeatForResolution(controls.resolution)) {
-        regeneratePattern(pattern, controls, false);
+        regeneratePattern(pattern, controls, meter, false);
         return;
     }
 

@@ -131,6 +131,69 @@ constexpr ScaleDef kScales[] = {
     return clampi(base + interval, 0, 127);
 }
 
+[[nodiscard]] ::downspout::Meter resolveMeter(const ::downspout::Meter& meter) {
+    return ::downspout::sanitizeMeter(meter);
+}
+
+[[nodiscard]] int stepInBarFor(const PatternState& pattern, const int step) {
+    if (pattern.stepsPerBar <= 0) {
+        return 0;
+    }
+
+    int local = step % pattern.stepsPerBar;
+    if (local < 0) {
+        local += pattern.stepsPerBar;
+    }
+    return local;
+}
+
+[[nodiscard]] int beatInBarFor(const PatternState& pattern, const int step) {
+    if (pattern.stepsPerBeat <= 0) {
+        return 0;
+    }
+    return stepInBarFor(pattern, step) / pattern.stepsPerBeat;
+}
+
+[[nodiscard]] bool isBeatStartStep(const PatternState& pattern, const int step) {
+    return pattern.stepsPerBeat > 0 && (step % pattern.stepsPerBeat) == 0;
+}
+
+[[nodiscard]] bool isPulseStartStep(const PatternState& pattern, const int step) {
+    if (!isBeatStartStep(pattern, step)) {
+        return false;
+    }
+    return ::downspout::meterIsPulseStart(pattern.meter, beatInBarFor(pattern, step));
+}
+
+[[nodiscard]] bool isPulsePickupStep(const PatternState& pattern, const int step) {
+    if (!::downspout::meterHasCompoundFeel(pattern.meter) || pattern.stepsPerBeat <= 1 || pattern.stepsPerBar <= 0) {
+        return false;
+    }
+
+    const int stepInBar = stepInBarFor(pattern, step);
+    const int beatInBar = stepInBar / pattern.stepsPerBeat;
+    const int stepInBeat = stepInBar % pattern.stepsPerBeat;
+    if (stepInBeat != (pattern.stepsPerBeat - 1)) {
+        return false;
+    }
+
+    const int nextBeat = (beatInBar + 1) % pattern.meter.numerator;
+    return ::downspout::meterIsPulseStart(pattern.meter, nextBeat);
+}
+
+[[nodiscard]] float meterDensityBias(const PatternState& pattern, const int step) {
+    if (isPulseStartStep(pattern, step)) {
+        return ::downspout::meterHasCompoundFeel(pattern.meter) ? 1.32f : 1.08f;
+    }
+    if (isBeatStartStep(pattern, step)) {
+        return ::downspout::meterHasCompoundFeel(pattern.meter) ? 0.74f : 1.0f;
+    }
+    if (isPulsePickupStep(pattern, step)) {
+        return 1.10f;
+    }
+    return ::downspout::meterHasCompoundFeel(pattern.meter) ? 0.88f : 0.94f;
+}
+
 [[nodiscard]] float genreDensityBias(GenreId genre, bool strong) {
     switch (genre) {
     case GenreId::techno: return strong ? 1.15f : 0.78f;
@@ -142,6 +205,46 @@ constexpr ScaleDef kScales[] = {
     case GenreId::funk: return strong ? 0.84f : 1.28f;
     case GenreId::sabbath: return strong ? 1.22f : 0.52f;
     default: return 1.0f;
+    }
+}
+
+void reinforceMeterPulses(std::array<bool, kMaxPatternSteps>& onset,
+                          const PatternState& pattern,
+                          const Controls& controls,
+                          Rng& rng) {
+    if (!::downspout::meterHasCompoundFeel(pattern.meter) || pattern.stepsPerBar <= 0 || pattern.stepsPerBeat <= 0) {
+        return;
+    }
+
+    const int barCount = std::max(1, (pattern.patternSteps + pattern.stepsPerBar - 1) / pattern.stepsPerBar);
+    const int pulseCount = ::downspout::meterPulseCount(pattern.meter);
+    for (int bar = 0; bar < barCount; ++bar) {
+        for (int pulseIndex = 1; pulseIndex < pulseCount; ++pulseIndex) {
+            const int pulseBeat = ::downspout::meterGroupStartBeat(pattern.meter, pulseIndex);
+            const int step = bar * pattern.stepsPerBar + pulseBeat * pattern.stepsPerBeat;
+            if (step <= 0 || step >= pattern.patternSteps) {
+                continue;
+            }
+
+            const bool alreadyCovered =
+                onset[step] ||
+                (step > 0 && onset[step - 1]) ||
+                ((step + 1) < pattern.patternSteps && onset[step + 1]);
+            if (alreadyCovered) {
+                continue;
+            }
+
+            float probability = 0.34f + controls.density * 0.46f;
+            if (controls.genre == GenreId::ambient) {
+                probability -= 0.12f;
+            } else if (controls.genre == GenreId::dub || controls.genre == GenreId::sabbath) {
+                probability += 0.08f;
+            }
+
+            if (rng.nextFloat() < clampf(probability, 0.16f, 0.88f)) {
+                onset[step] = true;
+            }
+        }
     }
 }
 
@@ -234,9 +337,14 @@ void ensureFirstEvent(PatternState& pattern, const Controls& controls) {
     pattern.events[0].velocity = 96;
 }
 
-void generateRhythm(PatternState& pattern, const Controls& controls, Rng& rng) {
+void generateRhythm(PatternState& pattern,
+                    const Controls& controls,
+                    const ::downspout::Meter& rawMeter,
+                    Rng& rng) {
     pattern.eventCount = 0;
+    pattern.meter = resolveMeter(rawMeter);
     pattern.stepsPerBeat = stepsPerBeatForSubdivision(controls.subdivision);
+    pattern.stepsPerBar = ::downspout::meterStepsPerBar(pattern.meter, pattern.stepsPerBeat);
     pattern.patternSteps = clampi(controls.lengthBeats * pattern.stepsPerBeat, 1, kMaxPatternSteps);
 
     std::array<bool, kMaxPatternSteps> onset {};
@@ -244,8 +352,11 @@ void generateRhythm(PatternState& pattern, const Controls& controls, Rng& rng) {
     int cooldown = 0;
 
     for (int step = 1; step < pattern.patternSteps; ++step) {
-        const bool strong = (step % pattern.stepsPerBeat) == 0;
-        float probability = controls.density * genreDensityBias(controls.genre, strong);
+        const bool strong = isPulseStartStep(pattern, step) ||
+                            (!::downspout::meterHasCompoundFeel(pattern.meter) && isBeatStartStep(pattern, step));
+        float probability = controls.density *
+                            genreDensityBias(controls.genre, strong) *
+                            meterDensityBias(pattern, step);
 
         if (cooldown > 0) {
             probability *= 0.30f;
@@ -257,6 +368,8 @@ void generateRhythm(PatternState& pattern, const Controls& controls, Rng& rng) {
             cooldown = 1;
         }
     }
+
+    reinforceMeterPulses(onset, pattern, controls, rng);
 
     for (int step = 0; step < pattern.patternSteps && pattern.eventCount < kMaxEvents; ++step) {
         if (!onset[step]) {
@@ -288,7 +401,9 @@ void generateNotes(PatternState& pattern, const Controls& controls, Rng& rng) {
 
     for (int index = 0; index < pattern.eventCount; ++index) {
         NoteEvent& event = pattern.events[index];
-        const bool strong = (event.startStep % pattern.stepsPerBeat) == 0;
+        const bool strong = isPulseStartStep(pattern, event.startStep) ||
+                            (!::downspout::meterHasCompoundFeel(pattern.meter) && isBeatStartStep(pattern, event.startStep));
+        const bool secondaryAccent = !strong && isBeatStartStep(pattern, event.startStep);
         const int degree = (controls.genre == GenreId::sabbath)
             ? sabbathCellDegree(pattern, rng, sabbathCell, sabbathCellLen, index)
             : chooseDegree(rng, controls.genre, strong, prevDegree);
@@ -296,7 +411,9 @@ void generateNotes(PatternState& pattern, const Controls& controls, Rng& rng) {
         event.note = noteFromDegree(controls, degree);
 
         const int baseVelocity = 86;
-        const int accentBoost = strong ? static_cast<int>(std::lround(controls.accent * 28.0f)) : 0;
+        const int accentBoost = strong
+            ? static_cast<int>(std::lround(controls.accent * 28.0f))
+            : (secondaryAccent ? static_cast<int>(std::lround(controls.accent * 12.0f)) : 0);
         const int randomBoost = rng.nextInt(0, 10);
         event.velocity = clampi(baseVelocity + accentBoost + randomBoost, 1, 127);
     }
@@ -377,6 +494,7 @@ int registerOffset(int reg) {
 
 void regeneratePattern(PatternState& pattern,
                        const Controls& controls,
+                       const ::downspout::Meter& meter,
                        bool regenRhythm,
                        bool regenNotes) {
     if (!regenRhythm && pattern.eventCount <= 0) {
@@ -393,7 +511,10 @@ void regeneratePattern(PatternState& pattern,
     rng.seed(seedMix);
 
     if (regenRhythm || pattern.patternSteps <= 0 || pattern.stepsPerBeat <= 0) {
-        generateRhythm(pattern, controls, rng);
+        generateRhythm(pattern, controls, meter, rng);
+    } else {
+        pattern.meter = resolveMeter(meter);
+        pattern.stepsPerBar = ::downspout::meterStepsPerBar(pattern.meter, pattern.stepsPerBeat);
     }
 
     if (regenRhythm && !regenNotes && hadPreviousPattern) {
@@ -416,7 +537,7 @@ void partialNoteMutation(PatternState& pattern,
                          const Controls& controls,
                          float strength) {
     if (pattern.eventCount <= 0) {
-        regeneratePattern(pattern, controls, true, true);
+        regeneratePattern(pattern, controls, pattern.meter, true, true);
         return;
     }
 

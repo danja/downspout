@@ -1,5 +1,7 @@
 #pragma once
 
+#include "downspout/meter.hpp"
+
 #include <array>
 #include <cstdint>
 
@@ -8,11 +10,11 @@ namespace downspout::drumgen {
 inline constexpr int kMinBars = 1;
 inline constexpr int kMaxBars = 4;
 inline constexpr int kLaneCount = 11;
-inline constexpr int kMaxPatternSteps = 64;
+inline constexpr int kMaxPatternSteps = 128;
 inline constexpr int kMaxScheduledMidiEvents = 512;
 inline constexpr int kMaxPendingNoteOffs = 96;
 inline constexpr int kSafetyGapSamples = 1;
-inline constexpr std::int32_t kPatternStateVersion = 1;
+inline constexpr std::int32_t kPatternStateVersion = 2;
 inline constexpr std::int32_t kVariationStateVersion = 1;
 
 enum class GenreId : std::int32_t {
@@ -98,6 +100,7 @@ struct PatternState {
     std::int32_t stepsPerBar = 16;
     std::int32_t totalSteps = 0;
     std::int32_t generationSerial = 0;
+    ::downspout::Meter meter {};
     std::array<DrumLaneState, kLaneCount> lanes {};
 };
 
@@ -113,7 +116,9 @@ struct TransportSnapshot {
     double bar = 0.0;
     double barBeat = 0.0;
     double beatsPerBar = 4.0;
+    double beatType = 4.0;
     double bpm = 120.0;
+    ::downspout::Meter meter {};
 };
 
 enum class MidiEventType : std::uint8_t {

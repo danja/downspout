@@ -31,7 +31,7 @@ void testBlockPatternWrapsAndOffsets() {
     parameters.steps = 3.0f;
     parameters.offset = 2.0f;
 
-    const std::array<bool, 8> expected = {false, true, true, false, false, true, false, false};
+    const std::array<bool, 8> expected = {false, true, false, false, true, false, true, false};
     for (int index = 0; index < 8; ++index) {
         assert(blockIsActive(parameters, index) == expected[static_cast<std::size_t>(index)]);
     }

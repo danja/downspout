@@ -36,9 +36,9 @@ The immediate targets are:
 
 Current limitation:
 
-- the repository is broadly transport-aware today, but full meter-awareness is
-  still uneven across the musical generators, especially for compound meters
-  such as `6/8`, `9/8`, and `12/8`
+- the repository now has a shared meter model, but full musical meter-awareness
+  is still uneven across the generators, especially for
+  compound-meter style behavior in `6/8`, `9/8`, and `12/8`
 
 The repository is intentionally scaffolded around a shared-core pattern:
 
@@ -58,7 +58,7 @@ The repository is intentionally scaffolded around a shared-core pattern:
 This repository now contains:
 
 - project planning and scaffolding;
-- a portable `bassgen` core library with tests;
+- a portable `bassgen` core library with tests and pulse-aware compound-meter support;
 - a first DPF-backed `bassgen` VST3 wrapper target with UI;
 - a portable `p-mix` core library with tests;
 - a first DPF-backed `p-mix` VST3 wrapper target with UI;
@@ -123,7 +123,7 @@ workflow details.
   How the repository is wired together, including build graph, dependency
   direction, core/wrapper/UI split, and install/release flow
 - [docs/meter.md](docs/meter.md)
-  Current meter-handling limitations, the planned shared meter model, and what
+  Current meter-handling limitations, the shared meter model, and what
   is still missing for use cases such as generative Irish folk music
 - [docs/install.md](docs/install.md)
   Local build and installation notes
@@ -197,5 +197,5 @@ pedals, cadences, and releases rather than only mutating a short loop.
 8. Validate `gremlin_driver.vst3` in Reaper, especially MIDI pass-through, transport sync, and chaining into `gremlin.vst3`.
 9. Validate `drumgen.vst3` in Reaper, especially the new action-button UI, transport sync, and state restore.
 10. Validate `ground.vst3` in Reaper, especially long-form phrase behavior, action triggers, and state restore.
-11. Add a shared meter model so `ground`, `drumgen`, and later `bassgen` can support compound and grouped meters coherently.
+11. Push the shared meter model further into folk-oriented style vocabulary so compound meters are musically convincing, not just structurally valid.
 12. Publish the first public `v*` tag and verify the GitHub Actions release assets on GitHub.

@@ -25,6 +25,8 @@ Implementation status:
 - text serialization for controls, pattern state, and variation state now exists;
 - deterministic core and engine tests now exist and pass;
 - a first DPF-backed `drumgen.vst3` wrapper now builds with a custom control UI.
+- the core now follows shared meter input beyond bar length alone: compound and
+  triple meters get dedicated pulse-aware anchor and fill behavior.
 
 Recommended next steps:
 

@@ -114,7 +114,7 @@ bool applyLoopVariation(FormState& form,
         } else if (roll < 0.74f) {
             refreshPhrase(form, controls, targetPhrase);
         } else {
-            regenerateForm(form, controls);
+            regenerateForm(form, controls, form.meter);
         }
         return true;
     }
@@ -130,7 +130,7 @@ bool applyLoopVariation(FormState& form,
             }
         }
     } else {
-        regenerateForm(form, controls);
+        regenerateForm(form, controls, form.meter);
     }
 
     return true;

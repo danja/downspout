@@ -57,7 +57,9 @@ CoreTransport toCoreTransport(const TimePosition& timePos) {
         transport.barBeat = static_cast<double>(timePos.bbt.beat - 1)
             + (timePos.bbt.ticksPerBeat > 0.0 ? (timePos.bbt.tick / timePos.bbt.ticksPerBeat) : 0.0);
         transport.beatsPerBar = timePos.bbt.beatsPerBar;
+        transport.beatType = timePos.bbt.beatType;
         transport.bpm = timePos.bbt.beatsPerMinute;
+        transport.meter = downspout::meterFromTimeSignature(timePos.bbt.beatsPerBar, timePos.bbt.beatType);
     }
 
     return transport;

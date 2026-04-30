@@ -21,6 +21,10 @@ PatternState sanitizePatternState(const PatternState& raw, bool* valid) {
     pattern.eventCount = clampi(pattern.eventCount, 0, kMaxEvents);
     pattern.patternSteps = clampi(pattern.patternSteps, 1, kMaxPatternSteps);
     pattern.stepsPerBeat = clampi(pattern.stepsPerBeat, 1, 6);
+    pattern.meter = ::downspout::sanitizeMeter(pattern.meter);
+    pattern.stepsPerBar = clampi(::downspout::meterStepsPerBar(pattern.meter, pattern.stepsPerBeat),
+                                 pattern.stepsPerBeat,
+                                 kMaxPatternSteps);
 
     for (int index = 0; index < pattern.eventCount; ++index) {
         pattern.events[index].startStep = clampi(pattern.events[index].startStep, 0, pattern.patternSteps - 1);

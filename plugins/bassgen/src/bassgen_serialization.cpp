@@ -70,6 +70,9 @@ std::string serializePatternState(const PatternState& pattern) {
     out << "version=" << pattern.version << '\n';
     out << "patternSteps=" << pattern.patternSteps << '\n';
     out << "stepsPerBeat=" << pattern.stepsPerBeat << '\n';
+    out << "stepsPerBar=" << pattern.stepsPerBar << '\n';
+    out << "meterNumerator=" << pattern.meter.numerator << '\n';
+    out << "meterDenominator=" << pattern.meter.denominator << '\n';
     out << "eventCount=" << pattern.eventCount << '\n';
     out << "generationSerial=" << pattern.generationSerial << '\n';
     for (int index = 0; index < pattern.eventCount; ++index) {
@@ -172,6 +175,18 @@ std::optional<PatternState> deserializePatternState(const std::string& text) {
             }
         } else if (key == "stepsPerBeat") {
             if (!parseInteger(value, pattern.stepsPerBeat)) {
+                return std::nullopt;
+            }
+        } else if (key == "stepsPerBar") {
+            if (!parseInteger(value, pattern.stepsPerBar)) {
+                return std::nullopt;
+            }
+        } else if (key == "meterNumerator") {
+            if (!parseInteger(value, pattern.meter.numerator)) {
+                return std::nullopt;
+            }
+        } else if (key == "meterDenominator") {
+            if (!parseInteger(value, pattern.meter.denominator)) {
                 return std::nullopt;
             }
         } else if (key == "eventCount") {

@@ -39,6 +39,17 @@ constexpr int kLaneOpenHat = static_cast<int>(LaneId::openHat);
     return controls;
 }
 
+[[nodiscard]] int preferredFillBeats(const ::downspout::Meter& meter, const float fillAmount) {
+    const ::downspout::Meter normalized = ::downspout::sanitizeMeter(meter);
+    if (::downspout::meterHasCompoundFeel(normalized)) {
+        return ::downspout::meterGroupSize(normalized, std::max(0, ::downspout::meterPulseCount(normalized) - 1));
+    }
+    if (normalized.numerator == 3) {
+        return fillAmount > 0.62f ? 2 : 1;
+    }
+    return fillAmount > 0.62f ? 2 : 1;
+}
+
 void appendMidi(BlockResult& result,
                 MidiEventType type,
                 std::uint32_t frame,
@@ -117,16 +128,29 @@ struct UpdateDecision {
     bool fillTriggered = false;
 };
 
-UpdateDecision updatePatternIfNeeded(EngineState& state, const Controls& current) {
+[[nodiscard]] ::downspout::Meter targetMeterForTransport(const EngineState& state, const TransportSnapshot& transport) {
+    if (transport.valid && transport.beatsPerBar > 0.0 && transport.beatType > 0.0) {
+        return ::downspout::sanitizeMeter(transport.meter);
+    }
+    if (state.patternValid) {
+        return ::downspout::sanitizeMeter(state.pattern.meter);
+    }
+    return ::downspout::Meter {};
+}
+
+UpdateDecision updatePatternIfNeeded(EngineState& state,
+                                     const Controls& current,
+                                     const ::downspout::Meter& targetMeter) {
     UpdateDecision decision;
     const bool controlsChanged = structuralControlsChanged(current, state.previousControls);
     const bool newChanged = current.actionNew != state.previousControls.actionNew;
     const bool mutateChanged = current.actionMutate != state.previousControls.actionMutate;
     const bool fillChanged = current.actionFill != state.previousControls.actionFill;
     const bool varyChanged = std::fabs(current.vary - state.previousControls.vary) >= 0.0001f;
+    const bool meterChanged = !state.patternValid || !::downspout::metersEqual(state.pattern.meter, targetMeter);
 
-    if (!state.patternValid || controlsChanged || newChanged || mutateChanged) {
-        regeneratePattern(state.pattern, current, false);
+    if (!state.patternValid || controlsChanged || newChanged || mutateChanged || meterChanged) {
+        regeneratePattern(state.pattern, current, targetMeter, false);
         state.patternValid = true;
         resetVariationProgress(state.variation);
     } else if (varyChanged) {
@@ -150,7 +174,7 @@ int targetBarForFillTrigger(const PatternState& pattern, const Controls& control
     const int currentStep = clampi(static_cast<int>(std::floor(localStep + 1e-9)), 0, pattern.totalSteps - 1);
     const int currentBar = clampi(currentStep / pattern.stepsPerBar, 0, pattern.bars - 1);
     const int stepInBar = currentStep % pattern.stepsPerBar;
-    const int fillBeats = fillControls.fill > 0.62f ? 2 : 1;
+    const int fillBeats = preferredFillBeats(pattern.meter, fillControls.fill);
     const int fillSteps = clampi(fillBeats * pattern.stepsPerBeat, pattern.stepsPerBeat, pattern.stepsPerBar);
     const int zoneStart = pattern.stepsPerBar - fillSteps;
 
@@ -247,7 +271,7 @@ void activate(EngineState& state, const Controls& controls) {
     state.controls = clampControls(controls);
     state.previousControls = state.controls;
     if (!state.patternValid) {
-        regeneratePattern(state.pattern, state.controls, false);
+        regeneratePattern(state.pattern, state.controls, ::downspout::Meter {}, false);
         state.patternValid = true;
         resetVariationProgress(state.variation);
     }
@@ -269,7 +293,8 @@ BlockResult processBlock(EngineState& state,
     }
 
     const Controls clampedControls = clampControls(controls);
-    const UpdateDecision updateDecision = updatePatternIfNeeded(state, clampedControls);
+    const ::downspout::Meter targetMeter = targetMeterForTransport(state, transport);
+    const UpdateDecision updateDecision = updatePatternIfNeeded(state, clampedControls, targetMeter);
     processPendingNoteOffs(state, result, nframes);
 
     const bool playing = transport.valid && transport.playing && transport.bpm > 0.0 && transport.beatsPerBar > 0.0;
@@ -278,9 +303,12 @@ BlockResult processBlock(EngineState& state,
             const int stepsPerBeat = state.pattern.stepsPerBeat;
             const double absBeatsStart = transport.bar * transport.beatsPerBar + transport.barBeat;
             const double absStepsStart = absBeatsStart * static_cast<double>(stepsPerBeat);
-            refreshFillBar(state.pattern, state.controls, targetBarForFillTrigger(state.pattern, state.controls, absStepsStart));
+            refreshFillBar(state.pattern,
+                           state.controls,
+                           targetMeter,
+                           targetBarForFillTrigger(state.pattern, state.controls, absStepsStart));
         } else {
-            refreshFillBar(state.pattern, state.controls, state.pattern.bars - 1);
+            refreshFillBar(state.pattern, state.controls, state.pattern.meter, state.pattern.bars - 1);
         }
     }
 

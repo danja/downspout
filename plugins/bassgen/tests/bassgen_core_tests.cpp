@@ -22,11 +22,12 @@ void testDeterministicGeneration() {
 
     PatternState first;
     PatternState second;
-    regeneratePattern(first, controls, true, true);
-    regeneratePattern(second, controls, true, true);
+    regeneratePattern(first, controls, ::downspout::Meter {}, true, true);
+    regeneratePattern(second, controls, ::downspout::Meter {}, true, true);
 
     assert(first.patternSteps == second.patternSteps);
     assert(first.stepsPerBeat == second.stepsPerBeat);
+    assert(first.stepsPerBar == second.stepsPerBar);
     assert(first.eventCount == second.eventCount);
     assert(first.generationSerial == second.generationSerial);
 
@@ -44,10 +45,10 @@ void testRhythmRegenerationKeepsPreviousNotes() {
     controls.genre = GenreId::dub;
 
     PatternState pattern;
-    regeneratePattern(pattern, controls, true, true);
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, true, true);
     const PatternState original = pattern;
 
-    regeneratePattern(pattern, controls, true, false);
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, true, false);
 
     assert(pattern.eventCount > 0);
     for (int index = 0; index < pattern.eventCount; ++index) {
@@ -84,11 +85,11 @@ void testVariationMutatesAfterLoopThreshold() {
     controls.vary = 1.0f;
 
     PatternState pattern;
-    regeneratePattern(pattern, controls, true, true);
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, true, true);
     const int originalSerial = pattern.generationSerial;
 
     VariationState variation;
-    const bool changed = applyLoopVariation(pattern, variation, controls, 4.0);
+    const bool changed = applyLoopVariation(pattern, variation, controls, ::downspout::Meter {}, 4.0);
 
     assert(changed);
     assert(variation.completedLoops == 1);
@@ -100,6 +101,7 @@ void testStateSanitization() {
     PatternState raw;
     raw.patternSteps = 999;
     raw.stepsPerBeat = 99;
+    raw.meter = ::downspout::makeMeter(6, 8);
     raw.eventCount = 2;
     raw.events[0] = NoteEvent{-5, 0, -1, 200};
     raw.events[1] = NoteEvent{999, 999, 300, -2};
@@ -110,6 +112,9 @@ void testStateSanitization() {
     assert(sanitized.version == kPatternStateVersion);
     assert(sanitized.patternSteps == kMaxPatternSteps);
     assert(sanitized.stepsPerBeat == 6);
+    assert(sanitized.stepsPerBar == 36);
+    assert(sanitized.meter.numerator == 6);
+    assert(sanitized.meter.denominator == 8);
     assert(sanitized.events[0].startStep == 0);
     assert(sanitized.events[0].durationSteps == 1);
     assert(sanitized.events[0].note == 0);
@@ -136,6 +141,8 @@ void testEngineRewindResyncAndStopNoteOff() {
     engine.patternValid = true;
     engine.pattern.patternSteps = 32;
     engine.pattern.stepsPerBeat = 4;
+    engine.pattern.stepsPerBar = 16;
+    engine.pattern.meter = ::downspout::Meter {};
     engine.pattern.eventCount = 1;
     engine.pattern.events[0] = NoteEvent{0, 8, 48, 101};
 
@@ -143,9 +150,11 @@ void testEngineRewindResyncAndStopNoteOff() {
     transport.valid = true;
     transport.playing = true;
     transport.beatsPerBar = 4.0;
+    transport.beatType = 4.0;
     transport.bpm = 120.0;
     transport.bar = 0.0;
     transport.barBeat = 1.0;
+    transport.meter = ::downspout::Meter {};
 
     BlockResult result = processBlock(engine, controls, transport, 64, 48000.0);
     assert(result.eventCount == 1);
@@ -180,6 +189,8 @@ void testEngineBoundaryEndThenStartScheduling() {
     engine.patternValid = true;
     engine.pattern.patternSteps = 16;
     engine.pattern.stepsPerBeat = 4;
+    engine.pattern.stepsPerBar = 16;
+    engine.pattern.meter = ::downspout::Meter {};
     engine.pattern.eventCount = 2;
     engine.pattern.events[0] = NoteEvent{0, 1, 40, 90};
     engine.pattern.events[1] = NoteEvent{1, 2, 43, 95};
@@ -191,9 +202,11 @@ void testEngineBoundaryEndThenStartScheduling() {
     transport.valid = true;
     transport.playing = true;
     transport.beatsPerBar = 4.0;
+    transport.beatType = 4.0;
     transport.bpm = 120.0;
     transport.bar = 0.0;
     transport.barBeat = 0.249;
+    transport.meter = ::downspout::Meter {};
 
     const BlockResult result = processBlock(engine, controls, transport, 1024, 48000.0);
     assert(result.eventCount >= 2);
@@ -215,7 +228,8 @@ void testSerializationRoundTrip() {
     controls.actionNotes = 3;
 
     PatternState pattern;
-    regeneratePattern(pattern, controls, true, true);
+    pattern.meter = ::downspout::makeMeter(6, 8);
+    regeneratePattern(pattern, controls, pattern.meter, true, true);
 
     VariationState variation;
     variation.completedLoops = 7;
@@ -234,6 +248,9 @@ void testSerializationRoundTrip() {
     assert(controlsRoundTrip->actionNotes == controls.actionNotes);
     assert(patternRoundTrip->eventCount == pattern.eventCount);
     assert(patternRoundTrip->patternSteps == pattern.patternSteps);
+    assert(patternRoundTrip->stepsPerBar == pattern.stepsPerBar);
+    assert(patternRoundTrip->meter.numerator == 6);
+    assert(patternRoundTrip->meter.denominator == 8);
     assert(patternRoundTrip->generationSerial == pattern.generationSerial);
     for (int index = 0; index < pattern.eventCount; ++index) {
         assert(patternRoundTrip->events[index].startStep == pattern.events[index].startStep);
@@ -243,6 +260,61 @@ void testSerializationRoundTrip() {
     }
     assert(variationRoundTrip->completedLoops == 7);
     assert(variationRoundTrip->lastMutationLoop == 5);
+}
+
+void testCompoundMeterGenerationTracksPulseGrid() {
+    Controls controls;
+    controls.seed = 4242u;
+    controls.genre = GenreId::dub;
+    controls.lengthBeats = 12;
+    controls.subdivision = SubdivisionId::sixteenth;
+    controls.density = 0.58f;
+
+    PatternState pattern;
+    const ::downspout::Meter jigMeter = ::downspout::makeMeter(6, 8);
+    regeneratePattern(pattern, controls, jigMeter, true, true);
+
+    assert(pattern.meter.numerator == 6);
+    assert(pattern.meter.denominator == 8);
+    assert(pattern.stepsPerBar == 24);
+    assert(pattern.patternSteps == 48);
+
+    bool hasSecondaryPulse = false;
+    for (int index = 0; index < pattern.eventCount; ++index) {
+        if ((pattern.events[index].startStep % pattern.stepsPerBar) == 12) {
+            hasSecondaryPulse = true;
+            break;
+        }
+    }
+
+    assert(hasSecondaryPulse);
+}
+
+void testEngineRegeneratesOnMeterChange() {
+    Controls controls;
+    controls.seed = 202u;
+    controls.lengthBeats = 12;
+
+    EngineState engine;
+    activate(engine, controls);
+    const int originalSerial = engine.pattern.generationSerial;
+
+    TransportSnapshot transport;
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 0.0;
+    transport.barBeat = 0.0;
+    transport.beatsPerBar = 6.0;
+    transport.beatType = 8.0;
+    transport.bpm = 120.0;
+    transport.meter = ::downspout::makeMeter(6, 8);
+
+    const BlockResult result = processBlock(engine, controls, transport, 128, 48000.0);
+    assert(result.eventCount >= 0);
+    assert(engine.pattern.meter.numerator == 6);
+    assert(engine.pattern.meter.denominator == 8);
+    assert(engine.pattern.stepsPerBar == 24);
+    assert(engine.pattern.generationSerial > originalSerial);
 }
 
 }  // namespace
@@ -256,5 +328,7 @@ int main() {
     testEngineRewindResyncAndStopNoteOff();
     testEngineBoundaryEndThenStartScheduling();
     testSerializationRoundTrip();
+    testCompoundMeterGenerationTracksPulseGrid();
+    testEngineRegeneratesOnMeterChange();
     return 0;
 }
