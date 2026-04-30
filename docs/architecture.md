@@ -89,6 +89,7 @@ Examples:
 - [plugins/bassgen/src/bassgen_engine.cpp](/home/danny/github/downspout/plugins/bassgen/src/bassgen_engine.cpp)
 - [plugins/drumgen/src/drumgen_engine.cpp](/home/danny/github/downspout/plugins/drumgen/src/drumgen_engine.cpp)
 - [plugins/rift/src/rift_engine.cpp](/home/danny/github/downspout/plugins/rift/src/rift_engine.cpp)
+- [plugins/ground/src/ground_engine.cpp](/home/danny/github/downspout/plugins/ground/src/ground_engine.cpp)
 
 ### 2. Wrapper layer
 
@@ -188,6 +189,7 @@ The release script currently expects these bundles:
 - `cadence.vst3`
 - `gremlin.vst3`
 - `gremlin_driver.vst3`
+- `ground.vst3`
 
 So yes: current `rift` changes are part of the release packaging path as soon
 as you build and tag a release from updated code.

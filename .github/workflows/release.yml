@@ -82,6 +82,7 @@ jobs:
             echo "- cadence.vst3"
             echo "- gremlin.vst3"
             echo "- gremlin_driver.vst3"
+            echo "- ground.vst3"
             echo
             echo "The .sha256 asset contains the checksum for the zip."
           } > "$notes_file"

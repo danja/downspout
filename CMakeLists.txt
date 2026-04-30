@@ -19,6 +19,7 @@ option(DOWNSPOUT_BUILD_DRUMGEN "Configure the drumgen port target" ON)
 option(DOWNSPOUT_BUILD_CADENCE "Configure the cadence port target" ON)
 option(DOWNSPOUT_BUILD_GREMLIN "Configure the gremlin port target" ON)
 option(DOWNSPOUT_BUILD_GREMLIN_DRIVER "Configure the gremlin-driver port target" ON)
+option(DOWNSPOUT_BUILD_GROUND "Configure the ground original MIDI target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -71,4 +72,8 @@ endif()
 
 if(DOWNSPOUT_BUILD_GREMLIN_DRIVER)
     add_subdirectory(plugins/gremlin-driver)
+endif()
+
+if(DOWNSPOUT_BUILD_GROUND)
+    add_subdirectory(plugins/ground)
 endif()

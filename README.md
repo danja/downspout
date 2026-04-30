@@ -17,7 +17,7 @@ copy the `.vst3` bundles into `~/.vst3`:
 
 ```bash
 mkdir -p ~/.vst3
-cp -r bassgen.vst3 p_mix.vst3 e_mix.vst3 rift.vst3 drumgen.vst3 cadence.vst3 gremlin.vst3 gremlin_driver.vst3 ~/.vst3/
+cp -r bassgen.vst3 p_mix.vst3 e_mix.vst3 rift.vst3 drumgen.vst3 cadence.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 ~/.vst3/
 ```
 
 Then restart your DAW or trigger a plugin rescan.
@@ -32,6 +32,7 @@ The immediate targets are:
 - `cadence`: a transport-aware MIDI harmonizer and comping generator
 - `gremlin`: a chaotic glitch instrument with live performance gestures
 - `gremlin-driver`: a MIDI modulation and action sequencer for `gremlin`
+- `ground`: an original long-form MIDI bass form generator
 
 The repository is intentionally scaffolded around a shared-core pattern:
 
@@ -62,9 +63,10 @@ This repository now contains:
 - a portable `cadence` core library with tests and a first DPF-backed `cadence.vst3` wrapper target with UI;
 - a portable `gremlin` core library with tests and a first DPF-backed `gremlin.vst3` wrapper target with UI;
 - a portable `gremlin-driver` MIDI control core with tests and a first DPF-backed `gremlin_driver.vst3` wrapper target with UI;
+- an original `ground` core library with tests and a first DPF-backed `ground.vst3` wrapper target with UI;
 - an `install.sh` entrypoint for local VST3 installs.
 
-`bassgen`, `p_mix`, `e_mix`, `rift`, `drumgen`, `cadence`, `gremlin`, and `gremlin_driver` can now be built and installed as `.vst3` bundles.
+`bassgen`, `p_mix`, `e_mix`, `rift`, `drumgen`, `cadence`, `gremlin`, `gremlin_driver`, and `ground` can now be built and installed as `.vst3` bundles.
 
 ## Build & Install
 
@@ -98,6 +100,7 @@ Current installable plugin:
 - `cadence.vst3`
 - `gremlin.vst3`
 - `gremlin_driver.vst3`
+- `ground.vst3`
 
 ## Releases
 
@@ -166,6 +169,13 @@ modulation engine and a DPF wrapper/UI. It is intended to sit in front of
 `gremlin.vst3` in a MIDI chain and emit macro CCs, action notes, and patch
 randomisation bursts while passing note input through.
 
+## Ground
+
+`ground` now builds as `ground.vst3`. It is an original `downspout` MIDI
+generator that works above the riff level: it plans bass movement across
+phrases and sections, then emits monophonic lines that aim toward climbs,
+pedals, cadences, and releases rather than only mutating a short loop.
+
 ## Next steps
 
 1. Finish host-side validation of `bassgen.vst3` in Reaper and fix any remaining wrapper/UI issues.
@@ -177,4 +187,5 @@ randomisation bursts while passing note input through.
 7. Validate `gremlin.vst3` in Reaper, especially controller-style MIDI gestures, scene changes, and output level.
 8. Validate `gremlin_driver.vst3` in Reaper, especially MIDI pass-through, transport sync, and chaining into `gremlin.vst3`.
 9. Validate `drumgen.vst3` in Reaper, especially the new action-button UI, transport sync, and state restore.
-10. Publish the first public `v*` tag and verify the GitHub Actions release assets on GitHub.
+10. Validate `ground.vst3` in Reaper, especially long-form phrase behavior, action triggers, and state restore.
+11. Publish the first public `v*` tag and verify the GitHub Actions release assets on GitHub.

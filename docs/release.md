@@ -17,6 +17,7 @@ downspout-<version>-linux-x86_64-vst3.zip
 ├── cadence.vst3/
 ├── gremlin.vst3/
 ├── gremlin_driver.vst3/
+├── ground.vst3/
 ├── LICENSE
 └── README.md
 ```

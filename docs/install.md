@@ -32,7 +32,7 @@ Public release packaging is handled separately by
 
 ## Current outputs
 
-The repository currently installs eight real wrapper targets:
+The repository currently installs nine real wrapper targets:
 
 - `bassgen.vst3` with UI
 - `p_mix.vst3` with UI
@@ -42,8 +42,9 @@ The repository currently installs eight real wrapper targets:
 - `cadence.vst3` with UI
 - `gremlin.vst3` with UI
 - `gremlin_driver.vst3` with UI
+- `ground.vst3` with UI
 
-The next install-related validation is host-side confirmation that all eight bundles behave correctly in `Release` builds.
+The next install-related validation is host-side confirmation that all nine bundles behave correctly in `Release` builds.
 
 ## Verified behavior
 
@@ -61,3 +62,4 @@ The script has been smoke-tested with a temporary install root under `/tmp`:
 - confirmed `cadence.vst3` bundle output and install
 - confirmed `gremlin.vst3` bundle output and install
 - confirmed `gremlin_driver.vst3` bundle output and install
+- confirmed `ground.vst3` bundle output and install
