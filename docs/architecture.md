@@ -150,6 +150,18 @@ core snapshot once per block, and the engine handles:
 That pattern is especially visible in `bassgen`, `drumgen`, `cadence`, and
 `rift`.
 
+Current limitation:
+
+- most transport snapshots only preserve `bar`, `barBeat`, `beatsPerBar`, and
+  `bpm`
+
+That is enough for bar-relative transport sync, but not enough for full musical
+meter handling. It does not distinguish, for example, between simple and
+compound feel in a way that a core can use directly.
+
+See [docs/meter.md](docs/meter.md) for the planned shared meter model and the
+current plugin-by-plugin limitations.
+
 ## Testing pattern
 
 Tests target the portable core, not the DPF wrapper.
@@ -202,3 +214,7 @@ as you build and tag a release from updated code.
 - keep tests focused on deterministic core behavior
 - keep plugin options independently switchable in CMake
 - avoid broad shared abstractions until at least two plugins clearly need them
+
+The next shared abstraction that now clearly qualifies is meter handling:
+`ground` and `drumgen` both need more than ad hoc `4/4` fixes, and Irish-folk
+style work would be weak without a shared pulse/grouping model.

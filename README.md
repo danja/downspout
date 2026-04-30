@@ -34,6 +34,12 @@ The immediate targets are:
 - `gremlin-driver`: a MIDI modulation and action sequencer for `gremlin`
 - `ground`: an original long-form MIDI bass form generator
 
+Current limitation:
+
+- the repository is broadly transport-aware today, but full meter-awareness is
+  still uneven across the musical generators, especially for compound meters
+  such as `6/8`, `9/8`, and `12/8`
+
 The repository is intentionally scaffolded around a shared-core pattern:
 
 - `plugins/<plugin>/`
@@ -116,6 +122,9 @@ workflow details.
 - [docs/architecture.md](docs/architecture.md)
   How the repository is wired together, including build graph, dependency
   direction, core/wrapper/UI split, and install/release flow
+- [docs/meter.md](docs/meter.md)
+  Current meter-handling limitations, the planned shared meter model, and what
+  is still missing for use cases such as generative Irish folk music
 - [docs/install.md](docs/install.md)
   Local build and installation notes
 - [docs/release.md](docs/release.md)
@@ -188,4 +197,5 @@ pedals, cadences, and releases rather than only mutating a short loop.
 8. Validate `gremlin_driver.vst3` in Reaper, especially MIDI pass-through, transport sync, and chaining into `gremlin.vst3`.
 9. Validate `drumgen.vst3` in Reaper, especially the new action-button UI, transport sync, and state restore.
 10. Validate `ground.vst3` in Reaper, especially long-form phrase behavior, action triggers, and state restore.
-11. Publish the first public `v*` tag and verify the GitHub Actions release assets on GitHub.
+11. Add a shared meter model so `ground`, `drumgen`, and later `bassgen` can support compound and grouped meters coherently.
+12. Publish the first public `v*` tag and verify the GitHub Actions release assets on GitHub.

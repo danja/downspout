@@ -49,6 +49,9 @@ As of 2026-04-18, the working requirements are:
 
 - Preserve the musical and transport behavior of the source LV2 plugins before adding new features.
 - Support host transport/time information robustly enough for bar-based and loop-aware behavior.
+- Evolve transport-aware generators toward true meter-aware behavior where the
+  musical goal requires it, especially for compound meters and grouped pulse
+  feel.
 - Support saved/restored plugin state.
 - Support custom UI, but do not let UI decisions block DSP/core migration.
 - Keep per-plugin metadata, parameters, defaults, and ranges traceable back to source implementations.
@@ -149,23 +152,35 @@ Current main gap:
 - DPF is now vendored and all current wrapper targets build successfully.
 - `install.sh` now installs real `bassgen.vst3`, `p_mix.vst3`, `e_mix.vst3`, `rift.vst3`, `drumgen.vst3`, `cadence.vst3`, `gremlin.vst3`, `gremlin_driver.vst3`, and `ground.vst3` bundles.
 - both `install.sh` and `scripts/package-release.sh` now pass clean full-tree smoke runs for all nine bundles.
-- the main remaining gaps are host validation of `bassgen`, host validation of `p-mix`, host validation of `e-mix`, host validation of `rift`, host validation of `drumgen`, host validation of `cadence`, host validation of `gremlin`, host validation of `gremlin-driver`, host validation of `ground`, and validating the first tagged GitHub Actions release.
+- the main remaining gaps are host validation of `bassgen`, host validation of `p-mix`, host validation of `e-mix`, host validation of `rift`, host validation of `drumgen`, host validation of `cadence`, host validation of `gremlin`, host validation of `gremlin-driver`, host validation of `ground`, validating the first tagged GitHub Actions release, and establishing a shared meter model so the generative plugins are not quietly stuck in `4/4`.
+
+## Meter direction
+
+The next architectural addition should be shared meter handling.
+
+Reasoning:
+
+- several wrappers already follow host bar timing successfully;
+- `ground` and `drumgen` are still structurally `4/4` in their core logic;
+- `bassgen` is more adaptable, but its rhythmic language is still simple-meter
+  oriented;
+- compound-meter work is necessary if `downspout` is going to support use
+  cases such as generative Irish folk material.
+
+See [docs/meter.md](meter.md) for the concrete design target and plugin impact.
 
 ## Next implementation sequence
 
 The next work should proceed in this order:
 
-1. Continue light host validation of `bassgen.vst3` in Reaper until there are no obvious wrapper/UI regressions.
-2. Continue validating `p-mix.vst3` in Reaper, especially transport sync, multichannel routing, and the new UI.
-3. Validate `e_mix.vst3` in Reaper, especially stopped transport behavior, restart handling, and whether the redesigned UI actually clarifies the cycle.
-4. Validate `rift.vst3` in Reaper, especially whether the macro layer, preview lane, and performance buttons make the effect usable without extra explanation.
-5. Tighten any remaining `p-mix` layout or interaction issues discovered in host testing.
-6. Validate `cadence.vst3` in Reaper, especially learning, restart/rewind handling, and saved-state restore.
-7. Validate `gremlin.vst3` in Reaper, especially combined note/controller MIDI, scene switching, and level range.
-8. Validate `gremlin_driver.vst3` in Reaper, especially MIDI pass-through, transport sync, and chaining into `gremlin.vst3`.
-9. Validate `drumgen.vst3` in Reaper, especially the new action-button UI, transport sync, MIDI output behavior, and state restore through the host.
-10. Validate `ground.vst3` in Reaper, especially section pacing, phrase-role legibility in the UI, trigger behavior, and state restore.
-11. Validate the release-build workflow on the first public tag so installable bundles can be built reproducibly on GitHub, not just locally.
+1. Continue host validation of the current plugin set in Reaper and fix any DAW-facing issues that block basic use.
+2. Define and document a shared portable meter model.
+3. Extend transport snapshots so wrappers can pass richer meter information when the host provides it.
+4. Refactor `ground` to stop assuming `16 steps per bar` and instead derive structure from the shared meter model.
+5. Refactor `drumgen` to stop assuming `stepsPerBeat * 4` for every bar.
+6. Expand `bassgen` rhythmic behavior for compound-meter styles rather than only simple-meter subdivisions.
+7. Add folk-oriented style vocabulary where musically justified: reel, jig, slip jig, hornpipe, polka, drone/modal accompaniment.
+8. Validate the release-build workflow on the first public tag so installable bundles can be built reproducibly on GitHub, not just locally.
 
 Reasoning:
 
@@ -178,6 +193,8 @@ Reasoning:
 - `cadence` has now reached the same core-plus-wrapper milestone, so the next useful work is host validation and incremental fixes rather than more architectural churn.
 - `gremlin` and `gremlin-driver` now reach the same milestone, so the highest-value work has shifted to host behavior, routing validation, and release packaging rather than more extraction.
 - `ground` is already in the same portable-core-plus-wrapper state, so its next useful work is DAW validation of phrase behavior and UI clarity rather than more architectural work.
+- that DAW validation exposed a broader architectural gap: transport sync exists, but true meter support does not yet exist consistently across the generator plugins.
+- a shared meter abstraction is now justified because at least `ground` and `drumgen` need the same class of refactor.
 
 ## Non-goals for the first phase
 
