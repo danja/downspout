@@ -50,10 +50,21 @@ enum class SubdivisionId : std::int32_t {
     count
 };
 
+enum class StyleModeId : std::int32_t {
+    autoMode = 0,
+    straight,
+    reel,
+    waltz,
+    jig,
+    slipJig,
+    count
+};
+
 struct Controls {
     int rootNote = 36;
     ScaleId scale = ScaleId::minor;
     GenreId genre = GenreId::techno;
+    StyleModeId styleMode = StyleModeId::autoMode;
     int channel = 1;
     int lengthBeats = 16;
     SubdivisionId subdivision = SubdivisionId::sixteenth;

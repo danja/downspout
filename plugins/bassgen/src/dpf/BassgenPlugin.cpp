@@ -15,6 +15,7 @@ enum ParameterIndex : uint32_t {
     kParamRootNote = 0,
     kParamScale,
     kParamGenre,
+    kParamStyleMode,
     kParamChannel,
     kParamLengthBeats,
     kParamSubdivision,
@@ -154,6 +155,14 @@ protected:
             parameter.ranges.max = static_cast<float>(static_cast<int>(downspout::bassgen::GenreId::count) - 1);
             parameter.ranges.def = 0.0f;
             break;
+        case kParamStyleMode:
+            parameter.name = "Style";
+            parameter.symbol = "style_mode";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = static_cast<float>(static_cast<int>(downspout::bassgen::StyleModeId::count) - 1);
+            parameter.ranges.def = 0.0f;
+            break;
         case kParamChannel:
             parameter.name = "Channel";
             parameter.symbol = "channel";
@@ -276,6 +285,7 @@ protected:
         case kParamRootNote: return static_cast<float>(controls_.rootNote);
         case kParamScale: return static_cast<float>(static_cast<int>(controls_.scale));
         case kParamGenre: return static_cast<float>(static_cast<int>(controls_.genre));
+        case kParamStyleMode: return static_cast<float>(static_cast<int>(controls_.styleMode));
         case kParamChannel: return static_cast<float>(controls_.channel);
         case kParamLengthBeats: return static_cast<float>(controls_.lengthBeats);
         case kParamSubdivision: return static_cast<float>(static_cast<int>(controls_.subdivision));
@@ -300,6 +310,7 @@ protected:
         case kParamRootNote: controls_.rootNote = static_cast<int>(value); break;
         case kParamScale: controls_.scale = static_cast<downspout::bassgen::ScaleId>(static_cast<int>(value)); break;
         case kParamGenre: controls_.genre = static_cast<downspout::bassgen::GenreId>(static_cast<int>(value)); break;
+        case kParamStyleMode: controls_.styleMode = static_cast<downspout::bassgen::StyleModeId>(static_cast<int>(value)); break;
         case kParamChannel: controls_.channel = static_cast<int>(value); break;
         case kParamLengthBeats: controls_.lengthBeats = static_cast<int>(value); break;
         case kParamSubdivision: controls_.subdivision = static_cast<downspout::bassgen::SubdivisionId>(static_cast<int>(value)); break;

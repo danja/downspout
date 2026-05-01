@@ -66,14 +66,15 @@ engines are not deeply tied to `4/4`.
 
 `bassgen` now receives richer meter data from the wrapper, persists it in
 pattern state, regenerates when meter changes, and shapes accents around pulse
-starts for compound meters. That closes the structural gap for `bassgen`, but
-its style layer is still generic rather than explicitly jig/reel/hornpipe
-aware.
+starts for compound meters. It now also exposes explicit `Auto`, `Straight`,
+`Reel`, `Waltz`, `Jig`, and `Slip Jig` modes. That closes much of the immediate
+style-discovery gap for `bassgen`, though it is still not a full folk-idiom
+bass planner by itself.
 
 ### Structural 4/4 blockers that have now been removed
 
-- `ground`
 - `drumgen`
+- `ground`
 
 These were the main structural blockers. That first refactor is now done:
 
@@ -81,7 +82,8 @@ These were the main structural blockers. That first refactor is now done:
   than a fixed `16 steps per bar`
 - `drumgen` now derives `stepsPerBar` from `meter.numerator * stepsPerBeat`
   rather than `stepsPerBeat * 4`, and now has dedicated compound/triple-meter
-  pulse accents for bar generation and fill targeting
+  pulse accents for bar generation and fill targeting plus explicit
+  `Straight`/`Reel`/`Waltz`/`Jig`/`Slip Jig` modes
 
 That does not mean they are now idiomatic jig/hornpipe generators. It means
 they no longer silently force every bar back into `4/4` shape.
@@ -170,8 +172,9 @@ derive useful defaults from numerator/denominator and style.
 
 ## Recommended implementation order
 
-1. Add folk-specific style logic in `cadence`, `ground`, `drumgen`, and the
-   higher-level `bassgen` phrasing choices.
+1. Extend the same explicit style-vocabulary approach into `cadence`,
+   `ground`, and any future melody generator, rather than leaving
+   folk-specific timing only in `bassgen` and `drumgen`.
 2. Add explicit pickup/anacrusis handling where musically needed.
 3. Add a dedicated melody generator if the goal remains full generative
    Irish-folk arrangement.

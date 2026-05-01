@@ -12,6 +12,7 @@ namespace {
 
 enum ParameterIndex : uint32_t {
     kParamGenre = 0,
+    kParamStyleMode,
     kParamChannel,
     kParamKitMap,
     kParamBars,
@@ -143,6 +144,14 @@ protected:
             parameter.hints |= kParameterIsInteger;
             parameter.ranges.min = 0.0f;
             parameter.ranges.max = static_cast<float>(static_cast<int>(downspout::drumgen::GenreId::count) - 1);
+            parameter.ranges.def = 0.0f;
+            break;
+        case kParamStyleMode:
+            parameter.name = "Style";
+            parameter.symbol = "style_mode";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = static_cast<float>(static_cast<int>(downspout::drumgen::StyleModeId::count) - 1);
             parameter.ranges.def = 0.0f;
             break;
         case kParamChannel:
@@ -310,6 +319,7 @@ protected:
         switch (index)
         {
         case kParamGenre: return static_cast<float>(static_cast<int>(controls_.genre));
+        case kParamStyleMode: return static_cast<float>(static_cast<int>(controls_.styleMode));
         case kParamChannel: return static_cast<float>(controls_.channel);
         case kParamKitMap: return static_cast<float>(static_cast<int>(controls_.kitMap));
         case kParamBars: return static_cast<float>(controls_.bars);
@@ -339,6 +349,7 @@ protected:
         switch (index)
         {
         case kParamGenre: controls_.genre = static_cast<downspout::drumgen::GenreId>(static_cast<int>(value)); break;
+        case kParamStyleMode: controls_.styleMode = static_cast<downspout::drumgen::StyleModeId>(static_cast<int>(value)); break;
         case kParamChannel: controls_.channel = static_cast<int>(value); break;
         case kParamKitMap: controls_.kitMap = static_cast<downspout::drumgen::KitMapId>(static_cast<int>(value)); break;
         case kParamBars: controls_.bars = static_cast<int>(value); break;

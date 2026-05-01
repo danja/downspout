@@ -47,8 +47,9 @@ std::vector<std::string_view> split(std::string_view text, char delimiter) {
 
 std::string serializeControls(const Controls& controls) {
     std::ostringstream out;
-    out << "version=1\n";
+    out << "version=2\n";
     out << "genre=" << static_cast<int>(controls.genre) << '\n';
+    out << "styleMode=" << static_cast<int>(controls.styleMode) << '\n';
     out << "channel=" << controls.channel << '\n';
     out << "kitMap=" << static_cast<int>(controls.kitMap) << '\n';
     out << "bars=" << controls.bars << '\n';
@@ -127,6 +128,8 @@ std::optional<Controls> deserializeControls(const std::string& text) {
             continue;
         } else if (key == "genre" && parseInteger(value, intValue)) {
             controls.genre = static_cast<GenreId>(intValue);
+        } else if (key == "styleMode" && parseInteger(value, intValue)) {
+            controls.styleMode = static_cast<StyleModeId>(intValue);
         } else if (key == "channel" && parseInteger(value, intValue)) {
             controls.channel = intValue;
         } else if (key == "kitMap" && parseInteger(value, intValue)) {

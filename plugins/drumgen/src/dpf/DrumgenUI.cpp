@@ -12,6 +12,7 @@ namespace {
 
 enum ParameterIndex : uint32_t {
     kParamGenre = 0,
+    kParamStyleMode,
     kParamChannel,
     kParamKitMap,
     kParamBars,
@@ -87,6 +88,10 @@ constexpr const char* kGenreNames[] = {
     "Rock", "Disco", "Shuffle", "Electro", "Dub", "Motorik", "Bossa", "Afro"
 };
 
+constexpr const char* kStyleNames[] = {
+    "Auto", "Straight", "Reel", "Waltz", "Jig", "Slip Jig"
+};
+
 constexpr const char* kKitMapNames[] = {
     "Flues Drumkit", "GM"
 };
@@ -104,8 +109,9 @@ constexpr const char* kChannelNames[] = {
     "9", "10", "11", "12", "13", "14", "15", "16"
 };
 
-constexpr std::array<SelectorDef, 5> kSelectors = {{
+constexpr std::array<SelectorDef, 6> kSelectors = {{
     {kParamGenre, "Genre", kGenreNames, 8, 0},
+    {kParamStyleMode, "Style", kStyleNames, 6, 0},
     {kParamKitMap, "Kit Map", kKitMapNames, 2, 0},
     {kParamResolution, "Resolution", kResolutionNames, 3, 0},
     {kParamBars, "Bars", kBarNames, 4, 1},
@@ -179,6 +185,7 @@ public:
        #endif
 
         values_[kParamGenre] = 0.0f;
+        values_[kParamStyleMode] = 0.0f;
         values_[kParamChannel] = 10.0f;
         values_[kParamKitMap] = 0.0f;
         values_[kParamBars] = 2.0f;

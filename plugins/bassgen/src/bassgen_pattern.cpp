@@ -16,6 +16,13 @@ struct ScaleDef {
     int count;
 };
 
+enum class StepRole : std::uint8_t {
+    weak = 0,
+    pickup,
+    secondary,
+    primary
+};
+
 constexpr int kScaleMinor[] = {0, 2, 3, 5, 7, 8, 10};
 constexpr int kScaleMajor[] = {0, 2, 4, 5, 7, 9, 11};
 constexpr int kScaleDorian[] = {0, 2, 3, 5, 7, 9, 10};
@@ -67,7 +74,9 @@ constexpr ScaleDef kScales[] = {
 }
 
 [[nodiscard]] std::uint32_t seedMixForSerial(const Controls& controls, std::int32_t generationSerial) {
-    return controls.seed ^ (static_cast<std::uint32_t>(generationSerial) * 2654435761u);
+    return controls.seed ^
+           (static_cast<std::uint32_t>(static_cast<int>(controls.styleMode) + 1) * 2246822519u) ^
+           (static_cast<std::uint32_t>(generationSerial) * 2654435761u);
 }
 
 [[nodiscard]] int chooseDegree(Rng& rng, GenreId genre, bool strongBeat, int prevDegree) {
@@ -181,17 +190,251 @@ constexpr ScaleDef kScales[] = {
     return ::downspout::meterIsPulseStart(pattern.meter, nextBeat);
 }
 
+[[nodiscard]] bool isTripleMeter(const PatternState& pattern) {
+    return pattern.meter.numerator == 3 && !::downspout::meterHasCompoundFeel(pattern.meter);
+}
+
+[[nodiscard]] bool isTriplePickupStep(const PatternState& pattern, const int step) {
+    if (!isTripleMeter(pattern) || pattern.stepsPerBeat <= 1 || pattern.stepsPerBar <= 0) {
+        return false;
+    }
+
+    const int stepInBar = stepInBarFor(pattern, step);
+    const int beatInBar = stepInBar / pattern.stepsPerBeat;
+    const int stepInBeat = stepInBar % pattern.stepsPerBeat;
+    return beatInBar < 2 && stepInBeat == (pattern.stepsPerBeat - 1);
+}
+
+[[nodiscard]] bool isPrimaryAccentStep(const PatternState& pattern, const int step) {
+    if (::downspout::meterHasCompoundFeel(pattern.meter)) {
+        return isPulseStartStep(pattern, step);
+    }
+    if (isTripleMeter(pattern)) {
+        return isBeatStartStep(pattern, step) && beatInBarFor(pattern, step) == 0;
+    }
+    return isBeatStartStep(pattern, step);
+}
+
+[[nodiscard]] bool isSecondaryAccentStep(const PatternState& pattern, const int step) {
+    if (::downspout::meterHasCompoundFeel(pattern.meter)) {
+        return isBeatStartStep(pattern, step) && !isPulseStartStep(pattern, step);
+    }
+    if (isTripleMeter(pattern)) {
+        return isBeatStartStep(pattern, step) && beatInBarFor(pattern, step) == 1;
+    }
+    return false;
+}
+
+[[nodiscard]] int beatForFraction(const PatternState& pattern, const int numerator, const int denominator) {
+    if (pattern.meter.numerator <= 1 || denominator <= 0) {
+        return 0;
+    }
+
+    return clampi((pattern.meter.numerator * numerator) / denominator, 0, pattern.meter.numerator - 1);
+}
+
+[[nodiscard]] bool isPickupToBeat(const PatternState& pattern, const int step, const int targetBeat) {
+    if (pattern.stepsPerBeat <= 1 || pattern.meter.numerator <= 0) {
+        return false;
+    }
+
+    const int stepInBar = stepInBarFor(pattern, step);
+    const int beatInBar = stepInBar / pattern.stepsPerBeat;
+    const int stepInBeat = stepInBar % pattern.stepsPerBeat;
+    if (stepInBeat != (pattern.stepsPerBeat - 1)) {
+        return false;
+    }
+
+    const int nextBeat = (beatInBar + 1) % pattern.meter.numerator;
+    return nextBeat == clampi(targetBeat, 0, pattern.meter.numerator - 1);
+}
+
+[[nodiscard]] StepRole explicitStyleRole(const PatternState& pattern, const int step, const StyleModeId styleMode) {
+    const int beat = beatInBarFor(pattern, step);
+    const bool beatStart = isBeatStartStep(pattern, step);
+
+    if (!beatStart && pattern.stepsPerBeat <= 1) {
+        return StepRole::weak;
+    }
+
+    switch (styleMode) {
+    case StyleModeId::straight:
+        if (beatStart) {
+            return StepRole::primary;
+        }
+        return isPickupToBeat(pattern, step, (beat + 1) % std::max(1, pattern.meter.numerator))
+            ? StepRole::pickup
+            : StepRole::weak;
+
+    case StyleModeId::reel: {
+        const int halfBeat = beatForFraction(pattern, 1, 2);
+        if (beatStart && (beat == 0 || beat == halfBeat)) {
+            return StepRole::primary;
+        }
+        if (beatStart) {
+            return StepRole::secondary;
+        }
+        if (isPickupToBeat(pattern, step, halfBeat) || isPickupToBeat(pattern, step, 0)) {
+            return StepRole::pickup;
+        }
+        return StepRole::weak;
+    }
+
+    case StyleModeId::waltz:
+        if (beatStart && beat == 0) {
+            return StepRole::primary;
+        }
+        if (beatStart && (beat == beatForFraction(pattern, 1, 3) || beat == beatForFraction(pattern, 2, 3))) {
+            return StepRole::secondary;
+        }
+        if (isPickupToBeat(pattern, step, beatForFraction(pattern, 1, 3)) ||
+            isPickupToBeat(pattern, step, beatForFraction(pattern, 2, 3)) ||
+            isPickupToBeat(pattern, step, 0)) {
+            return StepRole::pickup;
+        }
+        return StepRole::weak;
+
+    case StyleModeId::jig: {
+        const int pulseBeat = beatForFraction(pattern, 1, 2);
+        if (beatStart && (beat == 0 || beat == pulseBeat)) {
+            return StepRole::primary;
+        }
+        if (beatStart) {
+            return StepRole::secondary;
+        }
+        if (isPickupToBeat(pattern, step, pulseBeat) || isPickupToBeat(pattern, step, 0)) {
+            return StepRole::pickup;
+        }
+        return StepRole::weak;
+    }
+
+    case StyleModeId::slipJig: {
+        const int secondPulse = beatForFraction(pattern, 1, 3);
+        const int thirdPulse = beatForFraction(pattern, 2, 3);
+        if (beatStart && (beat == 0 || beat == secondPulse || beat == thirdPulse)) {
+            return StepRole::primary;
+        }
+        if (beatStart) {
+            return StepRole::secondary;
+        }
+        if (isPickupToBeat(pattern, step, secondPulse) ||
+            isPickupToBeat(pattern, step, thirdPulse) ||
+            isPickupToBeat(pattern, step, 0)) {
+            return StepRole::pickup;
+        }
+        return StepRole::weak;
+    }
+
+    case StyleModeId::autoMode:
+    case StyleModeId::count:
+    default:
+        return StepRole::weak;
+    }
+}
+
+[[nodiscard]] StepRole stepRoleFor(const PatternState& pattern, const Controls& controls, const int step) {
+    if (controls.styleMode != StyleModeId::autoMode) {
+        return explicitStyleRole(pattern, step, controls.styleMode);
+    }
+
+    if (isPrimaryAccentStep(pattern, step)) {
+        return StepRole::primary;
+    }
+    if (isSecondaryAccentStep(pattern, step)) {
+        return StepRole::secondary;
+    }
+    if (isPulsePickupStep(pattern, step) || isTriplePickupStep(pattern, step)) {
+        return StepRole::pickup;
+    }
+    return StepRole::weak;
+}
+
 [[nodiscard]] float meterDensityBias(const PatternState& pattern, const int step) {
-    if (isPulseStartStep(pattern, step)) {
-        return ::downspout::meterHasCompoundFeel(pattern.meter) ? 1.32f : 1.08f;
+    if (::downspout::meterHasCompoundFeel(pattern.meter)) {
+        if (isPulseStartStep(pattern, step)) {
+            return 1.92f;
+        }
+        if (isPulsePickupStep(pattern, step)) {
+            return 1.28f;
+        }
+        if (isBeatStartStep(pattern, step)) {
+            return 0.26f;
+        }
+        return 0.08f;
+    }
+    if (isTripleMeter(pattern)) {
+        const int beat = beatInBarFor(pattern, step);
+        if (isBeatStartStep(pattern, step)) {
+            if (beat == 0) return 1.68f;
+            if (beat == 1) return 1.08f;
+            return 0.78f;
+        }
+        if (isTriplePickupStep(pattern, step)) {
+            return beat == 0 ? 0.58f : 0.92f;
+        }
+        return 0.18f;
     }
     if (isBeatStartStep(pattern, step)) {
-        return ::downspout::meterHasCompoundFeel(pattern.meter) ? 0.74f : 1.0f;
+        return 1.0f;
     }
-    if (isPulsePickupStep(pattern, step)) {
-        return 1.10f;
+    return 0.94f;
+}
+
+[[nodiscard]] float styleDensityBias(const PatternState& pattern,
+                                     const Controls& controls,
+                                     const int step) {
+    const StepRole role = stepRoleFor(pattern, controls, step);
+
+    if (controls.styleMode == StyleModeId::autoMode) {
+        return meterDensityBias(pattern, step);
     }
-    return ::downspout::meterHasCompoundFeel(pattern.meter) ? 0.88f : 0.94f;
+
+    switch (controls.styleMode) {
+    case StyleModeId::straight:
+        switch (role) {
+        case StepRole::primary: return 1.06f;
+        case StepRole::pickup: return 0.56f;
+        case StepRole::secondary:
+        case StepRole::weak:
+        default: return 0.90f;
+        }
+    case StyleModeId::reel:
+        switch (role) {
+        case StepRole::primary: return 1.94f;
+        case StepRole::secondary: return 0.86f;
+        case StepRole::pickup: return 1.04f;
+        case StepRole::weak:
+        default: return 0.14f;
+        }
+    case StyleModeId::waltz:
+        switch (role) {
+        case StepRole::primary: return 1.82f;
+        case StepRole::secondary: return 0.96f;
+        case StepRole::pickup: return 0.84f;
+        case StepRole::weak:
+        default: return 0.18f;
+        }
+    case StyleModeId::jig:
+        switch (role) {
+        case StepRole::primary: return 1.96f;
+        case StepRole::secondary: return 0.72f;
+        case StepRole::pickup: return 1.12f;
+        case StepRole::weak:
+        default: return 0.10f;
+        }
+    case StyleModeId::slipJig:
+        switch (role) {
+        case StepRole::primary: return 1.74f;
+        case StepRole::secondary: return 0.70f;
+        case StepRole::pickup: return 0.98f;
+        case StepRole::weak:
+        default: return 0.10f;
+        }
+    case StyleModeId::autoMode:
+    case StyleModeId::count:
+    default:
+        return meterDensityBias(pattern, step);
+    }
 }
 
 [[nodiscard]] float genreDensityBias(GenreId genre, bool strong) {
@@ -212,17 +455,84 @@ void reinforceMeterPulses(std::array<bool, kMaxPatternSteps>& onset,
                           const PatternState& pattern,
                           const Controls& controls,
                           Rng& rng) {
-    if (!::downspout::meterHasCompoundFeel(pattern.meter) || pattern.stepsPerBar <= 0 || pattern.stepsPerBeat <= 0) {
+    if (pattern.stepsPerBar <= 0 || pattern.stepsPerBeat <= 0) {
         return;
     }
 
     const int barCount = std::max(1, (pattern.patternSteps + pattern.stepsPerBar - 1) / pattern.stepsPerBar);
-    const int pulseCount = ::downspout::meterPulseCount(pattern.meter);
+    if (::downspout::meterHasCompoundFeel(pattern.meter)) {
+        const int pulseCount = ::downspout::meterPulseCount(pattern.meter);
+        for (int bar = 0; bar < barCount; ++bar) {
+            for (int pulseIndex = 1; pulseIndex < pulseCount; ++pulseIndex) {
+                const int pulseBeat = ::downspout::meterGroupStartBeat(pattern.meter, pulseIndex);
+                const int step = bar * pattern.stepsPerBar + pulseBeat * pattern.stepsPerBeat;
+                if (step <= 0 || step >= pattern.patternSteps) {
+                    continue;
+                }
+
+                const bool alreadyCovered =
+                    onset[step] ||
+                    (step > 0 && onset[step - 1]) ||
+                    ((step + 1) < pattern.patternSteps && onset[step + 1]);
+                if (alreadyCovered) {
+                    continue;
+                }
+
+                float probability = 0.52f + controls.density * 0.34f;
+                if (controls.genre == GenreId::ambient) {
+                    probability -= 0.10f;
+                } else if (controls.genre == GenreId::dub || controls.genre == GenreId::sabbath) {
+                    probability += 0.10f;
+                }
+
+                if (rng.nextFloat() < clampf(probability, 0.32f, 0.94f)) {
+                    onset[step] = true;
+                }
+
+                if (step > 0 && !onset[step - 1] && rng.nextFloat() < clampf(controls.density * 0.22f, 0.0f, 0.28f)) {
+                    onset[step - 1] = true;
+                }
+            }
+        }
+        return;
+    }
+
+    if (isTripleMeter(pattern)) {
+        for (int bar = 0; bar < barCount; ++bar) {
+            const int barStart = bar * pattern.stepsPerBar;
+            const int beatTwoStep = barStart + pattern.stepsPerBeat;
+            const int beatThreeStep = barStart + pattern.stepsPerBeat * 2;
+
+            if (beatTwoStep < pattern.patternSteps && !onset[beatTwoStep] &&
+                rng.nextFloat() < clampf(0.46f + controls.density * 0.34f, 0.28f, 0.88f)) {
+                onset[beatTwoStep] = true;
+            }
+
+            if (beatThreeStep < pattern.patternSteps && !onset[beatThreeStep] &&
+                rng.nextFloat() < clampf(0.28f + controls.density * 0.28f, 0.16f, 0.74f)) {
+                onset[beatThreeStep] = true;
+            }
+        }
+    }
+}
+
+void reinforceStyleAnchors(std::array<bool, kMaxPatternSteps>& onset,
+                           const PatternState& pattern,
+                           const Controls& controls,
+                           Rng& rng) {
+    if (controls.styleMode == StyleModeId::autoMode ||
+        pattern.stepsPerBar <= 0 ||
+        pattern.patternSteps <= 0) {
+        return;
+    }
+
+    const int barCount = std::max(1, (pattern.patternSteps + pattern.stepsPerBar - 1) / pattern.stepsPerBar);
     for (int bar = 0; bar < barCount; ++bar) {
-        for (int pulseIndex = 1; pulseIndex < pulseCount; ++pulseIndex) {
-            const int pulseBeat = ::downspout::meterGroupStartBeat(pattern.meter, pulseIndex);
-            const int step = bar * pattern.stepsPerBar + pulseBeat * pattern.stepsPerBeat;
-            if (step <= 0 || step >= pattern.patternSteps) {
+        const int barStart = bar * pattern.stepsPerBar;
+        const int barEnd = std::min(pattern.patternSteps, barStart + pattern.stepsPerBar);
+        for (int step = barStart; step < barEnd; ++step) {
+            const StepRole role = explicitStyleRole(pattern, step, controls.styleMode);
+            if (role == StepRole::weak) {
                 continue;
             }
 
@@ -234,14 +544,26 @@ void reinforceMeterPulses(std::array<bool, kMaxPatternSteps>& onset,
                 continue;
             }
 
-            float probability = 0.34f + controls.density * 0.46f;
-            if (controls.genre == GenreId::ambient) {
-                probability -= 0.12f;
-            } else if (controls.genre == GenreId::dub || controls.genre == GenreId::sabbath) {
-                probability += 0.08f;
+            if (role == StepRole::primary) {
+                onset[step] = true;
+                continue;
             }
 
-            if (rng.nextFloat() < clampf(probability, 0.16f, 0.88f)) {
+            float probability = 0.0f;
+            switch (role) {
+            case StepRole::secondary:
+                probability = 0.42f + controls.density * 0.18f;
+                break;
+            case StepRole::pickup:
+                probability = 0.16f + controls.density * 0.34f;
+                break;
+            case StepRole::primary:
+            case StepRole::weak:
+            default:
+                break;
+            }
+
+            if (rng.nextFloat() < clampf(probability, 0.0f, 0.96f)) {
                 onset[step] = true;
             }
         }
@@ -257,7 +579,11 @@ void reinforceMeterPulses(std::array<bool, kMaxPatternSteps>& onset,
     return patternSteps;
 }
 
-[[nodiscard]] int chooseDurationSteps(const Controls& controls, Rng& rng, int availableSteps) {
+[[nodiscard]] int chooseDurationSteps(const Controls& controls,
+                                      const PatternState& pattern,
+                                      Rng& rng,
+                                      const int step,
+                                      int availableSteps) {
     if (availableSteps <= 1) {
         return 1;
     }
@@ -277,7 +603,65 @@ void reinforceMeterPulses(std::array<bool, kMaxPatternSteps>& onset,
     const int maxHold = clampi(static_cast<int>(std::floor(1.0f + holdBias * static_cast<float>(availableSteps - 1))),
                                1,
                                availableSteps);
-    return clampi(1 + rng.nextInt(0, maxHold - 1), 1, availableSteps);
+
+    int minHold = 1;
+    const StepRole role = stepRoleFor(pattern, controls, step);
+    if (controls.styleMode != StyleModeId::autoMode) {
+        switch (controls.styleMode) {
+        case StyleModeId::reel:
+            if (role == StepRole::primary) {
+                minHold = std::min(availableSteps, pattern.stepsPerBeat * 2);
+            } else if (role == StepRole::secondary) {
+                minHold = std::min(availableSteps, pattern.stepsPerBeat);
+            } else if (role == StepRole::pickup) {
+                minHold = std::min(availableSteps, std::max(1, pattern.stepsPerBeat / 2));
+            }
+            break;
+        case StyleModeId::waltz:
+        case StyleModeId::jig:
+        case StyleModeId::slipJig:
+            if (role == StepRole::primary) {
+                minHold = std::min(availableSteps, pattern.stepsPerBeat * 2);
+            } else if (role == StepRole::secondary) {
+                minHold = std::min(availableSteps, pattern.stepsPerBeat);
+            } else if (role == StepRole::pickup) {
+                minHold = std::min(availableSteps, std::max(1, pattern.stepsPerBeat / 2));
+            }
+            break;
+        case StyleModeId::straight:
+            if (role == StepRole::primary) {
+                minHold = std::min(availableSteps, pattern.stepsPerBeat);
+            } else if (role == StepRole::pickup) {
+                minHold = std::min(availableSteps, std::max(1, pattern.stepsPerBeat / 2));
+            }
+            break;
+        case StyleModeId::autoMode:
+        case StyleModeId::count:
+        default:
+            break;
+        }
+    } else if (::downspout::meterHasCompoundFeel(pattern.meter)) {
+        if (isPulseStartStep(pattern, step)) {
+            minHold = std::min(availableSteps, pattern.stepsPerBeat * 2);
+        } else if (isSecondaryAccentStep(pattern, step)) {
+            minHold = std::min(availableSteps, pattern.stepsPerBeat);
+        } else if (isPulsePickupStep(pattern, step)) {
+            minHold = std::min(availableSteps, std::max(1, pattern.stepsPerBeat / 2));
+        }
+    } else if (isTripleMeter(pattern)) {
+        if (isPrimaryAccentStep(pattern, step)) {
+            minHold = std::min(availableSteps, pattern.stepsPerBeat * 2);
+        } else if (isSecondaryAccentStep(pattern, step)) {
+            minHold = std::min(availableSteps, pattern.stepsPerBeat);
+        } else if (isTriplePickupStep(pattern, step)) {
+            minHold = std::min(availableSteps, std::max(1, pattern.stepsPerBeat / 2));
+        }
+    }
+
+    if (maxHold <= minHold) {
+        return minHold;
+    }
+    return clampi(minHold + rng.nextInt(0, maxHold - minHold), minHold, availableSteps);
 }
 
 [[nodiscard]] int sabbathCellLength(const PatternState& pattern) {
@@ -352,11 +736,10 @@ void generateRhythm(PatternState& pattern,
     int cooldown = 0;
 
     for (int step = 1; step < pattern.patternSteps; ++step) {
-        const bool strong = isPulseStartStep(pattern, step) ||
-                            (!::downspout::meterHasCompoundFeel(pattern.meter) && isBeatStartStep(pattern, step));
+        const bool strong = stepRoleFor(pattern, controls, step) == StepRole::primary;
         float probability = controls.density *
                             genreDensityBias(controls.genre, strong) *
-                            meterDensityBias(pattern, step);
+                            styleDensityBias(pattern, controls, step);
 
         if (cooldown > 0) {
             probability *= 0.30f;
@@ -369,7 +752,11 @@ void generateRhythm(PatternState& pattern,
         }
     }
 
-    reinforceMeterPulses(onset, pattern, controls, rng);
+    if (controls.styleMode == StyleModeId::autoMode) {
+        reinforceMeterPulses(onset, pattern, controls, rng);
+    } else {
+        reinforceStyleAnchors(onset, pattern, controls, rng);
+    }
 
     for (int step = 0; step < pattern.patternSteps && pattern.eventCount < kMaxEvents; ++step) {
         if (!onset[step]) {
@@ -378,7 +765,7 @@ void generateRhythm(PatternState& pattern,
 
         const int nextStep = nextOnsetStep(onset, pattern.patternSteps, step);
         const int available = clampi(nextStep - step, 1, pattern.patternSteps);
-        const int duration = chooseDurationSteps(controls, rng, available);
+        const int duration = chooseDurationSteps(controls, pattern, rng, step, available);
 
         NoteEvent& event = pattern.events[pattern.eventCount++];
         event.startStep = step;
@@ -401,9 +788,9 @@ void generateNotes(PatternState& pattern, const Controls& controls, Rng& rng) {
 
     for (int index = 0; index < pattern.eventCount; ++index) {
         NoteEvent& event = pattern.events[index];
-        const bool strong = isPulseStartStep(pattern, event.startStep) ||
-                            (!::downspout::meterHasCompoundFeel(pattern.meter) && isBeatStartStep(pattern, event.startStep));
-        const bool secondaryAccent = !strong && isBeatStartStep(pattern, event.startStep);
+        const StepRole role = stepRoleFor(pattern, controls, event.startStep);
+        const bool strong = role == StepRole::primary;
+        const bool secondaryAccent = role == StepRole::secondary;
         const int degree = (controls.genre == GenreId::sabbath)
             ? sabbathCellDegree(pattern, rng, sabbathCell, sabbathCellLen, index)
             : chooseDegree(rng, controls.genre, strong, prevDegree);
@@ -413,7 +800,9 @@ void generateNotes(PatternState& pattern, const Controls& controls, Rng& rng) {
         const int baseVelocity = 86;
         const int accentBoost = strong
             ? static_cast<int>(std::lround(controls.accent * 28.0f))
-            : (secondaryAccent ? static_cast<int>(std::lround(controls.accent * 12.0f)) : 0);
+            : (secondaryAccent
+                ? static_cast<int>(std::lround(controls.accent * 12.0f))
+                : (role == StepRole::pickup ? static_cast<int>(std::lround(controls.accent * 8.0f)) : 0));
         const int randomBoost = rng.nextInt(0, 10);
         event.velocity = clampi(baseVelocity + accentBoost + randomBoost, 1, 127);
     }
@@ -446,6 +835,7 @@ Controls clampControls(const Controls& raw) {
     controls.rootNote = clampi(controls.rootNote, 0, 127);
     controls.scale = static_cast<ScaleId>(clampi(static_cast<int>(controls.scale), 0, static_cast<int>(ScaleId::count) - 1));
     controls.genre = static_cast<GenreId>(clampi(static_cast<int>(controls.genre), 0, static_cast<int>(GenreId::count) - 1));
+    controls.styleMode = static_cast<StyleModeId>(clampi(static_cast<int>(controls.styleMode), 0, static_cast<int>(StyleModeId::count) - 1));
     controls.channel = clampi(controls.channel, 1, 16);
     controls.lengthBeats = clampi(controls.lengthBeats, kMinLengthBeats, kMaxLengthBeats);
     controls.subdivision = static_cast<SubdivisionId>(clampi(static_cast<int>(controls.subdivision), 0, static_cast<int>(SubdivisionId::count) - 1));
@@ -464,6 +854,7 @@ bool structuralControlsChanged(const Controls& a, const Controls& b) {
     return a.rootNote != b.rootNote ||
            a.scale != b.scale ||
            a.genre != b.genre ||
+           a.styleMode != b.styleMode ||
            a.lengthBeats != b.lengthBeats ||
            a.subdivision != b.subdivision ||
            std::fabs(a.density - b.density) > 0.0001f ||

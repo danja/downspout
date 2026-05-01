@@ -21,6 +21,9 @@ Current wrapper choice:
 
 - the first DPF/VST3 wrapper now has a thin custom control UI with explicit
   `New`, `Mutate`, and `Fill` buttons;
+- the wrapper now also exposes explicit `Style` modes for `Auto`, `Straight`,
+  `Reel`, `Waltz`, `Jig`, and `Slip Jig`, and those modes drive core timing
+  behavior rather than only post-generation labels;
 - the manual `Fill` trigger is intentionally more immediate than the original
   stored-last-bar refresh: it now targets the current or next bar and boosts the
   fill amount so the result is audible in host use;

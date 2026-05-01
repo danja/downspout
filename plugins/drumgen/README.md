@@ -26,7 +26,10 @@ Implementation status:
 - deterministic core and engine tests now exist and pass;
 - a first DPF-backed `drumgen.vst3` wrapper now builds with a custom control UI.
 - the core now follows shared meter input beyond bar length alone: compound and
-  triple meters get dedicated pulse-aware anchor and fill behavior.
+  triple meters get dedicated pulse-aware anchor and fill behavior;
+- the wrapper now exposes explicit `Auto`, `Straight`, `Reel`, `Waltz`, `Jig`,
+  and `Slip Jig` style modes so users can force rhythmic vocabulary instead of
+  relying only on meter-derived auto behavior.
 
 Recommended next steps:
 

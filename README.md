@@ -38,7 +38,8 @@ Current limitation:
 
 - the repository now has a shared meter model, but full musical meter-awareness
   is still uneven across the generators, especially for
-  compound-meter style behavior in `6/8`, `9/8`, and `12/8`
+  pickup handling, melody generation, and folk-specific accompaniment beyond
+  the new explicit style modes in `bassgen` and `drumgen`
 
 The repository is intentionally scaffolded around a shared-core pattern:
 
@@ -59,6 +60,7 @@ This repository now contains:
 
 - project planning and scaffolding;
 - a portable `bassgen` core library with tests and pulse-aware compound-meter support;
+- explicit `Auto` / `Straight` / `Reel` / `Waltz` / `Jig` / `Slip Jig` style modes in `bassgen`;
 - a first DPF-backed `bassgen` VST3 wrapper target with UI;
 - a portable `p-mix` core library with tests;
 - a first DPF-backed `p-mix` VST3 wrapper target with UI;
@@ -66,6 +68,7 @@ This repository now contains:
 - a first DPF-backed `e_mix.vst3` wrapper target with a redesigned UI;
 - an original `rift` core library with tests and a first DPF-backed `rift.vst3` wrapper target with UI;
 - a portable `drumgen` core library with a host-neutral MIDI engine, serialization helpers, tests, and a first DPF-backed VST3 wrapper target with UI;
+- explicit `Auto` / `Straight` / `Reel` / `Waltz` / `Jig` / `Slip Jig` style modes in `drumgen`;
 - a portable `cadence` core library with tests and a first DPF-backed `cadence.vst3` wrapper target with UI;
 - a portable `gremlin` core library with tests and a first DPF-backed `gremlin.vst3` wrapper target with UI;
 - a portable `gremlin-driver` MIDI control core with tests and a first DPF-backed `gremlin_driver.vst3` wrapper target with UI;
@@ -197,5 +200,5 @@ pedals, cadences, and releases rather than only mutating a short loop.
 8. Validate `gremlin_driver.vst3` in Reaper, especially MIDI pass-through, transport sync, and chaining into `gremlin.vst3`.
 9. Validate `drumgen.vst3` in Reaper, especially the new action-button UI, transport sync, and state restore.
 10. Validate `ground.vst3` in Reaper, especially long-form phrase behavior, action triggers, and state restore.
-11. Push the shared meter model further into folk-oriented style vocabulary so compound meters are musically convincing, not just structurally valid.
+11. Push folk-oriented style vocabulary into the remaining generators so the compound-meter work extends beyond `bassgen` and `drumgen`.
 12. Publish the first public `v*` tag and verify the GitHub Actions release assets on GitHub.

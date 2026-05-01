@@ -14,6 +14,7 @@ enum ParameterIndex : uint32_t {
     kParamRootNote = 0,
     kParamScale,
     kParamGenre,
+    kParamStyleMode,
     kParamChannel,
     kParamLengthBeats,
     kParamSubdivision,
@@ -81,6 +82,10 @@ constexpr const char* kGenreNames[] = {
     "Techno", "Acid", "House", "Electro", "Dub", "Ambient", "Funk", "Sabbath"
 };
 
+constexpr const char* kStyleNames[] = {
+    "Auto", "Straight", "Reel", "Waltz", "Jig", "Slip Jig"
+};
+
 constexpr const char* kSubdivisionNames[] = {
     "1/8", "1/16", "1/16T"
 };
@@ -93,6 +98,7 @@ constexpr const char* kChannelNames[] = {
 constexpr SelectorDef kSelectors[] = {
     {kParamScale, "Scale", kScaleNames, 11},
     {kParamGenre, "Genre", kGenreNames, 8},
+    {kParamStyleMode, "Style", kStyleNames, 6},
     {kParamSubdivision, "Subdivision", kSubdivisionNames, 3},
     {kParamChannel, "Channel", kChannelNames, 16},
 };
@@ -158,6 +164,7 @@ public:
 
         values_[kParamRootNote] = 36.0f;
         values_[kParamLengthBeats] = 16.0f;
+        values_[kParamStyleMode] = 0.0f;
         values_[kParamSubdivision] = 1.0f;
         values_[kParamDensity] = 0.45f;
         values_[kParamRegister] = 1.0f;

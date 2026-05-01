@@ -12,6 +12,34 @@ using namespace downspout::bassgen;
 
 namespace {
 
+bool hasEventStartingAt(const PatternState& pattern, const int step) {
+    for (int index = 0; index < pattern.eventCount; ++index) {
+        if (pattern.events[index].startStep == step) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool patternsDiffer(const PatternState& left, const PatternState& right) {
+    if (left.eventCount != right.eventCount ||
+        left.patternSteps != right.patternSteps ||
+        left.stepsPerBar != right.stepsPerBar) {
+        return true;
+    }
+
+    for (int index = 0; index < left.eventCount; ++index) {
+        if (left.events[index].startStep != right.events[index].startStep ||
+            left.events[index].durationSteps != right.events[index].durationSteps ||
+            left.events[index].note != right.events[index].note ||
+            left.events[index].velocity != right.events[index].velocity) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void testDeterministicGeneration() {
     Controls controls;
     controls.seed = 12345u;
@@ -95,6 +123,27 @@ void testVariationMutatesAfterLoopThreshold() {
     assert(variation.completedLoops == 1);
     assert(variation.lastMutationLoop == 1);
     assert(pattern.generationSerial > originalSerial);
+}
+
+void testExplicitStyleModesChangePatternShape() {
+    Controls controls;
+    controls.seed = 314u;
+    controls.genre = GenreId::funk;
+    controls.lengthBeats = 12;
+    controls.subdivision = SubdivisionId::sixteenth;
+    controls.density = 0.68f;
+    controls.hold = 0.40f;
+
+    PatternState jig;
+    controls.styleMode = StyleModeId::jig;
+    regeneratePattern(jig, controls, ::downspout::makeMeter(6, 8), true, true);
+
+    PatternState straight;
+    controls.styleMode = StyleModeId::straight;
+    regeneratePattern(straight, controls, ::downspout::makeMeter(6, 8), true, true);
+
+    assert(hasEventStartingAt(jig, 12));
+    assert(patternsDiffer(jig, straight));
 }
 
 void testStateSanitization() {
@@ -223,6 +272,7 @@ void testSerializationRoundTrip() {
     controls.rootNote = 41;
     controls.scale = ScaleId::mixolydian;
     controls.genre = GenreId::funk;
+    controls.styleMode = StyleModeId::reel;
     controls.vary = 0.65f;
     controls.seed = 999u;
     controls.actionNotes = 3;
@@ -245,6 +295,7 @@ void testSerializationRoundTrip() {
     assert(controlsRoundTrip->rootNote == controls.rootNote);
     assert(controlsRoundTrip->scale == controls.scale);
     assert(controlsRoundTrip->genre == controls.genre);
+    assert(controlsRoundTrip->styleMode == controls.styleMode);
     assert(controlsRoundTrip->actionNotes == controls.actionNotes);
     assert(patternRoundTrip->eventCount == pattern.eventCount);
     assert(patternRoundTrip->patternSteps == pattern.patternSteps);
@@ -290,6 +341,35 @@ void testCompoundMeterGenerationTracksPulseGrid() {
     assert(hasSecondaryPulse);
 }
 
+void testTripleMeterGenerationTracksSecondaryBeat() {
+    Controls controls;
+    controls.seed = 8181u;
+    controls.genre = GenreId::funk;
+    controls.lengthBeats = 9;
+    controls.subdivision = SubdivisionId::sixteenth;
+    controls.density = 0.52f;
+
+    PatternState pattern;
+    const ::downspout::Meter waltzMeter = ::downspout::makeMeter(3, 4);
+    regeneratePattern(pattern, controls, waltzMeter, true, true);
+
+    assert(pattern.meter.numerator == 3);
+    assert(pattern.meter.denominator == 4);
+    assert(pattern.stepsPerBar == 12);
+    assert(pattern.patternSteps == 36);
+
+    bool hasSecondaryBeat = false;
+    for (int index = 0; index < pattern.eventCount; ++index) {
+        const int localStep = pattern.events[index].startStep % pattern.stepsPerBar;
+        if (localStep == pattern.stepsPerBeat || localStep == (pattern.stepsPerBeat * 2)) {
+            hasSecondaryBeat = true;
+            break;
+        }
+    }
+
+    assert(hasSecondaryBeat);
+}
+
 void testEngineRegeneratesOnMeterChange() {
     Controls controls;
     controls.seed = 202u;
@@ -324,11 +404,13 @@ int main() {
     testRhythmRegenerationKeepsPreviousNotes();
     testTransportHelpers();
     testVariationMutatesAfterLoopThreshold();
+    testExplicitStyleModesChangePatternShape();
     testStateSanitization();
     testEngineRewindResyncAndStopNoteOff();
     testEngineBoundaryEndThenStartScheduling();
     testSerializationRoundTrip();
     testCompoundMeterGenerationTracksPulseGrid();
+    testTripleMeterGenerationTracksSecondaryBeat();
     testEngineRegeneratesOnMeterChange();
     return 0;
 }

@@ -16,6 +16,28 @@ bool equalStep(const DrumStepCell& a, const DrumStepCell& b) {
     return a.velocity == b.velocity && a.flags == b.flags;
 }
 
+bool patternsDiffer(const PatternState& left, const PatternState& right) {
+    if (left.bars != right.bars ||
+        left.stepsPerBeat != right.stepsPerBeat ||
+        left.stepsPerBar != right.stepsPerBar ||
+        left.totalSteps != right.totalSteps) {
+        return true;
+    }
+
+    for (int lane = 0; lane < kLaneCount; ++lane) {
+        if (left.lanes[lane].midiNote != right.lanes[lane].midiNote) {
+            return true;
+        }
+        for (int step = 0; step < left.totalSteps; ++step) {
+            if (!equalStep(left.lanes[lane].steps[step], right.lanes[lane].steps[step])) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 PatternState makeSingleHitPattern(int step, int note, int velocity) {
     PatternState pattern;
     pattern.version = kPatternStateVersion;
@@ -170,6 +192,26 @@ void testTripleMeterBackbeatLandsOnSecondBeat() {
     assert(hasBackbeat);
 }
 
+void testExplicitStyleModesChangePatternShape() {
+    Controls controls;
+    controls.seed = 515u;
+    controls.genre = GenreId::rock;
+    controls.bars = 2;
+    controls.resolution = ResolutionId::sixteenth;
+    controls.backbeatAmt = 1.0f;
+    controls.hatAmt = 0.9f;
+
+    PatternState jig;
+    controls.styleMode = StyleModeId::jig;
+    regeneratePattern(jig, controls, ::downspout::makeMeter(6, 8), false);
+
+    PatternState straight;
+    controls.styleMode = StyleModeId::straight;
+    regeneratePattern(straight, controls, ::downspout::makeMeter(6, 8), false);
+
+    assert(patternsDiffer(jig, straight));
+}
+
 void testRefreshBarKeepsOtherBars() {
     Controls controls;
     controls.seed = 313u;
@@ -296,6 +338,7 @@ void testStateSanitization() {
 void testSerializationRoundTrip() {
     Controls controls;
     controls.genre = GenreId::afro;
+    controls.styleMode = StyleModeId::slipJig;
     controls.channel = 8;
     controls.kitMap = KitMapId::gm;
     controls.bars = 4;
@@ -319,6 +362,7 @@ void testSerializationRoundTrip() {
     assert(patternRoundTrip.has_value());
     assert(variationRoundTrip.has_value());
     assert(controlsRoundTrip->genre == controls.genre);
+    assert(controlsRoundTrip->styleMode == controls.styleMode);
     assert(controlsRoundTrip->channel == controls.channel);
     assert(controlsRoundTrip->kitMap == controls.kitMap);
     assert(controlsRoundTrip->actionMutate == controls.actionMutate);
@@ -537,6 +581,7 @@ int main() {
     testCompoundMeterShape();
     testCompoundMeterBackbeatLandsOnSecondPulse();
     testTripleMeterBackbeatLandsOnSecondBeat();
+    testExplicitStyleModesChangePatternShape();
     testRefreshBarKeepsOtherBars();
     testRefreshFillBarTargetsChosenBar();
     testTransportHelpers();

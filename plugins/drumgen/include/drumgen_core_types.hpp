@@ -42,6 +42,16 @@ enum class KitMapId : std::int32_t {
     count
 };
 
+enum class StyleModeId : std::int32_t {
+    autoMode = 0,
+    straight,
+    reel,
+    waltz,
+    jig,
+    slipJig,
+    count
+};
+
 enum class LaneId : std::int32_t {
     kick = 0,
     clap,
@@ -63,6 +73,7 @@ enum StepFlag : std::uint8_t {
 
 struct Controls {
     GenreId genre = GenreId::rock;
+    StyleModeId styleMode = StyleModeId::autoMode;
     int channel = 10;
     KitMapId kitMap = KitMapId::fluesDrumkit;
     int bars = 2;
