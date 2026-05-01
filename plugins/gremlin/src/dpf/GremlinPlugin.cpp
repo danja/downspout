@@ -160,6 +160,16 @@ protected:
         return d_cconst('G', 'r', 'm', 'n');
     }
 
+    void initAudioPort(const bool input, const uint32_t index, AudioPort& port) override
+    {
+        Plugin::initAudioPort(input, index, port);
+
+        if (index < 2)
+            port.groupId = kPortGroupStereo;
+        port.name = String(input ? "Input " : "Output ") + String(static_cast<int>(index + 1));
+        port.symbol = String(input ? "in_" : "out_") + String(static_cast<int>(index + 1));
+    }
+
     void initParameter(uint32_t index, Parameter& parameter) override
     {
         parameter.hints = kParameterIsAutomatable;

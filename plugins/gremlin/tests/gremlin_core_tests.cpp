@@ -52,5 +52,29 @@ int main()
     processor.processBlock(left, right, 16, &cc, 1);
     require(nearlyEqual(processor.getMacro(downspout::gremlin::MacroId::source), 1.0f), "gremlin macro CC mapping mismatch");
 
+    MidiMessage noteOn {};
+    noteOn.size = 3;
+    noteOn.data[0] = 0x90;
+    noteOn.data[1] = 60;
+    noteOn.data[2] = 100;
+
+    float synthLeft[512] {};
+    float synthRight[512] {};
+    processor.processBlock(synthLeft, synthRight, 512, &noteOn, 1);
+
+    float peak = 0.0f;
+    for (int i = 0; i < 512; ++i)
+        peak = std::max(peak, std::max(std::fabs(synthLeft[i]), std::fabs(synthRight[i])));
+
+    require(peak > 0.01f, "gremlin should emit audio after note-on");
+
+    float monoOnly[128] {};
+    processor.processBlock(monoOnly, nullptr, 128, nullptr, 0);
+    float monoPeak = 0.0f;
+    for (float sample : monoOnly)
+        monoPeak = std::max(monoPeak, std::fabs(sample));
+
+    require(monoPeak > 0.001f, "gremlin mono-output render should still emit audio");
+
     return 0;
 }

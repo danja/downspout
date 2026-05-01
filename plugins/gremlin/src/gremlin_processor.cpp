@@ -286,14 +286,16 @@ void Processor::processBlock(float* outLeft,
                              const MidiMessage* midiEvents,
                              const std::uint32_t midiEventCount)
 {
-    if (outLeft == nullptr || outRight == nullptr)
+    if (outLeft == nullptr && outRight == nullptr)
         return;
 
     const float activityDrop = static_cast<float>(frameCount) / std::max(1.0, sampleRate_ * 0.35);
     status_.controllerActivity = std::max(0.0f, status_.controllerActivity - activityDrop);
 
-    std::memset(outLeft, 0, frameCount * sizeof(float));
-    std::memset(outRight, 0, frameCount * sizeof(float));
+    if (outLeft != nullptr)
+        std::memset(outLeft, 0, frameCount * sizeof(float));
+    if (outRight != nullptr)
+        std::memset(outRight, 0, frameCount * sizeof(float));
 
     applyLiveState();
 
@@ -659,8 +661,10 @@ void Processor::renderRange(float* outLeft,
     for (std::uint32_t frame = beginFrame; frame < endFrame; ++frame)
     {
         const flues::gremlin::StereoFrame sample = engine_.process();
-        outLeft[frame] = 0.92f * std::tanh(sample.left * postGain_);
-        outRight[frame] = 0.92f * std::tanh(sample.right * postGain_);
+        if (outLeft != nullptr)
+            outLeft[frame] = 0.92f * std::tanh(sample.left * postGain_);
+        if (outRight != nullptr)
+            outRight[frame] = 0.92f * std::tanh(sample.right * postGain_);
     }
 }
 
