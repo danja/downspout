@@ -92,7 +92,7 @@ constexpr const char* kSourceNames[] = {
 };
 
 constexpr const char* kConnectionNames[] = {
-    "Local", "Server OK", "Server Offline", "Server Error"
+    "Local", "Requesting", "Ready", "Server Offline", "Server Error"
 };
 
 constexpr SelectorDef kSelectors[] = {
@@ -347,19 +347,23 @@ private:
 
     void drawConnectionPill(const float x, const float y, const float w, const float h)
     {
-        const int status = clampi(static_cast<int>(std::lround(values_[kParamConnectionStatus])), 0, 3);
+        const int status = clampi(static_cast<int>(std::lround(values_[kParamConnectionStatus])), 0, 4);
         int r = 136;
         int g = 151;
         int b = 166;
         if (status == 1) {
+            r = 99;
+            g = 158;
+            b = 218;
+        } else if (status == 2) {
             r = 105;
             g = 184;
             b = 134;
-        } else if (status == 2) {
+        } else if (status == 3) {
             r = 218;
             g = 151;
             b = 82;
-        } else if (status == 3) {
+        } else if (status == 4) {
             r = 204;
             g = 112;
             b = 82;
@@ -535,7 +539,13 @@ private:
         setParameterValue(index, nextValue);
         editParameter(index, false);
         values_[index] = nextValue;
-        values_[kParamStatusReady] = 1.0f;
+        if ((index == kParamGenerate || index == kParamRetry) && values_[kParamSource] >= 0.5f) {
+            values_[kParamStatusReady] = 0.0f;
+            values_[kParamConnectionStatus] = 1.0f;
+        } else if (index == kParamGenerate || index == kParamRetry) {
+            values_[kParamStatusReady] = 1.0f;
+            values_[kParamConnectionStatus] = 0.0f;
+        }
         buttonPulse_ = 8;
         pulsedButton_ = buttonIndex;
         repaint();

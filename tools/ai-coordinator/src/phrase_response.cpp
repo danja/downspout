@@ -73,6 +73,41 @@ bool parseFloat(const std::optional<std::string_view> value, float& target)
     return std::max(minimum, std::min(value, maximum));
 }
 
+[[nodiscard]] int distinctNoteCount(const downspout::sidecar::Phrase& phrase)
+{
+    std::array<bool, 128> used {};
+    int count = 0;
+    for (int i = 0; i < phrase.eventCount; ++i) {
+        const int note = clampi(phrase.events[static_cast<std::size_t>(i)].note, 0, 127);
+        if (!used[static_cast<std::size_t>(note)]) {
+            used[static_cast<std::size_t>(note)] = true;
+            ++count;
+        }
+    }
+    return count;
+}
+
+void repairLowPitchVariety(downspout::sidecar::Phrase& phrase, const TuneState& state)
+{
+    const int registerSpan = std::max(0, state.registerHigh - state.registerLow);
+    const int minimumDistinct = registerSpan >= 12 ? 4 : (registerSpan >= 5 ? 3 : 2);
+    if (phrase.eventCount < minimumDistinct || distinctNoteCount(phrase) >= minimumDistinct)
+        return;
+
+    TuneState fallbackState = state;
+    fallbackState.seed = state.seed == 0 ? 17u : state.seed ^ 0x5bd1e995u;
+    fallbackState.density = std::max(state.density, 0.55f);
+    fallbackState.risk = std::max(state.risk, 0.35f);
+    const downspout::sidecar::Phrase fallback = generateSoloPhrase(fallbackState);
+    if (fallback.eventCount <= 0)
+        return;
+
+    for (int i = 0; i < phrase.eventCount; ++i) {
+        const downspout::sidecar::PhraseEvent& source = fallback.events[static_cast<std::size_t>(i % fallback.eventCount)];
+        phrase.events[static_cast<std::size_t>(i)].note = clampi(source.note, state.registerLow, state.registerHigh);
+    }
+}
+
 }  // namespace
 
 std::optional<downspout::sidecar::Phrase> parsePhraseResponseJson(const std::string& text)
@@ -185,6 +220,7 @@ downspout::sidecar::Phrase constrainPhraseToTuneState(const downspout::sidecar::
             break;
     }
 
+    repairLowPitchVariety(phrase, state);
     return phrase;
 }
 

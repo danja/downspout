@@ -56,7 +56,9 @@ std::string buildSoloRequestJson(const TuneState& state)
     out << "    \"Use beat positions relative to the phrase start.\",\n";
     out << "    \"Keep events monophonic, sorted, and inside the phrase length.\",\n";
     out << "    \"Keep note values inside tune_state.register_low and tune_state.register_high.\",\n";
-    out << "    \"Prefer guide pitch classes on strong beats when supplied.\"\n";
+    out << "    \"Prefer guide pitch classes on strong beats when supplied.\",\n";
+    out << "    \"Use a melodic contour with at least four distinct pitches when the register allows it.\",\n";
+    out << "    \"Do not repeat the same MIDI note more than twice in a row.\"\n";
     out << "  ],\n";
     out << "  \"tune_state\": ";
     appendTuneStateObject(out, state);

@@ -32,16 +32,18 @@ CLI/server.
 - `Generate`: creates a new deterministic fallback phrase.
 - `Accept`: marks the current phrase as accepted for session state.
 - `Retry`: creates an alternate deterministic fallback phrase.
-- Connection status: `Local`, `Server OK`, `Server Offline`, or `Server Error`.
+- Connection status: `Local`, `Requesting`, `Ready`, `Server Offline`, or
+  `Server Error`.
 
 If MIDI has been routed into Sidecar, Generate and Retry use the captured note
 range, density, and event seed as hints. If no MIDI has been routed in, the
 plugin keeps the original local fallback behavior.
 
-In `Server` source mode, Generate and Retry post the current captured
-MIDI-derived request to `http://127.0.0.1:37371/openai`. If the coordinator is
-not running or returns an error, Sidecar flags the connection status and leaves
-the current phrase unchanged.
+In `Server` source mode, Generate and Retry queue the current captured
+MIDI-derived request to `http://127.0.0.1:37371/openai` on a background thread.
+The audio/MIDI callback does not make network calls. While the request is in
+flight Sidecar silences the old phrase, then adopts the validated phrase at a
+future bar boundary after the coordinator responds.
 
 ## DAW Test: Live Sidecar
 
@@ -81,9 +83,11 @@ In the DAW:
 1. Set Sidecar `Source` to `Server`.
 2. Route MIDI into Sidecar and let it capture a few notes.
 3. Click `Generate` or `Retry`.
-4. `Server OK` means a validated phrase was accepted from the coordinator.
-5. `Server Offline` means Sidecar could not connect to localhost.
-6. `Server Error` means the coordinator answered but rejected or failed the
+4. `Requesting` means the coordinator call is running in the background.
+5. `Ready` means a validated phrase has been received and queued for a future
+   bar boundary.
+6. `Server Offline` means Sidecar could not connect to localhost.
+7. `Server Error` means the coordinator answered but rejected or failed the
    request, for example missing API key, invalid state, or invalid model output.
 
 Leave `Source` on `Local` for token-free deterministic testing.
@@ -146,6 +150,8 @@ build/tools/ai-coordinator/downspout-ai-coordinator openai-from-midi /tmp/source
 ## Current Limits
 
 - Sidecar does not yet import `phrase.txt` directly through the UI.
-- Server mode is synchronous on Generate/Retry, so keep the coordinator local
-  and expect a short wait while OpenAI responds.
+- Server mode is asynchronous, but only one request is in flight at a time.
+  Repeated Generate/Retry clicks are ignored until the current request finishes.
+- The UI/host may take a moment to refresh output status parameters, but the
+  plugin itself queues and switches phrases internally once the worker returns.
 - The plugin never owns or prints the API key.

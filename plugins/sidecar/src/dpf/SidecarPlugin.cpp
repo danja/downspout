@@ -10,9 +10,11 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstdint>
+#include <mutex>
 #include <optional>
 #include <sstream>
 #include <string>
+#include <thread>
 
 #if defined(__unix__) || defined(__APPLE__)
 #include <arpa/inet.h>
@@ -59,9 +61,10 @@ enum class SourceMode : int {
 
 enum class ConnectionStatus : int {
     local = 0,
-    serverOk = 1,
-    serverOffline = 2,
-    serverError = 3
+    requesting = 1,
+    ready = 2,
+    serverOffline = 3,
+    serverError = 4
 };
 
 using downspout::sidecar::BlockResult;
@@ -69,6 +72,7 @@ using downspout::sidecar::Controls;
 using downspout::sidecar::EngineState;
 using downspout::sidecar::MidiEventType;
 using downspout::sidecar::Phrase;
+using downspout::sidecar::PhraseEvent;
 using downspout::sidecar::RegisterId;
 using downspout::sidecar::ScheduledMidiEvent;
 using downspout::sidecar::TransportSnapshot;
@@ -87,9 +91,17 @@ ParameterEnumerationValue kSourceEnumValues[] = {
 
 ParameterEnumerationValue kConnectionStatusEnumValues[] = {
     {0.0f, "Local"},
-    {1.0f, "Server OK"},
-    {2.0f, "Server Offline"},
-    {3.0f, "Server Error"},
+    {1.0f, "Requesting"},
+    {2.0f, "Ready"},
+    {3.0f, "Server Offline"},
+    {4.0f, "Server Error"},
+};
+
+struct WorkerResult {
+    bool done = false;
+    bool ok = false;
+    bool connected = false;
+    Phrase phrase {};
 };
 
 TransportSnapshot toCoreTransport(const TimePosition& timePos)
@@ -265,6 +277,11 @@ public:
         hasAcceptedPhrase_ = true;
     }
 
+    ~SidecarPlugin() override
+    {
+        joinWorker();
+    }
+
 protected:
     const char* getLabel() const override { return "Sidecar"; }
     const char* getDescription() const override { return "AI-ready MIDI phrase sidecar and validated solo phrase player."; }
@@ -362,7 +379,7 @@ protected:
             parameter.name = "Connection";
             parameter.symbol = "connection_status";
             parameter.hints = kParameterIsOutput | kParameterIsInteger;
-            setRanges(parameter, 0.0f, 3.0f, 0.0f);
+            setRanges(parameter, 0.0f, 4.0f, 0.0f);
             parameter.enumValues.count = static_cast<uint8_t>(std::size(kConnectionStatusEnumValues));
             parameter.enumValues.restrictedMode = true;
             parameter.enumValues.values = kConnectionStatusEnumValues;
@@ -399,7 +416,11 @@ protected:
         case kParamAccept: return acceptCounter_;
         case kParamRetry: return retryCounter_;
         case kParamSource: return static_cast<float>(static_cast<int>(sourceMode_));
-        case kParamStatusReady: return engine_.phraseReady ? 1.0f : 0.0f;
+        case kParamStatusReady:
+            if (sourceMode_ == SourceMode::server &&
+                (connectionStatus_ == ConnectionStatus::requesting || queuedPhraseReady_))
+                return 0.0f;
+            return engine_.phraseReady ? 1.0f : 0.0f;
         case kParamConnectionStatus: return static_cast<float>(static_cast<int>(connectionStatus_));
         default: return 0.0f;
         }
@@ -420,7 +441,11 @@ protected:
         case kParamMute: controls_.mute = value >= 0.5f; break;
         case kParamSource:
             sourceMode_ = value >= 0.5f ? SourceMode::server : SourceMode::local;
-            setConnectionStatus(sourceMode_ == SourceMode::server ? ConnectionStatus::serverOffline : ConnectionStatus::local);
+            if (sourceMode_ == SourceMode::local) {
+                setConnectionStatus(ConnectionStatus::local);
+            } else if (connectionStatus_ == ConnectionStatus::local) {
+                setConnectionStatus(ConnectionStatus::serverOffline);
+            }
             break;
         case kParamGenerate:
             if (value > generateCounter_)
@@ -483,10 +508,19 @@ protected:
     void run(const float**, float**, uint32_t frames, const MidiEvent* midiEvents, uint32_t midiEventCount) override
     {
         consumeInputMidi(midiEvents, midiEventCount);
+        const TransportSnapshot transport = toCoreTransport(getTimePosition());
+        applyAsyncResult(transport);
+        activateQueuedPhrase(transport);
+
+        Controls processControls = controls_;
+        if (sourceMode_ == SourceMode::server &&
+            (connectionStatus_ == ConnectionStatus::requesting || queuedPhraseReady_)) {
+            processControls.mute = true;
+        }
 
         const BlockResult result = downspout::sidecar::processBlock(engine_,
-                                                                    controls_,
-                                                                    toCoreTransport(getTimePosition()),
+                                                                    processControls,
+                                                                    transport,
                                                                     frames,
                                                                     getSampleRate());
         for (int i = 0; i < result.eventCount; ++i)
@@ -520,8 +554,7 @@ private:
         const Controls generationControls = controlsForGeneration();
         engine_.controls = generationControls;
         if (sourceMode_ == SourceMode::server) {
-            if (trySetServerPhrase(generationControls, seed))
-                return;
+            startServerRequest(generationControls, seed);
             return;
         }
 
@@ -531,34 +564,157 @@ private:
         setConnectionStatus(ConnectionStatus::local);
     }
 
-    bool trySetServerPhrase(const Controls& generationControls, const std::uint32_t seed)
+    void startServerRequest(const Controls& generationControls, const std::uint32_t seed)
     {
+        if (worker_.joinable()) {
+            WorkerResult result {};
+            bool hasFinishedWorker = false;
+            {
+                std::lock_guard<std::mutex> lock(workerMutex_);
+                hasFinishedWorker = workerResult_.done;
+            }
+            if (hasFinishedWorker)
+                worker_.detach();
+            else
+                return;
+        }
+
         const std::uint32_t guidedSeed = seed ^ capturedSeed_;
         const std::string request = controlsToTuneStateJson(generationControls,
                                                             capturedPitchClasses_,
                                                             guidedSeed == 0u ? seed : guidedSeed);
-        const std::optional<HttpResult> response = postCoordinatorRequest("/openai", request);
-        if (!response.has_value()) {
-            setConnectionStatus(ConnectionStatus::serverOffline);
-            return false;
+        {
+            std::lock_guard<std::mutex> lock(workerMutex_);
+            workerResult_ = WorkerResult {};
         }
-        if (response->status != 200) {
-            setConnectionStatus(ConnectionStatus::serverError);
-            return false;
-        }
-        const auto phrase = downspout::sidecar::deserializePhraseJson(response->body);
-        if (!phrase.has_value()) {
-            setConnectionStatus(ConnectionStatus::serverError);
-            return false;
-        }
-        downspout::sidecar::setPhrase(engine_, *phrase);
-        setConnectionStatus(ConnectionStatus::serverOk);
-        return true;
+        queuedPhraseReady_ = false;
+        setConnectionStatus(ConnectionStatus::requesting);
+
+        worker_ = std::thread([this, request]() {
+            WorkerResult result {};
+            const std::optional<HttpResult> response = postCoordinatorRequest("/openai", request);
+            if (!response.has_value()) {
+                result.done = true;
+                result.connected = false;
+            } else if (response->status == 200) {
+                result.connected = true;
+                const auto phrase = downspout::sidecar::deserializePhraseJson(response->body);
+                result.done = true;
+                result.ok = phrase.has_value();
+                if (phrase.has_value())
+                    result.phrase = *phrase;
+            } else {
+                result.done = true;
+                result.connected = true;
+                result.ok = false;
+            }
+
+            std::lock_guard<std::mutex> lock(workerMutex_);
+            workerResult_ = result;
+        });
     }
 
     void setConnectionStatus(const ConnectionStatus status)
     {
         connectionStatus_ = status;
+    }
+
+    void applyAsyncResult(const TransportSnapshot& transport)
+    {
+        WorkerResult result {};
+        bool hasResult = false;
+        if (workerMutex_.try_lock()) {
+            if (workerResult_.done) {
+                result = workerResult_;
+                workerResult_ = WorkerResult {};
+                hasResult = true;
+            }
+            workerMutex_.unlock();
+        }
+        if (!hasResult)
+            return;
+
+        if (worker_.joinable())
+            worker_.detach();
+
+        if (sourceMode_ != SourceMode::server) {
+            setConnectionStatus(ConnectionStatus::local);
+            return;
+        }
+
+        if (!result.ok) {
+            setConnectionStatus(result.connected ? ConnectionStatus::serverError : ConnectionStatus::serverOffline);
+            return;
+        }
+
+        queuedPhrase_ = result.phrase;
+        queuedPhraseReady_ = true;
+        queuedActivationBeat_ = nextActivationBeat(transport);
+        setConnectionStatus(ConnectionStatus::ready);
+    }
+
+    [[nodiscard]] double nextActivationBeat(const TransportSnapshot& transport) const
+    {
+        if (!transport.valid || transport.beatsPerBar <= 0.0)
+            return 0.0;
+        const double currentBeat = transport.bar * transport.beatsPerBar + transport.barBeat;
+        const double currentBar = std::floor(currentBeat / transport.beatsPerBar);
+        return (currentBar + 2.0) * transport.beatsPerBar;
+    }
+
+    void activateQueuedPhrase(const TransportSnapshot& transport)
+    {
+        if (!queuedPhraseReady_)
+            return;
+        if (transport.valid && transport.beatsPerBar > 0.0) {
+            const double currentBeat = transport.bar * transport.beatsPerBar + transport.barBeat;
+            if (currentBeat + 0.0001 < queuedActivationBeat_)
+                return;
+        }
+
+        downspout::sidecar::setPhrase(engine_, phraseShiftedToActivation(queuedPhrase_, queuedActivationBeat_));
+        queuedPhraseReady_ = false;
+    }
+
+    [[nodiscard]] Phrase phraseShiftedToActivation(const Phrase& phrase, const double activationBeat) const
+    {
+        Phrase shifted = phrase;
+        const float phraseBeats = static_cast<float>(std::max(1, phrase.bars) * std::max(1, phrase.beatsPerBar));
+        if (phraseBeats <= 0.0f)
+            return shifted;
+
+        const float offset = std::fmod(static_cast<float>(activationBeat), phraseBeats);
+        if (std::fabs(offset) < 0.0001f)
+            return shifted;
+
+        for (int i = 0; i < shifted.eventCount; ++i) {
+            PhraseEvent& event = shifted.events[static_cast<std::size_t>(i)];
+            event.beat = std::fmod(event.beat + offset, phraseBeats);
+            if (event.beat < 0.0f)
+                event.beat += phraseBeats;
+            event.duration = std::min(event.duration, phraseBeats - event.beat);
+        }
+        std::stable_sort(shifted.events.begin(),
+                         shifted.events.begin() + shifted.eventCount,
+                         [](const PhraseEvent& left, const PhraseEvent& right) {
+                             return left.beat < right.beat;
+                         });
+
+        float previousEnd = 0.0f;
+        for (int i = 0; i < shifted.eventCount; ++i) {
+            PhraseEvent& event = shifted.events[static_cast<std::size_t>(i)];
+            if (event.beat < previousEnd)
+                event.beat = previousEnd;
+            event.duration = std::min(event.duration, phraseBeats - event.beat);
+            previousEnd = event.beat + event.duration;
+        }
+        return shifted;
+    }
+
+    void joinWorker()
+    {
+        if (worker_.joinable())
+            worker_.join();
     }
 
     void consumeInputMidi(const MidiEvent* midiEvents, const uint32_t midiEventCount)
@@ -599,6 +755,12 @@ private:
     std::array<int, 12> capturedPitchClasses_ {};
     SourceMode sourceMode_ = SourceMode::local;
     ConnectionStatus connectionStatus_ = ConnectionStatus::local;
+    std::thread worker_ {};
+    std::mutex workerMutex_ {};
+    WorkerResult workerResult_ {};
+    Phrase queuedPhrase_ {};
+    bool queuedPhraseReady_ = false;
+    double queuedActivationBeat_ = 0.0;
     float generateCounter_ = 0.0f;
     float acceptCounter_ = 0.0f;
     float retryCounter_ = 0.0f;

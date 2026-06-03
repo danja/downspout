@@ -41,8 +41,10 @@ stays realtime-safe and only queues validated MIDI phrases.
   Humanize, Source, Mute/Open, Generate, Accept, Retry, and connection status.
 - `Source=Local` keeps deterministic, token-free generation.
 - `Source=Server` posts the current MIDI-derived request to the localhost
-  coordinator on Generate/Retry and flags `Server OK`, `Server Offline`, or
-  `Server Error`.
+  coordinator on Generate/Retry from a background worker and flags `Requesting`,
+  `Ready`, `Server Offline`, or `Server Error`.
+- Server results are validated, queued internally, and activated at a future bar
+  boundary instead of blocking the DAW or replacing the phrase mid-callback.
 
 ## Current non-goals
 
@@ -50,8 +52,8 @@ stays realtime-safe and only queues validated MIDI phrases.
 - No API keys in plugin state.
 - No MCP layer.
 - No automatic model calls during playback.
-- No background/asynchronous request queue yet; live server calls are explicit
-  button actions.
+- No automatic model calls during playback; live server calls are explicit
+  button actions with one background request in flight.
 
 ## Implemented coordinator slice
 
@@ -129,6 +131,9 @@ This keeps the architecture modular:
   the OpenAI endpoint is configured.
 - `downspout-ai-coordinator serve --port 37371` exposes localhost
   `GET /health`, `POST /generate`, and `POST /openai` for Sidecar Server mode.
+- API responses that validate but collapse to too few distinct pitches are
+  repaired with deterministic scale/guide-aware substitute notes before MIDI or
+  live JSON is emitted.
 - The raw response can be saved with `--raw`, but MIDI is written only after the
   extracted phrase JSON validates through Sidecar's phrase protocol.
 - `exercise-sidecar-ai.sh` keeps this path opt-in through

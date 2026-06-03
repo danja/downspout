@@ -99,6 +99,10 @@ The OpenAI path stays outside the audio/MIDI processing thread. It writes MIDI
 or returns live phrase JSON only after the returned text has been parsed as a
 phrase response and validated by the Sidecar protocol.
 
+If a model response is valid but collapses to too few distinct pitches, the
+coordinator repairs the pitch contour with deterministic, scale/guide-aware
+substitute notes before returning it to Sidecar.
+
 ## MIDI-First Context
 
 The coordinator should primarily derive tune context from MIDI routed to
