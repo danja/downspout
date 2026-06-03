@@ -51,6 +51,11 @@ fi
 echo "Running Sidecar/coordinator tests"
 ctest --test-dir "$build_dir" -R "downspout_(ai_coordinator|sidecar)_.*tests" --output-on-failure
 
+echo "Checking coordinator startup"
+if ! "$coordinator" health; then
+  echo "OpenAI key is not configured; live /openai and DOWNSPOUT_RUN_OPENAI=1 will fail until .env or OPENAI_API_KEY is set."
+fi
+
 echo "Generating sample solo MIDI"
 "$coordinator" generate "$state_file" --out "$solo_midi" --phrase "$phrase_txt"
 

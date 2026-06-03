@@ -147,19 +147,25 @@ The first coordinator can start as a CLI:
 downspout-ai-coordinator generate state.json --out solo.mid
 ```
 
-Then it can grow a localhost server mode:
+The current implementation now includes that CLI and a first localhost server
+mode:
 
 ```text
+downspout-ai-coordinator health
 downspout-ai-coordinator serve --port 37371
 ```
 
+`health` and `serve` load `.env` on startup. `serve` exposes `GET /health`,
+`POST /generate`, and `POST /openai`.
+
 ### Sidecar plugin
 
-`Sidecar` now starts as a dedicated MIDI plugin that queues and plays validated
-phrases. The first slice deliberately stays local: it has a deterministic
-fallback phrase generator, accepted phrase state, transport-aware playback, and
-a compact UI, but no network calls. The coordinator can be added around that
-stable playback path.
+`Sidecar` is a dedicated MIDI plugin that queues and plays validated phrases.
+It has a deterministic fallback phrase generator, accepted phrase state,
+transport-aware playback, routed MIDI capture, and a compact UI. Its `Source`
+control selects token-free `Local` generation or explicit `Server` requests to
+the localhost coordinator on Generate/Retry. Network work remains outside the
+audio/MIDI processing thread.
 
 Sidecar does not need to know how Ground, BassGen, or Cadence work internally.
 It can rely on the coordinator's merged tune state once the live request path
@@ -267,10 +273,10 @@ Responsibilities:
 
 - read `state.json`;
 - generate deterministic placeholder phrases for now;
-- call the OpenAI API later;
+- call the OpenAI API;
 - validate the structured response through `ai_protocol`;
 - write `solo.mid`;
-- later, run a localhost server for live Sidecar requests.
+- run a localhost server for live Sidecar requests.
 
 First useful command:
 
@@ -278,9 +284,10 @@ First useful command:
 downspout-ai-coordinator generate state.json --out solo.mid
 ```
 
-Second step:
+Live commands:
 
 ```text
+downspout-ai-coordinator health
 downspout-ai-coordinator serve --port 37371
 ```
 
@@ -362,7 +369,9 @@ passive, and behavior-neutral.
 7. Add a manual workflow: export or hand-write `state.json`, generate
    `solo.mid`, import into the DAW.
 8. Add MIDI-derived context extraction from Sidecar/coordinator input.
-9. Add localhost request/response between Sidecar and the coordinator.
+9. Add localhost request/response between Sidecar and the coordinator. Done:
+   Sidecar `Source=Server` posts to `/openai` on Generate/Retry and flags
+   `Server OK`, `Server Offline`, or `Server Error`.
 10. Use passive plugin summaries only as optional hints or diagnostics.
 
 The first offline MIDI-derived path exists as:
@@ -625,7 +634,9 @@ to concrete musical constraints.
 5. Add DAW-friendly workflow docs: export state, generate, import MIDI.
 6. Build the `Sidecar` MIDI plugin once the coordinator protocol is stable.
 7. Add optional live queueing through localhost HTTP/WebSocket, still keeping
-   all API/network work outside the audio callback.
+   all API/network work outside the audio callback. The first HTTP request path
+   exists; a background queue can come later if button-triggered synchronous
+   requests feel too blocking in a DAW.
 
 ## Open questions
 

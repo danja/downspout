@@ -4,7 +4,7 @@ Sidecar is the Downspout MIDI plugin intended to sit beside the deterministic
 ensemble plugins and play validated phrase material. The plugin itself remains
 local and realtime-safe: it does not call an API from the audio/MIDI thread.
 API-backed phrase generation lives in the separate `downspout-ai-coordinator`
-CLI.
+CLI/server.
 
 ## Current behavior
 
@@ -27,13 +27,21 @@ CLI.
 - `Risk`: chance of wider or more surprising note choices in fallback mode.
 - `Humanize`: reserved for timing/velocity shaping.
 - `Output`: open or muted.
+- `Source`: `Local` uses Sidecar's deterministic generator; `Server` asks the
+  localhost coordinator for an OpenAI phrase.
 - `Generate`: creates a new deterministic fallback phrase.
 - `Accept`: marks the current phrase as accepted for session state.
 - `Retry`: creates an alternate deterministic fallback phrase.
+- Connection status: `Local`, `Server OK`, `Server Offline`, or `Server Error`.
 
 If MIDI has been routed into Sidecar, Generate and Retry use the captured note
 range, density, and event seed as hints. If no MIDI has been routed in, the
 plugin keeps the original local fallback behavior.
+
+In `Server` source mode, Generate and Retry post the current captured
+MIDI-derived request to `http://127.0.0.1:37371/openai`. If the coordinator is
+not running or returns an error, Sidecar flags the connection status and leaves
+the current phrase unchanged.
 
 ## DAW Test: Live Sidecar
 
@@ -54,6 +62,31 @@ What to listen for:
   register and density.
 - Saving/reopening the DAW project after `Accept` should restore the accepted
   phrase.
+
+## DAW Test: Live Coordinator
+
+Start the coordinator before opening or testing Sidecar in Server mode:
+
+```bash
+build/tools/ai-coordinator/downspout-ai-coordinator health
+build/tools/ai-coordinator/downspout-ai-coordinator serve --port 37371
+```
+
+`health` reads `.env` on startup and reports whether `OPENAI_API_KEY` is
+configured without printing the key. The server prints the localhost URL,
+whether the OpenAI endpoint is usable, and any rejected `/openai` requests.
+
+In the DAW:
+
+1. Set Sidecar `Source` to `Server`.
+2. Route MIDI into Sidecar and let it capture a few notes.
+3. Click `Generate` or `Retry`.
+4. `Server OK` means a validated phrase was accepted from the coordinator.
+5. `Server Offline` means Sidecar could not connect to localhost.
+6. `Server Error` means the coordinator answered but rejected or failed the
+   request, for example missing API key, invalid state, or invalid model output.
+
+Leave `Source` on `Local` for token-free deterministic testing.
 
 ## DAW Test: Coordinator MIDI Files
 
@@ -99,6 +132,8 @@ folds/clamps it into range, removes overlaps, and validates the final phrase.
 ## Coordinator Commands
 
 ```bash
+build/tools/ai-coordinator/downspout-ai-coordinator health
+build/tools/ai-coordinator/downspout-ai-coordinator serve --port 37371
 build/tools/ai-coordinator/downspout-ai-coordinator generate tools/ai-coordinator/examples/state.json --out /tmp/solo.mid --phrase /tmp/phrase.txt
 build/tools/ai-coordinator/downspout-ai-coordinator generate-from-midi /tmp/source.mid --out /tmp/solo.mid --phrase /tmp/phrase.txt
 build/tools/ai-coordinator/downspout-ai-coordinator analyze-midi /tmp/source.mid --out /tmp/state.json
@@ -111,7 +146,6 @@ build/tools/ai-coordinator/downspout-ai-coordinator openai-from-midi /tmp/source
 ## Current Limits
 
 - Sidecar does not yet import `phrase.txt` directly through the UI.
-- The coordinator is a CLI, not a live localhost service.
-- API-generated MIDI is currently imported into the DAW as a MIDI file rather
-  than delivered live into Sidecar.
+- Server mode is synchronous on Generate/Retry, so keep the coordinator local
+  and expect a short wait while OpenAI responds.
 - The plugin never owns or prints the API key.

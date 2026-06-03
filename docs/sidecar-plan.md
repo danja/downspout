@@ -21,8 +21,8 @@ stays realtime-safe and only queues validated MIDI phrases.
 - [x] Add local phrase-response validation/rendering.
 - [x] Add provider-neutral solo request JSON builder.
 - [x] Add CLI-only OpenAI request path.
-- [ ] Add live MIDI-derived tune context in Sidecar/coordinator.
-- [ ] Add localhost live request/response.
+- [x] Add live MIDI-derived tune context in Sidecar/coordinator.
+- [x] Add localhost live request/response.
 - [x] Add state summaries for Ground and Cadence.
 - [ ] Add Sidecar to release packaging and screenshot documentation once the
   first plugin slice is accepted.
@@ -38,14 +38,20 @@ stays realtime-safe and only queues validated MIDI phrases.
 - The engine schedules note-on/note-off MIDI from host BBT transport and clears
   active notes when playback stops, the phrase is unavailable, or Mute is on.
 - The compact UI exposes Channel, Bars, Register, custom range, Density, Risk,
-  Humanize, Mute/Open, Generate, Accept, and Retry.
+  Humanize, Source, Mute/Open, Generate, Accept, Retry, and connection status.
+- `Source=Local` keeps deterministic, token-free generation.
+- `Source=Server` posts the current MIDI-derived request to the localhost
+  coordinator on Generate/Retry and flags `Server OK`, `Server Offline`, or
+  `Server Error`.
 
 ## Current non-goals
 
-- No network calls in the plugin.
+- No network calls in the audio/MIDI processing thread.
 - No API keys in plugin state.
 - No MCP layer.
 - No automatic model calls during playback.
+- No background/asynchronous request queue yet; live server calls are explicit
+  button actions.
 
 ## Implemented coordinator slice
 
@@ -119,6 +125,10 @@ This keeps the architecture modular:
 - `downspout-ai-coordinator openai-from-midi source.mid --out solo.mid` derives
   MIDI context first, then calls OpenAI.
 - The API key is loaded from `OPENAI_API_KEY` or `.env` and is not printed.
+- `downspout-ai-coordinator health` reads `.env` on startup and reports whether
+  the OpenAI endpoint is configured.
+- `downspout-ai-coordinator serve --port 37371` exposes localhost
+  `GET /health`, `POST /generate`, and `POST /openai` for Sidecar Server mode.
 - The raw response can be saved with `--raw`, but MIDI is written only after the
   extracted phrase JSON validates through Sidecar's phrase protocol.
 - `exercise-sidecar-ai.sh` keeps this path opt-in through

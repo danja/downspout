@@ -23,7 +23,9 @@ enum ParameterIndex : uint32_t {
     kParamGenerate,
     kParamAccept,
     kParamRetry,
+    kParamSource,
     kParamStatusReady,
+    kParamConnectionStatus,
     kParameterCount
 };
 
@@ -85,10 +87,19 @@ constexpr const char* kToggleNames[] = {
     "Open", "Mute"
 };
 
+constexpr const char* kSourceNames[] = {
+    "Local", "Server"
+};
+
+constexpr const char* kConnectionNames[] = {
+    "Local", "Server OK", "Server Offline", "Server Error"
+};
+
 constexpr SelectorDef kSelectors[] = {
     {kParamChannel, "Channel", kChannelNames, 16, 1},
     {kParamBars, "Bars", kBarsNames, 8, 1},
     {kParamRegister, "Register", kRegisterNames, 4, 0},
+    {kParamSource, "Source", kSourceNames, 2, 0},
     {kParamMute, "Output", kToggleNames, 2, 0},
 };
 
@@ -145,7 +156,9 @@ public:
         values_[kParamDensity] = 0.5f;
         values_[kParamRisk] = 0.35f;
         values_[kParamHumanize] = 0.0f;
+        values_[kParamSource] = 0.0f;
         values_[kParamStatusReady] = 1.0f;
+        values_[kParamConnectionStatus] = 0.0f;
 
        #ifdef DGL_NO_SHARED_RESOURCES
         createFontFromFile("sans", "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf");
@@ -300,11 +313,12 @@ private:
         fillColor(153, 168, 181, 255);
         text(x + 22.0f, y + 48.0f, "AI-ready phrase player", nullptr);
 
-        drawStatusPill(x + w - 176.0f, y + 16.0f, 156.0f, 30.0f,
+        drawStatusPill(x + w - 328.0f, y + 16.0f, 144.0f, 30.0f,
                        values_[kParamStatusReady] >= 0.5f ? "Phrase Ready" : "No Phrase",
                        values_[kParamStatusReady] >= 0.5f ? 105 : 204,
                        values_[kParamStatusReady] >= 0.5f ? 184 : 112,
                        values_[kParamStatusReady] >= 0.5f ? 134 : 82);
+        drawConnectionPill(x + w - 172.0f, y + 16.0f, 152.0f, 30.0f);
     }
 
     void drawStatusPill(const float x,
@@ -329,6 +343,28 @@ private:
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
         fillColor(r, g, b, 255);
         text(x + w * 0.5f, y + h * 0.5f + 1.0f, label, nullptr);
+    }
+
+    void drawConnectionPill(const float x, const float y, const float w, const float h)
+    {
+        const int status = clampi(static_cast<int>(std::lround(values_[kParamConnectionStatus])), 0, 3);
+        int r = 136;
+        int g = 151;
+        int b = 166;
+        if (status == 1) {
+            r = 105;
+            g = 184;
+            b = 134;
+        } else if (status == 2) {
+            r = 218;
+            g = 151;
+            b = 82;
+        } else if (status == 3) {
+            r = 204;
+            g = 112;
+            b = 82;
+        }
+        drawStatusPill(x, y, w, h, kConnectionNames[status], r, g, b);
     }
 
     void drawPhrasePanel(const float x, const float y, const float w, const float h)
@@ -365,8 +401,8 @@ private:
         fillColor(225, 230, 235, 255);
         text(x + 20.0f, y + 18.0f, "Request", nullptr);
 
-        const float selectorH = 48.0f;
-        const float selectorGap = 10.0f;
+        const float selectorH = 42.0f;
+        const float selectorGap = 9.0f;
         const float selectorStartY = y + 55.0f;
         for (std::size_t i = 0; i < std::size(kSelectors); ++i) {
             const float sy = selectorStartY + static_cast<float>(i) * (selectorH + selectorGap);

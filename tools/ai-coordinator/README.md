@@ -1,11 +1,31 @@
 # Downspout AI Coordinator
 
-`downspout-ai-coordinator` is the out-of-plugin process planned for AI-assisted
-phrase generation. The current implementation is a local deterministic stub:
-it reads a small tune-state JSON file, generates a validated Sidecar phrase,
-and writes a Standard MIDI File.
+`downspout-ai-coordinator` is the out-of-plugin process for AI-assisted phrase
+generation. It can run as a CLI for file workflows or as a localhost server for
+Sidecar's live `Server` source mode.
 
 ## Command
+
+Check startup configuration without spending API tokens:
+
+```bash
+downspout-ai-coordinator health
+```
+
+Run the live localhost server used by Sidecar:
+
+```bash
+downspout-ai-coordinator serve --port 37371
+```
+
+The server exposes:
+
+- `GET /health`: returns `ok` and whether an OpenAI key is configured.
+- `POST /generate`: deterministic local phrase JSON, useful for smoke tests.
+- `POST /openai`: OpenAI phrase JSON after Sidecar validation/constraining.
+
+`serve` reads `.env` on startup, prints whether the key is configured, and logs
+rejected `/openai` requests. It never prints the API key.
 
 ```bash
 downspout-ai-coordinator generate tools/ai-coordinator/examples/state.json --out /tmp/solo.mid --phrase /tmp/phrase.txt
@@ -43,9 +63,9 @@ downspout-ai-coordinator openai /tmp/state.json --out /tmp/solo.mid --phrase /tm
 downspout-ai-coordinator openai-from-midi /tmp/source.mid --out /tmp/solo.mid --phrase /tmp/phrase.txt --raw /tmp/raw-response.json
 ```
 
-The API key is read from `OPENAI_API_KEY` or from `.env`. The coordinator does
-not print the key. Set `DOWNSPOUT_OPENAI_MODEL` to override the default model.
-The repository exercise script keeps this path opt-in:
+The API key is read on startup from `OPENAI_API_KEY` or from `.env`. The
+coordinator does not print the key. Set `DOWNSPOUT_OPENAI_MODEL` to override
+the default model. The repository exercise script keeps this path opt-in:
 
 ```bash
 DOWNSPOUT_RUN_OPENAI=1 ./exercise-sidecar-ai.sh
@@ -75,9 +95,9 @@ The first JSON shape is intentionally small and hand-writable:
 }
 ```
 
-The OpenAI path is CLI-only and outside the plugin. It writes MIDI only after
-the returned text has been parsed as a phrase response and validated by the
-Sidecar protocol.
+The OpenAI path stays outside the audio/MIDI processing thread. It writes MIDI
+or returns live phrase JSON only after the returned text has been parsed as a
+phrase response and validated by the Sidecar protocol.
 
 ## MIDI-First Context
 

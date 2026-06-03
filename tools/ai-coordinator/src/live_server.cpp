@@ -99,19 +99,28 @@ void sendAll(const int client, const std::string& response)
 
 [[nodiscard]] std::string handleOpenAi(const std::string& body)
 {
-    if (!hasOpenAiApiKey())
+    if (!hasOpenAiApiKey()) {
+        std::cerr << "Sidecar /openai request rejected: OPENAI_API_KEY is not configured\n";
         return httpResponse(503, "Service Unavailable", "{\"error\":\"OPENAI_API_KEY is not configured\"}\n");
+    }
     const auto state = parseTuneStateJson(body);
-    if (!state.has_value())
+    if (!state.has_value()) {
+        std::cerr << "Sidecar /openai request rejected: invalid tune state\n";
         return httpResponse(400, "Bad Request", "{\"error\":\"invalid tune state\"}\n");
+    }
 
     const auto phrase = requestOpenAiPhrase(*state);
-    if (!phrase.has_value())
+    if (!phrase.has_value()) {
+        std::cerr << "Sidecar /openai request failed: OpenAI response did not validate\n";
         return httpResponse(502, "Bad Gateway", "{\"error\":\"OpenAI response did not validate\"}\n");
+    }
     const downspout::sidecar::Phrase constrained = constrainPhraseToTuneState(*phrase, *state);
     const downspout::sidecar::Controls controls = controlsFromTuneState(*state);
-    if (!downspout::sidecar::validatePhrase(constrained, controls).valid)
+    if (!downspout::sidecar::validatePhrase(constrained, controls).valid) {
+        std::cerr << "Sidecar /openai request failed: constrained phrase did not validate\n";
         return httpResponse(502, "Bad Gateway", "{\"error\":\"constrained phrase did not validate\"}\n");
+    }
+    std::cout << "Sidecar /openai request ok: " << constrained.eventCount << " events\n";
     return httpResponse(200, "OK", serializePhraseResponseJson(constrained) + "\n");
 }
 
@@ -161,6 +170,9 @@ int runLiveServer(const int port)
 
     std::cout << "downspout-ai-coordinator serving on http://127.0.0.1:" << port << '\n';
     std::cout << "OpenAI key configured: " << (hasOpenAiApiKey() ? "yes" : "no") << '\n';
+    std::cout << "Endpoints: GET /health, POST /generate, POST /openai\n";
+    if (!hasOpenAiApiKey())
+        std::cout << "Sidecar Server mode will show Server Error for /openai until OPENAI_API_KEY is configured.\n";
     while (true) {
         const int client = accept(server, nullptr, nullptr);
         if (client < 0)

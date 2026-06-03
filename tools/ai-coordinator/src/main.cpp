@@ -21,6 +21,7 @@ void printUsage()
         << "  downspout-ai-coordinator render-response response.json --out solo.mid [--phrase phrase.txt] [--state state.json]\n"
         << "  downspout-ai-coordinator openai state.json --out solo.mid [--phrase phrase.txt] [--raw raw.json]\n"
         << "  downspout-ai-coordinator openai-from-midi source.mid --out solo.mid [--phrase phrase.txt] [--raw raw.json]\n"
+        << "  downspout-ai-coordinator health\n"
         << "  downspout-ai-coordinator serve [--port 37371]\n";
 }
 
@@ -36,6 +37,13 @@ int main(const int argc, char** argv)
     }
 
     const std::string command = argv[1];
+    if (command == "health") {
+        std::cout << "downspout-ai-coordinator: ok\n";
+        std::cout << "OPENAI_API_KEY: " << (downspout::ai_coordinator::hasOpenAiApiKey() ? "configured" : "missing") << '\n';
+        std::cout << "live server: run `downspout-ai-coordinator serve --port 37371` for Sidecar Server mode\n";
+        return downspout::ai_coordinator::hasOpenAiApiKey() ? 0 : 2;
+    }
+
     if (command == "serve") {
         int port = 37371;
         for (int i = 2; i < argc; ++i) {
@@ -164,6 +172,12 @@ int main(const int argc, char** argv)
     }
 
     if (command == "openai" || command == "openai-from-midi") {
+        if (!downspout::ai_coordinator::hasOpenAiApiKey()) {
+            std::cerr << "OPENAI_API_KEY is not configured. Put it in .env or export it before using "
+                      << command << ".\n";
+            return 2;
+        }
+
         const auto state = command == "openai"
             ? downspout::ai_coordinator::loadTuneStateJson(inputPath)
             : downspout::ai_coordinator::analyzeMidiFileToTuneState(inputPath);
