@@ -34,6 +34,17 @@ The server exposes:
 `serve` reads `.env` on startup, prints whether the key is configured, and logs
 rejected `/openai` requests. It never prints the API key.
 
+Enable request/response debug logging with either:
+
+```bash
+downspout-ai-coordinator serve --port 37371 --debug
+DOWNSPOUT_AI_DEBUG=1 downspout-ai-coordinator openai /tmp/state.json --out /tmp/solo.mid
+```
+
+Debug mode prints the Sidecar request body, full OpenAI payload, raw model
+response, extracted model text/JSON, and final phrase JSON returned to the
+plugin. It does not print the API key.
+
 ```bash
 downspout-ai-coordinator generate tools/ai-coordinator/examples/state.json --out /tmp/solo.mid --phrase /tmp/phrase.txt
 ```

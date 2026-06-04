@@ -262,6 +262,41 @@ void testConstrainRepairsCollapsedPitchOutput()
             "collapsed one-note phrase should be repaired to multiple pitches");
 }
 
+void testConstrainPreservesVarietyWhenTransposingRegister()
+{
+    downspout::ai_coordinator::TuneState state {};
+    state.key = 0;
+    state.scale = "major";
+    state.bars = 2;
+    state.beatsPerBar = 4;
+    state.registerLow = 79;
+    state.registerHigh = 97;
+    state.density = 0.75f;
+    state.risk = 0.35f;
+    state.seed = 91;
+
+    downspout::sidecar::Phrase phrase {};
+    phrase.bars = 2;
+    phrase.beatsPerBar = 4;
+    phrase.eventCount = 8;
+    phrase.events[0] = {0.0f, 1.0f, 55, 86};
+    phrase.events[1] = {1.0f, 1.0f, 57, 90};
+    phrase.events[2] = {2.0f, 1.0f, 59, 84};
+    phrase.events[3] = {3.0f, 1.0f, 60, 88};
+    phrase.events[4] = {4.0f, 1.0f, 59, 82};
+    phrase.events[5] = {5.0f, 1.0f, 57, 87};
+    phrase.events[6] = {6.0f, 1.0f, 55, 85};
+    phrase.events[7] = {7.0f, 0.5f, 62, 89};
+
+    const downspout::sidecar::Phrase constrained =
+        downspout::ai_coordinator::constrainPhraseToTuneState(phrase, state);
+    const downspout::sidecar::Controls controls = downspout::ai_coordinator::controlsFromTuneState(state);
+    require(downspout::sidecar::validatePhrase(constrained, controls).valid,
+            "transposed phrase should validate");
+    require(distinctNotes(constrained) >= 4,
+            "transposed phrase should preserve pitch variety");
+}
+
 }  // namespace
 
 int main()
@@ -275,6 +310,7 @@ int main()
     testBuildSoloRequest();
     testConstrainPhraseToTuneState();
     testConstrainRepairsCollapsedPitchOutput();
+    testConstrainPreservesVarietyWhenTransposingRegister();
     std::cout << "ai coordinator tests passed\n";
     return 0;
 }

@@ -189,6 +189,28 @@ void setRanges(Parameter& parameter, const float minValue, const float maxValue,
     return out.str();
 }
 
+[[nodiscard]] Controls controlsForServerRequest(const Controls& rawControls)
+{
+    Controls controls = rawControls;
+    controls.reg = RegisterId::custom;
+    controls.registerLow = clampi(controls.registerLow, 0, 127);
+    controls.registerHigh = clampi(controls.registerHigh, controls.registerLow, 127);
+
+    constexpr int kMinimumSoloSpan = 18;
+    const int span = controls.registerHigh - controls.registerLow;
+    if (span >= kMinimumSoloSpan)
+        return controls;
+
+    const int center = (controls.registerLow + controls.registerHigh) / 2;
+    controls.registerLow = clampi(center - (kMinimumSoloSpan / 2), 0, 127);
+    controls.registerHigh = clampi(controls.registerLow + kMinimumSoloSpan, 0, 127);
+    if (controls.registerHigh - controls.registerLow < kMinimumSoloSpan) {
+        controls.registerHigh = clampi(center + (kMinimumSoloSpan / 2), 0, 127);
+        controls.registerLow = clampi(controls.registerHigh - kMinimumSoloSpan, 0, 127);
+    }
+    return controls;
+}
+
 struct HttpResult {
     int status = 0;
     std::string body;
@@ -579,8 +601,9 @@ private:
                 return;
         }
 
+        const Controls serverControls = controlsForServerRequest(generationControls);
         const std::uint32_t guidedSeed = seed ^ capturedSeed_;
-        const std::string request = controlsToTuneStateJson(generationControls,
+        const std::string request = controlsToTuneStateJson(serverControls,
                                                             capturedPitchClasses_,
                                                             guidedSeed == 0u ? seed : guidedSeed);
         {

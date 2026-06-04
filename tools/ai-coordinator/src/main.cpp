@@ -3,6 +3,7 @@
 #include "sidecar_protocol.hpp"
 #include "sidecar_serialization.hpp"
 
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -19,10 +20,15 @@ void printUsage()
         << "  downspout-ai-coordinator build-request state.json --out request.json\n"
         << "  downspout-ai-coordinator build-request-from-midi source.mid --out request.json\n"
         << "  downspout-ai-coordinator render-response response.json --out solo.mid [--phrase phrase.txt] [--state state.json]\n"
-        << "  downspout-ai-coordinator openai state.json --out solo.mid [--phrase phrase.txt] [--raw raw.json]\n"
-        << "  downspout-ai-coordinator openai-from-midi source.mid --out solo.mid [--phrase phrase.txt] [--raw raw.json]\n"
+        << "  downspout-ai-coordinator openai state.json --out solo.mid [--phrase phrase.txt] [--raw raw.json] [--debug]\n"
+        << "  downspout-ai-coordinator openai-from-midi source.mid --out solo.mid [--phrase phrase.txt] [--raw raw.json] [--debug]\n"
         << "  downspout-ai-coordinator health\n"
-        << "  downspout-ai-coordinator serve [--port 37371]\n";
+        << "  downspout-ai-coordinator serve [--port 37371] [--debug]\n";
+}
+
+void enableDebug()
+{
+    setenv("DOWNSPOUT_AI_DEBUG", "1", 1);
 }
 
 }  // namespace
@@ -50,6 +56,8 @@ int main(const int argc, char** argv)
             const std::string arg = argv[i];
             if (arg == "--port" && i + 1 < argc) {
                 port = std::stoi(argv[++i]);
+            } else if (arg == "--debug") {
+                enableDebug();
             } else {
                 std::cerr << "unknown or incomplete argument: " << arg << '\n';
                 return 1;
@@ -87,6 +95,8 @@ int main(const int argc, char** argv)
             statePath = argv[++i];
         } else if (arg == "--raw" && i + 1 < argc) {
             rawPath = argv[++i];
+        } else if (arg == "--debug") {
+            enableDebug();
         } else {
             std::cerr << "unknown or incomplete argument: " << arg << '\n';
             return 1;

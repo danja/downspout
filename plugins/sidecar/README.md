@@ -57,6 +57,15 @@ build/tools/ai-coordinator/downspout-ai-coordinator serve --port 37371
 `health` reads `.env` or `OPENAI_API_KEY` and reports whether the key is
 configured without printing it.
 
+For debugging generated solos, run:
+
+```bash
+build/tools/ai-coordinator/downspout-ai-coordinator serve --port 37371 --debug
+```
+
+This prints the Sidecar request, OpenAI payload/response, and final phrase JSON
+returned to the plugin. It does not print the API key.
+
 In the DAW:
 
 1. Add Sidecar to a MIDI track.

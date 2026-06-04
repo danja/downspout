@@ -105,6 +105,24 @@ namespace {
     return out;
 }
 
+[[nodiscard]] bool debugEnabled()
+{
+    const char* value = std::getenv("DOWNSPOUT_AI_DEBUG");
+    if (value == nullptr || *value == '\0')
+        return false;
+    const std::string text(value);
+    return text != "0" && text != "false" && text != "FALSE" && text != "no" && text != "NO";
+}
+
+void debugBlock(const char* title, const std::string& text)
+{
+    if (!debugEnabled())
+        return;
+    std::cerr << "\n--- " << title << " ---\n";
+    std::cerr << text << '\n';
+    std::cerr << "--- end " << title << " ---\n";
+}
+
 [[nodiscard]] std::optional<std::string> loadSoloPrompt()
 {
     const char* promptPathEnv = std::getenv("DOWNSPOUT_AI_SOLO_PROMPT");
@@ -272,6 +290,7 @@ std::optional<downspout::sidecar::Phrase> requestOpenAiPhrase(const TuneState& s
         const std::optional<std::string> payloadText = makePayload(state);
         if (!payloadText.has_value())
             return std::nullopt;
+        debugBlock("OpenAI request payload", *payloadText);
         std::ofstream payload(payloadPath);
         if (!payload)
             return std::nullopt;
@@ -293,18 +312,21 @@ std::optional<downspout::sidecar::Phrase> requestOpenAiPhrase(const TuneState& s
     const std::string raw = runCurl(payloadPath, configPath);
     std::filesystem::remove(payloadPath);
     std::filesystem::remove(configPath);
+    debugBlock("OpenAI raw response", raw);
 
     if (rawResponse != nullptr)
         *rawResponse = raw;
     const auto responseText = extractResponseText(raw);
     if (!responseText.has_value())
         return std::nullopt;
+    debugBlock("OpenAI extracted text", *responseText);
     if (extractedText != nullptr)
         *extractedText = *responseText;
 
     const auto phraseJson = extractFirstJsonObject(*responseText);
     if (!phraseJson.has_value())
         return std::nullopt;
+    debugBlock("OpenAI extracted phrase JSON", *phraseJson);
     return parsePhraseResponseJson(*phraseJson);
 }
 

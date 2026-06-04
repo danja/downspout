@@ -27,6 +27,24 @@ namespace {
     return out.str();
 }
 
+[[nodiscard]] bool debugEnabled()
+{
+    const char* value = std::getenv("DOWNSPOUT_AI_DEBUG");
+    if (value == nullptr || *value == '\0')
+        return false;
+    const std::string text(value);
+    return text != "0" && text != "false" && text != "FALSE" && text != "no" && text != "NO";
+}
+
+void debugBlock(const char* title, const std::string& text)
+{
+    if (!debugEnabled())
+        return;
+    std::cerr << "\n--- " << title << " ---\n";
+    std::cerr << text << '\n';
+    std::cerr << "--- end " << title << " ---\n";
+}
+
 void sendAll(const int client, const std::string& response)
 {
     const char* data = response.data();
@@ -90,15 +108,19 @@ void sendAll(const int client, const std::string& response)
 
 [[nodiscard]] std::string handleGenerate(const std::string& body)
 {
+    debugBlock("Sidecar /generate request body", body);
     const auto state = parseTuneStateJson(body);
     if (!state.has_value())
         return httpResponse(400, "Bad Request", "{\"error\":\"invalid tune state\"}\n");
     const downspout::sidecar::Phrase phrase = generateSoloPhrase(*state);
-    return httpResponse(200, "OK", serializePhraseResponseJson(phrase) + "\n");
+    const std::string response = serializePhraseResponseJson(phrase) + "\n";
+    debugBlock("Sidecar /generate response body", response);
+    return httpResponse(200, "OK", response);
 }
 
 [[nodiscard]] std::string handleOpenAi(const std::string& body)
 {
+    debugBlock("Sidecar /openai request body", body);
     if (!hasOpenAiApiKey()) {
         std::cerr << "Sidecar /openai request rejected: OPENAI_API_KEY is not configured\n";
         return httpResponse(503, "Service Unavailable", "{\"error\":\"OPENAI_API_KEY is not configured\"}\n");
@@ -109,7 +131,9 @@ void sendAll(const int client, const std::string& response)
         return httpResponse(400, "Bad Request", "{\"error\":\"invalid tune state\"}\n");
     }
 
-    const auto phrase = requestOpenAiPhrase(*state);
+    std::string rawResponse;
+    std::string extractedText;
+    const auto phrase = requestOpenAiPhrase(*state, &rawResponse, &extractedText);
     if (!phrase.has_value()) {
         std::cerr << "Sidecar /openai request failed: OpenAI response did not validate\n";
         return httpResponse(502, "Bad Gateway", "{\"error\":\"OpenAI response did not validate\"}\n");
@@ -121,7 +145,9 @@ void sendAll(const int client, const std::string& response)
         return httpResponse(502, "Bad Gateway", "{\"error\":\"constrained phrase did not validate\"}\n");
     }
     std::cout << "Sidecar /openai request ok: " << constrained.eventCount << " events\n";
-    return httpResponse(200, "OK", serializePhraseResponseJson(constrained) + "\n");
+    const std::string response = serializePhraseResponseJson(constrained) + "\n";
+    debugBlock("Sidecar /openai response body to plugin", response);
+    return httpResponse(200, "OK", response);
 }
 
 [[nodiscard]] std::string handleRequest(const std::string& request)
@@ -171,6 +197,7 @@ int runLiveServer(const int port)
     std::cout << "downspout-ai-coordinator serving on http://127.0.0.1:" << port << '\n';
     std::cout << "OpenAI key configured: " << (hasOpenAiApiKey() ? "yes" : "no") << '\n';
     std::cout << "Endpoints: GET /health, POST /generate, POST /openai\n";
+    std::cout << "Debug logging: " << (debugEnabled() ? "on" : "off") << '\n';
     if (!hasOpenAiApiKey())
         std::cout << "Sidecar Server mode will show Server Error for /openai until OPENAI_API_KEY is configured.\n";
     while (true) {

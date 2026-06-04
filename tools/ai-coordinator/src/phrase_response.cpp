@@ -8,6 +8,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <string_view>
 
@@ -85,6 +86,59 @@ bool parseFloat(const std::optional<std::string_view> value, float& target)
         }
     }
     return count;
+}
+
+[[nodiscard]] bool debugEnabled()
+{
+    const char* value = std::getenv("DOWNSPOUT_AI_DEBUG");
+    if (value == nullptr || *value == '\0')
+        return false;
+    const std::string text(value);
+    return text != "0" && text != "false" && text != "FALSE" && text != "no" && text != "NO";
+}
+
+void debugPhraseSummary(const char* label,
+                        const downspout::sidecar::Phrase& phrase,
+                        const TuneState& state)
+{
+    if (!debugEnabled())
+        return;
+
+    int minNote = 127;
+    int maxNote = 0;
+    for (int i = 0; i < phrase.eventCount; ++i) {
+        const int note = phrase.events[static_cast<std::size_t>(i)].note;
+        minNote = std::min(minNote, note);
+        maxNote = std::max(maxNote, note);
+    }
+    if (phrase.eventCount == 0) {
+        minNote = 0;
+        maxNote = 0;
+    }
+
+    std::cerr << label
+              << ": events=" << phrase.eventCount
+              << ", distinct_notes=" << distinctNoteCount(phrase)
+              << ", note_range=" << minNote << '-' << maxNote
+              << ", requested_register=" << state.registerLow << '-' << state.registerHigh
+              << '\n';
+}
+
+[[nodiscard]] int nearestPitchClassInRegister(const int note, const int low, const int high)
+{
+    const int pitchClass = ((note % 12) + 12) % 12;
+    int best = clampi(note, low, high);
+    int bestDistance = 1024;
+    for (int candidate = low; candidate <= high; ++candidate) {
+        if (candidate % 12 != pitchClass)
+            continue;
+        const int distance = std::abs(candidate - note);
+        if (distance < bestDistance) {
+            best = candidate;
+            bestDistance = distance;
+        }
+    }
+    return best;
 }
 
 void repairLowPitchVariety(downspout::sidecar::Phrase& phrase, const TuneState& state)
@@ -187,6 +241,7 @@ downspout::sidecar::Phrase constrainPhraseToTuneState(const downspout::sidecar::
     state.registerHigh = clampi(state.registerHigh, 0, 127);
     if (state.registerHigh < state.registerLow)
         std::swap(state.registerLow, state.registerHigh);
+    debugPhraseSummary("OpenAI parsed phrase before constraining", rawPhrase, state);
 
     std::array<downspout::sidecar::PhraseEvent, downspout::sidecar::kMaxPhraseEvents> events = rawPhrase.events;
     const int rawCount = clampi(rawPhrase.eventCount, 0, downspout::sidecar::kMaxPhraseEvents);
@@ -214,11 +269,7 @@ downspout::sidecar::Phrase constrainPhraseToTuneState(const downspout::sidecar::
         if (event.duration <= 0.01f)
             continue;
 
-        while (event.note < state.registerLow && event.note + 12 <= state.registerHigh)
-            event.note += 12;
-        while (event.note > state.registerHigh && event.note - 12 >= state.registerLow)
-            event.note -= 12;
-        event.note = clampi(event.note, state.registerLow, state.registerHigh);
+        event.note = nearestPitchClassInRegister(event.note, state.registerLow, state.registerHigh);
         event.velocity = clampi(event.velocity, 1, 127);
 
         phrase.events[static_cast<std::size_t>(phrase.eventCount++)] = event;
@@ -228,6 +279,7 @@ downspout::sidecar::Phrase constrainPhraseToTuneState(const downspout::sidecar::
     }
 
     repairLowPitchVariety(phrase, state);
+    debugPhraseSummary("OpenAI phrase after constraining", phrase, state);
     return phrase;
 }
 
