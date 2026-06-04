@@ -39,8 +39,9 @@ Connection status:
 - `Humanize`: reserved for timing/velocity shaping.
 - `Output`: open or muted.
 - `Generate`: request or create a phrase.
-- `Accept`: store the current phrase in plugin state.
+- `Play`: arm the current ready phrase for the next bar boundary.
 - `Retry`: request or create an alternate phrase.
+- `Accept`: store the current phrase in plugin state.
 
 Sidecar does not pass routed input MIDI through to its output. Input notes are
 used only as generation context.
@@ -75,7 +76,8 @@ In the DAW:
 4. Set `Source` to `Server`.
 5. Press play, let Sidecar capture a few notes, then click `Generate` or
    `Retry`.
-6. Wait for `Ready`; the phrase will start on a later bar boundary.
+6. Wait for `Ready`; the phrase will start on the next bar boundary. Press
+   `Play` to re-arm the current ready phrase.
 
 Use `Source=Local` for token-free testing.
 

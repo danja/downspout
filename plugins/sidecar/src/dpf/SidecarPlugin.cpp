@@ -38,6 +38,7 @@ enum ParameterIndex : uint32_t {
     kParamHumanize,
     kParamMute,
     kParamGenerate,
+    kParamPlay,
     kParamAccept,
     kParamRetry,
     kParamSource,
@@ -374,10 +375,15 @@ protected:
             setRanges(parameter, 0.0f, 1.0f, 0.0f);
             break;
         case kParamGenerate:
+        case kParamPlay:
         case kParamAccept:
         case kParamRetry:
-            parameter.name = index == kParamGenerate ? "Generate" : (index == kParamAccept ? "Accept" : "Retry");
-            parameter.symbol = index == kParamGenerate ? "generate" : (index == kParamAccept ? "accept" : "retry");
+            parameter.name = index == kParamGenerate
+                ? "Generate"
+                : (index == kParamPlay ? "Play" : (index == kParamAccept ? "Accept" : "Retry"));
+            parameter.symbol = index == kParamGenerate
+                ? "generate"
+                : (index == kParamPlay ? "play" : (index == kParamAccept ? "accept" : "retry"));
             parameter.hints = kParameterIsAutomatable | kParameterIsInteger;
             setRanges(parameter, 0.0f, 1048576.0f, 0.0f);
             break;
@@ -435,6 +441,7 @@ protected:
         case kParamHumanize: return controls_.humanize;
         case kParamMute: return controls_.mute ? 1.0f : 0.0f;
         case kParamGenerate: return generateCounter_;
+        case kParamPlay: return playCounter_;
         case kParamAccept: return acceptCounter_;
         case kParamRetry: return retryCounter_;
         case kParamSource: return static_cast<float>(static_cast<int>(sourceMode_));
@@ -474,6 +481,13 @@ protected:
             {
                 generateCounter_ = value;
                 setGeneratedPhrase(static_cast<std::uint32_t>(std::lround(value)) + 1u);
+            }
+            break;
+        case kParamPlay:
+            if (value > playCounter_)
+            {
+                playCounter_ = value;
+                armCurrentPhrase();
             }
             break;
         case kParamAccept:
@@ -531,6 +545,7 @@ protected:
     {
         consumeInputMidi(midiEvents, midiEventCount);
         const TransportSnapshot transport = toCoreTransport(getTimePosition());
+        lastTransport_ = transport;
         applyAsyncResult(transport);
         activateQueuedPhrase(transport);
 
@@ -584,6 +599,20 @@ private:
         Phrase phrase = downspout::sidecar::makeFallbackPhrase(generationControls, guidedSeed == 0u ? seed : guidedSeed);
         downspout::sidecar::setPhrase(engine_, phrase);
         setConnectionStatus(ConnectionStatus::local);
+    }
+
+    void armCurrentPhrase()
+    {
+        if (!engine_.phraseReady && !queuedPhraseReady_)
+            return;
+
+        if (!queuedPhraseReady_) {
+            queuedPhrase_ = engine_.phrase;
+            queuedServerControls_ = engine_.controls;
+            queuedPhraseReady_ = true;
+        }
+        queuedActivationBeat_ = nextActivationBeat(lastTransport_);
+        setConnectionStatus(sourceMode_ == SourceMode::server ? ConnectionStatus::ready : ConnectionStatus::local);
     }
 
     void startServerRequest(const Controls& generationControls, const std::uint32_t seed)
@@ -683,7 +712,7 @@ private:
             return 0.0;
         const double currentBeat = transport.bar * transport.beatsPerBar + transport.barBeat;
         const double currentBar = std::floor(currentBeat / transport.beatsPerBar);
-        return (currentBar + 2.0) * transport.beatsPerBar;
+        return (currentBar + 1.0) * transport.beatsPerBar;
     }
 
     void activateQueuedPhrase(const TransportSnapshot& transport)
@@ -794,7 +823,9 @@ private:
     Controls queuedServerControls_ {};
     bool queuedPhraseReady_ = false;
     double queuedActivationBeat_ = 0.0;
+    TransportSnapshot lastTransport_ {};
     float generateCounter_ = 0.0f;
+    float playCounter_ = 0.0f;
     float acceptCounter_ = 0.0f;
     float retryCounter_ = 0.0f;
 

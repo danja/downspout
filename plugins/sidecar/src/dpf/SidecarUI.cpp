@@ -21,6 +21,7 @@ enum ParameterIndex : uint32_t {
     kParamHumanize,
     kParamMute,
     kParamGenerate,
+    kParamPlay,
     kParamAccept,
     kParamRetry,
     kParamSource,
@@ -105,8 +106,9 @@ constexpr SelectorDef kSelectors[] = {
 
 constexpr ButtonDef kButtons[] = {
     {kParamGenerate, "Generate"},
-    {kParamAccept, "Accept"},
+    {kParamPlay, "Play"},
     {kParamRetry, "Retry"},
+    {kParamAccept, "Accept"},
 };
 
 [[nodiscard]] float clampf(const float value, const float minimum, const float maximum)
@@ -406,20 +408,26 @@ private:
         text(x + 20.0f, y + 18.0f, "Request", nullptr);
 
         const float selectorH = 42.0f;
-        const float selectorGap = 9.0f;
+        const float selectorGap = 10.0f;
+        const float selectorColumnGap = 8.0f;
+        const float selectorColumnW = (w - 40.0f - selectorColumnGap) * 0.5f;
         const float selectorStartY = y + 55.0f;
         for (std::size_t i = 0; i < std::size(kSelectors); ++i) {
-            const float sy = selectorStartY + static_cast<float>(i) * (selectorH + selectorGap);
-            selectorRects_[i] = {x + 20.0f, sy, w - 40.0f, selectorH};
+            const float sx = x + 20.0f + static_cast<float>(i % 2) * (selectorColumnW + selectorColumnGap);
+            const float sy = selectorStartY + static_cast<float>(i / 2) * (selectorH + selectorGap);
+            const float sw = i == std::size(kSelectors) - 1 && (i % 2) == 0 ? w - 40.0f : selectorColumnW;
+            selectorRects_[i] = {sx, sy, sw, selectorH};
             drawSelector(kSelectors[i], selectorRects_[i], selectorValueForDisplay(kSelectors[i], values_[kSelectors[i].index]));
         }
 
-        const float buttonH = 42.0f;
+        const float buttonH = 38.0f;
         const float buttonGap = 9.0f;
-        const float buttonY = y + h - 20.0f - buttonH;
-        const float buttonW = (w - 40.0f - buttonGap * 2.0f) / 3.0f;
+        const float buttonY = y + h - 20.0f - buttonH * 2.0f - buttonGap;
+        const float buttonW = (w - 40.0f - buttonGap) / 2.0f;
         for (std::size_t i = 0; i < std::size(kButtons); ++i) {
-            buttonRects_[i] = {x + 20.0f + static_cast<float>(i) * (buttonW + buttonGap), buttonY, buttonW, buttonH};
+            const float bx = x + 20.0f + static_cast<float>(i % 2) * (buttonW + buttonGap);
+            const float by = buttonY + static_cast<float>(i / 2) * (buttonH + buttonGap);
+            buttonRects_[i] = {bx, by, buttonW, buttonH};
             drawButton(kButtons[i], buttonRects_[i], pulsedButton_ == static_cast<int>(i));
         }
     }
@@ -545,6 +553,8 @@ private:
         } else if (index == kParamGenerate || index == kParamRetry) {
             values_[kParamStatusReady] = 1.0f;
             values_[kParamConnectionStatus] = 0.0f;
+        } else if (index == kParamPlay) {
+            values_[kParamStatusReady] = 1.0f;
         }
         buttonPulse_ = 8;
         pulsedButton_ = buttonIndex;
