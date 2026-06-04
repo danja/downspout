@@ -4,6 +4,10 @@
 generation. It can run as a CLI for file workflows or as a localhost server for
 Sidecar's live `Server` source mode.
 
+The human-readable model contract is documented in
+`docs/ai-solo-protocol.md`. The coordinator embeds those rules in the
+`downspout.ai_solo.v1` request JSON sent to the model.
+
 ## Command
 
 Check startup configuration without spending API tokens:

@@ -100,6 +100,11 @@ This keeps the hard boundaries clear:
 - OpenAI is the remote phrase generator;
 - generated phrases are validated before they enter the DAW.
 
+The current human-readable solo-generation contract lives in
+[`docs/ai-solo-protocol.md`](ai-solo-protocol.md). The coordinator also embeds
+the same core rules in each `downspout.ai_solo.v1` JSON request sent to the
+model.
+
 ## Modules
 
 ### `ai_protocol`

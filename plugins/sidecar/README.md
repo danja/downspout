@@ -6,6 +6,8 @@ local and realtime-safe: it does not call an API from the audio/MIDI thread.
 API-backed phrase generation lives in the separate `downspout-ai-coordinator`
 CLI/server.
 
+The model-facing solo contract is documented in `docs/ai-solo-protocol.md`.
+
 ## Current behavior
 
 - Generates deterministic fallback phrases from the UI constraints.

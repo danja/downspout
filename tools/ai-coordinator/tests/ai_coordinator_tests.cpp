@@ -2,6 +2,8 @@
 
 #include "sidecar_protocol.hpp"
 
+#include <algorithm>
+#include <array>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -183,6 +185,24 @@ void testBuildSoloRequest()
             "request should include guide pitch classes");
     require(request.find("\"response_schema\"") != std::string::npos,
             "request should include response schema");
+    require(request.find("Do not return a phrase consisting of one repeated note") != std::string::npos,
+            "request should reject one-note repeated phrases");
+    require(request.find("\"quality_constraints\"") != std::string::npos,
+            "request should include quality constraints");
+}
+
+int distinctNotes(const downspout::sidecar::Phrase& phrase)
+{
+    std::array<bool, 128> used {};
+    int count = 0;
+    for (int i = 0; i < phrase.eventCount; ++i) {
+        const int note = std::max(0, std::min(127, phrase.events[static_cast<std::size_t>(i)].note));
+        if (!used[static_cast<std::size_t>(note)]) {
+            used[static_cast<std::size_t>(note)] = true;
+            ++count;
+        }
+    }
+    return count;
 }
 
 void testConstrainPhraseToTuneState()
@@ -213,6 +233,35 @@ void testConstrainPhraseToTuneState()
             "overlap should be removed");
 }
 
+void testConstrainRepairsCollapsedPitchOutput()
+{
+    downspout::ai_coordinator::TuneState state {};
+    state.key = 0;
+    state.scale = "dorian";
+    state.bars = 2;
+    state.beatsPerBar = 4;
+    state.registerLow = 60;
+    state.registerHigh = 84;
+    state.density = 0.75f;
+    state.risk = 0.35f;
+    state.seed = 77;
+
+    downspout::sidecar::Phrase phrase {};
+    phrase.bars = 2;
+    phrase.beatsPerBar = 4;
+    phrase.eventCount = 8;
+    for (int i = 0; i < phrase.eventCount; ++i)
+        phrase.events[static_cast<std::size_t>(i)] = {static_cast<float>(i), 0.5f, 64, 90};
+
+    const downspout::sidecar::Phrase repaired =
+        downspout::ai_coordinator::constrainPhraseToTuneState(phrase, state);
+    const downspout::sidecar::Controls controls = downspout::ai_coordinator::controlsFromTuneState(state);
+    require(downspout::sidecar::validatePhrase(repaired, controls).valid,
+            "repaired collapsed phrase should validate");
+    require(distinctNotes(repaired) >= 4,
+            "collapsed one-note phrase should be repaired to multiple pitches");
+}
+
 }  // namespace
 
 int main()
@@ -225,6 +274,7 @@ int main()
     testPhraseResponseValidation();
     testBuildSoloRequest();
     testConstrainPhraseToTuneState();
+    testConstrainRepairsCollapsedPitchOutput();
     std::cout << "ai coordinator tests passed\n";
     return 0;
 }

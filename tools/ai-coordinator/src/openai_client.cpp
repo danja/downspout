@@ -113,8 +113,11 @@ namespace {
     std::ostringstream out;
     out << "{";
     out << "\"model\":\"" << jsonEscape(model) << "\",";
-    out << "\"input\":\"You are generating a monophonic MIDI phrase for Downspout Sidecar. "
-           "Return only a JSON object matching the response_schema in the request.\\n\\n"
+    out << "\"input\":\"Follow protocol downspout.ai_solo.v1. "
+           "Generate a monophonic MIDI solo phrase for Downspout Sidecar. "
+           "Return exactly one JSON object matching response_schema. "
+           "No Markdown, no explanation, no code fence. "
+           "The phrase must have a melodic contour and must not be one repeated note.\\n\\n"
         << jsonEscape(request) << "\"";
     out << "}";
     return out.str();

@@ -106,6 +106,13 @@ void repairLowPitchVariety(downspout::sidecar::Phrase& phrase, const TuneState& 
         const downspout::sidecar::PhraseEvent& source = fallback.events[static_cast<std::size_t>(i % fallback.eventCount)];
         phrase.events[static_cast<std::size_t>(i)].note = clampi(source.note, state.registerLow, state.registerHigh);
     }
+
+    if (distinctNoteCount(phrase) >= minimumDistinct)
+        return;
+
+    phrase = fallback;
+    phrase.bars = state.bars;
+    phrase.beatsPerBar = state.beatsPerBar;
 }
 
 }  // namespace
