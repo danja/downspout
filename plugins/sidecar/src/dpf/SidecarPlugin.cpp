@@ -602,6 +602,7 @@ private:
         }
 
         const Controls serverControls = controlsForServerRequest(generationControls);
+        queuedServerControls_ = serverControls;
         const std::uint32_t guidedSeed = seed ^ capturedSeed_;
         const std::string request = controlsToTuneStateJson(serverControls,
                                                             capturedPitchClasses_,
@@ -695,6 +696,7 @@ private:
                 return;
         }
 
+        engine_.controls = queuedServerControls_;
         downspout::sidecar::setPhrase(engine_, phraseShiftedToActivation(queuedPhrase_, queuedActivationBeat_));
         queuedPhraseReady_ = false;
     }
@@ -715,7 +717,7 @@ private:
             event.beat = std::fmod(event.beat + offset, phraseBeats);
             if (event.beat < 0.0f)
                 event.beat += phraseBeats;
-            event.duration = std::min(event.duration, phraseBeats - event.beat);
+            event.duration = std::min(std::max(event.duration, 0.05f), phraseBeats - event.beat);
         }
         std::stable_sort(shifted.events.begin(),
                          shifted.events.begin() + shifted.eventCount,
@@ -723,15 +725,22 @@ private:
                              return left.beat < right.beat;
                          });
 
+        Phrase result {};
+        result.version = shifted.version;
+        result.bars = shifted.bars;
+        result.beatsPerBar = shifted.beatsPerBar;
         float previousEnd = 0.0f;
         for (int i = 0; i < shifted.eventCount; ++i) {
-            PhraseEvent& event = shifted.events[static_cast<std::size_t>(i)];
+            PhraseEvent event = shifted.events[static_cast<std::size_t>(i)];
             if (event.beat < previousEnd)
                 event.beat = previousEnd;
             event.duration = std::min(event.duration, phraseBeats - event.beat);
+            if (event.duration <= 0.01f || event.beat >= phraseBeats)
+                continue;
+            result.events[static_cast<std::size_t>(result.eventCount++)] = event;
             previousEnd = event.beat + event.duration;
         }
-        return shifted;
+        return result.eventCount > 0 ? result : phrase;
     }
 
     void joinWorker()
@@ -782,6 +791,7 @@ private:
     std::mutex workerMutex_ {};
     WorkerResult workerResult_ {};
     Phrase queuedPhrase_ {};
+    Controls queuedServerControls_ {};
     bool queuedPhraseReady_ = false;
     double queuedActivationBeat_ = 0.0;
     float generateCounter_ = 0.0f;

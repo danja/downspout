@@ -91,7 +91,7 @@ void testJsonPhraseDeserialization()
     const std::string json =
         "{\"version\":1,\"bars\":2,\"beats_per_bar\":4,\"events\":["
         "{\"beat\":0,\"duration\":0.5,\"note\":60,\"velocity\":90},"
-        "{\"beat\":1.5,\"duration\":0.25,\"note\":64,\"velocity\":80}"
+        "{\"beat\":1.5,\"duration\":0.25,\"note\":90,\"velocity\":80}"
         "]}";
 
     const std::optional<sidecar::Phrase> restored = sidecar::deserializePhraseJson(json);
@@ -99,7 +99,7 @@ void testJsonPhraseDeserialization()
     require(restored->bars == 2, "JSON phrase should preserve bars");
     require(restored->beatsPerBar == 4, "JSON phrase should preserve beats per bar");
     require(restored->eventCount == 2, "JSON phrase should preserve event count");
-    require(restored->events[1].note == 64, "JSON phrase should preserve event notes");
+    require(restored->events[1].note == 90, "JSON phrase should preserve full-range event notes");
     require(!sidecar::deserializePhraseJson("{\"events\":[{\"beat\":0}]}").has_value(),
             "malformed JSON phrase response should be rejected");
 }
