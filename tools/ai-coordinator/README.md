@@ -4,9 +4,12 @@
 generation. It can run as a CLI for file workflows or as a localhost server for
 Sidecar's live `Server` source mode.
 
-The human-readable model contract is documented in
-`docs/ai-solo-protocol.md`. The coordinator embeds those rules in the
-`downspout.ai_solo.v1` request JSON sent to the model.
+The model-facing prompt text is read from
+`tools/ai-coordinator/prompts/solo-system.txt`. The coordinator fails the
+OpenAI path if that file is missing or empty. Set `DOWNSPOUT_AI_SOLO_PROMPT` to
+use a different prompt file.
+
+The broader protocol contract is documented in `docs/ai-solo-protocol.md`.
 
 ## Command
 
@@ -69,7 +72,8 @@ downspout-ai-coordinator openai-from-midi /tmp/source.mid --out /tmp/solo.mid --
 
 The API key is read on startup from `OPENAI_API_KEY` or from `.env`. The
 coordinator does not print the key. Set `DOWNSPOUT_OPENAI_MODEL` to override
-the default model. The repository exercise script keeps this path opt-in:
+the default model, and `DOWNSPOUT_AI_SOLO_PROMPT` to override the prompt file.
+The repository exercise script keeps this path opt-in:
 
 ```bash
 DOWNSPOUT_RUN_OPENAI=1 ./exercise-sidecar-ai.sh

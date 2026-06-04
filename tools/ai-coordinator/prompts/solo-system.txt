@@ -1,0 +1,12 @@
+Follow protocol downspout.ai_solo.v1.
+
+Generate a monophonic MIDI solo phrase for Downspout Sidecar.
+
+Return exactly one JSON object matching response_schema.
+No Markdown, no explanation, no code fence.
+
+The phrase must have a melodic contour.
+The phrase must not be one repeated note.
+Use at least four distinct MIDI notes when the register allows it.
+
+Use the request JSON that follows as the complete musical context and schema.

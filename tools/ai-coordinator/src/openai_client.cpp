@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -104,21 +105,43 @@ namespace {
     return out;
 }
 
-[[nodiscard]] std::string makePayload(const TuneState& state)
+[[nodiscard]] std::optional<std::string> loadSoloPrompt()
+{
+    const char* promptPathEnv = std::getenv("DOWNSPOUT_AI_SOLO_PROMPT");
+    const std::filesystem::path promptPath =
+        promptPathEnv != nullptr && *promptPathEnv != '\0'
+            ? std::filesystem::path(promptPathEnv)
+            : std::filesystem::path("tools/ai-coordinator/prompts/solo-system.txt");
+
+    std::ifstream input(promptPath);
+    if (!input) {
+        std::cerr << "could not read AI solo prompt file: " << promptPath << '\n';
+        return std::nullopt;
+    }
+
+    std::ostringstream buffer;
+    buffer << input.rdbuf();
+    const std::string prompt = trim(buffer.str());
+    if (prompt.empty()) {
+        std::cerr << "AI solo prompt file is empty: " << promptPath << '\n';
+        return std::nullopt;
+    }
+    return prompt;
+}
+
+[[nodiscard]] std::optional<std::string> makePayload(const TuneState& state)
 {
     const char* modelEnv = std::getenv("DOWNSPOUT_OPENAI_MODEL");
     const std::string model = modelEnv != nullptr && *modelEnv != '\0' ? modelEnv : "gpt-5.4-mini";
+    const std::optional<std::string> prompt = loadSoloPrompt();
+    if (!prompt.has_value())
+        return std::nullopt;
     const std::string request = buildSoloRequestJson(state);
 
     std::ostringstream out;
     out << "{";
     out << "\"model\":\"" << jsonEscape(model) << "\",";
-    out << "\"input\":\"Follow protocol downspout.ai_solo.v1. "
-           "Generate a monophonic MIDI solo phrase for Downspout Sidecar. "
-           "Return exactly one JSON object matching response_schema. "
-           "No Markdown, no explanation, no code fence. "
-           "The phrase must have a melodic contour and must not be one repeated note.\\n\\n"
-        << jsonEscape(request) << "\"";
+    out << "\"input\":\"" << jsonEscape(*prompt) << "\\n\\n" << jsonEscape(request) << "\"";
     out << "}";
     return out.str();
 }
@@ -246,10 +269,13 @@ std::optional<downspout::sidecar::Phrase> requestOpenAiPhrase(const TuneState& s
     const std::filesystem::path configPath = tempPath("-curl.conf");
 
     {
+        const std::optional<std::string> payloadText = makePayload(state);
+        if (!payloadText.has_value())
+            return std::nullopt;
         std::ofstream payload(payloadPath);
         if (!payload)
             return std::nullopt;
-        payload << makePayload(state);
+        payload << *payloadText;
     }
 
     {
