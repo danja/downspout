@@ -38,6 +38,13 @@ The planned phrases use a small role vocabulary:
 Those are not just labels for the UI. They push note density, root-degree
 choice, register offset, and motion bias in the core.
 
+## Bass register guard
+
+Ground is usually routed to a bass instrument, so generated notes are folded
+back into a lane around the selected root and register after form generation,
+phrase refresh, and variation. `Register Arc` still allows phrase lift, but it
+no longer lets climb/cadence roles jump across several octaves.
+
 ## User-facing design choices
 
 The UI is built around structure rather than around every internal random

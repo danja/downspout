@@ -247,6 +247,55 @@ void testFugalFormPlansSubjectAnswerPedalCadence()
     assert(firstPhraseNote(form, 1) == controls.rootNote + 7);
 }
 
+void testBassRegisterStaysInLane()
+{
+    Controls controls;
+    controls.rootNote = 36;
+    controls.scale = ScaleId::mixolydian;
+    controls.style = StyleId::climb;
+    controls.formBars = 32;
+    controls.phraseBars = 4;
+    controls.density = 0.80f;
+    controls.motion = 1.0f;
+    controls.tension = 0.95f;
+    controls.color = 1.0f;
+    controls.cadence = 0.90f;
+    controls.reg = 1;
+    controls.registerArc = 1.0f;
+    controls.sequence = 0.95f;
+    controls.vary = 1.0f;
+    controls.seed = 424242u;
+
+    FormState form;
+    regenerateForm(form, controls, ::downspout::Meter {});
+
+    auto assertLane = [](const FormState& generated) {
+        int low = 128;
+        int high = -1;
+        for (int i = 0; i < generated.eventCount; ++i) {
+            const int note = generated.events[static_cast<std::size_t>(i)].note;
+            low = std::min(low, note);
+            high = std::max(high, note);
+            assert(note >= 29);
+            assert(note <= 60);
+        }
+        assert(generated.eventCount > 0);
+        assert((high - low) <= 31);
+    };
+
+    assertLane(form);
+
+    refreshPhrase(form, controls, 3);
+    assertLane(form);
+
+    mutatePhraseCell(form, controls, 4, 1.0f);
+    assertLane(form);
+
+    VariationState variation;
+    assert(applyLoopVariation(form, variation, controls, 4.0, 2));
+    assertLane(form);
+}
+
 void testAiStateSummaryIncludesCurrentPhraseContext()
 {
     Controls controls;
@@ -392,6 +441,7 @@ int main()
     testCompoundMeterShape();
     testGroundedPhraseGetsSyncopationAndLegato();
     testFugalFormPlansSubjectAnswerPedalCadence();
+    testBassRegisterStaysInLane();
     testAiStateSummaryIncludesCurrentPhraseContext();
     testEngineRestartPhraseStatusAndStop();
     testSerializationRoundTrip();

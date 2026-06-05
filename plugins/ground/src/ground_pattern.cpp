@@ -267,6 +267,30 @@ static_assert((sizeof(kScales) / sizeof(kScales[0])) == static_cast<int>(ScaleId
     return clampi(controls.rootNote + interval, 0, 127);
 }
 
+[[nodiscard]] int constrainNoteToRegisterLane(const Controls& controls, int note)
+{
+    const int registerRoot = clampi(controls.rootNote + 12 * registerOctaveOffset(controls.reg), 0, 127);
+    const int lower = clampi(registerRoot - 7, 0, 127);
+    const int upper = clampi(registerRoot + 19 + static_cast<int>(std::lround(clampf(controls.registerArc, 0.0f, 1.0f) * 5.0f)), 0, 127);
+
+    while (note > upper && note >= 12) {
+        note -= 12;
+    }
+    while (note < lower && note <= 115) {
+        note += 12;
+    }
+
+    return clampi(note, lower, std::max(lower, upper));
+}
+
+void constrainFormNotesToRegisterLane(FormState& form, const Controls& controls)
+{
+    for (int index = 0; index < form.eventCount; ++index) {
+        NoteEvent& event = form.events[static_cast<std::size_t>(index)];
+        event.note = constrainNoteToRegisterLane(controls, event.note);
+    }
+}
+
 [[nodiscard]] PhraseRoleId chooseRole(const Controls& controls,
                                       Rng& rng,
                                       const int phraseIndex,
@@ -338,6 +362,10 @@ static_assert((sizeof(kScales) / sizeof(kScales[0])) == static_cast<int>(ScaleId
     const bool strongBeat = stepsPerBeat > 0 ? ((localStep % stepsPerBeat) == 0) : true;
     const int base = plan.rootDegree;
     const float color = colorAmount(controls);
+
+    if (ordinal == 0 && localStep == 0) {
+        return base;
+    }
 
     switch (plan.role) {
     case PhraseRoleId::statement:
@@ -757,13 +785,15 @@ void generatePhraseEvents(PhraseEventList& out,
             event.durationSteps = clampi(event.durationSteps + (mutationStrength > 0.30f ? rng.nextInt(-1, 1) : 0),
                                          1,
                                          (plan.startStep + plan.stepCount) - event.startStep);
-            event.note = applyColorToNote(controls,
-                                          rng,
-                                          clampi(event.note + semitoneShift, 0, 127),
-                                          localStart,
-                                          stepsPerBeat,
-                                          plan.role,
-                                          plan.stepCount);
+            event.note = constrainNoteToRegisterLane(
+                controls,
+                applyColorToNote(controls,
+                                 rng,
+                                 clampi(event.note + semitoneShift, 0, 127),
+                                 localStart,
+                                 stepsPerBeat,
+                                 plan.role,
+                                 plan.stepCount));
             event.velocity = clampi(event.velocity + rng.nextInt(-4, 4), 52, 124);
             out.events[static_cast<std::size_t>(out.count++)] = event;
         }
@@ -810,13 +840,15 @@ void generatePhraseEvents(PhraseEventList& out,
         NoteEvent event;
         event.startStep = plan.startStep + step;
         event.durationSteps = chooseDuration(controls, plan, rng, available, step, phraseSteps);
-        event.note = applyColorToNote(controls,
-                                      rng,
-                                      noteFromDegree(controls, degree, plan.registerOffset),
-                                      step,
-                                      stepsPerBeat,
-                                      plan.role,
-                                      phraseSteps);
+        event.note = constrainNoteToRegisterLane(
+            controls,
+            applyColorToNote(controls,
+                             rng,
+                             noteFromDegree(controls, degree, plan.registerOffset),
+                             step,
+                             stepsPerBeat,
+                             plan.role,
+                             phraseSteps));
         event.velocity = clampi(static_cast<int>(78.0f + plan.intensity * 28.0f) +
                                     ((step % stepsPerBar) == 0 ? 10 : 0) +
                                     rng.nextInt(-6, 6),
@@ -829,7 +861,7 @@ void generatePhraseEvents(PhraseEventList& out,
     if (out.count <= 0) {
         out.events[0].startStep = plan.startStep;
         out.events[0].durationSteps = std::max(1, plan.stepCount);
-        out.events[0].note = noteFromDegree(controls, plan.rootDegree, plan.registerOffset);
+        out.events[0].note = constrainNoteToRegisterLane(controls, noteFromDegree(controls, plan.rootDegree, plan.registerOffset));
         out.events[0].velocity = 84;
         out.count = 1;
     }
@@ -1085,6 +1117,7 @@ void regenerateForm(FormState& form, const Controls& rawControls, const ::downsp
     }
 
     rebuildFromPhraseEvents(form, phraseEvents);
+    constrainFormNotesToRegisterLane(form, controls);
 }
 
 void refreshPhrase(FormState& form, const Controls& rawControls, const int phraseIndex)
@@ -1129,6 +1162,7 @@ void refreshPhrase(FormState& form, const Controls& rawControls, const int phras
                          0.12f,
                          rng);
     rebuildFromPhraseEvents(form, phraseEvents);
+    constrainFormNotesToRegisterLane(form, controls);
 }
 
 void mutatePhraseCell(FormState& form, const Controls& rawControls, const int phraseIndex, const float strength)
@@ -1160,6 +1194,7 @@ void mutatePhraseCell(FormState& form, const Controls& rawControls, const int ph
                          clampf(strength, 0.0f, 1.0f),
                          rng);
     rebuildFromPhraseEvents(form, phraseEvents);
+    constrainFormNotesToRegisterLane(form, controls);
 }
 
 }  // namespace downspout::ground
