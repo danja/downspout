@@ -369,11 +369,26 @@ void constrainFormNotesToRegisterLane(FormState& form, const Controls& controls)
 
     switch (plan.role) {
     case PhraseRoleId::statement:
+        if (controls.style == StyleId::dub) {
+            return rng.nextFloat() < 0.72f ? base : base + 4;
+        }
+        if (controls.style == StyleId::jazz) {
+            if (strongBeat) {
+                return rng.nextFloat() < 0.50f ? base : base + rng.nextInt(1, 4);
+            }
+            return clampi(previousDegree + rng.nextInt(-1, 1) + (rng.nextFloat() < 0.25f + color * 0.20f ? 1 : 0), base - 2, base + 5);
+        }
         if (strongBeat) {
             return rng.nextFloat() < 0.72f ? base : base + 2;
         }
         return clampi(previousDegree + rng.nextInt(-1, 1) + (rng.nextFloat() < color * 0.20f ? rng.nextInt(-1, 1) : 0), base - 2, base + 4);
     case PhraseRoleId::answer:
+        if (controls.style == StyleId::dub) {
+            return rng.nextFloat() < 0.76f ? base : base - 1;
+        }
+        if (controls.style == StyleId::jazz) {
+            return clampi(previousDegree + rng.nextInt(-1, 2), base - 3, base + 4);
+        }
         if (strongBeat && rng.nextFloat() < 0.60f) {
             return base;
         }
@@ -481,6 +496,10 @@ void addRoleSyncopation(std::array<bool, kMaxPhraseGridSteps>& onset,
         appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, ((barIndex % 2) == 0) ? 6 : 14));
     } else if (controls.style == StyleId::march && motion > 0.46f) {
         maybeAppendOnset(onset, rng, 0.40f + density * 0.20f, localBarStart + scaledBarStep(stepsPerBar, 10));
+    } else if (controls.style == StyleId::dub) {
+        maybeAppendOnset(onset, rng, density * 0.36f, localBarStart + scaledBarStep(stepsPerBar, 15));
+    } else if (controls.style == StyleId::jazz) {
+        maybeAppendOnset(onset, rng, density * 0.34f + motion * 0.20f, localBarStart + scaledBarStep(stepsPerBar, 14));
     }
 }
 
@@ -555,6 +574,20 @@ void buildBarOnsets(std::array<bool, kMaxPhraseGridSteps>& onset,
             appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 14));
         }
         break;
+    case StyleId::dub:
+        appendOnset(onset, localBarStart);
+        if (rng.nextFloat() < density * 0.42f) appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 7));
+        if (rng.nextFloat() < density * 0.66f) appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 12));
+        break;
+    case StyleId::jazz:
+        appendOnset(onset, localBarStart);
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 4));
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 8));
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 12));
+        if (rng.nextFloat() < density * (0.28f + motion * 0.24f)) {
+            appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 14));
+        }
+        break;
     default:
         break;
     }
@@ -600,6 +633,8 @@ void buildBarOnsets(std::array<bool, kMaxPhraseGridSteps>& onset,
     case StyleId::pulse: desired = 8; break;
     case StyleId::drone: desired = 16; break;
     case StyleId::climb: desired = 4; break;
+    case StyleId::dub: desired = 10; break;
+    case StyleId::jazz: desired = 4; break;
     default: break;
     }
 
@@ -639,6 +674,8 @@ void buildBarOnsets(std::array<bool, kMaxPhraseGridSteps>& onset,
     case StyleId::ostinato: legato -= 0.18f; break;
     case StyleId::march: legato -= 0.10f; break;
     case StyleId::climb: legato += 0.02f; break;
+    case StyleId::dub: legato += 0.22f; break;
+    case StyleId::jazz: legato -= 0.02f; break;
     default: break;
     }
 

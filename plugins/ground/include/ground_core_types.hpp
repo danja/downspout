@@ -46,6 +46,8 @@ enum class StyleId : std::int32_t {
     pulse,
     drone,
     climb,
+    dub,
+    jazz,
     count
 };
 

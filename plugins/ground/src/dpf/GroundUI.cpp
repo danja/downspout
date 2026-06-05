@@ -90,7 +90,7 @@ constexpr const char* kScaleNames[] = {
 };
 
 constexpr const char* kStyleNames[] = {
-    "Grounded", "Ostinato", "March", "Pulse", "Drone", "Climb"
+    "Grounded", "Ostinato", "March", "Pulse", "Drone", "Climb", "Dub", "Jazz"
 };
 
 constexpr const char* kFormNames[] = {
@@ -137,7 +137,7 @@ constexpr std::array<float, 16> kChannelValues = {
 
 constexpr SelectorDef kSelectors[] = {
     {kParamScale, "Scale", kScaleNames, 20, nullptr},
-    {kParamStyle, "Style", kStyleNames, 6, nullptr},
+    {kParamStyle, "Style", kStyleNames, static_cast<int>(std::size(kStyleNames)), nullptr},
     {kParamFormBars, "Form", kFormNames, 4, kFormValues},
     {kParamPhraseBars, "Phrase", kPhraseNames, 3, kPhraseValues},
     {kParamRegister, "Register", kRegisterNames, 4, kRegisterValues},

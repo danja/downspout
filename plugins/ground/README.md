@@ -15,7 +15,9 @@ ties than the first `ground` build.
 - `Scale`
   Pitch collection used for note selection.
 - `Style`
-  Base rhythmic attitude: grounded, ostinato, march, pulse, drone, or climb.
+  Base rhythmic attitude: grounded, ostinato, march, pulse, drone, climb, dub,
+  or jazz. Dub stays sparse and heavy with long low notes and pickups; Jazz
+  leans toward walking-bass quarter motion with extra approach tones.
 - `Channel`
   MIDI output channel.
 - `Form`

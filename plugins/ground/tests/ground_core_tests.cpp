@@ -296,6 +296,47 @@ void testBassRegisterStaysInLane()
     assertLane(form);
 }
 
+void testDubAndJazzStylesAreExplicit()
+{
+    Controls dub;
+    dub.rootNote = 36;
+    dub.scale = ScaleId::minor;
+    dub.style = StyleId::dub;
+    dub.formBars = 8;
+    dub.phraseBars = 2;
+    dub.density = 0.52f;
+    dub.motion = 0.38f;
+    dub.registerArc = 0.35f;
+    dub.seed = 2024u;
+
+    Controls jazz = dub;
+    jazz.scale = ScaleId::mixolydian;
+    jazz.style = StyleId::jazz;
+    jazz.motion = 0.72f;
+    jazz.color = 0.65f;
+
+    FormState dubForm;
+    FormState jazzForm;
+    regenerateForm(dubForm, dub, ::downspout::Meter {});
+    regenerateForm(jazzForm, jazz, ::downspout::Meter {});
+
+    assert(dubForm.eventCount > 0);
+    assert(jazzForm.eventCount > dubForm.eventCount);
+
+    const auto dubRoundTrip = deserializeControls(serializeControls(dub));
+    const auto jazzRoundTrip = deserializeControls(serializeControls(jazz));
+    assert(dubRoundTrip.has_value());
+    assert(jazzRoundTrip.has_value());
+    assert(dubRoundTrip->style == StyleId::dub);
+    assert(jazzRoundTrip->style == StyleId::jazz);
+
+    assert(styleName(StyleId::dub) == std::string("dub"));
+    assert(styleName(StyleId::jazz) == std::string("jazz"));
+
+    const std::string jazzSummary = summarizeGroundAiState(jazz, jazzForm, 0);
+    assert(jazzSummary.find("\"style\":\"jazz\"") != std::string::npos);
+}
+
 void testAiStateSummaryIncludesCurrentPhraseContext()
 {
     Controls controls;
@@ -442,6 +483,7 @@ int main()
     testGroundedPhraseGetsSyncopationAndLegato();
     testFugalFormPlansSubjectAnswerPedalCadence();
     testBassRegisterStaysInLane();
+    testDubAndJazzStylesAreExplicit();
     testAiStateSummaryIncludesCurrentPhraseContext();
     testEngineRestartPhraseStatusAndStop();
     testSerializationRoundTrip();

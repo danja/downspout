@@ -38,6 +38,11 @@ The planned phrases use a small role vocabulary:
 Those are not just labels for the UI. They push note density, root-degree
 choice, register offset, and motion bias in the core.
 
+The Style control shapes the local cell rhythm inside those roles. Dub favors
+sparse low notes, longer holds, and late pickups. Jazz favors walking-bass
+quarter motion with extra approach tones, while the phrase planner still owns
+the larger statement, answer, climb, pedal, cadence, and release arc.
+
 ## Bass register guard
 
 Ground is usually routed to a bass instrument, so generated notes are folded

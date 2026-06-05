@@ -14,6 +14,7 @@ the same ideas apply in any host that can route MIDI between plugins.
   points, and cadences. Ground keeps generated notes inside a guarded bass
   register lane, so `Register` and `Register Arc` shape lift without turning the
   part into wide octave jumping.
+  Use `Dub` style for sparse low-weight parts and `Jazz` style for walking bass.
 - `BassGen` -> `Basilico` or another bass instrument
   Use BassGen as the riff/continuo voice. If Ground is also active, keep one
   part lower and simpler so the two bass generators do not fight.
@@ -116,6 +117,8 @@ Suggested routing:
 Useful settings:
 
 - BassGen: raise `Color` for more altered/diminished dominant behavior.
+- Ground: choose `Jazz` style when it should own the walking bass role; choose
+  `Dub` style for a sparse pedal-heavy low part under busier drums or chords.
 - Cadence: `Color` high, `Chord Size` set to Sevenths or Extended, `Spread`
   around the middle, `Arpeggio` to taste.
 - MelGen: use the improvisation/randomness controls sparingly at first, then
