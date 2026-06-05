@@ -11,7 +11,9 @@ the same ideas apply in any host that can route MIDI between plugins.
   channel 10.
 - `Ground` -> `Basilico`
   Use Ground as the long-form low part when you want section shape, pedal
-  points, and cadences.
+  points, and cadences. Ground keeps generated notes inside a guarded bass
+  register lane, so `Register` and `Register Arc` shape lift without turning the
+  part into wide octave jumping.
 - `BassGen` -> `Basilico` or another bass instrument
   Use BassGen as the riff/continuo voice. If Ground is also active, keep one
   part lower and simpler so the two bass generators do not fight.
@@ -135,6 +137,9 @@ Counterpointer only after the main melody has a clear shape.
 
 - Avoid doubling the same register. Put Ground low, BassGen slightly higher or
   mute one of them, Cadence mid/high, and Counterpointer above or beside MelGen.
+- If Ground still feels too animated for a bass anchor, lower `Register Arc`
+  before lowering `Motion`; the register guard will keep the line in lane, but
+  a smaller arc gives a flatter section shape.
 - Let one plugin own the form. For classical/fugal sketches, Ground is the best
   form owner. For short loops, BassGen or MelGen can own the phrase.
 - Use Cadence as support, not the source of all motion. If the chord track gets

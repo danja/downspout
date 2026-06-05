@@ -35,9 +35,11 @@ ties than the first `ground` build.
 - `Cadence`
   How strongly the final phrase behaves like a real cadence rather than a soft release.
 - `Register`
-  Base octave placement.
+  Base octave placement. Ground folds generated notes into a lane around this
+  register so bass parts do not jump across several octaves.
 - `Reg Arc`
-  How much the register climbs across the form.
+  How much the register climbs across the form. This still creates phrase lift,
+  but the generated MIDI remains pinned to a bass-sized register lane.
 - `Sequence`
   How likely answer/release phrases are to derive their material from the previous phrase.
   High `Sequence` with high `Cadence` enters a Fugue-friendly long-form region:
@@ -80,6 +82,9 @@ It is supposed to help users think in sections rather than in parameter soup.
   so the original long-form behavior remains the baseline.
 - high `Sequence` plus high `Cadence` gives a deterministic Fugue-friendly
   subject/answer/pedal/cadence arc without adding a dedicated genre selector.
+- generated notes are constrained after form generation, phrase refresh, cell
+  mutation, and loop variation so Ground stays usable as a bass source even
+  with high Motion, Color, Register Arc, or Vary settings.
 
 Reference docs:
 

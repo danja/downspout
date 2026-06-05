@@ -89,6 +89,7 @@ jobs:
             echo "- ground.vst3"
             echo "- floozy.vst3"
             echo "- basilico.vst3"
+            echo "- canticle.vst3"
             echo "- luma.vst3"
             echo "- paunchlad.vst3"
             echo "- lifeform.vst3"

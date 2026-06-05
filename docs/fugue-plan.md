@@ -69,6 +69,7 @@ prepare the final tonic.
 - Validate MelGen's Fugue-friendly control region in a DAW with BassGen Fugue
   and Counterpointer.
 - Validate Ground's high-Sequence/high-Cadence Fugue-friendly form in a DAW,
-  especially with MelGen and Counterpointer layered above it.
+  especially with MelGen and Counterpointer layered above it after the bass
+  register guard.
 - Validate Cadence's high-Color circle-of-fifths and suspended-dominant support
   against sparse MelGen, BassGen, and Ground input.
