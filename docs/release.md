@@ -24,6 +24,7 @@ downspout-<version>-linux-x86_64-vst3.zip
 ├── ground.vst3/
 ├── floozy.vst3/
 ├── basilico.vst3/
+├── canticle.vst3/
 ├── luma.vst3/
 ├── paunchlad.vst3/
 ├── lifeform.vst3/

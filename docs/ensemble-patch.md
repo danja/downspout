@@ -16,15 +16,18 @@ the same ideas apply in any host that can route MIDI between plugins.
   Use BassGen as the riff/continuo voice. If Ground is also active, keep one
   part lower and simpler so the two bass generators do not fight.
 - `MelGen` -> lead instrument
-  Use MelGen for the primary melodic subject or top line.
+  Use MelGen for the primary melodic subject or top line. Canticle works well
+  here when the line should stay readable instead of hybrid or glitchy.
 - `Counterpointer` -> second melodic instrument
   Send MelGen or BassGen MIDI into Counterpointer, then route Counterpointer to
   a separate instrument. Disable `Pass` when you want only the generated answer
   on that track.
 - `Cadence` -> chord instrument
   Send MelGen, BassGen, or Ground MIDI into Cadence. Route Cadence output to a
-  polyphonic synth such as Floozy or an external chord instrument. Disable
-  `Pass` when the source part should not also play through the chord sound.
+  polyphonic synth such as Canticle or Floozy. Use Canticle for stable keys,
+  reed, pad, pluck, or glass support; use Floozy when the chord sound should be
+  more synthetic and physical-model-like. Disable `Pass` when the source part
+  should not also play through the chord sound.
 
 ## Learning and timing
 
@@ -80,8 +83,8 @@ Suggested routing:
 2. `Ground` -> low `Basilico`
 3. `BassGen` in `Fugue` genre -> second bass/continuo sound
 4. `MelGen` -> lead sound
-5. MIDI send from `MelGen` to `Counterpointer` -> second lead sound
-6. MIDI send from `MelGen` or `Ground` to `Cadence` -> chord/pad sound
+5. MIDI send from `MelGen` to `Counterpointer` -> second Canticle or Floozy lead
+6. MIDI send from `MelGen` or `Ground` to `Cadence` -> Canticle chord/pad sound
 
 Useful settings:
 

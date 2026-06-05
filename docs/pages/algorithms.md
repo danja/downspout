@@ -67,6 +67,8 @@ current Downspout plugins.
   excitation, feedback, filtering, modulation, and reverb.
 - `Gremlin`: a chaotic glitch synth with sound modes, scenes, fader macros,
   performance actions, hold pads, and MIDI LED feedback.
+- `Canticle`: a 12-voice tonal synth for readable keys, reed, pad, pluck, and
+  glass parts driven by melody, counterpoint, and harmony generators.
 
 ## How the site treats these methods
 

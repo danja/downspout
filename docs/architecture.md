@@ -214,6 +214,7 @@ The release script currently expects these bundles:
 - `ground.vst3`
 - `floozy.vst3`
 - `basilico.vst3`
+- `canticle.vst3`
 - `luma.vst3`
 - `paunchlad.vst3`
 - `lifeform.vst3`

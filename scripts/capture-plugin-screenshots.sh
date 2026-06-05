@@ -32,6 +32,7 @@ plugins=(
   "ground:ground"
   "floozy:floozy"
   "basilico:basilico"
+  "canticle:canticle"
   "luma:luma"
   "paunchlad:paunchlad"
   "lifeform:lifeform"

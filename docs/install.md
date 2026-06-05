@@ -49,6 +49,7 @@ The repository currently installs eighteen real wrapper targets:
 - `ground.vst3` with UI
 - `floozy.vst3` with UI
 - `basilico.vst3` with UI
+- `canticle.vst3` with UI
 - `luma.vst3` with UI
 - `paunchlad.vst3` with UI
 - `lifeform.vst3` with UI
@@ -84,6 +85,7 @@ The script has been smoke-tested with a temporary install root under `/tmp`:
 - confirmed `ground.vst3` bundle output and install
 - confirmed `floozy.vst3` bundle output and install
 - confirmed `basilico.vst3` bundle output and install
+- confirmed `canticle.vst3` bundle output and install
 - confirmed `luma.vst3` bundle output and install
 - confirmed `paunchlad.vst3` bundle output and install
 - confirmed `lifeform.vst3` bundle output and install
