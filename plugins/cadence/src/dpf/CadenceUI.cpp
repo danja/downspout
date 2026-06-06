@@ -68,12 +68,12 @@ struct ButtonDef {
 constexpr SliderDef kSliders[] = {
     {kParamComplexity, "Complexity", 0.0f, 1.0f, false},
     {kParamMovement, "Movement", 0.0f, 1.0f, false},
-    {kParamColor, "Color", 0.0f, 1.0f, false},
     {kParamSpread, "Spread", 0.0f, 1.0f, false},
+    {kParamColor, "Color", 0.0f, 1.0f, false},
+    {kParamNoteLength, "Note Len", 0.10f, 1.0f, false},
     {kParamArpeggio, "Arpeggio", 0.0f, 1.0f, false},
-    {kParamNoteLength, "Length", 0.10f, 1.0f, false},
-    {kParamVary, "Vary", 0.0f, 100.0f, true},
-    {kParamComp, "Comp", 0.0f, 100.0f, true},
+    {kParamComp, "Comping", 0.0f, 100.0f, true},
+    {kParamVary, "Variation", 0.0f, 100.0f, true},
 };
 
 constexpr const char* kNoteNames[] = {
@@ -116,12 +116,12 @@ constexpr const char* kOutputChannelNames[] = {
 constexpr SelectorDef kSelectors[] = {
     {kParamKey, "Key", kNoteNames, 12, 0},
     {kParamScale, "Scale", kScaleNames, 21, 0},
-    {kParamCycleBars, "Bars", kCycleBarNames, 8, 1},
-    {kParamGranularity, "Grid", kGranularityNames, 3, 0},
-    {kParamChordSize, "Chord", kChordSizeNames, 3, 0},
+    {kParamCycleBars, "Cycle", kCycleBarNames, 8, 1},
+    {kParamGranularity, "Segment", kGranularityNames, 3, 0},
+    {kParamChordSize, "Voicing", kChordSizeNames, 3, 0},
     {kParamRegister, "Register", kRegisterNames, 3, 0},
-    {kParamPassInput, "Pass", kToggleNames, 2, 0},
-    {kParamOutputChannel, "Channel", kOutputChannelNames, 17, 0},
+    {kParamPassInput, "Pass Input", kToggleNames, 2, 0},
+    {kParamOutputChannel, "Output", kOutputChannelNames, 17, 0},
 };
 
 constexpr ButtonDef kButtons[] = {
@@ -226,9 +226,10 @@ protected:
 
         const float contentY = pad + headerH + 18.0f;
         const float contentH = height - contentY - pad;
-        const float leftW = width * 0.62f;
+        const float leftW = width * 0.60f;
         const float rightW = width - leftW - pad * 3.0f;
 
+        updateLayout(width, height);
         drawSliderPanel(pad, contentY, leftW, contentH);
         drawRightPanel(pad * 2.0f + leftW, contentY, rightW, contentH);
 
@@ -243,6 +244,7 @@ protected:
 
         const float x = static_cast<float>(ev.pos.getX());
         const float y = static_cast<float>(ev.pos.getY());
+        updateLayout(static_cast<float>(getWidth()), static_cast<float>(getHeight()));
 
         if (!ev.press) {
             draggingSlider_ = -1;
@@ -294,6 +296,7 @@ protected:
     {
         const float x = static_cast<float>(ev.pos.getX());
         const float y = static_cast<float>(ev.pos.getY());
+        updateLayout(static_cast<float>(getWidth()), static_cast<float>(getHeight()));
 
         for (std::size_t i = 0; i < sliderRects_.size(); ++i) {
             if (sliderRects_[i].contains(x, y)) {
@@ -328,6 +331,43 @@ private:
 
     static constexpr float kSelectorItemHeight = 24.0f;
 
+    void updateLayout(const float width, const float height)
+    {
+        const float pad = 20.0f;
+        const float headerH = 72.0f;
+        const float selectorH = 44.0f;
+        const float buttonH = 44.0f;
+        const float contentY = pad + headerH + 18.0f;
+        const float contentH = height - contentY - pad;
+        const float leftW = width * 0.60f;
+        const float rightX = pad * 2.0f + leftW;
+        const float rightW = width - leftW - pad * 3.0f;
+
+        const float innerX = pad + 20.0f;
+        const float innerY = contentY + 52.0f;
+        const float innerW = leftW - 40.0f;
+        const float rowGap = 10.0f;
+        const float rowH = 40.0f;
+        const float columnGap = 16.0f;
+        const float columnW = (innerW - columnGap) * 0.5f;
+
+        for (std::size_t i = 0; i < std::size(kSliders); ++i) {
+            const float cx = innerX + static_cast<float>(i % 2) * (columnW + columnGap);
+            const float ry = innerY + static_cast<float>(i / 2) * (rowH + rowGap);
+            sliderRects_[i] = {cx, ry + 18.0f, columnW, 22.0f};
+        }
+
+        const float selectorGap = 6.0f;
+        float cy = contentY + 54.0f;
+        for (std::size_t i = 0; i < std::size(kSelectors); ++i) {
+            selectorRects_[i] = {rightX + 20.0f, cy, rightW - 40.0f, selectorH};
+            cy += selectorH + selectorGap;
+        }
+
+        const float buttonY = contentY + contentH - 20.0f - buttonH;
+        buttonRects_[0] = {rightX + 20.0f, buttonY, rightW - 40.0f, buttonH};
+    }
+
     void drawBackground(const float width, const float height)
     {
         beginPath();
@@ -358,7 +398,7 @@ private:
 
         fontSize(13.0f);
         fillColor(154, 169, 183, 255);
-        text(x + 22.0f, y + 48.0f, "Cycle-learned MIDI harmonizer", nullptr);
+        text(x + 22.0f, y + 48.0f, "Transport-synced MIDI harmonizer", nullptr);
 
         drawStatusPill(x + w - 178.0f, y + 16.0f, 158.0f, 30.0f, values_[kParamStatusReady] >= 0.5f ? "Ready" : "Learning",
                        values_[kParamStatusReady] >= 0.5f ? 103 : 195,
@@ -396,18 +436,7 @@ private:
         fillColor(224, 228, 232, 255);
         text(x + 20.0f, y + 18.0f, "Shape", nullptr);
 
-        const float innerX = x + 20.0f;
-        const float innerY = y + 52.0f;
-        const float innerW = w - 40.0f;
-        const float columnGap = 18.0f;
-        const float rowGap = 17.0f;
-        const float rowH = 44.0f;
-        const float columnW = (innerW - columnGap) * 0.5f;
-
         for (std::size_t i = 0; i < std::size(kSliders); ++i) {
-            const float cx = innerX + static_cast<float>(i % 2) * (columnW + columnGap);
-            const float ry = innerY + static_cast<float>(i / 2) * (rowH + rowGap);
-            sliderRects_[i] = {cx, ry + 18.0f, columnW, 22.0f};
             drawSlider(kSliders[i], sliderRects_[i], values_[kSliders[i].index], draggingSlider_ == static_cast<int>(i));
         }
     }
@@ -450,23 +479,16 @@ private:
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fillColor(224, 228, 232, 255);
-        text(x + 20.0f, y + 18.0f, "Harmony", nullptr);
+        text(x + 20.0f, y + 18.0f, "Setup", nullptr);
 
-        const float selectorH = 48.0f;
-        const float selectorGap = 8.0f;
-        const float selectorColumnGap = 10.0f;
-        const float selectorW = (w - 40.0f - selectorColumnGap) * 0.5f;
-        const float selectorStartY = y + 52.0f;
         for (std::size_t i = 0; i < std::size(kSelectors); ++i) {
-            const float sx = x + 20.0f + static_cast<float>(i % 2) * (selectorW + selectorColumnGap);
-            const float sy = selectorStartY + static_cast<float>(i / 2) * (selectorH + selectorGap);
-            selectorRects_[i] = {sx, sy, selectorW, selectorH};
             drawSelector(kSelectors[i], selectorRects_[i], selectorValueForDisplay(kSelectors[i], values_[kSelectors[i].index]), static_cast<int>(i));
         }
 
-        const float buttonH = 44.0f;
-        const float buttonY = y + h - 20.0f - buttonH;
-        buttonRects_[0] = {x + 20.0f, buttonY, w - 40.0f, buttonH};
+        fontSize(15.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(224, 228, 232, 255);
+        text(x + 20.0f, buttonRects_[0].y - 28.0f, "Actions", nullptr);
         drawButton(kButtons[0], buttonRects_[0]);
     }
 
@@ -478,19 +500,19 @@ private:
         fill();
         closePath();
 
-        fontSize(10.0f);
+        fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fillColor(152, 166, 181, 255);
-        text(rect.x + 14.0f, rect.y + 8.0f, def.label, nullptr);
+        text(rect.x + 16.0f, rect.y + 8.0f, def.label, nullptr);
 
-        fontSize(14.0f);
+        fontSize(18.0f);
         fillColor(235, 239, 242, 255);
-        text(rect.x + 14.0f, rect.y + 27.0f, def.items[clampi(value, 0, def.count - 1)], nullptr);
+        text(rect.x + 16.0f, rect.y + 28.0f, def.items[clampi(value, 0, def.count - 1)], nullptr);
 
-        fontSize(17.0f);
+        fontSize(18.0f);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
         fillColor(117, 133, 149, 255);
-        text(rect.x + rect.w - 16.0f, rect.y + rect.h * 0.5f + 1.0f, openSelector_ == selectorIndex ? "^" : "v", nullptr);
+        text(rect.x + rect.w - 18.0f, rect.y + rect.h * 0.5f + 1.0f, openSelector_ == selectorIndex ? "^" : "v", nullptr);
     }
 
     void drawButton(const ButtonDef& def, const Rect& rect)
