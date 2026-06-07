@@ -2,8 +2,8 @@
 
 `rift` is an original `downspout` plugin rather than a `flues` port.
 
-It is a transport-aware stereo buffer effect that captures the incoming audio
-into a rolling memory window and, on rhythmic block boundaries, can:
+It is a transport-aware stereo buffer effect that captures source audio into a
+rolling memory window and, on rhythmic block boundaries, can:
 
 - repeat a recent slice;
 - reverse it;
@@ -14,6 +14,11 @@ into a rolling memory window and, on rhythmic block boundaries, can:
 The goal is not total destruction by default. `rift` is meant to create
 repeatable, groove-locked disruption that still feels musically attached to the
 source material.
+
+The source can be live input, a loaded WAV loop, or both. Sample playback is
+beat-mapped to the host transport before it enters the same rolling-buffer
+engine, so a break can be treated as a four-beat phrase even when the raw file
+duration does not match the current DAW tempo.
 
 ## Controls
 
@@ -34,6 +39,15 @@ source material.
   Crossfade amount between the end of a slice loop and its next pass.
 - `Mix`
   Wet level of the slice playback layer.
+- `Source`
+  Selects `Live`, `Sample`, or `Live + Sample` input. `Sample` uses the loaded
+  WAV file, falling back to a built-in four-beat test loop when no file is
+  loaded.
+- `Load WAV`
+  Opens a file picker and stores the selected sample path in plugin state.
+- `Sample Beats`
+  Host-visible parameter that declares how many beats the loaded sample spans.
+  The default is `4`, which is the intended breakbeat-loop case.
 - `Hold`
   Freeze the current action and slice choice.
 - `Scatter`
@@ -47,10 +61,25 @@ The UI is intentionally product-style rather than dev-style:
 
 - one macro strip for the playable controls;
 - large `Hold`, `Scatter`, and `Recover` buttons;
+- a `Source` selector and `Load WAV` button for sample-backed processing;
 - a bottom `Modes` strip with quick parameter recipes such as `Stutter`,
   `Smear`, and `Ruin`;
 - a preview lane that shows the next conceptual block pattern;
 - an action-bias panel that makes the musical consequences of the macros legible.
+
+## Sample loading
+
+Current sample loading is deliberately conservative. `rift` accepts ordinary
+RIFF/WAVE PCM files and 32-bit float WAV files. Compressed WAV, AIFF, FLAC, and
+MP3 are not supported yet.
+
+Loaded samples are decoded outside the audio callback and then published to the
+processor as immutable PCM data. If a selected file cannot be loaded, `Sample`
+mode falls back to the built-in test loop rather than breaking the plugin.
+
+Chop/transient detection is not implemented yet. The current sample path maps
+the whole file evenly across the declared beat length, then lets the existing
+`rift` mutation engine choose and process rhythmic blocks.
 
 ## Transition handling
 
@@ -65,7 +94,9 @@ spitting a click at every restart.
 `rift` has:
 
 - a portable core with deterministic tests;
+- WAV sample-source loading and beat-mapped sample playback;
 - text parameter state serialization;
-- a first DPF-backed `rift.vst3` wrapper target with a custom UI.
+- a DPF-backed `rift.vst3` wrapper target with a custom UI and file browser.
 
-The next step after build verification is real DAW feedback.
+The next major sample-mode step is transient/chop detection after more DAW
+testing with real breaks.

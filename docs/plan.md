@@ -144,7 +144,7 @@ Progress as of 2026-05-27:
 - `e-mix` now has a portable core library, deterministic tests, and a first VST3 wrapper target with a redesigned UI via vendored DPF;
 - `m-mix` now has a portable MIDI-gate core, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `melgen` now has a phrase-aware MIDI melody core, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
-- `rift` now exists as an original `downspout` transport-aware buffer effect with a portable core, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
+- `rift` now exists as an original `downspout` transport-aware live/sample buffer effect with WAV loading, beat-mapped sample playback, a portable core, deterministic tests, and a VST3 wrapper target with UI via vendored DPF;
 - `drumgen` now has a portable core library, a host-neutral MIDI engine, text serialization helpers, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `drumkit` now ports the `flues` drum synth through a portable core and a first VST3 instrument wrapper with UI via vendored DPF;
 - `cadence` now has a portable core library, a host-neutral learning/playback engine, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;

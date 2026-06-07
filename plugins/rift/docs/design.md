@@ -25,19 +25,17 @@ This gives it three useful properties:
 
 1. It stays locked to transport.
 2. It only changes at musically legible moments.
-3. The source material always comes from what the user just played.
+3. The source material stays musically attached to the session.
 
-The portable core also has an experimental sample-source path. In that mode a
-loaded sample is mapped by musical beat position and then fed into the same
-rolling-buffer engine as live input. This keeps the action set and smoothing
-behavior shared: sample playback is source material for `rift`, not a separate
-effect that bypasses the existing processor.
+In live mode the source material comes from what the user just played. In sample
+mode, a loaded WAV file is mapped by musical beat position and then fed into the
+same rolling-buffer engine as live input. This keeps the action set and
+smoothing behavior shared: sample playback is source material for `rift`, not a
+separate effect that bypasses the existing processor.
 
-Sample mapping uses an explicit loop length in beats when available. If no loop
-length has been declared, the core can derive one from the sample duration and a
-source BPM. The declared beat length wins because break loops often need to be
-treated as a musical bar even when the raw file duration does not exactly imply
-that length.
+Sample mapping uses an explicit loop length in beats. The current DAW-facing
+default is four beats because break loops often need to be treated as one
+musical bar even when the raw file duration does not exactly imply that length.
 
 ## Action set
 
@@ -60,6 +58,7 @@ The UI avoids exposing too many microscopic options. Instead it uses:
 
 - a few strong musical macros;
 - three large performance gestures;
+- a simple live/sample source selector;
 - a bottom strip of named mode recipes for quick direction changes;
 - an explicit blend control for loop-wrap smoothing;
 - visual explanations of the block plan and action bias.

@@ -30,16 +30,18 @@ surprises are usually the wrong default.
 - when a slice loops back to its start, the core can also crossfade the tail
   into the next pass, controlled by the user-facing `Blend` parameter.
 
-## Sample source batch 1
+## Sample source
 
-The first sample-source implementation keeps real sample loading out of scope.
-It adds:
+The sample-source implementation adds:
 
 - a portable `SampleSource` model for already-decoded interleaved PCM;
 - `SamplePlayback` source routing for live input, sample input, or both;
 - beat-position mapping from host transport to source frames;
+- plugin-local WAV loading for RIFF/WAVE PCM and 32-bit float files;
+- DPF file-browser support for selecting WAV files from the custom UI;
 - deterministic tests that render synthetic in-memory samples through the
-  existing pass and mutation paths.
+  existing pass and mutation paths;
+- deterministic tests for generated 16-bit WAV loading.
 
 The DPF wrapper exposes a host-visible `Source` parameter for DAW testing:
 
@@ -54,6 +56,9 @@ The UI has a `Load WAV` control that stores the selected path in the
 callback and publishes an immutable sample snapshot to the processor. Current
 file support is intentionally narrow: RIFF/WAVE PCM or 32-bit float files. MP3,
 AIFF, FLAC, and compressed WAV are rejected rather than guessed.
+
+`rift` is built with DPF `USE_FILE_BROWSER` enabled so `Load WAV` can fall back
+to DPF's file browser when the host does not provide a state-file picker.
 
 Loaded files are mapped by the `Sample Beats` parameter, which defaults to four
 beats. This means a two-second break can still be treated as one four-beat bar

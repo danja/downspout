@@ -66,8 +66,8 @@ ParameterEnumerationValue kActionEnumValues[] = {
 
 ParameterEnumerationValue kSourceModeEnumValues[] = {
     {0.0f, "Live"},
-    {1.0f, "Test Sample"},
-    {2.0f, "Live + Test"},
+    {1.0f, "Sample"},
+    {2.0f, "Live + Sample"},
 };
 
 constexpr std::uint32_t kWrapperChannelCount =
