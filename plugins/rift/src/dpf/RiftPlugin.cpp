@@ -2,10 +2,18 @@
 
 #include "rift_engine.hpp"
 #include "rift_params.hpp"
+#include "rift_sample_loader.hpp"
 #include "rift_serialization.hpp"
 
 #include <array>
+#include <algorithm>
+#include <atomic>
+#include <cmath>
 #include <cstring>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 START_NAMESPACE_DISTRHO
 
@@ -15,10 +23,14 @@ using CoreAudioBlock = downspout::rift::AudioBlock;
 using CoreEngineState = downspout::rift::EngineState;
 using CoreOutputStatus = downspout::rift::OutputStatus;
 using CoreParameters = downspout::rift::Parameters;
+using CoreSamplePlayback = downspout::rift::SamplePlayback;
+using CoreSampleSource = downspout::rift::SampleSource;
+using CoreSampleLoadResult = downspout::rift::SampleLoadResult;
 using CoreTransport = downspout::rift::TransportSnapshot;
 using CoreTriggers = downspout::rift::Triggers;
 
 using downspout::rift::ActionType;
+using downspout::rift::InputSourceMode;
 using downspout::rift::kActionCount;
 using downspout::rift::kActionNames;
 using downspout::rift::kParamDamage;
@@ -32,12 +44,16 @@ using downspout::rift::kParamMix;
 using downspout::rift::kParamPitch;
 using downspout::rift::kParamRecover;
 using downspout::rift::kParamScatter;
+using downspout::rift::kParamSampleBeats;
+using downspout::rift::kParamSourceMode;
 using downspout::rift::kParamStatusAction;
 using downspout::rift::kParamStatusActivity;
 using downspout::rift::kParameterCount;
 using downspout::rift::kStateCount;
 using downspout::rift::kStateKeyParameters;
+using downspout::rift::kStateKeySamplePath;
 using downspout::rift::kStateParameters;
+using downspout::rift::kStateSamplePath;
 
 ParameterEnumerationValue kActionEnumValues[] = {
     {0.0f, "Pass"},
@@ -48,8 +64,15 @@ ParameterEnumerationValue kActionEnumValues[] = {
     {5.0f, "Slip"},
 };
 
+ParameterEnumerationValue kSourceModeEnumValues[] = {
+    {0.0f, "Live"},
+    {1.0f, "Test Sample"},
+    {2.0f, "Live + Test"},
+};
+
 constexpr std::uint32_t kWrapperChannelCount =
     DISTRHO_PLUGIN_NUM_INPUTS < DISTRHO_PLUGIN_NUM_OUTPUTS ? DISTRHO_PLUGIN_NUM_INPUTS : DISTRHO_PLUGIN_NUM_OUTPUTS;
+constexpr double kPi = 3.14159265358979323846;
 
 CoreTransport toCoreTransport(const TimePosition& timePos)
 {
@@ -69,6 +92,56 @@ CoreTransport toCoreTransport(const TimePosition& timePos)
     }
 
     return transport;
+}
+
+CoreSampleSource makeTestSampleSource(const double sampleRate)
+{
+    CoreSampleSource source;
+    if (sampleRate <= 0.0)
+        return source;
+
+    source.channelCount = 2;
+    source.sampleRate = sampleRate;
+    source.loopBeats = 4.0;
+    source.sourceBpm = 120.0;
+
+    const uint32_t frames = std::max<uint32_t>(16u, static_cast<uint32_t>(std::lround(sampleRate * 2.0)));
+    source.interleaved.assign(static_cast<std::size_t>(frames) * source.channelCount, 0.0f);
+
+    const auto addHit = [&](const double beat, const float amp, const double decaySeconds, const float toneHz, const float pan) {
+        const uint32_t start = std::min<uint32_t>(
+            frames - 1u,
+            static_cast<uint32_t>(std::lround((beat / source.loopBeats) * static_cast<double>(frames))));
+        const uint32_t length = std::min<uint32_t>(
+            frames - start,
+            std::max<uint32_t>(1u, static_cast<uint32_t>(std::lround(sampleRate * decaySeconds * 6.0))));
+
+        const float leftGain = std::sqrt(std::max(0.0f, 1.0f - pan));
+        const float rightGain = std::sqrt(std::max(0.0f, pan));
+        for (uint32_t i = 0; i < length; ++i) {
+            const double t = static_cast<double>(i) / sampleRate;
+            const float env = static_cast<float>(std::exp(-t / decaySeconds));
+            const float body = std::sin(static_cast<float>(2.0 * kPi * toneHz * t));
+            const float click = (i < 12u) ? (1.0f - static_cast<float>(i) / 12.0f) : 0.0f;
+            const float value = amp * env * (body * 0.65f + click * 0.35f);
+            const std::size_t base = static_cast<std::size_t>(start + i) * source.channelCount;
+            source.interleaved[base] += value * leftGain;
+            source.interleaved[base + 1u] += value * rightGain;
+        }
+    };
+
+    addHit(0.0, 0.95f, 0.080, 72.0f, 0.40f);
+    addHit(1.0, 0.52f, 0.045, 190.0f, 0.62f);
+    addHit(1.5, 0.35f, 0.030, 420.0f, 0.30f);
+    addHit(2.0, 0.78f, 0.065, 118.0f, 0.55f);
+    addHit(2.75, 0.34f, 0.028, 520.0f, 0.72f);
+    addHit(3.0, 0.60f, 0.050, 230.0f, 0.48f);
+    addHit(3.5, 0.28f, 0.026, 610.0f, 0.22f);
+
+    for (float& value : source.interleaved)
+        value = std::max(-1.0f, std::min(1.0f, value));
+
+    return source;
 }
 
 }  // namespace
@@ -222,6 +295,26 @@ protected:
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = 0.0f;
             break;
+        case kParamSourceMode:
+            parameter.name = "Source";
+            parameter.symbol = "source";
+            parameter.hints = kParameterIsAutomatable | kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 2.0f;
+            parameter.ranges.def = 0.0f;
+            parameter.enumValues.count = 3;
+            parameter.enumValues.restrictedMode = true;
+            parameter.enumValues.values = kSourceModeEnumValues;
+            parameter.enumValues.deleteLater = false;
+            break;
+        case kParamSampleBeats:
+            parameter.name = "Sample Beats";
+            parameter.symbol = "sample_beats";
+            parameter.hints = kParameterIsAutomatable | kParameterIsInteger;
+            parameter.ranges.min = 1.0f;
+            parameter.ranges.max = 32.0f;
+            parameter.ranges.def = 4.0f;
+            break;
         case kParamStatusAction:
             parameter.name = "Current Action";
             parameter.symbol = "status_action";
@@ -254,6 +347,13 @@ protected:
             state.hints = kStateIsOnlyForDSP;
             state.defaultValue = "";
         }
+        else if (index == kStateSamplePath)
+        {
+            state.key = kStateKeySamplePath;
+            state.label = "Sample Path";
+            state.hints = kStateIsFilenamePath;
+            state.defaultValue = "";
+        }
     }
 
     float getParameterValue(uint32_t index) const override
@@ -269,6 +369,8 @@ protected:
         case kParamMix: return parameters_.mix;
         case kParamBlend: return parameters_.blend;
         case kParamHold: return parameters_.hold;
+        case kParamSourceMode: return parameters_.sourceMode;
+        case kParamSampleBeats: return parameters_.sampleBeats;
         case kParamScatter: return scatterValue_;
         case kParamRecover: return recoverValue_;
         case kParamStatusAction: return statusAction_;
@@ -290,6 +392,8 @@ protected:
         case kParamMix: parameters_.mix = value; break;
         case kParamBlend: parameters_.blend = value; break;
         case kParamHold: parameters_.hold = value; break;
+        case kParamSourceMode: parameters_.sourceMode = value; break;
+        case kParamSampleBeats: parameters_.sampleBeats = value; break;
         case kParamScatter:
             if (value >= 0.5f && scatterValue_ < 0.5f)
                 triggers_.scatterSerial += 1u;
@@ -311,24 +415,34 @@ protected:
     {
         if (std::strcmp(key, kStateKeyParameters) == 0)
             return String(downspout::rift::serializeParameters(parameters_).c_str());
+        if (std::strcmp(key, kStateKeySamplePath) == 0)
+            return String(samplePath_.c_str());
 
         return String();
     }
 
     void setState(const char* key, const char* value) override
     {
-        if (std::strcmp(key, kStateKeyParameters) != 0)
+        if (std::strcmp(key, kStateKeyParameters) == 0)
+        {
+            const std::string text = value != nullptr ? value : "";
+            const auto parameters = downspout::rift::deserializeParameters(text);
+            if (parameters.has_value())
+                parameters_ = *parameters;
             return;
+        }
 
-        const std::string text = value != nullptr ? value : "";
-        const auto parameters = downspout::rift::deserializeParameters(text);
-        if (parameters.has_value())
-            parameters_ = *parameters;
+        if (std::strcmp(key, kStateKeySamplePath) == 0)
+        {
+            loadSamplePath(value != nullptr ? value : "");
+            return;
+        }
     }
 
     void activate() override
     {
         downspout::rift::activate(engineState_, getSampleRate(), kWrapperChannelCount);
+        testSampleSource_ = makeTestSampleSource(getSampleRate());
         statusAction_ = 0.0f;
         statusActivity_ = 0.0f;
     }
@@ -349,21 +463,73 @@ protected:
         audio.outputs = safeOutputs;
         audio.channelCount = kWrapperChannelCount;
 
-        const CoreOutputStatus status = downspout::rift::processBlock(engineState_,
-                                                                      parameters_,
-                                                                      triggers_,
-                                                                      toCoreTransport(getTimePosition()),
-                                                                      frames,
-                                                                      getSampleRate(),
-                                                                      audio);
+        const CoreTransport transport = toCoreTransport(getTimePosition());
+        CoreOutputStatus status;
+        if (parameters_.sourceMode >= 0.5f)
+        {
+            const std::shared_ptr<const CoreSampleSource> fileSample = fileSampleSource_.load(std::memory_order_acquire);
+            const CoreSampleSource* source = fileSample && downspout::rift::isSampleSourceUsable(*fileSample)
+                ? fileSample.get()
+                : &testSampleSource_;
+
+            CoreSamplePlayback playback;
+            playback.source = source;
+            playback.mode = parameters_.sourceMode >= 1.5f ? InputSourceMode::LiveAndSample : InputSourceMode::Sample;
+            playback.loopBeats = parameters_.sampleBeats;
+            status = downspout::rift::processBlock(engineState_,
+                                                   parameters_,
+                                                   triggers_,
+                                                   transport,
+                                                   frames,
+                                                   getSampleRate(),
+                                                   audio,
+                                                   playback);
+        }
+        else
+        {
+            status = downspout::rift::processBlock(engineState_,
+                                                   parameters_,
+                                                   triggers_,
+                                                   transport,
+                                                   frames,
+                                                   getSampleRate(),
+                                                   audio);
+        }
         statusAction_ = static_cast<float>(status.action);
         statusActivity_ = status.activity;
     }
 
 private:
+    void loadSamplePath(const std::string& path)
+    {
+        samplePath_ = path;
+        sampleLoadError_.clear();
+
+        if (samplePath_.empty())
+        {
+            fileSampleSource_.store(nullptr, std::memory_order_release);
+            return;
+        }
+
+        CoreSampleLoadResult loaded = downspout::rift::loadWavSampleSource(samplePath_, parameters_.sampleBeats);
+        if (!loaded.error.empty())
+        {
+            sampleLoadError_ = loaded.error;
+            fileSampleSource_.store(nullptr, std::memory_order_release);
+            return;
+        }
+
+        fileSampleSource_.store(std::make_shared<const CoreSampleSource>(std::move(loaded.source)),
+                                std::memory_order_release);
+    }
+
     CoreParameters parameters_ {};
     CoreTriggers triggers_ {};
     CoreEngineState engineState_ {};
+    CoreSampleSource testSampleSource_ {};
+    std::atomic<std::shared_ptr<const CoreSampleSource>> fileSampleSource_ {};
+    std::string samplePath_ {};
+    std::string sampleLoadError_ {};
     float scatterValue_ = 0.0f;
     float recoverValue_ = 0.0f;
     float statusAction_ = 0.0f;

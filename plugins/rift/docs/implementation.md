@@ -30,6 +30,47 @@ surprises are usually the wrong default.
 - when a slice loops back to its start, the core can also crossfade the tail
   into the next pass, controlled by the user-facing `Blend` parameter.
 
+## Sample source batch 1
+
+The first sample-source implementation keeps real sample loading out of scope.
+It adds:
+
+- a portable `SampleSource` model for already-decoded interleaved PCM;
+- `SamplePlayback` source routing for live input, sample input, or both;
+- beat-position mapping from host transport to source frames;
+- deterministic tests that render synthetic in-memory samples through the
+  existing pass and mutation paths.
+
+The DPF wrapper exposes a host-visible `Source` parameter for DAW testing:
+
+- `Live` keeps the original live-input behavior;
+- `Sample` feeds a loaded WAV file into `rift`, falling back to the built-in
+  four-beat synthetic loop when no file is loaded;
+- `Live + Sample` mixes live input with the loaded/fallback sample before the
+  rolling buffer.
+
+The UI has a `Load WAV` control that stores the selected path in the
+`sample_path` state slot. The DSP wrapper decodes the file outside the audio
+callback and publishes an immutable sample snapshot to the processor. Current
+file support is intentionally narrow: RIFF/WAVE PCM or 32-bit float files. MP3,
+AIFF, FLAC, and compressed WAV are rejected rather than guessed.
+
+Loaded files are mapped by the `Sample Beats` parameter, which defaults to four
+beats. This means a two-second break can still be treated as one four-beat bar
+at the host tempo.
+
+The sample path intentionally feeds the generated source frames into the normal
+`AudioBlock` input path. That means pass-through, history capture, scatter,
+recover, slice selection, and crossfades continue to use the existing engine
+logic.
+
+When sample-only mode is selected and host transport cannot be mapped, the
+generated source is silence. This preserves the transport-gated behavior that
+`rift` already uses for disruptive processing.
+
+This batch does not detect chop points. That should be added after basic file
+selection and beat mapping have been exercised in a DAW.
+
 ## Performance gestures
 
 - `Hold` freezes the current block action and source slice;

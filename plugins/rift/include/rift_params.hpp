@@ -16,6 +16,8 @@ enum ParameterIndex : std::uint32_t {
     kParamScatter,
     kParamRecover,
     kParamBlend,
+    kParamSourceMode,
+    kParamSampleBeats,
     kParamStatusAction,
     kParamStatusActivity,
     kParameterCount
@@ -23,9 +25,11 @@ enum ParameterIndex : std::uint32_t {
 
 enum StateIndex : std::uint32_t {
     kStateParameters = 0,
+    kStateSamplePath,
     kStateCount
 };
 
 inline constexpr const char* kStateKeyParameters = "parameters";
+inline constexpr const char* kStateKeySamplePath = "sample_path";
 
 }  // namespace downspout::rift

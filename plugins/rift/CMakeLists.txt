@@ -1,5 +1,6 @@
 add_library(downspout_rift_core STATIC
     src/rift_engine.cpp
+    src/rift_sample_loader.cpp
     src/rift_serialization.cpp
 )
 target_link_libraries(downspout_rift_core PUBLIC downspout-project-options)
@@ -17,6 +18,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
     dpf_add_plugin(rift
         TARGETS ${DOWNSPOUT_DPF_PLUGIN_TARGETS}
         ${DOWNSPOUT_DPF_PLUGIN_ARGS}
+        USE_FILE_BROWSER
         FILES_DSP
             src/dpf/RiftPlugin.cpp
         FILES_UI

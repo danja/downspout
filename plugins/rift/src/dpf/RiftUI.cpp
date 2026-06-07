@@ -7,6 +7,7 @@
 #include <array>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <string>
 
 START_NAMESPACE_DISTRHO
@@ -29,9 +30,12 @@ using downspout::rift::kParamMix;
 using downspout::rift::kParamPitch;
 using downspout::rift::kParamRecover;
 using downspout::rift::kParamScatter;
+using downspout::rift::kParamSampleBeats;
+using downspout::rift::kParamSourceMode;
 using downspout::rift::kParamStatusAction;
 using downspout::rift::kParamStatusActivity;
 using downspout::rift::kParameterCount;
+using downspout::rift::kStateKeySamplePath;
 
 struct Rect {
     float x = 0.0f;
@@ -61,6 +65,11 @@ struct ButtonDef {
     int blue;
 };
 
+struct SourceModeDef {
+    float value;
+    const char* label;
+};
+
 struct ModePreset {
     const char* label;
     const char* detail;
@@ -85,6 +94,12 @@ constexpr std::array<ButtonDef, 3> kButtons = {{
     {kParamHold, "Hold", 198, 161, 78},
     {kParamScatter, "Scatter", 183, 86, 78},
     {kParamRecover, "Recover", 79, 145, 117},
+}};
+
+constexpr std::array<SourceModeDef, 3> kSourceModes = {{
+    {0.0f, "Live"},
+    {1.0f, "Sample"},
+    {2.0f, "Live + Sample"},
 }};
 
 constexpr std::array<ModePreset, 6> kModes = {{
@@ -136,6 +151,20 @@ constexpr std::size_t kPreviewBlockCount = 24;
     return buf;
 }
 
+[[nodiscard]] std::string basenameForPath(const std::string& path)
+{
+    if (path.empty()) {
+        return "built-in test loop";
+    }
+
+    const std::size_t sep = path.find_last_of("/\\");
+    const std::string base = sep == std::string::npos ? path : path.substr(sep + 1u);
+    if (base.size() <= 30u) {
+        return base;
+    }
+    return base.substr(0u, 12u) + "..." + base.substr(base.size() - 15u);
+}
+
 struct ActionColor {
     int r;
     int g;
@@ -182,6 +211,8 @@ public:
         values_[kParamMix] = defaults.mix;
         values_[kParamBlend] = defaults.blend;
         values_[kParamHold] = defaults.hold;
+        values_[kParamSourceMode] = defaults.sourceMode;
+        values_[kParamSampleBeats] = defaults.sampleBeats;
         values_[kParamStatusAction] = 0.0f;
         values_[kParamStatusActivity] = 0.0f;
 
@@ -199,6 +230,20 @@ protected:
             values_[index] = value;
             repaint();
         }
+    }
+
+    void stateChanged(const char* key, const char* value) override
+    {
+        if (std::strcmp(key, kStateKeySamplePath) != 0) {
+            return;
+        }
+
+        samplePath_ = value != nullptr ? value : "";
+        if (awaitingSampleFile_ && !samplePath_.empty()) {
+            commitParameter(kParamSourceMode, 1.0f);
+        }
+        awaitingSampleFile_ = false;
+        repaint();
     }
 
     void uiIdle() override
@@ -264,6 +309,18 @@ protected:
             }
         }
 
+        for (std::size_t i = 0; i < sourceModeRects_.size(); ++i) {
+            if (sourceModeRects_[i].contains(x, y)) {
+                commitParameter(kParamSourceMode, kSourceModes[i].value);
+                return true;
+            }
+        }
+
+        if (sampleLoadRect_.contains(x, y)) {
+            awaitingSampleFile_ = requestStateFile(kStateKeySamplePath);
+            return true;
+        }
+
         for (std::size_t i = 0; i < kModes.size(); ++i) {
             if (modeRects_[i].contains(x, y)) {
                 applyModePreset(static_cast<int>(i));
@@ -311,9 +368,13 @@ private:
     std::array<Rect, kSliders.size()> sliderRects_ {};
     std::array<Rect, kButtons.size()> buttonRects_ {};
     std::array<int, kButtons.size()> buttonPulse_ {};
+    std::array<Rect, kSourceModes.size()> sourceModeRects_ {};
+    Rect sampleLoadRect_ {};
     std::array<Rect, kModes.size()> modeRects_ {};
     std::array<int, kModes.size()> modePulse_ {};
+    std::string samplePath_ {};
     int draggingSlider_ = -1;
+    bool awaitingSampleFile_ = false;
 
     [[nodiscard]] CoreParameters currentParameters() const
     {
@@ -327,6 +388,8 @@ private:
         parameters.mix = values_[kParamMix];
         parameters.blend = values_[kParamBlend];
         parameters.hold = values_[kParamHold];
+        parameters.sourceMode = values_[kParamSourceMode];
+        parameters.sampleBeats = values_[kParamSampleBeats];
         return downspout::rift::clampParameters(parameters);
     }
 
@@ -415,18 +478,86 @@ private:
             drawButton(kButtons[i], buttonRects_[i], static_cast<int>(i), parameters);
         }
 
-        const float sliderStartY = buttonY + 52.0f;
-        const float rowGap = 8.0f;
-        const float rowH = 42.0f;
+        drawSourceSelector(x, buttonY + 58.0f, w, 30.0f, parameters);
+        drawSampleLoader(x, buttonY + 96.0f, w, 28.0f);
+
+        const float sliderStartY = buttonY + 138.0f;
+        const float rowGap = 2.0f;
+        const float rowH = 32.0f;
         for (std::size_t i = 0; i < kSliders.size(); ++i) {
             const float rowY = sliderStartY + static_cast<float>(i) * (rowH + rowGap);
             if (rowY + rowH > y + h) {
                 sliderRects_[i] = {-1000.0f, -1000.0f, 0.0f, 0.0f};
                 continue;
             }
-            sliderRects_[i] = {x, rowY + 22.0f, w, 14.0f};
+            sliderRects_[i] = {x, rowY + 17.0f, w, 10.0f};
             drawSlider(kSliders[i], sliderRects_[i], parameters, draggingSlider_ == static_cast<int>(i));
         }
+    }
+
+    void drawSourceSelector(const float x, const float y, const float w, const float h, const CoreParameters& parameters)
+    {
+        fontSize(12.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(227, 232, 236, 255);
+        text(x, y - 18.0f, "Source", nullptr);
+
+        const float gap = 8.0f;
+        const float buttonW = (w - gap * static_cast<float>(kSourceModes.size() - 1u)) / static_cast<float>(kSourceModes.size());
+        const int activeIndex = std::max(0, std::min(2, static_cast<int>(std::lround(parameters.sourceMode))));
+
+        for (std::size_t i = 0; i < kSourceModes.size(); ++i) {
+            const float bx = x + static_cast<float>(i) * (buttonW + gap);
+            sourceModeRects_[i] = {bx, y, buttonW, h};
+            const bool active = static_cast<int>(i) == activeIndex;
+
+            beginPath();
+            roundedRect(bx, y, buttonW, h, 8.0f);
+            fillColor(active ? 72 : 26, active ? 103 : 38, active ? 118 : 48, 255);
+            fill();
+            closePath();
+
+            beginPath();
+            roundedRect(bx, y, buttonW, h, 8.0f);
+            strokeColor(active ? 146 : 82, active ? 205 : 112, active ? 222 : 126, active ? 220 : 110);
+            strokeWidth(1.0f);
+            stroke();
+            closePath();
+
+            fontSize(12.0f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            fillColor(active ? 246 : 178, active ? 250 : 191, active ? 252 : 200, 255);
+            text(bx + buttonW * 0.5f, y + h * 0.5f + 1.0f, kSourceModes[i].label, nullptr);
+        }
+    }
+
+    void drawSampleLoader(const float x, const float y, const float w, const float h)
+    {
+        sampleLoadRect_ = {x, y, 112.0f, h};
+
+        beginPath();
+        roundedRect(sampleLoadRect_.x, sampleLoadRect_.y, sampleLoadRect_.w, sampleLoadRect_.h, 8.0f);
+        fillColor(51, 64, 74, 255);
+        fill();
+        closePath();
+
+        beginPath();
+        roundedRect(sampleLoadRect_.x, sampleLoadRect_.y, sampleLoadRect_.w, sampleLoadRect_.h, 8.0f);
+        strokeColor(142, 158, 168, 160);
+        strokeWidth(1.0f);
+        stroke();
+        closePath();
+
+        fontSize(12.0f);
+        textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+        fillColor(239, 243, 246, 255);
+        text(sampleLoadRect_.x + sampleLoadRect_.w * 0.5f, y + h * 0.5f + 1.0f, "Load WAV", nullptr);
+
+        fontSize(11.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        fillColor(143, 158, 169, 255);
+        const std::string label = basenameForPath(samplePath_);
+        text(x + 126.0f, y + h * 0.5f + 1.0f, label.c_str(), nullptr);
     }
 
     void drawButton(const ButtonDef& def, const Rect& rect, const int buttonIndex, const CoreParameters& parameters)

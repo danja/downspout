@@ -29,6 +29,12 @@ inline constexpr std::array<const char*, kActionCount> kActionNames = {{
     "Slip",
 }};
 
+enum class InputSourceMode : std::uint8_t {
+    LiveInput = 0,
+    Sample,
+    LiveAndSample,
+};
+
 struct Parameters {
     float grid = 8.0f;
     float density = 35.0f;
@@ -39,6 +45,8 @@ struct Parameters {
     float mix = 100.0f;
     float blend = 20.0f;
     float hold = 0.0f;
+    float sourceMode = 0.0f;
+    float sampleBeats = 4.0f;
 };
 
 struct Triggers {
@@ -63,6 +71,22 @@ struct AudioBlock {
     std::uint32_t channelCount = 2;
 };
 
+struct SampleSource {
+    std::vector<float> interleaved;
+    std::uint32_t channelCount = 0;
+    double sampleRate = 0.0;
+    double sourceBpm = 0.0;
+    double loopBeats = 0.0;
+};
+
+struct SamplePlayback {
+    const SampleSource* source = nullptr;
+    InputSourceMode mode = InputSourceMode::Sample;
+    float gain = 1.0f;
+    double beatOffset = 0.0;
+    double loopBeats = 0.0;
+};
+
 struct BlockSpec {
     ActionType action = ActionType::Pass;
     double readPosition = 0.0;
@@ -77,6 +101,7 @@ struct BlockSpec {
 
 struct EngineState {
     std::vector<float> buffer;
+    std::vector<float> sourceInputScratch;
     std::uint32_t bufferFrames = 0;
     std::uint32_t bufferChannels = 0;
     std::uint32_t writeHead = 0;

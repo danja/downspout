@@ -94,6 +94,14 @@ constexpr double kHalfPi = 1.5707963267948966;
     return static_cast<std::size_t>(frame) * static_cast<std::size_t>(state.bufferChannels) + static_cast<std::size_t>(channel);
 }
 
+[[nodiscard]] std::uint32_t sampleFrameCount(const SampleSource& source) {
+    if (source.channelCount == 0u) {
+        return 0u;
+    }
+
+    return static_cast<std::uint32_t>(source.interleaved.size() / static_cast<std::size_t>(source.channelCount));
+}
+
 [[nodiscard]] bool nearlyEqual(const double lhs, const double rhs, const double epsilon = 1e-6) {
     return std::fabs(lhs - rhs) <= epsilon;
 }
@@ -219,6 +227,74 @@ void writeInputFrame(EngineState& state, const AudioBlock& audio, const std::uin
 
     state.writeHead = (state.writeHead + 1u) % state.bufferFrames;
     state.filledFrames = std::min(state.filledFrames + 1u, state.bufferFrames);
+}
+
+[[nodiscard]] float readSampleAtFrame(const SampleSource& source,
+                                      const std::uint32_t outputChannel,
+                                      double position) {
+    const std::uint32_t frames = sampleFrameCount(source);
+    if (frames == 0u || source.channelCount == 0u) {
+        return 0.0f;
+    }
+
+    position = std::fmod(position, static_cast<double>(frames));
+    if (position < 0.0) {
+        position += static_cast<double>(frames);
+    }
+
+    const std::int64_t frame0 = static_cast<std::int64_t>(std::floor(position));
+    const double frac = position - static_cast<double>(frame0);
+    const std::uint32_t index0 = static_cast<std::uint32_t>(frame0) % frames;
+    const std::uint32_t index1 = (index0 + 1u) % frames;
+    const std::uint32_t sourceChannel = source.channelCount == 1u
+        ? 0u
+        : std::min(outputChannel, source.channelCount - 1u);
+
+    const std::size_t sample0Index = static_cast<std::size_t>(index0) * source.channelCount + sourceChannel;
+    const std::size_t sample1Index = static_cast<std::size_t>(index1) * source.channelCount + sourceChannel;
+    const float sample0 = source.interleaved[sample0Index];
+    const float sample1 = source.interleaved[sample1Index];
+    return sample0 + static_cast<float>(frac) * (sample1 - sample0);
+}
+
+[[nodiscard]] bool canRenderSamplePlayback(const SamplePlayback& samplePlayback,
+                                           const TransportSnapshot& transport,
+                                           const double hostSampleRate) {
+    return samplePlayback.source != nullptr &&
+           isSampleSourceUsable(*samplePlayback.source) &&
+           transport.valid &&
+           transport.playing &&
+           transport.bpm > 0.0 &&
+           transport.beatsPerBar > 0.0 &&
+           hostSampleRate > 0.0;
+}
+
+[[nodiscard]] float renderSamplePlaybackFrame(const SamplePlayback& samplePlayback,
+                                              const TransportSnapshot& transport,
+                                              const double hostSampleRate,
+                                              const std::uint32_t frame,
+                                              const std::uint32_t channel) {
+    if (!canRenderSamplePlayback(samplePlayback, transport, hostSampleRate)) {
+        return 0.0f;
+    }
+
+    const SampleSource& source = *samplePlayback.source;
+    const double loopBeats = samplePlayback.loopBeats > 0.0 ? samplePlayback.loopBeats : sampleLoopBeats(source);
+    if (loopBeats <= 0.0) {
+        return 0.0f;
+    }
+
+    const double framesPerHostBeat = hostSampleRate * 60.0 / transport.bpm;
+    const double absoluteHostBeats = transport.bar * transport.beatsPerBar +
+                                     transport.barBeat +
+                                     static_cast<double>(frame) / framesPerHostBeat;
+    double sourceBeat = std::fmod(absoluteHostBeats + samplePlayback.beatOffset, loopBeats);
+    if (sourceBeat < 0.0) {
+        sourceBeat += loopBeats;
+    }
+
+    const double sourceFramesPerBeat = static_cast<double>(sampleFrameCount(source)) / loopBeats;
+    return readSampleAtFrame(source, channel, sourceBeat * sourceFramesPerBeat) * samplePlayback.gain;
 }
 
 [[nodiscard]] float readBufferAtPosition(const EngineState& state,
@@ -450,6 +526,8 @@ Parameters clampParameters(const Parameters& raw) {
     parameters.mix = clampf(parameters.mix, 0.0f, 100.0f);
     parameters.blend = clampf(parameters.blend, 0.0f, 100.0f);
     parameters.hold = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.hold)), 0, 1));
+    parameters.sourceMode = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.sourceMode)), 0, 2));
+    parameters.sampleBeats = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.sampleBeats)), 1, 32));
     return parameters;
 }
 
@@ -472,6 +550,29 @@ ActionType previewActionForBlock(const Parameters& rawParameters, const std::uin
     const Parameters parameters = clampParameters(rawParameters);
     std::uint32_t rngState = seedForPreview(parameters, blockIndex);
     return chooseAction(parameters, rngState, false);
+}
+
+bool isSampleSourceUsable(const SampleSource& source) {
+    return source.channelCount > 0u &&
+           source.channelCount <= kMaxChannels &&
+           source.sampleRate > 0.0 &&
+           sampleFrameCount(source) > 0u;
+}
+
+double sampleLoopBeats(const SampleSource& source) {
+    if (!isSampleSourceUsable(source)) {
+        return 0.0;
+    }
+
+    if (source.loopBeats > 0.0) {
+        return source.loopBeats;
+    }
+
+    if (source.sourceBpm <= 0.0) {
+        return 0.0;
+    }
+
+    return static_cast<double>(sampleFrameCount(source)) / source.sampleRate * source.sourceBpm / 60.0;
 }
 
 void activate(EngineState& state, const double sampleRate, const std::uint32_t channelCount) {
@@ -618,6 +719,43 @@ OutputStatus processBlock(EngineState& state,
     status.action = state.activeBlock.action;
     status.activity = (state.activeBlock.action == ActionType::Pass) ? 0.0f : state.activeBlock.wet;
     return status;
+}
+
+OutputStatus processBlock(EngineState& state,
+                          const Parameters& parameters,
+                          const Triggers& triggers,
+                          const TransportSnapshot& transport,
+                          const std::uint32_t nframes,
+                          const double sampleRate,
+                          const AudioBlock& audio,
+                          const SamplePlayback& samplePlayback) {
+    if (samplePlayback.mode == InputSourceMode::LiveInput) {
+        return processBlock(state, parameters, triggers, transport, nframes, sampleRate, audio);
+    }
+
+    const std::uint32_t channelCount = std::max<std::uint32_t>(1u, std::min(audio.channelCount, kMaxChannels));
+    const std::size_t scratchFrames = static_cast<std::size_t>(nframes) * channelCount;
+    state.sourceInputScratch.assign(scratchFrames, 0.0f);
+
+    for (std::uint32_t channel = 0; channel < channelCount; ++channel) {
+        for (std::uint32_t frame = 0; frame < nframes; ++frame) {
+            float value = renderSamplePlaybackFrame(samplePlayback, transport, sampleRate, frame, channel);
+            if (samplePlayback.mode == InputSourceMode::LiveAndSample) {
+                const float* in = audio.inputs[channel];
+                value += in ? in[frame] : 0.0f;
+            }
+            state.sourceInputScratch[static_cast<std::size_t>(channel) * nframes + frame] = value;
+        }
+    }
+
+    AudioBlock sourcedAudio;
+    sourcedAudio.outputs = audio.outputs;
+    sourcedAudio.channelCount = channelCount;
+    for (std::uint32_t channel = 0; channel < channelCount; ++channel) {
+        sourcedAudio.inputs[channel] = state.sourceInputScratch.data() + static_cast<std::size_t>(channel) * nframes;
+    }
+
+    return processBlock(state, parameters, triggers, transport, nframes, sampleRate, sourcedAudio);
 }
 
 }  // namespace downspout::rift

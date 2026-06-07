@@ -1,9 +1,13 @@
 #include "rift_engine.hpp"
+#include "rift_sample_loader.hpp"
 #include "rift_serialization.hpp"
 
 #include <array>
 #include <cassert>
+#include <cstdint>
+#include <cstdio>
 #include <cmath>
+#include <fstream>
 
 using namespace downspout::rift;
 
@@ -20,6 +24,8 @@ void testClampParameters() {
     parameters.mix = 140.0f;
     parameters.blend = 140.0f;
     parameters.hold = 7.0f;
+    parameters.sourceMode = 7.0f;
+    parameters.sampleBeats = 99.0f;
 
     const Parameters clamped = clampParameters(parameters);
     assert(std::fabs(clamped.grid - 16.0f) < 1e-6f);
@@ -31,6 +37,8 @@ void testClampParameters() {
     assert(std::fabs(clamped.mix - 100.0f) < 1e-6f);
     assert(std::fabs(clamped.blend - 100.0f) < 1e-6f);
     assert(std::fabs(clamped.hold - 1.0f) < 1e-6f);
+    assert(std::fabs(clamped.sourceMode - 2.0f) < 1e-6f);
+    assert(std::fabs(clamped.sampleBeats - 32.0f) < 1e-6f);
 }
 
 void testPreviewActionHonorsZeroDensity() {
@@ -275,6 +283,143 @@ void testBlockTransitionsArmCrossfade() {
     assert(!state.transitionBlock.valid);
 }
 
+void testSamplePlaybackUsesDeclaredLoopBeats() {
+    EngineState state;
+    activate(state, 2.0, 1);
+
+    SampleSource source;
+    source.channelCount = 1;
+    source.sampleRate = 4.0;
+    source.sourceBpm = 100.0;
+    source.loopBeats = 4.0;
+    source.interleaved = {0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f};
+
+    assert(isSampleSourceUsable(source));
+    assert(std::fabs(sampleLoopBeats(source) - 4.0) < 1e-6);
+
+    Parameters parameters;
+    parameters.density = 0.0f;
+
+    std::array<float, 4> out {};
+    AudioBlock audio;
+    audio.outputs[0] = out.data();
+    audio.channelCount = 1;
+
+    TransportSnapshot transport;
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 0.0;
+    transport.barBeat = 0.0;
+    transport.beatsPerBar = 4.0;
+    transport.bpm = 120.0;
+
+    SamplePlayback playback;
+    playback.source = &source;
+    playback.mode = InputSourceMode::Sample;
+
+    const OutputStatus status = processBlock(state,
+                                             parameters,
+                                             Triggers {},
+                                             transport,
+                                             static_cast<std::uint32_t>(out.size()),
+                                             2.0,
+                                             audio,
+                                             playback);
+
+    assert(status.action == ActionType::Pass);
+    assert(std::fabs(out[0] - 0.0f) < 1e-6f);
+    assert(std::fabs(out[1] - 2.0f) < 1e-6f);
+    assert(std::fabs(out[2] - 4.0f) < 1e-6f);
+    assert(std::fabs(out[3] - 6.0f) < 1e-6f);
+}
+
+void testSamplePlaybackFeedsExistingMutationBuffer() {
+    EngineState state;
+    activate(state, 8.0, 1);
+
+    SampleSource source;
+    source.channelCount = 1;
+    source.sampleRate = 8.0;
+    source.loopBeats = 16.0;
+    source.interleaved.resize(128);
+    for (std::size_t i = 0; i < source.interleaved.size(); ++i) {
+        source.interleaved[i] = static_cast<float>(i) * 0.05f;
+    }
+
+    Parameters parameters;
+    parameters.grid = 1.0f;
+    parameters.density = 0.0f;
+    parameters.damage = 100.0f;
+    parameters.memoryBars = 2.0f;
+    parameters.drift = 80.0f;
+    parameters.pitch = 7.0f;
+    parameters.mix = 100.0f;
+
+    std::array<float, 32> firstOut {};
+    std::array<float, 32> secondOut {};
+    std::array<float, 32> mutatedOut {};
+
+    AudioBlock audio;
+    audio.outputs[0] = firstOut.data();
+    audio.channelCount = 1;
+
+    TransportSnapshot transport;
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 0.0;
+    transport.barBeat = 0.0;
+    transport.beatsPerBar = 4.0;
+    transport.bpm = 60.0;
+
+    SamplePlayback playback;
+    playback.source = &source;
+    playback.mode = InputSourceMode::Sample;
+
+    const OutputStatus first = processBlock(state,
+                                            parameters,
+                                            Triggers {},
+                                            transport,
+                                            static_cast<std::uint32_t>(firstOut.size()),
+                                            8.0,
+                                            audio,
+                                            playback);
+    assert(first.action == ActionType::Pass);
+
+    audio.outputs[0] = secondOut.data();
+    transport.bar = 1.0;
+    const OutputStatus second = processBlock(state,
+                                             parameters,
+                                             Triggers {},
+                                             transport,
+                                             static_cast<std::uint32_t>(secondOut.size()),
+                                             8.0,
+                                             audio,
+                                             playback);
+    assert(second.action == ActionType::Pass);
+
+    audio.outputs[0] = mutatedOut.data();
+    transport.bar = 2.0;
+    const OutputStatus mutated = processBlock(state,
+                                              parameters,
+                                              Triggers {.scatterSerial = 1},
+                                              transport,
+                                              static_cast<std::uint32_t>(mutatedOut.size()),
+                                              8.0,
+                                              audio,
+                                              playback);
+
+    assert(mutated.action != ActionType::Pass);
+    bool changed = false;
+    for (std::size_t i = 0; i < mutatedOut.size(); ++i) {
+        const float expectedPassSample = source.interleaved[(64u + i) % source.interleaved.size()];
+        if (std::fabs(mutatedOut[i] - expectedPassSample) > 1e-4f) {
+            changed = true;
+            break;
+        }
+    }
+    assert(changed);
+}
+
 void testSerializationRoundTrip() {
     Parameters parameters;
     parameters.grid = 5.0f;
@@ -286,6 +431,8 @@ void testSerializationRoundTrip() {
     parameters.mix = 84.0f;
     parameters.blend = 31.0f;
     parameters.hold = 1.0f;
+    parameters.sourceMode = 2.0f;
+    parameters.sampleBeats = 8.0f;
 
     const auto roundTrip = deserializeParameters(serializeParameters(parameters));
     assert(roundTrip.has_value());
@@ -298,6 +445,8 @@ void testSerializationRoundTrip() {
     assert(std::fabs(roundTrip->mix - 84.0f) < 1e-6f);
     assert(std::fabs(roundTrip->blend - 31.0f) < 1e-6f);
     assert(std::fabs(roundTrip->hold - 1.0f) < 1e-6f);
+    assert(std::fabs(roundTrip->sourceMode - 2.0f) < 1e-6f);
+    assert(std::fabs(roundTrip->sampleBeats - 8.0f) < 1e-6f);
 }
 
 void testEarlierStateFormatDefaultsBlend() {
@@ -314,6 +463,65 @@ void testEarlierStateFormatDefaultsBlend() {
 
     assert(parsed.has_value());
     assert(std::fabs(parsed->blend - 20.0f) < 1e-6f);
+    assert(std::fabs(parsed->sourceMode) < 1e-6f);
+    assert(std::fabs(parsed->sampleBeats - 4.0f) < 1e-6f);
+}
+
+void writeU16(std::ofstream& file, const std::uint16_t value) {
+    file.put(static_cast<char>(value & 0xffu));
+    file.put(static_cast<char>((value >> 8) & 0xffu));
+}
+
+void writeU32(std::ofstream& file, const std::uint32_t value) {
+    file.put(static_cast<char>(value & 0xffu));
+    file.put(static_cast<char>((value >> 8) & 0xffu));
+    file.put(static_cast<char>((value >> 16) & 0xffu));
+    file.put(static_cast<char>((value >> 24) & 0xffu));
+}
+
+void testLoadWavSampleSource() {
+    const char* path = "/tmp/downspout_rift_loader_test.wav";
+    {
+        std::ofstream file(path, std::ios::binary);
+        assert(file);
+
+        const std::uint16_t channels = 1;
+        const std::uint32_t sampleRate = 4;
+        const std::uint16_t bitsPerSample = 16;
+        const std::uint16_t blockAlign = channels * bitsPerSample / 8u;
+        const std::uint32_t dataBytes = 4u * blockAlign;
+
+        file.write("RIFF", 4);
+        writeU32(file, 36u + dataBytes);
+        file.write("WAVE", 4);
+        file.write("fmt ", 4);
+        writeU32(file, 16);
+        writeU16(file, 1);
+        writeU16(file, channels);
+        writeU32(file, sampleRate);
+        writeU32(file, sampleRate * blockAlign);
+        writeU16(file, blockAlign);
+        writeU16(file, bitsPerSample);
+        file.write("data", 4);
+        writeU32(file, dataBytes);
+        writeU16(file, 0);
+        writeU16(file, 16384);
+        writeU16(file, 32767);
+        writeU16(file, static_cast<std::uint16_t>(-16384));
+    }
+
+    const SampleLoadResult loaded = loadWavSampleSource(path, 4.0);
+    assert(loaded.error.empty());
+    assert(isSampleSourceUsable(loaded.source));
+    assert(loaded.source.channelCount == 1u);
+    assert(std::fabs(loaded.source.sampleRate - 4.0) < 1e-6);
+    assert(std::fabs(loaded.source.loopBeats - 4.0) < 1e-6);
+    assert(loaded.source.interleaved.size() == 4u);
+    assert(std::fabs(loaded.source.interleaved[0]) < 1e-6f);
+    assert(std::fabs(loaded.source.interleaved[1] - 0.5f) < 1e-4f);
+    assert(loaded.source.interleaved[2] > 0.99f);
+    assert(std::fabs(loaded.source.interleaved[3] + 0.5f) < 1e-4f);
+    std::remove(path);
 }
 
 }  // namespace
@@ -324,7 +532,10 @@ int main() {
     testStoppedTransportPassesThrough();
     testScatterMutatesAndRecoverReturnsDry();
     testBlockTransitionsArmCrossfade();
+    testSamplePlaybackUsesDeclaredLoopBeats();
+    testSamplePlaybackFeedsExistingMutationBuffer();
     testSerializationRoundTrip();
     testEarlierStateFormatDefaultsBlend();
+    testLoadWavSampleSource();
     return 0;
 }

@@ -35,7 +35,7 @@ std::vector<std::string_view> split(std::string_view text, const char delimiter)
 }  // namespace
 
 std::string serializeParameters(const Parameters& parameters) {
-    return "version=2\n"
+    return "version=3\n"
            "grid=" + std::to_string(parameters.grid) + "\n"
            "density=" + std::to_string(parameters.density) + "\n"
            "damage=" + std::to_string(parameters.damage) + "\n"
@@ -44,7 +44,9 @@ std::string serializeParameters(const Parameters& parameters) {
            "pitch=" + std::to_string(parameters.pitch) + "\n"
            "mix=" + std::to_string(parameters.mix) + "\n"
            "blend=" + std::to_string(parameters.blend) + "\n"
-           "hold=" + std::to_string(parameters.hold) + "\n";
+           "hold=" + std::to_string(parameters.hold) + "\n"
+           "sourceMode=" + std::to_string(parameters.sourceMode) + "\n"
+           "sampleBeats=" + std::to_string(parameters.sampleBeats) + "\n";
 }
 
 std::optional<Parameters> deserializeParameters(const std::string& text) {
@@ -84,6 +86,10 @@ std::optional<Parameters> deserializeParameters(const std::string& text) {
             parameters.blend = parsed;
         } else if (key == "hold" && parseFloat(value, parsed)) {
             parameters.hold = parsed;
+        } else if (key == "sourceMode" && parseFloat(value, parsed)) {
+            parameters.sourceMode = parsed;
+        } else if (key == "sampleBeats" && parseFloat(value, parsed)) {
+            parameters.sampleBeats = parsed;
         } else {
             return std::nullopt;
         }
