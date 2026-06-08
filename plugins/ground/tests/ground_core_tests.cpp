@@ -47,6 +47,15 @@ int firstPhraseNote(const FormState& form, const int phraseIndex)
     return note;
 }
 
+int totalDurationSteps(const FormState& form)
+{
+    int total = 0;
+    for (int i = 0; i < form.eventCount; ++i) {
+        total += form.events[static_cast<std::size_t>(i)].durationSteps;
+    }
+    return total;
+}
+
 void assertPhraseEqual(const PhraseSnapshot& a, const PhraseSnapshot& b)
 {
     assert(a.plan.role == b.plan.role);
@@ -216,6 +225,32 @@ void testGroundedPhraseGetsSyncopationAndLegato()
 
     assert(hasSyncopation);
     assert(hasLegatoTie);
+}
+
+void testNoteLengthControlsDurations()
+{
+    Controls shortControls;
+    shortControls.seed = 909u;
+    shortControls.style = StyleId::grounded;
+    shortControls.formBars = 16;
+    shortControls.phraseBars = 4;
+    shortControls.density = 0.50f;
+    shortControls.motion = 0.70f;
+    shortControls.noteLength = 0.15f;
+    shortControls.noteLengthVariation = 0.0f;
+
+    Controls longControls = shortControls;
+    longControls.noteLength = 0.95f;
+
+    FormState shortForm;
+    FormState longForm;
+    regenerateForm(shortForm, shortControls, ::downspout::Meter {});
+    regenerateForm(longForm, longControls, ::downspout::Meter {});
+
+    assert(shortForm.eventCount > 0);
+    assert(longForm.eventCount > 0);
+    assert(totalDurationSteps(shortForm) < totalDurationSteps(longForm));
+    assert(!structureControlsMatch(shortControls, longControls));
 }
 
 void testFugalFormPlansSubjectAnswerPedalCadence()
@@ -429,6 +464,8 @@ void testSerializationRoundTrip()
     controls.phraseBars = 8;
     controls.color = 0.72f;
     controls.sequence = 0.75f;
+    controls.noteLength = 0.61f;
+    controls.noteLengthVariation = 0.27f;
     controls.vary = 0.42f;
     controls.seed = 998u;
     controls.actionMutateCell = 7;
@@ -451,6 +488,8 @@ void testSerializationRoundTrip()
     assert(controlsRoundTrip->scale == controls.scale);
     assert(controlsRoundTrip->style == controls.style);
     assert(controlsRoundTrip->color > 0.71f && controlsRoundTrip->color < 0.73f);
+    assert(controlsRoundTrip->noteLength > 0.60f && controlsRoundTrip->noteLength < 0.62f);
+    assert(controlsRoundTrip->noteLengthVariation > 0.26f && controlsRoundTrip->noteLengthVariation < 0.28f);
     assert(controlsRoundTrip->actionMutateCell == controls.actionMutateCell);
     assert(formRoundTrip->phraseCount == form.phraseCount);
     assert(formRoundTrip->eventCount == form.eventCount);
@@ -481,6 +520,7 @@ int main()
     testVariationChangesOnLoop();
     testCompoundMeterShape();
     testGroundedPhraseGetsSyncopationAndLegato();
+    testNoteLengthControlsDurations();
     testFugalFormPlansSubjectAnswerPedalCadence();
     testBassRegisterStaysInLane();
     testDubAndJazzStylesAreExplicit();

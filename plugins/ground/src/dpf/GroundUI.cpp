@@ -23,6 +23,8 @@ using downspout::ground::kParamColor;
 using downspout::ground::kParamDensity;
 using downspout::ground::kParamFormBars;
 using downspout::ground::kParamMotion;
+using downspout::ground::kParamNoteLength;
+using downspout::ground::kParamNoteLengthVariation;
 using downspout::ground::kParamPhraseBars;
 using downspout::ground::kParamRegister;
 using downspout::ground::kParamRegisterArc;
@@ -78,6 +80,8 @@ constexpr SliderDef kSliders[] = {
     {kParamCadence, "Cadence", 0.0f, 1.0f, false},
     {kParamRegisterArc, "Reg Arc", 0.0f, 1.0f, false},
     {kParamSequence, "Sequence", 0.0f, 1.0f, false},
+    {kParamNoteLength, "Note Length", 0.0f, 1.0f, false},
+    {kParamNoteLengthVariation, "Note Length Variation", 0.0f, 1.0f, false},
     {kParamVary, "Vary", 0.0f, 100.0f, true},
     {kParamSeed, "Seed", 1.0f, 65535.0f, true},
 };
@@ -300,6 +304,8 @@ public:
         values_[kParamRegister] = 1.0f;
         values_[kParamRegisterArc] = 0.40f;
         values_[kParamSequence] = 0.35f;
+        values_[kParamNoteLength] = 0.35f;
+        values_[kParamNoteLengthVariation] = 0.35f;
         values_[kParamSeed] = 1.0f;
         values_[kParamVary] = 0.0f;
         values_[kParamStatusPhrase] = 1.0f;
@@ -472,37 +478,11 @@ private:
         fillColor(160, 174, 188, 255);
         text(x + 22.0f, y + 52.0f, "Long-form bass movement across phrases, sections, and cadences", nullptr);
 
-        drawPill(x + 22.0f, y + h - 34.0f, 190.0f, 24.0f, "DPF VST3 generator", 104, 188, 142);
-
         const int currentPhrase = std::max(1, static_cast<int>(std::lround(values_[kParamStatusPhrase])));
         const int currentRole = clampi(static_cast<int>(std::lround(values_[kParamStatusRole])), 0, 6);
 
         drawStatusCard(x + w - 266.0f, y + 14.0f, 116.0f, h - 28.0f, "Phrase", std::to_string(currentPhrase), 81, 146, 201);
         drawStatusCard(x + w - 136.0f, y + 14.0f, 116.0f, h - 28.0f, "Role", kRoleNames[currentRole], colorForRole(currentRole).r, colorForRole(currentRole).g, colorForRole(currentRole).b);
-    }
-
-    void drawPill(const float x,
-                  const float y,
-                  const float w,
-                  const float h,
-                  const char* label,
-                  const int r,
-                  const int g,
-                  const int b)
-    {
-        beginPath();
-        roundedRect(x, y, w, h, h * 0.5f);
-        fillColor(r, g, b, 36);
-        fill();
-        strokeColor(r, g, b, 180);
-        strokeWidth(1.0f);
-        stroke();
-        closePath();
-
-        fontSize(12.0f);
-        textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(r, g, b, 255);
-        text(x + w * 0.5f, y + h * 0.5f + 1.0f, label, nullptr);
     }
 
     void drawStatusCard(const float x,
@@ -542,11 +522,6 @@ private:
         fill();
         closePath();
 
-        fontSize(15.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(226, 230, 234, 255);
-        text(x + 20.0f, y + 18.0f, "Form Preview", nullptr);
-
         const int formBars = clampi(static_cast<int>(std::lround(values_[kParamFormBars])), 8, 64);
         const int phraseBars = std::max(1, clampi(static_cast<int>(std::lround(values_[kParamPhraseBars])), 2, 8));
         const int phraseCount = std::max(1, formBars / phraseBars);
@@ -556,7 +531,7 @@ private:
         const int currentPhrase = clampi(static_cast<int>(std::lround(values_[kParamStatusPhrase])) - 1, 0, phraseCount - 1);
 
         const float laneX = x + 20.0f;
-        const float laneY = y + 56.0f;
+        const float laneY = y + 36.0f;
         const float laneW = w - 40.0f;
         const float laneH = 64.0f;
         const float cellGap = 10.0f;
@@ -595,14 +570,6 @@ private:
             text(cellX + 10.0f, laneY + 49.0f, bottomLabel.c_str(), nullptr);
         }
 
-        const int peakPhrase = predictedPeakPhrase(phraseCount, tension);
-        fontSize(12.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(150, 162, 176, 255);
-        const std::string footer = "Peak around phrase " + std::to_string(peakPhrase + 1) +
-                                   " | Form " + std::to_string(formBars) +
-                                   " bars | Phrase " + std::to_string(phraseBars) + " bars";
-        text(x + 20.0f, y + h - 28.0f, footer.c_str(), nullptr);
     }
 
     void drawTensionArc(const float x,
@@ -645,8 +612,8 @@ private:
         const float innerX = x + 20.0f;
         const float innerY = y + 52.0f;
         const float innerW = w - 40.0f;
-        const float rowGap = 18.0f;
-        const float rowH = 48.0f;
+        const float rowGap = 10.0f;
+        const float rowH = 38.0f;
         const float colGap = 16.0f;
         const float colW = (innerW - colGap) * 0.5f;
 
@@ -655,7 +622,7 @@ private:
             const int row = static_cast<int>(i / 2);
             const float rx = innerX + static_cast<float>(col) * (colW + colGap);
             const float ry = innerY + static_cast<float>(row) * (rowH + rowGap);
-            sliderRects_[i] = {rx, ry + 18.0f, colW, 22.0f};
+            sliderRects_[i] = {rx, ry + 16.0f, colW, 18.0f};
             drawSlider(kSliders[i], sliderRects_[i], values_[kSliders[i].index], draggingSlider_ == static_cast<int>(i));
         }
     }

@@ -31,6 +31,8 @@ using downspout::ground::kParamColor;
 using downspout::ground::kParamDensity;
 using downspout::ground::kParamFormBars;
 using downspout::ground::kParamMotion;
+using downspout::ground::kParamNoteLength;
+using downspout::ground::kParamNoteLengthVariation;
 using downspout::ground::kParamPhraseBars;
 using downspout::ground::kParamRegister;
 using downspout::ground::kParamRegisterArc;
@@ -341,6 +343,20 @@ protected:
             parameter.ranges.max = 100.0f;
             parameter.ranges.def = 0.0f;
             break;
+        case kParamNoteLength:
+            parameter.name = "Note Length";
+            parameter.symbol = "note_length";
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.35f;
+            break;
+        case kParamNoteLengthVariation:
+            parameter.name = "Note Length Variation";
+            parameter.symbol = "note_length_variation";
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.35f;
+            break;
         case kParamActionNewForm:
             parameter.name = "New Form";
             parameter.symbol = "new_form";
@@ -426,6 +442,8 @@ protected:
         case kParamRegister: return static_cast<float>(controls_.reg);
         case kParamRegisterArc: return controls_.registerArc;
         case kParamSequence: return controls_.sequence;
+        case kParamNoteLength: return controls_.noteLength;
+        case kParamNoteLengthVariation: return controls_.noteLengthVariation;
         case kParamSeed: return static_cast<float>(controls_.seed);
         case kParamVary: return controls_.vary * 100.0f;
         case kParamActionNewForm:
@@ -458,6 +476,8 @@ protected:
         case kParamRegister: controls_.reg = static_cast<int>(value); break;
         case kParamRegisterArc: controls_.registerArc = value; break;
         case kParamSequence: controls_.sequence = value; break;
+        case kParamNoteLength: controls_.noteLength = value; break;
+        case kParamNoteLengthVariation: controls_.noteLengthVariation = value; break;
         case kParamSeed: controls_.seed = static_cast<uint32_t>(value); break;
         case kParamVary: controls_.vary = value / 100.0f; break;
         case kParamActionNewForm: if (value > 0.5f) ++controls_.actionNewForm; break;

@@ -26,6 +26,8 @@ enum ParameterIndex : std::uint32_t {
     kParamStatusPhrase,
     kParamStatusRole,
     kParamColor,
+    kParamNoteLength,
+    kParamNoteLengthVariation,
     kParameterCount
 };
 

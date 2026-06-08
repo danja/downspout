@@ -647,7 +647,8 @@ void buildBarOnsets(std::array<bool, kMaxPhraseGridSteps>& onset,
         break;
     case PhraseRoleId::cadence:
         if ((localStep + 4) >= phraseSteps) {
-            return available;
+            desired = std::max(desired, available);
+            break;
         }
         desired = std::max(desired, 6);
         break;
@@ -658,8 +659,22 @@ void buildBarOnsets(std::array<bool, kMaxPhraseGridSteps>& onset,
         break;
     }
 
-    desired += rng.nextInt(0, std::max(0, desired / 2));
-    return clampi(desired, 1, available);
+    const float length = clampf(controls.noteLength, 0.0f, 1.0f);
+    const float variation = clampf(controls.noteLengthVariation, 0.0f, 1.0f);
+    const int lengthCap = clampi(static_cast<int>(std::floor(1.0f + length * static_cast<float>(available - 1))),
+                                 1,
+                                 available);
+    const int center = clampi(desired, 1, lengthCap);
+    if (variation <= 0.0001f || lengthCap <= 1) {
+        return center;
+    }
+
+    const int spread = clampi(static_cast<int>(std::lround(static_cast<float>(lengthCap - 1) * variation)),
+                              0,
+                              lengthCap - 1);
+    const int low = std::max(1, center - spread);
+    const int high = std::min(lengthCap, center + spread);
+    return rng.nextInt(low, high);
 }
 
 [[nodiscard]] float legatoAmountForPhrase(const Controls& controls, const PhrasePlan& plan)
@@ -720,7 +735,9 @@ void applyLegatoShaping(PhraseEventList& list, const Controls& controls, const P
         return;
     }
 
-    const float legato = legatoAmountForPhrase(controls, plan);
+    const float length = clampf(controls.noteLength, 0.0f, 1.0f);
+    const float variation = clampf(controls.noteLengthVariation, 0.0f, 1.0f);
+    const float legato = legatoAmountForPhrase(controls, plan) * (0.25f + length * 0.75f);
     const int phraseEnd = plan.startStep + plan.stepCount;
 
     for (int index = 0; index < list.count; ++index) {
@@ -736,15 +753,18 @@ void applyLegatoShaping(PhraseEventList& list, const Controls& controls, const P
         } else if (legato >= 0.82f) {
             tailGap = 0;
         } else if (legato >= 0.60f) {
-            tailGap = rng.nextFloat() < 0.65f ? 0 : 1;
+            tailGap = rng.nextFloat() < (0.65f * variation) ? 0 : 1;
         } else if (legato >= 0.42f) {
             tailGap = 1;
         } else {
-            tailGap = 1 + (rng.nextFloat() < 0.35f ? 1 : 0);
+            tailGap = 1 + (rng.nextFloat() < (0.35f * variation) ? 1 : 0);
         }
 
+        const int lengthCap = clampi(static_cast<int>(std::floor(1.0f + length * static_cast<float>(maxDuration - 1))),
+                                     1,
+                                     maxDuration);
         const int stretched = clampi(maxDuration - tailGap, 1, maxDuration);
-        event.durationSteps = std::max(event.durationSteps, stretched);
+        event.durationSteps = std::max(event.durationSteps, std::min(stretched, lengthCap));
     }
 }
 
@@ -1042,6 +1062,8 @@ Controls clampControls(const Controls& raw)
     controls.reg = clampi(controls.reg, 0, 3);
     controls.registerArc = clampf(controls.registerArc, 0.0f, 1.0f);
     controls.sequence = clampf(controls.sequence, 0.0f, 1.0f);
+    controls.noteLength = clampf(controls.noteLength, 0.0f, 1.0f);
+    controls.noteLengthVariation = clampf(controls.noteLengthVariation, 0.0f, 1.0f);
     controls.vary = clampf(controls.vary, 0.0f, 1.0f);
     controls.seed = controls.seed == 0 ? 1u : controls.seed;
     controls.actionNewForm = clampi(controls.actionNewForm, 0, 1048576);
@@ -1117,6 +1139,8 @@ bool structureControlsMatch(const Controls& a, const Controls& b)
            a.reg == b.reg &&
            std::fabs(a.registerArc - b.registerArc) < 0.0001f &&
            std::fabs(a.sequence - b.sequence) < 0.0001f &&
+           std::fabs(a.noteLength - b.noteLength) < 0.0001f &&
+           std::fabs(a.noteLengthVariation - b.noteLengthVariation) < 0.0001f &&
            a.seed == b.seed;
 }
 

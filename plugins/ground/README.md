@@ -47,6 +47,10 @@ ties than the first `ground` build.
   High `Sequence` with high `Cadence` enters a Fugue-friendly long-form region:
   Ground plans subject, dominant-answer, pedal, and cadence phrases while
   keeping the same visible controls.
+- `Note Length`
+  Caps generated note holds as a fraction of the space before the next onset.
+- `Note Length Variation`
+  Controls how much generated holds vary around the current style and role.
 - `Seed`
   Deterministic random seed.
 - `Vary`

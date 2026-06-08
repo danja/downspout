@@ -68,6 +68,8 @@ std::string serializeControls(const Controls& rawControls)
            "reg=" + std::to_string(controls.reg) + "\n"
            "register_arc=" + std::to_string(controls.registerArc) + "\n"
            "sequence=" + std::to_string(controls.sequence) + "\n"
+           "note_length=" + std::to_string(controls.noteLength) + "\n"
+           "note_length_variation=" + std::to_string(controls.noteLengthVariation) + "\n"
            "vary=" + std::to_string(controls.vary) + "\n"
            "seed=" + std::to_string(controls.seed) + "\n"
            "action_new_form=" + std::to_string(controls.actionNewForm) + "\n"
@@ -178,6 +180,10 @@ std::optional<Controls> deserializeControls(const std::string& text)
             controls.registerArc = floatValue;
         } else if (key == "sequence" && parseFloat(value, floatValue)) {
             controls.sequence = floatValue;
+        } else if (key == "note_length" && parseFloat(value, floatValue)) {
+            controls.noteLength = floatValue;
+        } else if (key == "note_length_variation" && parseFloat(value, floatValue)) {
+            controls.noteLengthVariation = floatValue;
         } else if (key == "vary" && parseFloat(value, floatValue)) {
             controls.vary = floatValue;
         } else if (key == "seed" && parseInteger(value, uintValue)) {

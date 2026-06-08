@@ -55,8 +55,9 @@ The phrase planner now does two extra passes beyond raw onset generation:
 - it adds role/style-dependent syncopated pickups and off-beat placements so
   later bars in a phrase do not feel locked to only square quarter/half-beat
   starts;
-- it stretches note durations toward the next onset, then merges contiguous
-  repeated notes, so the line reads more legato instead of pecking every event.
+- it shapes note durations from style, role, `Note Length`, and `Note Length
+  Variation`, then merges contiguous repeated notes, so the line can move
+  between tighter gates and longer legato holds.
 
 ## UI status pattern
 
