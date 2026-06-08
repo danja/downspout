@@ -45,16 +45,16 @@ struct ControlDef {
 struct SectionDef {
     const char* title;
     Color color;
-    std::array<ControlDef, 5> controls;
+    std::array<ControlDef, 6> controls;
     std::size_t count;
 };
 
 constexpr std::array<SectionDef, 5> kSections = {{
-    {"Voice", {112, 177, 139}, {{{0, "Model"}, {1, "Wave"}, {2, "Sub"}, {3, "Body"}, {4, "Bite"}}}, 5},
-    {"Phrase", {215, 163, 78}, {{{5, "Mute"}, {6, "Glide"}, {7, "Accent"}, {16, "Punch"}, {0, ""}}}, 4},
-    {"Filter", {105, 158, 218}, {{{8, "Cutoff"}, {9, "Res"}, {10, "Env"}, {11, "Track"}, {0, ""}}}, 4},
-    {"Envelope", {176, 132, 214}, {{{12, "Attack"}, {13, "Decay"}, {14, "Sustain"}, {15, "Release"}, {0, ""}}}, 4},
-    {"Drive", {214, 112, 92}, {{{17, "Type"}, {18, "Drive"}, {19, "Output"}, {0, ""}, {0, ""}}}, 3},
+    {"Voice", {112, 177, 139}, {{{0, "Model"}, {1, "Wave"}, {2, "Sub"}, {3, "Body"}, {4, "Bite"}, {0, ""}}}, 5},
+    {"Phrase", {215, 163, 78}, {{{5, "Mute"}, {6, "Glide"}, {7, "Accent"}, {16, "Punch"}, {0, ""}, {0, ""}}}, 4},
+    {"Filter", {105, 158, 218}, {{{8, "Cutoff"}, {9, "Res"}, {10, "Env"}, {11, "Track"}, {20, "LFO Frequency"}, {21, "Mod Depth"}}}, 6},
+    {"Envelope", {176, 132, 214}, {{{12, "Attack"}, {13, "Decay"}, {14, "Sustain"}, {15, "Release"}, {0, ""}, {0, ""}}}, 4},
+    {"Drive", {214, 112, 92}, {{{17, "Type"}, {18, "Drive"}, {19, "Output"}, {0, ""}, {0, ""}, {0, ""}}}, 3},
 }};
 
 float clampf(const float value, const float minimum, const float maximum)
@@ -109,6 +109,10 @@ std::string formatValue(const std::uint32_t parameter, const float value)
     else if (parameter == static_cast<std::uint32_t>(ParamId::output))
     {
         std::snprintf(buffer, sizeof(buffer), "%.1fx", clampf(value, 0.0f, 1.0f) * 2.0f);
+    }
+    else if (parameter == static_cast<std::uint32_t>(ParamId::lfoFrequency))
+    {
+        std::snprintf(buffer, sizeof(buffer), "%.2f Hz", value);
     }
     else
     {
@@ -310,8 +314,8 @@ private:
         text(rect.x + 14.0f, rect.y + 33.0f, section.title, nullptr);
 
         const float startY = rect.y + 78.0f;
-        const float rowH = 46.0f;
-        const float rowGap = 20.0f;
+        const float rowH = 42.0f;
+        const float rowGap = 14.0f;
         for (std::size_t i = 0; i < section.count; ++i)
         {
             const Rect control {rect.x + 14.0f, startY + static_cast<float>(i) * (rowH + rowGap), rect.w - 28.0f, rowH};

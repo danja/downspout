@@ -25,5 +25,6 @@ ctest --test-dir ../../build --output-on-failure -R basilico
 ## Implementation
 
 The portable core handles MIDI note priority, note-off release, glide, velocity
-accent, model-specific filter/drive behavior, and bounded output. The DPF layer
-is intentionally thin and exposes one MIDI input with stereo audio output.
+accent, model-specific filter/drive behavior, sine-LFO filter cutoff
+modulation, and bounded output. The DPF layer is intentionally thin and exposes
+one MIDI input with stereo audio output.

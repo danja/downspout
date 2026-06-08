@@ -238,6 +238,45 @@ void outputCanBoost()
     require(boostedPeak > nominalPeak * 1.25f, "basilico output should boost above midpoint");
 }
 
+void filterLfoChangesTone()
+{
+    BasilicoEngine steady {48000.0f};
+    steady.setParameter(ParamId::model, 3.0f);
+    steady.setParameter(ParamId::waveform, 2.0f);
+    steady.setParameter(ParamId::cutoff, 0.36f);
+    steady.setParameter(ParamId::resonance, 0.65f);
+    steady.setParameter(ParamId::filterEnv, 0.0f);
+    steady.setParameter(ParamId::lfoFrequency, 4.0f);
+    steady.setParameter(ParamId::lfoDepth, 0.0f);
+    steady.noteOn(36, 110);
+
+    BasilicoEngine moving {48000.0f};
+    moving.setParameter(ParamId::model, 3.0f);
+    moving.setParameter(ParamId::waveform, 2.0f);
+    moving.setParameter(ParamId::cutoff, 0.36f);
+    moving.setParameter(ParamId::resonance, 0.65f);
+    moving.setParameter(ParamId::filterEnv, 0.0f);
+    moving.setParameter(ParamId::lfoFrequency, 4.0f);
+    moving.setParameter(ParamId::lfoDepth, 0.80f);
+    moving.noteOn(36, 110);
+
+    float difference = 0.0f;
+    float reference = 0.0f;
+    for (int i = 0; i < 48000; ++i)
+    {
+        const auto a = steady.processStereo();
+        const auto b = moving.processStereo();
+        require(std::isfinite(a.left) && std::isfinite(b.left), "basilico LFO rendered non-finite audio");
+        if (i >= 2048)
+        {
+            difference += std::fabs(a.left - b.left);
+            reference += std::fabs(a.left);
+        }
+    }
+
+    require(difference > reference * 0.08f, "basilico filter LFO should audibly modulate cutoff");
+}
+
 void extremeParametersStayFinite()
 {
     BasilicoEngine engine {96000.0f};
@@ -260,6 +299,7 @@ int main()
     bodyChangesTone();
     velocityAccentChangesOutput();
     outputCanBoost();
+    filterLfoChangesTone();
     extremeParametersStayFinite();
 
     std::cout << "basilico core tests passed\n";

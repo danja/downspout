@@ -27,9 +27,11 @@ enum class ParamId : std::uint32_t {
     driveType,
     drive,
     output,
+    lfoFrequency,
+    lfoDepth,
 };
 
-inline constexpr std::size_t kParameterCount = 20;
+inline constexpr std::size_t kParameterCount = 22;
 
 struct ParamSpec {
     const char* symbol;
@@ -61,6 +63,8 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"drive_type", "Drive Type", 0.0f, 3.0f, 1.0f, true},
     {"drive", "Drive", 0.0f, 1.0f, 0.25f, false},
     {"output", "Output", 0.0f, 1.0f, 0.70f, false},
+    {"lfo_frequency", "LFO Frequency", 0.05f, 20.0f, 0.50f, false},
+    {"lfo_depth", "Mod Depth", 0.0f, 1.0f, 0.0f, false},
 }};
 
 inline constexpr std::array<const char*, 5> kModelNames = {{

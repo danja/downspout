@@ -325,6 +325,7 @@ public:
         currentFrequency_ = 55.0f;
         phase_ = 0.0f;
         subPhase_ = 0.0f;
+        lfoPhase_ = 0.0f;
         punch_ = 0.0f;
         active_ = false;
         velocity_ = 0.0f;
@@ -466,7 +467,10 @@ public:
                              body * bodyAmount * 1.65f +
                              transient;
 
-        const float cutoff = cutoffHz(profile, filterEnv);
+        const float lfo = std::sin(lfoPhase_ * kTwoPi);
+        advanceLfo();
+
+        const float cutoff = cutoffHz(profile, filterEnv, lfo);
         const float filtered = filter_.process(sanitizeAudio(source), cutoff, resonance(profile), sampleRate_);
         const float driven = applyDrive(filtered, driveType, profile);
         const float out = sanitizeAudio(dcBlock(sanitizeAudio(driven * amp * (0.35f + velocity_ * 0.65f) *
@@ -569,14 +573,24 @@ private:
         return sanitizeAudio(click + finger);
     }
 
-    float cutoffHz(const ModelProfile& profile, const float env) const
+    void advanceLfo()
+    {
+        const float frequency = params_.values[static_cast<std::size_t>(ParamId::lfoFrequency)];
+        lfoPhase_ += std::clamp(frequency, 0.05f, 20.0f) / sampleRate_;
+        if (lfoPhase_ >= 1.0f)
+            lfoPhase_ -= std::floor(lfoPhase_);
+    }
+
+    float cutoffHz(const ModelProfile& profile, const float env, const float lfo) const
     {
         const float cutoffParam = params_.values[static_cast<std::size_t>(ParamId::cutoff)];
         const float envAmount = params_.values[static_cast<std::size_t>(ParamId::filterEnv)] * profile.envScale;
         const float keyTrack = params_.values[static_cast<std::size_t>(ParamId::keyTrack)];
         const float accent = params_.values[static_cast<std::size_t>(ParamId::accent)] * velocity_;
+        const float lfoDepth = params_.values[static_cast<std::size_t>(ParamId::lfoDepth)];
         const float normalized = std::clamp(profile.cutoffBias + (cutoffParam - 0.5f) * 0.85f +
-                                                env * envAmount * 0.65f + accent * 0.22f,
+                                                env * envAmount * 0.65f + accent * 0.22f +
+                                                lfo * lfoDepth * 0.42f,
                                             0.0f,
                                             1.0f);
         const float base = expMap(normalized, 55.0f, 9000.0f);
@@ -638,6 +652,7 @@ private:
     float currentFrequency_ = 55.0f;
     float phase_ = 0.0f;
     float subPhase_ = 0.0f;
+    float lfoPhase_ = 0.0f;
     float punch_ = 0.0f;
     float velocity_ = 0.0f;
     float dcX_ = 0.0f;
