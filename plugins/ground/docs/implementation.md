@@ -17,7 +17,7 @@ Main pieces:
 - `ground_core_types.hpp`
   Shared control, form, phrase, event, variation, and transport types.
 - `ground_pattern.cpp`
-  Form planning and phrase/cell regeneration.
+  Form planning, 12-bar blues templates, and phrase/cell regeneration.
 - `ground_variation.cpp`
   Mutation cadence for completed form loops.
 - `ground_engine.cpp`
@@ -47,6 +47,14 @@ Depending on amount, completed form loops can:
 
 That keeps the plugin changing on a higher structural timescale than
 `bassgen`.
+
+## Form shapes
+
+`Form Shape` is a structural control. `Free` preserves the generic planner.
+The 12-bar blues shapes force a 12-bar form with one-bar phrases so each bar can
+carry explicit root movement. Standard and quick-change blues use I/IV/V
+turnaround templates; minor and jazz-blues variants keep the same timing model
+but use their own bar-root plans.
 
 ## Phrase feel
 

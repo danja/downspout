@@ -90,9 +90,16 @@ struct UpdateDecision {
 
 [[nodiscard]] int phraseIndexForLocalStep(const FormState& form, const double localStep)
 {
-    const int stepsPerPhrase = std::max(1, form.phraseBars * form.stepsPerBar);
-    const int phraseIndex = static_cast<int>(std::floor(localStep + 1e-9)) / stepsPerPhrase;
-    return clampi(phraseIndex, 0, std::max(0, form.phraseCount - 1));
+    const int step = clampi(static_cast<int>(std::floor(localStep + 1e-9)), 0, std::max(0, form.patternSteps - 1));
+    for (int phraseIndex = 0; phraseIndex < form.phraseCount; ++phraseIndex) {
+        const PhrasePlan& phrase = form.phrases[static_cast<std::size_t>(phraseIndex)];
+        const int start = phrase.startStep;
+        const int end = phrase.startStep + phrase.stepCount;
+        if (step >= start && step < end) {
+            return phraseIndex;
+        }
+    }
+    return clampi(form.phraseCount - 1, 0, std::max(0, form.phraseCount - 1));
 }
 
 [[nodiscard]] ::downspout::Meter targetMeterForTransport(const EngineState& state, const TransportSnapshot& transport)

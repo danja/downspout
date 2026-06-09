@@ -282,12 +282,66 @@ void testFugalFormPlansSubjectAnswerPedalCadence()
     assert(firstPhraseNote(form, 1) == controls.rootNote + 7);
 }
 
+void testTwelveBarBluesFormShapes()
+{
+    Controls standard;
+    standard.rootNote = 36;
+    standard.scale = ScaleId::mixolydian;
+    standard.style = StyleId::jazz;
+    standard.formShape = FormShapeId::blues12;
+    standard.formBars = 32;
+    standard.phraseBars = 8;
+    standard.seed = 5150u;
+
+    FormState form;
+    regenerateForm(form, standard, ::downspout::Meter {});
+
+    assert(form.formBars == 12);
+    assert(form.phraseBars == 1);
+    assert(form.phraseCount == 12);
+    for (int i = 0; i < 12; ++i) {
+        assert(form.phrases[static_cast<std::size_t>(i)].startBar == i);
+        assert(form.phrases[static_cast<std::size_t>(i)].bars == 1);
+    }
+
+    const int rootI = 0;
+    const int rootIV = 3;
+    const int rootV = 4;
+    const int expectedStandard[] = {
+        rootI, rootI, rootI, rootI,
+        rootIV, rootIV, rootI, rootI,
+        rootV, rootIV, rootI, rootV
+    };
+    for (int i = 0; i < 12; ++i) {
+        assert(form.phrases[static_cast<std::size_t>(i)].rootDegree == expectedStandard[i]);
+    }
+    assert(form.phrases[8].role == PhraseRoleId::climb);
+    assert(form.phrases[10].role == PhraseRoleId::cadence);
+
+    Controls quick = standard;
+    quick.formShape = FormShapeId::blues12QuickChange;
+    FormState quickForm;
+    regenerateForm(quickForm, quick, ::downspout::Meter {});
+    assert(quickForm.formBars == 12);
+    assert(quickForm.phrases[1].rootDegree == rootIV);
+
+    Controls jazz = standard;
+    jazz.scale = ScaleId::blues;
+    jazz.formShape = FormShapeId::blues12Jazz;
+    FormState jazzForm;
+    regenerateForm(jazzForm, jazz, ::downspout::Meter {});
+    assert(jazzForm.formBars == 12);
+    assert(jazzForm.phrases[5].rootDegree == 3);
+    assert(jazzForm.phrases[9].role == PhraseRoleId::cadence);
+}
+
 void testBassRegisterStaysInLane()
 {
     Controls controls;
     controls.rootNote = 36;
     controls.scale = ScaleId::mixolydian;
     controls.style = StyleId::climb;
+    controls.formShape = FormShapeId::blues12QuickChange;
     controls.formBars = 32;
     controls.phraseBars = 4;
     controls.density = 0.80f;
@@ -386,6 +440,7 @@ void testAiStateSummaryIncludesCurrentPhraseContext()
     regenerateForm(form, controls, ::downspout::Meter {});
 
     const std::string summary = summarizeGroundAiState(controls, form, 1);
+    assert(summary.find("\"form_shape\":\"free\"") != std::string::npos);
     assert(summary.find("\"plugin\":\"ground\"") != std::string::npos);
     assert(summary.find("\"key\":2") != std::string::npos);
     assert(summary.find("\"scale\":\"dorian\"") != std::string::npos);
@@ -460,6 +515,7 @@ void testSerializationRoundTrip()
     controls.rootNote = 41;
     controls.scale = ScaleId::mixolydian;
     controls.style = StyleId::march;
+    controls.formShape = FormShapeId::blues12Minor;
     controls.formBars = 32;
     controls.phraseBars = 8;
     controls.color = 0.72f;
@@ -487,6 +543,7 @@ void testSerializationRoundTrip()
     assert(controlsRoundTrip->rootNote == controls.rootNote);
     assert(controlsRoundTrip->scale == controls.scale);
     assert(controlsRoundTrip->style == controls.style);
+    assert(controlsRoundTrip->formShape == controls.formShape);
     assert(controlsRoundTrip->color > 0.71f && controlsRoundTrip->color < 0.73f);
     assert(controlsRoundTrip->noteLength > 0.60f && controlsRoundTrip->noteLength < 0.62f);
     assert(controlsRoundTrip->noteLengthVariation > 0.26f && controlsRoundTrip->noteLengthVariation < 0.28f);
@@ -522,6 +579,7 @@ int main()
     testGroundedPhraseGetsSyncopationAndLegato();
     testNoteLengthControlsDurations();
     testFugalFormPlansSubjectAnswerPedalCadence();
+    testTwelveBarBluesFormShapes();
     testBassRegisterStaysInLane();
     testDubAndJazzStylesAreExplicit();
     testAiStateSummaryIncludesCurrentPhraseContext();

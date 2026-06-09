@@ -14,14 +14,15 @@ only produce a local pattern.
 The plugin works on three scales at once:
 
 1. `Form`
-   The whole 8, 16, 32, or 64-bar span.
+   The whole 8, 12, 16, 32, or 64-bar span.
 2. `Phrase`
    The repeated structural chunk inside that form.
 3. `Cell`
    The local note pattern inside a phrase.
 
-That separation matters. The form layer decides where the lift, release, and
-cadence happen. The cell layer only supplies note motion inside that plan.
+That separation matters. The form layer decides where the lift, release,
+cadence, and selected structural templates happen. The cell layer only supplies
+note motion inside that plan.
 
 ## Phrase roles
 
@@ -42,6 +43,11 @@ The Style control shapes the local cell rhythm inside those roles. Dub favors
 sparse low notes, longer holds, and late pickups. Jazz favors walking-bass
 quarter motion with extra approach tones, while the phrase planner still owns
 the larger statement, answer, climb, pedal, cadence, and release arc.
+
+`Form Shape` is separate from Style. `Free` uses the generic phrase arc. The
+12-bar blues shapes force a one-bar phrase grid and assign the bar-level
+I/IV/V movement for standard, quick-change, minor, and jazz-blues structures,
+while Style still controls how each bar is voiced rhythmically.
 
 ## Bass register guard
 

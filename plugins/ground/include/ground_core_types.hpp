@@ -62,10 +62,20 @@ enum class PhraseRoleId : std::int32_t {
     count
 };
 
+enum class FormShapeId : std::int32_t {
+    free = 0,
+    blues12,
+    blues12QuickChange,
+    blues12Minor,
+    blues12Jazz,
+    count
+};
+
 struct Controls {
     int rootNote = 36;
     ScaleId scale = ScaleId::minor;
     StyleId style = StyleId::grounded;
+    FormShapeId formShape = FormShapeId::free;
     int channel = 1;
     int formBars = 16;
     int phraseBars = 4;

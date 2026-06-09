@@ -68,6 +68,19 @@ const char* styleName(const StyleId style) noexcept
     return "grounded";
 }
 
+const char* formShapeName(const FormShapeId shape) noexcept
+{
+    switch (shape) {
+    case FormShapeId::free: return "free";
+    case FormShapeId::blues12: return "12_bar_blues";
+    case FormShapeId::blues12QuickChange: return "12_bar_blues_quick_change";
+    case FormShapeId::blues12Minor: return "12_bar_minor_blues";
+    case FormShapeId::blues12Jazz: return "12_bar_jazz_blues";
+    case FormShapeId::count: break;
+    }
+    return "free";
+}
+
 const char* phraseRoleName(const PhraseRoleId role) noexcept
 {
     switch (role) {
@@ -108,6 +121,9 @@ std::string summarizeGroundAiState(const Controls& rawControls,
     out << ',';
     out << "\"style\":";
     appendQuoted(out, styleName(controls.style));
+    out << ',';
+    out << "\"form_shape\":";
+    appendQuoted(out, formShapeName(controls.formShape));
     out << ',';
     out << "\"form_bars\":" << controls.formBars << ',';
     out << "\"phrase_bars\":" << controls.phraseBars << ',';

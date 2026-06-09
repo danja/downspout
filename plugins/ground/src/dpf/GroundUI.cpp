@@ -22,6 +22,7 @@ using downspout::ground::kParamChannel;
 using downspout::ground::kParamColor;
 using downspout::ground::kParamDensity;
 using downspout::ground::kParamFormBars;
+using downspout::ground::kParamFormShape;
 using downspout::ground::kParamMotion;
 using downspout::ground::kParamNoteLength;
 using downspout::ground::kParamNoteLengthVariation;
@@ -97,20 +98,24 @@ constexpr const char* kStyleNames[] = {
     "Grounded", "Ostinato", "March", "Pulse", "Drone", "Climb", "Dub", "Jazz"
 };
 
+constexpr const char* kFormShapeNames[] = {
+    "Free", "12 Blues", "12 Blues Quick", "12 Minor Blues", "12 Jazz Blues"
+};
+
 constexpr const char* kFormNames[] = {
-    "8", "16", "32", "64"
+    "8", "12", "16", "32", "64"
 };
 
 constexpr float kFormValues[] = {
-    8.0f, 16.0f, 32.0f, 64.0f
+    8.0f, 12.0f, 16.0f, 32.0f, 64.0f
 };
 
 constexpr const char* kPhraseNames[] = {
-    "2", "4", "8"
+    "1", "2", "3", "4", "6", "8", "12"
 };
 
 constexpr float kPhraseValues[] = {
-    2.0f, 4.0f, 8.0f
+    1.0f, 2.0f, 3.0f, 4.0f, 6.0f, 8.0f, 12.0f
 };
 
 constexpr const char* kRegisterNames[] = {
@@ -142,8 +147,9 @@ constexpr std::array<float, 16> kChannelValues = {
 constexpr SelectorDef kSelectors[] = {
     {kParamScale, "Scale", kScaleNames, 20, nullptr},
     {kParamStyle, "Style", kStyleNames, static_cast<int>(std::size(kStyleNames)), nullptr},
-    {kParamFormBars, "Form", kFormNames, 4, kFormValues},
-    {kParamPhraseBars, "Phrase", kPhraseNames, 3, kPhraseValues},
+    {kParamFormShape, "Shape", kFormShapeNames, static_cast<int>(std::size(kFormShapeNames)), nullptr},
+    {kParamFormBars, "Form", kFormNames, static_cast<int>(std::size(kFormNames)), kFormValues},
+    {kParamPhraseBars, "Phrase", kPhraseNames, static_cast<int>(std::size(kPhraseNames)), kPhraseValues},
     {kParamRegister, "Register", kRegisterNames, 4, kRegisterValues},
     {kParamChannel, "Channel", kChannelNames.data(), 16, kChannelValues.data()},
 };
@@ -261,6 +267,19 @@ constexpr ButtonDef kButtons[] = {
     return (phraseIndex % 2) == 0 ? 0 : 1;
 }
 
+[[nodiscard]] bool bluesShape(const int shape)
+{
+    return shape >= 1 && shape <= 4;
+}
+
+[[nodiscard]] int predictedBluesRoleForPhrase(const int shape, const int phraseIndex)
+{
+    static constexpr int kStandard[] = {0, 1, 0, 1, 2, 1, 0, 4, 2, 1, 5, 5};
+    static constexpr int kJazz[] = {0, 1, 0, 1, 2, 2, 0, 1, 2, 5, 5, 5};
+    const int index = clampi(phraseIndex, 0, 11);
+    return shape == 4 ? kJazz[index] : kStandard[index];
+}
+
 struct RoleColor {
     int r;
     int g;
@@ -293,6 +312,7 @@ public:
         values_[kParamRootNote] = 36.0f;
         values_[kParamScale] = 0.0f;
         values_[kParamStyle] = 0.0f;
+        values_[kParamFormShape] = 0.0f;
         values_[kParamChannel] = 1.0f;
         values_[kParamFormBars] = 16.0f;
         values_[kParamPhraseBars] = 4.0f;
@@ -522,8 +542,9 @@ private:
         fill();
         closePath();
 
-        const int formBars = clampi(static_cast<int>(std::lround(values_[kParamFormBars])), 8, 64);
-        const int phraseBars = std::max(1, clampi(static_cast<int>(std::lround(values_[kParamPhraseBars])), 2, 8));
+        const int formShape = clampi(static_cast<int>(std::lround(values_[kParamFormShape])), 0, 4);
+        const int formBars = bluesShape(formShape) ? 12 : clampi(static_cast<int>(std::lround(values_[kParamFormBars])), 8, 64);
+        const int phraseBars = bluesShape(formShape) ? 1 : std::max(1, clampi(static_cast<int>(std::lround(values_[kParamPhraseBars])), 1, 12));
         const int phraseCount = std::max(1, formBars / phraseBars);
         const float tension = values_[kParamTension];
         const float cadence = values_[kParamCadence];
@@ -541,7 +562,9 @@ private:
 
         for (int phraseIndex = 0; phraseIndex < phraseCount; ++phraseIndex) {
             const float cellX = laneX + static_cast<float>(phraseIndex) * (cellW + cellGap);
-            const int role = predictedRoleForPhrase(phraseIndex, phraseCount, tension, cadence, sequence);
+            const int role = bluesShape(formShape)
+                ? predictedBluesRoleForPhrase(formShape, phraseIndex)
+                : predictedRoleForPhrase(phraseIndex, phraseCount, tension, cadence, sequence);
             const RoleColor color = colorForRole(role);
             const bool active = phraseIndex == currentPhrase;
 
@@ -566,7 +589,7 @@ private:
 
             fontSize(11.0f);
             fillColor(168, 181, 194, 255);
-            const std::string bottomLabel = std::to_string(phraseBars) + " bars";
+            const std::string bottomLabel = std::to_string(phraseBars) + (phraseBars == 1 ? " bar" : " bars");
             text(cellX + 10.0f, laneY + 49.0f, bottomLabel.c_str(), nullptr);
         }
 
@@ -685,15 +708,17 @@ private:
             drawSelector(static_cast<int>(i), kSelectors[i], selectorRects_[i], values_[kSelectors[i].index]);
         }
 
-        float cy = selectorTop + 3.0f * selectorH + 2.0f * selectorGap + 20.0f;
+        const int selectorRows = static_cast<int>((std::size(kSelectors) + 1u) / 2u);
+        float cy = selectorTop + static_cast<float>(selectorRows) * selectorH +
+                   static_cast<float>(selectorRows - 1) * selectorGap + 20.0f;
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fillColor(226, 230, 234, 255);
         text(x + 20.0f, cy + 2.0f, "Actions", nullptr);
-        cy += 30.0f;
+        cy += 26.0f;
 
         const float buttonGap = 10.0f;
-        const float buttonH = 40.0f;
+        const float buttonH = 34.0f;
         const float buttonW = (innerW - buttonGap * static_cast<float>(std::size(kButtons) - 1)) / static_cast<float>(std::size(kButtons));
         for (std::size_t i = 0; i < std::size(kButtons); ++i) {
             buttonRects_[i] = {innerX + static_cast<float>(i) * (buttonW + buttonGap), cy, buttonW, buttonH};

@@ -57,6 +57,7 @@ std::string serializeControls(const Controls& rawControls)
            "root_note=" + std::to_string(controls.rootNote) + "\n"
            "scale=" + std::to_string(static_cast<int>(controls.scale)) + "\n"
            "style=" + std::to_string(static_cast<int>(controls.style)) + "\n"
+           "form_shape=" + std::to_string(static_cast<int>(controls.formShape)) + "\n"
            "channel=" + std::to_string(controls.channel) + "\n"
            "form_bars=" + std::to_string(controls.formBars) + "\n"
            "phrase_bars=" + std::to_string(controls.phraseBars) + "\n"
@@ -158,6 +159,8 @@ std::optional<Controls> deserializeControls(const std::string& text)
             controls.scale = static_cast<ScaleId>(intValue);
         } else if (key == "style" && parseInteger(value, intValue)) {
             controls.style = static_cast<StyleId>(intValue);
+        } else if (key == "form_shape" && parseInteger(value, intValue)) {
+            controls.formShape = static_cast<FormShapeId>(intValue);
         } else if (key == "channel" && parseInteger(value, intValue)) {
             controls.channel = intValue;
         } else if (key == "form_bars" && parseInteger(value, intValue)) {

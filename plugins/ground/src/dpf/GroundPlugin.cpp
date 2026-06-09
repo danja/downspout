@@ -15,6 +15,7 @@ namespace {
 using downspout::ground::BlockResult;
 using downspout::ground::Controls;
 using downspout::ground::EngineState;
+using downspout::ground::FormShapeId;
 using downspout::ground::MidiEventType;
 using downspout::ground::PhraseRoleId;
 using downspout::ground::ScaleId;
@@ -30,6 +31,7 @@ using downspout::ground::kParamChannel;
 using downspout::ground::kParamColor;
 using downspout::ground::kParamDensity;
 using downspout::ground::kParamFormBars;
+using downspout::ground::kParamFormShape;
 using downspout::ground::kParamMotion;
 using downspout::ground::kParamNoteLength;
 using downspout::ground::kParamNoteLengthVariation;
@@ -84,17 +86,30 @@ ParameterEnumerationValue kStyleEnumValues[] = {
     {7.0f, "Jazz"},
 };
 
+ParameterEnumerationValue kFormShapeEnumValues[] = {
+    {0.0f, "Free"},
+    {1.0f, "12 Blues"},
+    {2.0f, "12 Blues Quick"},
+    {3.0f, "12 Minor Blues"},
+    {4.0f, "12 Jazz Blues"},
+};
+
 ParameterEnumerationValue kFormEnumValues[] = {
     {8.0f, "8"},
+    {12.0f, "12"},
     {16.0f, "16"},
     {32.0f, "32"},
     {64.0f, "64"},
 };
 
 ParameterEnumerationValue kPhraseEnumValues[] = {
+    {1.0f, "1"},
     {2.0f, "2"},
+    {3.0f, "3"},
     {4.0f, "4"},
+    {6.0f, "6"},
     {8.0f, "8"},
+    {12.0f, "12"},
 };
 
 ParameterEnumerationValue kRegisterEnumValues[] = {
@@ -243,6 +258,18 @@ protected:
             parameter.ranges.max = 16.0f;
             parameter.ranges.def = 1.0f;
             break;
+        case kParamFormShape:
+            parameter.name = "Form Shape";
+            parameter.symbol = "form_shape";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = static_cast<float>(static_cast<int>(FormShapeId::count) - 1);
+            parameter.ranges.def = 0.0f;
+            parameter.enumValues.count = static_cast<uint8_t>(std::size(kFormShapeEnumValues));
+            parameter.enumValues.restrictedMode = true;
+            parameter.enumValues.values = kFormShapeEnumValues;
+            parameter.enumValues.deleteLater = false;
+            break;
         case kParamFormBars:
             parameter.name = "Form Bars";
             parameter.symbol = "form_bars";
@@ -259,8 +286,8 @@ protected:
             parameter.name = "Phrase Bars";
             parameter.symbol = "phrase_bars";
             parameter.hints |= kParameterIsInteger;
-            parameter.ranges.min = 2.0f;
-            parameter.ranges.max = 8.0f;
+            parameter.ranges.min = 1.0f;
+            parameter.ranges.max = 12.0f;
             parameter.ranges.def = 4.0f;
             parameter.enumValues.count = static_cast<uint8_t>(std::size(kPhraseEnumValues));
             parameter.enumValues.restrictedMode = true;
@@ -431,6 +458,7 @@ protected:
         case kParamRootNote: return static_cast<float>(controls_.rootNote);
         case kParamScale: return static_cast<float>(static_cast<int>(controls_.scale));
         case kParamStyle: return static_cast<float>(static_cast<int>(controls_.style));
+        case kParamFormShape: return static_cast<float>(static_cast<int>(controls_.formShape));
         case kParamChannel: return static_cast<float>(controls_.channel);
         case kParamFormBars: return static_cast<float>(controls_.formBars);
         case kParamPhraseBars: return static_cast<float>(controls_.phraseBars);
@@ -465,6 +493,7 @@ protected:
         case kParamRootNote: controls_.rootNote = static_cast<int>(value); break;
         case kParamScale: controls_.scale = static_cast<ScaleId>(static_cast<int>(value)); break;
         case kParamStyle: controls_.style = static_cast<StyleId>(static_cast<int>(value)); break;
+        case kParamFormShape: controls_.formShape = static_cast<FormShapeId>(static_cast<int>(value)); break;
         case kParamChannel: controls_.channel = static_cast<int>(value); break;
         case kParamFormBars: controls_.formBars = static_cast<int>(value); break;
         case kParamPhraseBars: controls_.phraseBars = static_cast<int>(value); break;

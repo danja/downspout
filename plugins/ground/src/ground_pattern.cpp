@@ -100,6 +100,7 @@ static_assert((sizeof(kScales) / sizeof(kScales[0])) == static_cast<int>(ScaleId
            (static_cast<std::uint32_t>(generationSerial) * 2654435761u) ^
            (static_cast<std::uint32_t>(phraseIndex + 1) * 2246822519u) ^
            (static_cast<std::uint32_t>(std::lround(controls.color * 1000.0f)) * 3266489917u) ^
+           (static_cast<std::uint32_t>(controls.formShape) * 668265263u) ^
            salt;
 }
 
@@ -214,6 +215,14 @@ static_assert((sizeof(kScales) / sizeof(kScales[0])) == static_cast<int>(ScaleId
            controls.density >= 0.22f;
 }
 
+[[nodiscard]] bool bluesFormMode(const Controls& controls)
+{
+    return controls.formShape == FormShapeId::blues12 ||
+           controls.formShape == FormShapeId::blues12QuickChange ||
+           controls.formShape == FormShapeId::blues12Minor ||
+           controls.formShape == FormShapeId::blues12Jazz;
+}
+
 [[nodiscard]] PhraseRoleId fugalRoleForPhrase(const int phraseIndex, const int phraseCount)
 {
     if (phraseIndex <= 0) {
@@ -251,6 +260,119 @@ static_assert((sizeof(kScales) / sizeof(kScales[0])) == static_cast<int>(ScaleId
         return 4;
     }
     return 0;
+}
+
+[[nodiscard]] int degreeForSemitone(const Controls& controls, const int targetSemitone)
+{
+    const ScaleDef& scale = kScales[static_cast<int>(controls.scale)];
+    const int target = ((targetSemitone % 12) + 12) % 12;
+    int bestDegree = 0;
+    int bestDistance = std::numeric_limits<int>::max();
+
+    for (int octave = -1; octave <= 1; ++octave) {
+        for (int degree = 0; degree < scale.count; ++degree) {
+            const int degreeIndex = degree + octave * scale.count;
+            const int semitone = scale.intervals[degree] + octave * 12;
+            const int distance = std::abs(semitone - target);
+            if (distance < bestDistance ||
+                (distance == bestDistance && std::abs(degreeIndex) < std::abs(bestDegree))) {
+                bestDegree = degreeIndex;
+                bestDistance = distance;
+            }
+        }
+    }
+
+    return bestDegree;
+}
+
+struct BluesBarPlan {
+    int rootSemitone = 0;
+    PhraseRoleId role = PhraseRoleId::statement;
+};
+
+[[nodiscard]] BluesBarPlan bluesBarPlan(const FormShapeId shape, const int barIndex)
+{
+    static constexpr BluesBarPlan kStandard[] = {
+        {0, PhraseRoleId::statement},
+        {0, PhraseRoleId::answer},
+        {0, PhraseRoleId::statement},
+        {0, PhraseRoleId::answer},
+        {5, PhraseRoleId::climb},
+        {5, PhraseRoleId::answer},
+        {0, PhraseRoleId::statement},
+        {0, PhraseRoleId::breakdown},
+        {7, PhraseRoleId::climb},
+        {5, PhraseRoleId::answer},
+        {0, PhraseRoleId::cadence},
+        {7, PhraseRoleId::cadence},
+    };
+    static constexpr BluesBarPlan kQuickChange[] = {
+        {0, PhraseRoleId::statement},
+        {5, PhraseRoleId::answer},
+        {0, PhraseRoleId::statement},
+        {0, PhraseRoleId::answer},
+        {5, PhraseRoleId::climb},
+        {5, PhraseRoleId::answer},
+        {0, PhraseRoleId::statement},
+        {0, PhraseRoleId::breakdown},
+        {7, PhraseRoleId::climb},
+        {5, PhraseRoleId::answer},
+        {0, PhraseRoleId::cadence},
+        {7, PhraseRoleId::cadence},
+    };
+    static constexpr BluesBarPlan kMinor[] = {
+        {0, PhraseRoleId::statement},
+        {0, PhraseRoleId::answer},
+        {0, PhraseRoleId::statement},
+        {0, PhraseRoleId::answer},
+        {5, PhraseRoleId::climb},
+        {5, PhraseRoleId::answer},
+        {0, PhraseRoleId::statement},
+        {0, PhraseRoleId::breakdown},
+        {7, PhraseRoleId::climb},
+        {5, PhraseRoleId::answer},
+        {0, PhraseRoleId::cadence},
+        {7, PhraseRoleId::cadence},
+    };
+    static constexpr BluesBarPlan kJazz[] = {
+        {0, PhraseRoleId::statement},
+        {5, PhraseRoleId::answer},
+        {0, PhraseRoleId::statement},
+        {0, PhraseRoleId::answer},
+        {5, PhraseRoleId::climb},
+        {6, PhraseRoleId::climb},
+        {0, PhraseRoleId::statement},
+        {9, PhraseRoleId::answer},
+        {2, PhraseRoleId::climb},
+        {7, PhraseRoleId::cadence},
+        {0, PhraseRoleId::cadence},
+        {7, PhraseRoleId::cadence},
+    };
+
+    const int index = clampi(barIndex, 0, 11);
+    switch (shape) {
+    case FormShapeId::blues12QuickChange:
+        return kQuickChange[index];
+    case FormShapeId::blues12Minor:
+        return kMinor[index];
+    case FormShapeId::blues12Jazz:
+        return kJazz[index];
+    case FormShapeId::blues12:
+    case FormShapeId::free:
+    case FormShapeId::count:
+        break;
+    }
+    return kStandard[index];
+}
+
+void applyBluesPhrasePlan(PhrasePlan& phrase,
+                          const Controls& controls,
+                          const int phraseIndex,
+                          const int)
+{
+    const BluesBarPlan plan = bluesBarPlan(controls.formShape, phraseIndex);
+    phrase.role = plan.role;
+    phrase.rootDegree = degreeForSemitone(controls, plan.rootSemitone);
 }
 
 [[nodiscard]] int noteFromDegree(const Controls& controls, int degreeIndex, const int phraseRegisterOffset)
@@ -930,8 +1052,8 @@ void generatePhraseEvents(PhraseEventList& out,
 
 void buildPhrasePlan(FormState& form, const Controls& controls, const ::downspout::Meter& rawMeter)
 {
-    form.formBars = normalizeFormBars(controls.formBars);
-    form.phraseBars = normalizePhraseBars(controls.phraseBars, form.formBars);
+    form.formBars = bluesFormMode(controls) ? 12 : normalizeFormBars(controls.formBars);
+    form.phraseBars = bluesFormMode(controls) ? 1 : normalizePhraseBars(controls.phraseBars, form.formBars);
     form.meter = ::downspout::sanitizeMeter(rawMeter);
     form.stepsPerBeat = 4;
     form.stepsPerBar = ::downspout::meterStepsPerBar(form.meter, form.stepsPerBeat);
@@ -952,7 +1074,9 @@ void buildPhrasePlan(FormState& form, const Controls& controls, const ::downspou
         phrase.bars = form.phraseBars;
         phrase.startStep = phrase.startBar * form.stepsPerBar;
         phrase.stepCount = form.phraseBars * form.stepsPerBar;
-        if (fugalFormMode(controls)) {
+        if (bluesFormMode(controls)) {
+            applyBluesPhrasePlan(phrase, controls, index, form.phraseCount);
+        } else if (fugalFormMode(controls)) {
             phrase.role = fugalRoleForPhrase(index, form.phraseCount);
             phrase.rootDegree = fugalRootDegreeForRole(phrase.role, index);
         } else {
@@ -1009,7 +1133,9 @@ void regenerateSinglePhrasePlan(PhrasePlan& phrase,
                                                                (0.35 + clampf(controls.tension + colorAmount(controls) * 0.12f, 0.0f, 1.0f) * 0.40))),
                                   1,
                                   std::max(1, phraseCount - 1));
-    if (fugalFormMode(controls)) {
+    if (bluesFormMode(controls)) {
+        applyBluesPhrasePlan(phrase, controls, phraseIndex, phraseCount);
+    } else if (fugalFormMode(controls)) {
         phrase.role = fugalRoleForPhrase(phraseIndex, phraseCount);
         phrase.rootDegree = fugalRootDegreeForRole(phrase.role, phraseIndex);
     } else {
@@ -1025,14 +1151,14 @@ void regenerateSinglePhrasePlan(PhrasePlan& phrase,
 
 int normalizeFormBars(const int rawBars)
 {
-    return nearestFromSet(rawBars, {8, 16, 32, 64});
+    return nearestFromSet(rawBars, {8, 12, 16, 32, 64});
 }
 
 int normalizePhraseBars(const int rawPhraseBars, const int formBars)
 {
-    int best = 2;
+    int best = 1;
     int bestDistance = std::numeric_limits<int>::max();
-    for (const int value : {2, 4, 8}) {
+    for (const int value : {1, 2, 3, 4, 6, 8, 12}) {
         if (value > formBars || (formBars % value) != 0) {
             continue;
         }
@@ -1051,9 +1177,10 @@ Controls clampControls(const Controls& raw)
     controls.rootNote = clampi(controls.rootNote, 0, 127);
     controls.scale = static_cast<ScaleId>(clampi(static_cast<int>(controls.scale), 0, static_cast<int>(ScaleId::count) - 1));
     controls.style = static_cast<StyleId>(clampi(static_cast<int>(controls.style), 0, static_cast<int>(StyleId::count) - 1));
+    controls.formShape = static_cast<FormShapeId>(clampi(static_cast<int>(controls.formShape), 0, static_cast<int>(FormShapeId::count) - 1));
     controls.channel = clampi(controls.channel, 1, 16);
-    controls.formBars = normalizeFormBars(controls.formBars);
-    controls.phraseBars = normalizePhraseBars(controls.phraseBars, controls.formBars);
+    controls.formBars = bluesFormMode(controls) ? 12 : normalizeFormBars(controls.formBars);
+    controls.phraseBars = bluesFormMode(controls) ? 1 : normalizePhraseBars(controls.phraseBars, controls.formBars);
     controls.density = clampf(controls.density, 0.0f, 1.0f);
     controls.motion = clampf(controls.motion, 0.0f, 1.0f);
     controls.tension = clampf(controls.tension, 0.0f, 1.0f);
@@ -1129,6 +1256,7 @@ bool structureControlsMatch(const Controls& a, const Controls& b)
     return a.rootNote == b.rootNote &&
            a.scale == b.scale &&
            a.style == b.style &&
+           a.formShape == b.formShape &&
            a.formBars == b.formBars &&
            a.phraseBars == b.phraseBars &&
            std::fabs(a.density - b.density) < 0.0001f &&
