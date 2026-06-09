@@ -335,6 +335,74 @@ void testTwelveBarBluesFormShapes()
     assert(jazzForm.phrases[9].role == PhraseRoleId::cadence);
 }
 
+void testAdditionalNamedFormShapes()
+{
+    Controls controls;
+    controls.rootNote = 36;
+    controls.scale = ScaleId::major;
+    controls.formBars = 64;
+    controls.phraseBars = 12;
+    controls.seed = 9123u;
+
+    controls.formShape = FormShapeId::classical16;
+    FormState classical;
+    regenerateForm(classical, controls, ::downspout::Meter {});
+    assert(classical.formBars == 16);
+    assert(classical.phraseBars == 4);
+    assert(classical.phraseCount == 4);
+    assert(classical.phrases[0].role == PhraseRoleId::statement);
+    assert(classical.phrases[1].role == PhraseRoleId::answer);
+    assert(classical.phrases[2].rootDegree == 3);
+    assert(classical.phrases[3].role == PhraseRoleId::cadence);
+
+    controls.formShape = FormShapeId::fugue16;
+    FormState fugue;
+    regenerateForm(fugue, controls, ::downspout::Meter {});
+    assert(fugue.formBars == 16);
+    assert(fugue.phraseBars == 2);
+    assert(fugue.phraseCount == 8);
+    assert(fugue.phrases[1].role == PhraseRoleId::answer);
+    assert(fugue.phrases[1].rootDegree == 4);
+    assert(fugue.phrases[5].role == PhraseRoleId::pedal);
+
+    controls.scale = ScaleId::mixolydian;
+    controls.formShape = FormShapeId::jazzAaba32;
+    FormState aaba;
+    regenerateForm(aaba, controls, ::downspout::Meter {});
+    assert(aaba.formBars == 32);
+    assert(aaba.phraseBars == 4);
+    assert(aaba.phraseCount == 8);
+    assert(aaba.phrases[4].role == PhraseRoleId::climb);
+    assert(aaba.phrases[4].rootDegree == 2);
+
+    controls.formShape = FormShapeId::rhythmChanges32;
+    FormState rhythm;
+    regenerateForm(rhythm, controls, ::downspout::Meter {});
+    assert(rhythm.phrases[1].rootDegree == 5);
+    assert(rhythm.phrases[3].role == PhraseRoleId::cadence);
+
+    controls.formShape = FormShapeId::techno16;
+    FormState techno;
+    regenerateForm(techno, controls, ::downspout::Meter {});
+    assert(techno.formBars == 16);
+    assert(techno.phrases[0].role == PhraseRoleId::pedal);
+    assert(techno.phrases[2].role == PhraseRoleId::climb);
+
+    controls.formShape = FormShapeId::ambient8;
+    FormState ambient;
+    regenerateForm(ambient, controls, ::downspout::Meter {});
+    assert(ambient.formBars == 8);
+    assert(ambient.phraseBars == 2);
+    assert(ambient.phrases[2].role == PhraseRoleId::release);
+
+    controls.formShape = FormShapeId::rondo32;
+    FormState rondo;
+    regenerateForm(rondo, controls, ::downspout::Meter {});
+    assert(rondo.formBars == 32);
+    assert(rondo.phrases[0].rootDegree == rondo.phrases[2].rootDegree);
+    assert(rondo.phrases[7].role == PhraseRoleId::cadence);
+}
+
 void testBassRegisterStaysInLane()
 {
     Controls controls;
@@ -580,6 +648,7 @@ int main()
     testNoteLengthControlsDurations();
     testFugalFormPlansSubjectAnswerPedalCadence();
     testTwelveBarBluesFormShapes();
+    testAdditionalNamedFormShapes();
     testBassRegisterStaysInLane();
     testDubAndJazzStylesAreExplicit();
     testAiStateSummaryIncludesCurrentPhraseContext();

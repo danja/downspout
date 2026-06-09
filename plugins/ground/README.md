@@ -19,18 +19,18 @@ ties than the first `ground` build.
   or jazz. Dub stays sparse and heavy with long low notes and pickups; Jazz
   leans toward walking-bass quarter motion with extra approach tones.
 - `Form Shape`
-  Structure template. `Free` uses the generic long-form planner; the 12-bar
-  blues options force a one-bar phrase grid and plan standard, quick-change,
-  minor, or jazz-blues root movement.
+  Structure template. `Free` uses the generic long-form planner. Named shapes
+  force their own form and phrase grid, including 12-bar blues variants,
+  classical and fugue arcs, jazz AABA/rhythm changes, techno, dub, ambient, and
+  rondo layouts.
 - `Channel`
   MIDI output channel.
 - `Form`
-  Total form length in bars. `12` is available for free-form use and is forced
-  by the 12-bar blues shapes.
+  Total form length in bars. Named shapes override this with their fixed
+  template length.
 - `Phrase`
-  Phrase length in bars. Phrases are the structural units inside the form. The
-  12-bar blues shapes use one-bar phrases internally so each bar can carry its
-  own I/IV/V movement.
+  Phrase length in bars. Phrases are the structural units inside the form.
+  Named shapes override this with their template phrase grid.
 - `Density`
   How many note onsets appear inside each phrase.
 - `Motion`
@@ -95,7 +95,7 @@ It is supposed to help users think in sections rather than in parameter soup.
   so the original long-form behavior remains the baseline.
 - high `Sequence` plus high `Cadence` gives a deterministic Fugue-friendly
   subject/answer/pedal/cadence arc without adding a dedicated genre selector.
-- `Form Shape` adds 12-bar blues templates while keeping `Style` focused on
+- `Form Shape` adds named structure templates while keeping `Style` focused on
   local rhythmic behavior.
 - generated notes are constrained after form generation, phrase refresh, cell
   mutation, and loop variation so Ground stays usable as a bass source even

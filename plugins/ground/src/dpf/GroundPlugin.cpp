@@ -92,6 +92,14 @@ ParameterEnumerationValue kFormShapeEnumValues[] = {
     {2.0f, "12 Blues Quick"},
     {3.0f, "12 Minor Blues"},
     {4.0f, "12 Jazz Blues"},
+    {5.0f, "16 Classical"},
+    {6.0f, "16 Fugue"},
+    {7.0f, "32 Jazz AABA"},
+    {8.0f, "32 Rhythm"},
+    {9.0f, "16 Techno"},
+    {10.0f, "16 Dub"},
+    {11.0f, "8 Ambient"},
+    {12.0f, "32 Rondo"},
 };
 
 ParameterEnumerationValue kFormEnumValues[] = {

@@ -68,6 +68,14 @@ enum class FormShapeId : std::int32_t {
     blues12QuickChange,
     blues12Minor,
     blues12Jazz,
+    classical16,
+    fugue16,
+    jazzAaba32,
+    rhythmChanges32,
+    techno16,
+    dub16,
+    ambient8,
+    rondo32,
     count
 };
 

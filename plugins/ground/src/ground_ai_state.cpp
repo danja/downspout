@@ -76,6 +76,14 @@ const char* formShapeName(const FormShapeId shape) noexcept
     case FormShapeId::blues12QuickChange: return "12_bar_blues_quick_change";
     case FormShapeId::blues12Minor: return "12_bar_minor_blues";
     case FormShapeId::blues12Jazz: return "12_bar_jazz_blues";
+    case FormShapeId::classical16: return "16_bar_classical";
+    case FormShapeId::fugue16: return "16_bar_fugue";
+    case FormShapeId::jazzAaba32: return "32_bar_jazz_aaba";
+    case FormShapeId::rhythmChanges32: return "32_bar_rhythm_changes";
+    case FormShapeId::techno16: return "16_bar_techno";
+    case FormShapeId::dub16: return "16_bar_dub";
+    case FormShapeId::ambient8: return "8_bar_ambient";
+    case FormShapeId::rondo32: return "32_bar_rondo";
     case FormShapeId::count: break;
     }
     return "free";

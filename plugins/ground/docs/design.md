@@ -44,10 +44,11 @@ sparse low notes, longer holds, and late pickups. Jazz favors walking-bass
 quarter motion with extra approach tones, while the phrase planner still owns
 the larger statement, answer, climb, pedal, cadence, and release arc.
 
-`Form Shape` is separate from Style. `Free` uses the generic phrase arc. The
-12-bar blues shapes force a one-bar phrase grid and assign the bar-level
-I/IV/V movement for standard, quick-change, minor, and jazz-blues structures,
-while Style still controls how each bar is voiced rhythmically.
+`Form Shape` is separate from Style. `Free` uses the generic phrase arc. Named
+shapes force their own form and phrase grid, then assign phrase roles and root
+movement for blues, classical, fugue, jazz AABA/rhythm changes, techno, dub,
+ambient, and rondo structures. Style still controls how each phrase is voiced
+rhythmically.
 
 ## Bass register guard
 

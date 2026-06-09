@@ -223,6 +223,62 @@ static_assert((sizeof(kScales) / sizeof(kScales[0])) == static_cast<int>(ScaleId
            controls.formShape == FormShapeId::blues12Jazz;
 }
 
+[[nodiscard]] bool shapedFormMode(const Controls& controls)
+{
+    return controls.formShape != FormShapeId::free;
+}
+
+[[nodiscard]] int shapedFormBars(const FormShapeId shape)
+{
+    switch (shape) {
+    case FormShapeId::ambient8:
+        return 8;
+    case FormShapeId::blues12:
+    case FormShapeId::blues12QuickChange:
+    case FormShapeId::blues12Minor:
+    case FormShapeId::blues12Jazz:
+        return 12;
+    case FormShapeId::classical16:
+    case FormShapeId::fugue16:
+    case FormShapeId::techno16:
+    case FormShapeId::dub16:
+        return 16;
+    case FormShapeId::jazzAaba32:
+    case FormShapeId::rhythmChanges32:
+    case FormShapeId::rondo32:
+        return 32;
+    case FormShapeId::free:
+    case FormShapeId::count:
+        break;
+    }
+    return 16;
+}
+
+[[nodiscard]] int shapedPhraseBars(const FormShapeId shape)
+{
+    switch (shape) {
+    case FormShapeId::blues12:
+    case FormShapeId::blues12QuickChange:
+    case FormShapeId::blues12Minor:
+    case FormShapeId::blues12Jazz:
+        return 1;
+    case FormShapeId::fugue16:
+    case FormShapeId::ambient8:
+        return 2;
+    case FormShapeId::classical16:
+    case FormShapeId::jazzAaba32:
+    case FormShapeId::rhythmChanges32:
+    case FormShapeId::techno16:
+    case FormShapeId::dub16:
+    case FormShapeId::rondo32:
+        return 4;
+    case FormShapeId::free:
+    case FormShapeId::count:
+        break;
+    }
+    return 4;
+}
+
 [[nodiscard]] PhraseRoleId fugalRoleForPhrase(const int phraseIndex, const int phraseCount)
 {
     if (phraseIndex <= 0) {
@@ -359,6 +415,14 @@ struct BluesBarPlan {
         return kJazz[index];
     case FormShapeId::blues12:
     case FormShapeId::free:
+    case FormShapeId::classical16:
+    case FormShapeId::fugue16:
+    case FormShapeId::jazzAaba32:
+    case FormShapeId::rhythmChanges32:
+    case FormShapeId::techno16:
+    case FormShapeId::dub16:
+    case FormShapeId::ambient8:
+    case FormShapeId::rondo32:
     case FormShapeId::count:
         break;
     }
@@ -371,6 +435,115 @@ void applyBluesPhrasePlan(PhrasePlan& phrase,
                           const int)
 {
     const BluesBarPlan plan = bluesBarPlan(controls.formShape, phraseIndex);
+    phrase.role = plan.role;
+    phrase.rootDegree = degreeForSemitone(controls, plan.rootSemitone);
+}
+
+struct ShapePhrasePlan {
+    int rootSemitone = 0;
+    PhraseRoleId role = PhraseRoleId::statement;
+};
+
+[[nodiscard]] ShapePhrasePlan structuredPhrasePlan(const FormShapeId shape, const int phraseIndex)
+{
+    static constexpr ShapePhrasePlan kClassical16[] = {
+        {0, PhraseRoleId::statement},
+        {7, PhraseRoleId::answer},
+        {5, PhraseRoleId::climb},
+        {7, PhraseRoleId::cadence},
+    };
+    static constexpr ShapePhrasePlan kFugue16[] = {
+        {0, PhraseRoleId::statement},
+        {7, PhraseRoleId::answer},
+        {0, PhraseRoleId::statement},
+        {5, PhraseRoleId::answer},
+        {2, PhraseRoleId::climb},
+        {7, PhraseRoleId::pedal},
+        {5, PhraseRoleId::climb},
+        {7, PhraseRoleId::cadence},
+    };
+    static constexpr ShapePhrasePlan kJazzAaba32[] = {
+        {0, PhraseRoleId::statement},
+        {5, PhraseRoleId::answer},
+        {0, PhraseRoleId::statement},
+        {7, PhraseRoleId::cadence},
+        {4, PhraseRoleId::climb},
+        {9, PhraseRoleId::climb},
+        {2, PhraseRoleId::answer},
+        {7, PhraseRoleId::cadence},
+    };
+    static constexpr ShapePhrasePlan kRhythm32[] = {
+        {0, PhraseRoleId::statement},
+        {9, PhraseRoleId::answer},
+        {2, PhraseRoleId::climb},
+        {7, PhraseRoleId::cadence},
+        {0, PhraseRoleId::statement},
+        {9, PhraseRoleId::answer},
+        {2, PhraseRoleId::climb},
+        {7, PhraseRoleId::cadence},
+    };
+    static constexpr ShapePhrasePlan kTechno16[] = {
+        {0, PhraseRoleId::pedal},
+        {0, PhraseRoleId::statement},
+        {0, PhraseRoleId::climb},
+        {0, PhraseRoleId::cadence},
+    };
+    static constexpr ShapePhrasePlan kDub16[] = {
+        {0, PhraseRoleId::pedal},
+        {5, PhraseRoleId::answer},
+        {0, PhraseRoleId::breakdown},
+        {7, PhraseRoleId::cadence},
+    };
+    static constexpr ShapePhrasePlan kAmbient8[] = {
+        {0, PhraseRoleId::pedal},
+        {0, PhraseRoleId::pedal},
+        {5, PhraseRoleId::release},
+        {0, PhraseRoleId::release},
+    };
+    static constexpr ShapePhrasePlan kRondo32[] = {
+        {0, PhraseRoleId::statement},
+        {7, PhraseRoleId::answer},
+        {0, PhraseRoleId::statement},
+        {5, PhraseRoleId::climb},
+        {0, PhraseRoleId::statement},
+        {9, PhraseRoleId::breakdown},
+        {0, PhraseRoleId::statement},
+        {7, PhraseRoleId::cadence},
+    };
+
+    switch (shape) {
+    case FormShapeId::classical16:
+        return kClassical16[clampi(phraseIndex, 0, 3)];
+    case FormShapeId::fugue16:
+        return kFugue16[clampi(phraseIndex, 0, 7)];
+    case FormShapeId::jazzAaba32:
+        return kJazzAaba32[clampi(phraseIndex, 0, 7)];
+    case FormShapeId::rhythmChanges32:
+        return kRhythm32[clampi(phraseIndex, 0, 7)];
+    case FormShapeId::techno16:
+        return kTechno16[clampi(phraseIndex, 0, 3)];
+    case FormShapeId::dub16:
+        return kDub16[clampi(phraseIndex, 0, 3)];
+    case FormShapeId::ambient8:
+        return kAmbient8[clampi(phraseIndex, 0, 3)];
+    case FormShapeId::rondo32:
+        return kRondo32[clampi(phraseIndex, 0, 7)];
+    case FormShapeId::free:
+    case FormShapeId::blues12:
+    case FormShapeId::blues12QuickChange:
+    case FormShapeId::blues12Minor:
+    case FormShapeId::blues12Jazz:
+    case FormShapeId::count:
+        break;
+    }
+    return {};
+}
+
+void applyStructuredPhrasePlan(PhrasePlan& phrase,
+                               const Controls& controls,
+                               const int phraseIndex)
+{
+    const ShapePhrasePlan plan = structuredPhrasePlan(controls.formShape, phraseIndex);
     phrase.role = plan.role;
     phrase.rootDegree = degreeForSemitone(controls, plan.rootSemitone);
 }
@@ -1052,8 +1225,8 @@ void generatePhraseEvents(PhraseEventList& out,
 
 void buildPhrasePlan(FormState& form, const Controls& controls, const ::downspout::Meter& rawMeter)
 {
-    form.formBars = bluesFormMode(controls) ? 12 : normalizeFormBars(controls.formBars);
-    form.phraseBars = bluesFormMode(controls) ? 1 : normalizePhraseBars(controls.phraseBars, form.formBars);
+    form.formBars = shapedFormMode(controls) ? shapedFormBars(controls.formShape) : normalizeFormBars(controls.formBars);
+    form.phraseBars = shapedFormMode(controls) ? shapedPhraseBars(controls.formShape) : normalizePhraseBars(controls.phraseBars, form.formBars);
     form.meter = ::downspout::sanitizeMeter(rawMeter);
     form.stepsPerBeat = 4;
     form.stepsPerBar = ::downspout::meterStepsPerBar(form.meter, form.stepsPerBeat);
@@ -1076,6 +1249,8 @@ void buildPhrasePlan(FormState& form, const Controls& controls, const ::downspou
         phrase.stepCount = form.phraseBars * form.stepsPerBar;
         if (bluesFormMode(controls)) {
             applyBluesPhrasePlan(phrase, controls, index, form.phraseCount);
+        } else if (shapedFormMode(controls)) {
+            applyStructuredPhrasePlan(phrase, controls, index);
         } else if (fugalFormMode(controls)) {
             phrase.role = fugalRoleForPhrase(index, form.phraseCount);
             phrase.rootDegree = fugalRootDegreeForRole(phrase.role, index);
@@ -1135,6 +1310,8 @@ void regenerateSinglePhrasePlan(PhrasePlan& phrase,
                                   std::max(1, phraseCount - 1));
     if (bluesFormMode(controls)) {
         applyBluesPhrasePlan(phrase, controls, phraseIndex, phraseCount);
+    } else if (shapedFormMode(controls)) {
+        applyStructuredPhrasePlan(phrase, controls, phraseIndex);
     } else if (fugalFormMode(controls)) {
         phrase.role = fugalRoleForPhrase(phraseIndex, phraseCount);
         phrase.rootDegree = fugalRootDegreeForRole(phrase.role, phraseIndex);
@@ -1179,8 +1356,8 @@ Controls clampControls(const Controls& raw)
     controls.style = static_cast<StyleId>(clampi(static_cast<int>(controls.style), 0, static_cast<int>(StyleId::count) - 1));
     controls.formShape = static_cast<FormShapeId>(clampi(static_cast<int>(controls.formShape), 0, static_cast<int>(FormShapeId::count) - 1));
     controls.channel = clampi(controls.channel, 1, 16);
-    controls.formBars = bluesFormMode(controls) ? 12 : normalizeFormBars(controls.formBars);
-    controls.phraseBars = bluesFormMode(controls) ? 1 : normalizePhraseBars(controls.phraseBars, controls.formBars);
+    controls.formBars = shapedFormMode(controls) ? shapedFormBars(controls.formShape) : normalizeFormBars(controls.formBars);
+    controls.phraseBars = shapedFormMode(controls) ? shapedPhraseBars(controls.formShape) : normalizePhraseBars(controls.phraseBars, controls.formBars);
     controls.density = clampf(controls.density, 0.0f, 1.0f);
     controls.motion = clampf(controls.motion, 0.0f, 1.0f);
     controls.tension = clampf(controls.tension, 0.0f, 1.0f);

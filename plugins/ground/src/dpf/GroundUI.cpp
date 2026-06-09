@@ -99,7 +99,9 @@ constexpr const char* kStyleNames[] = {
 };
 
 constexpr const char* kFormShapeNames[] = {
-    "Free", "12 Blues", "12 Blues Quick", "12 Minor Blues", "12 Jazz Blues"
+    "Free", "12 Blues", "12 Blues Quick", "12 Minor Blues", "12 Jazz Blues",
+    "16 Classical", "16 Fugue", "32 Jazz AABA", "32 Rhythm", "16 Techno",
+    "16 Dub", "8 Ambient", "32 Rondo"
 };
 
 constexpr const char* kFormNames[] = {
@@ -272,12 +274,91 @@ constexpr ButtonDef kButtons[] = {
     return shape >= 1 && shape <= 4;
 }
 
+[[nodiscard]] bool structuredShape(const int shape)
+{
+    return shape >= 1 && shape <= 12;
+}
+
+[[nodiscard]] int formBarsForShape(const int shape)
+{
+    switch (shape) {
+    case 11: return 8;
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+        return 12;
+    case 5:
+    case 6:
+    case 9:
+    case 10:
+        return 16;
+    case 7:
+    case 8:
+    case 12:
+        return 32;
+    default:
+        break;
+    }
+    return 16;
+}
+
+[[nodiscard]] int phraseBarsForShape(const int shape)
+{
+    switch (shape) {
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+        return 1;
+    case 6:
+    case 11:
+        return 2;
+    case 5:
+    case 7:
+    case 8:
+    case 9:
+    case 10:
+    case 12:
+        return 4;
+    default:
+        break;
+    }
+    return 4;
+}
+
 [[nodiscard]] int predictedBluesRoleForPhrase(const int shape, const int phraseIndex)
 {
     static constexpr int kStandard[] = {0, 1, 0, 1, 2, 1, 0, 4, 2, 1, 5, 5};
     static constexpr int kJazz[] = {0, 1, 0, 1, 2, 2, 0, 1, 2, 5, 5, 5};
     const int index = clampi(phraseIndex, 0, 11);
     return shape == 4 ? kJazz[index] : kStandard[index];
+}
+
+[[nodiscard]] int predictedStructuredRoleForPhrase(const int shape, const int phraseIndex)
+{
+    static constexpr int kClassical16[] = {0, 1, 2, 5};
+    static constexpr int kFugue16[] = {0, 1, 0, 1, 2, 3, 2, 5};
+    static constexpr int kJazzAaba32[] = {0, 1, 0, 5, 2, 2, 1, 5};
+    static constexpr int kRhythm32[] = {0, 1, 2, 5, 0, 1, 2, 5};
+    static constexpr int kTechno16[] = {3, 0, 2, 5};
+    static constexpr int kDub16[] = {3, 1, 4, 5};
+    static constexpr int kAmbient8[] = {3, 3, 6, 6};
+    static constexpr int kRondo32[] = {0, 1, 0, 2, 0, 4, 0, 5};
+
+    switch (shape) {
+    case 5: return kClassical16[clampi(phraseIndex, 0, 3)];
+    case 6: return kFugue16[clampi(phraseIndex, 0, 7)];
+    case 7: return kJazzAaba32[clampi(phraseIndex, 0, 7)];
+    case 8: return kRhythm32[clampi(phraseIndex, 0, 7)];
+    case 9: return kTechno16[clampi(phraseIndex, 0, 3)];
+    case 10: return kDub16[clampi(phraseIndex, 0, 3)];
+    case 11: return kAmbient8[clampi(phraseIndex, 0, 3)];
+    case 12: return kRondo32[clampi(phraseIndex, 0, 7)];
+    default:
+        break;
+    }
+    return 0;
 }
 
 struct RoleColor {
@@ -543,8 +624,12 @@ private:
         closePath();
 
         const int formShape = clampi(static_cast<int>(std::lround(values_[kParamFormShape])), 0, 4);
-        const int formBars = bluesShape(formShape) ? 12 : clampi(static_cast<int>(std::lround(values_[kParamFormBars])), 8, 64);
-        const int phraseBars = bluesShape(formShape) ? 1 : std::max(1, clampi(static_cast<int>(std::lround(values_[kParamPhraseBars])), 1, 12));
+        const int formBars = structuredShape(formShape)
+            ? formBarsForShape(formShape)
+            : clampi(static_cast<int>(std::lround(values_[kParamFormBars])), 8, 64);
+        const int phraseBars = structuredShape(formShape)
+            ? phraseBarsForShape(formShape)
+            : std::max(1, clampi(static_cast<int>(std::lround(values_[kParamPhraseBars])), 1, 12));
         const int phraseCount = std::max(1, formBars / phraseBars);
         const float tension = values_[kParamTension];
         const float cadence = values_[kParamCadence];
@@ -564,6 +649,8 @@ private:
             const float cellX = laneX + static_cast<float>(phraseIndex) * (cellW + cellGap);
             const int role = bluesShape(formShape)
                 ? predictedBluesRoleForPhrase(formShape, phraseIndex)
+                : structuredShape(formShape)
+                    ? predictedStructuredRoleForPhrase(formShape, phraseIndex)
                 : predictedRoleForPhrase(phraseIndex, phraseCount, tension, cadence, sequence);
             const RoleColor color = colorForRole(role);
             const bool active = phraseIndex == currentPhrase;
