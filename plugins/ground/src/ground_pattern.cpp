@@ -1370,6 +1370,9 @@ Controls clampControls(const Controls& raw)
     controls.noteLengthVariation = clampf(controls.noteLengthVariation, 0.0f, 1.0f);
     controls.vary = clampf(controls.vary, 0.0f, 1.0f);
     controls.seed = controls.seed == 0 ? 1u : controls.seed;
+    for (std::int32_t& roleOverride : controls.phraseRoleOverrides) {
+        roleOverride = clampi(roleOverride, 0, static_cast<int>(PhraseRoleId::count));
+    }
     controls.actionNewForm = clampi(controls.actionNewForm, 0, 1048576);
     controls.actionNewPhrase = clampi(controls.actionNewPhrase, 0, 1048576);
     controls.actionMutateCell = clampi(controls.actionMutateCell, 0, 1048576);
@@ -1559,6 +1562,55 @@ void mutatePhraseCell(FormState& form, const Controls& rawControls, const int ph
                          false,
                          clampf(strength, 0.0f, 1.0f),
                          rng);
+    rebuildFromPhraseEvents(form, phraseEvents);
+    constrainFormNotesToRegisterLane(form, controls);
+}
+
+void setPhraseRole(FormState& form, const Controls& rawControls, const int phraseIndex, const PhraseRoleId rawRole)
+{
+    const Controls controls = clampControls(rawControls);
+    bool valid = false;
+    form = sanitizeFormState(form, &valid);
+    if (!valid) {
+        regenerateForm(form, controls, form.meter);
+    }
+
+    const int index = clampi(phraseIndex, 0, form.phraseCount - 1);
+    const PhraseRoleId role = static_cast<PhraseRoleId>(
+        clampi(static_cast<int>(rawRole), 0, static_cast<int>(PhraseRoleId::count) - 1));
+    form.generationSerial = nextGenerationSerial(form.generationSerial);
+
+    PhrasePlan& phrase = form.phrases[static_cast<std::size_t>(index)];
+    Rng roleRng;
+    roleRng.seed(seedMix(controls, form.generationSerial, index, 0x3e58c2d7u));
+    phrase.role = role;
+    phrase.rootDegree = roleBaseDegree(role, roleRng);
+    phrase.registerOffset = phraseRegisterOffset(controls, role, index, form.phraseCount);
+    phrase.intensity = roleIntensity(role);
+    phrase.motionBias = roleMotionBias(role, clampf(controls.motion + colorAmount(controls) * 0.15f, 0.0f, 1.0f));
+
+    std::array<PhraseEventList, kMaxPhraseCount> phraseEvents {};
+    copyExistingPhraseEvents(phraseEvents, form);
+
+    Rng eventRng;
+    eventRng.seed(seedMix(controls, form.generationSerial, index, 0x6af19b4du));
+    const PhrasePlan* previousPlan = index > 0 ? &form.phrases[static_cast<std::size_t>(index - 1)] : nullptr;
+    const PhraseEventList* previousEvents = index > 0 ? &phraseEvents[static_cast<std::size_t>(index - 1)] : nullptr;
+    const bool roleCanSequence = role == PhraseRoleId::answer || role == PhraseRoleId::release;
+    const bool useSequence = index > 0 &&
+                             roleCanSequence &&
+                             (fugalFormMode(controls) || controls.sequence > 0.35f);
+
+    generatePhraseEvents(phraseEvents[static_cast<std::size_t>(index)],
+                         phrase,
+                         controls,
+                         form.stepsPerBeat,
+                         form.stepsPerBar,
+                         previousPlan,
+                         previousEvents,
+                         useSequence,
+                         0.08f,
+                         eventRng);
     rebuildFromPhraseEvents(form, phraseEvents);
     constrainFormNotesToRegisterLane(form, controls);
 }

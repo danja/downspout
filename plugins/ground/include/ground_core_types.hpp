@@ -99,6 +99,7 @@ struct Controls {
     float noteLengthVariation = 0.35f;
     float vary = 0.0f;
     std::uint32_t seed = 1u;
+    std::array<std::int32_t, kMaxPhraseCount> phraseRoleOverrides {};
     int actionNewForm = 0;
     int actionNewPhrase = 0;
     int actionMutateCell = 0;

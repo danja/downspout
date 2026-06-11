@@ -9,5 +9,6 @@ namespace downspout::ground {
 void regenerateForm(FormState& form, const Controls& controls, const ::downspout::Meter& meter);
 void refreshPhrase(FormState& form, const Controls& controls, int phraseIndex);
 void mutatePhraseCell(FormState& form, const Controls& controls, int phraseIndex, float strength);
+void setPhraseRole(FormState& form, const Controls& controls, int phraseIndex, PhraseRoleId role);
 
 }  // namespace downspout::ground

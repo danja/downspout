@@ -29,8 +29,12 @@ enum ParameterIndex : std::uint32_t {
     kParamNoteLength,
     kParamNoteLengthVariation,
     kParamFormShape,
-    kParameterCount
+    kParamPhraseRole0,
+    kParameterCount = kParamPhraseRole0 + 32
 };
+
+inline constexpr std::uint32_t kParamPhraseRoleStart = kParamPhraseRole0;
+inline constexpr std::uint32_t kParamPhraseRoleCount = 32;
 
 enum StateIndex : std::uint32_t {
     kStateControls = 0,

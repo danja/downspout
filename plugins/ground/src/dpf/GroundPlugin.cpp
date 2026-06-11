@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstring>
 
 START_NAMESPACE_DISTRHO
@@ -36,6 +37,8 @@ using downspout::ground::kParamMotion;
 using downspout::ground::kParamNoteLength;
 using downspout::ground::kParamNoteLengthVariation;
 using downspout::ground::kParamPhraseBars;
+using downspout::ground::kParamPhraseRoleCount;
+using downspout::ground::kParamPhraseRoleStart;
 using downspout::ground::kParamRegister;
 using downspout::ground::kParamRegisterArc;
 using downspout::ground::kParamRootNote;
@@ -137,6 +140,22 @@ ParameterEnumerationValue kRoleEnumValues[] = {
     {6.0f, "Release"},
 };
 
+ParameterEnumerationValue kPhraseRoleEnumValues[] = {
+    {0.0f, "Auto"},
+    {1.0f, "Statement"},
+    {2.0f, "Answer"},
+    {3.0f, "Climb"},
+    {4.0f, "Pedal"},
+    {5.0f, "Breakdown"},
+    {6.0f, "Cadence"},
+    {7.0f, "Release"},
+};
+
+[[nodiscard]] bool phraseRoleParameter(const uint32_t index)
+{
+    return index >= kParamPhraseRoleStart && index < kParamPhraseRoleStart + kParamPhraseRoleCount;
+}
+
 TransportSnapshot toCoreTransport(const TimePosition& timePos)
 {
     TransportSnapshot transport;
@@ -224,6 +243,21 @@ protected:
     void initParameter(uint32_t index, Parameter& parameter) override
     {
         parameter.hints = kParameterIsAutomatable;
+
+        if (phraseRoleParameter(index)) {
+            const uint32_t phrase = index - kParamPhraseRoleStart;
+            parameter.name = String("Phrase Role ") + String(static_cast<int>(phrase + 1u));
+            parameter.symbol = String("phrase_role_") + String(static_cast<int>(phrase + 1u));
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = static_cast<float>(static_cast<int>(PhraseRoleId::count));
+            parameter.ranges.def = 0.0f;
+            parameter.enumValues.count = static_cast<uint8_t>(std::size(kPhraseRoleEnumValues));
+            parameter.enumValues.restrictedMode = true;
+            parameter.enumValues.values = kPhraseRoleEnumValues;
+            parameter.enumValues.deleteLater = false;
+            return;
+        }
 
         switch (index) {
         case kParamRootNote:
@@ -462,6 +496,10 @@ protected:
 
     float getParameterValue(uint32_t index) const override
     {
+        if (phraseRoleParameter(index)) {
+            return static_cast<float>(controls_.phraseRoleOverrides[static_cast<std::size_t>(index - kParamPhraseRoleStart)]);
+        }
+
         switch (index) {
         case kParamRootNote: return static_cast<float>(controls_.rootNote);
         case kParamScale: return static_cast<float>(static_cast<int>(controls_.scale));
@@ -497,6 +535,13 @@ protected:
 
     void setParameterValue(uint32_t index, float value) override
     {
+        if (phraseRoleParameter(index)) {
+            controls_.phraseRoleOverrides[static_cast<std::size_t>(index - kParamPhraseRoleStart)] =
+                static_cast<int>(std::lround(value));
+            controls_ = downspout::ground::clampControls(controls_);
+            return;
+        }
+
         switch (index) {
         case kParamRootNote: controls_.rootNote = static_cast<int>(value); break;
         case kParamScale: controls_.scale = static_cast<ScaleId>(static_cast<int>(value)); break;

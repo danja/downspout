@@ -53,6 +53,15 @@ std::vector<std::string_view> split(std::string_view text, const char delimiter)
 std::string serializeControls(const Controls& rawControls)
 {
     const Controls controls = clampControls(rawControls);
+    std::string phraseRoles;
+    phraseRoles.reserve(kMaxPhraseCount * 2u);
+    for (int i = 0; i < kMaxPhraseCount; ++i) {
+        if (i > 0) {
+            phraseRoles += ",";
+        }
+        phraseRoles += std::to_string(controls.phraseRoleOverrides[static_cast<std::size_t>(i)]);
+    }
+
     return "version=1\n"
            "root_note=" + std::to_string(controls.rootNote) + "\n"
            "scale=" + std::to_string(static_cast<int>(controls.scale)) + "\n"
@@ -73,6 +82,7 @@ std::string serializeControls(const Controls& rawControls)
            "note_length_variation=" + std::to_string(controls.noteLengthVariation) + "\n"
            "vary=" + std::to_string(controls.vary) + "\n"
            "seed=" + std::to_string(controls.seed) + "\n"
+           "phrase_roles=" + phraseRoles + "\n"
            "action_new_form=" + std::to_string(controls.actionNewForm) + "\n"
            "action_new_phrase=" + std::to_string(controls.actionNewPhrase) + "\n"
            "action_mutate_cell=" + std::to_string(controls.actionMutateCell) + "\n";
@@ -191,6 +201,17 @@ std::optional<Controls> deserializeControls(const std::string& text)
             controls.vary = floatValue;
         } else if (key == "seed" && parseInteger(value, uintValue)) {
             controls.seed = uintValue;
+        } else if (key == "phrase_roles") {
+            const auto fields = split(value, ',');
+            if (fields.size() > static_cast<std::size_t>(kMaxPhraseCount)) {
+                return std::nullopt;
+            }
+            for (std::size_t i = 0; i < fields.size(); ++i) {
+                if (!parseInteger(fields[i], intValue)) {
+                    return std::nullopt;
+                }
+                controls.phraseRoleOverrides[i] = intValue;
+            }
         } else if (key == "action_new_form" && parseInteger(value, intValue)) {
             controls.actionNewForm = intValue;
         } else if (key == "action_new_phrase" && parseInteger(value, intValue)) {

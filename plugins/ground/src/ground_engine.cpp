@@ -121,6 +121,72 @@ struct UpdateDecision {
     return form.phrases[static_cast<std::size_t>(phraseIndex)].role;
 }
 
+[[nodiscard]] PhraseRoleId roleOverrideToRole(const int roleOverride)
+{
+    return static_cast<PhraseRoleId>(
+        clampi(roleOverride - 1, 0, static_cast<int>(PhraseRoleId::count) - 1));
+}
+
+void syncCurrentPhraseToForm(EngineState& state)
+{
+    if (!state.formValid) {
+        state.currentPhraseIndex = 0;
+        state.currentRole = PhraseRoleId::statement;
+        return;
+    }
+
+    state.currentPhraseIndex = clampi(state.currentPhraseIndex, 0, std::max(0, state.form.phraseCount - 1));
+    state.currentRole = roleForPhraseIndex(state.form, state.currentPhraseIndex);
+}
+
+void applyPhraseRoleOverrides(EngineState& state, const Controls& controls)
+{
+    if (!state.formValid) {
+        return;
+    }
+
+    for (int phraseIndex = 0; phraseIndex < state.form.phraseCount; ++phraseIndex) {
+        const int roleOverride = controls.phraseRoleOverrides[static_cast<std::size_t>(phraseIndex)];
+        if (roleOverride > 0) {
+            setPhraseRole(state.form, controls, phraseIndex, roleOverrideToRole(roleOverride));
+        }
+    }
+    syncCurrentPhraseToForm(state);
+}
+
+[[nodiscard]] bool phraseRoleOverridesChanged(const Controls& freshControls, const Controls& previousControls)
+{
+    for (std::size_t i = 0; i < freshControls.phraseRoleOverrides.size(); ++i) {
+        if (freshControls.phraseRoleOverrides[i] != previousControls.phraseRoleOverrides[i]) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void applyChangedPhraseRoleOverrides(EngineState& state,
+                                     const Controls& freshControls,
+                                     const Controls& previousControls)
+{
+    if (!state.formValid) {
+        return;
+    }
+
+    for (int phraseIndex = 0; phraseIndex < state.form.phraseCount; ++phraseIndex) {
+        const std::size_t index = static_cast<std::size_t>(phraseIndex);
+        if (freshControls.phraseRoleOverrides[index] == previousControls.phraseRoleOverrides[index]) {
+            continue;
+        }
+
+        if (freshControls.phraseRoleOverrides[index] > 0) {
+            setPhraseRole(state.form, freshControls, phraseIndex, roleOverrideToRole(freshControls.phraseRoleOverrides[index]));
+        } else {
+            refreshPhrase(state.form, freshControls, phraseIndex);
+        }
+    }
+    syncCurrentPhraseToForm(state);
+}
+
 void appendMidi(BlockResult& result,
                 const MidiEventType type,
                 const std::uint32_t frame,
@@ -221,6 +287,7 @@ UpdateDecision updateFormIfNeeded(EngineState& state,
     const bool newFormTriggered = freshControls.actionNewForm != state.previousControls.actionNewForm;
     const bool newPhraseTriggered = freshControls.actionNewPhrase != state.previousControls.actionNewPhrase;
     const bool mutateTriggered = freshControls.actionMutateCell != state.previousControls.actionMutateCell;
+    const bool roleOverridesChanged = phraseRoleOverridesChanged(freshControls, state.previousControls);
     const bool varyJustEnabled = state.previousControls.vary <= 0.0001f && freshControls.vary > 0.0001f;
     const bool meterChanged = !state.formValid || !::downspout::metersEqual(state.form.meter, targetMeter);
 
@@ -229,14 +296,24 @@ UpdateDecision updateFormIfNeeded(EngineState& state,
     if (!state.formValid || structureChanged || newFormTriggered || meterChanged) {
         regenerateForm(state.form, freshControls, targetMeter);
         state.formValid = true;
+        applyPhraseRoleOverrides(state, freshControls);
         resetVariationProgress(state.variation);
         decision.forceResync = true;
     } else if (newPhraseTriggered) {
-        refreshPhrase(state.form, freshControls, targetPhraseIndex);
+        const int roleOverride = freshControls.phraseRoleOverrides[static_cast<std::size_t>(targetPhraseIndex)];
+        if (roleOverride > 0) {
+            setPhraseRole(state.form, freshControls, targetPhraseIndex, roleOverrideToRole(roleOverride));
+        } else {
+            refreshPhrase(state.form, freshControls, targetPhraseIndex);
+        }
         resetVariationProgress(state.variation);
         decision.forceResync = true;
     } else if (mutateTriggered) {
         mutatePhraseCell(state.form, freshControls, targetPhraseIndex, 0.70f);
+        resetVariationProgress(state.variation);
+        decision.forceResync = true;
+    } else if (roleOverridesChanged) {
+        applyChangedPhraseRoleOverrides(state, freshControls, state.previousControls);
         resetVariationProgress(state.variation);
         decision.forceResync = true;
     } else if (varyJustEnabled) {

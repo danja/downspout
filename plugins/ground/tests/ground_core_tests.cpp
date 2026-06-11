@@ -150,6 +150,42 @@ void testRefreshPhraseKeepsNeighbours()
     assert(changed);
 }
 
+void testSetPhraseRoleKeepsNeighbours()
+{
+    Controls controls;
+    controls.seed = 451u;
+    controls.formBars = 16;
+    controls.phraseBars = 4;
+    controls.sequence = 0.65f;
+
+    FormState form;
+    regenerateForm(form, controls, ::downspout::Meter {});
+
+    const PhraseSnapshot before0 = capturePhrase(form, 0);
+    const PhraseSnapshot before1 = capturePhrase(form, 1);
+    const PhraseSnapshot before2 = capturePhrase(form, 2);
+
+    setPhraseRole(form, controls, 1, PhraseRoleId::cadence);
+
+    const PhraseSnapshot after0 = capturePhrase(form, 0);
+    const PhraseSnapshot after1 = capturePhrase(form, 1);
+    const PhraseSnapshot after2 = capturePhrase(form, 2);
+
+    assertPhraseEqual(before0, after0);
+    assertPhraseEqual(before2, after2);
+    assert(after1.plan.role == PhraseRoleId::cadence);
+
+    bool changed = before1.plan.role != after1.plan.role ||
+                   before1.eventCount != after1.eventCount;
+    for (int i = 0; !changed && i < std::min(before1.eventCount, after1.eventCount); ++i) {
+        changed = before1.events[static_cast<std::size_t>(i)].startStep != after1.events[static_cast<std::size_t>(i)].startStep ||
+                  before1.events[static_cast<std::size_t>(i)].durationSteps != after1.events[static_cast<std::size_t>(i)].durationSteps ||
+                  before1.events[static_cast<std::size_t>(i)].note != after1.events[static_cast<std::size_t>(i)].note ||
+                  before1.events[static_cast<std::size_t>(i)].velocity != after1.events[static_cast<std::size_t>(i)].velocity;
+    }
+    assert(changed);
+}
+
 void testVariationChangesOnLoop()
 {
     Controls controls;
@@ -592,6 +628,8 @@ void testSerializationRoundTrip()
     controls.noteLengthVariation = 0.27f;
     controls.vary = 0.42f;
     controls.seed = 998u;
+    controls.phraseRoleOverrides[1] = static_cast<int>(PhraseRoleId::cadence) + 1;
+    controls.phraseRoleOverrides[3] = static_cast<int>(PhraseRoleId::pedal) + 1;
     controls.actionMutateCell = 7;
 
     FormState form;
@@ -615,6 +653,8 @@ void testSerializationRoundTrip()
     assert(controlsRoundTrip->color > 0.71f && controlsRoundTrip->color < 0.73f);
     assert(controlsRoundTrip->noteLength > 0.60f && controlsRoundTrip->noteLength < 0.62f);
     assert(controlsRoundTrip->noteLengthVariation > 0.26f && controlsRoundTrip->noteLengthVariation < 0.28f);
+    assert(controlsRoundTrip->phraseRoleOverrides[1] == static_cast<int>(PhraseRoleId::cadence) + 1);
+    assert(controlsRoundTrip->phraseRoleOverrides[3] == static_cast<int>(PhraseRoleId::pedal) + 1);
     assert(controlsRoundTrip->actionMutateCell == controls.actionMutateCell);
     assert(formRoundTrip->phraseCount == form.phraseCount);
     assert(formRoundTrip->eventCount == form.eventCount);
@@ -642,6 +682,7 @@ int main()
 {
     testDeterministicGeneration();
     testRefreshPhraseKeepsNeighbours();
+    testSetPhraseRoleKeepsNeighbours();
     testVariationChangesOnLoop();
     testCompoundMeterShape();
     testGroundedPhraseGetsSyncopationAndLegato();

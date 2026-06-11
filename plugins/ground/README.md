@@ -74,6 +74,8 @@ ties than the first `ground` build.
 The UI is structure-first:
 
 - a top form-preview lane that shows the predicted phrase-role arc;
+- editable role cells in that lane, with Auto plus concrete phrase-role choices
+  for each supported phrase slot;
 - status cards for the current phrase and current role;
 - motion sliders on the left;
 - framing selectors and one-shot actions on the right.

@@ -76,3 +76,10 @@ The wrapper exposes output parameters for:
 
 The UI uses those values to show the live position through the form instead of
 only reflecting the last edited parameter value.
+
+The wrapper also exposes 32 phrase-role override parameters, one for each
+supported phrase slot. Value `0` means Auto and leaves the generated form role
+intact; values `1..7` force Statement, Answer, Climb, Pedal, Breakdown,
+Cadence, or Release for that phrase and regenerate only that phrase's note
+material. New-form and new-phrase actions reapply active role overrides after
+their normal regeneration path.

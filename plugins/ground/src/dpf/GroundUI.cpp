@@ -27,6 +27,8 @@ using downspout::ground::kParamMotion;
 using downspout::ground::kParamNoteLength;
 using downspout::ground::kParamNoteLengthVariation;
 using downspout::ground::kParamPhraseBars;
+using downspout::ground::kParamPhraseRoleCount;
+using downspout::ground::kParamPhraseRoleStart;
 using downspout::ground::kParamRegister;
 using downspout::ground::kParamRegisterArc;
 using downspout::ground::kParamRootNote;
@@ -134,6 +136,14 @@ constexpr const char* kRoleNames[] = {
 
 constexpr const char* kRoleShortNames[] = {
     "STAT", "ANS", "CLMB", "PED", "BRK", "CAD", "REL"
+};
+
+constexpr const char* kRoleTinyNames[] = {
+    "S", "A", "C", "P", "B", "K", "R"
+};
+
+constexpr const char* kRoleMenuNames[] = {
+    "Auto", "Statement", "Answer", "Climb", "Pedal", "Breakdown", "Cadence", "Release"
 };
 
 constexpr std::array<const char*, 16> kChannelNames = {
@@ -267,6 +277,16 @@ constexpr ButtonDef kButtons[] = {
         return 3;
     }
     return (phraseIndex % 2) == 0 ? 0 : 1;
+}
+
+[[nodiscard]] uint32_t roleParamForPhrase(const int phraseIndex)
+{
+    return kParamPhraseRoleStart + static_cast<uint32_t>(clampi(phraseIndex, 0, static_cast<int>(kParamPhraseRoleCount) - 1));
+}
+
+[[nodiscard]] int roleOverrideValueToRole(const float value)
+{
+    return clampi(static_cast<int>(std::lround(value)) - 1, 0, static_cast<int>(std::size(kRoleNames)) - 1);
 }
 
 [[nodiscard]] bool bluesShape(const int shape)
@@ -411,6 +431,9 @@ public:
         values_[kParamVary] = 0.0f;
         values_[kParamStatusPhrase] = 1.0f;
         values_[kParamStatusRole] = 0.0f;
+        for (std::size_t i = 0; i < kParamPhraseRoleCount; ++i) {
+            values_[kParamPhraseRoleStart + i] = 0.0f;
+        }
 
        #ifdef DGL_NO_SHARED_RESOURCES
         createFontFromFile("sans", "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf");
@@ -451,6 +474,9 @@ protected:
         if (openSelector_ >= 0) {
             drawOpenSelectorMenu(openSelector_);
         }
+        if (openRoleMenu_ >= 0) {
+            drawOpenRoleMenu(openRoleMenu_);
+        }
     }
 
     bool onMouse(const MouseEvent& ev) override
@@ -474,6 +500,13 @@ protected:
             openSelector_ = -1;
         }
 
+        if (openRoleMenu_ >= 0) {
+            if (handleOpenRoleClick(x, y)) {
+                return true;
+            }
+            openRoleMenu_ = -1;
+        }
+
         for (std::size_t i = 0; i < sliderRects_.size(); ++i) {
             if (sliderRects_[i].contains(x, y)) {
                 draggingSlider_ = static_cast<int>(i);
@@ -484,7 +517,17 @@ protected:
 
         for (std::size_t i = 0; i < selectorRects_.size(); ++i) {
             if (selectorRects_[i].contains(x, y)) {
+                openRoleMenu_ = -1;
                 openSelector_ = static_cast<int>(i);
+                repaint();
+                return true;
+            }
+        }
+
+        for (std::size_t i = 0; i < phraseRoleRects_.size(); ++i) {
+            if (phraseRoleRects_[i].contains(x, y)) {
+                openSelector_ = -1;
+                openRoleMenu_ = static_cast<int>(i);
                 repaint();
                 return true;
             }
@@ -533,6 +576,18 @@ protected:
             }
         }
 
+        for (std::size_t i = 0; i < phraseRoleRects_.size(); ++i) {
+            if (phraseRoleRects_[i].contains(x, y)) {
+                if (openRoleMenu_ == static_cast<int>(i)) {
+                    openRoleMenu_ = -1;
+                    repaint();
+                } else {
+                    cycleRoleSelector(static_cast<int>(i), ev.delta.getY() > 0.0f ? -1 : 1);
+                }
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -541,8 +596,10 @@ private:
     std::array<Rect, std::size(kSliders)> sliderRects_ {};
     std::array<Rect, std::size(kSelectors)> selectorRects_ {};
     std::array<Rect, std::size(kButtons)> buttonRects_ {};
+    std::array<Rect, kParamPhraseRoleCount> phraseRoleRects_ {};
     int draggingSlider_ = -1;
     int openSelector_ = -1;
+    int openRoleMenu_ = -1;
 
     static constexpr float kSelectorItemHeight = 30.0f;
     static constexpr int kSelectorMenuMaxRows = 10;
@@ -623,14 +680,18 @@ private:
         fill();
         closePath();
 
-        const int formShape = clampi(static_cast<int>(std::lround(values_[kParamFormShape])), 0, 4);
+        phraseRoleRects_.fill({});
+
+        const int formShape = clampi(static_cast<int>(std::lround(values_[kParamFormShape])),
+                                     0,
+                                     static_cast<int>(std::size(kFormShapeNames)) - 1);
         const int formBars = structuredShape(formShape)
             ? formBarsForShape(formShape)
             : clampi(static_cast<int>(std::lround(values_[kParamFormBars])), 8, 64);
         const int phraseBars = structuredShape(formShape)
             ? phraseBarsForShape(formShape)
             : std::max(1, clampi(static_cast<int>(std::lround(values_[kParamPhraseBars])), 1, 12));
-        const int phraseCount = std::max(1, formBars / phraseBars);
+        const int phraseCount = clampi(formBars / phraseBars, 1, static_cast<int>(kParamPhraseRoleCount));
         const float tension = values_[kParamTension];
         const float cadence = values_[kParamCadence];
         const float sequence = values_[kParamSequence];
@@ -647,37 +708,58 @@ private:
 
         for (int phraseIndex = 0; phraseIndex < phraseCount; ++phraseIndex) {
             const float cellX = laneX + static_cast<float>(phraseIndex) * (cellW + cellGap);
-            const int role = bluesShape(formShape)
+            const int generatedRole = bluesShape(formShape)
                 ? predictedBluesRoleForPhrase(formShape, phraseIndex)
                 : structuredShape(formShape)
                     ? predictedStructuredRoleForPhrase(formShape, phraseIndex)
                 : predictedRoleForPhrase(phraseIndex, phraseCount, tension, cadence, sequence);
+            const float roleOverrideValue = values_[roleParamForPhrase(phraseIndex)];
+            const bool roleEdited = roleOverrideValue >= 0.5f;
+            const int role = roleEdited ? roleOverrideValueToRole(roleOverrideValue) : generatedRole;
             const RoleColor color = colorForRole(role);
             const bool active = phraseIndex == currentPhrase;
+            const bool open = openRoleMenu_ == phraseIndex;
+
+            phraseRoleRects_[static_cast<std::size_t>(phraseIndex)] = {cellX, laneY, cellW, laneH};
 
             beginPath();
             roundedRect(cellX, laneY, cellW, laneH, 14.0f);
-            fillColor(color.r, color.g, color.b, active ? 88 : 42);
+            fillColor(color.r, color.g, color.b, active ? 96 : (roleEdited ? 62 : 42));
             fill();
-            strokeColor(color.r, color.g, color.b, active ? 240 : 170);
-            strokeWidth(active ? 2.2f : 1.0f);
+            strokeColor(color.r, color.g, color.b, active || open ? 240 : 170);
+            strokeWidth(active || open ? 2.2f : 1.0f);
             stroke();
             closePath();
 
-            fontSize(11.0f);
-            textAlign(ALIGN_LEFT | ALIGN_TOP);
-            fillColor(150, 162, 176, 255);
-            const std::string topLabel = "P" + std::to_string(phraseIndex + 1);
-            text(cellX + 10.0f, laneY + 10.0f, topLabel.c_str(), nullptr);
+            if (cellW >= 54.0f) {
+                fontSize(11.0f);
+                textAlign(ALIGN_LEFT | ALIGN_TOP);
+                fillColor(150, 162, 176, 255);
+                const std::string topLabel = "P" + std::to_string(phraseIndex + 1);
+                text(cellX + 10.0f, laneY + 10.0f, topLabel.c_str(), nullptr);
 
-            fontSize(16.0f);
-            fillColor(238, 242, 245, 255);
-            text(cellX + 10.0f, laneY + 28.0f, kRoleShortNames[role], nullptr);
+                fontSize(cellW < 68.0f ? 13.0f : 16.0f);
+                fillColor(238, 242, 245, 255);
+                text(cellX + 10.0f, laneY + 28.0f, kRoleShortNames[role], nullptr);
 
-            fontSize(11.0f);
-            fillColor(168, 181, 194, 255);
-            const std::string bottomLabel = std::to_string(phraseBars) + (phraseBars == 1 ? " bar" : " bars");
-            text(cellX + 10.0f, laneY + 49.0f, bottomLabel.c_str(), nullptr);
+                fontSize(16.0f);
+                textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
+                fillColor(210, 220, 228, roleEdited ? 230 : 150);
+                text(cellX + cellW - 10.0f, laneY + 36.0f, open ? "˄" : "˅", nullptr);
+
+                if (cellW >= 70.0f) {
+                    fontSize(11.0f);
+                    textAlign(ALIGN_LEFT | ALIGN_TOP);
+                    fillColor(168, 181, 194, 255);
+                    const std::string bottomLabel = std::to_string(phraseBars) + (phraseBars == 1 ? " bar" : " bars");
+                    text(cellX + 10.0f, laneY + 49.0f, bottomLabel.c_str(), nullptr);
+                }
+            } else {
+                fontSize(15.0f);
+                textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+                fillColor(238, 242, 245, 255);
+                text(cellX + cellW * 0.5f, laneY + laneH * 0.5f + 1.0f, kRoleTinyNames[role], nullptr);
+            }
         }
 
     }
@@ -888,6 +970,14 @@ private:
         setParameter(def.index, selectorIndexToValue(def, nextIndex));
     }
 
+    void cycleRoleSelector(const int phraseIndex, const int direction)
+    {
+        const uint32_t param = roleParamForPhrase(phraseIndex);
+        const int currentIndex = clampi(static_cast<int>(std::lround(values_[param])), 0, static_cast<int>(std::size(kRoleMenuNames)) - 1);
+        const int nextIndex = clampi(currentIndex + direction, 0, static_cast<int>(std::size(kRoleMenuNames)) - 1);
+        setParameter(param, static_cast<float>(nextIndex));
+    }
+
     void drawOpenSelectorMenu(const int selectorIndex)
     {
         const SelectorDef& def = kSelectors[selectorIndex];
@@ -983,13 +1073,85 @@ private:
         return true;
     }
 
+    [[nodiscard]] Rect roleMenuRect(const int phraseIndex) const
+    {
+        const Rect& base = phraseRoleRects_[static_cast<std::size_t>(phraseIndex)];
+        const float itemW = std::max(base.w, 148.0f);
+        const float menuW = itemW;
+        const float menuH = static_cast<float>(std::size(kRoleMenuNames)) * kSelectorItemHeight;
+        const float windowW = static_cast<float>(getWidth());
+        const float windowH = static_cast<float>(getHeight());
+        const float gap = 6.0f;
+
+        float menuX = clampf(base.x, 10.0f, std::max(10.0f, windowW - menuW - 10.0f));
+        float menuY = base.y + base.h + gap;
+        if (menuY + menuH > windowH - 10.0f) {
+            menuY = base.y - menuH - gap;
+        }
+        menuY = clampf(menuY, 10.0f, std::max(10.0f, windowH - menuH - 10.0f));
+        return {menuX, menuY, menuW, menuH};
+    }
+
+    void drawOpenRoleMenu(const int phraseIndex)
+    {
+        const uint32_t param = roleParamForPhrase(phraseIndex);
+        const int selected = clampi(static_cast<int>(std::lround(values_[param])), 0, static_cast<int>(std::size(kRoleMenuNames)) - 1);
+        const Rect menuRect = roleMenuRect(phraseIndex);
+
+        beginPath();
+        roundedRect(menuRect.x, menuRect.y, menuRect.w, menuRect.h, 14.0f);
+        fillColor(22, 28, 36, 248);
+        fill();
+        strokeColor(93, 112, 134, 220);
+        strokeWidth(1.0f);
+        stroke();
+        closePath();
+
+        for (std::size_t i = 0; i < std::size(kRoleMenuNames); ++i) {
+            const float rowY = menuRect.y + static_cast<float>(i) * kSelectorItemHeight;
+            if (static_cast<int>(i) == selected) {
+                beginPath();
+                roundedRect(menuRect.x + 4.0f, rowY + 3.0f, menuRect.w - 8.0f, kSelectorItemHeight - 6.0f, 10.0f);
+                fillColor(74, 96, 122, 255);
+                fill();
+                closePath();
+            }
+
+            fontSize(13.0f);
+            textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+            fillColor(236, 240, 243, 255);
+            text(menuRect.x + 14.0f, rowY + kSelectorItemHeight * 0.5f + 1.0f, kRoleMenuNames[i], nullptr);
+        }
+    }
+
+    bool handleOpenRoleClick(const float x, const float y)
+    {
+        const Rect& base = phraseRoleRects_[static_cast<std::size_t>(openRoleMenu_)];
+        if (base.contains(x, y)) {
+            openRoleMenu_ = -1;
+            repaint();
+            return true;
+        }
+
+        const Rect menuRect = roleMenuRect(openRoleMenu_);
+        if (!menuRect.contains(x, y)) {
+            return false;
+        }
+
+        const int item = clampi(static_cast<int>((y - menuRect.y) / kSelectorItemHeight), 0, static_cast<int>(std::size(kRoleMenuNames)) - 1);
+        setParameter(roleParamForPhrase(openRoleMenu_), static_cast<float>(item));
+        openRoleMenu_ = -1;
+        repaint();
+        return true;
+    }
+
     void triggerButton(const int buttonIndex)
     {
         const uint32_t index = kButtons[buttonIndex].index;
         editParameter(index, true);
         setParameterValue(index, 1.0f);
-        setParameterValue(index, 0.0f);
         editParameter(index, false);
+        values_[index] = 0.0f;
         repaint();
     }
 
