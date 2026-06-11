@@ -507,6 +507,8 @@ protected:
 
         if (!ev.press) {
             draggingSlider_ = -1;
+            pulsedButton_ = -1;
+            repaint();
             return false;
         }
 
@@ -641,6 +643,7 @@ private:
     int openSelector_ = -1;
     bool openRootMenu_ = false;
     int openRoleMenu_ = -1;
+    int pulsedButton_ = -1;
 
     static constexpr float kSelectorItemHeight = 30.0f;
     static constexpr int kSelectorMenuMaxRows = 10;
@@ -936,7 +939,7 @@ private:
         const float buttonW = (innerW - buttonGap * static_cast<float>(std::size(kButtons) - 1)) / static_cast<float>(std::size(kButtons));
         for (std::size_t i = 0; i < std::size(kButtons); ++i) {
             buttonRects_[i] = {innerX + static_cast<float>(i) * (buttonW + buttonGap), cy, buttonW, buttonH};
-            drawButton(kButtons[i], buttonRects_[i]);
+            drawButton(kButtons[i], buttonRects_[i], pulsedButton_ == static_cast<int>(i));
         }
     }
 
@@ -992,18 +995,18 @@ private:
              openRootMenu_ ? "˄" : "˅", nullptr);
     }
 
-    void drawButton(const ButtonDef& def, const Rect& rect)
+    void drawButton(const ButtonDef& def, const Rect& rect, const bool active)
     {
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 14.0f);
-        fillColor(76, 96, 120, 255);
+        fillColor(active ? 205 : 76, active ? 139 : 96, active ? 82 : 120, 255);
         fill();
         closePath();
 
         beginPath();
         roundedRect(rect.x + 1.0f, rect.y + 1.0f, rect.w - 2.0f, rect.h - 2.0f, 13.0f);
-        strokeColor(167, 187, 211, 110);
-        strokeWidth(1.0f);
+        strokeColor(active ? 248 : 167, active ? 203 : 187, active ? 144 : 211, active ? 190 : 110);
+        strokeWidth(active ? 2.0f : 1.0f);
         stroke();
         closePath();
 
@@ -1308,10 +1311,12 @@ private:
     void triggerButton(const int buttonIndex)
     {
         const uint32_t index = kButtons[buttonIndex].index;
-        editParameter(index, true);
-        setParameterValue(index, 1.0f);
-        editParameter(index, false);
-        values_[index] = 0.0f;
+        float value = values_[index] + 1.0f;
+        if (value > 1048576.0f) {
+            value = 1.0f;
+        }
+        pulsedButton_ = buttonIndex;
+        setParameter(index, value);
         repaint();
     }
 

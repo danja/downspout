@@ -16,6 +16,7 @@ struct EngineState {
     int activeNote = -1;
     std::int64_t lastTransportStep = -1;
     bool wasPlaying = false;
+    bool pendingResync = false;
     int currentPhraseIndex = 0;
     PhraseRoleId currentRole = PhraseRoleId::statement;
 };

@@ -404,7 +404,11 @@ BlockResult processBlock(EngineState& state,
     }
 
     const ::downspout::Meter targetMeter = targetMeterForTransport(state, transport);
-    const UpdateDecision updateDecision = updateFormIfNeeded(state, freshControls, targetPhraseIndex, targetMeter);
+    UpdateDecision updateDecision = updateFormIfNeeded(state, freshControls, targetPhraseIndex, targetMeter);
+    if (state.pendingResync) {
+        updateDecision.forceResync = true;
+        state.pendingResync = false;
+    }
     result.currentPhraseIndex = state.currentPhraseIndex;
     result.currentRole = state.currentRole;
 

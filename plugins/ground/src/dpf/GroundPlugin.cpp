@@ -2,7 +2,9 @@
 
 #include "ground_engine.hpp"
 #include "ground_params.hpp"
+#include "ground_pattern.hpp"
 #include "ground_serialization.hpp"
+#include "ground_variation.hpp"
 
 #include <algorithm>
 #include <array>
@@ -438,25 +440,25 @@ protected:
         case kParamActionNewForm:
             parameter.name = "New Form";
             parameter.symbol = "new_form";
-            parameter.hints = kParameterIsAutomatable | kParameterIsBoolean | kParameterIsInteger | kParameterIsTrigger;
+            parameter.hints = kParameterIsAutomatable | kParameterIsInteger;
             parameter.ranges.min = 0.0f;
-            parameter.ranges.max = 1.0f;
+            parameter.ranges.max = 1048576.0f;
             parameter.ranges.def = 0.0f;
             break;
         case kParamActionNewPhrase:
             parameter.name = "New Phrase";
             parameter.symbol = "new_phrase";
-            parameter.hints = kParameterIsAutomatable | kParameterIsBoolean | kParameterIsInteger | kParameterIsTrigger;
+            parameter.hints = kParameterIsAutomatable | kParameterIsInteger;
             parameter.ranges.min = 0.0f;
-            parameter.ranges.max = 1.0f;
+            parameter.ranges.max = 1048576.0f;
             parameter.ranges.def = 0.0f;
             break;
         case kParamActionMutateCell:
             parameter.name = "Mutate Cell";
             parameter.symbol = "mutate_cell";
-            parameter.hints = kParameterIsAutomatable | kParameterIsBoolean | kParameterIsInteger | kParameterIsTrigger;
+            parameter.hints = kParameterIsAutomatable | kParameterIsInteger;
             parameter.ranges.min = 0.0f;
-            parameter.ranges.max = 1.0f;
+            parameter.ranges.max = 1048576.0f;
             parameter.ranges.def = 0.0f;
             break;
         case kParamStatusPhrase:
@@ -530,10 +532,9 @@ protected:
         case kParamNoteLengthVariation: return controls_.noteLengthVariation;
         case kParamSeed: return static_cast<float>(controls_.seed);
         case kParamVary: return controls_.vary * 100.0f;
-        case kParamActionNewForm:
-        case kParamActionNewPhrase:
-        case kParamActionMutateCell:
-            return 0.0f;
+        case kParamActionNewForm: return static_cast<float>(controls_.actionNewForm);
+        case kParamActionNewPhrase: return static_cast<float>(controls_.actionNewPhrase);
+        case kParamActionMutateCell: return static_cast<float>(controls_.actionMutateCell);
         case kParamStatusPhrase:
             return static_cast<float>(statusPhrase_);
         case kParamStatusRole:
@@ -551,6 +552,11 @@ protected:
             controls_ = downspout::ground::clampControls(controls_);
             return;
         }
+
+        const bool actionParameter = index == kParamActionNewForm ||
+                                     index == kParamActionNewPhrase ||
+                                     index == kParamActionMutateCell;
+        const int previousActionValue = actionParameter ? actionValueForIndex(index) : 0;
 
         switch (index) {
         case kParamRootNote: controls_.rootNote = static_cast<int>(value); break;
@@ -573,15 +579,18 @@ protected:
         case kParamNoteLengthVariation: controls_.noteLengthVariation = value; break;
         case kParamSeed: controls_.seed = static_cast<uint32_t>(value); break;
         case kParamVary: controls_.vary = value / 100.0f; break;
-        case kParamActionNewForm: if (value > 0.5f) ++controls_.actionNewForm; break;
-        case kParamActionNewPhrase: if (value > 0.5f) ++controls_.actionNewPhrase; break;
-        case kParamActionMutateCell: if (value > 0.5f) ++controls_.actionMutateCell; break;
+        case kParamActionNewForm: controls_.actionNewForm = static_cast<int>(value); break;
+        case kParamActionNewPhrase: controls_.actionNewPhrase = static_cast<int>(value); break;
+        case kParamActionMutateCell: controls_.actionMutateCell = static_cast<int>(value); break;
         case kParamStatusPhrase:
         case kParamStatusRole:
             break;
         }
 
         controls_ = downspout::ground::clampControls(controls_);
+        if (actionParameter && actionValueForIndex(index) != previousActionValue) {
+            applyActionImmediately(index);
+        }
     }
 
     String getState(const char* key) const override
@@ -664,6 +673,81 @@ protected:
     }
 
 private:
+    [[nodiscard]] static PhraseRoleId roleOverrideToRole(const int roleOverride)
+    {
+        return static_cast<PhraseRoleId>(
+            std::max(0, std::min(roleOverride - 1, static_cast<int>(PhraseRoleId::count) - 1)));
+    }
+
+    [[nodiscard]] int actionValueForIndex(const uint32_t index) const
+    {
+        switch (index) {
+        case kParamActionNewForm: return controls_.actionNewForm;
+        case kParamActionNewPhrase: return controls_.actionNewPhrase;
+        case kParamActionMutateCell: return controls_.actionMutateCell;
+        default: return 0;
+        }
+    }
+
+    void applyRoleOverridesToEngine()
+    {
+        if (!engine_.formValid) {
+            return;
+        }
+
+        for (int phraseIndex = 0; phraseIndex < engine_.form.phraseCount; ++phraseIndex) {
+            const int roleOverride = controls_.phraseRoleOverrides[static_cast<std::size_t>(phraseIndex)];
+            if (roleOverride > 0) {
+                downspout::ground::setPhraseRole(engine_.form,
+                                                 controls_,
+                                                 phraseIndex,
+                                                 roleOverrideToRole(roleOverride));
+            }
+        }
+    }
+
+    void syncEngineAfterImmediateAction()
+    {
+        engine_.controls = controls_;
+        engine_.previousControls = controls_;
+        engine_.pendingResync = true;
+        engine_.currentPhraseIndex = std::max(0, std::min(engine_.currentPhraseIndex,
+                                                          std::max(0, engine_.form.phraseCount - 1)));
+        engine_.currentRole = engine_.formValid && engine_.form.phraseCount > 0
+            ? engine_.form.phrases[static_cast<std::size_t>(engine_.currentPhraseIndex)].role
+            : PhraseRoleId::statement;
+        syncStatusFromEngine();
+    }
+
+    void applyActionImmediately(const uint32_t index)
+    {
+        const ::downspout::Meter meter = engine_.formValid ? engine_.form.meter : ::downspout::Meter {};
+        if (!engine_.formValid || index == kParamActionNewForm) {
+            downspout::ground::regenerateForm(engine_.form, controls_, meter);
+            engine_.formValid = true;
+            applyRoleOverridesToEngine();
+        } else {
+            const int phraseIndex = std::max(0, std::min(engine_.currentPhraseIndex,
+                                                         std::max(0, engine_.form.phraseCount - 1)));
+            if (index == kParamActionNewPhrase) {
+                const int roleOverride = controls_.phraseRoleOverrides[static_cast<std::size_t>(phraseIndex)];
+                if (roleOverride > 0) {
+                    downspout::ground::setPhraseRole(engine_.form,
+                                                     controls_,
+                                                     phraseIndex,
+                                                     roleOverrideToRole(roleOverride));
+                } else {
+                    downspout::ground::refreshPhrase(engine_.form, controls_, phraseIndex);
+                }
+            } else if (index == kParamActionMutateCell) {
+                downspout::ground::mutatePhraseCell(engine_.form, controls_, phraseIndex, 0.70f);
+            }
+        }
+
+        downspout::ground::resetVariationProgress(engine_.variation);
+        syncEngineAfterImmediateAction();
+    }
+
     void syncStatusFromEngine()
     {
         statusPhrase_ = std::max(0, engine_.currentPhraseIndex + 1);

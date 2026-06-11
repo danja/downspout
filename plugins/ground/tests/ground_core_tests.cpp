@@ -640,6 +640,34 @@ void testEngineRestartPhraseStatusAndStop()
     assert(engine.activeNote == -1);
 }
 
+void testEngineActionCountersTriggerUpdates()
+{
+    Controls controls;
+    controls.seed = 909u;
+    controls.formBars = 16;
+    controls.phraseBars = 4;
+
+    EngineState engine;
+    activate(engine, controls);
+
+    const std::int32_t initialSerial = engine.form.generationSerial;
+
+    Controls next = controls;
+    next.actionNewForm = controls.actionNewForm + 1;
+    (void)processBlock(engine, next, TransportSnapshot {}, 64, 48000.0);
+    assert(engine.form.generationSerial > initialSerial);
+
+    const std::int32_t formSerial = engine.form.generationSerial;
+    next.actionNewPhrase += 1;
+    (void)processBlock(engine, next, TransportSnapshot {}, 64, 48000.0);
+    assert(engine.form.generationSerial > formSerial);
+
+    const std::int32_t phraseSerial = engine.form.generationSerial;
+    next.actionMutateCell += 1;
+    (void)processBlock(engine, next, TransportSnapshot {}, 64, 48000.0);
+    assert(engine.form.generationSerial > phraseSerial);
+}
+
 void testSerializationRoundTrip()
 {
     Controls controls;
@@ -724,6 +752,7 @@ int main()
     testDubAndJazzStylesAreExplicit();
     testAiStateSummaryIncludesCurrentPhraseContext();
     testEngineRestartPhraseStatusAndStop();
+    testEngineActionCountersTriggerUpdates();
     testSerializationRoundTrip();
     return 0;
 }
