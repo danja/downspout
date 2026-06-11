@@ -77,6 +77,7 @@ std::string serializeControls(const Controls& rawControls)
            "cadence=" + std::to_string(controls.cadence) + "\n"
            "reg=" + std::to_string(controls.reg) + "\n"
            "register_arc=" + std::to_string(controls.registerArc) + "\n"
+           "clamp_semitones=" + std::to_string(controls.clampSemitones) + "\n"
            "sequence=" + std::to_string(controls.sequence) + "\n"
            "note_length=" + std::to_string(controls.noteLength) + "\n"
            "note_length_variation=" + std::to_string(controls.noteLengthVariation) + "\n"
@@ -191,6 +192,8 @@ std::optional<Controls> deserializeControls(const std::string& text)
             controls.reg = intValue;
         } else if (key == "register_arc" && parseFloat(value, floatValue)) {
             controls.registerArc = floatValue;
+        } else if (key == "clamp_semitones" && parseInteger(value, intValue)) {
+            controls.clampSemitones = intValue;
         } else if (key == "sequence" && parseFloat(value, floatValue)) {
             controls.sequence = floatValue;
         } else if (key == "note_length" && parseFloat(value, floatValue)) {

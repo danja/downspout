@@ -29,6 +29,7 @@ using downspout::ground::kParamActionNewForm;
 using downspout::ground::kParamActionNewPhrase;
 using downspout::ground::kParamCadence;
 using downspout::ground::kParamChannel;
+using downspout::ground::kParamClamp;
 using downspout::ground::kParamColor;
 using downspout::ground::kParamDensity;
 using downspout::ground::kParamFormBars;
@@ -390,6 +391,14 @@ protected:
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = 0.40f;
             break;
+        case kParamClamp:
+            parameter.name = "Clamp";
+            parameter.symbol = "clamp";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 12.0f;
+            parameter.ranges.max = 48.0f;
+            parameter.ranges.def = 12.0f;
+            break;
         case kParamSequence:
             parameter.name = "Sequence";
             parameter.symbol = "sequence";
@@ -515,6 +524,7 @@ protected:
         case kParamCadence: return controls_.cadence;
         case kParamRegister: return static_cast<float>(controls_.reg);
         case kParamRegisterArc: return controls_.registerArc;
+        case kParamClamp: return static_cast<float>(controls_.clampSemitones);
         case kParamSequence: return controls_.sequence;
         case kParamNoteLength: return controls_.noteLength;
         case kParamNoteLengthVariation: return controls_.noteLengthVariation;
@@ -557,6 +567,7 @@ protected:
         case kParamCadence: controls_.cadence = value; break;
         case kParamRegister: controls_.reg = static_cast<int>(value); break;
         case kParamRegisterArc: controls_.registerArc = value; break;
+        case kParamClamp: controls_.clampSemitones = static_cast<int>(value); break;
         case kParamSequence: controls_.sequence = value; break;
         case kParamNoteLength: controls_.noteLength = value; break;
         case kParamNoteLengthVariation: controls_.noteLengthVariation = value; break;

@@ -30,7 +30,8 @@ enum ParameterIndex : std::uint32_t {
     kParamNoteLengthVariation,
     kParamFormShape,
     kParamPhraseRole0,
-    kParameterCount = kParamPhraseRole0 + 32
+    kParamClamp = kParamPhraseRole0 + 32,
+    kParameterCount
 };
 
 inline constexpr std::uint32_t kParamPhraseRoleStart = kParamPhraseRole0;

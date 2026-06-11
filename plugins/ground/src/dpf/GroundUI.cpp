@@ -19,6 +19,7 @@ using downspout::ground::kParamActionNewForm;
 using downspout::ground::kParamActionNewPhrase;
 using downspout::ground::kParamCadence;
 using downspout::ground::kParamChannel;
+using downspout::ground::kParamClamp;
 using downspout::ground::kParamColor;
 using downspout::ground::kParamDensity;
 using downspout::ground::kParamFormBars;
@@ -75,13 +76,13 @@ struct ButtonDef {
 };
 
 constexpr SliderDef kSliders[] = {
-    {kParamRootNote, "Root", 0.0f, 127.0f, true},
     {kParamDensity, "Density", 0.0f, 1.0f, false},
     {kParamMotion, "Motion", 0.0f, 1.0f, false},
     {kParamTension, "Tension", 0.0f, 1.0f, false},
     {kParamColor, "Color", 0.0f, 1.0f, false},
     {kParamCadence, "Cadence", 0.0f, 1.0f, false},
-    {kParamRegisterArc, "Reg Arc", 0.0f, 1.0f, false},
+    {kParamRegisterArc, "Register Arc", 0.0f, 1.0f, false},
+    {kParamClamp, "Clamp", 12.0f, 48.0f, true},
     {kParamSequence, "Sequence", 0.0f, 1.0f, false},
     {kParamNoteLength, "Note Length", 0.0f, 1.0f, false},
     {kParamNoteLengthVariation, "Note Length Variation", 0.0f, 1.0f, false},
@@ -234,10 +235,22 @@ constexpr ButtonDef kButtons[] = {
     case kParamSeed:
         std::snprintf(buffer, sizeof(buffer), "%u", static_cast<unsigned int>(std::lround(value)));
         return buffer;
+    case kParamClamp:
+        std::snprintf(buffer, sizeof(buffer), "%d st", static_cast<int>(std::lround(value)));
+        return buffer;
     default:
         std::snprintf(buffer, sizeof(buffer), "%.2f", value);
         return buffer;
     }
+}
+
+[[nodiscard]] std::string formatRootValue(const float value)
+{
+    char buffer[64];
+    const int midi = static_cast<int>(std::lround(value));
+    const int octave = midi / 12 - 1;
+    std::snprintf(buffer, sizeof(buffer), "%s%d", noteName(midi), octave);
+    return buffer;
 }
 
 [[nodiscard]] int predictedPeakPhrase(const int phraseCount, const float tension)
@@ -424,6 +437,7 @@ public:
         values_[kParamCadence] = 0.50f;
         values_[kParamRegister] = 1.0f;
         values_[kParamRegisterArc] = 0.40f;
+        values_[kParamClamp] = 12.0f;
         values_[kParamSequence] = 0.35f;
         values_[kParamNoteLength] = 0.35f;
         values_[kParamNoteLengthVariation] = 0.35f;
@@ -474,6 +488,9 @@ protected:
         if (openSelector_ >= 0) {
             drawOpenSelectorMenu(openSelector_);
         }
+        if (openRootMenu_) {
+            drawOpenRootMenu();
+        }
         if (openRoleMenu_ >= 0) {
             drawOpenRoleMenu(openRoleMenu_);
         }
@@ -500,6 +517,13 @@ protected:
             openSelector_ = -1;
         }
 
+        if (openRootMenu_) {
+            if (handleOpenRootClick(x, y)) {
+                return true;
+            }
+            openRootMenu_ = false;
+        }
+
         if (openRoleMenu_ >= 0) {
             if (handleOpenRoleClick(x, y)) {
                 return true;
@@ -518,15 +542,25 @@ protected:
         for (std::size_t i = 0; i < selectorRects_.size(); ++i) {
             if (selectorRects_[i].contains(x, y)) {
                 openRoleMenu_ = -1;
+                openRootMenu_ = false;
                 openSelector_ = static_cast<int>(i);
                 repaint();
                 return true;
             }
         }
 
+        if (rootRect_.contains(x, y)) {
+            openSelector_ = -1;
+            openRoleMenu_ = -1;
+            openRootMenu_ = true;
+            repaint();
+            return true;
+        }
+
         for (std::size_t i = 0; i < phraseRoleRects_.size(); ++i) {
             if (phraseRoleRects_[i].contains(x, y)) {
                 openSelector_ = -1;
+                openRootMenu_ = false;
                 openRoleMenu_ = static_cast<int>(i);
                 repaint();
                 return true;
@@ -576,6 +610,11 @@ protected:
             }
         }
 
+        if (rootRect_.contains(x, y)) {
+            nudgeRoot(ev.delta.getY() > 0.0f ? -1.0f : 1.0f);
+            return true;
+        }
+
         for (std::size_t i = 0; i < phraseRoleRects_.size(); ++i) {
             if (phraseRoleRects_[i].contains(x, y)) {
                 if (openRoleMenu_ == static_cast<int>(i)) {
@@ -597,8 +636,10 @@ private:
     std::array<Rect, std::size(kSelectors)> selectorRects_ {};
     std::array<Rect, std::size(kButtons)> buttonRects_ {};
     std::array<Rect, kParamPhraseRoleCount> phraseRoleRects_ {};
+    Rect rootRect_ {};
     int draggingSlider_ = -1;
     int openSelector_ = -1;
+    bool openRootMenu_ = false;
     int openRoleMenu_ = -1;
 
     static constexpr float kSelectorItemHeight = 30.0f;
@@ -865,9 +906,13 @@ private:
         const float selectorH = 50.0f;
         const float selectorGap = 8.0f;
         const float selectorTop = y + 54.0f;
+        rootRect_ = {innerX, selectorTop, colW, selectorH};
+        drawRootSelector(rootRect_);
+
         for (std::size_t i = 0; i < std::size(kSelectors); ++i) {
-            const int col = static_cast<int>(i % 2);
-            const int row = static_cast<int>(i / 2);
+            const std::size_t controlIndex = i + 1u;
+            const int col = static_cast<int>(controlIndex % 2u);
+            const int row = static_cast<int>(controlIndex / 2u);
             selectorRects_[i] = {
                 innerX + static_cast<float>(col) * (colW + colGap),
                 selectorTop + static_cast<float>(row) * (selectorH + selectorGap),
@@ -877,7 +922,7 @@ private:
             drawSelector(static_cast<int>(i), kSelectors[i], selectorRects_[i], values_[kSelectors[i].index]);
         }
 
-        const int selectorRows = static_cast<int>((std::size(kSelectors) + 1u) / 2u);
+        const int selectorRows = static_cast<int>((std::size(kSelectors) + 2u) / 2u);
         float cy = selectorTop + static_cast<float>(selectorRows) * selectorH +
                    static_cast<float>(selectorRows - 1) * selectorGap + 20.0f;
         fontSize(15.0f);
@@ -922,6 +967,31 @@ private:
              openSelector_ == selectorIndex ? "˄" : "˅", nullptr);
     }
 
+    void drawRootSelector(const Rect& rect)
+    {
+        beginPath();
+        roundedRect(rect.x, rect.y, rect.w, rect.h, 16.0f);
+        fillColor(34, 43, 55, 255);
+        fill();
+        closePath();
+
+        fontSize(12.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(152, 166, 181, 255);
+        text(rect.x + 16.0f, rect.y + 12.0f, "Root", nullptr);
+
+        const std::string valueText = formatRootValue(values_[kParamRootNote]);
+        fontSize(rect.w < 150.0f ? 15.0f : 18.0f);
+        fillColor(235, 239, 242, 255);
+        text(rect.x + 16.0f, rect.y + 31.0f, valueText.c_str(), nullptr);
+
+        fontSize(20.0f);
+        textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
+        fillColor(117, 133, 149, 255);
+        text(rect.x + rect.w - 18.0f, rect.y + rect.h * 0.5f + 1.0f,
+             openRootMenu_ ? "˄" : "˅", nullptr);
+    }
+
     void drawButton(const ButtonDef& def, const Rect& rect)
     {
         beginPath();
@@ -960,6 +1030,11 @@ private:
         const SliderDef& def = kSliders[sliderIndex];
         const float step = def.integer ? 1.0f : (def.max - def.min) / 100.0f;
         setParameter(def.index, values_[def.index] + direction * step);
+    }
+
+    void nudgeRoot(const float direction)
+    {
+        setParameter(kParamRootNote, clampf(values_[kParamRootNote] + direction, 0.0f, 127.0f));
     }
 
     void cycleSelector(const int selectorIndex, const int direction)
@@ -1069,6 +1144,91 @@ private:
         }
         setParameter(def.index, selectorIndexToValue(def, item));
         openSelector_ = -1;
+        repaint();
+        return true;
+    }
+
+    [[nodiscard]] Rect rootMenuRect() const
+    {
+        constexpr int kRootMenuRows = 10;
+        const int columns = (128 + kRootMenuRows - 1) / kRootMenuRows;
+        const float itemW = 58.0f;
+        const float menuW = itemW * static_cast<float>(columns);
+        const float menuH = static_cast<float>(kRootMenuRows) * kSelectorItemHeight;
+        const float windowW = static_cast<float>(getWidth());
+        const float windowH = static_cast<float>(getHeight());
+        const float gap = 6.0f;
+
+        float menuX = clampf(rootRect_.x, 10.0f, std::max(10.0f, windowW - menuW - 10.0f));
+        float menuY = rootRect_.y + rootRect_.h + gap;
+        if (menuY + menuH > windowH - 10.0f) {
+            menuY = rootRect_.y - menuH - gap;
+        }
+        menuY = clampf(menuY, 10.0f, std::max(10.0f, windowH - menuH - 10.0f));
+        return {menuX, menuY, menuW, menuH};
+    }
+
+    void drawOpenRootMenu()
+    {
+        constexpr int kRootMenuRows = 10;
+        const float itemW = 58.0f;
+        const int selected = clampi(static_cast<int>(std::lround(values_[kParamRootNote])), 0, 127);
+        const Rect menuRect = rootMenuRect();
+
+        beginPath();
+        roundedRect(menuRect.x, menuRect.y, menuRect.w, menuRect.h, 14.0f);
+        fillColor(22, 28, 36, 248);
+        fill();
+        strokeColor(93, 112, 134, 220);
+        strokeWidth(1.0f);
+        stroke();
+        closePath();
+
+        for (int i = 0; i < 128; ++i) {
+            const int col = i / kRootMenuRows;
+            const int row = i % kRootMenuRows;
+            const float itemX = menuRect.x + static_cast<float>(col) * itemW;
+            const float rowY = menuRect.y + static_cast<float>(row) * kSelectorItemHeight;
+            if (i == selected) {
+                beginPath();
+                roundedRect(itemX + 4.0f, rowY + 3.0f, itemW - 8.0f, kSelectorItemHeight - 6.0f, 10.0f);
+                fillColor(74, 96, 122, 255);
+                fill();
+                closePath();
+            }
+
+            const std::string label = formatRootValue(static_cast<float>(i));
+            fontSize(12.0f);
+            textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+            fillColor(236, 240, 243, 255);
+            text(itemX + 10.0f, rowY + kSelectorItemHeight * 0.5f + 1.0f, label.c_str(), nullptr);
+        }
+    }
+
+    bool handleOpenRootClick(const float x, const float y)
+    {
+        if (rootRect_.contains(x, y)) {
+            openRootMenu_ = false;
+            repaint();
+            return true;
+        }
+
+        constexpr int kRootMenuRows = 10;
+        const int columns = (128 + kRootMenuRows - 1) / kRootMenuRows;
+        const float itemW = 58.0f;
+        const Rect menuRect = rootMenuRect();
+        if (!menuRect.contains(x, y)) {
+            return false;
+        }
+
+        const int col = clampi(static_cast<int>((x - menuRect.x) / itemW), 0, columns - 1);
+        const int row = clampi(static_cast<int>((y - menuRect.y) / kSelectorItemHeight), 0, kRootMenuRows - 1);
+        const int item = col * kRootMenuRows + row;
+        if (item >= 128) {
+            return true;
+        }
+        setParameter(kParamRootNote, static_cast<float>(item));
+        openRootMenu_ = false;
         repaint();
         return true;
     }

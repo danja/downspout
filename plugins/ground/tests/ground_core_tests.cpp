@@ -489,6 +489,33 @@ void testBassRegisterStaysInLane()
     assertLane(form);
 }
 
+void testClampFoldsNotesIntoRootRange()
+{
+    Controls controls;
+    controls.rootNote = 36;
+    controls.scale = ScaleId::bebopDominant;
+    controls.style = StyleId::jazz;
+    controls.formBars = 16;
+    controls.phraseBars = 4;
+    controls.density = 0.95f;
+    controls.motion = 1.0f;
+    controls.color = 1.0f;
+    controls.reg = 1;
+    controls.registerArc = 1.0f;
+    controls.clampSemitones = 12;
+    controls.seed = 7575u;
+
+    FormState form;
+    regenerateForm(form, controls, ::downspout::Meter {});
+
+    assert(form.eventCount > 0);
+    for (int i = 0; i < form.eventCount; ++i) {
+        const int note = form.events[static_cast<std::size_t>(i)].note;
+        assert(note >= controls.rootNote);
+        assert(note <= controls.rootNote + controls.clampSemitones);
+    }
+}
+
 void testDubAndJazzStylesAreExplicit()
 {
     Controls dub;
@@ -628,6 +655,7 @@ void testSerializationRoundTrip()
     controls.noteLengthVariation = 0.27f;
     controls.vary = 0.42f;
     controls.seed = 998u;
+    controls.clampSemitones = 24;
     controls.phraseRoleOverrides[1] = static_cast<int>(PhraseRoleId::cadence) + 1;
     controls.phraseRoleOverrides[3] = static_cast<int>(PhraseRoleId::pedal) + 1;
     controls.actionMutateCell = 7;
@@ -653,6 +681,7 @@ void testSerializationRoundTrip()
     assert(controlsRoundTrip->color > 0.71f && controlsRoundTrip->color < 0.73f);
     assert(controlsRoundTrip->noteLength > 0.60f && controlsRoundTrip->noteLength < 0.62f);
     assert(controlsRoundTrip->noteLengthVariation > 0.26f && controlsRoundTrip->noteLengthVariation < 0.28f);
+    assert(controlsRoundTrip->clampSemitones == 24);
     assert(controlsRoundTrip->phraseRoleOverrides[1] == static_cast<int>(PhraseRoleId::cadence) + 1);
     assert(controlsRoundTrip->phraseRoleOverrides[3] == static_cast<int>(PhraseRoleId::pedal) + 1);
     assert(controlsRoundTrip->actionMutateCell == controls.actionMutateCell);
@@ -691,6 +720,7 @@ int main()
     testTwelveBarBluesFormShapes();
     testAdditionalNamedFormShapes();
     testBassRegisterStaysInLane();
+    testClampFoldsNotesIntoRootRange();
     testDubAndJazzStylesAreExplicit();
     testAiStateSummaryIncludesCurrentPhraseContext();
     testEngineRestartPhraseStatusAndStop();

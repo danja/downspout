@@ -94,6 +94,7 @@ struct Controls {
     float cadence = 0.50f;
     int reg = 1;
     float registerArc = 0.40f;
+    int clampSemitones = 12;
     float sequence = 0.35f;
     float noteLength = 0.35f;
     float noteLengthVariation = 0.35f;

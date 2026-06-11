@@ -575,7 +575,19 @@ void applyStructuredPhrasePlan(PhrasePlan& phrase,
         note += 12;
     }
 
-    return clampi(note, lower, std::max(lower, upper));
+    note = clampi(note, lower, std::max(lower, upper));
+
+    const int clampUpper = clampi(registerRoot + controls.clampSemitones, registerRoot, 127);
+    while (note < registerRoot && note + 12 <= 127) {
+        note += 12;
+    }
+    while (note > clampUpper && note - 12 >= 0) {
+        note -= 12;
+    }
+    while (note < registerRoot && note + 12 <= clampUpper) {
+        note += 12;
+    }
+    return clampi(note, registerRoot, clampUpper);
 }
 
 void constrainFormNotesToRegisterLane(FormState& form, const Controls& controls)
@@ -1365,6 +1377,7 @@ Controls clampControls(const Controls& raw)
     controls.cadence = clampf(controls.cadence, 0.0f, 1.0f);
     controls.reg = clampi(controls.reg, 0, 3);
     controls.registerArc = clampf(controls.registerArc, 0.0f, 1.0f);
+    controls.clampSemitones = clampi(controls.clampSemitones, 12, 48);
     controls.sequence = clampf(controls.sequence, 0.0f, 1.0f);
     controls.noteLength = clampf(controls.noteLength, 0.0f, 1.0f);
     controls.noteLengthVariation = clampf(controls.noteLengthVariation, 0.0f, 1.0f);
@@ -1446,6 +1459,7 @@ bool structureControlsMatch(const Controls& a, const Controls& b)
            std::fabs(a.cadence - b.cadence) < 0.0001f &&
            a.reg == b.reg &&
            std::fabs(a.registerArc - b.registerArc) < 0.0001f &&
+           a.clampSemitones == b.clampSemitones &&
            std::fabs(a.sequence - b.sequence) < 0.0001f &&
            std::fabs(a.noteLength - b.noteLength) < 0.0001f &&
            std::fabs(a.noteLengthVariation - b.noteLengthVariation) < 0.0001f &&

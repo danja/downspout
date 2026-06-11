@@ -66,6 +66,9 @@ The phrase planner now does two extra passes beyond raw onset generation:
 - it shapes note durations from style, role, `Note Length`, and `Note Length
   Variation`, then merges contiguous repeated notes, so the line can move
   between tighter gates and longer legato holds.
+- it folds generated notes into the selected register lane and then applies
+  `Clamp` as an octave-folded semitone range above the selected root in that
+  register.
 
 ## UI status pattern
 
