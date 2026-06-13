@@ -450,7 +450,8 @@ void testJazzScaleIdsAreAppended() {
 void testFugueGenreIsAppendedAndAnswersAtDominant() {
     assert(static_cast<int>(GenreId::jazz) == 8);
     assert(static_cast<int>(GenreId::fugue) == 9);
-    assert(static_cast<int>(GenreId::count) == 10);
+    assert(static_cast<int>(GenreId::rock) == 10);
+    assert(static_cast<int>(GenreId::count) == 11);
 
     Controls controls;
     controls.seed = 1701u;
@@ -478,6 +479,29 @@ void testFugueGenreIsAppendedAndAnswersAtDominant() {
     assert(relativePitchClass(subject->note, controls.rootNote) == 0);
     assert(relativePitchClass(answer->note, controls.rootNote) == 7);
     assert(relativePitchClass(cadencePedal->note, controls.rootNote) == 0);
+}
+
+void testRockGenrePinsBeatAnchors() {
+    Controls controls;
+    controls.seed = 6161u;
+    controls.genre = GenreId::rock;
+    controls.scale = ScaleId::minor;
+    controls.lengthBeats = 8;
+    controls.subdivision = SubdivisionId::sixteenth;
+    controls.density = 0.25f;
+    controls.hold = 0.52f;
+    controls.accent = 0.78f;
+
+    PatternState pattern;
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, true, true);
+
+    assert(pattern.stepsPerBeat == 4);
+    assert(pattern.patternSteps == 32);
+    for (int step = 0; step < pattern.patternSteps; step += pattern.stepsPerBeat) {
+        const NoteEvent* event = eventStartingAt(pattern, step);
+        assert(event != nullptr);
+        assert(event->velocity >= 100);
+    }
 }
 
 void testBebopDominantScaleConstrainsGeneratedNotes() {
@@ -976,6 +1000,7 @@ int main() {
     testJazzApproachAndEnclosureNotesTargetChordTones();
     testJazzScaleIdsAreAppended();
     testFugueGenreIsAppendedAndAnswersAtDominant();
+    testRockGenrePinsBeatAnchors();
     testBebopDominantScaleConstrainsGeneratedNotes();
     testStateSanitization();
     testEngineRewindResyncAndStopNoteOff();

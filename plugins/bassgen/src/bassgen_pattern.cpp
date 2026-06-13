@@ -159,6 +159,12 @@ constexpr ScaleDef kScales[] = {
             if (roll < 0.90f) return 2;
             return 6;
         }
+        if (genre == GenreId::rock) {
+            if (roll < 0.62f) return 0;
+            if (roll < 0.86f) return 4;
+            if (roll < 0.96f) return 7;
+            return 2;
+        }
         if (roll < 0.45f) return 0;
         if (roll < 0.70f) return 4;
         if (roll < 0.82f) return 2;
@@ -189,6 +195,12 @@ constexpr ScaleDef kScales[] = {
         if (roll < 0.72f) return clampi(prevDegree - 1, 0, 9);
         if (roll < 0.84f) return 4;
         if (color > 0.55f && roll < 0.92f) return 6;
+        return 2;
+    case GenreId::rock:
+        if (roll < 0.42f - color * 0.08f) return 0;
+        if (roll < 0.66f) return 4;
+        if (roll < 0.82f + color * 0.08f) return 7;
+        if (roll < 0.92f) return prevDegree == 0 ? 4 : 0;
         return 2;
     case GenreId::acid:
         if (roll < 0.25f - color * 0.10f) return prevDegree;
@@ -990,6 +1002,7 @@ constexpr ScaleDef kScales[] = {
     case GenreId::sabbath: return strong ? 1.22f : 0.52f;
     case GenreId::jazz: return strong ? 1.35f : 0.26f;
     case GenreId::fugue: return strong ? 1.48f : 0.42f;
+    case GenreId::rock: return strong ? 1.55f : 0.18f;
     default: return 1.0f;
     }
 }
@@ -1024,7 +1037,9 @@ void reinforceMeterPulses(std::array<bool, kMaxPatternSteps>& onset,
                 float probability = 0.52f + controls.density * 0.34f;
                 if (controls.genre == GenreId::ambient) {
                     probability -= 0.10f;
-                } else if (controls.genre == GenreId::dub || controls.genre == GenreId::sabbath) {
+                } else if (controls.genre == GenreId::dub ||
+                           controls.genre == GenreId::sabbath ||
+                           controls.genre == GenreId::rock) {
                     probability += 0.10f;
                 }
 
@@ -1165,6 +1180,20 @@ void reinforceFugueSubjectSteps(std::array<bool, kMaxPatternSteps>& onset,
     }
 }
 
+void reinforceRockBeatAnchors(std::array<bool, kMaxPatternSteps>& onset,
+                              const PatternState& pattern,
+                              const Controls& controls) {
+    if (controls.genre != GenreId::rock ||
+        pattern.stepsPerBeat <= 0 ||
+        pattern.patternSteps <= 0) {
+        return;
+    }
+
+    for (int step = 0; step < pattern.patternSteps; step += pattern.stepsPerBeat) {
+        onset[step] = true;
+    }
+}
+
 [[nodiscard]] int nextOnsetStep(const std::array<bool, kMaxPatternSteps>& onset, int patternSteps, int step) {
     for (int index = step + 1; index < patternSteps; ++index) {
         if (onset[index]) {
@@ -1190,6 +1219,9 @@ void reinforceFugueSubjectSteps(std::array<bool, kMaxPatternSteps>& onset,
         break;
     case GenreId::sabbath:
         holdBias = clampf(holdBias * 1.35f + 0.12f, 0.0f, 1.0f);
+        break;
+    case GenreId::rock:
+        holdBias = clampf(holdBias * 1.15f + 0.10f, 0.0f, 1.0f);
         break;
     case GenreId::jazz:
         holdBias *= 0.58f;
@@ -1360,6 +1392,7 @@ void generateRhythm(PatternState& pattern,
     }
     reinforceJazzWalkingBeats(onset, pattern, controls, rng);
     reinforceFugueSubjectSteps(onset, pattern, controls, rng);
+    reinforceRockBeatAnchors(onset, pattern, controls);
 
     for (int step = 0; step < pattern.patternSteps && pattern.eventCount < kMaxEvents; ++step) {
         if (!onset[step]) {
@@ -1413,7 +1446,7 @@ void generateNotes(PatternState& pattern, const Controls& controls, Rng& rng) {
             prevJazzNote = event.note;
         }
 
-        const int baseVelocity = 86;
+        const int baseVelocity = controls.genre == GenreId::rock ? 92 : 86;
         const int accentBoost = strong
             ? static_cast<int>(std::lround(controls.accent * 28.0f))
             : (secondaryAccent

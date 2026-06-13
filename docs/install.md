@@ -22,6 +22,24 @@
 - `DOWNSPOUT_RUN_TESTS`
   Set to `0` to skip `ctest` during install.
 
+## Linux UI build dependencies
+
+DPF UI targets use OpenGL and DBus development headers through `DistrhoUI.hpp`.
+If an existing build tree was created before an Ubuntu upgrade, cached DPF UI
+objects may keep working until a UI source file changes. A later rebuild can
+then fail with errors such as:
+
+```text
+fatal error: GL/gl.h: No such file or directory
+```
+
+On Debian/Ubuntu, install the missing development headers and rebuild:
+
+```bash
+sudo apt install libgl-dev libdbus-1-dev
+cmake --build build
+```
+
 ## Release builds
 
 Release builds are now an explicit project requirement.

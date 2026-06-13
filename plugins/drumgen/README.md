@@ -33,7 +33,8 @@ Implementation status:
 - genres now include Breakbeat, Amen, Jungle, Hip Hop, Jazz, and Fugue
   alongside the earlier Rock, Disco, Shuffle, Electro, Dub, Motorik, Bossa, and
   Afro options. Fugue intentionally produces a sparse pulse rather than a full
-  drum style.
+  drum style. Rock now pins a harder kick/backbeat/hat signature in Auto style
+  so it lands as a direct rock groove before variation and fills are added.
 
 Recommended next steps:
 

@@ -35,7 +35,8 @@ Current wrapper choice:
   syncopated kicks, backbeat snares, ghost snares, and denser hat/open-hat
   figures; Jazz uses a core-side swing ride shape with feathered quarter-note
   kick and light snare comping while leaving explicit non-auto style modes in
-  control; Fugue strips the generated kit back to a sparse metrical pulse so it
-  can sit under contrapuntal material without fills or crash-heavy behavior;
+  control; Rock pins a harder kick/backbeat/hat signature in Auto style; Fugue
+  strips the generated kit back to a sparse metrical pulse so it can sit under
+  contrapuntal material without fills or crash-heavy behavior;
 - the port preserves exact control/state behavior first and still leaves any
   preview-grid UI as follow-up work after host validation.

@@ -47,6 +47,19 @@ int firstPhraseNote(const FormState& form, const int phraseIndex)
     return note;
 }
 
+bool hasPhraseEventAtLocalStep(const FormState& form, const int phraseIndex, const int localStep)
+{
+    const PhrasePlan& phrase = form.phrases[static_cast<std::size_t>(phraseIndex)];
+    const int target = phrase.startStep + localStep;
+    for (int i = 0; i < phrase.eventCount; ++i) {
+        const NoteEvent& event = form.events[static_cast<std::size_t>(phrase.eventStartIndex + i)];
+        if (event.startStep == target) {
+            return true;
+        }
+    }
+    return false;
+}
+
 int totalDurationSteps(const FormState& form)
 {
     int total = 0;
@@ -516,7 +529,7 @@ void testClampFoldsNotesIntoRootRange()
     }
 }
 
-void testDubAndJazzStylesAreExplicit()
+void testDubJazzAndRockStylesAreExplicit()
 {
     Controls dub;
     dub.rootNote = 36;
@@ -535,26 +548,46 @@ void testDubAndJazzStylesAreExplicit()
     jazz.motion = 0.72f;
     jazz.color = 0.65f;
 
+    Controls rock = dub;
+    rock.scale = ScaleId::minor;
+    rock.style = StyleId::rock;
+    rock.density = 0.26f;
+    rock.motion = 0.44f;
+    rock.seed = 2025u;
+
     FormState dubForm;
     FormState jazzForm;
+    FormState rockForm;
     regenerateForm(dubForm, dub, ::downspout::Meter {});
     regenerateForm(jazzForm, jazz, ::downspout::Meter {});
+    regenerateForm(rockForm, rock, ::downspout::Meter {});
 
     assert(dubForm.eventCount > 0);
     assert(jazzForm.eventCount > dubForm.eventCount);
+    assert(rockForm.eventCount > 0);
+    assert(hasPhraseEventAtLocalStep(rockForm, 0, 0));
+    assert(hasPhraseEventAtLocalStep(rockForm, 0, 4));
+    assert(hasPhraseEventAtLocalStep(rockForm, 0, 8));
+    assert(hasPhraseEventAtLocalStep(rockForm, 0, 12));
 
     const auto dubRoundTrip = deserializeControls(serializeControls(dub));
     const auto jazzRoundTrip = deserializeControls(serializeControls(jazz));
+    const auto rockRoundTrip = deserializeControls(serializeControls(rock));
     assert(dubRoundTrip.has_value());
     assert(jazzRoundTrip.has_value());
+    assert(rockRoundTrip.has_value());
     assert(dubRoundTrip->style == StyleId::dub);
     assert(jazzRoundTrip->style == StyleId::jazz);
+    assert(rockRoundTrip->style == StyleId::rock);
 
     assert(styleName(StyleId::dub) == std::string("dub"));
     assert(styleName(StyleId::jazz) == std::string("jazz"));
+    assert(styleName(StyleId::rock) == std::string("rock"));
 
     const std::string jazzSummary = summarizeGroundAiState(jazz, jazzForm, 0);
     assert(jazzSummary.find("\"style\":\"jazz\"") != std::string::npos);
+    const std::string rockSummary = summarizeGroundAiState(rock, rockForm, 0);
+    assert(rockSummary.find("\"style\":\"rock\"") != std::string::npos);
 }
 
 void testAiStateSummaryIncludesCurrentPhraseContext()
@@ -749,7 +782,7 @@ int main()
     testAdditionalNamedFormShapes();
     testBassRegisterStaysInLane();
     testClampFoldsNotesIntoRootRange();
-    testDubAndJazzStylesAreExplicit();
+    testDubJazzAndRockStylesAreExplicit();
     testAiStateSummaryIncludesCurrentPhraseContext();
     testEngineRestartPhraseStatusAndStop();
     testEngineActionCountersTriggerUpdates();

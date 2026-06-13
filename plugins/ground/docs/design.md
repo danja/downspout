@@ -41,8 +41,10 @@ choice, register offset, and motion bias in the core.
 
 The Style control shapes the local cell rhythm inside those roles. Dub favors
 sparse low notes, longer holds, and late pickups. Jazz favors walking-bass
-quarter motion with extra approach tones, while the phrase planner still owns
-the larger statement, answer, climb, pedal, cadence, and release arc.
+quarter motion with extra approach tones. Rock appends a hard beat-start grid
+with shorter, more separated notes for riff-like movement, while the phrase
+planner still owns the larger statement, answer, climb, pedal, cadence, and
+release arc.
 
 `Form Shape` is separate from Style. `Free` uses the generic phrase arc. Named
 shapes force their own form and phrase grid, then assign phrase roles and root

@@ -807,6 +807,8 @@ void addRoleSyncopation(std::array<bool, kMaxPhraseGridSteps>& onset,
         maybeAppendOnset(onset, rng, density * 0.36f, localBarStart + scaledBarStep(stepsPerBar, 15));
     } else if (controls.style == StyleId::jazz) {
         maybeAppendOnset(onset, rng, density * 0.34f + motion * 0.20f, localBarStart + scaledBarStep(stepsPerBar, 14));
+    } else if (controls.style == StyleId::rock) {
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 8));
     }
 }
 
@@ -895,6 +897,15 @@ void buildBarOnsets(std::array<bool, kMaxPhraseGridSteps>& onset,
             appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 14));
         }
         break;
+    case StyleId::rock:
+        appendOnset(onset, localBarStart);
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 4));
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 8));
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 12));
+        if (rng.nextFloat() < density * 0.32f) {
+            appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 14));
+        }
+        break;
     default:
         break;
     }
@@ -942,6 +953,7 @@ void buildBarOnsets(std::array<bool, kMaxPhraseGridSteps>& onset,
     case StyleId::climb: desired = 4; break;
     case StyleId::dub: desired = 10; break;
     case StyleId::jazz: desired = 4; break;
+    case StyleId::rock: desired = 4; break;
     default: break;
     }
 
@@ -998,6 +1010,7 @@ void buildBarOnsets(std::array<bool, kMaxPhraseGridSteps>& onset,
     case StyleId::climb: legato += 0.02f; break;
     case StyleId::dub: legato += 0.22f; break;
     case StyleId::jazz: legato -= 0.02f; break;
+    case StyleId::rock: legato -= 0.16f; break;
     default: break;
     }
 

@@ -1346,6 +1346,18 @@ void applyGenreSignatureToBar(PatternState& pattern, const Controls& controls, c
     const int barStart = barIndex * pattern.stepsPerBar;
 
     switch (controls.genre) {
+    case GENRE_ROCK:
+        for (int slot = 0; slot < 16; slot += 2) {
+            setSlotHit(pattern, barStart, LANE_CLOSED_HAT, slot, 82 + ((slot % 4) == 0 ? 10 : 0), 0);
+        }
+        setSlotHit(pattern, barStart, LANE_KICK, 0, 124, STEP_FLAG_ACCENT);
+        setSlotHit(pattern, barStart, LANE_KICK, 8, 118, STEP_FLAG_ACCENT);
+        setSlotHit(pattern, barStart, LANE_KICK, 14, 98, 0);
+        setSlotHit(pattern, barStart, LANE_SNARE, 4, 122, STEP_FLAG_ACCENT);
+        setSlotHit(pattern, barStart, LANE_SNARE, 12, 124, STEP_FLAG_ACCENT);
+        setSlotHit(pattern, barStart, LANE_CRASH, 0, 94, STEP_FLAG_ACCENT);
+        break;
+
     case GENRE_JAZZ:
         for (int slot = 0; slot < 16; slot += 4) {
             setSlotHit(pattern, barStart, LANE_KICK, slot, 66 + (slot == 0 ? 8 : 0), slot == 0 ? STEP_FLAG_ACCENT : 0);
@@ -1419,7 +1431,10 @@ void applyGenreSignatureToBar(PatternState& pattern, const Controls& controls, c
 
 void applyGenreSignature(PatternState& pattern, const Controls& controls) {
     if (controls.styleMode != StyleModeId::autoMode ||
-        (!isBreakbeatFamily(controls.genre) && controls.genre != GENRE_HIPHOP && controls.genre != GENRE_JAZZ)) {
+        (!isBreakbeatFamily(controls.genre) &&
+         controls.genre != GENRE_ROCK &&
+         controls.genre != GENRE_HIPHOP &&
+         controls.genre != GENRE_JAZZ)) {
         return;
     }
 

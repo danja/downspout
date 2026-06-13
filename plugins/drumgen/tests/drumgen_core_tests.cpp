@@ -218,6 +218,31 @@ void testTripleMeterBackbeatLandsOnSecondBeat() {
     assert(hasBackbeat);
 }
 
+void testRockGenrePinsHardBackbeat() {
+    Controls controls;
+    controls.seed = 4545u;
+    controls.genre = GenreId::rock;
+    controls.styleMode = StyleModeId::autoMode;
+    controls.bars = 1;
+    controls.resolution = ResolutionId::sixteenth;
+    controls.density = 0.12f;
+    controls.kickAmt = 0.20f;
+    controls.backbeatAmt = 0.20f;
+    controls.hatAmt = 0.20f;
+
+    PatternState pattern;
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, false);
+
+    assert(pattern.stepsPerBar == 16);
+    assert(pattern.lanes[static_cast<int>(LaneId::kick)].steps[0].velocity >= 124);
+    assert(pattern.lanes[static_cast<int>(LaneId::kick)].steps[8].velocity >= 118);
+    assert(pattern.lanes[static_cast<int>(LaneId::snare)].steps[4].velocity >= 122);
+    assert(pattern.lanes[static_cast<int>(LaneId::snare)].steps[12].velocity >= 124);
+    assert(hasHit(pattern, LaneId::closedHat, 0));
+    assert(hasHit(pattern, LaneId::closedHat, 2));
+    assert(hasHit(pattern, LaneId::closedHat, 4));
+}
+
 void testExplicitStyleModesChangePatternShape() {
     Controls controls;
     controls.seed = 515u;
@@ -739,6 +764,7 @@ int main() {
     testCompoundMeterShape();
     testCompoundMeterBackbeatLandsOnSecondPulse();
     testTripleMeterBackbeatLandsOnSecondBeat();
+    testRockGenrePinsHardBackbeat();
     testExplicitStyleModesChangePatternShape();
     testAmenGenrePinsBreakSignature();
     testHipHopGenrePinsSparseBackbeat();

@@ -98,7 +98,7 @@ constexpr const char* kScaleNames[] = {
 };
 
 constexpr const char* kStyleNames[] = {
-    "Grounded", "Ostinato", "March", "Pulse", "Drone", "Climb", "Dub", "Jazz"
+    "Grounded", "Ostinato", "March", "Pulse", "Drone", "Climb", "Dub", "Jazz", "Rock"
 };
 
 constexpr const char* kFormShapeNames[] = {

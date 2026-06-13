@@ -57,7 +57,8 @@ explicit templates. `Free` uses the current controls to choose roles and arcs.
 After the phrase plan is built, Ground generates note events. `Density` decides
 how many onsets appear, `Motion` and `Tension` influence degree movement, and
 `Style` changes the rhythmic feel. `Dub` stays sparse and heavy, while `Jazz`
-leans toward walking-bass motion and approach tones.
+leans toward walking-bass motion and approach tones. `Rock` pins beat-start
+riff anchors with shorter, more separated notes.
 
 `Sequence` lets answer/release phrases derive material from the previous
 phrase. With high `Sequence` and high `Cadence`, the planner enters a
@@ -89,7 +90,7 @@ same state and seed, generation is deterministic.
 `Scale`: pitch collection used when choosing notes.
 
 `Style`: rhythmic feel. Grounded, Ostinato, March, Pulse, Drone, Climb, Dub,
-and Jazz bias the local note pattern differently.
+Jazz, and Rock bias the local note pattern differently.
 
 `Shape`: section template. `Free` follows Form/Phrase; named shapes impose a
 known structure.
