@@ -17,6 +17,7 @@ option(DOWNSPOUT_BUILD_EMIX "Configure the e-mix port target" ON)
 option(DOWNSPOUT_BUILD_MMIX "Configure the m-mix MIDI target" ON)
 option(DOWNSPOUT_BUILD_MELGEN "Configure the melgen MIDI melody target" ON)
 option(DOWNSPOUT_BUILD_RIFT "Configure the rift original effect target" ON)
+option(DOWNSPOUT_BUILD_ORCHID "Configure the orchid voiced freeze effect target" ON)
 option(DOWNSPOUT_BUILD_AMBO "Configure the ambo original ambient effect target" ON)
 option(DOWNSPOUT_BUILD_DRUMGEN "Configure the drumgen port target" ON)
 option(DOWNSPOUT_BUILD_DRUMKIT "Configure the drumkit port target" ON)
@@ -85,6 +86,10 @@ endif()
 
 if(DOWNSPOUT_BUILD_RIFT)
     add_subdirectory(plugins/rift)
+endif()
+
+if(DOWNSPOUT_BUILD_ORCHID)
+    add_subdirectory(plugins/orchid)
 endif()
 
 if(DOWNSPOUT_BUILD_AMBO)

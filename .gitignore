@@ -45,6 +45,7 @@
 
 # Build trees
 build/
+build-*/
 out/
 dist/
 
