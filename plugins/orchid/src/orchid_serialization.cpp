@@ -47,7 +47,8 @@ std::string serializeParameters(const Parameters& parameters) {
            "cooldownMs=" + std::to_string(parameters.cooldownMs) + "\n"
            "loopPeriods=" + std::to_string(parameters.loopPeriods) + "\n"
            "mix=" + std::to_string(parameters.mix) + "\n"
-           "liveUnder=" + std::to_string(parameters.liveUnder) + "\n";
+           "liveUnder=" + std::to_string(parameters.liveUnder) + "\n"
+           "captureTiming=" + std::to_string(parameters.captureTiming) + "\n";
 }
 
 std::optional<Parameters> deserializeParameters(const std::string& text) {
@@ -93,6 +94,8 @@ std::optional<Parameters> deserializeParameters(const std::string& text) {
             parameters.mix = parsed;
         } else if (key == "liveUnder" && parseFloat(value, parsed)) {
             parameters.liveUnder = parsed;
+        } else if (key == "captureTiming" && parseFloat(value, parsed)) {
+            parameters.captureTiming = parsed;
         } else {
             return std::nullopt;
         }

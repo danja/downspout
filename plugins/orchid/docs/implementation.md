@@ -14,10 +14,10 @@ the conservative MVP from `docs/orchid-idea.md`:
 - read-only status parameters for host/UI feedback;
 - a custom NanoVG UI with parameter sliders and live detector status.
 
-The processor currently captures as soon as the detector has a stable voiced
-window. Hold length is transport-grid based, but capture starts are not yet
-quantized to the next grid boundary. That keeps the detector and loop renderer
-testable before adding a more involved arming scheduler.
+The processor has two capture timing modes. `Immediate` captures as soon as the
+detector has a stable voiced window. `Grid` stores the stable loop candidate and
+starts the hold at the next selected grid boundary. In both modes, hold length
+is transport-grid based.
 
 Buffered "catch-up" return is intentionally not implemented. The first pass
 crossfades back to live input after a hold.

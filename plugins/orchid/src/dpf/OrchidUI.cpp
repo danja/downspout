@@ -16,6 +16,7 @@ namespace {
 using CoreParameters = downspout::orchid::Parameters;
 
 using downspout::orchid::kParamCooldownMs;
+using downspout::orchid::kParamCaptureTiming;
 using downspout::orchid::kParamGrid;
 using downspout::orchid::kParamHoldUnits;
 using downspout::orchid::kParamLiveUnder;
@@ -53,6 +54,7 @@ enum class ValueKind {
     Milliseconds,
     Hertz,
     Integer,
+    Choice,
 };
 
 struct SliderDef {
@@ -64,12 +66,13 @@ struct SliderDef {
     ValueKind kind;
 };
 
-constexpr std::array<SliderDef, 12> kSliders = {{
+constexpr std::array<SliderDef, 13> kSliders = {{
     {kParamSensitivity, "Sensitivity", "input gate", 0.0f, 100.0f, ValueKind::Percent},
     {kParamPeriodicity, "Periodicity", "voicing threshold", 0.0f, 100.0f, ValueKind::Percent},
     {kParamStabilityMs, "Stability", "stable before capture", 5.0f, 250.0f, ValueKind::Milliseconds},
     {kParamPitchLow, "Pitch Low", "detector floor", 40.0f, 800.0f, ValueKind::Hertz},
     {kParamPitchHigh, "Pitch High", "detector ceiling", 120.0f, 2000.0f, ValueKind::Hertz},
+    {kParamCaptureTiming, "Timing", "capture start", 0.0f, 1.0f, ValueKind::Choice},
     {kParamGrid, "Grid", "blocks per bar", 1.0f, 16.0f, ValueKind::Integer},
     {kParamHoldUnits, "Hold", "grid units", 1.0f, 8.0f, ValueKind::Integer},
     {kParamReleaseMs, "Release", "fade back", 2.0f, 500.0f, ValueKind::Milliseconds},
@@ -109,7 +112,7 @@ constexpr std::array<SliderDef, 12> kSliders = {{
 {
     normalized = clampf(normalized, 0.0f, 1.0f);
     float value = slider.min + normalized * (slider.max - slider.min);
-    if (slider.kind == ValueKind::Integer)
+    if (slider.kind == ValueKind::Integer || slider.kind == ValueKind::Choice)
         value = static_cast<float>(std::lround(value));
     return value;
 }
@@ -130,6 +133,9 @@ constexpr std::array<SliderDef, 12> kSliders = {{
     case ValueKind::Integer:
         std::snprintf(buf, sizeof(buf), "%.0f", value);
         break;
+    case ValueKind::Choice:
+        std::snprintf(buf, sizeof(buf), "%s", value >= 0.5f ? "Grid" : "Immediate");
+        break;
     }
     return buf;
 }
@@ -149,6 +155,7 @@ constexpr std::array<SliderDef, 12> kSliders = {{
     case kParamLoopPeriods: return parameters.loopPeriods;
     case kParamMix: return parameters.mix;
     case kParamLiveUnder: return parameters.liveUnder;
+    case kParamCaptureTiming: return parameters.captureTiming;
     default: return 0.0f;
     }
 }
@@ -168,6 +175,7 @@ void setCoreParameterValue(CoreParameters& parameters, const std::uint32_t index
     case kParamLoopPeriods: parameters.loopPeriods = value; break;
     case kParamMix: parameters.mix = value; break;
     case kParamLiveUnder: parameters.liveUnder = value; break;
+    case kParamCaptureTiming: parameters.captureTiming = value; break;
     default: break;
     }
 }
@@ -269,7 +277,7 @@ protected:
             const SliderDef& slider = kSliders[i];
             const float direction = ev.delta.getY() > 0.0f ? 1.0f : -1.0f;
             float step = (slider.max - slider.min) * 0.01f;
-            if (slider.kind == ValueKind::Integer)
+            if (slider.kind == ValueKind::Integer || slider.kind == ValueKind::Choice)
                 step = 1.0f;
             else if (slider.kind == ValueKind::Milliseconds)
                 step = slider.max > 600.0f ? 10.0f : 5.0f;
@@ -303,6 +311,7 @@ private:
         parameters.loopPeriods = values_[kParamLoopPeriods];
         parameters.mix = values_[kParamMix];
         parameters.liveUnder = values_[kParamLiveUnder];
+        parameters.captureTiming = values_[kParamCaptureTiming];
         return downspout::orchid::clampParameters(parameters);
     }
 
@@ -320,6 +329,7 @@ private:
         values_[kParamLoopPeriods] = parameters.loopPeriods;
         values_[kParamMix] = parameters.mix;
         values_[kParamLiveUnder] = parameters.liveUnder;
+        values_[kParamCaptureTiming] = parameters.captureTiming;
     }
 
     void drawBackground(const float width, const float height)

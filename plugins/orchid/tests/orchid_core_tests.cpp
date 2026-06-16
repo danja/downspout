@@ -82,6 +82,7 @@ void testClampParameters()
     raw.loopPeriods = 99.0f;
     raw.mix = 140.0f;
     raw.liveUnder = -1.0f;
+    raw.captureTiming = 99.0f;
 
     const Parameters clamped = clampParameters(raw);
     assert(std::fabs(clamped.sensitivity) < 1e-6f);
@@ -96,6 +97,7 @@ void testClampParameters()
     assert(std::fabs(clamped.loopPeriods - 16.0f) < 1e-6f);
     assert(std::fabs(clamped.mix - 100.0f) < 1e-6f);
     assert(std::fabs(clamped.liveUnder) < 1e-6f);
+    assert(std::fabs(clamped.captureTiming - 1.0f) < 1e-6f);
 }
 
 void testSerializationRoundTrip()
@@ -113,6 +115,7 @@ void testSerializationRoundTrip()
     parameters.loopPeriods = 7.0f;
     parameters.mix = 67.0f;
     parameters.liveUnder = 22.0f;
+    parameters.captureTiming = 1.0f;
 
     const std::string text = serializeParameters(parameters);
     const auto decoded = deserializeParameters(text);
@@ -129,6 +132,7 @@ void testSerializationRoundTrip()
     assert(std::fabs(decoded->loopPeriods - parameters.loopPeriods) < 1e-6f);
     assert(std::fabs(decoded->mix - parameters.mix) < 1e-6f);
     assert(std::fabs(decoded->liveUnder - parameters.liveUnder) < 1e-6f);
+    assert(std::fabs(decoded->captureTiming - parameters.captureTiming) < 1e-6f);
     assert(!deserializeParameters("sensitivity=1\nunknown=2\n").has_value());
 }
 
@@ -315,6 +319,42 @@ void testRewindClearsHeldState()
     assert(rewound.state == ProcessorState::Pass || rewound.state == ProcessorState::Armed);
 }
 
+void testGridTimingArmsBeforeBoundary()
+{
+    constexpr double sampleRate = 48000.0;
+    EngineState state;
+    activate(state, sampleRate, 2);
+
+    Parameters parameters;
+    parameters.sensitivity = 95.0f;
+    parameters.periodicity = 60.0f;
+    parameters.stabilityMs = 30.0f;
+    parameters.captureTiming = 1.0f;
+    parameters.grid = 4.0f;
+
+    std::vector<float> inL(12288);
+    std::vector<float> inR(inL.size());
+    std::vector<float> outL(inL.size());
+    std::vector<float> outR(inR.size());
+    fillSine(inL, sampleRate, 220.0, 0.45f);
+    fillSine(inR, sampleRate, 220.0, 0.45f);
+
+    TransportSnapshot transport = playingTransport();
+    transport.barBeat = 0.10;
+    const OutputStatus armed = processStereo(state, parameters, transport, inL, inR, outL, outR, sampleRate);
+    assert(armed.state == ProcessorState::Armed);
+
+    std::vector<float> shortInL(2048);
+    std::vector<float> shortInR(shortInL.size());
+    std::vector<float> shortOutL(shortInL.size());
+    std::vector<float> shortOutR(shortInR.size());
+    fillSine(shortInL, sampleRate, 220.0, 0.45f);
+    fillSine(shortInR, sampleRate, 220.0, 0.45f);
+    transport.barBeat = 1.0;
+    const OutputStatus held = processStereo(state, parameters, transport, shortInL, shortInR, shortOutL, shortOutR, sampleRate);
+    assert(held.state == ProcessorState::Held || held.state == ProcessorState::Release);
+}
+
 }  // namespace
 
 int main()
@@ -327,5 +367,6 @@ int main()
     testUnstablePitchDoesNotCapture();
     testStereoCapturePreservesChannelDifference();
     testRewindClearsHeldState();
+    testGridTimingArmsBeforeBoundary();
     return 0;
 }

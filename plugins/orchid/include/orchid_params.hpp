@@ -17,6 +17,7 @@ enum ParameterIndex : std::uint32_t {
     kParamLoopPeriods,
     kParamMix,
     kParamLiveUnder,
+    kParamCaptureTiming,
     kParamStatusState,
     kParamStatusConfidence,
     kParamStatusPitch,

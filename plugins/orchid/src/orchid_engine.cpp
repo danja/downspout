@@ -61,12 +61,14 @@ constexpr double kTargetAnalysisRate = 12000.0;
 void clearActiveHold(EngineState& state) {
     state.processorState = ProcessorState::Pass;
     state.loop = {};
+    state.pendingLoop = {};
     state.holdFramesRemaining = 0;
     state.holdFramesTotal = 0;
     state.releaseFramesRemaining = 0;
     state.releaseFramesTotal = 0;
     state.cooldownFramesRemaining = 0;
     state.loopReadPosition = 0.0;
+    state.armedGridSerial = -1.0;
 }
 
 void clearDetectionHistory(EngineState& state) {
@@ -314,6 +316,26 @@ DetectorStatus analyzeRecentWindow(EngineState& state, const Parameters& paramet
         static_cast<std::uint32_t>(std::lround(gridFrames * std::max(1.0f, parameters.holdUnits))));
 }
 
+[[nodiscard]] double gridSerialForBeat(const Parameters& parameters,
+                                       const TransportSnapshot& transport,
+                                       const double beat) {
+    const double beatsPerBar = std::max(1.0, transport.beatsPerBar);
+    const double grid = std::max(1.0f, parameters.grid);
+    const double gridBeats = beatsPerBar / grid;
+    return std::floor((beat / gridBeats) + 1.0e-9);
+}
+
+[[nodiscard]] double nextGridSerialForBeat(const Parameters& parameters,
+                                           const TransportSnapshot& transport,
+                                           const double beat) {
+    const double serial = gridSerialForBeat(parameters, transport, beat);
+    const double beatsPerBar = std::max(1.0, transport.beatsPerBar);
+    const double grid = std::max(1.0f, parameters.grid);
+    const double gridBeats = beatsPerBar / grid;
+    const double boundary = serial * gridBeats;
+    return beat <= boundary + 1.0e-6 ? serial : serial + 1.0;
+}
+
 [[nodiscard]] std::uint32_t loopLengthFor(const Parameters& parameters,
                                           const DetectorStatus& detector,
                                           const double sampleRate) {
@@ -350,13 +372,13 @@ DetectorStatus analyzeRecentWindow(EngineState& state, const Parameters& paramet
     return cost;
 }
 
-void captureLoop(EngineState& state,
-                 const Parameters& parameters,
-                 const TransportSnapshot& transport,
-                 const DetectorStatus& detector) {
+[[nodiscard]] LoopRegion makeLoopRegion(EngineState& state,
+                                        const Parameters& parameters,
+                                        const DetectorStatus& detector) {
+    LoopRegion region {};
     const std::uint32_t length = loopLengthFor(parameters, detector, state.sampleRate);
     if (state.filledFrames <= length + 4u) {
-        return;
+        return region;
     }
 
     const std::int64_t nominalStart = static_cast<std::int64_t>(state.writeHead) - static_cast<std::int64_t>(length) - 1;
@@ -374,12 +396,26 @@ void captureLoop(EngineState& state,
         }
     }
 
-    state.loop.valid = true;
-    state.loop.startFrame = wrapFrameIndex(state, bestStart);
-    state.loop.lengthFrames = length;
-    state.loop.frequencyHz = detector.frequencyHz;
-    state.loop.confidence = detector.confidence;
+    region.valid = true;
+    region.startFrame = wrapFrameIndex(state, bestStart);
+    region.lengthFrames = length;
+    region.frequencyHz = detector.frequencyHz;
+    region.confidence = detector.confidence;
+    return region;
+}
+
+void startHoldFromLoop(EngineState& state,
+                       const Parameters& parameters,
+                       const TransportSnapshot& transport,
+                       const LoopRegion& loop) {
+    if (!loop.valid) {
+        return;
+    }
+
+    state.loop = loop;
+    state.pendingLoop = {};
     state.loopReadPosition = 0.0;
+    state.armedGridSerial = -1.0;
 
     state.processorState = ProcessorState::Held;
     state.holdFramesTotal = holdFramesFor(parameters, transport, state.sampleRate);
@@ -387,6 +423,25 @@ void captureLoop(EngineState& state,
     state.releaseFramesTotal = releaseFramesFor(parameters, state.sampleRate);
     state.releaseFramesRemaining = state.releaseFramesTotal;
     state.cooldownFramesRemaining = cooldownFramesFor(parameters, state.sampleRate);
+}
+
+void armOrCaptureLoop(EngineState& state,
+                      const Parameters& parameters,
+                      const TransportSnapshot& transport,
+                      const DetectorStatus& detector) {
+    const LoopRegion loop = makeLoopRegion(state, parameters, detector);
+    if (!loop.valid) {
+        return;
+    }
+
+    if (parameters.captureTiming < 0.5f) {
+        startHoldFromLoop(state, parameters, transport, loop);
+        return;
+    }
+
+    state.pendingLoop = loop;
+    state.processorState = ProcessorState::Armed;
+    state.armedGridSerial = nextGridSerialForBeat(parameters, transport, absoluteBeat(transport));
 }
 
 [[nodiscard]] float readLoopSample(const EngineState& state, const std::uint32_t channel) {
@@ -456,9 +511,26 @@ void updateDetectorAndCapture(EngineState& state,
         1u,
         static_cast<std::uint32_t>(std::lround(state.sampleRate * parameters.stabilityMs * 0.001f)));
     if (state.detector.stableFrames >= requiredStableFrames) {
-        captureLoop(state, parameters, transport, state.detector);
+        armOrCaptureLoop(state, parameters, transport, state.detector);
     } else if (state.processorState == ProcessorState::Pass) {
         state.processorState = ProcessorState::Armed;
+    }
+}
+
+void updateArmedGridCapture(EngineState& state,
+                            const Parameters& parameters,
+                            const TransportSnapshot& transport,
+                            const double frameAbsoluteBeat) {
+    if (parameters.captureTiming < 0.5f ||
+        state.processorState != ProcessorState::Armed ||
+        !state.pendingLoop.valid ||
+        state.armedGridSerial < 0.0) {
+        return;
+    }
+
+    const double currentSerial = gridSerialForBeat(parameters, transport, frameAbsoluteBeat);
+    if (currentSerial >= state.armedGridSerial) {
+        startHoldFromLoop(state, parameters, transport, state.pendingLoop);
     }
 }
 
@@ -546,6 +618,7 @@ Parameters clampParameters(const Parameters& raw) {
     parameters.loopPeriods = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.loopPeriods)), 2, 16));
     parameters.mix = clampf(parameters.mix, 0.0f, 100.0f);
     parameters.liveUnder = clampf(parameters.liveUnder, 0.0f, 100.0f);
+    parameters.captureTiming = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.captureTiming)), 0, 1));
     return parameters;
 }
 
@@ -582,6 +655,11 @@ OutputStatus processBlock(EngineState& state,
     for (std::uint32_t frame = 0; frame < nframes; ++frame) {
         writeInputFrame(state, audio, frame);
         updateDetectorAndCapture(state, parameters, transport, usableTransport);
+        if (usableTransport && state.processorState == ProcessorState::Armed) {
+            const double framesPerBeat = sampleRate * 60.0 / transport.bpm;
+            const double frameBeat = currentBeat + static_cast<double>(frame) / framesPerBeat;
+            updateArmedGridCapture(state, parameters, transport, frameBeat);
+        }
 
         const float envelope = usableTransport ? holdEnvelope(state) : 0.0f;
         const float wet = clampf(parameters.mix * 0.01f, 0.0f, 1.0f) * envelope;

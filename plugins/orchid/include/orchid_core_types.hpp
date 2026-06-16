@@ -39,6 +39,7 @@ struct Parameters {
     float loopPeriods = 5.0f;
     float mix = 82.0f;
     float liveUnder = 18.0f;
+    float captureTiming = 0.0f;
 };
 
 struct TransportSnapshot {
@@ -86,6 +87,7 @@ struct EngineState {
     ProcessorState processorState = ProcessorState::Pass;
     DetectorStatus detector {};
     LoopRegion loop {};
+    LoopRegion pendingLoop {};
 
     float previousStableFrequencyHz = 0.0f;
     std::uint32_t framesUntilAnalysis = 0;
@@ -99,6 +101,7 @@ struct EngineState {
     std::uint32_t releaseFramesTotal = 0;
     std::uint32_t cooldownFramesRemaining = 0;
     double loopReadPosition = 0.0;
+    double armedGridSerial = -1.0;
 
     bool transportWasUsable = false;
     double lastAbsoluteBeat = 0.0;

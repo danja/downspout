@@ -18,6 +18,7 @@ using CoreParameters = downspout::orchid::Parameters;
 using CoreTransport = downspout::orchid::TransportSnapshot;
 
 using downspout::orchid::kParamCooldownMs;
+using downspout::orchid::kParamCaptureTiming;
 using downspout::orchid::kParamGrid;
 using downspout::orchid::kParamHoldUnits;
 using downspout::orchid::kParamLiveUnder;
@@ -47,6 +48,11 @@ ParameterEnumerationValue kStateEnumValues[] = {
     {2.0f, "Held"},
     {3.0f, "Release"},
     {4.0f, "Cooldown"},
+};
+
+ParameterEnumerationValue kCaptureTimingEnumValues[] = {
+    {0.0f, "Immediate"},
+    {1.0f, "Grid"},
 };
 
 constexpr std::uint32_t kWrapperChannelCount =
@@ -222,6 +228,18 @@ protected:
             parameter.ranges.max = 100.0f;
             parameter.ranges.def = 18.0f;
             break;
+        case kParamCaptureTiming:
+            parameter.name = "Capture Timing";
+            parameter.symbol = "capture_timing";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.0f;
+            parameter.enumValues.count = static_cast<uint8_t>(std::size(kCaptureTimingEnumValues));
+            parameter.enumValues.restrictedMode = true;
+            parameter.enumValues.values = kCaptureTimingEnumValues;
+            parameter.enumValues.deleteLater = false;
+            break;
         case kParamStatusState:
             parameter.name = "State";
             parameter.symbol = "status_state";
@@ -304,6 +322,7 @@ protected:
         case kParamLoopPeriods: return parameters_.loopPeriods;
         case kParamMix: return parameters_.mix;
         case kParamLiveUnder: return parameters_.liveUnder;
+        case kParamCaptureTiming: return parameters_.captureTiming;
         case kParamStatusState: return static_cast<float>(status_.state);
         case kParamStatusConfidence: return status_.detectorConfidence;
         case kParamStatusPitch: return status_.detectedPitchHz;
@@ -330,6 +349,7 @@ protected:
         case kParamLoopPeriods: parameters_.loopPeriods = value; break;
         case kParamMix: parameters_.mix = value; break;
         case kParamLiveUnder: parameters_.liveUnder = value; break;
+        case kParamCaptureTiming: parameters_.captureTiming = value; break;
         default: break;
         }
 
