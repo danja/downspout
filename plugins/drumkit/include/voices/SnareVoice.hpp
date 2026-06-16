@@ -165,10 +165,11 @@ public:
 
         float sample = tonal * 0.95f + noiseOut * 0.72f + crack * 0.58f;
         if (metalParam > 0.0f) {
-            const float metal = metalResonator.process(filteredNoise + tonalExcite * 0.35f) * crackEnvValue;
-            sample = sample * (1.0f - metalParam * 0.14f) + metal * (0.75f * metalParam);
+            const float m = metalParam * metalParam;
+            const float metal = metalResonator.process(filteredNoise * 2.2f + tonalExcite * 0.9f) * (crackEnvValue + bodyEnv * 0.35f);
+            sample = sample * (1.0f - m * 0.58f) + std::tanh(metal * 3.8f) * (1.7f * m);
         }
-        sample = std::tanh(sample * (1.15f + snapParam * 0.55f));
+        sample = std::tanh(sample * (1.15f + snapParam * 0.55f + metalParam * 0.85f));
         sample *= velocity;
 
         return sample * 0.72f * level;

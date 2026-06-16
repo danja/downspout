@@ -122,8 +122,10 @@ public:
         const float rawBurst = sample;
         sample = bandpass.process(rawBurst);
         if (metalParam > 0.0f) {
-            const float ping = metalBand.process(rawBurst) * (0.35f + densityParam * 0.25f);
-            sample = sample * (1.0f - metalParam * 0.18f) + ping * metalParam;
+            const float m = metalParam * metalParam;
+            const float bite = rawBurst * std::fabs(rawBurst);
+            const float ping = metalBand.process(rawBurst * 1.8f + bite * 1.2f);
+            sample = sample * (1.0f - m * 0.72f) + std::tanh(ping * 4.2f) * (1.55f * m);
         }
         sample *= env.process();
 

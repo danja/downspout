@@ -124,13 +124,14 @@ public:
         }
 
         const float noiseSample = noise.process();
-        float sample = oscSum * (0.19f + metalParam * 0.08f)
-            + ring * (0.42f + metalParam * 0.48f)
-            + noiseSample * (0.95f - metalParam * 0.24f);
+        const float m = metalParam * metalParam;
+        float sample = oscSum * (0.19f + m * 0.32f)
+            + ring * (0.42f + m * 1.65f)
+            + noiseSample * (0.95f - m * 0.58f);
         const float filtered = hpf.process(sample);
-        const float sizzle = sizzleBand.process(noise.process() * 0.75f + ring * 0.28f);
-        sample = filtered * 0.92f + sizzle * (0.48f + metalParam * 0.28f);
-        sample = std::tanh(sample * (1.08f + 0.45f * brightnessParam + metalParam * 0.28f));
+        const float sizzle = sizzleBand.process(noise.process() * (0.75f - m * 0.22f) + ring * (0.28f + m * 1.25f));
+        sample = filtered * (0.92f + m * 0.25f) + sizzle * (0.48f + m * 1.35f) + ring * (m * 0.38f);
+        sample = std::tanh(sample * (1.08f + 0.45f * brightnessParam + m * 1.55f));
         sample *= env.process();
 
         return sample * (isClosed ? 0.66f : 0.74f) * level * (0.9f + 0.1f * velocity);

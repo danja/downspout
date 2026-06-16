@@ -101,8 +101,10 @@ public:
         sample = bp2.process(sample);
         sample = bp3.process(sample);
         if (metalParam > 0.0f) {
-            const float shimmer = metalBand.process(rawNoise) * 0.42f;
-            sample = sample * (1.0f - metalParam * 0.16f) + shimmer * metalParam;
+            const float m = metalParam * metalParam;
+            const float brightNoise = rawNoise * std::fabs(rawNoise);
+            const float shimmer = metalBand.process(rawNoise * 1.8f + brightNoise * 1.4f);
+            sample = sample * (1.0f - m * 0.65f) + std::tanh(shimmer * 3.2f) * (1.45f * m);
         }
 
         // Light soft clipping for edge

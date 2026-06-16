@@ -86,8 +86,10 @@ public:
         const float excitation = noise.process() * (0.8f + envValue * 0.4f);
         float sample = bandpass.process(excitation);
         if (metalParam > 0.0f) {
-            const float ping = metalBand.process(excitation) * (0.42f + envValue * 0.28f);
-            sample = sample * (1.0f - metalParam * 0.18f) + ping * metalParam;
+            const float m = metalParam * metalParam;
+            const float bite = excitation * std::fabs(excitation);
+            const float ping = metalBand.process(excitation * 1.9f + bite * 1.4f) * (0.7f + envValue * 0.85f);
+            sample = sample * (1.0f - m * 0.7f) + std::tanh(ping * 4.0f) * (1.45f * m);
         }
 
         return sample * envValue * velocity * 0.5f * level;

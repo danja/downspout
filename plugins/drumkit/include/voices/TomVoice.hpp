@@ -127,10 +127,12 @@ public:
 
         float sample = body * (0.95f + 0.12f * velocity) + knock * 0.44f;
         if (metalParam > 0.0f) {
-            const float clang = metalResonator.process(attackNoise * 0.8f + triangle * 0.45f) * attack;
-            sample = sample * (1.0f - metalParam * 0.12f) + clang * (0.58f * metalParam);
+            const float m = metalParam * metalParam;
+            const float clangEnv = attack + amp * 0.48f;
+            const float clang = metalResonator.process(attackNoise * 1.6f + triangle * 1.05f + sine * 0.35f) * clangEnv;
+            sample = sample * (1.0f - m * 0.62f) + std::tanh(clang * 3.4f) * (1.65f * m);
         }
-        sample = std::tanh(sample * 1.45f);
+        sample = std::tanh(sample * (1.45f + metalParam * 0.75f));
         sample *= amp * velocity;
         return sample * 0.52f * level;
     }

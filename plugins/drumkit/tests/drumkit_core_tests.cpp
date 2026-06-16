@@ -158,7 +158,7 @@ void metalChangesTargetVoices()
             difference += std::fabs(dryFrame.left - metalFrame.left);
             difference += std::fabs(dryFrame.right - metalFrame.right);
         }
-        assert(difference > 0.0001f);
+        assert(difference > 0.05f);
     }
 }
 

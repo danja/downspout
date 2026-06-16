@@ -73,7 +73,7 @@ public:
 
     void setMetal(float value) {
         metalParam = std::clamp(value, 0.0f, 1.0f);
-        saturator.setDrive(2.0f + metalParam * 1.6f);
+        saturator.setDrive(2.0f + metalParam * metalParam * 4.0f);
     }
 
     void trigger(float vel = 1.0f) {
@@ -106,9 +106,10 @@ public:
         const float clang = squareA * squareB + (oscA * squareB - oscB * squareA) * 0.32f;
         float sample = 0.55f * squareA + 0.45f * squareB + 0.2f * (oscA + oscB);
         if (metalParam > 0.0f) {
-            sample = sample * (1.0f - metalParam * 0.1f) + clang * (0.42f * metalParam);
+            const float m = metalParam * metalParam;
+            sample = sample * (1.0f - m * 0.52f) + clang * (1.7f * m);
         }
-        sample = bandpass.process(sample * 0.8f);
+        sample = bandpass.process(sample * (0.8f + metalParam * 0.35f));
         sample = saturator.process(sample);
 
         return sample * envValue * velocity * 0.6f * level;
