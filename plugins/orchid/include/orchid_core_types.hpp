@@ -40,6 +40,7 @@ struct Parameters {
     float mix = 82.0f;
     float liveUnder = 18.0f;
     float captureTiming = 0.0f;
+    float retrigger = 20.0f;
 };
 
 struct TransportSnapshot {

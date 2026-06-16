@@ -19,6 +19,11 @@ detector has a stable voiced window. `Grid` stores the stable loop candidate and
 starts the hold at the next selected grid boundary. In both modes, hold length
 is transport-grid based.
 
+`Retrigger` controls whether a new stable candidate can replace an armed or
+active loop. The default is 20%, which requires a clearly stronger detector
+confidence before replacing the current material. Higher values make replacement
+easier; 0% disables replacement.
+
 Buffered "catch-up" return is intentionally not implemented. The first pass
 crossfades back to live input after a hold.
 

@@ -26,6 +26,7 @@ using downspout::orchid::kParamPeriodicity;
 using downspout::orchid::kParamPitchHigh;
 using downspout::orchid::kParamPitchLow;
 using downspout::orchid::kParamReleaseMs;
+using downspout::orchid::kParamRetrigger;
 using downspout::orchid::kParamSensitivity;
 using downspout::orchid::kParamStabilityMs;
 using downspout::orchid::kParamStatusConfidence;
@@ -66,13 +67,14 @@ struct SliderDef {
     ValueKind kind;
 };
 
-constexpr std::array<SliderDef, 13> kSliders = {{
+constexpr std::array<SliderDef, 14> kSliders = {{
     {kParamSensitivity, "Sensitivity", "input gate", 0.0f, 100.0f, ValueKind::Percent},
     {kParamPeriodicity, "Periodicity", "voicing threshold", 0.0f, 100.0f, ValueKind::Percent},
     {kParamStabilityMs, "Stability", "stable before capture", 5.0f, 250.0f, ValueKind::Milliseconds},
     {kParamPitchLow, "Pitch Low", "detector floor", 40.0f, 800.0f, ValueKind::Hertz},
     {kParamPitchHigh, "Pitch High", "detector ceiling", 120.0f, 2000.0f, ValueKind::Hertz},
     {kParamCaptureTiming, "Timing", "capture start", 0.0f, 1.0f, ValueKind::Choice},
+    {kParamRetrigger, "Retrigger", "replace stronger tones", 0.0f, 100.0f, ValueKind::Percent},
     {kParamGrid, "Grid", "blocks per bar", 1.0f, 16.0f, ValueKind::Integer},
     {kParamHoldUnits, "Hold", "grid units", 1.0f, 8.0f, ValueKind::Integer},
     {kParamReleaseMs, "Release", "fade back", 2.0f, 500.0f, ValueKind::Milliseconds},
@@ -156,6 +158,7 @@ constexpr std::array<SliderDef, 13> kSliders = {{
     case kParamMix: return parameters.mix;
     case kParamLiveUnder: return parameters.liveUnder;
     case kParamCaptureTiming: return parameters.captureTiming;
+    case kParamRetrigger: return parameters.retrigger;
     default: return 0.0f;
     }
 }
@@ -176,6 +179,7 @@ void setCoreParameterValue(CoreParameters& parameters, const std::uint32_t index
     case kParamMix: parameters.mix = value; break;
     case kParamLiveUnder: parameters.liveUnder = value; break;
     case kParamCaptureTiming: parameters.captureTiming = value; break;
+    case kParamRetrigger: parameters.retrigger = value; break;
     default: break;
     }
 }
@@ -312,6 +316,7 @@ private:
         parameters.mix = values_[kParamMix];
         parameters.liveUnder = values_[kParamLiveUnder];
         parameters.captureTiming = values_[kParamCaptureTiming];
+        parameters.retrigger = values_[kParamRetrigger];
         return downspout::orchid::clampParameters(parameters);
     }
 
@@ -330,6 +335,7 @@ private:
         values_[kParamMix] = parameters.mix;
         values_[kParamLiveUnder] = parameters.liveUnder;
         values_[kParamCaptureTiming] = parameters.captureTiming;
+        values_[kParamRetrigger] = parameters.retrigger;
     }
 
     void drawBackground(const float width, const float height)

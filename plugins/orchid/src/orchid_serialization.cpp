@@ -48,7 +48,8 @@ std::string serializeParameters(const Parameters& parameters) {
            "loopPeriods=" + std::to_string(parameters.loopPeriods) + "\n"
            "mix=" + std::to_string(parameters.mix) + "\n"
            "liveUnder=" + std::to_string(parameters.liveUnder) + "\n"
-           "captureTiming=" + std::to_string(parameters.captureTiming) + "\n";
+           "captureTiming=" + std::to_string(parameters.captureTiming) + "\n"
+           "retrigger=" + std::to_string(parameters.retrigger) + "\n";
 }
 
 std::optional<Parameters> deserializeParameters(const std::string& text) {
@@ -96,6 +97,8 @@ std::optional<Parameters> deserializeParameters(const std::string& text) {
             parameters.liveUnder = parsed;
         } else if (key == "captureTiming" && parseFloat(value, parsed)) {
             parameters.captureTiming = parsed;
+        } else if (key == "retrigger" && parseFloat(value, parsed)) {
+            parameters.retrigger = parsed;
         } else {
             return std::nullopt;
         }

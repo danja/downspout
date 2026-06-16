@@ -28,6 +28,7 @@ using downspout::orchid::kParamPeriodicity;
 using downspout::orchid::kParamPitchHigh;
 using downspout::orchid::kParamPitchLow;
 using downspout::orchid::kParamReleaseMs;
+using downspout::orchid::kParamRetrigger;
 using downspout::orchid::kParamSensitivity;
 using downspout::orchid::kParamStabilityMs;
 using downspout::orchid::kParamStatusConfidence;
@@ -240,6 +241,13 @@ protected:
             parameter.enumValues.values = kCaptureTimingEnumValues;
             parameter.enumValues.deleteLater = false;
             break;
+        case kParamRetrigger:
+            parameter.name = "Retrigger";
+            parameter.symbol = "retrigger";
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 100.0f;
+            parameter.ranges.def = 20.0f;
+            break;
         case kParamStatusState:
             parameter.name = "State";
             parameter.symbol = "status_state";
@@ -323,6 +331,7 @@ protected:
         case kParamMix: return parameters_.mix;
         case kParamLiveUnder: return parameters_.liveUnder;
         case kParamCaptureTiming: return parameters_.captureTiming;
+        case kParamRetrigger: return parameters_.retrigger;
         case kParamStatusState: return static_cast<float>(status_.state);
         case kParamStatusConfidence: return status_.detectorConfidence;
         case kParamStatusPitch: return status_.detectedPitchHz;
@@ -350,6 +359,7 @@ protected:
         case kParamMix: parameters_.mix = value; break;
         case kParamLiveUnder: parameters_.liveUnder = value; break;
         case kParamCaptureTiming: parameters_.captureTiming = value; break;
+        case kParamRetrigger: parameters_.retrigger = value; break;
         default: break;
         }
 

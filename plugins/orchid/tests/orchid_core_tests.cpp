@@ -49,6 +49,17 @@ void fillSine(std::vector<float>& buffer, const double sampleRate, const double 
     }
 }
 
+void fillNoisySine(std::vector<float>& buffer, const double sampleRate, const double frequency, const float amplitude)
+{
+    std::uint32_t rng = 0x1234abcd;
+    for (std::size_t i = 0; i < buffer.size(); ++i) {
+        rng = rng * 1664525u + 1013904223u;
+        const float noise = (static_cast<float>((rng >> 8u) & 0xffffu) / 32768.0f - 1.0f) * 0.16f;
+        const double t = static_cast<double>(i) / sampleRate;
+        buffer[i] = amplitude * static_cast<float>(std::sin(2.0 * kPi * frequency * t)) + noise;
+    }
+}
+
 OutputStatus processStereo(EngineState& state,
                            const Parameters& parameters,
                            TransportSnapshot transport,
@@ -83,6 +94,7 @@ void testClampParameters()
     raw.mix = 140.0f;
     raw.liveUnder = -1.0f;
     raw.captureTiming = 99.0f;
+    raw.retrigger = 140.0f;
 
     const Parameters clamped = clampParameters(raw);
     assert(std::fabs(clamped.sensitivity) < 1e-6f);
@@ -98,6 +110,7 @@ void testClampParameters()
     assert(std::fabs(clamped.mix - 100.0f) < 1e-6f);
     assert(std::fabs(clamped.liveUnder) < 1e-6f);
     assert(std::fabs(clamped.captureTiming - 1.0f) < 1e-6f);
+    assert(std::fabs(clamped.retrigger - 100.0f) < 1e-6f);
 }
 
 void testSerializationRoundTrip()
@@ -116,6 +129,7 @@ void testSerializationRoundTrip()
     parameters.mix = 67.0f;
     parameters.liveUnder = 22.0f;
     parameters.captureTiming = 1.0f;
+    parameters.retrigger = 38.0f;
 
     const std::string text = serializeParameters(parameters);
     const auto decoded = deserializeParameters(text);
@@ -133,6 +147,7 @@ void testSerializationRoundTrip()
     assert(std::fabs(decoded->mix - parameters.mix) < 1e-6f);
     assert(std::fabs(decoded->liveUnder - parameters.liveUnder) < 1e-6f);
     assert(std::fabs(decoded->captureTiming - parameters.captureTiming) < 1e-6f);
+    assert(std::fabs(decoded->retrigger - parameters.retrigger) < 1e-6f);
     assert(!deserializeParameters("sensitivity=1\nunknown=2\n").has_value());
 }
 
@@ -355,6 +370,45 @@ void testGridTimingArmsBeforeBoundary()
     assert(held.state == ProcessorState::Held || held.state == ProcessorState::Release);
 }
 
+void testRetriggerReplacesPendingGridCandidate()
+{
+    constexpr double sampleRate = 48000.0;
+    EngineState state;
+    activate(state, sampleRate, 2);
+
+    Parameters parameters;
+    parameters.sensitivity = 95.0f;
+    parameters.periodicity = 30.0f;
+    parameters.stabilityMs = 30.0f;
+    parameters.captureTiming = 1.0f;
+    parameters.retrigger = 100.0f;
+    parameters.grid = 4.0f;
+
+    std::vector<float> inL(12288);
+    std::vector<float> inR(inL.size());
+    std::vector<float> outL(inL.size());
+    std::vector<float> outR(inR.size());
+    fillNoisySine(inL, sampleRate, 220.0, 0.42f);
+    fillNoisySine(inR, sampleRate, 220.0, 0.42f);
+
+    TransportSnapshot transport = playingTransport();
+    transport.barBeat = 0.10;
+    const OutputStatus first = processStereo(state, parameters, transport, inL, inR, outL, outR, sampleRate);
+    assert(first.state == ProcessorState::Armed);
+    assert(state.pendingLoop.valid);
+    const float firstPitch = state.pendingLoop.frequencyHz;
+    const float firstConfidence = state.pendingLoop.confidence;
+
+    fillSine(inL, sampleRate, 330.0, 0.45f);
+    fillSine(inR, sampleRate, 330.0, 0.45f);
+    transport.barBeat = 0.20;
+    const OutputStatus second = processStereo(state, parameters, transport, inL, inR, outL, outR, sampleRate);
+    assert(second.state == ProcessorState::Armed);
+    assert(state.pendingLoop.valid);
+    assert(std::fabs(state.pendingLoop.frequencyHz - firstPitch) > 30.0f);
+    assert(state.pendingLoop.confidence > firstConfidence);
+}
+
 }  // namespace
 
 int main()
@@ -368,5 +422,6 @@ int main()
     testStereoCapturePreservesChannelDifference();
     testRewindClearsHeldState();
     testGridTimingArmsBeforeBoundary();
+    testRetriggerReplacesPendingGridCandidate();
     return 0;
 }

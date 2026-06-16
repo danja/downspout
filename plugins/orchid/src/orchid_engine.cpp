@@ -425,6 +425,25 @@ void startHoldFromLoop(EngineState& state,
     state.cooldownFramesRemaining = cooldownFramesFor(parameters, state.sampleRate);
 }
 
+[[nodiscard]] bool shouldReplaceLoop(const Parameters& parameters,
+                                     const LoopRegion& current,
+                                     const LoopRegion& candidate) {
+    if (!candidate.valid) {
+        return false;
+    }
+    if (!current.valid) {
+        return true;
+    }
+
+    const float retriggerNorm = clampf(parameters.retrigger * 0.01f, 0.0f, 1.0f);
+    if (retriggerNorm <= 0.0f) {
+        return false;
+    }
+
+    const float requiredImprovement = 0.18f - retriggerNorm * 0.15f;
+    return candidate.confidence >= current.confidence + requiredImprovement;
+}
+
 void armOrCaptureLoop(EngineState& state,
                       const Parameters& parameters,
                       const TransportSnapshot& transport,
@@ -435,12 +454,26 @@ void armOrCaptureLoop(EngineState& state,
     }
 
     if (parameters.captureTiming < 0.5f) {
+        if ((state.processorState == ProcessorState::Held || state.processorState == ProcessorState::Release) &&
+            !shouldReplaceLoop(parameters, state.loop, loop)) {
+            return;
+        }
         startHoldFromLoop(state, parameters, transport, loop);
         return;
     }
 
+    const LoopRegion current = state.pendingLoop.valid ? state.pendingLoop : state.loop;
+    if ((state.processorState == ProcessorState::Armed ||
+         state.processorState == ProcessorState::Held ||
+         state.processorState == ProcessorState::Release) &&
+        !shouldReplaceLoop(parameters, current, loop)) {
+        return;
+    }
+
     state.pendingLoop = loop;
-    state.processorState = ProcessorState::Armed;
+    if (state.processorState != ProcessorState::Held && state.processorState != ProcessorState::Release) {
+        state.processorState = ProcessorState::Armed;
+    }
     state.armedGridSerial = nextGridSerialForBeat(parameters, transport, absoluteBeat(transport));
 }
 
@@ -496,7 +529,9 @@ void updateDetectorAndCapture(EngineState& state,
     if (state.processorState == ProcessorState::Cooldown && state.cooldownFramesRemaining > 0u) {
         return;
     }
-    if (state.processorState == ProcessorState::Held || state.processorState == ProcessorState::Release) {
+    if ((state.processorState == ProcessorState::Held || state.processorState == ProcessorState::Release) &&
+        parameters.retrigger <= 0.0f &&
+        !state.pendingLoop.valid) {
         return;
     }
 
@@ -522,7 +557,7 @@ void updateArmedGridCapture(EngineState& state,
                             const TransportSnapshot& transport,
                             const double frameAbsoluteBeat) {
     if (parameters.captureTiming < 0.5f ||
-        state.processorState != ProcessorState::Armed ||
+        (state.processorState != ProcessorState::Armed && state.processorState != ProcessorState::Held && state.processorState != ProcessorState::Release) ||
         !state.pendingLoop.valid ||
         state.armedGridSerial < 0.0) {
         return;
@@ -619,6 +654,7 @@ Parameters clampParameters(const Parameters& raw) {
     parameters.mix = clampf(parameters.mix, 0.0f, 100.0f);
     parameters.liveUnder = clampf(parameters.liveUnder, 0.0f, 100.0f);
     parameters.captureTiming = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.captureTiming)), 0, 1));
+    parameters.retrigger = clampf(parameters.retrigger, 0.0f, 100.0f);
     return parameters;
 }
 
@@ -655,7 +691,7 @@ OutputStatus processBlock(EngineState& state,
     for (std::uint32_t frame = 0; frame < nframes; ++frame) {
         writeInputFrame(state, audio, frame);
         updateDetectorAndCapture(state, parameters, transport, usableTransport);
-        if (usableTransport && state.processorState == ProcessorState::Armed) {
+        if (usableTransport && state.pendingLoop.valid) {
             const double framesPerBeat = sampleRate * 60.0 / transport.bpm;
             const double frameBeat = currentBeat + static_cast<double>(frame) / framesPerBeat;
             updateArmedGridCapture(state, parameters, transport, frameBeat);
