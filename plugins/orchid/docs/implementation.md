@@ -25,3 +25,8 @@ crossfades back to live input after a hold.
 The UI is intentionally direct: all MVP controls are sliders, and the detector
 panel mirrors the processor's status outputs. It is meant for DAW iteration on
 the DSP behavior before adding more performance-oriented gestures.
+
+The detector runs on a decimated mono analysis stream near 12 kHz while loop
+capture and audio output stay at the host sample rate. This keeps the
+autocorrelation scan out of full-rate audio territory and avoids large CPU
+spikes when a voiced region becomes eligible for capture.

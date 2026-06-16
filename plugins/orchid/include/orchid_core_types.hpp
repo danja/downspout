@@ -91,6 +91,7 @@ struct EngineState {
     std::uint32_t framesUntilAnalysis = 0;
     std::uint32_t analysisHopFrames = 0;
     std::uint32_t analysisWindowFrames = 0;
+    std::uint32_t analysisDecimation = 1;
 
     std::uint32_t holdFramesRemaining = 0;
     std::uint32_t holdFramesTotal = 0;

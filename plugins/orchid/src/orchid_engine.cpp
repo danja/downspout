@@ -8,6 +8,7 @@ namespace {
 
 constexpr double kPi = 3.14159265358979323846;
 constexpr double kHalfPi = 1.5707963267948966;
+constexpr double kTargetAnalysisRate = 12000.0;
 
 [[nodiscard]] float clampf(float value, const float minValue, const float maxValue) {
     if (value < minValue) {
@@ -82,21 +83,27 @@ void ensureBuffer(EngineState& state,
                   const double sampleRate,
                   const std::uint32_t channelCount) {
     const std::uint32_t safeChannels = std::max<std::uint32_t>(1u, std::min(channelCount, kMaxChannels));
+    const std::uint32_t decimation = std::max<std::uint32_t>(
+        1u,
+        static_cast<std::uint32_t>(std::floor(sampleRate / kTargetAnalysisRate)));
+    const double analysisRate = sampleRate / static_cast<double>(decimation);
     const std::uint32_t windowFrames = static_cast<std::uint32_t>(
-        std::clamp(std::lround(sampleRate * 0.050), 512l, 4096l));
+        std::clamp(std::lround(analysisRate * 0.050), 256l, 1024l));
     const std::uint32_t hopFrames = static_cast<std::uint32_t>(
-        std::clamp(std::lround(sampleRate * 0.008), 64l, 1024l));
+        std::clamp(std::lround(sampleRate * 0.016), 128l, 2048l));
+    const std::uint32_t sourceWindowFrames = windowFrames * decimation;
     const double lowPitch = std::max(20.0f, parameters.pitchLow);
     const std::uint32_t minHistory = static_cast<std::uint32_t>(
         std::ceil(sampleRate * std::max(0.25, 12.0 / lowPitch)));
     const std::uint32_t requiredFrames = std::max<std::uint32_t>(
-        std::max(windowFrames * 4u, minHistory),
+        std::max(sourceWindowFrames * 4u, minHistory),
         static_cast<std::uint32_t>(std::lround(sampleRate * 2.0)));
 
     if (state.bufferFrames == requiredFrames &&
         state.bufferChannels == safeChannels &&
         state.analysisWindowFrames == windowFrames &&
         state.analysisHopFrames == hopFrames &&
+        state.analysisDecimation == decimation &&
         std::fabs(state.sampleRate - sampleRate) < 0.001) {
         return;
     }
@@ -110,6 +117,7 @@ void ensureBuffer(EngineState& state,
     state.sampleRate = sampleRate;
     state.analysisWindowFrames = windowFrames;
     state.analysisHopFrames = hopFrames;
+    state.analysisDecimation = decimation;
     state.framesUntilAnalysis = hopFrames;
     state.detector = {};
     state.previousStableFrequencyHz = 0.0f;
@@ -165,14 +173,17 @@ void writeInputFrame(EngineState& state, const AudioBlock& audio, const std::uin
 DetectorStatus analyzeRecentWindow(EngineState& state, const Parameters& parameters) {
     DetectorStatus status {};
     const std::uint32_t windowFrames = state.analysisWindowFrames;
-    if (windowFrames < 32u || state.filledFrames < windowFrames || state.sampleRate <= 0.0) {
+    const std::uint32_t decimation = std::max<std::uint32_t>(1u, state.analysisDecimation);
+    const std::uint32_t sourceWindowFrames = windowFrames * decimation;
+    const double analysisRate = state.sampleRate / static_cast<double>(decimation);
+    if (windowFrames < 32u || state.filledFrames < sourceWindowFrames || state.sampleRate <= 0.0 || analysisRate <= 0.0) {
         return status;
     }
 
     double mean = 0.0;
-    const std::int64_t startFrame = static_cast<std::int64_t>(state.writeHead) - static_cast<std::int64_t>(windowFrames);
+    const std::int64_t startFrame = static_cast<std::int64_t>(state.writeHead) - static_cast<std::int64_t>(sourceWindowFrames);
     for (std::uint32_t i = 0; i < windowFrames; ++i) {
-        const float sample = readMonoFrame(state, startFrame + static_cast<std::int64_t>(i));
+        const float sample = readMonoFrame(state, startFrame + static_cast<std::int64_t>(i * decimation));
         state.analysisWindow[i] = sample;
         mean += sample;
     }
@@ -194,11 +205,15 @@ DetectorStatus analyzeRecentWindow(EngineState& state, const Parameters& paramet
     }
 
     const float low = std::max(20.0f, std::min(parameters.pitchLow, parameters.pitchHigh - 1.0f));
-    const float high = std::max(low + 1.0f, parameters.pitchHigh);
-    const std::uint32_t minLag = std::max<std::uint32_t>(1u, static_cast<std::uint32_t>(std::floor(state.sampleRate / high)));
+    const float high = std::min(std::max(low + 1.0f, parameters.pitchHigh), static_cast<float>(analysisRate * 0.45));
+    if (high <= low) {
+        return status;
+    }
+
+    const std::uint32_t minLag = std::max<std::uint32_t>(1u, static_cast<std::uint32_t>(std::floor(analysisRate / high)));
     const std::uint32_t maxLag = std::min<std::uint32_t>(
         windowFrames - 8u,
-        static_cast<std::uint32_t>(std::ceil(state.sampleRate / low)));
+        static_cast<std::uint32_t>(std::ceil(analysisRate / low)));
 
     if (minLag >= maxLag || maxLag >= windowFrames) {
         return status;
@@ -248,7 +263,7 @@ DetectorStatus analyzeRecentWindow(EngineState& state, const Parameters& paramet
             break;
         }
 
-        const float lowerFrequency = static_cast<float>(state.sampleRate / static_cast<double>(lowerLag));
+        const float lowerFrequency = static_cast<float>(analysisRate / static_cast<double>(lowerLag));
         if (lowerFrequency >= low) {
             continue;
         }
@@ -262,7 +277,7 @@ DetectorStatus analyzeRecentWindow(EngineState& state, const Parameters& paramet
     }
 
     status.voiced = true;
-    status.frequencyHz = static_cast<float>(state.sampleRate / static_cast<double>(bestLag));
+    status.frequencyHz = static_cast<float>(analysisRate / static_cast<double>(bestLag));
 
     if (state.previousStableFrequencyHz > 0.0f) {
         const float relativeChange = std::fabs(status.frequencyHz - state.previousStableFrequencyHz) /
