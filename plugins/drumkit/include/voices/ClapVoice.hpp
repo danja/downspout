@@ -19,10 +19,12 @@ private:
 
     NoiseGenerator noise;
     BiquadFilter bandpass;
+    BiquadFilter metalBand;
     ADEnvelope env;
 
     float densityParam;
     float toneParam;
+    float metalParam;
     float level;
 
     // Multi-impulse state
@@ -42,9 +44,11 @@ public:
         : sampleRate(sampleRate)
         , noise(444555666u)
         , bandpass(sampleRate, BiquadFilter::Type::Bandpass)
+        , metalBand(sampleRate, BiquadFilter::Type::Bandpass)
         , env(sampleRate)
         , densityParam(0.55f)
         , toneParam(0.45f)
+        , metalParam(0.0f)
         , level(1.0f)
         , impulseCount(5)
         , currentImpulse(0)
@@ -54,6 +58,7 @@ public:
         , burstSamples(0)
     {
         bandpass.setParameters(1500.0f, 6.0f);  // Higher Q for more resonance
+        metalBand.setParameters(3600.0f, 8.0f);
         env.setAttackTime(0.001f);  // Very fast attack
         env.setDecayTime(0.3f);     // Longer decay
     }
@@ -70,6 +75,11 @@ public:
         const float freq = expoMap(toneParam, 1000.0f, 4500.0f);  // Higher frequency range
         const float q = 4.0f + toneParam * 4.0f;  // Q from 4-8 (more resonance at high tone)
         bandpass.setParameters(freq, q);
+        metalBand.setParameters(std::min(freq * 2.35f, sampleRate * 0.43f), 8.0f + toneParam * 4.0f);
+    }
+
+    void setMetal(float value) {
+        metalParam = std::clamp(value, 0.0f, 1.0f);
     }
 
     void setLevel(float value) {
@@ -82,6 +92,7 @@ public:
         burstSamples = 0;
         env.trigger();
         bandpass.reset();
+        metalBand.reset();
     }
 
     float process() {
@@ -108,15 +119,19 @@ public:
             }
         }
 
-        // Filter and envelope
-        sample = bandpass.process(sample);
+        const float rawBurst = sample;
+        sample = bandpass.process(rawBurst);
+        if (metalParam > 0.0f) {
+            const float ping = metalBand.process(rawBurst) * (0.35f + densityParam * 0.25f);
+            sample = sample * (1.0f - metalParam * 0.18f) + ping * metalParam;
+        }
         sample *= env.process();
 
         return sample * 0.8f * level;  // Higher output level
     }
 
     bool isActive() const { return env.isActive(); }
-    void reset() { env.reset(); bandpass.reset(); }
+    void reset() { env.reset(); bandpass.reset(); metalBand.reset(); }
 };
 
 } // namespace downspout::drumkit

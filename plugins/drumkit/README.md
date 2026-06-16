@@ -7,8 +7,8 @@ The port keeps the LV2 synth behavior in a portable core and exposes it through 
 - stereo audio output;
 - one MIDI input, responding to the original note map;
 - 43 inherited synthesis and master parameters with the LV2 ranges/defaults preserved;
-- 11 added per-instrument mute parameters plus an appended kick transient
-  amount control;
+- 11 added per-instrument mute parameters plus appended kick transient and
+  per-voice metal amount controls;
 - a new custom NanoVG UI built around instrument strips, focused voice editing, and master bus controls.
 
 UI notes:

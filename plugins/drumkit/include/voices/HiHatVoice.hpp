@@ -29,6 +29,7 @@ private:
     const float baseFreq = 320.0f;  // Base frequency
 
     float brightnessParam;
+    float metalParam;
     float decayTime;
     bool isClosed;
     float level;
@@ -46,6 +47,7 @@ public:
         , sizzleBand(sampleRate, BiquadFilter::Type::Bandpass)
         , env(sampleRate)
         , brightnessParam(0.6f)
+        , metalParam(0.0f)
         , decayTime(0.1f)
         , isClosed(closed)
         , level(1.0f)
@@ -85,6 +87,10 @@ public:
         level = std::clamp(value, 0.0f, 1.5f);
     }
 
+    void setMetal(float value) {
+        metalParam = std::clamp(value, 0.0f, 1.0f);
+    }
+
     void trigger(float vel = 1.0f) {
         velocity = std::clamp(vel, 0.0f, 1.0f);
         for (int i = 0; i < 6; ++i) {
@@ -118,11 +124,13 @@ public:
         }
 
         const float noiseSample = noise.process();
-        float sample = oscSum * 0.19f + ring * 0.42f + noiseSample * 0.95f;
+        float sample = oscSum * (0.19f + metalParam * 0.08f)
+            + ring * (0.42f + metalParam * 0.48f)
+            + noiseSample * (0.95f - metalParam * 0.24f);
         const float filtered = hpf.process(sample);
         const float sizzle = sizzleBand.process(noise.process() * 0.75f + ring * 0.28f);
-        sample = filtered * 0.92f + sizzle * 0.48f;
-        sample = std::tanh(sample * (1.08f + 0.45f * brightnessParam));
+        sample = filtered * 0.92f + sizzle * (0.48f + metalParam * 0.28f);
+        sample = std::tanh(sample * (1.08f + 0.45f * brightnessParam + metalParam * 0.28f));
         sample *= env.process();
 
         return sample * (isClosed ? 0.66f : 0.74f) * level * (0.9f + 0.1f * velocity);

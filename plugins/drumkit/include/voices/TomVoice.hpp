@@ -24,10 +24,13 @@ private:
     ADEnvelope attackEnv;
     BiquadFilter bodyResonator;
     BiquadFilter knockResonator;
+    BiquadFilter metalResonator;
     NoiseGenerator noise;
 
     float phase;
     float basePitch;     // Note-dependent base frequency
+    float pitchParam;
+    float metalParam;
     float velocity;
     float level;
 
@@ -43,14 +46,18 @@ public:
         , attackEnv(sampleRate)
         , bodyResonator(sampleRate, BiquadFilter::Type::Bandpass)
         , knockResonator(sampleRate, BiquadFilter::Type::Bandpass)
+        , metalResonator(sampleRate, BiquadFilter::Type::Bandpass)
         , noise(777888999u)
         , phase(0.0f)
         , basePitch(baseFreq)
+        , pitchParam(0.0f)
+        , metalParam(0.0f)
         , velocity(1.0f)
         , level(1.0f)
     {
         bodyResonator.setParameters(baseFreq, 10.0f);
         knockResonator.setParameters(2200.0f, 2.4f);
+        metalResonator.setParameters(std::clamp(baseFreq * 7.4f, 700.0f, 7200.0f), 6.0f);
         ampEnv.setAttackTime(0.0003f);
         ampEnv.setDecayTime(0.24f);
         attackEnv.setAttackTime(0.0001f);
@@ -62,9 +69,11 @@ public:
     }
 
     void setPitch(float value) {
+        pitchParam = std::clamp(value, 0.0f, 1.0f);
         const float startFreq = basePitch * (1.55f + value * 0.65f);
         const float endFreq = basePitch * (0.86f + value * 0.12f);
         pitchEnv.setParameters(startFreq, endFreq, 0.09f);
+        metalResonator.setParameters(std::clamp(basePitch * (6.4f + pitchParam * 5.8f), 700.0f, 7600.0f), 6.0f + pitchParam * 2.5f);
     }
 
     void setDecay(float value) {
@@ -76,6 +85,10 @@ public:
         level = std::clamp(value, 0.0f, 1.5f);
     }
 
+    void setMetal(float value) {
+        metalParam = std::clamp(value, 0.0f, 1.0f);
+    }
+
     void trigger(float vel = 1.0f) {
         velocity = std::clamp(vel, 0.0f, 1.0f);
         phase = 0.0f;
@@ -84,6 +97,7 @@ public:
         attackEnv.trigger();
         bodyResonator.reset();
         knockResonator.reset();
+        metalResonator.reset();
     }
 
     float process() {
@@ -107,10 +121,15 @@ public:
 
         const float knockFreq = std::clamp(freq * 8.5f, 1400.0f, 4200.0f);
         knockResonator.setParameters(knockFreq, 1.7f + velocity * 1.4f);
-        const float knockExcite = noise.process() * (0.55f + 0.35f * velocity) + triangle * 0.25f;
+        const float attackNoise = noise.process();
+        const float knockExcite = attackNoise * (0.55f + 0.35f * velocity) + triangle * 0.25f;
         const float knock = knockResonator.process(knockExcite) * attack;
 
         float sample = body * (0.95f + 0.12f * velocity) + knock * 0.44f;
+        if (metalParam > 0.0f) {
+            const float clang = metalResonator.process(attackNoise * 0.8f + triangle * 0.45f) * attack;
+            sample = sample * (1.0f - metalParam * 0.12f) + clang * (0.58f * metalParam);
+        }
         sample = std::tanh(sample * 1.45f);
         sample *= amp * velocity;
         return sample * 0.52f * level;
@@ -123,6 +142,7 @@ public:
         pitchEnv.reset();
         bodyResonator.reset();
         knockResonator.reset();
+        metalResonator.reset();
         phase = 0.0f;
     }
 };

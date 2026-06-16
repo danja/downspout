@@ -20,9 +20,11 @@ private:
     NoiseGenerator noise;
     ADEnvelope env;
     BiquadFilter bandpass;
+    BiquadFilter metalBand;
 
     float toneFreq;
     float decayTime;
+    float metalParam;
     float velocity;
     float level;
 
@@ -37,8 +39,10 @@ public:
         , noise(910231u)
         , env(sampleRate)
         , bandpass(sampleRate, BiquadFilter::Type::Bandpass)
+        , metalBand(sampleRate, BiquadFilter::Type::Bandpass)
         , toneFreq(1800.0f)
         , decayTime(0.08f)
+        , metalParam(0.0f)
         , velocity(1.0f)
         , level(1.0f)
     {
@@ -50,6 +54,7 @@ public:
     void setTone(float value) {
         toneFreq = expoMap(value, 900.0f, 4200.0f);
         bandpass.setParameters(toneFreq, 10.0f);
+        metalBand.setParameters(std::min(toneFreq * 2.45f, sampleRate * 0.43f), 8.0f);
     }
 
     void setDecay(float value) {
@@ -61,10 +66,15 @@ public:
         level = std::clamp(value, 0.0f, 1.5f);
     }
 
+    void setMetal(float value) {
+        metalParam = std::clamp(value, 0.0f, 1.0f);
+    }
+
     void trigger(float vel = 1.0f) {
         velocity = std::clamp(vel, 0.0f, 1.0f);
         env.trigger();
         bandpass.reset();
+        metalBand.reset();
     }
 
     float process() {
@@ -73,8 +83,12 @@ public:
         }
 
         const float envValue = env.process();
-        float sample = noise.process() * (0.8f + envValue * 0.4f);
-        sample = bandpass.process(sample);
+        const float excitation = noise.process() * (0.8f + envValue * 0.4f);
+        float sample = bandpass.process(excitation);
+        if (metalParam > 0.0f) {
+            const float ping = metalBand.process(excitation) * (0.42f + envValue * 0.28f);
+            sample = sample * (1.0f - metalParam * 0.18f) + ping * metalParam;
+        }
 
         return sample * envValue * velocity * 0.5f * level;
     }
@@ -84,6 +98,7 @@ public:
     void reset() {
         env.reset();
         bandpass.reset();
+        metalBand.reset();
     }
 };
 

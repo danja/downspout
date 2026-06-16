@@ -72,6 +72,15 @@ enum ParameterId : std::uint32_t {
     kParamCowbellMute,
     kParamClaveMute,
     kParamKickTransient,
+    kParamClapMetal,
+    kParamSnareMetal,
+    kParamCrashMetal,
+    kParamClosedHHMetal,
+    kParamTom1Metal,
+    kParamOpenHHMetal,
+    kParamTom2Metal,
+    kParamCowbellMetal,
+    kParamClaveMetal,
     kParameterCount
 };
 
@@ -157,6 +166,15 @@ inline constexpr std::array<ParameterSpec, kParameterCount> kParameterSpecs = {{
     {"Cowbell Mute", "cowbell_mute", 0.0f, 1.0f, 0.0f, true},
     {"Clave Mute", "clave_mute", 0.0f, 1.0f, 0.0f, true},
     {"Kick Transient", "kick_transient", 0.0f, 1.0f, 0.0f, false},
+    {"Clap Metal", "clap_metal", 0.0f, 1.0f, 0.0f, false},
+    {"Snare Metal", "snare_metal", 0.0f, 1.0f, 0.0f, false},
+    {"Crash Metal", "crash_metal", 0.0f, 1.0f, 0.0f, false},
+    {"Closed HH Metal", "hh_closed_metal", 0.0f, 1.0f, 0.0f, false},
+    {"Tom 1 Metal", "tom1_metal", 0.0f, 1.0f, 0.0f, false},
+    {"Open HH Metal", "hh_open_metal", 0.0f, 1.0f, 0.0f, false},
+    {"Tom 2 Metal", "tom2_metal", 0.0f, 1.0f, 0.0f, false},
+    {"Cowbell Metal", "cowbell_metal", 0.0f, 1.0f, 0.0f, false},
+    {"Clave Metal", "clave_metal", 0.0f, 1.0f, 0.0f, false},
 }};
 
 [[nodiscard]] inline float normalizedKickPitchToHz(const float value)

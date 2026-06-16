@@ -25,15 +25,20 @@ using downspout::drumkit::kParamBashSize;
 using downspout::drumkit::kParamBashSpread;
 using downspout::drumkit::kParamBitCrush;
 using downspout::drumkit::kParamClapDensity;
+using downspout::drumkit::kParamClapMetal;
 using downspout::drumkit::kParamClapTone;
 using downspout::drumkit::kParamClaveDecay;
+using downspout::drumkit::kParamClaveMetal;
 using downspout::drumkit::kParamClaveTone;
 using downspout::drumkit::kParamClosedHHBrightness;
 using downspout::drumkit::kParamClosedHHDecay;
+using downspout::drumkit::kParamClosedHHMetal;
 using downspout::drumkit::kParamCowbellDecay;
+using downspout::drumkit::kParamCowbellMetal;
 using downspout::drumkit::kParamCowbellTone;
 using downspout::drumkit::kParamCrashBrightness;
 using downspout::drumkit::kParamCrashDecay;
+using downspout::drumkit::kParamCrashMetal;
 using downspout::drumkit::kParamKickDecay;
 using downspout::drumkit::kParamKickDrive;
 using downspout::drumkit::kParamKickPitch;
@@ -44,11 +49,15 @@ using downspout::drumkit::kParamMasterGain;
 using downspout::drumkit::kParamMasterReverb;
 using downspout::drumkit::kParamOpenHHBrightness;
 using downspout::drumkit::kParamOpenHHDecay;
+using downspout::drumkit::kParamOpenHHMetal;
+using downspout::drumkit::kParamSnareMetal;
 using downspout::drumkit::kParamSnareSnap;
 using downspout::drumkit::kParamSnareTone;
 using downspout::drumkit::kParamTom1Decay;
+using downspout::drumkit::kParamTom1Metal;
 using downspout::drumkit::kParamTom1Pitch;
 using downspout::drumkit::kParamTom2Decay;
+using downspout::drumkit::kParamTom2Metal;
 using downspout::drumkit::kParamTom2Pitch;
 using downspout::drumkit::normalizedKickPitchToHz;
 
@@ -100,16 +109,16 @@ constexpr std::array<Color, kInstrumentCount> kInstrumentColors = {{
 
 constexpr std::array<VoiceControls, kInstrumentCount> kVoiceControls = {{
     {InstrumentId::Kick, {{{kParamKickPitch, "Pitch"}, {kParamKickDecay, "Decay"}, {kParamKickDrive, "Drive"}, {kParamKickPunch, "Punch"}, {kParamKickTransient, "Transient"}, {0, ""}}}, 5},
-    {InstrumentId::Clap, {{{kParamClapDensity, "Density"}, {kParamClapTone, "Tone"}, {0, ""}, {0, ""}, {0, ""}, {0, ""}}}, 2},
-    {InstrumentId::Snare, {{{kParamSnareTone, "Tone"}, {kParamSnareSnap, "Snap"}, {0, ""}, {0, ""}, {0, ""}, {0, ""}}}, 2},
-    {InstrumentId::Crash, {{{kParamCrashBrightness, "Bright"}, {kParamCrashDecay, "Decay"}, {0, ""}, {0, ""}, {0, ""}, {0, ""}}}, 2},
-    {InstrumentId::ClosedHH, {{{kParamClosedHHBrightness, "Bright"}, {kParamClosedHHDecay, "Decay"}, {0, ""}, {0, ""}, {0, ""}, {0, ""}}}, 2},
-    {InstrumentId::Tom1, {{{kParamTom1Pitch, "Pitch"}, {kParamTom1Decay, "Decay"}, {0, ""}, {0, ""}, {0, ""}, {0, ""}}}, 2},
-    {InstrumentId::OpenHH, {{{kParamOpenHHBrightness, "Bright"}, {kParamOpenHHDecay, "Decay"}, {0, ""}, {0, ""}, {0, ""}, {0, ""}}}, 2},
-    {InstrumentId::Tom2, {{{kParamTom2Pitch, "Pitch"}, {kParamTom2Decay, "Decay"}, {0, ""}, {0, ""}, {0, ""}, {0, ""}}}, 2},
+    {InstrumentId::Clap, {{{kParamClapDensity, "Density"}, {kParamClapTone, "Tone"}, {kParamClapMetal, "Metal"}, {0, ""}, {0, ""}, {0, ""}}}, 3},
+    {InstrumentId::Snare, {{{kParamSnareTone, "Tone"}, {kParamSnareSnap, "Snap"}, {kParamSnareMetal, "Metal"}, {0, ""}, {0, ""}, {0, ""}}}, 3},
+    {InstrumentId::Crash, {{{kParamCrashBrightness, "Bright"}, {kParamCrashDecay, "Decay"}, {kParamCrashMetal, "Metal"}, {0, ""}, {0, ""}, {0, ""}}}, 3},
+    {InstrumentId::ClosedHH, {{{kParamClosedHHBrightness, "Bright"}, {kParamClosedHHDecay, "Decay"}, {kParamClosedHHMetal, "Metal"}, {0, ""}, {0, ""}, {0, ""}}}, 3},
+    {InstrumentId::Tom1, {{{kParamTom1Pitch, "Pitch"}, {kParamTom1Decay, "Decay"}, {kParamTom1Metal, "Metal"}, {0, ""}, {0, ""}, {0, ""}}}, 3},
+    {InstrumentId::OpenHH, {{{kParamOpenHHBrightness, "Bright"}, {kParamOpenHHDecay, "Decay"}, {kParamOpenHHMetal, "Metal"}, {0, ""}, {0, ""}, {0, ""}}}, 3},
+    {InstrumentId::Tom2, {{{kParamTom2Pitch, "Pitch"}, {kParamTom2Decay, "Decay"}, {kParamTom2Metal, "Metal"}, {0, ""}, {0, ""}, {0, ""}}}, 3},
     {InstrumentId::Bash, {{{kParamBashSize, "Size"}, {kParamBashSpread, "Spread"}, {kParamBashDecay, "Decay"}, {kParamBashDrive, "Drive"}, {kParamBashNoise, "Noise"}, {kParamBashEdge, "Edge"}}}, 6},
-    {InstrumentId::Cowbell, {{{kParamCowbellTone, "Tone"}, {kParamCowbellDecay, "Decay"}, {0, ""}, {0, ""}, {0, ""}, {0, ""}}}, 2},
-    {InstrumentId::Clave, {{{kParamClaveTone, "Tone"}, {kParamClaveDecay, "Decay"}, {0, ""}, {0, ""}, {0, ""}, {0, ""}}}, 2},
+    {InstrumentId::Cowbell, {{{kParamCowbellTone, "Tone"}, {kParamCowbellDecay, "Decay"}, {kParamCowbellMetal, "Metal"}, {0, ""}, {0, ""}, {0, ""}}}, 3},
+    {InstrumentId::Clave, {{{kParamClaveTone, "Tone"}, {kParamClaveDecay, "Decay"}, {kParamClaveMetal, "Metal"}, {0, ""}, {0, ""}, {0, ""}}}, 3},
 }};
 
 constexpr std::array<ControlDef, kMasterControlCount> kMasterControls = {{

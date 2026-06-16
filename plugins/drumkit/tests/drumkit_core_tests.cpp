@@ -1,9 +1,11 @@
 #include "drumkit_engine.hpp"
 
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <utility>
 
 namespace {
 
@@ -91,6 +93,75 @@ void allNotesOffStopsVoices()
     assert(renderEnergy(engine, 256) < 0.0001f);
 }
 
+void metalDefaultsToDryTone()
+{
+    constexpr std::array<std::pair<std::uint8_t, std::uint32_t>, 9> targets {{
+        {39, downspout::drumkit::kParamClapMetal},
+        {40, downspout::drumkit::kParamSnareMetal},
+        {41, downspout::drumkit::kParamCrashMetal},
+        {42, downspout::drumkit::kParamClosedHHMetal},
+        {45, downspout::drumkit::kParamTom1Metal},
+        {46, downspout::drumkit::kParamOpenHHMetal},
+        {50, downspout::drumkit::kParamTom2Metal},
+        {52, downspout::drumkit::kParamCowbellMetal},
+        {53, downspout::drumkit::kParamClaveMetal},
+    }};
+
+    for (const auto& target : targets)
+    {
+        downspout::drumkit::Engine defaultMetal {48000.0f};
+        defaultMetal.setParameter(downspout::drumkit::kParamMasterReverb, 0.0f);
+        noteOn(defaultMetal, target.first);
+        const float defaultEnergy = renderEnergy(defaultMetal, 768);
+
+        downspout::drumkit::Engine explicitZero {48000.0f};
+        explicitZero.setParameter(downspout::drumkit::kParamMasterReverb, 0.0f);
+        explicitZero.setParameter(target.second, 0.0f);
+        noteOn(explicitZero, target.first);
+        const float zeroEnergy = renderEnergy(explicitZero, 768);
+
+        assert(std::fabs(defaultEnergy - zeroEnergy) < 0.000001f);
+    }
+}
+
+void metalChangesTargetVoices()
+{
+    constexpr std::array<std::pair<std::uint8_t, std::uint32_t>, 9> targets {{
+        {39, downspout::drumkit::kParamClapMetal},
+        {40, downspout::drumkit::kParamSnareMetal},
+        {41, downspout::drumkit::kParamCrashMetal},
+        {42, downspout::drumkit::kParamClosedHHMetal},
+        {45, downspout::drumkit::kParamTom1Metal},
+        {46, downspout::drumkit::kParamOpenHHMetal},
+        {50, downspout::drumkit::kParamTom2Metal},
+        {52, downspout::drumkit::kParamCowbellMetal},
+        {53, downspout::drumkit::kParamClaveMetal},
+    }};
+
+    for (const auto& target : targets)
+    {
+        downspout::drumkit::Engine dry {48000.0f};
+        dry.setParameter(downspout::drumkit::kParamMasterReverb, 0.0f);
+        dry.setParameter(target.second, 0.0f);
+        noteOn(dry, target.first);
+
+        downspout::drumkit::Engine metal {48000.0f};
+        metal.setParameter(downspout::drumkit::kParamMasterReverb, 0.0f);
+        metal.setParameter(target.second, 1.0f);
+        noteOn(metal, target.first);
+
+        float difference = 0.0f;
+        for (int i = 0; i < 768; ++i)
+        {
+            const auto dryFrame = dry.processStereo();
+            const auto metalFrame = metal.processStereo();
+            difference += std::fabs(dryFrame.left - metalFrame.left);
+            difference += std::fabs(dryFrame.right - metalFrame.right);
+        }
+        assert(difference > 0.0001f);
+    }
+}
+
 } // namespace
 
 int main()
@@ -100,6 +171,8 @@ int main()
     kickTransientAddsAttackEnergy();
     closedHatChokesOpenHatEvenWhenClosedHatMuted();
     allNotesOffStopsVoices();
+    metalDefaultsToDryTone();
+    metalChangesTargetVoices();
 
     std::cout << "drumkit core tests passed\n";
     return 0;

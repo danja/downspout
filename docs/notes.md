@@ -1,1 +1,0 @@
-For the plugins that have a Style or Genre selector, can you add an option Rock if it isn't already there. Even if it is, maybe rework so it will sound like very hard rock, solid notes on the beat - think Seven Nation Army by White Stripes or Kick Out the Jams by MC5. Make it hit.

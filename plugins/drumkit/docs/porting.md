@@ -13,6 +13,9 @@ Mapping decisions:
 - The kick transient amount is appended after the mute parameters. It is a
   Downspout-only extension, defaulting to zero so existing drumkit patches keep
   the inherited kick tone unless the new slider is raised.
+- Metal controls for Clap, Snare, Crash, Closed Hat, Low Tom, Open Hat, High
+  Tom, Cowbell, and Clave are appended after Kick Transient. They default to
+  zero, preserving the inherited voice tone unless raised.
 - The LV2 X11 UI was not ported. The DPF UI is new and intentionally separates mixer actions from voice editing.
 
 UI decisions:

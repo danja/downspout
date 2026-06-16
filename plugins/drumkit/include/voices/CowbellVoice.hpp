@@ -28,6 +28,7 @@ private:
 
     float baseFreq;
     float decayTime;
+    float metalParam;
     float velocity;
     float level;
 
@@ -46,6 +47,7 @@ public:
         , phaseB(0.0f)
         , baseFreq(540.0f)
         , decayTime(0.25f)
+        , metalParam(0.0f)
         , velocity(1.0f)
         , level(1.0f)
     {
@@ -67,6 +69,11 @@ public:
 
     void setLevel(float value) {
         level = std::clamp(value, 0.0f, 1.5f);
+    }
+
+    void setMetal(float value) {
+        metalParam = std::clamp(value, 0.0f, 1.0f);
+        saturator.setDrive(2.0f + metalParam * 1.6f);
     }
 
     void trigger(float vel = 1.0f) {
@@ -96,7 +103,11 @@ public:
         const float squareA = oscA >= 0.0f ? 1.0f : -1.0f;
         const float squareB = oscB >= 0.0f ? 1.0f : -1.0f;
 
+        const float clang = squareA * squareB + (oscA * squareB - oscB * squareA) * 0.32f;
         float sample = 0.55f * squareA + 0.45f * squareB + 0.2f * (oscA + oscB);
+        if (metalParam > 0.0f) {
+            sample = sample * (1.0f - metalParam * 0.1f) + clang * (0.42f * metalParam);
+        }
         sample = bandpass.process(sample * 0.8f);
         sample = saturator.process(sample);
 

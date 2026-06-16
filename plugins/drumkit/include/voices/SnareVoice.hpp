@@ -22,6 +22,7 @@ private:
     BiquadFilter shellResonator;   // 330 Hz resonator
     BiquadFilter noiseFilter;      // HPF for snap
     BiquadFilter crackResonator;   // Upper-mid crack band
+    BiquadFilter metalResonator;   // Narrow inharmonic ping
     NoiseGenerator noise;
     ADEnvelope ampEnv;             // Main amplitude envelope
     ADEnvelope noiseEnv;           // Noise burst envelope
@@ -30,6 +31,7 @@ private:
     // Parameters
     float toneParam;       // Body/shell mix and Q
     float snapParam;       // Noise level and filter frequency
+    float metalParam;      // Inharmonic resonant component
     float level;           // Output level
     float velocity;
 
@@ -48,12 +50,14 @@ public:
         , shellResonator(sampleRate, BiquadFilter::Type::Bandpass)
         , noiseFilter(sampleRate, BiquadFilter::Type::Highpass)
         , crackResonator(sampleRate, BiquadFilter::Type::Bandpass)
+        , metalResonator(sampleRate, BiquadFilter::Type::Bandpass)
         , noise(111222333u)
         , ampEnv(sampleRate)
         , noiseEnv(sampleRate)
         , crackEnv(sampleRate)
         , toneParam(0.5f)
         , snapParam(0.6f)
+        , metalParam(0.0f)
         , level(1.0f)
         , velocity(1.0f)
     {
@@ -61,6 +65,7 @@ public:
         bodyResonator.setParameters(185.0f, 8.0f);
         shellResonator.setParameters(360.0f, 9.0f);
         crackResonator.setParameters(2200.0f, 1.8f);
+        metalResonator.setParameters(4200.0f, 7.0f);
 
         // Configure noise filter
         noiseFilter.setParameters(2200.0f, 0.85f);
@@ -93,6 +98,7 @@ public:
         bodyResonator.setParameters(bodyFreq, bodyQ);
         shellResonator.setParameters(shellFreq, shellQ);
         crackResonator.setParameters(crackFreq, 1.3f + toneParam * 1.4f);
+        metalResonator.setParameters(std::min(crackFreq * 1.72f, sampleRate * 0.43f), 7.0f + toneParam * 3.0f);
     }
 
     /**
@@ -110,6 +116,10 @@ public:
         level = std::clamp(value, 0.0f, 1.5f);
     }
 
+    void setMetal(float value) {
+        metalParam = std::clamp(value, 0.0f, 1.0f);
+    }
+
     /**
      * Trigger the snare
      * @param vel - Velocity 0-1
@@ -125,6 +135,7 @@ public:
         shellResonator.reset();
         noiseFilter.reset();
         crackResonator.reset();
+        metalResonator.reset();
     }
 
     /**
@@ -149,9 +160,14 @@ public:
 
         const float filteredNoise = noiseFilter.process(rawNoise);
         const float noiseOut = filteredNoise * noiseEnv.process() * noiseAmt;
-        const float crack = crackResonator.process(filteredNoise * (0.9f + snapParam * 0.5f)) * crackEnv.process();
+        const float crackEnvValue = crackEnv.process();
+        const float crack = crackResonator.process(filteredNoise * (0.9f + snapParam * 0.5f)) * crackEnvValue;
 
         float sample = tonal * 0.95f + noiseOut * 0.72f + crack * 0.58f;
+        if (metalParam > 0.0f) {
+            const float metal = metalResonator.process(filteredNoise + tonalExcite * 0.35f) * crackEnvValue;
+            sample = sample * (1.0f - metalParam * 0.14f) + metal * (0.75f * metalParam);
+        }
         sample = std::tanh(sample * (1.15f + snapParam * 0.55f));
         sample *= velocity;
 
@@ -176,6 +192,7 @@ public:
         shellResonator.reset();
         noiseFilter.reset();
         crackResonator.reset();
+        metalResonator.reset();
     }
 };
 
