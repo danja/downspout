@@ -27,6 +27,12 @@ Current wrapper choice:
 - the manual `Fill` trigger is intentionally more immediate than the original
   stored-last-bar refresh: it now targets the current or next bar and boosts the
   fill amount so the result is audible in host use;
+- the `Resolution` control includes `1/4`, `1/8`, `1/16`, and `1/16T`; `1/4`
+  is appended to the saved-state enum so existing resolution values keep their
+  previous meaning;
+- the lowest `Density` setting now thins nonessential anchors and Euclidean
+  pulses more aggressively, especially hats and auxiliary percussion, while
+  leaving core downbeat/backbeat skeleton behavior intact;
 - the portable pattern core now uses shared meter data for more than bar size:
   `6/8`, `9/8`, `12/8`, and `3/4` get pulse-aware anchor and fill landmarks
   instead of only scaled `4/4` quarter-slot logic;

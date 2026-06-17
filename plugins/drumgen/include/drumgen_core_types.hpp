@@ -39,6 +39,7 @@ enum class ResolutionId : std::int32_t {
     eighth = 0,
     sixteenth,
     sixteenthTriplet,
+    quarter,
     count
 };
 

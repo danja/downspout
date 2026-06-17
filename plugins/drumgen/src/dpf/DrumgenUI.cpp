@@ -98,7 +98,7 @@ constexpr const char* kKitMapNames[] = {
 };
 
 constexpr const char* kResolutionNames[] = {
-    "1/8", "1/16", "1/16T"
+    "1/8", "1/16", "1/16T", "1/4"
 };
 
 constexpr const char* kBarNames[] = {
@@ -114,7 +114,7 @@ constexpr std::array<SelectorDef, 6> kSelectors = {{
     {kParamGenre, "Genre", kGenreNames, 14, 0},
     {kParamStyleMode, "Style", kStyleNames, 6, 0},
     {kParamKitMap, "Kit Map", kKitMapNames, 2, 0},
-    {kParamResolution, "Resolution", kResolutionNames, 3, 0},
+    {kParamResolution, "Resolution", kResolutionNames, 4, 0},
     {kParamBars, "Bars", kBarNames, 4, 1},
     {kParamChannel, "Channel", kChannelNames, 16, 1},
 }};

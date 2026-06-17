@@ -243,6 +243,41 @@ void testRockGenrePinsHardBackbeat() {
     assert(hasHit(pattern, LaneId::closedHat, 4));
 }
 
+void testQuarterResolutionUsesOneStepPerBeat() {
+    Controls controls;
+    controls.seed = 9090u;
+    controls.genre = GenreId::rock;
+    controls.bars = 2;
+    controls.resolution = ResolutionId::quarter;
+
+    PatternState pattern;
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, false);
+
+    assert(pattern.stepsPerBeat == 1);
+    assert(pattern.stepsPerBar == 4);
+    assert(pattern.totalSteps == 8);
+}
+
+void testLowestDensityIsSparse() {
+    Controls sparseControls;
+    sparseControls.seed = 9091u;
+    sparseControls.genre = GenreId::rock;
+    sparseControls.bars = 1;
+    sparseControls.resolution = ResolutionId::sixteenth;
+    sparseControls.density = 0.0f;
+
+    Controls defaultControls = sparseControls;
+    defaultControls.density = 0.58f;
+
+    PatternState sparse;
+    PatternState normal;
+    regeneratePattern(sparse, sparseControls, ::downspout::Meter {}, false);
+    regeneratePattern(normal, defaultControls, ::downspout::Meter {}, false);
+
+    assert(countAllHits(sparse) < countAllHits(normal));
+    assert(countHits(sparse, LaneId::closedHat) <= 4);
+}
+
 void testExplicitStyleModesChangePatternShape() {
     Controls controls;
     controls.seed = 515u;
@@ -765,6 +800,8 @@ int main() {
     testCompoundMeterBackbeatLandsOnSecondPulse();
     testTripleMeterBackbeatLandsOnSecondBeat();
     testRockGenrePinsHardBackbeat();
+    testQuarterResolutionUsesOneStepPerBeat();
+    testLowestDensityIsSparse();
     testExplicitStyleModesChangePatternShape();
     testAmenGenrePinsBreakSignature();
     testHipHopGenrePinsSparseBackbeat();

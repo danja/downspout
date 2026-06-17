@@ -30,6 +30,7 @@ constexpr auto GENRE_FUGUE = GenreId::fugue;
 constexpr auto RESOLUTION_8TH = ResolutionId::eighth;
 constexpr auto RESOLUTION_16TH = ResolutionId::sixteenth;
 constexpr auto RESOLUTION_16T = ResolutionId::sixteenthTriplet;
+constexpr auto RESOLUTION_4TH = ResolutionId::quarter;
 
 constexpr auto KIT_MAP_GM = KitMapId::gm;
 
@@ -1147,8 +1148,48 @@ struct StylePulseInfo {
     }
 
     desiredHits *= styleEuclidBias(controls, lane);
+    if (lane != LANE_KICK && lane != LANE_SNARE && !fillBar) {
+        desiredHits *= 0.22f + 0.78f * density;
+    }
     const int jitter = static_cast<int>(std::lround((rng.nextFloat() * 2.0f - 1.0f) * (variation * 2.0f)));
     return clampi(static_cast<int>(std::lround(desiredHits)) + jitter, 0, stepsPerBar);
+}
+
+[[nodiscard]] float lowDensityAnchorScale(const Controls& controls,
+                                          const int lane,
+                                          const int beatIndex,
+                                          const int subIndex,
+                                          const int stepsPerBeat,
+                                          const ::downspout::Meter& meter) {
+    const float density = clampf(controls.density, 0.0f, 1.0f);
+    const bool beatStart = subIndex == 0;
+    const bool hardDownbeat = lane == LANE_KICK && beatIndex == 0 && beatStart;
+    const bool backbeat = (lane == LANE_SNARE || lane == LANE_CLAP) && beatStart && isBackbeatBeat(meter, beatIndex);
+
+    if (hardDownbeat || backbeat) {
+        return 1.0f;
+    }
+
+    switch (lane) {
+    case LANE_CLOSED_HAT:
+    case LANE_OPEN_HAT:
+        return 0.12f + 0.88f * density;
+    case LANE_COWBELL:
+    case LANE_CLAVE:
+    case LANE_CRASH:
+    case LANE_BASH:
+        return 0.10f + 0.90f * density;
+    case LANE_LOW_TOM:
+    case LANE_HIGH_TOM:
+        return 0.16f + 0.84f * density;
+    case LANE_KICK:
+        return 0.28f + 0.72f * density;
+    case LANE_SNARE:
+    case LANE_CLAP:
+        return 0.22f + 0.78f * density;
+    default:
+        return 0.18f + 0.82f * density;
+    }
 }
 
 [[nodiscard]] float euclidInfluenceForLane(const Controls& controls, int lane, bool fillBar) {
@@ -1666,8 +1707,11 @@ void buildBar(PatternState& pattern,
         const int subIndex = step % stepsPerBeat;
 
         for (int lane = 0; lane < kLaneCount; ++lane) {
-            const float anchorProbabilityValue =
+            float anchorProbabilityValue =
                 anchorProbability(controls, pattern.meter, lane, barIndex, beatIndex, subIndex, stepsPerBeat, fillBar);
+            if (!fillBar) {
+                anchorProbabilityValue *= lowDensityAnchorScale(controls, lane, beatIndex, subIndex, stepsPerBeat, pattern.meter);
+            }
             const bool anchor =
                 anchorProbabilityValue > 0.0f && rng.nextFloat() < clampf(anchorProbabilityValue, 0.0f, 1.0f);
             const bool euclid = euclidHit(step, pulses[lane], offsets[lane], stepsPerBar);
@@ -1876,6 +1920,8 @@ bool structuralControlsChanged(const Controls& a, const Controls& b) {
 
 int stepsPerBeatForResolution(ResolutionId resolution) {
     switch (resolution) {
+    case RESOLUTION_4TH:
+        return 1;
     case RESOLUTION_8TH:
         return 2;
     case RESOLUTION_16T:
