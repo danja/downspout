@@ -19,9 +19,13 @@ enum class ParamId : std::uint32_t {
     width,
     drive,
     output,
+    metal,
+    articulation,
+    range,
+    ensemble,
 };
 
-inline constexpr std::size_t kParameterCount = 12;
+inline constexpr std::size_t kParameterCount = 16;
 
 struct ParamSpec {
     const char* symbol;
@@ -45,6 +49,10 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"width", "Width", 0.0f, 1.0f, 0.62f, false},
     {"drive", "Drive", 0.0f, 1.0f, 0.10f, false},
     {"output", "Output", 0.0f, 1.0f, 0.68f, false},
+    {"metal", "Metal", 0.0f, 1.0f, 0.0f, false},
+    {"articulation", "Articulation", 0.0f, 3.0f, 0.0f, true},
+    {"range", "Register", 0.0f, 3.0f, 0.0f, true},
+    {"ensemble", "Ensemble", 0.0f, 3.0f, 0.0f, true},
 }};
 
 inline constexpr std::array<const char*, 5> kModelNames = {{
@@ -53,6 +61,27 @@ inline constexpr std::array<const char*, 5> kModelNames = {{
     "Pad",
     "Pluck",
     "Glass",
+}};
+
+inline constexpr std::array<const char*, 4> kArticulationNames = {{
+    "Natural",
+    "Short",
+    "Sustain",
+    "Bloom",
+}};
+
+inline constexpr std::array<const char*, 4> kRangeNames = {{
+    "Natural",
+    "Low",
+    "High",
+    "Open",
+}};
+
+inline constexpr std::array<const char*, 4> kEnsembleNames = {{
+    "Solo",
+    "Pair",
+    "Chorus",
+    "Wide",
 }};
 
 } // namespace downspout::canticle

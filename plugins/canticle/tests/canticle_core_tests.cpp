@@ -44,6 +44,24 @@ float renderPeak(CanticleEngine& engine, const int frames)
     return peak;
 }
 
+float renderHighpassEnergy(CanticleEngine& engine, const int frames)
+{
+    float energy = 0.0f;
+    float lastInput = 0.0f;
+    float lastOutput = 0.0f;
+    for (int i = 0; i < frames; ++i)
+    {
+        const auto frame = engine.processStereo();
+        require(std::isfinite(frame.left) && std::isfinite(frame.right), "canticle rendered non-finite audio");
+        const float mono = (frame.left + frame.right) * 0.5f;
+        const float high = mono - lastInput + 0.92f * lastOutput;
+        lastInput = mono;
+        lastOutput = high;
+        energy += std::fabs(high);
+    }
+    return energy;
+}
+
 void defaultsAndClamping()
 {
     CanticleEngine engine {48000.0f};
@@ -58,6 +76,14 @@ void defaultsAndClamping()
     engine.setParameter(ParamId::output, -99.0f);
     require(std::fabs(engine.getParameter(ParamId::output) - 0.0f) < 1.0e-6f,
             "canticle unit parameter should clamp low");
+
+    engine.setParameter(ParamId::articulation, 2.6f);
+    require(std::fabs(engine.getParameter(ParamId::articulation) - 3.0f) < 1.0e-6f,
+            "canticle articulation should round");
+
+    engine.setParameter(ParamId::range, 99.0f);
+    require(std::fabs(engine.getParameter(ParamId::range) - 3.0f) < 1.0e-6f,
+            "canticle range should clamp high");
 }
 
 void allModelsRender()
@@ -114,9 +140,31 @@ void outputIsBounded()
     CanticleEngine engine {48000.0f};
     engine.setParameter(ParamId::output, 1.0f);
     engine.setParameter(ParamId::drive, 1.0f);
+    engine.setParameter(ParamId::metal, 1.0f);
     for (int i = 0; i < 12; ++i)
         engine.noteOn(48 + i, 127);
     require(renderPeak(engine, 24000) <= 1.0f, "canticle output should remain bounded");
+}
+
+void metalAddsBrightEdge()
+{
+    CanticleEngine plain {48000.0f};
+    plain.setParameter(ParamId::model, 0.0f);
+    plain.setParameter(ParamId::tone, 0.55f);
+    plain.setParameter(ParamId::body, 0.58f);
+    plain.setParameter(ParamId::metal, 0.0f);
+    plain.noteOn(60, 108);
+    const float plainHigh = renderHighpassEnergy(plain, 12000);
+
+    CanticleEngine metallic {48000.0f};
+    metallic.setParameter(ParamId::model, 0.0f);
+    metallic.setParameter(ParamId::tone, 0.55f);
+    metallic.setParameter(ParamId::body, 0.58f);
+    metallic.setParameter(ParamId::metal, 1.0f);
+    metallic.noteOn(60, 108);
+    const float metalHigh = renderHighpassEnergy(metallic, 12000);
+
+    require(metalHigh > plainHigh * 1.25f, "canticle metal should add a brighter edge");
 }
 
 } // namespace
@@ -129,6 +177,7 @@ int main()
     noteOffReleases();
     allNotesOffReleasesChord();
     outputIsBounded();
+    metalAddsBrightEdge();
 
     std::cout << "canticle core tests passed\n";
     return 0;

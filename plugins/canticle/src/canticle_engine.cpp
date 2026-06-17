@@ -64,6 +64,11 @@ struct Params {
     }
 };
 
+int paramChoice(const Params& params, const ParamId id, const int maxValue)
+{
+    return std::clamp(static_cast<int>(std::lround(params.values[static_cast<std::size_t>(id)])), 0, maxValue);
+}
+
 class Envelope {
 public:
     void setSampleRate(const float sampleRate)
@@ -331,16 +336,27 @@ public:
             return {};
         }
 
-        const float detuneCents = (params.values[static_cast<std::size_t>(ParamId::detune)] * 18.0f + 1.0f);
+        const int range = paramChoice(params, ParamId::range, 3);
+        const int ensemble = paramChoice(params, ParamId::ensemble, 3);
+        const float rangeSemitones = range == 1 ? -12.0f : (range == 2 ? 12.0f : 0.0f);
+        const float voiceFrequency = frequency_ * std::pow(2.0f, rangeSemitones / 12.0f);
+        const float ensembleDetuneScale = ensemble == 0 ? 0.65f : (ensemble == 1 ? 1.00f : (ensemble == 2 ? 1.55f : 2.10f));
+        const float ensembleMovementScale = ensemble == 0 ? 0.70f : (ensemble == 1 ? 1.00f : (ensemble == 2 ? 1.25f : 1.45f));
+        const float ensembleWidthBoost = ensemble == 0 ? -0.18f : (ensemble == 1 ? 0.0f : (ensemble == 2 ? 0.16f : 0.28f));
+        const float openRangeBoost = range == 3 ? 0.22f : 0.0f;
+
+        const float detuneCents = (params.values[static_cast<std::size_t>(ParamId::detune)] * 18.0f + 1.0f) *
+                                  ensembleDetuneScale;
         const float detuneRatio = std::pow(2.0f, detuneCents / 1200.0f);
-        const float movement = params.values[static_cast<std::size_t>(ParamId::movement)] * profile.movementScale;
+        const float movement = params.values[static_cast<std::size_t>(ParamId::movement)] * profile.movementScale *
+                               ensembleMovementScale;
         const float lfo = sine(lfoPhase_);
         lfoPhase_ = wrapPhase(lfoPhase_ + (0.08f + movement * 4.2f) / sampleRate_);
 
         const float vibrato = 1.0f + lfo * movement * 0.0045f;
-        const float incA = (frequency_ * vibrato) / sampleRate_;
-        const float incB = (frequency_ * detuneRatio * (1.0f - movement * 0.001f)) / sampleRate_;
-        const float incC = (frequency_ * 2.0f * (1.0f + movement * 0.0015f)) / sampleRate_;
+        const float incA = (voiceFrequency * vibrato) / sampleRate_;
+        const float incB = (voiceFrequency * detuneRatio * (1.0f - movement * 0.001f)) / sampleRate_;
+        const float incC = (voiceFrequency * 2.0f * (1.0f + movement * 0.0015f)) / sampleRate_;
         phaseA_ = wrapPhase(phaseA_ + incA);
         phaseB_ = wrapPhase(phaseB_ + incB);
         phaseC_ = wrapPhase(phaseC_ + incC);
@@ -348,19 +364,26 @@ public:
         const float raw = sine(phaseA_) * profile.sineMix +
                           triangle(phaseB_) * profile.triMix +
                           softSaw(phaseA_ + 0.15f * lfo) * profile.sawMix +
-                          sine(phaseC_) * profile.octaveMix;
+                          sine(phaseC_) * (profile.octaveMix + openRangeBoost);
         const float body = params.values[static_cast<std::size_t>(ParamId::body)];
-        const float bodyTone = raw + body * profile.bodyScale * (sine(phaseA_ * 0.5f) + 0.35f * sine(phaseC_ * 0.5f));
+        const float metal = params.values[static_cast<std::size_t>(ParamId::metal)];
+        const float metallic = sine(phaseA_ * 2.997f + phaseB_ * 0.173f) * 0.42f +
+                               triangle(phaseB_ * 4.011f + phaseC_ * 0.071f) * 0.26f +
+                               softSaw(phaseC_ * 3.731f + phaseA_ * 0.113f) * 0.20f;
+        const float bodyTone = raw +
+                               body * profile.bodyScale * (sine(phaseA_ * 0.5f) + 0.35f * sine(phaseC_ * 0.5f)) +
+                               metal * (0.16f + body * 0.28f) * metallic;
         const float tone = params.values[static_cast<std::size_t>(ParamId::tone)];
         const float cutoff = profile.cutoffBase + profile.cutoffRange * tone * tone +
-                             std::clamp(frequency_ * (0.8f + body), 0.0f, 3200.0f);
+                             std::clamp(voiceFrequency * (0.8f + body), 0.0f, 3200.0f) +
+                             metal * (2400.0f + tone * 3600.0f);
         const float filtered = filter_.process(bodyTone, cutoff, sampleRate_);
-        const float drive = params.values[static_cast<std::size_t>(ParamId::drive)] * profile.driveScale;
-        const float shaped = sanitizeAudio(filtered * (1.0f + drive * 3.5f));
+        const float drive = params.values[static_cast<std::size_t>(ParamId::drive)] * profile.driveScale + metal * 0.45f;
+        const float shaped = sanitizeAudio(filtered * (1.0f + drive * 3.5f) + metallic * metal * 0.08f);
         const float amp = env * (0.18f + velocity_ * 0.82f);
         const float mono = sanitizeAudio(shaped * amp * 0.42f);
 
-        const float width = params.values[static_cast<std::size_t>(ParamId::width)];
+        const float width = std::clamp(params.values[static_cast<std::size_t>(ParamId::width)] + ensembleWidthBoost, 0.0f, 1.0f);
         const float panBase = (static_cast<float>((note_ * 37) % 101) / 100.0f - 0.5f) * 1.35f * width;
         const float pan = std::clamp(panBase + lfo * movement * 0.15f, -0.88f, 0.88f);
         const float leftGain = std::sqrt(0.5f * (1.0f - pan));
@@ -380,10 +403,39 @@ private:
     {
         const int model = static_cast<int>(std::lround(params.values[static_cast<std::size_t>(ParamId::model)]));
         const ModelProfile profile = profileForModel(model);
-        env_.set(std::clamp(params.values[static_cast<std::size_t>(ParamId::attack)] * profile.attackBias, 0.0f, 1.0f),
-                 std::clamp(params.values[static_cast<std::size_t>(ParamId::decay)] * profile.decayBias, 0.0f, 1.0f),
-                 std::clamp(params.values[static_cast<std::size_t>(ParamId::sustain)] * profile.sustainBias, 0.0f, 1.0f),
-                 std::clamp(params.values[static_cast<std::size_t>(ParamId::release)] * profile.releaseBias, 0.0f, 1.0f));
+        float attackBias = profile.attackBias;
+        float decayBias = profile.decayBias;
+        float sustainBias = profile.sustainBias;
+        float releaseBias = profile.releaseBias;
+
+        switch (paramChoice(params, ParamId::articulation, 3))
+        {
+        case 1: // Short.
+            attackBias *= 0.45f;
+            decayBias *= 0.38f;
+            sustainBias *= 0.45f;
+            releaseBias *= 0.42f;
+            break;
+        case 2: // Sustain.
+            attackBias *= 0.70f;
+            decayBias *= 1.20f;
+            sustainBias *= 1.18f;
+            releaseBias *= 1.25f;
+            break;
+        case 3: // Bloom.
+            attackBias *= 1.80f;
+            decayBias *= 1.35f;
+            sustainBias *= 0.95f;
+            releaseBias *= 1.45f;
+            break;
+        default:
+            break;
+        }
+
+        env_.set(std::clamp(params.values[static_cast<std::size_t>(ParamId::attack)] * attackBias, 0.0f, 1.0f),
+                 std::clamp(params.values[static_cast<std::size_t>(ParamId::decay)] * decayBias, 0.0f, 1.0f),
+                 std::clamp(params.values[static_cast<std::size_t>(ParamId::sustain)] * sustainBias, 0.0f, 1.0f),
+                 std::clamp(params.values[static_cast<std::size_t>(ParamId::release)] * releaseBias, 0.0f, 1.0f));
     }
 
     float sampleRate_ = 44100.0f;

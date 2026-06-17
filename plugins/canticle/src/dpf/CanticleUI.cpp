@@ -13,9 +13,12 @@ START_NAMESPACE_DISTRHO
 namespace {
 
 using downspout::canticle::ParamId;
+using downspout::canticle::kArticulationNames;
+using downspout::canticle::kEnsembleNames;
 using downspout::canticle::kModelNames;
 using downspout::canticle::kParameterCount;
 using downspout::canticle::kParameterSpecs;
+using downspout::canticle::kRangeNames;
 
 struct Rect {
     float x = 0.0f;
@@ -47,11 +50,24 @@ struct SectionDef {
     std::size_t count;
 };
 
-constexpr std::array<SectionDef, 4> kSections = {{
-    {"Voice", {93, 158, 180}, {{{0, "Model"}, {1, "Tone"}, {2, "Body"}, {3, "Move"}}}, 4},
+struct DropdownDef {
+    std::uint32_t parameter;
+    const char* label;
+    const char* const* names;
+    std::size_t count;
+};
+
+constexpr std::array<SectionDef, 3> kSections = {{
+    {"Voice", {93, 158, 180}, {{{1, "Tone"}, {2, "Body"}, {12, "Metal"}, {3, "Move"}}}, 4},
     {"Envelope", {199, 145, 86}, {{{4, "Attack"}, {5, "Decay"}, {6, "Sustain"}, {7, "Release"}}}, 4},
     {"Space", {132, 168, 104}, {{{8, "Detune"}, {9, "Width"}, {10, "Drive"}, {11, "Output"}}}, 4},
-    {"Role", {178, 128, 188}, {{{0, "Keys"}, {3, "Pluck"}, {2, "Pad"}, {1, "Reed"}}}, 4},
+}};
+
+constexpr std::array<DropdownDef, 4> kDropdowns = {{
+    {static_cast<std::uint32_t>(ParamId::model), "Model", kModelNames.data(), kModelNames.size()},
+    {static_cast<std::uint32_t>(ParamId::articulation), "Articulation", kArticulationNames.data(), kArticulationNames.size()},
+    {static_cast<std::uint32_t>(ParamId::range), "Register", kRangeNames.data(), kRangeNames.size()},
+    {static_cast<std::uint32_t>(ParamId::ensemble), "Ensemble", kEnsembleNames.data(), kEnsembleNames.size()},
 }};
 
 float clampf(const float value, const float minimum, const float maximum)
@@ -73,6 +89,24 @@ std::string formatValue(const std::uint32_t parameter, const float value)
         const std::size_t index = std::min<std::size_t>(kModelNames.size() - 1,
                                                         static_cast<std::size_t>(std::max(0, static_cast<int>(std::lround(value)))));
         std::snprintf(buffer, sizeof(buffer), "%s", kModelNames[index]);
+    }
+    else if (parameter == static_cast<std::uint32_t>(ParamId::articulation))
+    {
+        const std::size_t index = std::min<std::size_t>(kArticulationNames.size() - 1,
+                                                        static_cast<std::size_t>(std::max(0, static_cast<int>(std::lround(value)))));
+        std::snprintf(buffer, sizeof(buffer), "%s", kArticulationNames[index]);
+    }
+    else if (parameter == static_cast<std::uint32_t>(ParamId::range))
+    {
+        const std::size_t index = std::min<std::size_t>(kRangeNames.size() - 1,
+                                                        static_cast<std::size_t>(std::max(0, static_cast<int>(std::lround(value)))));
+        std::snprintf(buffer, sizeof(buffer), "%s", kRangeNames[index]);
+    }
+    else if (parameter == static_cast<std::uint32_t>(ParamId::ensemble))
+    {
+        const std::size_t index = std::min<std::size_t>(kEnsembleNames.size() - 1,
+                                                        static_cast<std::size_t>(std::max(0, static_cast<int>(std::lround(value)))));
+        std::snprintf(buffer, sizeof(buffer), "%s", kEnsembleNames[index]);
     }
     else if (parameter == static_cast<std::uint32_t>(ParamId::output))
     {
@@ -128,6 +162,8 @@ protected:
         const float sectionH = height - top - pad;
         for (std::size_t i = 0; i < kSections.size(); ++i)
             drawSection(i, {pad + static_cast<float>(i) * (sectionW + gap), top, sectionW, sectionH});
+        drawDropdownColumn({pad + 3.0f * (sectionW + gap), top, sectionW, sectionH});
+        drawOpenDropdown();
     }
 
     bool onMouse(const MouseEvent& ev) override
@@ -141,16 +177,28 @@ protected:
             return false;
         }
 
+        if (openDropdown_ >= 0)
+        {
+            if (handleOpenDropdownClick(ev.pos.getX(), ev.pos.getY()))
+                return true;
+            openDropdown_ = -1;
+        }
+
+        for (std::size_t i = 0; i < selectorRects_.size(); ++i)
+        {
+            if (selectorRects_[i].contains(ev.pos.getX(), ev.pos.getY()))
+            {
+                activeParameter_ = -1;
+                openDropdown_ = static_cast<int>(i);
+                repaint();
+                return true;
+            }
+        }
+
         for (const auto& rect : controlRects_)
         {
             if (rect.parameter >= 0 && rect.bounds.contains(ev.pos.getX(), ev.pos.getY()))
             {
-                if (rect.modelValue >= 0)
-                {
-                    activeParameter_ = -1;
-                    commitParameter(static_cast<std::uint32_t>(ParamId::model), static_cast<float>(rect.modelValue));
-                    return true;
-                }
                 activeParameter_ = rect.parameter;
                 updateParameterFromMouse(rect.bounds, ev.pos.getX());
                 return true;
@@ -178,7 +226,6 @@ protected:
 private:
     struct ControlRect {
         int parameter = -1;
-        int modelValue = -1;
         Rect bounds {};
     };
 
@@ -235,28 +282,115 @@ private:
         {
             const Rect control {rect.x + 14.0f, rect.y + 54.0f + static_cast<float>(i) * slotH, rect.w - 28.0f, slotH - 12.0f};
             const std::uint32_t parameter = section.controls[i].parameter;
-            if (index == 3)
-                drawModelButton(section.controls[i], control);
-            else
-                drawSlider(parameter, section.controls[i].label, control, section.color);
+            drawSlider(parameter, section.controls[i].label, control, section.color);
         }
     }
 
-    void drawModelButton(const ControlDef control, const Rect rect)
+    void drawDropdownColumn(const Rect rect)
     {
-        const int model = static_cast<int>(std::lround(values_[static_cast<std::size_t>(ParamId::model)]));
-        const bool selected = model == static_cast<int>(control.parameter);
         beginPath();
-        fillColor(selected ? 90 : 48, selected ? 69 : 54, selected ? 96 : 58, 255);
-        roundedRect(rect.x, rect.y, rect.w, rect.h, 5.0f);
+        fillColor(35, 40, 42, 255);
+        roundedRect(rect.x, rect.y, rect.w, rect.h, 7.0f);
         fill();
 
-        fillColor(selected ? 238 : 172, selected ? 230 : 174, selected ? 241 : 178, 255);
-        fontSize(15.0f);
-        textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f, control.label, nullptr);
+        beginPath();
+        fillColor(178, 128, 188, 255);
+        roundedRect(rect.x, rect.y, rect.w, 42.0f, 7.0f);
+        fill();
 
-        rememberControl(static_cast<int>(ParamId::model), rect, static_cast<int>(control.parameter));
+        fillColor(20, 24, 25, 255);
+        fontSize(16.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        text(rect.x + 14.0f, rect.y + 21.0f, "Role", nullptr);
+
+        const float slotH = (rect.h - 64.0f) / static_cast<float>(kDropdowns.size());
+        for (std::size_t i = 0; i < kDropdowns.size(); ++i)
+        {
+            const Rect control {rect.x + 14.0f, rect.y + 54.0f + static_cast<float>(i) * slotH, rect.w - 28.0f, slotH - 12.0f};
+            selectorRects_[i] = control;
+            drawDropdown(kDropdowns[i], control, openDropdown_ == static_cast<int>(i));
+        }
+    }
+
+    void drawDropdown(const DropdownDef& dropdown, const Rect rect, const bool open)
+    {
+        fillColor(190, 198, 193, 255);
+        fontSize(13.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        text(rect.x, rect.y, dropdown.label, nullptr);
+
+        const Rect box {rect.x, rect.y + 24.0f, rect.w, 30.0f};
+        beginPath();
+        fillColor(open ? 58 : 24, open ? 45 : 28, open ? 62 : 30, 255);
+        roundedRect(box.x, box.y, box.w, box.h, 5.0f);
+        fill();
+
+        const std::string value = formatValue(dropdown.parameter, values_[dropdown.parameter]);
+        fillColor(224, 226, 222, 255);
+        fontSize(14.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        text(box.x + 10.0f, box.y + box.h * 0.5f + 1.0f, value.c_str(), nullptr);
+
+        fillColor(154, 164, 159, 255);
+        textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
+        text(box.x + box.w - 10.0f, box.y + box.h * 0.5f, open ? "^" : "v", nullptr);
+    }
+
+    void drawOpenDropdown()
+    {
+        if (openDropdown_ < 0)
+            return;
+
+        const DropdownDef& dropdown = kDropdowns[static_cast<std::size_t>(openDropdown_)];
+        const Rect base = selectorRects_[static_cast<std::size_t>(openDropdown_)];
+        const Rect menu {base.x, base.y + 56.0f, base.w, 28.0f * static_cast<float>(dropdown.count)};
+        const int selected = static_cast<int>(std::lround(values_[dropdown.parameter]));
+
+        beginPath();
+        fillColor(23, 27, 29, 250);
+        roundedRect(menu.x, menu.y, menu.w, menu.h, 6.0f);
+        fill();
+
+        beginPath();
+        strokeColor(178, 128, 188, 220);
+        strokeWidth(1.0f);
+        roundedRect(menu.x, menu.y, menu.w, menu.h, 6.0f);
+        stroke();
+
+        for (std::size_t i = 0; i < dropdown.count; ++i)
+        {
+            const float y = menu.y + static_cast<float>(i) * 28.0f;
+            if (selected == static_cast<int>(i))
+            {
+                beginPath();
+                fillColor(74, 57, 80, 255);
+                roundedRect(menu.x + 4.0f, y + 3.0f, menu.w - 8.0f, 22.0f, 5.0f);
+                fill();
+            }
+
+            fillColor(225, 228, 224, 255);
+            fontSize(13.0f);
+            textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+            text(menu.x + 10.0f, y + 14.0f, dropdown.names[i], nullptr);
+        }
+    }
+
+    bool handleOpenDropdownClick(const float x, const float y)
+    {
+        const DropdownDef& dropdown = kDropdowns[static_cast<std::size_t>(openDropdown_)];
+        const Rect base = selectorRects_[static_cast<std::size_t>(openDropdown_)];
+        if (base.contains(x, y))
+            return false;
+
+        const Rect menu {base.x, base.y + 56.0f, base.w, 28.0f * static_cast<float>(dropdown.count)};
+        if (!menu.contains(x, y))
+            return false;
+
+        const int item = std::clamp(static_cast<int>((y - menu.y) / 28.0f), 0, static_cast<int>(dropdown.count) - 1);
+        commitParameter(dropdown.parameter, static_cast<float>(item));
+        openDropdown_ = -1;
+        repaint();
+        return true;
     }
 
     void drawSlider(const std::uint32_t parameter, const char* label, const Rect rect, const Color color)
@@ -286,10 +420,10 @@ private:
         rememberControl(static_cast<int>(parameter), {rect.x, trackY - 8.0f, rect.w, 29.0f});
     }
 
-    void rememberControl(const int parameter, const Rect bounds, const int modelValue = -1)
+    void rememberControl(const int parameter, const Rect bounds)
     {
         if (controlRectCount_ < controlRects_.size())
-            controlRects_[controlRectCount_++] = {parameter, modelValue, bounds};
+            controlRects_[controlRectCount_++] = {parameter, bounds};
     }
 
     void updateParameterFromMouse(const Rect bounds, const float mouseX)
@@ -315,8 +449,10 @@ private:
 
     std::array<float, kParameterCount> values_ {};
     std::array<ControlRect, 32> controlRects_ {};
+    std::array<Rect, kDropdowns.size()> selectorRects_ {};
     std::size_t controlRectCount_ = 0;
     int activeParameter_ = -1;
+    int openDropdown_ = -1;
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CanticleUI)
 };

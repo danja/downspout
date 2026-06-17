@@ -11,7 +11,10 @@ START_NAMESPACE_DISTRHO
 namespace {
 
 using downspout::canticle::CanticleEngine;
+using downspout::canticle::kArticulationNames;
+using downspout::canticle::kEnsembleNames;
 using downspout::canticle::ParamId;
+using downspout::canticle::kRangeNames;
 using downspout::canticle::kModelNames;
 using downspout::canticle::kParameterCount;
 using downspout::canticle::kParameterSpecs;
@@ -22,6 +25,27 @@ ParameterEnumerationValue kModelEnumValues[] = {
     {2.0f, kModelNames[2]},
     {3.0f, kModelNames[3]},
     {4.0f, kModelNames[4]},
+};
+
+ParameterEnumerationValue kArticulationEnumValues[] = {
+    {0.0f, kArticulationNames[0]},
+    {1.0f, kArticulationNames[1]},
+    {2.0f, kArticulationNames[2]},
+    {3.0f, kArticulationNames[3]},
+};
+
+ParameterEnumerationValue kRangeEnumValues[] = {
+    {0.0f, kRangeNames[0]},
+    {1.0f, kRangeNames[1]},
+    {2.0f, kRangeNames[2]},
+    {3.0f, kRangeNames[3]},
+};
+
+ParameterEnumerationValue kEnsembleEnumValues[] = {
+    {0.0f, kEnsembleNames[0]},
+    {1.0f, kEnsembleNames[1]},
+    {2.0f, kEnsembleNames[2]},
+    {3.0f, kEnsembleNames[3]},
 };
 
 void handleMidiEvent(CanticleEngine& engine, const MidiEvent& event)
@@ -105,6 +129,27 @@ protected:
             parameter.enumValues.count = static_cast<uint8_t>(std::size(kModelEnumValues));
             parameter.enumValues.restrictedMode = true;
             parameter.enumValues.values = kModelEnumValues;
+            parameter.enumValues.deleteLater = false;
+        }
+        else if (index == static_cast<uint32_t>(ParamId::articulation))
+        {
+            parameter.enumValues.count = static_cast<uint8_t>(std::size(kArticulationEnumValues));
+            parameter.enumValues.restrictedMode = true;
+            parameter.enumValues.values = kArticulationEnumValues;
+            parameter.enumValues.deleteLater = false;
+        }
+        else if (index == static_cast<uint32_t>(ParamId::range))
+        {
+            parameter.enumValues.count = static_cast<uint8_t>(std::size(kRangeEnumValues));
+            parameter.enumValues.restrictedMode = true;
+            parameter.enumValues.values = kRangeEnumValues;
+            parameter.enumValues.deleteLater = false;
+        }
+        else if (index == static_cast<uint32_t>(ParamId::ensemble))
+        {
+            parameter.enumValues.count = static_cast<uint8_t>(std::size(kEnsembleEnumValues));
+            parameter.enumValues.restrictedMode = true;
+            parameter.enumValues.values = kEnsembleEnumValues;
             parameter.enumValues.deleteLater = false;
         }
     }
