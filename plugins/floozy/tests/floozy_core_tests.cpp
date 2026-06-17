@@ -23,6 +23,11 @@ void require(const bool condition, const char* const message)
     }
 }
 
+void require(const bool condition, const std::string& message)
+{
+    require(condition, message.c_str());
+}
+
 float renderPeak(FloozyEngine& engine, const int frames)
 {
     float peak = 0.0f;
@@ -99,6 +104,13 @@ float estimateRenderedPitch(FloozyEngine& engine, const int warmupFrames, const 
     }
 
     return estimateZeroCrossingPitch(samples, 48000.0f);
+}
+
+float renderWindowEnergy(FloozyEngine& engine, const int skipFrames, const int frames)
+{
+    for (int i = 0; i < skipFrames; ++i)
+        (void)engine.processStereo();
+    return renderDcBlockedEnergy(engine, frames);
 }
 
 float midiNoteToExpectedFrequency(const int midiNote)
@@ -241,6 +253,118 @@ void sustainedInterfacesTrackMidiPitch()
     }
 }
 
+void bodyControlsShapeResonatorTail()
+{
+    FloozyEngine shortBody {48000.0f};
+    shortBody.setParameter(ParamId::interfaceType, 0.0f);
+    shortBody.setParameter(ParamId::interfaceIntensity, 0.85f);
+    shortBody.setParameter(ParamId::sourceLevel, 0.05f);
+    shortBody.setParameter(ParamId::noiseLevel, 0.45f);
+    shortBody.setParameter(ParamId::attack, 0.0f);
+    shortBody.setParameter(ParamId::release, 0.35f);
+    shortBody.setParameter(ParamId::delay1Feedback, 0.0f);
+    shortBody.setParameter(ParamId::delay2Feedback, 0.0f);
+    shortBody.setParameter(ParamId::filterFeedback, 0.0f);
+    shortBody.setParameter(ParamId::reverbLevel, 0.0f);
+    shortBody.setParameter(ParamId::masterGain, 0.7f);
+    shortBody.noteOn(48, 118);
+    (void)renderEnergy(shortBody, 2048);
+    shortBody.noteOff(48);
+    const float shortTail = renderWindowEnergy(shortBody, 12000, 24000);
+
+    FloozyEngine ringingBody {48000.0f};
+    ringingBody.setParameter(ParamId::interfaceType, 0.0f);
+    ringingBody.setParameter(ParamId::interfaceIntensity, 0.85f);
+    ringingBody.setParameter(ParamId::sourceLevel, 0.05f);
+    ringingBody.setParameter(ParamId::noiseLevel, 0.45f);
+    ringingBody.setParameter(ParamId::attack, 0.0f);
+    ringingBody.setParameter(ParamId::release, 0.35f);
+    ringingBody.setParameter(ParamId::delay1Feedback, 1.0f);
+    ringingBody.setParameter(ParamId::delay2Feedback, 0.75f);
+    ringingBody.setParameter(ParamId::filterFeedback, 0.25f);
+    ringingBody.setParameter(ParamId::reverbLevel, 0.0f);
+    ringingBody.setParameter(ParamId::masterGain, 0.7f);
+    ringingBody.noteOn(48, 118);
+    (void)renderEnergy(ringingBody, 2048);
+    ringingBody.noteOff(48);
+    const float ringingTail = renderWindowEnergy(ringingBody, 12000, 24000);
+
+    require(ringingTail > shortTail * 6.0f,
+            "floozy body feedback should extend resonator tail, short=" + std::to_string(shortTail) +
+                " ringing=" + std::to_string(ringingTail));
+
+    FloozyEngine lowTune {48000.0f};
+    lowTune.setParameter(ParamId::interfaceType, 0.0f);
+    lowTune.setParameter(ParamId::interfaceIntensity, 0.85f);
+    lowTune.setParameter(ParamId::sourceLevel, 0.05f);
+    lowTune.setParameter(ParamId::noiseLevel, 0.45f);
+    lowTune.setParameter(ParamId::attack, 0.0f);
+    lowTune.setParameter(ParamId::delay1Feedback, 1.0f);
+    lowTune.setParameter(ParamId::delay2Feedback, 0.75f);
+    lowTune.setParameter(ParamId::filterFeedback, 0.25f);
+    lowTune.setParameter(ParamId::tuning, 0.25f);
+    lowTune.setParameter(ParamId::reverbLevel, 0.0f);
+    lowTune.noteOn(60, 118);
+
+    FloozyEngine highTune {48000.0f};
+    highTune.setParameter(ParamId::interfaceType, 0.0f);
+    highTune.setParameter(ParamId::interfaceIntensity, 0.85f);
+    highTune.setParameter(ParamId::sourceLevel, 0.05f);
+    highTune.setParameter(ParamId::noiseLevel, 0.45f);
+    highTune.setParameter(ParamId::attack, 0.0f);
+    highTune.setParameter(ParamId::delay1Feedback, 1.0f);
+    highTune.setParameter(ParamId::delay2Feedback, 0.75f);
+    highTune.setParameter(ParamId::filterFeedback, 0.25f);
+    highTune.setParameter(ParamId::tuning, 0.75f);
+    highTune.setParameter(ParamId::reverbLevel, 0.0f);
+    highTune.noteOn(60, 118);
+
+    const float lowPitch = estimateRenderedPitch(lowTune, 8000, 24000);
+    const float highPitch = estimateRenderedPitch(highTune, 8000, 24000);
+    require(highPitch > lowPitch * 1.45f, "floozy body tuning should move resonator pitch");
+}
+
+void bodyAutomationAvoidsFullScaleImpulses()
+{
+    FloozyEngine engine {48000.0f};
+    engine.setParameter(ParamId::interfaceType, 0.0f);
+    engine.setParameter(ParamId::interfaceIntensity, 0.95f);
+    engine.setParameter(ParamId::sourceLevel, 0.35f);
+    engine.setParameter(ParamId::noiseLevel, 0.35f);
+    engine.setParameter(ParamId::attack, 0.0f);
+    engine.setParameter(ParamId::delay1Feedback, 1.0f);
+    engine.setParameter(ParamId::delay2Feedback, 1.0f);
+    engine.setParameter(ParamId::filterFeedback, 1.0f);
+    engine.setParameter(ParamId::reverbLevel, 0.0f);
+    engine.setParameter(ParamId::masterGain, 0.85f);
+    engine.noteOn(45, 120);
+
+    float previous = 0.0f;
+    float maxDelta = 0.0f;
+    float maxPeak = 0.0f;
+    for (int frame = 0; frame < 48000; ++frame)
+    {
+        if (frame > 0 && frame % 512 == 0)
+        {
+            const bool alternate = ((frame / 512) % 2) == 0;
+            engine.setParameter(ParamId::tuning, alternate ? 0.22f : 0.78f);
+            engine.setParameter(ParamId::ratio, alternate ? 0.15f : 0.90f);
+            engine.setParameter(ParamId::filterFeedback, alternate ? 0.35f : 1.0f);
+        }
+
+        const auto out = engine.processStereo();
+        require(std::isfinite(out.left) && std::isfinite(out.right), "floozy body automation emitted non-finite audio");
+        const float mono = (out.left + out.right) * 0.5f;
+        maxPeak = std::max(maxPeak, std::fabs(mono));
+        maxDelta = std::max(maxDelta, std::fabs(mono - previous));
+        previous = mono;
+    }
+
+    require(maxPeak <= 1.0f, "floozy body automation should stay bounded");
+    require(maxDelta < 1.45f,
+            "floozy body automation should avoid full-scale impulses, delta=" + std::to_string(maxDelta));
+}
+
 void midiVoiceLifecycle()
 {
     FloozyEngine engine {48000.0f};
@@ -335,6 +459,8 @@ int main()
     allInterfacesHaveUsableLevel();
     sustainedInterfacesHaveAudibleAcEnergy();
     sustainedInterfacesTrackMidiPitch();
+    bodyControlsShapeResonatorTail();
+    bodyAutomationAvoidsFullScaleImpulses();
     midiVoiceLifecycle();
     noteOffEventuallyStopsAllInterfaces();
     polyphonyIsCapped();

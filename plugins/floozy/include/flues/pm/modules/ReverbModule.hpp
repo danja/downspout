@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <vector>
 #include <array>
 
@@ -44,6 +45,10 @@ public:
     }
 
     float process(float input) {
+        if (std::fabs(input) < 1.0e-18f) {
+            input = 0.0f;
+        }
+
         float combSum = 0.0f;
         const float feedback = 0.7f + size * 0.28f;
 
@@ -53,7 +58,8 @@ public:
             const std::size_t delay = combDelays[i];
 
             const float delayed = buffer[index];
-            buffer[index] = input + delayed * feedback;
+            const float write = input + delayed * feedback;
+            buffer[index] = std::fabs(write) < 1.0e-18f ? 0.0f : write;
             combSum += delayed;
 
             combIndices[i] = (index + 1) % delay;
@@ -69,13 +75,15 @@ public:
             const float delayed = buffer[index];
             const float g = 0.5f;
             const float newOutput = -output * g + delayed;
-            buffer[index] = output + delayed * g;
+            const float write = output + delayed * g;
+            buffer[index] = std::fabs(write) < 1.0e-18f ? 0.0f : write;
             output = newOutput;
 
             allpassIndices[i] = (index + 1) % delay;
         }
 
-        return input * (1.0f - level) + output * level;
+        const float mixed = input * (1.0f - level) + output * level;
+        return std::fabs(mixed) < 1.0e-18f ? 0.0f : mixed;
     }
 
     void reset() {

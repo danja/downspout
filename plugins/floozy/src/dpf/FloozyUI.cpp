@@ -52,7 +52,7 @@ struct SectionDef {
 constexpr std::array<SectionDef, 5> kSections = {{
     {"Source", {219, 132, 84}, {{{0, "Algorithm"}, {1, "Param 1"}, {2, "Param 2"}, {3, "Tone"}, {4, "Noise"}, {5, "DC"}}}, 6},
     {"Shape", {92, 178, 164}, {{{6, "Attack"}, {7, "Release"}, {8, "Interface"}, {9, "Intensity"}, {22, "Gain"}, {0, ""}}}, 5},
-    {"Body", {126, 153, 221}, {{{10, "Tuning"}, {11, "Ratio"}, {12, "Delay 1"}, {13, "Delay 2"}, {14, "Feedback"}, {0, ""}}}, 5},
+    {"Body", {126, 153, 221}, {{{10, "Tuning"}, {11, "Ratio"}, {12, "D1 FB"}, {13, "D2 FB"}, {14, "Cross FB"}, {0, ""}}}, 5},
     {"Filter/Mod", {181, 137, 216}, {{{15, "Cutoff"}, {16, "Q"}, {17, "Shape"}, {18, "LFO"}, {19, "Mod Mix"}, {0, ""}}}, 5},
     {"Space", {211, 165, 82}, {{{20, "Size"}, {21, "Level"}, {0, ""}, {0, ""}, {0, ""}, {0, ""}}}, 2},
 }};

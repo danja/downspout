@@ -33,6 +33,8 @@ float sanitizeAudio(const float value)
 {
     if (!std::isfinite(value))
         return 0.0f;
+    if (std::fabs(value) < 1.0e-18f)
+        return 0.0f;
     return std::tanh(std::clamp(value, -4.0f, 4.0f));
 }
 
@@ -150,6 +152,11 @@ public:
         dcBlockY_ = 0.0f;
         transient_ = 0.0f;
         bowState_ = 0.0f;
+        currentDelay1_ = 0.0f;
+        currentDelay2_ = 0.0f;
+        currentFeedback1_ = 0.0f;
+        currentFeedback2_ = 0.0f;
+        currentCross_ = 0.0f;
     }
 
     void noteOn(const int interfaceType, const float velocity)
@@ -183,21 +190,26 @@ public:
         const float tuned = std::clamp(baseFrequency * std::pow(2.0f, static_cast<float>(tuneSemitones_) / 12.0f),
                                        20.0f,
                                        sampleRate_ * 0.40f);
-        const float delay1 = delaySamples(tuned * profile.ratio1);
-        const float delay2 = delaySamples(tuned * profile.ratio2);
+        const float targetDelay1 = delaySamples(tuned * profile.ratio1);
+        const float targetDelay2 = delaySamples(tuned * profile.ratio2);
+        currentDelay1_ = smoothControl(currentDelay1_, targetDelay1, 0.0025f);
+        currentDelay2_ = smoothControl(currentDelay2_, targetDelay2, 0.0025f);
+        currentFeedback1_ = smoothControl(currentFeedback1_, profile.feedback1, 0.0015f);
+        currentFeedback2_ = smoothControl(currentFeedback2_, profile.feedback2, 0.0015f);
+        currentCross_ = smoothControl(currentCross_, profile.cross, 0.0015f);
 
-        const float tap1 = readDelay(delay1_, write1_, delay1);
-        const float tap2 = readDelay(delay2_, write2_, delay2);
-        const float bodyFeedback = (tap1 + tap2) * 0.5f + previousOutput_ * profile.cross;
+        const float tap1 = readDelay(delay1_, write1_, currentDelay1_);
+        const float tap2 = readDelay(delay2_, write2_, currentDelay2_);
+        const float bodyFeedback = (tap1 + tap2) * 0.5f + previousOutput_ * currentCross_;
         const float excitation = makeExcitation(profile, source, env, bodyFeedback, velocity);
-        const float releaseScale = 0.22f + clampUnit(env) * 0.78f;
+        const float releaseScale = 0.58f + clampUnit(env) * 0.42f;
 
         const float damp1 = damp(tap1, lowpass1_, profile.damping);
         const float damp2 = damp(tap2, lowpass2_, profile.damping * 1.08f);
-        const float writeA = sanitizeAudio(excitation + damp1 * profile.feedback1 * releaseScale +
-                                           damp2 * profile.cross * releaseScale);
-        const float writeB = sanitizeAudio(excitation * profile.secondInput + damp2 * profile.feedback2 * releaseScale +
-                                           damp1 * profile.cross * releaseScale);
+        const float writeA = sanitizeAudio(excitation + damp1 * currentFeedback1_ * releaseScale +
+                                           damp2 * currentCross_ * releaseScale);
+        const float writeB = sanitizeAudio(excitation * profile.secondInput + damp2 * currentFeedback2_ * releaseScale +
+                                           damp1 * currentCross_ * releaseScale);
 
         delay1_[write1_] = writeA;
         delay2_[write2_] = writeB;
@@ -236,7 +248,7 @@ private:
             profile.feedback1 = 0.88f;
             profile.feedback2 = 0.80f;
             profile.damping = 0.16f + (1.0f - intensity_) * 0.18f;
-            profile.transientDecay = 0.9980f;
+            profile.transientDecay = 0.9915f;
             profile.outputGain = 2.25f;
             break;
         case 1: // Struck bar/plate.
@@ -319,9 +331,18 @@ private:
             break;
         }
 
-        profile.feedback1 *= 0.45f + feedback1Control_ * 0.52f;
-        profile.feedback2 *= 0.35f + feedback2Control_ * 0.60f;
-        profile.cross += crossFeedbackControl_ * 0.28f;
+        const float feedback1Boost = std::pow(std::max(0.0f, (feedback1Control_ - 0.50f) / 0.50f), 1.35f);
+        const float feedback2Boost = std::pow(std::max(0.0f, (feedback2Control_ - 0.10f) / 0.90f), 1.25f);
+        const float resonance = std::max({feedback1Boost, feedback2Boost, crossFeedbackControl_ * 0.85f});
+
+        profile.feedback1 *= 0.08f + std::sqrt(feedback1Control_) * 0.89f + feedback1Boost * 0.18f;
+        profile.feedback2 *= 0.06f + std::sqrt(feedback2Control_) * 0.86f + feedback2Boost * 0.18f;
+        profile.feedback1 = std::min(profile.feedback1, 1.14f);
+        profile.feedback2 = std::min(profile.feedback2, 1.08f);
+        profile.cross += crossFeedbackControl_ * 0.50f;
+        profile.cross = std::min(profile.cross, 0.68f);
+        profile.damping = std::max(0.015f, profile.damping * (1.0f - resonance * 0.72f));
+        profile.outputGain *= 1.0f + resonance * 1.25f;
         profile.ratio1 = std::max(0.25f, profile.ratio1);
         profile.ratio2 = std::max(0.25f, profile.ratio2);
         return profile;
@@ -398,6 +419,8 @@ private:
     {
         const float follow = std::clamp(1.0f - damping, 0.02f, 0.98f);
         state += (input - state) * follow;
+        if (std::fabs(state) < 1.0e-18f)
+            state = 0.0f;
         return state;
     }
 
@@ -405,8 +428,15 @@ private:
     {
         const float output = input - dcBlockX_ + 0.995f * dcBlockY_;
         dcBlockX_ = input;
-        dcBlockY_ = output;
-        return output;
+        dcBlockY_ = std::fabs(output) < 1.0e-18f ? 0.0f : output;
+        return dcBlockY_;
+    }
+
+    static float smoothControl(const float current, const float target, const float coefficient)
+    {
+        if (current <= 0.0f)
+            return target;
+        return current + (target - current) * coefficient;
     }
 
     float sampleRate_;
@@ -422,6 +452,11 @@ private:
     float dcBlockY_ = 0.0f;
     float transient_ = 0.0f;
     float bowState_ = 0.0f;
+    float currentDelay1_ = 0.0f;
+    float currentDelay2_ = 0.0f;
+    float currentFeedback1_ = 0.0f;
+    float currentFeedback2_ = 0.0f;
+    float currentCross_ = 0.0f;
     int interfaceType_ = 2;
     int tuneSemitones_ = 0;
     float intensity_ = 0.5f;
@@ -491,7 +526,7 @@ public:
         if (envActive)
             releaseDamp_ = 1.0f;
         else
-            releaseDamp_ *= 0.995f;
+            releaseDamp_ *= 0.9998f;
 
         const auto body = body_.process(source, env, frequency_, velocityGain_);
         const float filtered = filter_.process(sanitizeAudio(body.mix));

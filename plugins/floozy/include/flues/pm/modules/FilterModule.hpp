@@ -31,6 +31,10 @@ public:
     }
 
     float process(float input) {
+        if (std::fabs(input) < 1.0e-18f) {
+            input = 0.0f;
+        }
+
         const float f = 2.0f * std::sin(static_cast<float>(M_PI) * frequency / sampleRate);
         const float qInv = 1.0f / std::max(0.5f, q);
 
@@ -41,6 +45,9 @@ public:
         if (!std::isfinite(low)) low = 0.0f;
         if (!std::isfinite(band)) band = 0.0f;
         if (!std::isfinite(high)) high = 0.0f;
+        if (std::fabs(low) < 1.0e-18f) low = 0.0f;
+        if (std::fabs(band) < 1.0e-18f) band = 0.0f;
+        if (std::fabs(high) < 1.0e-18f) high = 0.0f;
 
         float output = 0.0f;
         if (shape < 0.5f) {
@@ -51,7 +58,7 @@ public:
             output = band * (1.0f - mix) + high * mix;
         }
 
-        return output;
+        return std::fabs(output) < 1.0e-18f ? 0.0f : output;
     }
 
     void reset() {
