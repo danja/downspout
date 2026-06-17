@@ -17,6 +17,20 @@ Notable behavior preserved in the current port:
   generated 9th, 11th, and 13th voicings;
 - saved state for controls, progression, and variation progress.
 
+Learning and reset behavior:
+
+- Cadence learns continuously while transport is playing. At each cycle
+  boundary, the current capture updates the base progression and the capture is
+  cleared for the next cycle.
+- The explicit `Learn` action and timing-grid changes (`Cycle`, `Segment`) reset
+  learned material because they change the capture contract.
+- Harmony and voicing changes rebuild from the last learned capture when
+  available, or revoice a restored saved progression when raw capture is not
+  available. This keeps the plugin ready instead of dropping into an empty
+  Learning state after ordinary sound-shaping changes.
+- The DPF wrapper exposes `MIDI Input Activity` and `MIDI Output Activity`
+  output parameters, mirrored in the UI header, to diagnose host MIDI routing.
+
 Jazz note:
 
 - Cadence now stores up to six notes per chord slot. Old four-note progression

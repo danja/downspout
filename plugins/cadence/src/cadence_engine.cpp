@@ -245,12 +245,58 @@ void clear_learning_state(EngineState& state)
     cadence_reset_variation_progress(&state.variation);
 }
 
+bool timingControlsMatch(const Controls& a, const Controls& b) noexcept
+{
+    return a.cycle_bars == b.cycle_bars &&
+           a.granularity == b.granularity;
+}
+
 void adopt_base_progression(EngineState& state)
 {
     cadence_clear_progression(state.playback.data(), kMaxSegments);
     if (state.baseSegmentCount > 0)
         cadence_copy_progression(state.playback.data(), state.baseProgression.data(), state.baseSegmentCount);
     state.playbackSegmentCount = state.baseSegmentCount;
+}
+
+bool rebuild_from_learned_material(EngineState& state)
+{
+    std::array<ChordSlot, kMaxSegments> rebuilt {};
+    const CadenceBuildOptions options {};
+
+    if (state.haveLearnedCapture &&
+        state.learnedSegmentCount > 0 &&
+        cadence_build_progression_from_capture(state.learnedCapture.data(),
+                                               state.learnedSegmentCount,
+                                               state.controls,
+                                               state.baseProgression.data(),
+                                               state.baseSegmentCount,
+                                               options,
+                                               rebuilt.data()))
+    {
+        cadence_clear_progression(state.baseProgression.data(), kMaxSegments);
+        cadence_copy_progression(state.baseProgression.data(), rebuilt.data(), state.learnedSegmentCount);
+        state.baseSegmentCount = state.learnedSegmentCount;
+        adopt_base_progression(state);
+        state.ready = true;
+        return true;
+    }
+
+    const int segmentCount = state.baseSegmentCount > 0 ? state.baseSegmentCount : state.playbackSegmentCount;
+    const ChordSlot* source = state.baseSegmentCount > 0 ? state.baseProgression.data() : state.playback.data();
+    if (state.ready &&
+        segmentCount > 0 &&
+        cadence_revoice_progression(source, segmentCount, state.controls, options, rebuilt.data()))
+    {
+        cadence_clear_progression(state.baseProgression.data(), kMaxSegments);
+        cadence_copy_progression(state.baseProgression.data(), rebuilt.data(), segmentCount);
+        state.baseSegmentCount = segmentCount;
+        adopt_base_progression(state);
+        state.ready = true;
+        return true;
+    }
+
+    return false;
 }
 
 void plan_current_segment_comp(EngineState& state,
@@ -608,15 +654,25 @@ BlockResult processBlock(EngineState& state,
     }
 
     const bool learnTriggered = state.controls.action_learn != state.previousControls.action_learn;
+    const bool timingChanged = !timingControlsMatch(state.controls, state.previousControls);
     const bool paramsChanged = !harmonyControlsMatch(state.controls, state.previousControls);
     const bool varyChanged = std::fabs(state.controls.vary - state.previousControls.vary) >= 0.0001f;
     const bool compChanged = std::fabs(state.controls.comp - state.previousControls.comp) >= 0.0001f;
     const bool arpeggioChanged = std::fabs(state.controls.arpeggio - state.previousControls.arpeggio) >= 0.0001f;
 
-    if (learnTriggered || paramsChanged)
+    if (learnTriggered || timingChanged)
     {
         silence_harmony(state, result, 0);
         clear_learning_state(state);
+    }
+    else if (paramsChanged)
+    {
+        silence_harmony(state, result, 0);
+        clear_pending_harmony_off(state);
+        cadence_reset_comp_playback(&state.compState);
+        state.arpeggioStep = 0;
+        if (!rebuild_from_learned_material(state))
+            clear_learning_state(state);
     }
     else if (varyChanged)
     {

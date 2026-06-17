@@ -389,6 +389,107 @@ void testEngineLearnsAndEmitsOnNextCycle()
     assert(sawNoteOn);
 }
 
+void testHarmonyChangeKeepsLearnedProgressionReady()
+{
+    EngineState state;
+    activate(state);
+
+    Controls controls = defaultControls();
+    controls.cycle_bars = 1;
+    controls.granularity = GRANULARITY_BEAT;
+    controls.pass_input = false;
+    controls.output_channel = 1;
+
+    constexpr std::uint32_t frameCount = 96000;
+    const std::array<InputMidiEvent, 8> firstCycle = {{
+        makeEvent(0, 0x90, 60, 100),
+        makeEvent(24000, 0x80, 60, 0),
+        makeEvent(24000, 0x90, 64, 100),
+        makeEvent(48000, 0x80, 64, 0),
+        makeEvent(48000, 0x90, 67, 100),
+        makeEvent(72000, 0x80, 67, 0),
+        makeEvent(72000, 0x90, 69, 100),
+        makeEvent(95999, 0x80, 69, 0),
+    }};
+
+    TransportSnapshot transport;
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 0.0;
+    transport.barBeat = 0.0;
+    transport.beatsPerBar = 4.0;
+    transport.bpm = 120.0;
+
+    const BlockResult learned = processBlock(state,
+                                             controls,
+                                             transport,
+                                             frameCount,
+                                             48000.0,
+                                             firstCycle.data(),
+                                             static_cast<std::uint32_t>(firstCycle.size()));
+    assert(learned.ready);
+    assert(state.haveLearnedCapture);
+
+    controls.color = 1.0f;
+    transport.bar = 1.0;
+    transport.barBeat = 0.0;
+
+    const BlockResult changed = processBlock(state,
+                                             controls,
+                                             transport,
+                                             24000,
+                                             48000.0,
+                                             nullptr,
+                                             0);
+    assert(changed.ready);
+    assert(state.ready);
+    assert(state.playbackSegmentCount == 4);
+}
+
+void testRestoredProgressionSurvivesVoicingChange()
+{
+    EngineState state;
+    activate(state);
+
+    Controls controls = defaultControls();
+    controls.cycle_bars = 1;
+    controls.granularity = GRANULARITY_BEAT;
+    controls.output_channel = 1;
+
+    state.ready = true;
+    state.baseSegmentCount = 4;
+    state.playbackSegmentCount = 4;
+    for (int i = 0; i < 4; ++i) {
+        ChordSlot& slot = state.baseProgression[static_cast<std::size_t>(i)];
+        slot.valid = true;
+        slot.root_pc = static_cast<std::uint8_t>((i * 2) % 12);
+        slot.quality = QUALITY_MINOR;
+        slot.note_count = 3;
+        slot.velocity = 96;
+        slot.notes = {60, 63, 67, 0, 0, 0};
+        state.playback[static_cast<std::size_t>(i)] = slot;
+    }
+    state.haveLearnedCapture = false;
+    state.controlsInitialized = true;
+    state.previousControls = controls;
+
+    controls.spread = 1.0f;
+
+    TransportSnapshot transport;
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 0.0;
+    transport.barBeat = 0.0;
+    transport.beatsPerBar = 4.0;
+    transport.bpm = 120.0;
+
+    const BlockResult changed = processBlock(state, controls, transport, 24000, 48000.0, nullptr, 0);
+    assert(changed.ready);
+    assert(state.ready);
+    assert(state.baseSegmentCount == 4);
+    assert(state.playbackSegmentCount == 4);
+}
+
 void testArpeggioCanEmitSingleNotes()
 {
     EngineState state;
@@ -461,6 +562,8 @@ int main()
     testSpreadControlWidensVoicings();
     testStoppedTransportPassThrough();
     testEngineLearnsAndEmitsOnNextCycle();
+    testHarmonyChangeKeepsLearnedProgressionReady();
+    testRestoredProgressionSurvivesVoicingChange();
     testArpeggioCanEmitSingleNotes();
     return 0;
 }

@@ -29,6 +29,8 @@ enum ParameterIndex : uint32_t {
     kParamComp,
     kParamColor,
     kParamArpeggio,
+    kParamStatusInput,
+    kParamStatusOutput,
     kParameterCount
 };
 
@@ -189,6 +191,8 @@ public:
         values_[kParamStatusReady] = 0.0f;
         values_[kParamVary] = 0.0f;
         values_[kParamComp] = 0.0f;
+        values_[kParamStatusInput] = 0.0f;
+        values_[kParamStatusOutput] = 0.0f;
 
        #ifdef DGL_NO_SHARED_RESOURCES
         createFontFromFile("sans", "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf");
@@ -400,10 +404,12 @@ private:
         fillColor(154, 169, 183, 255);
         text(x + 22.0f, y + 48.0f, "Transport-synced MIDI harmonizer", nullptr);
 
-        drawStatusPill(x + w - 178.0f, y + 16.0f, 158.0f, 30.0f, values_[kParamStatusReady] >= 0.5f ? "Ready" : "Learning",
+        drawStatusPill(x + w - 404.0f, y + 16.0f, 140.0f, 30.0f, values_[kParamStatusReady] >= 0.5f ? "Ready" : "Learning",
                        values_[kParamStatusReady] >= 0.5f ? 103 : 195,
                        values_[kParamStatusReady] >= 0.5f ? 185 : 123,
                        values_[kParamStatusReady] >= 0.5f ? 134 : 73);
+        drawActivityPill(x + w - 250.0f, y + 16.0f, 104.0f, 30.0f, "MIDI In", values_[kParamStatusInput]);
+        drawActivityPill(x + w - 132.0f, y + 16.0f, 112.0f, 30.0f, "MIDI Out", values_[kParamStatusOutput]);
     }
 
     void drawStatusPill(const float x, const float y, const float w, const float h, const char* label, const int r, const int g, const int b)
@@ -421,6 +427,15 @@ private:
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
         fillColor(r, g, b, 255);
         text(x + w * 0.5f, y + h * 0.5f + 1.0f, label, nullptr);
+    }
+
+    void drawActivityPill(const float x, const float y, const float w, const float h, const char* label, const float activity)
+    {
+        const float level = clampf(activity, 0.0f, 1.0f);
+        const int r = 76 + static_cast<int>(level * 119.0f);
+        const int g = 96 + static_cast<int>(level * 89.0f);
+        const int b = 120 + static_cast<int>(level * 14.0f);
+        drawStatusPill(x, y, w, h, label, r, g, b);
     }
 
     void drawSliderPanel(const float x, const float y, const float w, const float h)
