@@ -346,6 +346,7 @@ private:
     int openSelector_ = -1;
 
     static constexpr float kSelectorItemHeight = 24.0f;
+    static constexpr int kSelectorMenuMaxRows = 12;
 
     void updateLayout(float width, float height)
     {
@@ -613,6 +614,9 @@ private:
         const SelectorDef& def = kSelectors[selectorIndex];
         const int selected = clampi(static_cast<int>(std::lround(values_[def.index])), 0, def.count - 1);
         const Rect menuRect = selectorMenuRect(selectorIndex);
+        const int columns = selectorMenuColumnCount(def);
+        const int rows = selectorMenuRowCount(def);
+        const float itemW = menuRect.w / static_cast<float>(columns);
 
         beginPath();
         roundedRect(menuRect.x, menuRect.y, menuRect.w, menuRect.h, 14.0f);
@@ -624,19 +628,22 @@ private:
         closePath();
 
         for (int i = 0; i < def.count; ++i) {
-            const float rowY = menuRect.y + static_cast<float>(i) * kSelectorItemHeight;
+            const int col = i / rows;
+            const int row = i % rows;
+            const float itemX = menuRect.x + static_cast<float>(col) * itemW;
+            const float rowY = menuRect.y + static_cast<float>(row) * kSelectorItemHeight;
             if (i == selected) {
                 beginPath();
-                roundedRect(menuRect.x + 4.0f, rowY + 3.0f, menuRect.w - 8.0f, kSelectorItemHeight - 6.0f, 10.0f);
+                roundedRect(itemX + 4.0f, rowY + 3.0f, itemW - 8.0f, kSelectorItemHeight - 6.0f, 10.0f);
                 fillColor(74, 96, 122, 255);
                 fill();
                 closePath();
             }
 
-            fontSize(12.0f);
+            fontSize(columns > 1 ? 11.0f : 12.0f);
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
             fillColor(236, 240, 243, 255);
-            text(menuRect.x + 14.0f, rowY + kSelectorItemHeight * 0.5f + 1.0f, def.items[i], nullptr);
+            text(itemX + 14.0f, rowY + kSelectorItemHeight * 0.5f + 1.0f, def.items[i], nullptr);
         }
     }
 
@@ -655,24 +662,53 @@ private:
             return false;
         }
 
-        const int item = clampi(static_cast<int>((y - menuRect.y) / kSelectorItemHeight), 0, def.count - 1);
+        const int columns = selectorMenuColumnCount(def);
+        const int rows = selectorMenuRowCount(def);
+        const float itemW = menuRect.w / static_cast<float>(columns);
+        const int col = clampi(static_cast<int>((x - menuRect.x) / itemW), 0, columns - 1);
+        const int row = clampi(static_cast<int>((y - menuRect.y) / kSelectorItemHeight), 0, rows - 1);
+        const int item = col * rows + row;
+        if (item >= def.count) {
+            return true;
+        }
+
         setParameter(def.index, static_cast<float>(item));
         openSelector_ = -1;
         repaint();
         return true;
     }
 
+    [[nodiscard]] int selectorMenuColumnCount(const SelectorDef& def) const
+    {
+        return std::max(1, (def.count + kSelectorMenuMaxRows - 1) / kSelectorMenuMaxRows);
+    }
+
+    [[nodiscard]] int selectorMenuRowCount(const SelectorDef& def) const
+    {
+        const int columns = selectorMenuColumnCount(def);
+        return (def.count + columns - 1) / columns;
+    }
+
     [[nodiscard]] Rect selectorMenuRect(int selectorIndex) const
     {
         const SelectorDef& def = kSelectors[selectorIndex];
         const Rect& base = selectorRects_[selectorIndex];
-        const float menuH = static_cast<float>(def.count) * kSelectorItemHeight;
+        const int columns = selectorMenuColumnCount(def);
+        const int rows = selectorMenuRowCount(def);
+        const float itemW = std::max(base.w, 158.0f);
+        const float menuW = itemW * static_cast<float>(columns);
+        const float menuH = static_cast<float>(rows) * kSelectorItemHeight;
+        const float windowW = static_cast<float>(getWidth());
+        const float windowH = static_cast<float>(getHeight());
         const float margin = 14.0f;
+
+        float menuX = clampf(base.x, margin, std::max(margin, windowW - margin - menuW));
         float menuY = base.y + base.h + 6.0f;
-        if (menuY + menuH > static_cast<float>(getHeight()) - margin) {
-            menuY = std::max(margin, static_cast<float>(getHeight()) - margin - menuH);
+        if (menuY + menuH > windowH - margin) {
+            menuY = base.y - menuH - 6.0f;
         }
-        return {base.x, menuY, base.w, menuH};
+        menuY = clampf(menuY, margin, std::max(margin, windowH - margin - menuH));
+        return {menuX, menuY, menuW, menuH};
     }
 
     void triggerButton(int buttonIndex)
