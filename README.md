@@ -66,7 +66,7 @@ installed bundle.
 | [gremlin-driver](plugins/gremlin-driver/README.md) | `gremlin_driver.vst3` | MIDI effect | MIDI modulation and action sequencer intended to drive `gremlin`. |
 | [ground](plugins/ground/README.md) | `ground.vst3` | MIDI generator | Long-form bass generator with Dub/Jazz styles, phrase planning, and guarded bass-register output. |
 | [floozy](plugins/floozy/README.md) | `floozy.vst3` | Instrument | Corrected 8-voice hybrid physical/modulation synth derived from `floozy-poly`. |
-| [basilico](plugins/basilico/README.md) | `basilico.vst3` | Instrument | Monophonic bass synth for upright, electric, dub, acid, and industrial bass. |
+| [basilico](plugins/basilico/README.md) | `basilico.vst3` | Instrument | Monophonic bass synth with Dub/Acid wobble, tempo sync, squelch, and upright/electric/industrial models. |
 | [canticle](plugins/canticle/README.md) | `canticle.vst3` | Instrument | 12-voice keys, reed, pad, pluck, and glass synth for melody, counterpoint, and chords. |
 | [luma](plugins/luma/README.md) | `luma.vst3` | MIDI generator | Launchpad-oriented performance generator where lit pads become bass, chord, melody, and drum agents. |
 | [paunchlad](plugins/paunchlad/README.md) | `paunchlad.vst3` | Audio effect/instrument | Launchpad dub performance effect with echo throws, sirens, spring splashes, dropouts, and chops. |

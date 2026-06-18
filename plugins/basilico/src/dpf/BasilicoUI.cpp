@@ -18,6 +18,9 @@ using downspout::basilico::kModelNames;
 using downspout::basilico::kParameterCount;
 using downspout::basilico::kParameterSpecs;
 using downspout::basilico::kWaveformNames;
+using downspout::basilico::kWobbleDivisionNames;
+using downspout::basilico::kWobbleShapeNames;
+using downspout::basilico::kWobbleSyncNames;
 
 struct Rect {
     float x = 0.0f;
@@ -49,12 +52,18 @@ struct SectionDef {
     std::size_t count;
 };
 
-constexpr std::array<SectionDef, 5> kSections = {{
-    {"Voice", {112, 177, 139}, {{{0, "Model"}, {1, "Wave"}, {2, "Sub"}, {3, "Body"}, {4, "Bite"}, {0, ""}}}, 5},
-    {"Phrase", {215, 163, 78}, {{{5, "Mute"}, {6, "Glide"}, {7, "Accent"}, {16, "Punch"}, {0, ""}, {0, ""}}}, 4},
-    {"Filter", {105, 158, 218}, {{{8, "Cutoff"}, {9, "Res"}, {10, "Env"}, {11, "Track"}, {20, "LFO Frequency"}, {21, "Mod Depth"}}}, 6},
-    {"Envelope", {176, 132, 214}, {{{12, "Attack"}, {13, "Decay"}, {14, "Sustain"}, {15, "Release"}, {0, ""}, {0, ""}}}, 4},
-    {"Drive", {214, 112, 92}, {{{17, "Type"}, {18, "Drive"}, {19, "Output"}, {0, ""}, {0, ""}, {0, ""}}}, 3},
+constexpr std::uint32_t paramId(const ParamId id)
+{
+    return static_cast<std::uint32_t>(id);
+}
+
+constexpr std::array<SectionDef, 6> kSections = {{
+    {"Voice", {112, 177, 139}, {{{paramId(ParamId::model), "Model"}, {paramId(ParamId::waveform), "Wave"}, {paramId(ParamId::subLevel), "Sub"}, {paramId(ParamId::body), "Body"}, {paramId(ParamId::bite), "Bite"}, {0, ""}}}, 5},
+    {"Phrase", {215, 163, 78}, {{{paramId(ParamId::mute), "Mute"}, {paramId(ParamId::glide), "Glide"}, {paramId(ParamId::accent), "Accent"}, {paramId(ParamId::punch), "Punch"}, {0, ""}, {0, ""}}}, 4},
+    {"Filter", {105, 158, 218}, {{{paramId(ParamId::cutoff), "Cutoff"}, {paramId(ParamId::resonance), "Res"}, {paramId(ParamId::filterEnv), "Env"}, {paramId(ParamId::keyTrack), "Track"}, {paramId(ParamId::lfoDepth), "Wob Filter"}, {paramId(ParamId::squelch), "Squelch"}}}, 6},
+    {"Wobble", {92, 185, 194}, {{{paramId(ParamId::lfoFrequency), "Rate"}, {paramId(ParamId::wobbleSync), "Sync"}, {paramId(ParamId::wobbleDivision), "Division"}, {paramId(ParamId::wobbleShape), "Shape"}, {paramId(ParamId::ampWobble), "Amp"}, {paramId(ParamId::phaseWobble), "Phase"}}}, 6},
+    {"Envelope", {176, 132, 214}, {{{paramId(ParamId::attack), "Attack"}, {paramId(ParamId::decay), "Decay"}, {paramId(ParamId::sustain), "Sustain"}, {paramId(ParamId::release), "Release"}, {0, ""}, {0, ""}}}, 4},
+    {"Drive", {214, 112, 92}, {{{paramId(ParamId::driveType), "Type"}, {paramId(ParamId::drive), "Drive"}, {paramId(ParamId::output), "Output"}, {0, ""}, {0, ""}, {0, ""}}}, 3},
 }};
 
 float clampf(const float value, const float minimum, const float maximum)
@@ -72,7 +81,10 @@ bool isDropdownParameter(const std::uint32_t parameter)
 {
     return parameter == static_cast<std::uint32_t>(ParamId::model) ||
            parameter == static_cast<std::uint32_t>(ParamId::waveform) ||
-           parameter == static_cast<std::uint32_t>(ParamId::driveType);
+           parameter == static_cast<std::uint32_t>(ParamId::driveType) ||
+           parameter == static_cast<std::uint32_t>(ParamId::wobbleSync) ||
+           parameter == static_cast<std::uint32_t>(ParamId::wobbleDivision) ||
+           parameter == static_cast<std::uint32_t>(ParamId::wobbleShape);
 }
 
 std::size_t dropdownItemCount(const std::uint32_t parameter)
@@ -83,6 +95,12 @@ std::size_t dropdownItemCount(const std::uint32_t parameter)
         return kWaveformNames.size();
     if (parameter == static_cast<std::uint32_t>(ParamId::driveType))
         return kDriveTypeNames.size();
+    if (parameter == static_cast<std::uint32_t>(ParamId::wobbleSync))
+        return kWobbleSyncNames.size();
+    if (parameter == static_cast<std::uint32_t>(ParamId::wobbleDivision))
+        return kWobbleDivisionNames.size();
+    if (parameter == static_cast<std::uint32_t>(ParamId::wobbleShape))
+        return kWobbleShapeNames.size();
     return 0;
 }
 
@@ -94,6 +112,12 @@ const char* dropdownItemName(const std::uint32_t parameter, const std::size_t in
         return kWaveformNames[index];
     if (parameter == static_cast<std::uint32_t>(ParamId::driveType))
         return kDriveTypeNames[index];
+    if (parameter == static_cast<std::uint32_t>(ParamId::wobbleSync))
+        return kWobbleSyncNames[index];
+    if (parameter == static_cast<std::uint32_t>(ParamId::wobbleDivision))
+        return kWobbleDivisionNames[index];
+    if (parameter == static_cast<std::uint32_t>(ParamId::wobbleShape))
+        return kWobbleShapeNames[index];
     return "";
 }
 
@@ -160,7 +184,7 @@ protected:
 
         const float top = 124.0f;
         const float gap = 14.0f;
-        const float sectionW = (width - pad * 2.0f - gap * 4.0f) / 5.0f;
+        const float sectionW = (width - pad * 2.0f - gap * 5.0f) / 6.0f;
         const float sectionH = height - top - pad;
         for (std::size_t i = 0; i < kSections.size(); ++i)
         {

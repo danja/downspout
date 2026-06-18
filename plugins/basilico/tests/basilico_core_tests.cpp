@@ -10,6 +10,7 @@ namespace {
 
 using downspout::basilico::BasilicoEngine;
 using downspout::basilico::ParamId;
+using downspout::basilico::TransportSnapshot;
 using downspout::basilico::kParameterSpecs;
 
 void require(const bool condition, const char* const message)
@@ -43,6 +44,37 @@ float renderPeak(BasilicoEngine& engine, const int frames)
         peak = std::max(peak, std::max(std::fabs(frame.left), std::fabs(frame.right)));
     }
     return peak;
+}
+
+float renderDifference(BasilicoEngine& a, BasilicoEngine& b, const int frames, const int skipFrames)
+{
+    float difference = 0.0f;
+    float reference = 0.0f;
+    for (int i = 0; i < frames; ++i)
+    {
+        const auto left = a.processStereo();
+        const auto right = b.processStereo();
+        require(std::isfinite(left.left) && std::isfinite(right.left), "basilico rendered non-finite audio");
+        require(std::isfinite(left.right) && std::isfinite(right.right), "basilico rendered non-finite audio");
+        if (i >= skipFrames)
+        {
+            difference += std::fabs(left.left - right.left) + std::fabs(left.right - right.right);
+            reference += std::fabs(left.left) + std::fabs(left.right);
+        }
+    }
+    return reference > 0.0f ? difference / reference : 0.0f;
+}
+
+TransportSnapshot playingTransport(const double bpm, const double barBeat = 0.0)
+{
+    TransportSnapshot transport {};
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 0.0;
+    transport.barBeat = barBeat;
+    transport.beatsPerBar = 4.0;
+    transport.bpm = bpm;
+    return transport;
 }
 
 float estimateZeroCrossingPitch(const std::vector<float>& samples, const float sampleRate)
@@ -92,6 +124,10 @@ void defaultsAndClamping()
     engine.setParameter(ParamId::output, 99.0f);
     require(std::fabs(engine.getParameter(ParamId::output) - 1.0f) < 1.0e-6f,
             "basilico unit parameter should clamp high");
+
+    engine.setParameter(ParamId::wobbleDivision, 4.6f);
+    require(std::fabs(engine.getParameter(ParamId::wobbleDivision) - 5.0f) < 1.0e-6f,
+            "basilico appended integer parameter should round");
 }
 
 void allModelsRender()
@@ -277,6 +313,96 @@ void filterLfoChangesTone()
     require(difference > reference * 0.08f, "basilico filter LFO should audibly modulate cutoff");
 }
 
+void ampWobbleChangesLevel()
+{
+    BasilicoEngine steady {48000.0f};
+    steady.setParameter(ParamId::model, 2.0f);
+    steady.setParameter(ParamId::lfoFrequency, 4.0f);
+    steady.setParameter(ParamId::ampWobble, 0.0f);
+    steady.noteOn(36, 112);
+
+    BasilicoEngine moving {48000.0f};
+    moving.setParameter(ParamId::model, 2.0f);
+    moving.setParameter(ParamId::lfoFrequency, 4.0f);
+    moving.setParameter(ParamId::ampWobble, 1.0f);
+    moving.noteOn(36, 112);
+
+    require(renderDifference(steady, moving, 48000, 2048) > 0.12f,
+            "basilico amp wobble should audibly modulate level");
+}
+
+void phaseWobbleCreatesStereoMotion()
+{
+    BasilicoEngine engine {48000.0f};
+    engine.setParameter(ParamId::model, 2.0f);
+    engine.setParameter(ParamId::lfoFrequency, 3.0f);
+    engine.setParameter(ParamId::phaseWobble, 1.0f);
+    engine.noteOn(36, 116);
+
+    float spread = 0.0f;
+    float energy = 0.0f;
+    for (int i = 0; i < 48000; ++i)
+    {
+        const auto frame = engine.processStereo();
+        require(std::isfinite(frame.left) && std::isfinite(frame.right), "basilico phase wobble rendered non-finite audio");
+        if (i >= 4096)
+        {
+            spread += std::fabs(frame.left - frame.right);
+            energy += std::fabs(frame.left) + std::fabs(frame.right);
+        }
+    }
+
+    require(spread > energy * 0.015f, "basilico phase wobble should create stereo flange motion");
+}
+
+void tempoSyncChangesWobbleRate()
+{
+    BasilicoEngine slow {48000.0f};
+    slow.setParameter(ParamId::model, 2.0f);
+    slow.setParameter(ParamId::wobbleSync, 1.0f);
+    slow.setParameter(ParamId::wobbleDivision, 2.0f);
+    slow.setParameter(ParamId::wobbleShape, 4.0f);
+    slow.setParameter(ParamId::ampWobble, 1.0f);
+    slow.setTransport(playingTransport(60.0));
+    slow.noteOn(36, 118);
+
+    BasilicoEngine fast {48000.0f};
+    fast.setParameter(ParamId::model, 2.0f);
+    fast.setParameter(ParamId::wobbleSync, 1.0f);
+    fast.setParameter(ParamId::wobbleDivision, 2.0f);
+    fast.setParameter(ParamId::wobbleShape, 4.0f);
+    fast.setParameter(ParamId::ampWobble, 1.0f);
+    fast.setTransport(playingTransport(120.0));
+    fast.noteOn(36, 118);
+
+    require(renderDifference(slow, fast, 72000, 2048) > 0.10f,
+            "basilico tempo sync should follow host bpm");
+}
+
+void squelchChangesAcidTone()
+{
+    BasilicoEngine plain {48000.0f};
+    plain.setParameter(ParamId::model, 3.0f);
+    plain.setParameter(ParamId::cutoff, 0.36f);
+    plain.setParameter(ParamId::resonance, 0.40f);
+    plain.setParameter(ParamId::filterEnv, 0.55f);
+    plain.setParameter(ParamId::drive, 0.25f);
+    plain.setParameter(ParamId::squelch, 0.0f);
+    plain.noteOn(36, 116);
+
+    BasilicoEngine squelchy {48000.0f};
+    squelchy.setParameter(ParamId::model, 3.0f);
+    squelchy.setParameter(ParamId::cutoff, 0.36f);
+    squelchy.setParameter(ParamId::resonance, 0.40f);
+    squelchy.setParameter(ParamId::filterEnv, 0.55f);
+    squelchy.setParameter(ParamId::drive, 0.25f);
+    squelchy.setParameter(ParamId::squelch, 1.0f);
+    squelchy.noteOn(36, 116);
+
+    require(renderDifference(plain, squelchy, 36000, 1024) > 0.10f,
+            "basilico squelch should audibly change acid filter tone");
+}
+
 void extremeParametersStayFinite()
 {
     BasilicoEngine engine {96000.0f};
@@ -300,6 +426,10 @@ int main()
     velocityAccentChangesOutput();
     outputCanBoost();
     filterLfoChangesTone();
+    ampWobbleChangesLevel();
+    phaseWobbleCreatesStereoMotion();
+    tempoSyncChangesWobbleRate();
+    squelchChangesAcidTone();
     extremeParametersStayFinite();
 
     std::cout << "basilico core tests passed\n";

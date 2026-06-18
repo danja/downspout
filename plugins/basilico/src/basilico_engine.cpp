@@ -1,5 +1,8 @@
 #include "basilico_engine.hpp"
 
+#include "basilico_flanger.hpp"
+#include "basilico_modulation.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -309,6 +312,7 @@ public:
         sampleRate_ = std::max(1000.0f, sampleRate);
         ampEnv_.setSampleRate(sampleRate_);
         filterEnv_.setSampleRate(sampleRate_);
+        flanger_.setSampleRate(sampleRate_);
         reset();
     }
 
@@ -319,18 +323,24 @@ public:
         filter_.reset();
         bodyLow_.reset();
         bodyHigh_.reset();
+        wobble_.reset();
+        flanger_.reset();
         heldNotes_.clear();
         currentNote_ = -1;
         targetFrequency_ = 55.0f;
         currentFrequency_ = 55.0f;
         phase_ = 0.0f;
         subPhase_ = 0.0f;
-        lfoPhase_ = 0.0f;
         punch_ = 0.0f;
         active_ = false;
         velocity_ = 0.0f;
         dcX_ = 0.0f;
         dcY_ = 0.0f;
+    }
+
+    void setTransport(const TransportSnapshot& transport)
+    {
+        wobble_.setTransport(transport);
     }
 
     float getParameter(const std::uint32_t index) const
@@ -467,18 +477,20 @@ public:
                              body * bodyAmount * 1.65f +
                              transient;
 
-        const float lfo = std::sin(lfoPhase_ * kTwoPi);
-        advanceLfo();
+        const WobbleFrame wobble = wobble_.process(wobbleConfig(), sampleRate_);
 
-        const float cutoff = cutoffHz(profile, filterEnv, lfo);
+        const float cutoff = cutoffHz(profile, filterEnv, wobble);
         const float filtered = filter_.process(sanitizeAudio(source), cutoff, resonance(profile), sampleRate_);
         const float driven = applyDrive(filtered, driveType, profile);
-        const float out = sanitizeAudio(dcBlock(sanitizeAudio(driven * amp * (0.35f + velocity_ * 0.65f) *
+        const float ampMod = amplitudeWobble(wobble);
+        const float out = sanitizeAudio(dcBlock(sanitizeAudio(driven * amp * ampMod * (0.35f + velocity_ * 0.65f) *
                                                         outputGain(params_.values[static_cast<std::size_t>(ParamId::output)]))));
+        const float phaseDepth = params_.values[static_cast<std::size_t>(ParamId::phaseWobble)];
+        const auto stereo = flanger_.process(out, wobble.bipolar, phaseDepth);
 
         punch_ *= 0.995f - params_.values[static_cast<std::size_t>(ParamId::mute)] * 0.018f;
 
-        return {out, out};
+        return {stereo.left, stereo.right};
     }
 
     bool active() const { return active_; }
@@ -497,6 +509,7 @@ private:
         const int model = static_cast<int>(params_.values[static_cast<std::size_t>(ParamId::model)]);
         const auto profile = profileForModel(model);
         const float mute = params_.values[static_cast<std::size_t>(ParamId::mute)];
+        const float squelch = params_.values[static_cast<std::size_t>(ParamId::squelch)];
         const float decay = std::clamp(params_.values[static_cast<std::size_t>(ParamId::decay)] * profile.decayScale * (1.15f - mute * 0.65f),
                                        0.0f,
                                        1.0f);
@@ -507,7 +520,9 @@ private:
                     decay,
                     sustain,
                     params_.values[static_cast<std::size_t>(ParamId::release)]);
-        filterEnv_.set(0.0f, decay * 0.85f, sustain * 0.45f, params_.values[static_cast<std::size_t>(ParamId::release)]);
+        const float filterDecay = std::clamp(decay * (0.85f - squelch * 0.32f), 0.015f, 1.0f);
+        const float filterSustain = std::clamp(sustain * (0.45f - squelch * 0.22f), 0.0f, 1.0f);
+        filterEnv_.set(0.0f, filterDecay, filterSustain, params_.values[static_cast<std::size_t>(ParamId::release)]);
     }
 
     void updateGlide()
@@ -573,43 +588,64 @@ private:
         return sanitizeAudio(click + finger);
     }
 
-    void advanceLfo()
+    WobbleConfig wobbleConfig() const
     {
-        const float frequency = params_.values[static_cast<std::size_t>(ParamId::lfoFrequency)];
-        lfoPhase_ += std::clamp(frequency, 0.05f, 20.0f) / sampleRate_;
-        if (lfoPhase_ >= 1.0f)
-            lfoPhase_ -= std::floor(lfoPhase_);
+        return {
+            params_.values[static_cast<std::size_t>(ParamId::wobbleSync)] >= 0.5f,
+            static_cast<int>(params_.values[static_cast<std::size_t>(ParamId::wobbleDivision)]),
+            static_cast<int>(params_.values[static_cast<std::size_t>(ParamId::wobbleShape)]),
+            params_.values[static_cast<std::size_t>(ParamId::lfoFrequency)],
+        };
     }
 
-    float cutoffHz(const ModelProfile& profile, const float env, const float lfo) const
+    float amplitudeWobble(const WobbleFrame& wobble) const
+    {
+        const float depth = params_.values[static_cast<std::size_t>(ParamId::ampWobble)];
+        if (depth <= 0.0001f)
+            return 1.0f;
+
+        const float gate = 1.0f - wobble.unipolar;
+        const float floor = 0.04f + (1.0f - depth) * 0.86f;
+        return std::clamp((1.0f - depth) + depth * (floor + (1.0f - floor) * gate), 0.0f, 1.0f);
+    }
+
+    float cutoffHz(const ModelProfile& profile, const float env, const WobbleFrame& wobble) const
     {
         const float cutoffParam = params_.values[static_cast<std::size_t>(ParamId::cutoff)];
-        const float envAmount = params_.values[static_cast<std::size_t>(ParamId::filterEnv)] * profile.envScale;
+        const float squelch = params_.values[static_cast<std::size_t>(ParamId::squelch)];
+        const float envAmount = params_.values[static_cast<std::size_t>(ParamId::filterEnv)] * (profile.envScale + squelch * 0.36f);
         const float keyTrack = params_.values[static_cast<std::size_t>(ParamId::keyTrack)];
         const float accent = params_.values[static_cast<std::size_t>(ParamId::accent)] * velocity_;
         const float lfoDepth = params_.values[static_cast<std::size_t>(ParamId::lfoDepth)];
         const float normalized = std::clamp(profile.cutoffBias + (cutoffParam - 0.5f) * 0.85f +
-                                                env * envAmount * 0.65f + accent * 0.22f +
-                                                lfo * lfoDepth * 0.42f,
+                                                env * envAmount * (0.65f + squelch * 0.28f) +
+                                                accent * (0.22f + squelch * 0.28f) +
+                                                squelch * (env * 0.24f - 0.06f) +
+                                                wobble.bipolar * lfoDepth * 0.22f,
                                             0.0f,
                                             1.0f);
-        const float base = expMap(normalized, 55.0f, 9000.0f);
+        float base = expMap(normalized, 55.0f, 9000.0f);
+        base *= std::pow(2.0f, lfoDepth * (wobble.unipolar * 3.50f - 0.35f));
         const float tracked = currentFrequency_ * (0.5f + keyTrack * 4.0f);
-        return std::max(base, tracked * keyTrack);
+        return std::clamp(std::max(base, tracked * keyTrack), 20.0f, sampleRate_ * 0.42f);
     }
 
     float resonance(const ModelProfile& profile) const
     {
+        const float squelch = params_.values[static_cast<std::size_t>(ParamId::squelch)];
         return std::clamp(profile.resonanceBias +
-                              params_.values[static_cast<std::size_t>(ParamId::resonance)] * 0.80f,
+                              params_.values[static_cast<std::size_t>(ParamId::resonance)] * 0.80f +
+                              squelch * 0.34f,
                           0.0f,
-                          1.0f);
+                          0.98f);
     }
 
     float applyDrive(float input, const int driveType, const ModelProfile& profile) const
     {
-        const float drive = params_.values[static_cast<std::size_t>(ParamId::drive)] * profile.driveScale;
+        const float squelch = params_.values[static_cast<std::size_t>(ParamId::squelch)];
+        const float drive = params_.values[static_cast<std::size_t>(ParamId::drive)] * profile.driveScale + squelch * 0.18f;
         const float amount = 1.0f + drive * 9.0f;
+        input = sanitizeAudio(input + std::sin(phase_ * kTwoPi) * squelch * drive * 0.12f);
         switch (std::clamp(driveType, 0, 3))
         {
         case 0:
@@ -646,13 +682,14 @@ private:
     StateVariableFilter filter_;
     BiquadBandpass bodyLow_;
     BiquadBandpass bodyHigh_;
+    WobbleModulator wobble_;
+    BasilicoFlanger flanger_;
     std::vector<int> heldNotes_;
     int currentNote_ = -1;
     float targetFrequency_ = 55.0f;
     float currentFrequency_ = 55.0f;
     float phase_ = 0.0f;
     float subPhase_ = 0.0f;
-    float lfoPhase_ = 0.0f;
     float punch_ = 0.0f;
     float velocity_ = 0.0f;
     float dcX_ = 0.0f;
@@ -677,6 +714,11 @@ void BasilicoEngine::setSampleRate(const float sampleRate)
 void BasilicoEngine::reset()
 {
     impl_->reset();
+}
+
+void BasilicoEngine::setTransport(const TransportSnapshot& transport)
+{
+    impl_->setTransport(transport);
 }
 
 float BasilicoEngine::getParameter(const std::uint32_t index) const

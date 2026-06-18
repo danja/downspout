@@ -1,6 +1,7 @@
 #pragma once
 
 #include "basilico_params.hpp"
+#include "basilico_transport.hpp"
 
 #include <array>
 #include <cstdint>
@@ -20,6 +21,7 @@ public:
 
     void setSampleRate(float sampleRate);
     void reset();
+    void setTransport(const TransportSnapshot& transport);
 
     float getParameter(std::uint32_t index) const;
     void setParameter(std::uint32_t index, float value);

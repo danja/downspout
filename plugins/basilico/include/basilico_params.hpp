@@ -29,9 +29,15 @@ enum class ParamId : std::uint32_t {
     output,
     lfoFrequency,
     lfoDepth,
+    wobbleSync,
+    wobbleDivision,
+    wobbleShape,
+    ampWobble,
+    phaseWobble,
+    squelch,
 };
 
-inline constexpr std::size_t kParameterCount = 22;
+inline constexpr std::size_t kParameterCount = 28;
 
 struct ParamSpec {
     const char* symbol;
@@ -63,8 +69,14 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"drive_type", "Drive Type", 0.0f, 3.0f, 1.0f, true},
     {"drive", "Drive", 0.0f, 1.0f, 0.25f, false},
     {"output", "Output", 0.0f, 1.0f, 0.70f, false},
-    {"lfo_frequency", "LFO Frequency", 0.05f, 20.0f, 0.50f, false},
-    {"lfo_depth", "Mod Depth", 0.0f, 1.0f, 0.0f, false},
+    {"lfo_frequency", "Wobble Rate", 0.05f, 20.0f, 0.50f, false},
+    {"lfo_depth", "Filter Wobble", 0.0f, 1.0f, 0.0f, false},
+    {"wobble_sync", "Wobble Sync", 0.0f, 1.0f, 0.0f, true},
+    {"wobble_division", "Wobble Division", 0.0f, 7.0f, 3.0f, true},
+    {"wobble_shape", "Wobble Shape", 0.0f, 4.0f, 0.0f, true},
+    {"amp_wobble", "Amp Wobble", 0.0f, 1.0f, 0.0f, false},
+    {"phase_wobble", "Phase Wobble", 0.0f, 1.0f, 0.0f, false},
+    {"squelch", "Squelch", 0.0f, 1.0f, 0.0f, false},
 }};
 
 inline constexpr std::array<const char*, 5> kModelNames = {{
@@ -88,6 +100,30 @@ inline constexpr std::array<const char*, 4> kDriveTypeNames = {{
     "Amp",
     "Acid",
     "Fold",
+}};
+
+inline constexpr std::array<const char*, 2> kWobbleSyncNames = {{
+    "Free",
+    "Tempo",
+}};
+
+inline constexpr std::array<const char*, 8> kWobbleDivisionNames = {{
+    "1/1",
+    "1/2",
+    "1/4",
+    "1/8",
+    "1/8T",
+    "1/16",
+    "1/16T",
+    "1/32",
+}};
+
+inline constexpr std::array<const char*, 5> kWobbleShapeNames = {{
+    "Sine",
+    "Triangle",
+    "Ramp Down",
+    "Ramp Up",
+    "Square",
 }};
 
 } // namespace downspout::basilico

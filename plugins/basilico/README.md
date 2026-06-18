@@ -25,6 +25,13 @@ ctest --test-dir ../../build --output-on-failure -R basilico
 ## Implementation
 
 The portable core handles MIDI note priority, note-off release, glide, velocity
-accent, model-specific filter/drive behavior, sine-LFO filter cutoff
-modulation, and bounded output. The DPF layer is intentionally thin and exposes
-one MIDI input with stereo audio output.
+accent, model-specific filter/drive behavior, tempo-aware wobble modulation,
+and bounded output. The wobble path is split into small plugin-local modules:
+`basilico_modulation` owns free/tempo phase and shape generation, while
+`basilico_flanger` owns the stereo phase/flange target.
+
+The `Wobble` controls can run free or follow host tempo divisions. The shared
+wobble signal can drive amplitude, filter cutoff pitch, and stereo
+phase/flange motion. `Squelch` is an acid-style macro over filter envelope,
+resonance, and drive. The DPF layer is intentionally thin and exposes one MIDI
+input with stereo audio output.

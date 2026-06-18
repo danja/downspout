@@ -158,7 +158,7 @@ Progress as of 2026-05-27:
 - `gremlin-driver` now has a portable MIDI modulation core, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `ground` now exists as an original long-form MIDI bass generator with a portable form-planning core, explicit Dub and Jazz styles, guarded bass-register output, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `floozy` now ports `flues/lv2/floozy-poly` as a corrected 8-voice hybrid physical/modulation synth with a portable core, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
-- `basilico` now exists as an original monophonic bass instrument with upright, electric, dub, acid, and industrial models, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
+- `basilico` now exists as an original monophonic bass instrument with upright, electric, dub, acid, and industrial models, tempo-aware wobble modulation, acid squelch, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `canticle` now exists as an original 12-voice polyphonic tonal instrument for keys, reed, pad, pluck, and glass roles, with deterministic tests and a first VST3 wrapper target with UI via vendored DPF;
 - `luma` now exists as an original Launchpad-oriented MIDI performance generator with pad agents, LED feedback, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `paunchlad` now exists as an original Launchpad-oriented dub performance effect with echo throws, sirens, spring splashes, dropouts, chops, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;

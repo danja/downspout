@@ -1,5 +1,7 @@
 add_library(downspout_basilico_core STATIC
     src/basilico_engine.cpp
+    src/basilico_flanger.cpp
+    src/basilico_modulation.cpp
 )
 target_link_libraries(downspout_basilico_core PUBLIC downspout-project-options)
 target_include_directories(downspout_basilico_core PUBLIC

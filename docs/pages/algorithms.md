@@ -60,8 +60,9 @@ current Downspout plugins.
 
 ## Instruments
 
-- `Basilico`: a monophonic bass synth with glide, accent, filter, body, and
-  drive shaping for upright, electric, dub, acid, and industrial tones.
+- `Basilico`: a monophonic bass synth with glide, accent, body, drive,
+  tempo-aware wobble modulation for amplitude/filter/phase movement, and acid
+  squelch across upright, electric, dub, acid, and industrial tones.
 - `DrumKit`: a triggered drum synthesizer with a fixed MIDI map, voice
   controls, and mixer-style mute strips.
 - `Floozy`: an 8-voice hybrid synth combining distortion, physical-model-style

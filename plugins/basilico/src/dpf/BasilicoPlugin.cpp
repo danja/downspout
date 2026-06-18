@@ -12,11 +12,15 @@ namespace {
 
 using downspout::basilico::BasilicoEngine;
 using downspout::basilico::ParamId;
+using downspout::basilico::TransportSnapshot;
 using downspout::basilico::kDriveTypeNames;
 using downspout::basilico::kModelNames;
 using downspout::basilico::kParameterCount;
 using downspout::basilico::kParameterSpecs;
 using downspout::basilico::kWaveformNames;
+using downspout::basilico::kWobbleDivisionNames;
+using downspout::basilico::kWobbleShapeNames;
+using downspout::basilico::kWobbleSyncNames;
 
 ParameterEnumerationValue kModelEnumValues[] = {
     {0.0f, kModelNames[0]},
@@ -41,10 +45,52 @@ ParameterEnumerationValue kDriveEnumValues[] = {
     {3.0f, kDriveTypeNames[3]},
 };
 
+ParameterEnumerationValue kWobbleSyncEnumValues[] = {
+    {0.0f, kWobbleSyncNames[0]},
+    {1.0f, kWobbleSyncNames[1]},
+};
+
+ParameterEnumerationValue kWobbleDivisionEnumValues[] = {
+    {0.0f, kWobbleDivisionNames[0]},
+    {1.0f, kWobbleDivisionNames[1]},
+    {2.0f, kWobbleDivisionNames[2]},
+    {3.0f, kWobbleDivisionNames[3]},
+    {4.0f, kWobbleDivisionNames[4]},
+    {5.0f, kWobbleDivisionNames[5]},
+    {6.0f, kWobbleDivisionNames[6]},
+    {7.0f, kWobbleDivisionNames[7]},
+};
+
+ParameterEnumerationValue kWobbleShapeEnumValues[] = {
+    {0.0f, kWobbleShapeNames[0]},
+    {1.0f, kWobbleShapeNames[1]},
+    {2.0f, kWobbleShapeNames[2]},
+    {3.0f, kWobbleShapeNames[3]},
+    {4.0f, kWobbleShapeNames[4]},
+};
+
 void handleMidiEvent(BasilicoEngine& engine, const MidiEvent& event)
 {
     const std::uint8_t* const data = event.size > MidiEvent::kDataSize ? event.dataExt : event.data;
     engine.handleMidi(data, event.size);
+}
+
+TransportSnapshot toTransport(const TimePosition& timePos)
+{
+    TransportSnapshot transport {};
+    transport.valid = timePos.bbt.valid;
+    transport.playing = timePos.playing;
+    if (timePos.bbt.valid)
+    {
+        transport.bar = static_cast<double>(timePos.bbt.bar - 1);
+        transport.barBeat = static_cast<double>(timePos.bbt.beat - 1) +
+                            (timePos.bbt.ticksPerBeat > 0.0
+                                 ? timePos.bbt.tick / timePos.bbt.ticksPerBeat
+                                 : 0.0);
+        transport.beatsPerBar = timePos.bbt.beatsPerBar;
+        transport.bpm = timePos.bbt.beatsPerMinute;
+    }
+    return transport;
 }
 
 } // namespace
@@ -140,6 +186,27 @@ protected:
             parameter.enumValues.values = kDriveEnumValues;
             parameter.enumValues.deleteLater = false;
         }
+        else if (index == static_cast<uint32_t>(ParamId::wobbleSync))
+        {
+            parameter.enumValues.count = static_cast<uint8_t>(std::size(kWobbleSyncEnumValues));
+            parameter.enumValues.restrictedMode = true;
+            parameter.enumValues.values = kWobbleSyncEnumValues;
+            parameter.enumValues.deleteLater = false;
+        }
+        else if (index == static_cast<uint32_t>(ParamId::wobbleDivision))
+        {
+            parameter.enumValues.count = static_cast<uint8_t>(std::size(kWobbleDivisionEnumValues));
+            parameter.enumValues.restrictedMode = true;
+            parameter.enumValues.values = kWobbleDivisionEnumValues;
+            parameter.enumValues.deleteLater = false;
+        }
+        else if (index == static_cast<uint32_t>(ParamId::wobbleShape))
+        {
+            parameter.enumValues.count = static_cast<uint8_t>(std::size(kWobbleShapeEnumValues));
+            parameter.enumValues.restrictedMode = true;
+            parameter.enumValues.values = kWobbleShapeEnumValues;
+            parameter.enumValues.deleteLater = false;
+        }
     }
 
     float getParameterValue(const uint32_t index) const override
@@ -168,6 +235,8 @@ protected:
              const MidiEvent* midiEvents,
              const uint32_t midiEventCount) override
     {
+        engine_.setTransport(toTransport(getTimePosition()));
+
         std::uint32_t eventIndex = 0;
         for (std::uint32_t frame = 0; frame < frames; ++frame)
         {
