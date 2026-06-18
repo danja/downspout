@@ -73,8 +73,11 @@ When sample-only mode is selected and host transport cannot be mapped, the
 generated source is silence. This preserves the transport-gated behavior that
 `rift` already uses for disruptive processing.
 
-This batch does not detect chop points. That should be added after basic file
-selection and beat mapping have been exercised in a DAW.
+This batch does not detect transient chop points. `Chop` is currently a
+grid-relative stutter control: it shortens the source slice used by repeat,
+reverse, smear, and slip actions so a block can retrigger a smaller fragment.
+Transient-aware chop point detection should be added after more DAW testing
+with real breaks.
 
 ## Performance gestures
 

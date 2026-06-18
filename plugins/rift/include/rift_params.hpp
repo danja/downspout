@@ -20,6 +20,7 @@ enum ParameterIndex : std::uint32_t {
     kParamSampleBeats,
     kParamStatusAction,
     kParamStatusActivity,
+    kParamChop,
     kParameterCount
 };
 

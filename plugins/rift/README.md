@@ -28,6 +28,10 @@ duration does not match the current DAW tempo.
   How often a block mutates instead of passing through.
 - `Damage`
   Bias toward more disruptive actions such as reverse, skip, and smear.
+- `Chop`
+  Shortens the repeated source fragment inside each grid block. Raise it for
+  tighter beat chops, fast stutters, and sample retriggers without changing the
+  main block grid.
 - `Memory`
   How many bars of past audio are eligible as slice source material.
 - `Drift`
@@ -77,9 +81,11 @@ Loaded samples are decoded outside the audio callback and then published to the
 processor as immutable PCM data. If a selected file cannot be loaded, `Sample`
 mode falls back to the built-in test loop rather than breaking the plugin.
 
-Chop/transient detection is not implemented yet. The current sample path maps
-the whole file evenly across the declared beat length, then lets the existing
-`rift` mutation engine choose and process rhythmic blocks.
+Transient detection is not implemented yet. The current sample path maps the
+whole file evenly across the declared beat length, then lets the existing
+`rift` mutation engine choose and process rhythmic blocks. The `Chop` control
+can still make loaded breaks stutter by shortening the repeated fragment inside
+each selected block.
 
 ## Transition handling
 
@@ -98,5 +104,5 @@ spitting a click at every restart.
 - text parameter state serialization;
 - a DPF-backed `rift.vst3` wrapper target with a custom UI and file browser.
 
-The next major sample-mode step is transient/chop detection after more DAW
-testing with real breaks.
+The next major sample-mode step is transient-aware chop-point detection after
+more DAW testing with real breaks.

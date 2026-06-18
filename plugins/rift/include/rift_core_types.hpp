@@ -47,6 +47,7 @@ struct Parameters {
     float hold = 0.0f;
     float sourceMode = 0.0f;
     float sampleBeats = 4.0f;
+    float chop = 0.0f;
 };
 
 struct Triggers {

@@ -39,6 +39,7 @@ using downspout::rift::kParamDrift;
 using downspout::rift::kParamGrid;
 using downspout::rift::kParamHold;
 using downspout::rift::kParamBlend;
+using downspout::rift::kParamChop;
 using downspout::rift::kParamMemoryBars;
 using downspout::rift::kParamMix;
 using downspout::rift::kParamPitch;
@@ -335,6 +336,14 @@ protected:
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = 0.0f;
             break;
+        case kParamChop:
+            parameter.name = "Chop";
+            parameter.symbol = "chop";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 100.0f;
+            parameter.ranges.def = 0.0f;
+            break;
         }
     }
 
@@ -371,6 +380,7 @@ protected:
         case kParamHold: return parameters_.hold;
         case kParamSourceMode: return parameters_.sourceMode;
         case kParamSampleBeats: return parameters_.sampleBeats;
+        case kParamChop: return parameters_.chop;
         case kParamScatter: return scatterValue_;
         case kParamRecover: return recoverValue_;
         case kParamStatusAction: return statusAction_;
@@ -394,6 +404,7 @@ protected:
         case kParamHold: parameters_.hold = value; break;
         case kParamSourceMode: parameters_.sourceMode = value; break;
         case kParamSampleBeats: parameters_.sampleBeats = value; break;
+        case kParamChop: parameters_.chop = value; break;
         case kParamScatter:
             if (value >= 0.5f && scatterValue_ < 0.5f)
                 triggers_.scatterSerial += 1u;

@@ -26,6 +26,7 @@ void testClampParameters() {
     parameters.hold = 7.0f;
     parameters.sourceMode = 7.0f;
     parameters.sampleBeats = 99.0f;
+    parameters.chop = 140.0f;
 
     const Parameters clamped = clampParameters(parameters);
     assert(std::fabs(clamped.grid - 16.0f) < 1e-6f);
@@ -39,6 +40,7 @@ void testClampParameters() {
     assert(std::fabs(clamped.hold - 1.0f) < 1e-6f);
     assert(std::fabs(clamped.sourceMode - 2.0f) < 1e-6f);
     assert(std::fabs(clamped.sampleBeats - 32.0f) < 1e-6f);
+    assert(std::fabs(clamped.chop - 100.0f) < 1e-6f);
 }
 
 void testPreviewActionHonorsZeroDensity() {
@@ -420,6 +422,61 @@ void testSamplePlaybackFeedsExistingMutationBuffer() {
     assert(changed);
 }
 
+void testChopShortensMutationSlice() {
+    EngineState state;
+    activate(state, 16.0, 1);
+
+    Parameters parameters;
+    parameters.grid = 4.0f;
+    parameters.density = 0.0f;
+    parameters.damage = 100.0f;
+    parameters.memoryBars = 2.0f;
+    parameters.drift = 20.0f;
+    parameters.mix = 100.0f;
+    parameters.chop = 100.0f;
+
+    std::array<float, 96> input {};
+    std::array<float, 96> output {};
+    for (std::size_t i = 0; i < input.size(); ++i) {
+        input[i] = static_cast<float>(i) * 0.01f;
+    }
+
+    AudioBlock audio;
+    audio.inputs[0] = input.data();
+    audio.outputs[0] = output.data();
+    audio.channelCount = 1;
+
+    TransportSnapshot transport;
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 0.0;
+    transport.barBeat = 0.0;
+    transport.beatsPerBar = 4.0;
+    transport.bpm = 60.0;
+
+    (void)processBlock(state, parameters, Triggers {}, transport, 32u, 16.0, audio);
+    audio.inputs[0] = input.data() + 32;
+    audio.outputs[0] = output.data() + 32;
+    transport.bar = 0.0;
+    transport.barBeat = 2.0;
+    (void)processBlock(state, parameters, Triggers {}, transport, 32u, 16.0, audio);
+
+    audio.inputs[0] = input.data() + 64;
+    audio.outputs[0] = output.data() + 64;
+    transport.bar = 1.0;
+    transport.barBeat = 0.0;
+    const OutputStatus chopped = processBlock(state,
+                                              parameters,
+                                              Triggers {.scatterSerial = 1},
+                                              transport,
+                                              16u,
+                                              16.0,
+                                              audio);
+
+    assert(chopped.action != ActionType::Pass);
+    assert(state.activeBlock.sourceLengthFrames <= 2u);
+}
+
 void testSerializationRoundTrip() {
     Parameters parameters;
     parameters.grid = 5.0f;
@@ -433,6 +490,7 @@ void testSerializationRoundTrip() {
     parameters.hold = 1.0f;
     parameters.sourceMode = 2.0f;
     parameters.sampleBeats = 8.0f;
+    parameters.chop = 63.0f;
 
     const auto roundTrip = deserializeParameters(serializeParameters(parameters));
     assert(roundTrip.has_value());
@@ -447,6 +505,7 @@ void testSerializationRoundTrip() {
     assert(std::fabs(roundTrip->hold - 1.0f) < 1e-6f);
     assert(std::fabs(roundTrip->sourceMode - 2.0f) < 1e-6f);
     assert(std::fabs(roundTrip->sampleBeats - 8.0f) < 1e-6f);
+    assert(std::fabs(roundTrip->chop - 63.0f) < 1e-6f);
 }
 
 void testEarlierStateFormatDefaultsBlend() {
@@ -465,6 +524,7 @@ void testEarlierStateFormatDefaultsBlend() {
     assert(std::fabs(parsed->blend - 20.0f) < 1e-6f);
     assert(std::fabs(parsed->sourceMode) < 1e-6f);
     assert(std::fabs(parsed->sampleBeats - 4.0f) < 1e-6f);
+    assert(std::fabs(parsed->chop) < 1e-6f);
 }
 
 void writeU16(std::ofstream& file, const std::uint16_t value) {
@@ -534,6 +594,7 @@ int main() {
     testBlockTransitionsArmCrossfade();
     testSamplePlaybackUsesDeclaredLoopBeats();
     testSamplePlaybackFeedsExistingMutationBuffer();
+    testChopShortensMutationSlice();
     testSerializationRoundTrip();
     testEarlierStateFormatDefaultsBlend();
     testLoadWavSampleSource();

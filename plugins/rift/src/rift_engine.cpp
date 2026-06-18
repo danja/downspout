@@ -51,6 +51,7 @@ constexpr double kHalfPi = 1.5707963267948966;
     seed ^= mixU32(static_cast<std::uint32_t>(std::lround((parameters.drift + 50.0f) * 19.0f)));
     seed ^= mixU32(static_cast<std::uint32_t>(std::lround((parameters.pitch + 24.0f) * 13.0f)));
     seed ^= mixU32(static_cast<std::uint32_t>(std::lround(parameters.mix * 11.0f)));
+    seed ^= mixU32(static_cast<std::uint32_t>(std::lround(parameters.chop * 7.0f)));
     return seed != 0 ? seed : 1u;
 }
 
@@ -141,6 +142,20 @@ constexpr double kHalfPi = 1.5707963267948966;
     }
 
     return std::clamp(static_cast<std::uint32_t>(std::lround(static_cast<double>(cap) * blendNorm)), 0u, cap);
+}
+
+[[nodiscard]] std::uint32_t chopDivisionsFor(const Parameters& parameters) {
+    const float chopNorm = clampf(parameters.chop * 0.01f, 0.0f, 1.0f);
+    return 1u + static_cast<std::uint32_t>(std::lround(chopNorm * 7.0f));
+}
+
+[[nodiscard]] std::uint32_t choppedSourceLength(const Parameters& parameters,
+                                                const std::uint32_t blockSourceLength) {
+    const std::uint32_t divisions = chopDivisionsFor(parameters);
+    if (divisions <= 1u) {
+        return blockSourceLength;
+    }
+    return std::max<std::uint32_t>(1u, blockSourceLength / divisions);
 }
 
 void clearTransition(EngineState& state) {
@@ -421,9 +436,10 @@ void selectBlock(EngineState& state,
         return;
     }
 
-    const std::uint32_t sourceLength = std::max<std::uint32_t>(1u, static_cast<std::uint32_t>(std::llround(blockFrames)));
+    const std::uint32_t blockSourceLength = std::max<std::uint32_t>(1u, static_cast<std::uint32_t>(std::llround(blockFrames)));
+    const std::uint32_t sourceLength = choppedSourceLength(parameters, blockSourceLength);
     const std::uint32_t memoryFrames = std::max<std::uint32_t>(
-        sourceLength + 8u,
+        blockSourceLength + 8u,
         static_cast<std::uint32_t>(std::llround(framesPerBar * std::max(1.0f, parameters.memoryBars))));
     const std::uint32_t availableHistory = std::min(state.filledFrames, memoryFrames);
     if (availableHistory <= sourceLength + 8u) {
@@ -528,6 +544,7 @@ Parameters clampParameters(const Parameters& raw) {
     parameters.hold = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.hold)), 0, 1));
     parameters.sourceMode = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.sourceMode)), 0, 2));
     parameters.sampleBeats = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.sampleBeats)), 1, 32));
+    parameters.chop = clampf(parameters.chop, 0.0f, 100.0f);
     return parameters;
 }
 
@@ -536,13 +553,14 @@ ActionWeights calculateActionWeights(const Parameters& rawParameters) {
     const float damageNorm = parameters.damage * 0.01f;
     const float driftNorm = parameters.drift * 0.01f;
     const float pitchNorm = std::fabs(parameters.pitch) / 12.0f;
+    const float chopNorm = parameters.chop * 0.01f;
 
     ActionWeights weights;
-    weights.repeat = 1.20f;
-    weights.reverse = 0.35f + damageNorm * 1.10f;
-    weights.skip = 0.15f + damageNorm * 0.90f;
-    weights.smear = 0.35f + ((damageNorm + driftNorm) * 0.75f);
-    weights.slip = 0.25f + pitchNorm * 0.90f + driftNorm * 0.75f;
+    weights.repeat = 1.20f + chopNorm * 1.80f;
+    weights.reverse = 0.35f + damageNorm * 1.10f + chopNorm * 0.25f;
+    weights.skip = (0.15f + damageNorm * 0.90f) * (1.0f - chopNorm * 0.45f);
+    weights.smear = 0.35f + ((damageNorm + driftNorm) * 0.75f) + chopNorm * 0.25f;
+    weights.slip = 0.25f + pitchNorm * 0.90f + driftNorm * 0.75f + chopNorm * 0.20f;
     return weights;
 }
 

@@ -43,8 +43,8 @@ current Downspout plugins.
 - `P-Mix`: transport-aware probabilistic audio gating and blending with fades.
 - `E-Mix`: Euclidean stereo gating that carves audio into repeating patterns
   using density, block, and fade controls.
-- `Rift`: short-buffer capture and disruption with repeat, reverse, skip,
-  smear, and pitch-slip actions.
+- `Rift`: short-buffer capture and disruption with chop/stutter repeats,
+  reverse, skip, smear, and pitch-slip actions.
 - `PaunchLad`: a dub-style performance effect built around delay throws,
   sirens, spring splashes, dropouts, and rhythmic chops.
 

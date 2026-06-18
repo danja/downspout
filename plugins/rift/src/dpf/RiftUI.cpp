@@ -20,6 +20,7 @@ using downspout::rift::ActionWeights;
 using downspout::rift::kActionCount;
 using downspout::rift::kActionNames;
 using downspout::rift::kParamBlend;
+using downspout::rift::kParamChop;
 using downspout::rift::kParamDamage;
 using downspout::rift::kParamDensity;
 using downspout::rift::kParamDrift;
@@ -79,10 +80,11 @@ struct ModePreset {
     CoreParameters parameters;
 };
 
-constexpr std::array<SliderDef, 8> kSliders = {{
+constexpr std::array<SliderDef, 9> kSliders = {{
     {kParamGrid, "Grid", "Blocks per bar", 1.0f, 16.0f},
     {kParamDensity, "Density", "How often blocks mutate", 0.0f, 100.0f},
     {kParamDamage, "Damage", "Bias toward disruptive actions", 0.0f, 100.0f},
+    {kParamChop, "Chop", "Sub-slice stutter depth", 0.0f, 100.0f},
     {kParamMemoryBars, "Memory", "Eligible history window", 1.0f, 8.0f},
     {kParamDrift, "Drift", "Slice distance and instability", 0.0f, 100.0f},
     {kParamPitch, "Pitch", "Slip semitone offset", -12.0f, 12.0f},
@@ -103,12 +105,12 @@ constexpr std::array<SourceModeDef, 3> kSourceModes = {{
 }};
 
 constexpr std::array<ModePreset, 6> kModes = {{
-    {"Pocket", "low-risk drift", 88, 125, 154, {8.0f, 18.0f, 18.0f, 2.0f, 10.0f, 0.0f, 58.0f, 18.0f, 0.0f}},
-    {"Stutter", "tight repeats", 205, 151, 79, {16.0f, 72.0f, 24.0f, 1.0f, 10.0f, 0.0f, 100.0f, 42.0f, 0.0f}},
-    {"Flip", "harder turns", 145, 110, 208, {8.0f, 56.0f, 70.0f, 2.0f, 26.0f, 0.0f, 100.0f, 22.0f, 0.0f}},
-    {"Smear", "slow melt", 78, 166, 169, {8.0f, 52.0f, 60.0f, 3.0f, 72.0f, 0.0f, 92.0f, 32.0f, 0.0f}},
-    {"Slip", "pitched drag", 93, 149, 224, {8.0f, 58.0f, 58.0f, 2.0f, 48.0f, 7.0f, 92.0f, 26.0f, 0.0f}},
-    {"Ruin", "full wreck", 196, 82, 82, {16.0f, 90.0f, 90.0f, 4.0f, 86.0f, -5.0f, 100.0f, 36.0f, 0.0f}},
+    {"Pocket", "low-risk drift", 88, 125, 154, {8.0f, 18.0f, 18.0f, 2.0f, 10.0f, 0.0f, 58.0f, 18.0f, 0.0f, 0.0f, 4.0f, 0.0f}},
+    {"Stutter", "tight repeats", 205, 151, 79, {16.0f, 72.0f, 24.0f, 1.0f, 10.0f, 0.0f, 100.0f, 42.0f, 0.0f, 0.0f, 4.0f, 76.0f}},
+    {"Flip", "harder turns", 145, 110, 208, {8.0f, 56.0f, 70.0f, 2.0f, 26.0f, 0.0f, 100.0f, 22.0f, 0.0f, 0.0f, 4.0f, 18.0f}},
+    {"Smear", "slow melt", 78, 166, 169, {8.0f, 52.0f, 60.0f, 3.0f, 72.0f, 0.0f, 92.0f, 32.0f, 0.0f, 0.0f, 4.0f, 12.0f}},
+    {"Slip", "pitched drag", 93, 149, 224, {8.0f, 58.0f, 58.0f, 2.0f, 48.0f, 7.0f, 92.0f, 26.0f, 0.0f, 0.0f, 4.0f, 10.0f}},
+    {"Ruin", "full wreck", 196, 82, 82, {16.0f, 90.0f, 90.0f, 4.0f, 86.0f, -5.0f, 100.0f, 36.0f, 0.0f, 0.0f, 4.0f, 46.0f}},
 }};
 
 constexpr std::size_t kPreviewBlockCount = 24;
@@ -213,6 +215,7 @@ public:
         values_[kParamHold] = defaults.hold;
         values_[kParamSourceMode] = defaults.sourceMode;
         values_[kParamSampleBeats] = defaults.sampleBeats;
+        values_[kParamChop] = defaults.chop;
         values_[kParamStatusAction] = 0.0f;
         values_[kParamStatusActivity] = 0.0f;
 
@@ -390,6 +393,7 @@ private:
         parameters.hold = values_[kParamHold];
         parameters.sourceMode = values_[kParamSourceMode];
         parameters.sampleBeats = values_[kParamSampleBeats];
+        parameters.chop = values_[kParamChop];
         return downspout::rift::clampParameters(parameters);
     }
 
@@ -481,8 +485,8 @@ private:
         drawSourceSelector(x, buttonY + 58.0f, w, 30.0f, parameters);
         drawSampleLoader(x, buttonY + 96.0f, w, 28.0f);
 
-        const float sliderStartY = buttonY + 138.0f;
-        const float rowGap = 2.0f;
+        const float sliderStartY = buttonY + 132.0f;
+        const float rowGap = 0.0f;
         const float rowH = 32.0f;
         for (std::size_t i = 0; i < kSliders.size(); ++i) {
             const float rowY = sliderStartY + static_cast<float>(i) * (rowH + rowGap);
@@ -917,6 +921,7 @@ private:
         return parameterMatches(parameters.grid, preset.parameters.grid) &&
                parameterMatches(parameters.density, preset.parameters.density) &&
                parameterMatches(parameters.damage, preset.parameters.damage) &&
+               parameterMatches(parameters.chop, preset.parameters.chop) &&
                parameterMatches(parameters.memoryBars, preset.parameters.memoryBars) &&
                parameterMatches(parameters.drift, preset.parameters.drift) &&
                parameterMatches(parameters.pitch, preset.parameters.pitch) &&
@@ -944,6 +949,7 @@ private:
         commitParameter(kParamGrid, preset.parameters.grid, false);
         commitParameter(kParamDensity, preset.parameters.density, false);
         commitParameter(kParamDamage, preset.parameters.damage, false);
+        commitParameter(kParamChop, preset.parameters.chop, false);
         commitParameter(kParamMemoryBars, preset.parameters.memoryBars, false);
         commitParameter(kParamDrift, preset.parameters.drift, false);
         commitParameter(kParamPitch, preset.parameters.pitch, false);
@@ -960,6 +966,7 @@ private:
         case kParamGrid: return parameters.grid;
         case kParamDensity: return parameters.density;
         case kParamDamage: return parameters.damage;
+        case kParamChop: return parameters.chop;
         case kParamMemoryBars: return parameters.memoryBars;
         case kParamDrift: return parameters.drift;
         case kParamPitch: return parameters.pitch;
