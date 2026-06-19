@@ -60,3 +60,26 @@ Initial plugin targets:
 - Keep docs concise, technical, and current.
 - Update `docs/plan.md` when project direction changes materially.
 - Record per-plugin migration decisions in that plugin’s `docs/` directory rather than bloating the root plan.
+
+## New plugin completion checklist
+
+When adding a new plugin, keep the local build, release artifact, and GitHub
+Pages catalog in sync in the same change:
+
+- add the plugin-local `CMakeLists.txt`, root `CMakeLists.txt` build option,
+  and `install(DIRECTORY ...vst3)` rule;
+- update `install.sh`, `scripts/package-release.sh`, and
+  `.github/workflows/release.yml` so local installs, CI packaging, and tagged
+  releases include the bundle;
+- update `README.md`, `docs/install.md`, `docs/release.md`,
+  `docs/architecture.md`, and `docs/plan.md` where the bundle list or project
+  status changes;
+- add `docs/pages/_products/<plugin>.md` with front matter, add the plugin to
+  `scripts/capture-plugin-screenshots.sh`, and generate
+  `docs/pages/assets/plugins/<plugin>.png`;
+- update `docs/screenshots.md` and `docs/pages/README.md` when screenshot or
+  Pages processes change;
+- run at least the plugin core tests, the plugin VST3 target build, shell
+  syntax checks for install/release scripts, and a static check that
+  `scripts/package-release.sh` expected bundles match plugin CMake install
+  declarations.

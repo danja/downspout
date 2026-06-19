@@ -63,13 +63,17 @@ Current output filenames:
 - `m-mix.png`
 - `melgen.png`
 - `rift.png`
+- `orchid.png`
 - `drumgen.png`
 - `drumkit.png`
+- `xoxolo.png`
 - `cadence.png`
 - `counterpointer.png`
+- `sidecar.png`
 - `gremlin.png`
 - `gremlin-driver.png`
 - `ground.png`
+- `ambo.png`
 - `floozy.png`
 - `basilico.png`
 - `canticle.png`

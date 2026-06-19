@@ -15,6 +15,7 @@ When adding or changing a plugin page, check:
 - the product file has `title`, `order`, `bundle`, `kind`, `role`,
   `screenshot`, and `summary`;
 - the referenced screenshot exists under `assets/plugins/`;
+- `scripts/capture-plugin-screenshots.sh --list` includes the plugin;
 - the plugin order keeps generators, effects, instruments, and controllers in a
   readable sequence on the index page.
 
