@@ -1,0 +1,2 @@
+Xoxolo will be a minimal, brain-dead simple drum pattern editor. 
+By default a 16x11 grid will be presented, with clickable note-on cells and a control panel to the right. The rows will map to midi notes, by default the instruments of drumkit. At the end of each row there will be a drop-down note number selector, and next to it a button that on clicking will send a midi message out on that note to allow preview. The grid may map to one, two, three or four bars. The grid may be resized by dropdowns in the control panel. When the transport is started, the beat will repeat.

@@ -44,6 +44,5 @@ is an XY control: left-to-right adjusts Mix, and bottom-to-top adjusts Feedback.
 
 ## Build Notes
 
-`plugins/ambo` is self-contained, but it is not currently added to the root
-build by this scaffold because the repository instructions require explicit
-approval before editing root build/install glue.
+`plugins/ambo` is wired into the root CMake build, local install script, and
+release packaging as `ambo.vst3`.

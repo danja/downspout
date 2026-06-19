@@ -24,8 +24,7 @@ stays realtime-safe and only queues validated MIDI phrases.
 - [x] Add live MIDI-derived tune context in Sidecar/coordinator.
 - [x] Add localhost live request/response.
 - [x] Add state summaries for Ground and Cadence.
-- [ ] Add Sidecar to release packaging and screenshot documentation once the
-  first plugin slice is accepted.
+- [x] Add Sidecar to release packaging once the first plugin slice is accepted.
 
 ## Implemented plugin slice
 

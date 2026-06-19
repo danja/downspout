@@ -205,10 +205,13 @@ The release script currently expects these bundles:
 - `m_mix.vst3`
 - `melgen.vst3`
 - `rift.vst3`
+- `orchid.vst3`
+- `ambo.vst3`
 - `drumgen.vst3`
 - `drumkit.vst3`
 - `cadence.vst3`
 - `counterpointer.vst3`
+- `sidecar.vst3`
 - `gremlin.vst3`
 - `gremlin_driver.vst3`
 - `ground.vst3`

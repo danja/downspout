@@ -20,7 +20,7 @@ unpack it, and copy the `.vst3` bundles into `~/.vst3`:
 
 ```bash
 mkdir -p ~/.vst3
-cp -r bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 melgen.vst3 rift.vst3 drumgen.vst3 drumkit.vst3 cadence.vst3 counterpointer.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 floozy.vst3 basilico.vst3 canticle.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3 ~/.vst3/
+cp -r bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 melgen.vst3 rift.vst3 orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 cadence.vst3 counterpointer.vst3 sidecar.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 floozy.vst3 basilico.vst3 canticle.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3 ~/.vst3/
 ```
 
 See [docs/install.md](docs/install.md) and [docs/release.md](docs/release.md)
@@ -58,10 +58,13 @@ installed bundle.
 | [m-mix](plugins/m-mix/README.md) | `m_mix.vst3` | MIDI effect | Transport-aware MIDI gate combining `p-mix` transitions with `e-mix` Euclidean blocks. |
 | [melgen](plugins/melgen/README.md) | `melgen.vst3` | MIDI generator | Phrase-aware melody generator with contour, answer, structure, and follow controls. |
 | [rift](plugins/rift/README.md) | `rift.vst3` | Audio effect | Transport-locked live/sample buffer disruptor with WAV loading, chop/stutter repeats, reverse, skip, smear, and pitch-slip actions. |
+| [Orchid](plugins/orchid/README.md) | `orchid.vst3` | Audio effect | Transport-aware voiced freeze/hold effect with autocorrelation capture and grid-synced loop holds. |
+| [Ambo](plugins/ambo/README.md) | `ambo.vst3` | Audio effect | Stereo ambient processor with rearrangeable time, spectral, tape, shimmer, delay, drive, and feedback modules. |
 | [drumgen](plugins/drumgen/README.md) | `drumgen.vst3` | MIDI drum generator | Pattern generator with meter-aware styles, fills, and Breakbeat/Amen/Jungle/Hip Hop genres. |
 | [drumkit](plugins/drumkit/README.md) | `drumkit.vst3` | Instrument | Port of the `flues` drum synth with stereo output, one MIDI input, and mixer-style UI. |
 | [cadence](plugins/cadence/README.md) | `cadence.vst3` | MIDI effect | Transport-aware MIDI harmonizer and comping generator. |
 | [counterpointer](plugins/counterpointer/README.md) | `counterpointer.vst3` | MIDI generator/effect | Learns incoming MIDI and emits a monophonic counter-melody. |
+| [Sidecar](plugins/sidecar/README.md) | `sidecar.vst3` | MIDI generator | MIDI phrase player for generated solo material with local deterministic and localhost coordinator modes. |
 | [gremlin](plugins/gremlin/README.md) | `gremlin.vst3` | Instrument | Chaotic glitch instrument with scenes, macros, actions, and performance controls. |
 | [gremlin-driver](plugins/gremlin-driver/README.md) | `gremlin_driver.vst3` | MIDI effect | MIDI modulation and action sequencer intended to drive `gremlin`. |
 | [ground](plugins/ground/README.md) | `ground.vst3` | MIDI generator | Long-form bass generator with Dub/Jazz styles, phrase planning, and guarded bass-register output. |
@@ -113,7 +116,7 @@ than large architecture changes.
 
 Near-term priorities:
 
-1. validate all eighteen bundles in real hosts after clean installs and rescans;
+1. validate all twenty-two bundles in real hosts after clean installs and rescans;
 2. keep release packaging aligned with local installs;
 3. extend musical style vocabulary where it improves actual generator behavior;
 4. publish and verify the first public tagged release artifact.
