@@ -96,6 +96,7 @@ jobs:
             echo "- luma.vst3"
             echo "- paunchlad.vst3"
             echo "- lifeform.vst3"
+            echo "- xoxolo.vst3"
             echo
             echo "The .sha256 asset contains the checksum for the zip."
           } > "$notes_file"

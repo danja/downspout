@@ -20,7 +20,7 @@ unpack it, and copy the `.vst3` bundles into `~/.vst3`:
 
 ```bash
 mkdir -p ~/.vst3
-cp -r bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 melgen.vst3 rift.vst3 orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 cadence.vst3 counterpointer.vst3 sidecar.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 floozy.vst3 basilico.vst3 canticle.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3 ~/.vst3/
+cp -r bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 melgen.vst3 rift.vst3 orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 cadence.vst3 counterpointer.vst3 sidecar.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 floozy.vst3 basilico.vst3 canticle.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3 xoxolo.vst3 ~/.vst3/
 ```
 
 See [docs/install.md](docs/install.md) and [docs/release.md](docs/release.md)
@@ -74,6 +74,7 @@ installed bundle.
 | [luma](plugins/luma/README.md) | `luma.vst3` | MIDI generator | Launchpad-oriented performance generator where lit pads become bass, chord, melody, and drum agents. |
 | [paunchlad](plugins/paunchlad/README.md) | `paunchlad.vst3` | Audio effect/instrument | Launchpad dub performance effect with echo throws, sirens, spring splashes, dropouts, and chops. |
 | [lifeform](plugins/lifeform/README.md) | `lifeform.vst3` | MIDI generator | Conway Game of Life sequencer for Launchpad, evolving one generation per beat into melodic or drum MIDI. |
+| [xoxolo](plugins/xoxolo/README.md) | `xoxolo.vst3` | MIDI generator | Simple x0x-style drum pattern editor with 11 drumkit lanes and a 32-step maximum. |
 
 ## Architecture
 
@@ -116,7 +117,7 @@ than large architecture changes.
 
 Near-term priorities:
 
-1. validate all twenty-two bundles in real hosts after clean installs and rescans;
+1. validate all twenty-three bundles in real hosts after clean installs and rescans;
 2. keep release packaging aligned with local installs;
 3. extend musical style vocabulary where it improves actual generator behavior;
 4. publish and verify the first public tagged release artifact.

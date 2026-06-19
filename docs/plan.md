@@ -163,6 +163,9 @@ Progress as of 2026-05-27:
 - `luma` now exists as an original Launchpad-oriented MIDI performance generator with pad agents, LED feedback, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `paunchlad` now exists as an original Launchpad-oriented dub performance effect with echo throws, sirens, spring splashes, dropouts, chops, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `lifeform` now exists as an original Launchpad-oriented Conway Game of Life MIDI generator with one generation per beat, LED feedback, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
+- `xoxolo` now exists as an original simple MIDI drum pattern editor with a
+  fixed 11-lane drumkit map, 32-step maximum, text state serialization,
+  deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `install.sh` exists as the intended build/install entrypoint for local VST deployment.
 
 Current main gap:
@@ -173,8 +176,8 @@ Current main gap:
   `rift.vst3`, `orchid.vst3`, `ambo.vst3`, `drumgen.vst3`, `drumkit.vst3`,
   `cadence.vst3`, `counterpointer.vst3`, `sidecar.vst3`, `gremlin.vst3`,
   `gremlin_driver.vst3`, `ground.vst3`, `floozy.vst3`, `basilico.vst3`,
-  `canticle.vst3`, `luma.vst3`, `paunchlad.vst3`, and `lifeform.vst3`
-  bundles.
+  `canticle.vst3`, `luma.vst3`, `paunchlad.vst3`, `lifeform.vst3`, and
+  `xoxolo.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set, validating the first tagged GitHub Actions release, and pushing the shared meter/style/color model further up the musical stack where it improves generator behavior.
 

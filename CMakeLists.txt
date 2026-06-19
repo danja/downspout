@@ -34,6 +34,7 @@ option(DOWNSPOUT_BUILD_CANTICLE "Configure the canticle polyphonic instrument ta
 option(DOWNSPOUT_BUILD_LUMA "Configure the luma Launchpad performance target" ON)
 option(DOWNSPOUT_BUILD_PAUNCHLAD "Configure the PaunchLad Launchpad dub effect target" ON)
 option(DOWNSPOUT_BUILD_LIFEFORM "Configure the Lifeform Launchpad Game of Life MIDI target" ON)
+option(DOWNSPOUT_BUILD_XOXOLO "Configure the Xoxolo MIDI drum pattern target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 option(DOWNSPOUT_BUILD_SCREENSHOT_APPS "Build DPF standalone apps for documentation screenshots" OFF)
 
@@ -158,4 +159,8 @@ endif()
 
 if(DOWNSPOUT_BUILD_LIFEFORM)
     add_subdirectory(plugins/lifeform)
+endif()
+
+if(DOWNSPOUT_BUILD_XOXOLO)
+    add_subdirectory(plugins/xoxolo)
 endif()
