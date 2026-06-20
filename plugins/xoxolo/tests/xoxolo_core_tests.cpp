@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
+#include <string>
 
 namespace {
 
@@ -26,9 +27,26 @@ TransportSnapshot playingTransport(double barBeat = 0.0)
 void defaultPatternMatchesDrumkit()
 {
     PatternState pattern = makeDefaultPattern();
-    assert(pattern.totalSteps == 16);
-    for (int lane = 0; lane < kLaneCount; ++lane)
+    assert(pattern.totalSteps == kDefaultSteps);
+    assert(pattern.notePreset == NotePresetId::downspout);
+    assert(activeLaneCountForPreset(pattern.notePreset) == kDownspoutLaneCount);
+    for (int lane = 0; lane < activeLaneCountForPreset(pattern.notePreset); ++lane)
         assert(pattern.lanes[static_cast<std::size_t>(lane)].midiNote == kDefaultLanes[static_cast<std::size_t>(lane)].note);
+}
+
+void presetAppliesAvlDrumkitsMap()
+{
+    PatternState pattern = makeDefaultPattern();
+    applyNotePreset(pattern, NotePresetId::avlDrumkits);
+    assert(pattern.notePreset == NotePresetId::avlDrumkits);
+    assert(pattern.lanes[0].midiNote == 36);
+    assert(activeLaneCountForPreset(pattern.notePreset) == kAvlDrumkitsLaneCount);
+    assert(pattern.lanes[1].midiNote == 37);
+    assert(pattern.lanes[2].midiNote == 38);
+    assert(pattern.lanes[3].midiNote == 39);
+    assert(pattern.lanes[20].midiNote == 56);
+    assert(pattern.lanes[28].midiNote == 64);
+    assert(std::string(laneSpecsForPreset(pattern.notePreset)[20].name) == "Cowbell");
 }
 
 void togglesCells()
@@ -44,32 +62,31 @@ void togglesCells()
 void resizePreservesOnlyVisibleCells()
 {
     PatternState pattern = makeDefaultPattern();
-    resizePattern(pattern, 2, ResolutionId::sixteenth, downspout::meterFromTimeSignature(4.0, 4.0));
+    resizePattern(pattern, 32, ResolutionId::sixteenth, downspout::meterFromTimeSignature(4.0, 4.0));
     assert(pattern.totalSteps == 32);
     setCell(pattern, 0, 0, true);
     setCell(pattern, 0, 20, true);
 
-    resizePattern(pattern, 1, ResolutionId::sixteenth, downspout::meterFromTimeSignature(4.0, 4.0));
-    assert(pattern.totalSteps == 16);
+    resizePattern(pattern, 13, ResolutionId::sixteenth, downspout::meterFromTimeSignature(4.0, 4.0));
+    assert(pattern.totalSteps == 13);
     assert(cellActive(pattern, 0, 0));
 
-    resizePattern(pattern, 2, ResolutionId::sixteenth, downspout::meterFromTimeSignature(4.0, 4.0));
+    resizePattern(pattern, 32, ResolutionId::sixteenth, downspout::meterFromTimeSignature(4.0, 4.0));
     assert(pattern.totalSteps == 32);
     assert(cellActive(pattern, 0, 0));
     assert(!cellActive(pattern, 0, 20));
 }
 
-void unsupportedResolutionIsReduced()
+void controlsClampStepRange()
 {
     Controls controls {};
-    controls.bars = 4;
-    controls.resolution = ResolutionId::sixteenth;
+    controls.steps = 99;
     controls = clampControls(controls);
-    assert(controls.resolution == ResolutionId::eighth);
+    assert(controls.steps == kMaxSteps);
 
     PatternState pattern = makeDefaultPattern();
-    resizePattern(pattern, controls.bars, controls.resolution, downspout::meterFromTimeSignature(4.0, 4.0));
-    assert(pattern.totalSteps == 32);
+    resizePattern(pattern, 4, ResolutionId::sixteenth, downspout::meterFromTimeSignature(4.0, 4.0));
+    assert(pattern.totalSteps == kMinSteps);
 }
 
 void clampsNotesAndChannel()
@@ -137,7 +154,9 @@ void previewEmitsOnePair()
 {
     EngineState state {};
     state.pattern = makeDefaultPattern();
+    state.pattern.lanes[2].midiNote = 72;
     Controls controls {};
+    controls.channel = 3;
     controls.previewLane = 2;
     controls.previewSerial = 1;
     activate(state, Controls {});
@@ -145,32 +164,37 @@ void previewEmitsOnePair()
     const BlockResult result = processBlock(state, controls, TransportSnapshot {}, 4096, 48000.0);
     assert(result.eventCount == 2);
     assert(result.events[0].type == MidiEventType::noteOn);
-    assert(result.events[0].data1 == 40);
+    assert(result.events[0].channel == 9);
+    assert(result.events[0].data1 == 72);
     assert(result.events[1].type == MidiEventType::noteOff);
-    assert(result.events[1].data1 == 40);
+    assert(result.events[1].channel == 9);
+    assert(result.events[1].data1 == 72);
 }
 
 void serializationRoundTrips()
 {
     PatternState pattern = makeDefaultPattern();
-    pattern.bars = 2;
+    pattern.totalSteps = 27;
     pattern.resolution = ResolutionId::sixteenth;
     pattern.channel = 9;
-    resizePattern(pattern, pattern.bars, pattern.resolution, downspout::meterFromTimeSignature(4.0, 4.0));
+    applyNotePreset(pattern, NotePresetId::avlDrumkits);
+    resizePattern(pattern, pattern.totalSteps, pattern.resolution, downspout::meterFromTimeSignature(4.0, 4.0));
     pattern.lanes[3].midiNote = 72;
     setCell(pattern, 3, 7, true);
-    setCell(pattern, 10, 31, true);
+    setCell(pattern, 10, 26, true);
 
     const std::string text = serializePatternState(pattern);
+    assert(text.find("length=27\n") != std::string::npos);
+    assert(text.find("steps=3,") != std::string::npos);
     const auto parsed = deserializePatternState(text);
     assert(parsed.has_value());
-    assert(parsed->bars == 2);
     assert(parsed->resolution == ResolutionId::sixteenth);
     assert(parsed->channel == 9);
-    assert(parsed->totalSteps == 32);
+    assert(parsed->notePreset == NotePresetId::avlDrumkits);
+    assert(parsed->totalSteps == 27);
     assert(parsed->lanes[3].midiNote == 72);
     assert(cellActive(*parsed, 3, 7));
-    assert(cellActive(*parsed, 10, 31));
+    assert(cellActive(*parsed, 10, 26));
 }
 
 }  // namespace
@@ -178,9 +202,10 @@ void serializationRoundTrips()
 int main()
 {
     defaultPatternMatchesDrumkit();
+    presetAppliesAvlDrumkitsMap();
     togglesCells();
     resizePreservesOnlyVisibleCells();
-    unsupportedResolutionIsReduced();
+    controlsClampStepRange();
     clampsNotesAndChannel();
     stoppedTransportEmitsNoSequence();
     playStartEmitsCurrentStep();

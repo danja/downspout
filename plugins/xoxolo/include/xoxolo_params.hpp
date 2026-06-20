@@ -5,9 +5,10 @@
 namespace downspout::xoxolo {
 
 enum ParameterIndex : std::uint32_t {
-    kParamBars = 0,
+    kParamSteps = 0,
     kParamResolution,
     kParamChannel,
+    kParamNotePreset,
     kParamClear,
     kParamPreviewLane,
     kParamPreview,

@@ -22,6 +22,7 @@ using downspout::xoxolo::BlockResult;
 using downspout::xoxolo::Controls;
 using downspout::xoxolo::EngineState;
 using downspout::xoxolo::MidiEventType;
+using downspout::xoxolo::NotePresetId;
 using downspout::xoxolo::ResolutionId;
 using downspout::xoxolo::ScheduledMidiEvent;
 using downspout::xoxolo::TransportSnapshot;
@@ -119,13 +120,13 @@ protected:
         parameter.hints = kParameterIsAutomatable;
 
         switch (index) {
-        case downspout::xoxolo::kParamBars:
-            parameter.name = "Bars";
-            parameter.symbol = "bars";
+        case downspout::xoxolo::kParamSteps:
+            parameter.name = "Steps";
+            parameter.symbol = "steps";
             parameter.hints |= kParameterIsInteger;
-            parameter.ranges.min = 1.0f;
-            parameter.ranges.max = 4.0f;
-            parameter.ranges.def = 1.0f;
+            parameter.ranges.min = static_cast<float>(downspout::xoxolo::kMinSteps);
+            parameter.ranges.max = static_cast<float>(downspout::xoxolo::kMaxSteps);
+            parameter.ranges.def = static_cast<float>(downspout::xoxolo::kDefaultSteps);
             break;
         case downspout::xoxolo::kParamResolution:
             parameter.name = "Resolution";
@@ -142,6 +143,14 @@ protected:
             parameter.ranges.min = 1.0f;
             parameter.ranges.max = 16.0f;
             parameter.ranges.def = 10.0f;
+            break;
+        case downspout::xoxolo::kParamNotePreset:
+            parameter.name = "Note Preset";
+            parameter.symbol = "note_preset";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = static_cast<float>(static_cast<int>(NotePresetId::count) - 1);
+            parameter.ranges.def = static_cast<float>(static_cast<int>(NotePresetId::downspout));
             break;
         case downspout::xoxolo::kParamClear:
             parameter.name = "Clear";
@@ -162,9 +171,9 @@ protected:
         case downspout::xoxolo::kParamPreview:
             parameter.name = "Preview";
             parameter.symbol = "preview";
-            parameter.hints = kParameterIsAutomatable | kParameterIsInteger | kParameterIsTrigger;
+            parameter.hints = kParameterIsAutomatable | kParameterIsInteger;
             parameter.ranges.min = 0.0f;
-            parameter.ranges.max = 4096.0f;
+            parameter.ranges.max = 16384.0f;
             parameter.ranges.def = 0.0f;
             break;
         case downspout::xoxolo::kParamCurrentStep:
@@ -193,9 +202,10 @@ protected:
     float getParameterValue(uint32_t index) const override
     {
         switch (index) {
-        case downspout::xoxolo::kParamBars: return static_cast<float>(controls_.bars);
+        case downspout::xoxolo::kParamSteps: return static_cast<float>(controls_.steps);
         case downspout::xoxolo::kParamResolution: return static_cast<float>(static_cast<int>(controls_.resolution));
         case downspout::xoxolo::kParamChannel: return static_cast<float>(controls_.channel);
+        case downspout::xoxolo::kParamNotePreset: return static_cast<float>(static_cast<int>(controls_.notePreset));
         case downspout::xoxolo::kParamClear: return static_cast<float>(controls_.clearSerial);
         case downspout::xoxolo::kParamPreviewLane: return static_cast<float>(controls_.previewLane);
         case downspout::xoxolo::kParamPreview: return static_cast<float>(controls_.previewSerial);
@@ -207,8 +217,10 @@ protected:
     void setParameterValue(uint32_t index, float value) override
     {
         switch (index) {
-        case downspout::xoxolo::kParamBars:
-            controls_.bars = clampi(static_cast<int>(std::lround(value)), 1, 4);
+        case downspout::xoxolo::kParamSteps:
+            controls_.steps = clampi(static_cast<int>(std::lround(value)),
+                                     downspout::xoxolo::kMinSteps,
+                                     downspout::xoxolo::kMaxSteps);
             break;
         case downspout::xoxolo::kParamResolution:
             controls_.resolution = static_cast<ResolutionId>(clampi(static_cast<int>(std::lround(value)), 0, 2));
@@ -216,6 +228,14 @@ protected:
         case downspout::xoxolo::kParamChannel:
             controls_.channel = clampi(static_cast<int>(std::lround(value)), 1, 16);
             break;
+        case downspout::xoxolo::kParamNotePreset: {
+            const auto preset = static_cast<NotePresetId>(
+                clampi(static_cast<int>(std::lround(value)), 0, static_cast<int>(NotePresetId::count) - 1));
+            controls_.notePreset = preset;
+            if (engine_.pattern.notePreset != preset)
+                downspout::xoxolo::applyNotePreset(engine_.pattern, preset);
+            break;
+        }
         case downspout::xoxolo::kParamClear:
             controls_.clearSerial = std::max(0, static_cast<int>(std::lround(value)));
             break;
@@ -248,9 +268,10 @@ protected:
             return;
 
         engine_.pattern = *pattern;
-        controls_.bars = engine_.pattern.bars;
+        controls_.steps = engine_.pattern.totalSteps;
         controls_.resolution = engine_.pattern.resolution;
         controls_.channel = engine_.pattern.channel;
+        controls_.notePreset = engine_.pattern.notePreset;
         controls_ = downspout::xoxolo::clampControls(controls_);
     }
 

@@ -8,12 +8,15 @@ Implementation decisions:
 - the grid is stored in `PatternState` and serialized as text under the
   `pattern` state key;
 - cells are not exposed as automatable parameters;
-- UI edits call DPF `setState(...)`, while Bars, Resolution, Channel, Clear, and
-  Preview remain small wrapper parameters;
+- UI edits call DPF `setState(...)`, while Steps, Resolution, Channel, Note
+  Preset, Clear, and Preview remain small wrapper parameters;
 - `xoxolo_engine` owns transport-to-step mapping, note scheduling, preview
   triggering, and pending note-offs;
 - MIDI input is not passed through in the first pass;
-- patterns never exceed 32 steps, so the full pattern remains visible.
+- patterns use an explicit `8..32` step count, so odd lengths are supported and
+  the full pattern remains visible.
 
-The default lane map mirrors `drumkit.vst3` so Xoxolo can immediately drive the
-Downspout drum synth without setup.
+The default `Downspout` lane map mirrors `drumkit.vst3` so Xoxolo can
+immediately drive the Downspout drum synth without setup. The `AVL-Drumkits`
+preset follows the note names from `docs/avl-drum-map.md` and exposes all 29
+kit entries from notes 36 through 64.

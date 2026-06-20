@@ -31,22 +31,6 @@ struct Rect {
     return std::max(minimum, std::min(value, maximum));
 }
 
-[[nodiscard]] int stepsPerBeatForResolution(const downspout::xoxolo::ResolutionId resolution)
-{
-    switch (resolution) {
-    case downspout::xoxolo::ResolutionId::quarter: return 1;
-    case downspout::xoxolo::ResolutionId::eighth: return 2;
-    case downspout::xoxolo::ResolutionId::sixteenth: return 4;
-    case downspout::xoxolo::ResolutionId::count: break;
-    }
-    return 4;
-}
-
-[[nodiscard]] bool supportedCombination(const int bars, const downspout::xoxolo::ResolutionId resolution)
-{
-    return bars >= 1 && bars <= 4 && bars * 4 * stepsPerBeatForResolution(resolution) <= downspout::xoxolo::kMaxSteps;
-}
-
 [[nodiscard]] const char* resolutionName(const downspout::xoxolo::ResolutionId resolution)
 {
     switch (resolution) {
@@ -58,6 +42,11 @@ struct Rect {
     return "1/16";
 }
 
+constexpr int kNoteMenuColumns = 8;
+constexpr int kNoteMenuRows = 16;
+constexpr float kNoteMenuItemHeight = 22.0f;
+constexpr float kNoteMenuItemWidth = 42.0f;
+
 }  // namespace
 
 class XoxoloUI : public UI
@@ -68,9 +57,11 @@ public:
     {
         pattern_ = downspout::xoxolo::makeDefaultPattern();
         values_.fill(0.0f);
-        values_[downspout::xoxolo::kParamBars] = 1.0f;
+        values_[downspout::xoxolo::kParamSteps] = static_cast<float>(downspout::xoxolo::kDefaultSteps);
         values_[downspout::xoxolo::kParamResolution] = 2.0f;
         values_[downspout::xoxolo::kParamChannel] = 10.0f;
+        values_[downspout::xoxolo::kParamNotePreset] =
+            static_cast<float>(static_cast<int>(downspout::xoxolo::NotePresetId::downspout));
         values_[downspout::xoxolo::kParamCurrentStep] = -1.0f;
 
        #ifdef DGL_NO_SHARED_RESOURCES
@@ -86,10 +77,17 @@ protected:
         if (index >= values_.size())
             return;
         values_[index] = value;
-        if (index == downspout::xoxolo::kParamBars ||
+        if (index == downspout::xoxolo::kParamSteps ||
             index == downspout::xoxolo::kParamResolution ||
             index == downspout::xoxolo::kParamChannel) {
             applyParameterControlsToPattern(false);
+        } else if (index == downspout::xoxolo::kParamNotePreset) {
+            const auto preset = static_cast<downspout::xoxolo::NotePresetId>(
+                clampi(static_cast<int>(std::lround(value)),
+                       0,
+                       static_cast<int>(downspout::xoxolo::NotePresetId::count) - 1));
+            if (pattern_.notePreset != preset)
+                downspout::xoxolo::applyNotePreset(pattern_, preset);
         }
         repaint();
     }
@@ -102,9 +100,10 @@ protected:
         if (!pattern.has_value())
             return;
         pattern_ = *pattern;
-        values_[downspout::xoxolo::kParamBars] = static_cast<float>(pattern_.bars);
+        values_[downspout::xoxolo::kParamSteps] = static_cast<float>(pattern_.totalSteps);
         values_[downspout::xoxolo::kParamResolution] = static_cast<float>(static_cast<int>(pattern_.resolution));
         values_[downspout::xoxolo::kParamChannel] = static_cast<float>(pattern_.channel);
+        values_[downspout::xoxolo::kParamNotePreset] = static_cast<float>(static_cast<int>(pattern_.notePreset));
         repaint();
     }
 
@@ -132,6 +131,7 @@ protected:
 
         drawGrid(gridX, gridY, gridW, gridH);
         drawControls(width - controlsW - pad, gridY, controlsW, gridH);
+        drawNoteMenu();
     }
 
     bool onMouse(const MouseEvent& ev) override
@@ -145,42 +145,58 @@ protected:
         if (!ev.press)
             return false;
 
-        for (int lane = 0; lane < downspout::xoxolo::kLaneCount; ++lane) {
+        if (openNoteMenuLane_ >= 0 && handleNoteMenuClick(x, y))
+            return true;
+
+        const int laneCount = downspout::xoxolo::activeLaneCountForPreset(pattern_.notePreset);
+        for (int lane = 0; lane < laneCount; ++lane) {
             if (previewRects_[static_cast<std::size_t>(lane)].contains(x, y)) {
+                openNoteMenuLane_ = -1;
                 triggerPreview(lane);
                 return true;
             }
             if (noteRects_[static_cast<std::size_t>(lane)].contains(x, y)) {
-                nudgeLaneNote(lane, 1);
+                openNoteMenuLane_ = openNoteMenuLane_ == lane ? -1 : lane;
+                repaint();
                 return true;
             }
         }
 
-        for (int lane = 0; lane < downspout::xoxolo::kLaneCount; ++lane) {
+        for (int lane = 0; lane < laneCount; ++lane) {
             for (int step = 0; step < pattern_.totalSteps; ++step) {
                 if (cellRects_[static_cast<std::size_t>(lane)][static_cast<std::size_t>(step)].contains(x, y)) {
                     const bool active = !downspout::xoxolo::cellActive(pattern_, lane, step);
                     downspout::xoxolo::setCell(pattern_, lane, step, active);
                     pushPatternState();
+                    openNoteMenuLane_ = -1;
                     repaint();
                     return true;
                 }
             }
         }
 
-        if (barsRect_.contains(x, y)) {
-            cycleBars();
+        if (stepsRect_.contains(x, y)) {
+            openNoteMenuLane_ = -1;
+            cycleSteps();
+            return true;
+        }
+        if (presetRect_.contains(x, y)) {
+            openNoteMenuLane_ = -1;
+            cyclePreset();
             return true;
         }
         if (resolutionRect_.contains(x, y)) {
+            openNoteMenuLane_ = -1;
             cycleResolution();
             return true;
         }
         if (channelRect_.contains(x, y)) {
+            openNoteMenuLane_ = -1;
             cycleChannel();
             return true;
         }
         if (clearRect_.contains(x, y)) {
+            openNoteMenuLane_ = -1;
             downspout::xoxolo::clearPattern(pattern_);
             pushPatternState();
             triggerParameter(downspout::xoxolo::kParamClear);
@@ -189,6 +205,8 @@ protected:
             return true;
         }
 
+        openNoteMenuLane_ = -1;
+        repaint();
         return false;
     }
 
@@ -198,14 +216,19 @@ protected:
         const float y = static_cast<float>(ev.pos.getY());
         const int direction = ev.delta.getY() > 0.0f ? 1 : -1;
 
-        for (int lane = 0; lane < downspout::xoxolo::kLaneCount; ++lane) {
+        const int laneCount = downspout::xoxolo::activeLaneCountForPreset(pattern_.notePreset);
+        for (int lane = 0; lane < laneCount; ++lane) {
             if (noteRects_[static_cast<std::size_t>(lane)].contains(x, y)) {
                 nudgeLaneNote(lane, direction);
                 return true;
             }
         }
-        if (barsRect_.contains(x, y)) {
-            cycleBars(direction);
+        if (stepsRect_.contains(x, y)) {
+            cycleSteps(direction);
+            return true;
+        }
+        if (presetRect_.contains(x, y)) {
+            cyclePreset(direction);
             return true;
         }
         if (resolutionRect_.contains(x, y)) {
@@ -225,11 +248,13 @@ private:
     std::array<std::array<Rect, downspout::xoxolo::kMaxSteps>, downspout::xoxolo::kLaneCount> cellRects_ {};
     std::array<Rect, downspout::xoxolo::kLaneCount> noteRects_ {};
     std::array<Rect, downspout::xoxolo::kLaneCount> previewRects_ {};
-    Rect barsRect_ {};
+    Rect presetRect_ {};
+    Rect stepsRect_ {};
     Rect resolutionRect_ {};
     Rect channelRect_ {};
     Rect clearRect_ {};
     int pulseFrames_ = 0;
+    int openNoteMenuLane_ = -1;
 
     void drawBackground(const float width, const float height)
     {
@@ -266,13 +291,15 @@ private:
 
     void drawGrid(const float x, const float y, const float w, const float h)
     {
-        const float labelW = 82.0f;
-        const float noteW = 44.0f;
+        const int laneCount = downspout::xoxolo::activeLaneCountForPreset(pattern_.notePreset);
+        const float labelW = pattern_.notePreset == downspout::xoxolo::NotePresetId::avlDrumkits ? 112.0f : 82.0f;
+        const float noteW = 52.0f;
         const float previewW = 28.0f;
         const float gap = 6.0f;
-        const float rowGap = 5.0f;
-        const float rowH = (h - rowGap * static_cast<float>(downspout::xoxolo::kLaneCount - 1)) /
-                           static_cast<float>(downspout::xoxolo::kLaneCount);
+        const float rowGap = laneCount > 16 ? 2.0f : 5.0f;
+        const float rowH = std::min(36.0f,
+                                    (h - rowGap * static_cast<float>(laneCount - 1)) /
+                                        static_cast<float>(laneCount));
         const float gridX = x + labelW;
         const float rightW = noteW + previewW + gap * 2.0f;
         const float stepGap = 3.0f;
@@ -282,7 +309,7 @@ private:
                                        -1,
                                        downspout::xoxolo::kMaxSteps - 1);
 
-        for (int lane = 0; lane < downspout::xoxolo::kLaneCount; ++lane) {
+        for (int lane = 0; lane < laneCount; ++lane) {
             const float rowY = y + static_cast<float>(lane) * (rowH + rowGap);
             drawLaneLabel(x, rowY, labelW - 8.0f, rowH, lane);
 
@@ -296,11 +323,20 @@ private:
             for (int step = pattern_.totalSteps; step < downspout::xoxolo::kMaxSteps; ++step)
                 cellRects_[static_cast<std::size_t>(lane)][static_cast<std::size_t>(step)] = {};
 
-            const float noteX = gridX + static_cast<float>(pattern_.totalSteps) * (cellW + stepGap) + gap;
-            noteRects_[static_cast<std::size_t>(lane)] = {noteX, rowY, noteW, rowH};
-            previewRects_[static_cast<std::size_t>(lane)] = {noteX + noteW + gap, rowY, previewW, rowH};
-            drawNoteBox(noteRects_[static_cast<std::size_t>(lane)], pattern_.lanes[static_cast<std::size_t>(lane)].midiNote);
+            const float previewX = gridX + static_cast<float>(pattern_.totalSteps) * (cellW + stepGap) + gap;
+            previewRects_[static_cast<std::size_t>(lane)] = {previewX, rowY, previewW, rowH};
+            noteRects_[static_cast<std::size_t>(lane)] = {previewX + previewW + gap, rowY, noteW, rowH};
             drawPreview(previewRects_[static_cast<std::size_t>(lane)]);
+            drawNoteDropdown(noteRects_[static_cast<std::size_t>(lane)],
+                             pattern_.lanes[static_cast<std::size_t>(lane)].midiNote,
+                             openNoteMenuLane_ == lane);
+        }
+
+        for (int lane = laneCount; lane < downspout::xoxolo::kLaneCount; ++lane) {
+            previewRects_[static_cast<std::size_t>(lane)] = {};
+            noteRects_[static_cast<std::size_t>(lane)] = {};
+            for (int step = 0; step < downspout::xoxolo::kMaxSteps; ++step)
+                cellRects_[static_cast<std::size_t>(lane)][static_cast<std::size_t>(step)] = {};
         }
     }
 
@@ -315,7 +351,10 @@ private:
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         fillColor(207, 216, 220, 255);
-        text(x + 9.0f, y + h * 0.5f, downspout::xoxolo::kDefaultLanes[static_cast<std::size_t>(lane)].name, nullptr);
+        text(x + 9.0f,
+             y + h * 0.5f,
+             downspout::xoxolo::laneSpecsForPreset(pattern_.notePreset)[static_cast<std::size_t>(lane)].name,
+             nullptr);
     }
 
     void drawCell(const Rect& rect, const bool active, const bool current, const int step)
@@ -345,11 +384,11 @@ private:
         }
     }
 
-    void drawNoteBox(const Rect& rect, const int note)
+    void drawNoteDropdown(const Rect& rect, const int note, const bool open)
     {
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 6.0f);
-        fillColor(31, 38, 43, 255);
+        fillColor(open ? 47 : 31, open ? 57 : 38, open ? 65 : 43, 255);
         fill();
         closePath();
 
@@ -358,7 +397,12 @@ private:
         fontSize(12.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
         fillColor(224, 231, 234, 255);
-        text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f, textValue, nullptr);
+        text(rect.x + rect.w * 0.42f, rect.y + rect.h * 0.5f, textValue, nullptr);
+
+        fontSize(11.0f);
+        textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
+        fillColor(140, 153, 160, 255);
+        text(rect.x + rect.w - 7.0f, rect.y + rect.h * 0.5f, open ? "^" : "v", nullptr);
     }
 
     void drawPreview(const Rect& rect)
@@ -375,6 +419,67 @@ private:
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f, ">", nullptr);
     }
 
+    Rect noteMenuRect() const
+    {
+        if (openNoteMenuLane_ < 0 || openNoteMenuLane_ >= downspout::xoxolo::kLaneCount)
+            return {};
+
+        const Rect& base = noteRects_[static_cast<std::size_t>(openNoteMenuLane_)];
+        const float menuW = kNoteMenuItemWidth * static_cast<float>(kNoteMenuColumns);
+        const float menuH = kNoteMenuItemHeight * static_cast<float>(kNoteMenuRows);
+        const float margin = 8.0f;
+        const float windowW = static_cast<float>(getWidth());
+        const float windowH = static_cast<float>(getHeight());
+        float menuX = base.x + base.w - menuW;
+        float menuY = base.y + base.h + 4.0f;
+        menuX = std::max(margin, std::min(menuX, std::max(margin, windowW - margin - menuW)));
+        if (menuY + menuH > windowH - margin)
+            menuY = base.y - menuH - 4.0f;
+        menuY = std::max(margin, std::min(menuY, std::max(margin, windowH - margin - menuH)));
+        return {menuX, menuY, menuW, menuH};
+    }
+
+    void drawNoteMenu()
+    {
+        if (openNoteMenuLane_ < 0)
+            return;
+
+        const Rect menu = noteMenuRect();
+        const int selected = pattern_.lanes[static_cast<std::size_t>(openNoteMenuLane_)].midiNote;
+
+        beginPath();
+        roundedRect(menu.x, menu.y, menu.w, menu.h, 8.0f);
+        fillColor(18, 23, 27, 248);
+        fill();
+        strokeColor(83, 96, 106, 230);
+        strokeWidth(1.0f);
+        stroke();
+        closePath();
+
+        fontSize(11.0f);
+        textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+        for (int note = 0; note < 128; ++note) {
+            const int col = note % kNoteMenuColumns;
+            const int row = note / kNoteMenuColumns;
+            const float itemX = menu.x + static_cast<float>(col) * kNoteMenuItemWidth;
+            const float itemY = menu.y + static_cast<float>(row) * kNoteMenuItemHeight;
+            if (note == selected) {
+                beginPath();
+                roundedRect(itemX + 3.0f, itemY + 3.0f, kNoteMenuItemWidth - 6.0f, kNoteMenuItemHeight - 6.0f, 5.0f);
+                fillColor(224, 117, 76, 230);
+                fill();
+                closePath();
+                fillColor(255, 249, 245, 255);
+            } else {
+                fillColor(192, 203, 209, 255);
+            }
+
+            char label[8];
+            std::snprintf(label, sizeof(label), "%d", note);
+            text(itemX + kNoteMenuItemWidth * 0.5f, itemY + kNoteMenuItemHeight * 0.5f + 1.0f, label, nullptr);
+        }
+    }
+
     void drawControls(const float x, const float y, const float w, const float h)
     {
         beginPath();
@@ -383,9 +488,10 @@ private:
         fill();
         closePath();
 
-        barsRect_ = {x + 14.0f, y + 42.0f, w - 28.0f, 44.0f};
-        resolutionRect_ = {x + 14.0f, y + 102.0f, w - 28.0f, 44.0f};
-        channelRect_ = {x + 14.0f, y + 162.0f, w - 28.0f, 44.0f};
+        presetRect_ = {x + 14.0f, y + 42.0f, w - 28.0f, 44.0f};
+        stepsRect_ = {x + 14.0f, y + 102.0f, w - 28.0f, 44.0f};
+        resolutionRect_ = {x + 14.0f, y + 162.0f, w - 28.0f, 44.0f};
+        channelRect_ = {x + 14.0f, y + 222.0f, w - 28.0f, 44.0f};
         clearRect_ = {x + 14.0f, y + h - 58.0f, w - 28.0f, 42.0f};
 
         fontSize(14.0f);
@@ -393,9 +499,11 @@ private:
         fillColor(226, 232, 235, 255);
         text(x + 14.0f, y + 16.0f, "Pattern", nullptr);
 
-        char barsValue[12];
-        std::snprintf(barsValue, sizeof(barsValue), "%d", pattern_.bars);
-        drawSelector(barsRect_, "Bars", barsValue);
+        drawSelector(presetRect_, "Preset", downspout::xoxolo::notePresetName(pattern_.notePreset));
+
+        char stepsValue[12];
+        std::snprintf(stepsValue, sizeof(stepsValue), "%d", pattern_.totalSteps);
+        drawSelector(stepsRect_, "Steps", stepsValue);
         drawSelector(resolutionRect_, "Resolution", resolutionName(pattern_.resolution));
 
         char channelValue[12];
@@ -441,12 +549,19 @@ private:
 
     void applyParameterControlsToPattern(const bool pushState)
     {
-        const int bars = clampi(static_cast<int>(std::lround(values_[downspout::xoxolo::kParamBars])), 1, 4);
+        const int steps = clampi(static_cast<int>(std::lround(values_[downspout::xoxolo::kParamSteps])),
+                                 downspout::xoxolo::kMinSteps,
+                                 downspout::xoxolo::kMaxSteps);
         const auto resolution = static_cast<downspout::xoxolo::ResolutionId>(
             clampi(static_cast<int>(std::lround(values_[downspout::xoxolo::kParamResolution])), 0, 2));
         const int channel = clampi(static_cast<int>(std::lround(values_[downspout::xoxolo::kParamChannel])), 1, 16);
+        const auto preset = static_cast<downspout::xoxolo::NotePresetId>(
+            clampi(static_cast<int>(std::lround(values_[downspout::xoxolo::kParamNotePreset])),
+                   0,
+                   static_cast<int>(downspout::xoxolo::NotePresetId::count) - 1));
+        pattern_.notePreset = downspout::xoxolo::clampNotePreset(preset);
         pattern_.channel = channel;
-        downspout::xoxolo::resizePattern(pattern_, bars, resolution, downspout::meterFromTimeSignature(4.0, 4.0));
+        downspout::xoxolo::resizePattern(pattern_, steps, resolution, downspout::meterFromTimeSignature(4.0, 4.0));
         if (pushState)
             pushPatternState();
     }
@@ -470,21 +585,15 @@ private:
         setParameter(index, next);
     }
 
-    void cycleBars(const int direction = 1)
+    void cycleSteps(const int direction = 1)
     {
-        int next = pattern_.bars;
-        for (int attempt = 0; attempt < 4; ++attempt) {
-            next += direction;
-            if (next > 4)
-                next = 1;
-            if (next < 1)
-                next = 4;
-            if (supportedCombination(next, pattern_.resolution))
-                break;
-        }
-        pattern_.bars = next;
-        downspout::xoxolo::resizePattern(pattern_, pattern_.bars, pattern_.resolution, downspout::meterFromTimeSignature(4.0, 4.0));
-        setParameter(downspout::xoxolo::kParamBars, static_cast<float>(pattern_.bars));
+        int next = pattern_.totalSteps + direction;
+        if (next > downspout::xoxolo::kMaxSteps)
+            next = downspout::xoxolo::kMinSteps;
+        if (next < downspout::xoxolo::kMinSteps)
+            next = downspout::xoxolo::kMaxSteps;
+        downspout::xoxolo::resizePattern(pattern_, next, pattern_.resolution, downspout::meterFromTimeSignature(4.0, 4.0));
+        setParameter(downspout::xoxolo::kParamSteps, static_cast<float>(pattern_.totalSteps));
         pushPatternState();
         repaint();
     }
@@ -494,13 +603,10 @@ private:
         int next = static_cast<int>(pattern_.resolution);
         for (int attempt = 0; attempt < 3; ++attempt) {
             next = (next + direction + 3) % 3;
-            const auto candidate = static_cast<downspout::xoxolo::ResolutionId>(next);
-            if (supportedCombination(pattern_.bars, candidate)) {
-                pattern_.resolution = candidate;
-                break;
-            }
+            pattern_.resolution = static_cast<downspout::xoxolo::ResolutionId>(next);
+            break;
         }
-        downspout::xoxolo::resizePattern(pattern_, pattern_.bars, pattern_.resolution, downspout::meterFromTimeSignature(4.0, 4.0));
+        downspout::xoxolo::resizePattern(pattern_, pattern_.totalSteps, pattern_.resolution, downspout::meterFromTimeSignature(4.0, 4.0));
         setParameter(downspout::xoxolo::kParamResolution, static_cast<float>(static_cast<int>(pattern_.resolution)));
         pushPatternState();
         repaint();
@@ -519,6 +625,18 @@ private:
         repaint();
     }
 
+    void cyclePreset(const int direction = 1)
+    {
+        const int count = static_cast<int>(downspout::xoxolo::NotePresetId::count);
+        int next = static_cast<int>(pattern_.notePreset);
+        next = (next + direction + count) % count;
+        const auto preset = static_cast<downspout::xoxolo::NotePresetId>(next);
+        downspout::xoxolo::applyNotePreset(pattern_, preset);
+        setParameter(downspout::xoxolo::kParamNotePreset, static_cast<float>(next));
+        pushPatternState();
+        repaint();
+    }
+
     void nudgeLaneNote(const int lane, const int direction)
     {
         if (lane < 0 || lane >= downspout::xoxolo::kLaneCount)
@@ -527,6 +645,29 @@ private:
         laneState.midiNote = clampi(laneState.midiNote + direction, 0, 127);
         pushPatternState();
         repaint();
+    }
+
+    bool handleNoteMenuClick(const float x, const float y)
+    {
+        const Rect menu = noteMenuRect();
+        if (menu.contains(x, y)) {
+            const int col = clampi(static_cast<int>((x - menu.x) / kNoteMenuItemWidth), 0, kNoteMenuColumns - 1);
+            const int row = clampi(static_cast<int>((y - menu.y) / kNoteMenuItemHeight), 0, kNoteMenuRows - 1);
+            const int note = clampi(row * kNoteMenuColumns + col, 0, 127);
+            pattern_.lanes[static_cast<std::size_t>(openNoteMenuLane_)].midiNote = note;
+            openNoteMenuLane_ = -1;
+            pushPatternState();
+            repaint();
+            return true;
+        }
+
+        if (!noteRects_[static_cast<std::size_t>(openNoteMenuLane_)].contains(x, y)) {
+            openNoteMenuLane_ = -1;
+            repaint();
+            return true;
+        }
+
+        return false;
     }
 
     void triggerPreview(const int lane)

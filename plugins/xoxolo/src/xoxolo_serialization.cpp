@@ -28,8 +28,10 @@ std::string serializePatternState(const PatternState& rawPattern)
     std::ostringstream out;
     out << "version=" << kPatternStateVersion << '\n';
     out << "bars=" << pattern.bars << '\n';
+    out << "length=" << pattern.totalSteps << '\n';
     out << "resolution=" << static_cast<int>(pattern.resolution) << '\n';
     out << "channel=" << pattern.channel << '\n';
+    out << "preset=" << static_cast<int>(pattern.notePreset) << '\n';
     out << "stepsPerBeat=" << pattern.stepsPerBeat << '\n';
     out << "stepsPerBar=" << pattern.stepsPerBar << '\n';
     out << "totalSteps=" << pattern.totalSteps << '\n';
@@ -75,6 +77,10 @@ std::optional<PatternState> deserializePatternState(const std::string& text)
             if (!parseInteger(value, intValue))
                 return std::nullopt;
             pattern.bars = intValue;
+        } else if (key == "length") {
+            if (!parseInteger(value, intValue))
+                return std::nullopt;
+            pattern.totalSteps = intValue;
         } else if (key == "resolution") {
             if (!parseInteger(value, intValue))
                 return std::nullopt;
@@ -83,6 +89,10 @@ std::optional<PatternState> deserializePatternState(const std::string& text)
             if (!parseInteger(value, intValue))
                 return std::nullopt;
             pattern.channel = intValue;
+        } else if (key == "preset") {
+            if (!parseInteger(value, intValue))
+                return std::nullopt;
+            pattern.notePreset = static_cast<NotePresetId>(intValue);
         } else if (key == "stepsPerBeat") {
             if (!parseInteger(value, intValue))
                 return std::nullopt;
@@ -110,8 +120,12 @@ std::optional<PatternState> deserializePatternState(const std::string& text)
             pattern.lanes[static_cast<std::size_t>(lane)].midiNote = note;
         } else if (key == "steps") {
             const std::size_t comma = value.find(',');
-            if (comma == std::string_view::npos)
-                return std::nullopt;
+            if (comma == std::string_view::npos) {
+                if (!parseInteger(value, intValue))
+                    return std::nullopt;
+                pattern.totalSteps = intValue;
+                continue;
+            }
             int lane = 0;
             if (!parseInteger(value.substr(0, comma), lane) || lane < 0 || lane >= kLaneCount)
                 return std::nullopt;

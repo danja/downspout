@@ -32,20 +32,6 @@ namespace {
     return resolution;
 }
 
-[[nodiscard]] int nominalStepsFor(int bars, ResolutionId resolution)
-{
-    return clampi(bars, kMinBars, kMaxBars) * 4 * stepsPerBeatForResolution(resolution);
-}
-
-[[nodiscard]] ResolutionId supportedResolutionForBars(const int bars, ResolutionId resolution)
-{
-    resolution = clampResolution(resolution);
-    while (resolution != ResolutionId::quarter && nominalStepsFor(bars, resolution) > kMaxSteps) {
-        resolution = static_cast<ResolutionId>(static_cast<int>(resolution) - 1);
-    }
-    return resolution;
-}
-
 [[nodiscard]] int stepsPerBarForMeter(const ::downspout::Meter& meter, const ResolutionId resolution)
 {
     const ::downspout::Meter sanitized = ::downspout::sanitizeMeter(meter);
@@ -170,7 +156,8 @@ void emitStep(EngineState& state,
     if (localStep < 0 || localStep >= state.pattern.totalSteps)
         return;
 
-    for (int lane = 0; lane < kLaneCount; ++lane) {
+    const int laneCount = activeLaneCountForPreset(state.pattern.notePreset);
+    for (int lane = 0; lane < laneCount; ++lane) {
         if (state.pattern.lanes[static_cast<std::size_t>(lane)].steps[static_cast<std::size_t>(localStep)] == 0)
             continue;
         emitNotePair(state,
@@ -200,28 +187,67 @@ void handlePreview(EngineState& state,
                  0,
                  state.pattern.lanes[static_cast<std::size_t>(lane)].midiNote,
                  112,
-                 controls.channel,
+                 10,
                  nframes,
                  sampleRate);
 }
 
 }  // namespace
 
+NotePresetId clampNotePreset(const NotePresetId preset)
+{
+    const int raw = static_cast<int>(preset);
+    if (raw < 0 || raw >= static_cast<int>(NotePresetId::count))
+        return NotePresetId::downspout;
+    return preset;
+}
+
+const std::array<LaneSpec, kLaneCount>& laneSpecsForPreset(const NotePresetId preset)
+{
+    switch (clampNotePreset(preset)) {
+    case NotePresetId::downspout: return kDownspoutLanes;
+    case NotePresetId::avlDrumkits: return kAvlDrumkitsLanes;
+    case NotePresetId::count: break;
+    }
+    return kDownspoutLanes;
+}
+
+int activeLaneCountForPreset(const NotePresetId preset)
+{
+    switch (clampNotePreset(preset)) {
+    case NotePresetId::downspout: return kDownspoutLaneCount;
+    case NotePresetId::avlDrumkits: return kAvlDrumkitsLaneCount;
+    case NotePresetId::count: break;
+    }
+    return kDownspoutLaneCount;
+}
+
+const char* notePresetName(const NotePresetId preset)
+{
+    switch (clampNotePreset(preset)) {
+    case NotePresetId::downspout: return "Downspout";
+    case NotePresetId::avlDrumkits: return "AVL-Drumkits";
+    case NotePresetId::count: break;
+    }
+    return "Downspout";
+}
+
 Controls clampControls(const Controls& controls)
 {
     Controls result = controls;
-    result.bars = clampi(result.bars, kMinBars, kMaxBars);
-    result.resolution = supportedResolutionForBars(result.bars, result.resolution);
+    result.steps = clampi(result.steps, kMinSteps, kMaxSteps);
+    result.resolution = clampResolution(result.resolution);
     result.channel = clampi(result.channel, 1, 16);
-    result.previewLane = clampi(result.previewLane, 0, kLaneCount - 1);
+    result.notePreset = clampNotePreset(result.notePreset);
+    result.previewLane = clampi(result.previewLane, 0, activeLaneCountForPreset(result.notePreset) - 1);
     return result;
 }
 
 PatternState makeDefaultPattern()
 {
     PatternState pattern {};
-    for (int lane = 0; lane < kLaneCount; ++lane)
-        pattern.lanes[static_cast<std::size_t>(lane)].midiNote = kDefaultLanes[static_cast<std::size_t>(lane)].note;
+    pattern.notePreset = NotePresetId::downspout;
+    applyNotePreset(pattern, pattern.notePreset);
     sanitizePattern(pattern);
     return pattern;
 }
@@ -229,12 +255,16 @@ PatternState makeDefaultPattern()
 void sanitizePattern(PatternState& pattern)
 {
     pattern.bars = clampi(pattern.bars, kMinBars, kMaxBars);
-    pattern.resolution = supportedResolutionForBars(pattern.bars, pattern.resolution);
+    pattern.resolution = clampResolution(pattern.resolution);
     pattern.channel = clampi(pattern.channel, 1, 16);
+    pattern.notePreset = clampNotePreset(pattern.notePreset);
     pattern.stepsPerBeat = stepsPerBeatForResolution(pattern.resolution);
     pattern.meter = ::downspout::sanitizeMeter(pattern.meter);
     pattern.stepsPerBar = clampi(stepsPerBarForMeter(pattern.meter, pattern.resolution), 1, kMaxSteps);
-    pattern.totalSteps = clampi(pattern.bars * pattern.stepsPerBar, 1, kMaxSteps);
+    pattern.totalSteps = clampi(pattern.totalSteps, kMinSteps, kMaxSteps);
+    pattern.bars = clampi((pattern.totalSteps + pattern.stepsPerBar - 1) / std::max(1, pattern.stepsPerBar),
+                          kMinBars,
+                          kMaxBars);
     pattern.version = kPatternStateVersion;
 
     for (int lane = 0; lane < kLaneCount; ++lane) {
@@ -245,10 +275,19 @@ void sanitizePattern(PatternState& pattern)
     }
 }
 
-void resizePattern(PatternState& pattern, const int bars, const ResolutionId resolution, const ::downspout::Meter& meter)
+void applyNotePreset(PatternState& pattern, const NotePresetId preset)
 {
-    pattern.bars = clampi(bars, kMinBars, kMaxBars);
-    pattern.resolution = supportedResolutionForBars(pattern.bars, resolution);
+    pattern.notePreset = clampNotePreset(preset);
+    const auto& lanes = laneSpecsForPreset(pattern.notePreset);
+    for (int lane = 0; lane < kLaneCount; ++lane)
+        pattern.lanes[static_cast<std::size_t>(lane)].midiNote = lanes[static_cast<std::size_t>(lane)].note;
+    sanitizePattern(pattern);
+}
+
+void resizePattern(PatternState& pattern, const int steps, const ResolutionId resolution, const ::downspout::Meter& meter)
+{
+    pattern.totalSteps = clampi(steps, kMinSteps, kMaxSteps);
+    pattern.resolution = clampResolution(resolution);
     pattern.meter = ::downspout::sanitizeMeter(meter);
     sanitizePattern(pattern);
     for (int lane = 0; lane < kLaneCount; ++lane) {
@@ -311,10 +350,11 @@ BlockResult processBlock(EngineState& state,
     Controls controls = clampControls(rawControls);
     state.controls = controls;
     state.pattern.channel = controls.channel;
+    state.pattern.notePreset = controls.notePreset;
     const ::downspout::Meter targetMeter = transport.valid
         ? ::downspout::sanitizeMeter(transport.meter)
         : ::downspout::sanitizeMeter(state.pattern.meter);
-    resizePattern(state.pattern, controls.bars, controls.resolution, targetMeter);
+    resizePattern(state.pattern, controls.steps, controls.resolution, targetMeter);
 
     processPendingNoteOffs(state, result, nframes);
 

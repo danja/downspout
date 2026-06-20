@@ -6,17 +6,19 @@ transport, and emits MIDI notes on channel 10 by default.
 
 The first version deliberately keeps the pattern small:
 
-- 11 fixed lanes;
+- 11 Downspout lanes, or 29 AVL-Drumkits lanes;
 - 16 default steps;
-- 32 visible steps maximum;
+- selectable `8..32` visible steps;
 - `1/4`, `1/8`, and `1/16` resolution;
-- one to four bars, with unsupported bar/resolution combinations avoided;
-- per-lane MIDI note selection and preview.
+- per-lane MIDI note selection and preview;
+- note-name presets for Downspout and AVL-Drumkits mappings.
 
-Pattern cells and lane note numbers are stored in explicit text state rather
-than as individual automatable parameters.
+Pattern cells, lane note numbers, and the selected note-name preset are stored
+in explicit text state rather than as individual cell parameters.
 
 ## Default MIDI map
+
+The default `Downspout` preset mirrors `drumkit.vst3`.
 
 - Kick 36
 - Clap 39
@@ -29,6 +31,11 @@ than as individual automatable parameters.
 - Bash 51
 - Cowbell 52
 - Clave 53
+
+## AVL-Drumkits preset
+
+The `AVL-Drumkits` preset exposes all 29 entries from `docs/avl-drum-map.md`,
+covering notes 36 through 64.
 
 ## Build Notes
 

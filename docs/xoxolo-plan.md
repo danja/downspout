@@ -9,23 +9,23 @@ other drum instruments, without becoming another probabilistic generator.
 Build a VST3 MIDI generator/effect with:
 
 - a clickable step grid;
-- 11 default drum lanes matching the current `drumkit` note map;
+- 11 Downspout drum lanes matching the current `drumkit` note map;
 - editable MIDI note number per lane;
+- a note-name preset selector for Downspout and AVL-Drumkits mappings;
 - a per-lane preview button;
 - host-transport-synced looping;
 - stable text state serialization for the pattern and lane note map.
 
 Default layout:
 
-- 16 columns;
-- 11 rows;
-- one bar;
+- 16 default columns;
+- 11 Downspout rows, or 29 AVL-Drumkits rows;
 - 1/16 resolution;
-- 32 columns/steps absolute maximum;
+- selectable 8-32 columns/steps;
 - MIDI channel 10;
 - fixed normal velocity around 100.
 
-Default lane map:
+Default `Downspout` lane map:
 
 | Lane | Name | MIDI note |
 | --- | --- | --- |
@@ -41,6 +41,8 @@ Default lane map:
 | 10 | Cowbell | 52 |
 | 11 | Clave | 53 |
 
+The `AVL-Drumkits` preset exposes all 29 entries from `docs/avl-drum-map.md`.
+
 ## UI
 
 The main UI should be the grid, not a configuration page.
@@ -48,9 +50,10 @@ The main UI should be the grid, not a configuration page.
 Suggested layout:
 
 - left/main area: step grid;
-- right edge of each row: lane name, note dropdown, preview button;
+- right edge of each row: preview button, then note dropdown;
 - right-side control column:
-  - Bars: `1`, `2`, `3`, `4`;
+  - Preset: `Downspout`, `AVL-Drumkits`;
+  - Steps: `8` through `32`;
   - Resolution: `1/4`, `1/8`, `1/16`;
   - Channel: `1` to `16`, default `10`;
   - Clear;
@@ -79,17 +82,14 @@ onto hidden material.
 
 Recommended first-pass mapping:
 
-- total steps = bars * steps per bar;
-- steps per bar comes from resolution and host meter;
-- default `4/4` at `1/16` gives 16 steps;
-- `2` bars at `1/16` gives 32 steps;
-- `4` bars at `1/8` gives 32 steps;
+- total steps are selected directly by the user;
+- resolution controls how quickly those steps advance against host transport;
+- default length is 16 steps;
+- any integer length from 8 through 32 is valid;
 - 32 total steps is the hard first-pass maximum.
 
-Unsupported combinations should be unavailable rather than silently clamped.
-For example, `4` bars at `1/16` would produce 64 steps, so the UI should either
-disable `1/16` while `4` bars is selected or reduce the bars selection before
-applying the change.
+The older Bars-derived shape was replaced because it prevented useful odd loop
+lengths such as 13, 15, or 27 steps.
 
 If a resize changes total step count:
 
@@ -99,8 +99,9 @@ If a resize changes total step count:
 - if shrinking and then expanding, lost cells are not restored unless an undo
   system is added later.
 
-Rows should stay fixed at 11 for the first pass. Row count controls can be added
-later if real use shows that fixed lanes are too limiting.
+Rows are preset-dependent for the first pass: 11 for Downspout and 29 for
+AVL-Drumkits. Row count controls can be added later if real use shows that
+fixed preset row sets are too limiting.
 
 ## Transport and MIDI behavior
 
@@ -146,10 +147,11 @@ Use explicit text serialization, following the existing Downspout pattern.
 State should include:
 
 - state version;
-- bars;
+- steps;
 - resolution;
 - channel;
-- lane count, fixed to 11 for v1;
+- selected note-name preset;
+- preset lane count;
 - each lane note number;
 - active cell bits for every lane and step.
 
@@ -210,7 +212,7 @@ Keep the UI responsible for:
 
 Keep the parameter surface small. Suggested first-pass parameters:
 
-- `Bars`
+- `Steps`
 - `Resolution`
 - `Channel`
 - `Clear`
@@ -236,7 +238,7 @@ Core tests should cover:
 - loop/rewind follows host position rather than internal elapsed time;
 - note-offs are emitted after note-ons;
 - preview trigger emits exactly one note-on/note-off pair;
-- serialization round-trips pattern cells, lane notes, bars, resolution, and
+- serialization round-trips pattern cells, lane notes, steps, resolution, and
   channel.
 
 Wrapper/UI behavior still needs DAW validation, but the core should be

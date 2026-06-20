@@ -25,9 +25,14 @@ struct BlockResult {
 };
 
 [[nodiscard]] Controls clampControls(const Controls& controls);
+[[nodiscard]] NotePresetId clampNotePreset(NotePresetId preset);
+[[nodiscard]] const std::array<LaneSpec, kLaneCount>& laneSpecsForPreset(NotePresetId preset);
+[[nodiscard]] int activeLaneCountForPreset(NotePresetId preset);
+[[nodiscard]] const char* notePresetName(NotePresetId preset);
 [[nodiscard]] PatternState makeDefaultPattern();
 void sanitizePattern(PatternState& pattern);
-void resizePattern(PatternState& pattern, int bars, ResolutionId resolution, const ::downspout::Meter& meter);
+void applyNotePreset(PatternState& pattern, NotePresetId preset);
+void resizePattern(PatternState& pattern, int steps, ResolutionId resolution, const ::downspout::Meter& meter);
 void setCell(PatternState& pattern, int lane, int step, bool active);
 [[nodiscard]] bool cellActive(const PatternState& pattern, int lane, int step);
 void clearPattern(PatternState& pattern);
