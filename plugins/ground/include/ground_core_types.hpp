@@ -49,6 +49,7 @@ enum class StyleId : std::int32_t {
     dub,
     jazz,
     rock,
+    descend,
     count
 };
 

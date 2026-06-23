@@ -81,7 +81,8 @@ std::string serializeControls(const Controls& controls)
            "pass_input=" + std::to_string(controls.pass_input ? 1 : 0) + "\n"
            "output_channel=" + std::to_string(controls.output_channel) + "\n"
            "action_learn=" + std::to_string(controls.action_learn) + "\n"
-           "freeze=" + std::to_string(controls.freeze ? 1 : 0) + "\n";
+           "freeze=" + std::to_string(controls.freeze ? 1 : 0) + "\n"
+           "response_mode=" + std::to_string(controls.response_mode) + "\n";
 }
 
 std::optional<Controls> deserializeControls(const std::string& text)
@@ -150,6 +151,8 @@ std::optional<Controls> deserializeControls(const std::string& text)
             controls.action_learn = intValue;
         else if (key == "freeze" && parseInteger(value, intValue))
             controls.freeze = intValue != 0;
+        else if (key == "response_mode" && parseInteger(value, intValue))
+            controls.response_mode = intValue;
         else
             return std::nullopt;
     }

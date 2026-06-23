@@ -30,6 +30,10 @@ Current status:
 - strict, Bach-like answering is available through existing controls: high
   `Regularity`, high `Counter`, and low random amounts preserve learned subject
   intervals and answer them around the dominant.
+- `Mode` chooses the response shape. `Counterpoint` keeps the original
+  monophonic counter-melody behavior. `Bass Descend` shifts the generated line
+  down into a bass register and favors consonant contrary downward motion
+  against rising input phrases.
 - the UI reports separate `MIDI In`, `MIDI Out`, and phrase-ready status so
   host routing can be checked before the learned counter-melody starts.
 

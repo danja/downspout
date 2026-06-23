@@ -229,6 +229,11 @@ int register_center(const int reg)
     }
 }
 
+int bass_register_center(const Controls& controls)
+{
+    return clampi(register_center(controls.reg) - 12, 36, 64);
+}
+
 double timing_center(const SegmentCapture& capture)
 {
     double best = -1.0;
@@ -535,6 +540,66 @@ int choose_output_note(const Controls& controls,
     return bestNote;
 }
 
+int choose_bass_descend_note(const Controls& controls,
+                             const int source,
+                             const int previousSource,
+                             const int previousOutput,
+                             const int segmentIndex,
+                             const int segmentCount,
+                             Rng& rng)
+{
+    const int center = bass_register_center(controls);
+    const int minNote = clampi(center - 16, 24, 127);
+    const int maxNote = clampi(center + 14, 0, 127);
+    const float progress = segmentCount > 1
+        ? static_cast<float>(segmentIndex) / static_cast<float>(segmentCount - 1)
+        : 0.0f;
+    const int descent = static_cast<int>(std::lround(progress * (7.0f + controls.span * 8.0f)));
+    const int target = nearest_scale_note(controls, center + 7 - descent, minNote, maxNote);
+    const int sourceDelta = clampi(source - previousSource, -12, 12);
+    const int maxLeap = 3 + static_cast<int>(std::lround(7.0f * controls.span));
+
+    double bestScore = -std::numeric_limits<double>::infinity();
+    int bestNote = target;
+    for (int note = minNote; note <= maxNote; ++note)
+    {
+        const bool inScale = scale_contains_pc(controls.scale, controls.key, note);
+        const bool chromaticApproach = !inScale && chromatic_approach_allowed(controls, note, source);
+        if (!inScale && !chromaticApproach)
+            continue;
+
+        const int outputDelta = clampi(note - previousOutput, -12, 12);
+        double score = 0.0;
+        score -= std::abs(note - target) * 0.18;
+        score -= std::abs(note - center) * 0.018;
+        score -= std::max(0, std::abs(note - previousOutput) - maxLeap) * 0.42;
+        score += consonance_score(note, source, controls.consonance) * 1.10;
+
+        if (sourceDelta > 0) {
+            score += outputDelta < 0 ? 1.10 + static_cast<double>(controls.counter) * 1.20 : -0.55;
+        } else if (sourceDelta < 0) {
+            score += outputDelta <= 0 ? 0.42 : -0.16;
+        } else {
+            score += outputDelta <= 0 ? 0.32 : -0.20;
+        }
+
+        if (outputDelta == 0 && segmentIndex > 0)
+            score -= 0.12;
+        if (chromaticApproach)
+            score += static_cast<double>(color_amount(controls)) * 0.24 - 0.22;
+
+        score += (static_cast<double>(rng.nextFloat()) - 0.5) * static_cast<double>(controls.short_random) * 0.45;
+
+        if (score > bestScore)
+        {
+            bestScore = score;
+            bestNote = note;
+        }
+    }
+
+    return bestNote;
+}
+
 void sync_primary_from_hits(PhraseStep& step)
 {
     step.active = false;
@@ -559,6 +624,7 @@ PhraseHit make_hit(const Controls& controls,
                    const int source,
                    const int previousSource,
                    const int previousOutput,
+                   const int segmentCount,
                    const int segmentIndex,
                    const int hitIndex,
                    const int velocity,
@@ -568,8 +634,10 @@ PhraseHit make_hit(const Controls& controls,
     PhraseHit hit {};
     hit.active = true;
     const int bias = hitIndex == 0 ? 0 : (hitIndex == 1 ? 2 : -2);
-    hit.note = static_cast<std::uint8_t>(
-        choose_output_note(controls, source + bias, previousSource, previousOutput, segmentIndex + hitIndex, rng));
+    const int note = controls.response_mode == RESPONSE_BASS_DESCEND
+        ? choose_bass_descend_note(controls, source + bias, previousSource, previousOutput, segmentIndex, segmentCount, rng)
+        : choose_output_note(controls, source + bias, previousSource, previousOutput, segmentIndex + hitIndex, rng);
+    hit.note = static_cast<std::uint8_t>(note);
     hit.velocity = static_cast<std::uint8_t>(clampi(static_cast<int>(std::lround(84.0 +
                                                                                   static_cast<double>(velocity - 84) *
                                                                                       static_cast<double>(controls.velocity_follow))) -
@@ -629,7 +697,7 @@ bool build_phrase_from_capture(const std::array<SegmentCapture, kMaxSegments>& c
         return false;
 
     const Controls controls = effective_controls_for_generation(rawControls);
-    const bool fugueMode = strict_fugue_mode(rawControls);
+    const bool fugueMode = rawControls.response_mode == RESPONSE_COUNTERPOINT && strict_fugue_mode(rawControls);
     clear_phrase(out);
     out.version = kPhraseStateVersion;
     out.segmentCount = segmentCount;
@@ -668,9 +736,10 @@ bool build_phrase_from_capture(const std::array<SegmentCapture, kMaxSegments>& c
             step.hits[static_cast<std::size_t>(step.hitCount++)] =
                 make_fugue_hit(controls, source, subjectRoot, i, 0, velocity, inputOnset);
         }
-        else if (rng.nextFloat() <= noteChance)
+        else if (rng.nextFloat() <= noteChance) {
             step.hits[static_cast<std::size_t>(step.hitCount++)] =
-                make_hit(controls, source, previousSource, previousOutput, i, 0, velocity, onset, rng);
+                make_hit(controls, source, previousSource, previousOutput, segmentCount, i, 0, velocity, onset, rng);
+        }
 
         const double firstExtraChance =
             fugueMode
@@ -697,6 +766,7 @@ bool build_phrase_from_capture(const std::array<SegmentCapture, kMaxSegments>& c
                                source,
                                previousSource,
                                previousOutput,
+                               segmentCount,
                                i,
                                1,
                                velocity,
@@ -710,6 +780,7 @@ bool build_phrase_from_capture(const std::array<SegmentCapture, kMaxSegments>& c
                          source,
                          previousSource,
                          previousOutput,
+                         segmentCount,
                          i,
                          2,
                          velocity,
@@ -721,7 +792,7 @@ bool build_phrase_from_capture(const std::array<SegmentCapture, kMaxSegments>& c
         {
             if (step.hitCount <= 0)
             {
-                step.hits[0] = make_hit(controls, source, previousSource, previousOutput, i, 0, velocity, onset, rng);
+                step.hits[0] = make_hit(controls, source, previousSource, previousOutput, segmentCount, i, 0, velocity, onset, rng);
                 step.hitCount = 1;
             }
             else

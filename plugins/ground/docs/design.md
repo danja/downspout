@@ -44,7 +44,9 @@ sparse low notes, longer holds, and late pickups. Jazz favors walking-bass
 quarter motion with extra approach tones. Rock appends a hard beat-start grid
 with shorter, more separated notes for riff-like movement, while the phrase
 planner still owns the larger statement, answer, climb, pedal, cadence, and
-release arc.
+release arc. Descend favors slower beat and half-bar anchors, longer legato,
+and falling diatonic degree paths so a classical/fugue/rondo form can support
+ascending melody material with a harmonizing bass descent.
 
 `Form Shape` is separate from Style. `Free` uses the generic phrase arc. Named
 shapes force their own form and phrase grid, then assign phrase roles and root

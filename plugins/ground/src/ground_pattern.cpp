@@ -674,6 +674,54 @@ void constrainFormNotesToRegisterLane(FormState& form, const Controls& controls)
         return base;
     }
 
+    if (controls.style == StyleId::descend) {
+        const int scaleSpan = kScales[static_cast<int>(controls.scale)].count;
+        const float progress = static_cast<float>(localStep) / static_cast<float>(std::max(1, phraseSteps - 1));
+        int descent = static_cast<int>(std::floor(progress * (3.0f + controls.motion * 3.0f + color * 1.5f)));
+        if (strongBeat) {
+            descent = std::max(descent, ordinal / 2);
+        }
+
+        int degree = base - descent;
+        switch (plan.role) {
+        case PhraseRoleId::statement:
+            degree = base - descent;
+            break;
+        case PhraseRoleId::answer:
+            degree = base + 2 - descent;
+            break;
+        case PhraseRoleId::climb: {
+            const int lift = static_cast<int>(std::floor((1.0f - progress) * (1.0f + controls.tension * 3.0f)));
+            degree = base + lift - std::max(0, descent - 1);
+            break;
+        }
+        case PhraseRoleId::pedal:
+            degree = rng.nextFloat() < 0.86f ? base : base - 1;
+            break;
+        case PhraseRoleId::breakdown:
+            degree = base - std::min(descent, 2);
+            break;
+        case PhraseRoleId::cadence:
+            if ((localStep + stepsPerBeat) >= phraseSteps) {
+                degree = 0;
+            } else if (ordinal >= std::max(1, eventCountEstimate - 2)) {
+                degree = std::max(0, scaleSpan - 1);
+            } else {
+                degree = base + 1 - descent;
+            }
+            break;
+        case PhraseRoleId::release:
+            degree = base - descent - std::max(0, ordinal / 3);
+            break;
+        }
+
+        if (!strongBeat && rng.nextFloat() < color * 0.25f) {
+            degree += rng.nextFloat() < 0.5f ? -1 : 1;
+        }
+
+        return clampi(degree, -scaleSpan, scaleSpan * 2);
+    }
+
     switch (plan.role) {
     case PhraseRoleId::statement:
         if (controls.style == StyleId::dub) {
@@ -906,6 +954,20 @@ void buildBarOnsets(std::array<bool, kMaxPhraseGridSteps>& onset,
             appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 14));
         }
         break;
+    case StyleId::descend:
+        appendOnset(onset, localBarStart);
+        appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 8));
+        if (motion > 0.36f || plan.role == PhraseRoleId::cadence) {
+            appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 12));
+        }
+        if (rng.nextFloat() < density * (0.20f + motion * 0.28f)) {
+            appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 4));
+        }
+        if ((plan.role == PhraseRoleId::cadence || colorAmount(controls) > 0.35f) &&
+            rng.nextFloat() < density * 0.45f) {
+            appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, 14));
+        }
+        break;
     default:
         break;
     }
@@ -954,6 +1016,7 @@ void buildBarOnsets(std::array<bool, kMaxPhraseGridSteps>& onset,
     case StyleId::dub: desired = 10; break;
     case StyleId::jazz: desired = 4; break;
     case StyleId::rock: desired = 4; break;
+    case StyleId::descend: desired = 8; break;
     default: break;
     }
 
@@ -1011,6 +1074,7 @@ void buildBarOnsets(std::array<bool, kMaxPhraseGridSteps>& onset,
     case StyleId::dub: legato += 0.22f; break;
     case StyleId::jazz: legato -= 0.02f; break;
     case StyleId::rock: legato -= 0.16f; break;
+    case StyleId::descend: legato += 0.18f; break;
     default: break;
     }
 

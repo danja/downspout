@@ -183,6 +183,7 @@ void testSerializationRoundTrip()
     controls.output_channel = 5;
     controls.action_learn = 7;
     controls.freeze = true;
+    controls.response_mode = RESPONSE_BASS_DESCEND;
 
     const auto controlsRoundTrip = deserializeControls(serializeControls(controls));
     assert(controlsRoundTrip.has_value());
@@ -196,6 +197,7 @@ void testSerializationRoundTrip()
     assert(!controlsRoundTrip->pass_input);
     assert(controlsRoundTrip->output_channel == 5);
     assert(controlsRoundTrip->freeze);
+    assert(controlsRoundTrip->response_mode == RESPONSE_BASS_DESCEND);
 
     PhraseState phrase;
     phrase.segmentCount = 2;
@@ -416,6 +418,56 @@ void testStrictCounterpointAnswersSubjectAtDominant()
     assert(firstActiveStepNote(state.playbackPhrase, 3) == 72);
 }
 
+void testBassDescendModeAnswersAscendingInputBelowIt()
+{
+    EngineState state;
+    activate(state);
+
+    Controls controls = defaultControls();
+    controls.key = 0;
+    controls.scale = SCALE_NAT_MINOR;
+    controls.response_mode = RESPONSE_BASS_DESCEND;
+    controls.cycle_bars = 1;
+    controls.granularity = GRANULARITY_BEAT;
+    controls.pass_input = false;
+    controls.density = 1.0f;
+    controls.counter = 1.0f;
+    controls.follow = 0.0f;
+    controls.short_random = 0.0f;
+    controls.long_random = 0.0f;
+    controls.embellish = 0.0f;
+    controls.reg = REGISTER_MID;
+    controls.span = 0.80f;
+
+    constexpr std::uint32_t frameCount = 96000;
+    const std::array<InputMidiEvent, 8> ascending = {{
+        makeEvent(0, 0x90, 60, 100),
+        makeEvent(12000, 0x80, 60, 0),
+        makeEvent(24000, 0x90, 62, 100),
+        makeEvent(36000, 0x80, 62, 0),
+        makeEvent(48000, 0x90, 64, 100),
+        makeEvent(60000, 0x80, 64, 0),
+        makeEvent(72000, 0x90, 65, 100),
+        makeEvent(84000, 0x80, 65, 0),
+    }};
+
+    const BlockResult learned =
+        processBlock(state, controls, runningTransport(0.0), frameCount, 48000.0, ascending.data(), ascending.size());
+    assert(learned.ready);
+    assert(state.playbackPhrase.ready);
+    assert(state.playbackPhrase.segmentCount == 4);
+
+    const int first = firstActiveStepNote(state.playbackPhrase, 0);
+    const int second = firstActiveStepNote(state.playbackPhrase, 1);
+    const int third = firstActiveStepNote(state.playbackPhrase, 2);
+    const int fourth = firstActiveStepNote(state.playbackPhrase, 3);
+    assert(first >= 0 && second >= 0 && third >= 0 && fourth >= 0);
+    assert(first < 60);
+    assert(second <= first);
+    assert(third <= second);
+    assert(fourth <= third);
+}
+
 void testNewModalScalesConstrainGeneratedNotes()
 {
     struct Case {
@@ -553,6 +605,7 @@ int main()
     testLearnsIncomingPatternAcrossHostBlocks();
     testDeterministicForSameInput();
     testStrictCounterpointAnswersSubjectAtDominant();
+    testBassDescendModeAnswersAscendingInputBelowIt();
     testScaleIdsStayAppendOnly();
     testNewModalScalesConstrainGeneratedNotes();
     testEmbellishCanOutnumberInputNotes();

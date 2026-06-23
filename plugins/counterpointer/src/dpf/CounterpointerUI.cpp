@@ -40,6 +40,7 @@ enum ParameterIndex : uint32_t {
     kParamStatusInput,
     kParamStatusOutput,
     kParamColor,
+    kParamResponseMode,
     kParameterCount
 };
 
@@ -117,6 +118,10 @@ constexpr const char* kRegisterNames[] = {
     "Low", "Mid", "High"
 };
 
+constexpr const char* kResponseModeNames[] = {
+    "Counterpoint", "Bass Descend"
+};
+
 constexpr const char* kToggleNames[] = {
     "Off", "On"
 };
@@ -135,6 +140,7 @@ constexpr SelectorDef kSelectors[] = {
     {kParamScale, "Scale", kScaleNames, downspout::counterpointer::SCALE_COUNT},
     {kParamCycleBars, "Bars", kCycleBarNames, 8},
     {kParamGranularity, "Grid", kGranularityNames, 3},
+    {kParamResponseMode, "Mode", kResponseModeNames, 2},
     {kParamRegister, "Register", kRegisterNames, 3},
     {kParamPassInput, "Pass", kToggleNames, 2},
     {kParamOutputChannel, "Channel", kOutputChannelNames, 17},
@@ -207,6 +213,7 @@ public:
         values_[kParamSyncopation] = 0.25f;
         values_[kParamConsonance] = 0.75f;
         values_[kParamColor] = 0.0f;
+        values_[kParamResponseMode] = 0.0f;
         values_[kParamEmbellish] = 0.25f;
         values_[kParamRegularity] = 0.65f;
         values_[kParamRegister] = 1.0f;

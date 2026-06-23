@@ -30,6 +30,10 @@ transport-synced cycle.
   effective short/long randomness and timing looseness; high values suppress
   mutation and favor more predictable timing and pitch choices.
 - `register`, `span`, `gate`, `velocity_follow`: output voice shaping.
+- `response_mode`: selects the output model. `Counterpoint` is the original
+  learned counter-melody path. `Bass Descend` keeps the same capture and timing
+  model but scores notes around a lower center, a falling cycle target, and
+  stronger contrary motion when the source rises.
 - `pass_input`, `output_channel`: wrapper-facing MIDI routing behavior.
 
 The wrapper exposes live `MIDI In` and `MIDI Out` status parameters in addition
@@ -60,6 +64,12 @@ core enters a stricter fugal answering path. The learned input becomes the
 subject, the generated line answers it around the dominant, and high color on
 Jazz-capable scales can invert the subject intervals. This uses the existing
 controls rather than adding a separate genre selector to Counterpointer.
+
+`Bass Descend` bypasses that strict fugal path and keeps the generated line
+low. It uses the selected key/scale for pitch vocabulary, scores consonance
+against the captured source note, and pulls each segment toward a descending
+cycle target. Rising source motion receives extra contrary-motion weight, which
+is the intended "melody up, bass down" behavior.
 
 ## Implementation staging
 

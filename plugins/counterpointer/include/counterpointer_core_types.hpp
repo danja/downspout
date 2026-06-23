@@ -53,6 +53,12 @@ enum RegisterMode {
     REGISTER_HIGH
 };
 
+enum ResponseMode {
+    RESPONSE_COUNTERPOINT = 0,
+    RESPONSE_BASS_DESCEND,
+    RESPONSE_COUNT
+};
+
 struct Controls {
     int key = 0;
     int scale = SCALE_NAT_MINOR;
@@ -77,6 +83,7 @@ struct Controls {
     int output_channel = 0;
     int action_learn = 0;
     bool freeze = false;
+    int response_mode = RESPONSE_COUNTERPOINT;
 };
 
 struct SegmentCapture {
@@ -188,6 +195,7 @@ using ScheduledMidiEvent = MidiMessage;
     controls.velocity_follow = clampf(controls.velocity_follow, 0.0f, 1.0f);
     controls.output_channel = clampi(controls.output_channel, 0, 16);
     controls.action_learn = clampi(controls.action_learn, 0, 1048576);
+    controls.response_mode = clampi(controls.response_mode, 0, RESPONSE_COUNT - 1);
     return controls;
 }
 
@@ -210,7 +218,8 @@ using ScheduledMidiEvent = MidiMessage;
            (a.regularity - b.regularity < 0.0001f && a.regularity - b.regularity > -0.0001f) &&
            (a.span - b.span < 0.0001f && a.span - b.span > -0.0001f) &&
            (a.gate - b.gate < 0.0001f && a.gate - b.gate > -0.0001f) &&
-           (a.velocity_follow - b.velocity_follow < 0.0001f && a.velocity_follow - b.velocity_follow > -0.0001f);
+           (a.velocity_follow - b.velocity_follow < 0.0001f && a.velocity_follow - b.velocity_follow > -0.0001f) &&
+           a.response_mode == b.response_mode;
 }
 
 }  // namespace downspout::counterpointer

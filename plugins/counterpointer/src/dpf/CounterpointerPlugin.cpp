@@ -38,6 +38,7 @@ enum ParameterIndex : uint32_t {
     kParamStatusInput,
     kParamStatusOutput,
     kParamColor,
+    kParamResponseMode,
     kParameterCount
 };
 
@@ -109,6 +110,11 @@ void initPercentParameter(Parameter& parameter, const char* name, const char* sy
     parameter.ranges.max = 1.0f;
     parameter.ranges.def = def;
 }
+
+ParameterEnumerationValue kResponseModeEnumValues[] = {
+    {0.0f, "Counterpoint"},
+    {1.0f, "Bass Descend"},
+};
 
 }  // namespace
 
@@ -206,6 +212,18 @@ protected:
         case kParamSyncopation: initPercentParameter(parameter, "Syncopation", "syncopation", 0.25f); break;
         case kParamConsonance: initPercentParameter(parameter, "Consonance", "consonance", 0.75f); break;
         case kParamColor: initPercentParameter(parameter, "Color", "color", 0.0f); break;
+        case kParamResponseMode:
+            parameter.name = "Response Mode";
+            parameter.symbol = "response_mode";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = static_cast<float>(downspout::counterpointer::RESPONSE_COUNT - 1);
+            parameter.ranges.def = static_cast<float>(downspout::counterpointer::RESPONSE_COUNTERPOINT);
+            parameter.enumValues.count = static_cast<uint8_t>(std::size(kResponseModeEnumValues));
+            parameter.enumValues.restrictedMode = true;
+            parameter.enumValues.values = kResponseModeEnumValues;
+            parameter.enumValues.deleteLater = false;
+            break;
         case kParamEmbellish: initPercentParameter(parameter, "Embellish", "embellish", 0.25f); break;
         case kParamRegularity: initPercentParameter(parameter, "Regularity", "regularity", 0.65f); break;
         case kParamRegister:
@@ -323,6 +341,7 @@ protected:
         case kParamSyncopation: return controls_.syncopation;
         case kParamConsonance: return controls_.consonance;
         case kParamColor: return controls_.color;
+        case kParamResponseMode: return static_cast<float>(controls_.response_mode);
         case kParamEmbellish: return controls_.embellish;
         case kParamRegularity: return controls_.regularity;
         case kParamRegister: return static_cast<float>(controls_.reg);
@@ -358,6 +377,7 @@ protected:
         case kParamSyncopation: controls_.syncopation = value; break;
         case kParamConsonance: controls_.consonance = value; break;
         case kParamColor: controls_.color = value; break;
+        case kParamResponseMode: controls_.response_mode = static_cast<int>(value); break;
         case kParamEmbellish: controls_.embellish = value; break;
         case kParamRegularity: controls_.regularity = value; break;
         case kParamRegister: controls_.reg = static_cast<int>(value); break;
