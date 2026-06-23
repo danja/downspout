@@ -90,7 +90,7 @@ constexpr const char* kGenreNames[] = {
 };
 
 constexpr const char* kStyleNames[] = {
-    "Auto", "Straight", "Reel", "Waltz", "Jig", "Slip Jig"
+    "Auto", "Straight", "Reel", "Waltz", "Jig", "Slip Jig", "Diddley"
 };
 
 constexpr const char* kKitMapNames[] = {
@@ -112,7 +112,7 @@ constexpr const char* kChannelNames[] = {
 
 constexpr std::array<SelectorDef, 6> kSelectors = {{
     {kParamGenre, "Genre", kGenreNames, 14, 0},
-    {kParamStyleMode, "Style", kStyleNames, 6, 0},
+    {kParamStyleMode, "Style", kStyleNames, 7, 0},
     {kParamKitMap, "Kit Map", kKitMapNames, 2, 0},
     {kParamResolution, "Resolution", kResolutionNames, 4, 0},
     {kParamBars, "Bars", kBarNames, 4, 1},
@@ -560,12 +560,15 @@ private:
     {
         const Rect base = selectorRects_[selectorIndex];
         const SelectorDef& def = kSelectors[selectorIndex];
+        const int columns = selectorMenuColumnCount(def);
+        const int rows = selectorMenuRowCount(def);
         const Rect menuRect = {
             base.x,
             base.y + base.h + 6.0f,
             base.w,
-            static_cast<float>(def.count) * kSelectorItemHeight
+            static_cast<float>(rows) * kSelectorItemHeight
         };
+        const float columnW = menuRect.w / static_cast<float>(columns);
 
         beginPath();
         roundedRect(menuRect.x, menuRect.y, menuRect.w, menuRect.h, 16.0f);
@@ -576,10 +579,13 @@ private:
         const int selected = clampi(static_cast<int>(std::lround(values_[def.index])) - def.valueOffset, 0, def.count - 1);
 
         for (int i = 0; i < def.count; ++i) {
-            const float rowY = menuRect.y + static_cast<float>(i) * kSelectorItemHeight;
+            const int col = i / rows;
+            const int row = i % rows;
+            const float itemX = menuRect.x + static_cast<float>(col) * columnW;
+            const float rowY = menuRect.y + static_cast<float>(row) * kSelectorItemHeight;
             if (i == selected) {
                 beginPath();
-                roundedRect(menuRect.x + 4.0f, rowY + 3.0f, menuRect.w - 8.0f, kSelectorItemHeight - 6.0f, 10.0f);
+                roundedRect(itemX + 4.0f, rowY + 3.0f, columnW - 8.0f, kSelectorItemHeight - 6.0f, 10.0f);
                 fillColor(74, 103, 114, 255);
                 fill();
                 closePath();
@@ -588,7 +594,7 @@ private:
             fontSize(13.0f);
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
             fillColor(237, 240, 242, 255);
-            text(menuRect.x + 14.0f, rowY + kSelectorItemHeight * 0.5f + 1.0f, def.items[i], nullptr);
+            text(itemX + 14.0f, rowY + kSelectorItemHeight * 0.5f + 1.0f, def.items[i], nullptr);
         }
     }
 
@@ -602,16 +608,35 @@ private:
         }
 
         const SelectorDef& def = kSelectors[openSelector_];
-        const Rect menuRect = {base.x, base.y + base.h + 6.0f, base.w, static_cast<float>(def.count) * kSelectorItemHeight};
+        const int columns = selectorMenuColumnCount(def);
+        const int rows = selectorMenuRowCount(def);
+        const Rect menuRect = {base.x, base.y + base.h + 6.0f, base.w, static_cast<float>(rows) * kSelectorItemHeight};
         if (!menuRect.contains(x, y)) {
             return false;
         }
 
-        const int item = clampi(static_cast<int>((y - menuRect.y) / kSelectorItemHeight), 0, def.count - 1);
+        const float columnW = menuRect.w / static_cast<float>(columns);
+        const int col = clampi(static_cast<int>((x - menuRect.x) / columnW), 0, columns - 1);
+        const int row = clampi(static_cast<int>((y - menuRect.y) / kSelectorItemHeight), 0, rows - 1);
+        const int item = col * rows + row;
+        if (item >= def.count) {
+            return true;
+        }
         setParameter(def.index, static_cast<float>(item + def.valueOffset));
         openSelector_ = -1;
         repaint();
         return true;
+    }
+
+    [[nodiscard]] int selectorMenuColumnCount(const SelectorDef& def) const
+    {
+        return def.count > 6 ? 2 : 1;
+    }
+
+    [[nodiscard]] int selectorMenuRowCount(const SelectorDef& def) const
+    {
+        const int columns = selectorMenuColumnCount(def);
+        return (def.count + columns - 1) / columns;
     }
 
     void updateSliderFromPosition(const int sliderIndex, const float mouseX)

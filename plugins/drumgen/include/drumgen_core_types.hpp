@@ -56,6 +56,7 @@ enum class StyleModeId : std::int32_t {
     waltz,
     jig,
     slipJig,
+    diddley,
     count
 };
 

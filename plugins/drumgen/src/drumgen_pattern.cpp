@@ -178,6 +178,9 @@ struct StylePulseInfo {
     case StyleModeId::slipJig:
         pushBeat(count, beatForFraction(normalized, 1, 3));
         break;
+    case StyleModeId::diddley:
+        pushBeat(count, beatForFraction(normalized, 3, 4));
+        break;
     case StyleModeId::autoMode:
     case StyleModeId::count:
     default:
@@ -253,6 +256,16 @@ struct StylePulseInfo {
                                   ((clampedBeat + 1) % normalized.numerator) == 0);
         return info;
     }
+
+    case StyleModeId::diddley:
+        info.pulseCount = 5;
+        info.pulseIndex = beatForFraction(normalized, 3, 4) <= clampedBeat ? 2
+            : (beatForFraction(normalized, 1, 2) <= clampedBeat ? 1 : 0);
+        info.pulseStart = beatStart && (clampedBeat == 0 ||
+                                        clampedBeat == beatForFraction(normalized, 1, 2) ||
+                                        clampedBeat == beatForFraction(normalized, 3, 4));
+        info.pickup = lateSub;
+        return info;
 
     case StyleModeId::autoMode:
     case StyleModeId::count:
@@ -621,6 +634,10 @@ struct StylePulseInfo {
 
     switch (lane) {
     case LANE_KICK:
+        if (controls.styleMode == StyleModeId::diddley) {
+            if (beatStart && primaryPulse) return 0.94f;
+            if (role == StepRole::pickup) return 0.18f + 0.22f * kick;
+        }
         if (pulse.pulseStart && primaryPulse) return 0.96f;
         if (controls.styleMode == StyleModeId::reel && beatStart && role == StepRole::secondary) return 0.18f + 0.16f * kick;
         if ((controls.styleMode == StyleModeId::waltz ||
@@ -636,6 +653,10 @@ struct StylePulseInfo {
         break;
 
     case LANE_SNARE:
+        if (controls.styleMode == StyleModeId::diddley) {
+            if (pulse.pulseStart && finalPulse) return 0.62f + 0.22f * backbeat;
+            if (role == StepRole::pickup) return 0.10f + 0.16f * controls.variation;
+        }
         if (controls.styleMode == StyleModeId::reel && beatStart && role == StepRole::secondary) {
             return 0.76f + 0.18f * backbeat;
         }
@@ -655,6 +676,9 @@ struct StylePulseInfo {
         break;
 
     case LANE_CLAP:
+        if (controls.styleMode == StyleModeId::diddley) {
+            if (pulse.pulseStart && finalPulse) return 0.18f + 0.20f * backbeat;
+        }
         if (controls.styleMode == StyleModeId::reel && beatStart && role == StepRole::secondary) {
             return 0.20f + 0.22f * backbeat;
         }
@@ -679,6 +703,10 @@ struct StylePulseInfo {
         break;
 
     case LANE_CLOSED_HAT:
+        if (controls.styleMode == StyleModeId::diddley) {
+            if (beatStart || offbeat) return 0.56f + 0.22f * hat;
+            return 0.08f + 0.12f * hat * controls.variation;
+        }
         if (beatStart) return pulse.pulseStart ? 0.82f + 0.16f * hat : 0.66f + 0.18f * hat;
         if (role == StepRole::pickup || offbeat) return 0.18f + 0.18f * hat;
         return 0.08f + 0.14f * hat * controls.variation;
@@ -705,11 +733,17 @@ struct StylePulseInfo {
         break;
 
     case LANE_COWBELL:
+        if (controls.styleMode == StyleModeId::diddley) {
+            if (pulse.pulseStart || role == StepRole::pickup) return 0.24f + 0.32f * perc;
+        }
         if (pulse.pulseStart && !primaryPulse) return 0.14f + 0.20f * perc;
         if (role == StepRole::pickup) return 0.16f + 0.18f * perc;
         break;
 
     case LANE_CLAVE:
+        if (controls.styleMode == StyleModeId::diddley) {
+            if (pulse.pulseStart || role == StepRole::pickup) return 0.34f + 0.36f * perc;
+        }
         if (pulse.pulseStart && (secondPulse || finalPulse)) return 0.14f + 0.18f * perc;
         if (role == StepRole::pickup) return 0.16f + 0.18f * perc;
         break;
@@ -1059,6 +1093,17 @@ struct StylePulseInfo {
         case LANE_CLAVE: return 0.94f;
         default: return 0.92f;
         }
+    case StyleModeId::diddley:
+        switch (lane) {
+        case LANE_KICK: return 0.84f;
+        case LANE_SNARE:
+        case LANE_CLAP: return 0.72f;
+        case LANE_CLOSED_HAT:
+        case LANE_OPEN_HAT: return 0.74f;
+        case LANE_COWBELL:
+        case LANE_CLAVE: return 1.34f;
+        default: return 0.78f;
+        }
     case StyleModeId::straight:
     case StyleModeId::autoMode:
     case StyleModeId::count:
@@ -1264,6 +1309,11 @@ struct StylePulseInfo {
             velocity += 4;
         }
 
+        if (controls.styleMode == StyleModeId::diddley && (lane == LANE_CLAVE || lane == LANE_COWBELL)) {
+            velocity += 10;
+            flags |= STEP_FLAG_ACCENT;
+        }
+
         if ((controls.styleMode == StyleModeId::jig || controls.styleMode == StyleModeId::slipJig) &&
             pulse.pulseStart &&
             pulse.pulseIndex > 0 &&
@@ -1467,6 +1517,57 @@ void applyGenreSignatureToBar(PatternState& pattern, const Controls& controls, c
 
     default:
         break;
+    }
+}
+
+[[nodiscard]] bool diddleyAccentSlot(const int phraseBar, const int slot) {
+    if ((phraseBar % 2) == 0) {
+        return slot == 0 || slot == 6 || slot == 12;
+    }
+    return slot == 4 || slot == 8;
+}
+
+void applyDiddleyStyleOverlayToBar(PatternState& pattern, const Controls& controls, const int bar) {
+    if (controls.styleMode != StyleModeId::diddley ||
+        pattern.stepsPerBar <= 0 ||
+        pattern.totalSteps <= 0 ||
+        bar < 0 ||
+        bar >= pattern.bars) {
+        return;
+    }
+
+    const int barStart = bar * pattern.stepsPerBar;
+    const int phraseBar = bar % 2;
+    for (int slot = 0; slot < 16; slot += 2) {
+        setSlotHit(pattern,
+                   barStart,
+                   LANE_CLOSED_HAT,
+                   slot,
+                   60 + ((slot % 4) == 0 ? 8 : 0),
+                   0);
+    }
+
+    for (int slot = 0; slot < 16; ++slot) {
+        if (!diddleyAccentSlot(phraseBar, slot)) {
+            continue;
+        }
+
+        const bool firstAccent = (phraseBar == 0 && slot == 0);
+        const bool tailAccent = (phraseBar == 1 && slot == 8) || (phraseBar == 0 && slot == 12);
+        const int accentVelocity = firstAccent ? 118 : (tailAccent ? 112 : 106);
+        setSlotHit(pattern, barStart, LANE_CLAVE, slot, accentVelocity, STEP_FLAG_ACCENT);
+        if (firstAccent || (phraseBar == 0 && slot == 12) || (phraseBar == 1 && slot == 8)) {
+            setSlotHit(pattern, barStart, LANE_KICK, slot, firstAccent ? 116 : 102, firstAccent ? STEP_FLAG_ACCENT : 0);
+        }
+        if ((phraseBar == 0 && slot == 6) || (phraseBar == 1 && slot == 4)) {
+            setSlotHit(pattern, barStart, LANE_SNARE, slot, 96, 0);
+        }
+    }
+}
+
+void applyDiddleyStyleOverlay(PatternState& pattern, const Controls& controls) {
+    for (int bar = 0; bar < pattern.bars; ++bar) {
+        applyDiddleyStyleOverlayToBar(pattern, controls, bar);
     }
 }
 
@@ -1856,7 +1957,7 @@ void cleanupPattern(PatternState& pattern, const Controls& controls) {
             }
         }
 
-        const bool needsBackbeat = controls.backbeatAmt > 0.30f;
+        const bool needsBackbeat = controls.backbeatAmt > 0.30f && controls.styleMode != StyleModeId::diddley;
         if (needsBackbeat) {
             std::array<int, ::downspout::kMaxMeterGroups> backbeatBeats {};
             const int backbeatCount = collectAccentBeatsForStyle(controls.styleMode, pattern.meter, backbeatBeats);
@@ -1977,6 +2078,7 @@ void regeneratePattern(PatternState& pattern,
                          fillSeedForSerial(controls, nextSerial) ^
                          0x6D2B79F5u);
     applyGenreSignature(nextPattern, controls);
+    applyDiddleyStyleOverlay(nextPattern, controls);
     cleanupPattern(nextPattern, controls);
 
     nextPattern.version = kPatternStateVersion;
@@ -2023,6 +2125,7 @@ void refreshBar(PatternState& pattern,
     }
 
     applyGenreSignatureToBar(nextPattern, controls, clampedBar);
+    applyDiddleyStyleOverlay(nextPattern, controls);
     cleanupPattern(nextPattern, controls);
     pattern = nextPattern;
 }
@@ -2065,6 +2168,7 @@ void refreshFillBar(PatternState& pattern,
                               (static_cast<std::uint32_t>(clampedBar + 1) * 0xA24BAED5u),
                           clampedBar);
     applyGenreSignatureToBar(nextPattern, controls, clampedBar);
+    applyDiddleyStyleOverlayToBar(nextPattern, controls, clampedBar);
     PatternState cleanedPattern = nextPattern;
     cleanupPattern(cleanedPattern, controls);
 

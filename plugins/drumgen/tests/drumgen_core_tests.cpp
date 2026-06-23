@@ -298,6 +298,44 @@ void testExplicitStyleModesChangePatternShape() {
     assert(patternsDiffer(jig, straight));
 }
 
+void testDiddleyStylePinsShaveAndHaircutPattern() {
+    assert(static_cast<int>(StyleModeId::slipJig) == 5);
+    assert(static_cast<int>(StyleModeId::diddley) == 6);
+    assert(static_cast<int>(StyleModeId::count) == 7);
+
+    Controls controls;
+    controls.seed = 6161u;
+    controls.genre = GenreId::rock;
+    controls.styleMode = StyleModeId::diddley;
+    controls.bars = 2;
+    controls.resolution = ResolutionId::sixteenth;
+    controls.density = 0.0f;
+    controls.variation = 0.0f;
+    controls.fill = 0.0f;
+    controls.backbeatAmt = 0.0f;
+    controls.hatAmt = 0.0f;
+    controls.auxAmt = 1.0f;
+
+    PatternState pattern;
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, false);
+
+    assert(pattern.stepsPerBar == 16);
+    assert(hasHit(pattern, LaneId::clave, 0));
+    assert(hasHit(pattern, LaneId::clave, 6));
+    assert(hasHit(pattern, LaneId::clave, 12));
+    assert(hasHit(pattern, LaneId::clave, 20));
+    assert(hasHit(pattern, LaneId::clave, 24));
+    assert(hasHit(pattern, LaneId::kick, 0));
+    assert(hasHit(pattern, LaneId::kick, 12));
+    assert(hasHit(pattern, LaneId::kick, 24));
+    assert(hasHit(pattern, LaneId::snare, 6));
+    assert(hasHit(pattern, LaneId::snare, 20));
+
+    const auto roundTrip = deserializeControls(serializeControls(controls));
+    assert(roundTrip.has_value());
+    assert(roundTrip->styleMode == StyleModeId::diddley);
+}
+
 void testAmenGenrePinsBreakSignature() {
     Controls controls;
     controls.seed = 616u;
@@ -803,6 +841,7 @@ int main() {
     testQuarterResolutionUsesOneStepPerBeat();
     testLowestDensityIsSparse();
     testExplicitStyleModesChangePatternShape();
+    testDiddleyStylePinsShaveAndHaircutPattern();
     testAmenGenrePinsBreakSignature();
     testHipHopGenrePinsSparseBackbeat();
     testJazzGenrePinsSwingRideShape();

@@ -28,8 +28,10 @@ Implementation status:
 - the core now follows shared meter input beyond bar length alone: compound and
   triple meters get dedicated pulse-aware anchor and fill behavior;
 - the wrapper now exposes explicit `Auto`, `Straight`, `Reel`, `Waltz`, `Jig`,
-  and `Slip Jig` style modes so users can force rhythmic vocabulary instead of
-  relying only on meter-derived auto behavior;
+  `Slip Jig`, and `Diddley` style modes so users can force rhythmic vocabulary
+  instead of relying only on meter-derived auto behavior. `Diddley` pins a
+  two-bar "shave and a haircut, two bits" 3-2 accent shape with clave,
+  kick/snare reinforcement, and light hats;
 - genres now include Breakbeat, Amen, Jungle, Hip Hop, Jazz, and Fugue
   alongside the earlier Rock, Disco, Shuffle, Electro, Dub, Motorik, Bossa, and
   Afro options. Fugue intentionally produces a sparse pulse rather than a full
