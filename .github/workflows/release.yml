@@ -13,16 +13,33 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  linux-vst3:
-    name: Linux VST3 Release
-    runs-on: ubuntu-24.04
+  build-vst3:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x86_64 VST3 Release
+            runner: ubuntu-24.04
+            platform: linux-x86_64
+          - name: macOS arm64 VST3 Release
+            runner: macos-15
+            platform: macos-arm64
+          - name: macOS x86_64 VST3 Release
+            runner: macos-15-intel
+            platform: macos-x86_64
+          - name: Windows x86_64 VST3 Release
+            runner: windows-2022
+            platform: windows-x86_64
 
     steps:
       - name: Check out source
         uses: actions/checkout@v4
 
       - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -37,8 +54,15 @@ jobs:
             libxrandr-dev \
             libxrender-dev
 
+      - name: Show toolchain versions
+        shell: bash
+        run: |
+          cmake --version
+          ctest --version
+
       - name: Resolve release version
         id: version
+        shell: bash
         run: |
           version="${GITHUB_REF_NAME#v}"
           if [ -z "$version" ]; then
@@ -48,30 +72,64 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Build, test, and package
-        id: package
+        shell: bash
         env:
+          DOWNSPOUT_BUILD_DIR: build/release-${{ matrix.platform }}
           DOWNSPOUT_DIST_DIR: ${{ runner.temp }}/downspout-dist
-          DOWNSPOUT_RELEASE_PLATFORM: linux-x86_64
+          DOWNSPOUT_RELEASE_PLATFORM: ${{ matrix.platform }}
           DOWNSPOUT_VERSION: ${{ steps.version.outputs.version }}
         run: bash scripts/package-release.sh
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: downspout-${{ steps.version.outputs.version }}-linux-x86_64-vst3
+          name: downspout-${{ steps.version.outputs.version }}-${{ matrix.platform }}-vst3
           path: ${{ runner.temp }}/downspout-dist/*
           if-no-files-found: error
           retention-days: 30
 
+  publish:
+    name: Publish GitHub Release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs: build-vst3
+
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/release-assets
+          pattern: downspout-*-vst3
+          merge-multiple: true
+
       - name: Create GitHub release
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          ARTIFACT: ${{ steps.package.outputs.artifact }}
-          CHECKSUM: ${{ steps.package.outputs.checksum }}
+          ASSET_DIR: ${{ runner.temp }}/release-assets
         run: |
+          mapfile -t assets < <(find "$ASSET_DIR" -type f \( -name '*.zip' -o -name '*.sha256' \) | sort)
+          if [ "${#assets[@]}" -ne 8 ]; then
+            echo "Expected 8 release assets, found ${#assets[@]}:" >&2
+            printf '%s\n' "${assets[@]}" >&2
+            exit 1
+          fi
+
+          version="${GITHUB_REF_NAME#v}"
+          if [ -z "$version" ]; then
+            echo "Unable to derive version from tag: $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+
           notes_file="$RUNNER_TEMP/release-notes.md"
           {
-            echo "Linux x86_64 VST3 release build for ${GITHUB_REF_NAME}."
+            echo "VST3 release builds for ${GITHUB_REF_NAME}."
+            echo
+            echo "Release assets:"
+            echo "- downspout-${version}-linux-x86_64-vst3.zip"
+            echo "- downspout-${version}-macos-arm64-vst3.zip"
+            echo "- downspout-${version}-macos-x86_64-vst3.zip"
+            echo "- downspout-${version}-windows-x86_64-vst3.zip"
             echo
             echo "Included plugin bundles:"
             echo "- bassgen.vst3"
@@ -98,12 +156,11 @@ jobs:
             echo "- lifeform.vst3"
             echo "- xoxolo.vst3"
             echo
-            echo "The .sha256 asset contains the checksum for the zip."
+            echo "Each .sha256 asset contains the checksum for the matching zip."
           } > "$notes_file"
 
           gh release create "$GITHUB_REF_NAME" \
-            "$ARTIFACT" \
-            "$CHECKSUM" \
+            "${assets[@]}" \
             --verify-tag \
             --title "downspout $GITHUB_REF_NAME" \
             --notes-file "$notes_file"

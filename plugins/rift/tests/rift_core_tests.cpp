@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 
 using namespace downspout::rift;
@@ -540,7 +541,8 @@ void writeU32(std::ofstream& file, const std::uint32_t value) {
 }
 
 void testLoadWavSampleSource() {
-    const char* path = "/tmp/downspout_rift_loader_test.wav";
+    const std::filesystem::path path =
+        std::filesystem::temp_directory_path() / "downspout_rift_loader_test.wav";
     {
         std::ofstream file(path, std::ios::binary);
         assert(file);
@@ -570,7 +572,7 @@ void testLoadWavSampleSource() {
         writeU16(file, static_cast<std::uint16_t>(-16384));
     }
 
-    const SampleLoadResult loaded = loadWavSampleSource(path, 4.0);
+    const SampleLoadResult loaded = loadWavSampleSource(path.string().c_str(), 4.0);
     assert(loaded.error.empty());
     assert(isSampleSourceUsable(loaded.source));
     assert(loaded.source.channelCount == 1u);
@@ -581,7 +583,7 @@ void testLoadWavSampleSource() {
     assert(std::fabs(loaded.source.interleaved[1] - 0.5f) < 1e-4f);
     assert(loaded.source.interleaved[2] > 0.99f);
     assert(std::fabs(loaded.source.interleaved[3] + 0.5f) < 1e-4f);
-    std::remove(path);
+    std::filesystem::remove(path);
 }
 
 }  // namespace

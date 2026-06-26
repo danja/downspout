@@ -11,16 +11,38 @@ permissions:
   contents: read
 
 jobs:
-  linux-release-build:
-    name: Linux Release Build
-    runs-on: ubuntu-24.04
+  release-package-build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x86_64 Release Package
+            runner: ubuntu-24.04
+            platform: linux-x86_64
+            experimental: false
+          - name: macOS arm64 Release Package Probe
+            runner: macos-15
+            platform: macos-arm64
+            experimental: true
+          - name: macOS x86_64 Release Package Probe
+            runner: macos-15-intel
+            platform: macos-x86_64
+            experimental: true
+          - name: Windows x86_64 Release Package Probe
+            runner: windows-2022
+            platform: windows-x86_64
+            experimental: true
 
     steps:
       - name: Check out source
         uses: actions/checkout@v4
 
       - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -35,17 +57,25 @@ jobs:
             libxrandr-dev \
             libxrender-dev
 
+      - name: Show toolchain versions
+        shell: bash
+        run: |
+          cmake --version
+          ctest --version
+
       - name: Build, test, and package
+        shell: bash
         env:
+          DOWNSPOUT_BUILD_DIR: build/release-ci-${{ matrix.platform }}
           DOWNSPOUT_DIST_DIR: ${{ runner.temp }}/downspout-dist
-          DOWNSPOUT_RELEASE_PLATFORM: linux-x86_64
+          DOWNSPOUT_RELEASE_PLATFORM: ${{ matrix.platform }}
           DOWNSPOUT_VERSION: ci-${{ github.run_number }}
         run: bash scripts/package-release.sh
 
       - name: Upload CI package
         uses: actions/upload-artifact@v4
         with:
-          name: downspout-linux-x86_64-vst3
+          name: downspout-${{ matrix.platform }}-vst3
           path: ${{ runner.temp }}/downspout-dist/*
           if-no-files-found: error
           retention-days: 14

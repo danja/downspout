@@ -15,13 +15,23 @@ See also : [flues](https://github.com/danja/flues) LV2 plugins
 
 ## Install From Releases
 
-Download `downspout-<version>-linux-x86_64-vst3.zip` from GitHub Releases,
-unpack it, and copy the `.vst3` bundles into `~/.vst3`:
+Download the zip for your platform from GitHub Releases:
+
+- `downspout-<version>-linux-x86_64-vst3.zip`
+- `downspout-<version>-macos-arm64-vst3.zip`
+- `downspout-<version>-macos-x86_64-vst3.zip`
+- `downspout-<version>-windows-x86_64-vst3.zip`
+
+Unpack it, then copy the `.vst3` bundles to your system VST3 folder. On Linux:
 
 ```bash
 mkdir -p ~/.vst3
 cp -r bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 melgen.vst3 rift.vst3 orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 cadence.vst3 counterpointer.vst3 sidecar.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 floozy.vst3 basilico.vst3 canticle.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3 xoxolo.vst3 ~/.vst3/
 ```
+
+Typical VST3 install locations are `~/.vst3` on Linux,
+`~/Library/Audio/Plug-Ins/VST3` on macOS, and
+`C:\Program Files\Common Files\VST3` on Windows.
 
 See [docs/install.md](docs/install.md) and [docs/release.md](docs/release.md)
 for the local install and release packaging details.

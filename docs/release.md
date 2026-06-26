@@ -1,14 +1,24 @@
 # release
 
-Release packaging is intentionally narrow for now: Linux x86_64 VST3 bundles
-for the currently enabled plugins.
+Release packaging publishes native VST3 bundles for the currently enabled
+plugins on Linux, macOS, and Windows.
 
 ## Current public artifact
 
-Tagged releases publish:
+Tagged releases publish one zip and matching `.sha256` file for each release
+platform:
 
 ```text
 downspout-<version>-linux-x86_64-vst3.zip
+downspout-<version>-macos-arm64-vst3.zip
+downspout-<version>-macos-x86_64-vst3.zip
+downspout-<version>-windows-x86_64-vst3.zip
+```
+
+Each zip contains:
+
+```text
+downspout-<version>-<platform>-vst3.zip
 ├── bassgen.vst3/
 ├── p_mix.vst3/
 ├── e_mix.vst3/
@@ -36,7 +46,7 @@ downspout-<version>-linux-x86_64-vst3.zip
 └── README.md
 ```
 
-A matching `.sha256` file is published alongside the zip.
+A matching `.sha256` file is published alongside each zip.
 
 ## Local release package
 
@@ -70,14 +80,21 @@ Two workflows are defined:
 
 - `.github/workflows/ci.yml`
   Builds, tests, installs, packages, and stores the package as a workflow
-  artifact for branch pushes, pull requests, and manual runs.
+  artifact for branch pushes, pull requests, and manual runs. Linux is the
+  required package build. macOS arm64, macOS x86_64, and Windows x86_64 run as
+  experimental package probes so cross-platform issues are visible before those
+  artifacts are promoted to public releases.
 - `.github/workflows/release.yml`
-  Runs for tags matching `v*`, builds the package, and creates a GitHub
-  Release with the zip and checksum assets.
+  Runs for tags matching `v*`, builds Linux x86_64, macOS arm64, macOS x86_64,
+  and Windows x86_64 packages, then creates one GitHub Release with all zip and
+  checksum assets.
 
 The release workflow derives the artifact version from the tag by removing the
 leading `v`. For example, tag `v0.1.0` produces
-`downspout-0.1.0-linux-x86_64-vst3.zip`.
+`downspout-0.1.0-linux-x86_64-vst3.zip`,
+`downspout-0.1.0-macos-arm64-vst3.zip`,
+`downspout-0.1.0-macos-x86_64-vst3.zip`, and
+`downspout-0.1.0-windows-x86_64-vst3.zip`.
 
 ## Publishing From Main
 
@@ -110,11 +127,12 @@ Notes:
 
 ## Assumptions
 
-- Public automation currently targets `ubuntu-24.04` only.
+- Public release publishing currently uses GitHub-hosted Ubuntu, macOS, and
+  Windows runners.
 - The VST3 bundles are dynamically linked against normal Linux desktop/plugin
   runtime libraries used by the DPF UI path, including X11/OpenGL-related
   libraries.
-- macOS and Windows artifacts are intentionally deferred until those builds and
-  host-validation paths are proven.
+- macOS and Windows artifacts are built by CI but still need real-host
+  validation before treating them as public-quality releases.
 - Host validation remains required before treating a tag as a public-quality
   release.
