@@ -15,7 +15,8 @@ See also : [flues](https://github.com/danja/flues) LV2 plugins
 
 ## Install From Releases
 
-Download the zip for your platform from GitHub Releases:
+Download the zip for your platform from GitHub Releases. The macOS and
+Windows builds are currently untested, and those packages omit `sidecar.vst3`:
 
 - `downspout-<version>-linux-x86_64-vst3.zip`
 - `downspout-<version>-macos-arm64-vst3.zip`

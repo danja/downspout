@@ -31,7 +31,6 @@ downspout-<version>-<platform>-vst3.zip
 ├── drumkit.vst3/
 ├── cadence.vst3/
 ├── counterpointer.vst3/
-├── sidecar.vst3/
 ├── gremlin.vst3/
 ├── gremlin_driver.vst3/
 ├── ground.vst3/
@@ -45,6 +44,9 @@ downspout-<version>-<platform>-vst3.zip
 ├── LICENSE
 └── README.md
 ```
+
+`sidecar.vst3` is currently included only in the Linux package. The macOS and
+Windows packages omit it until those builds are proven.
 
 A matching `.sha256` file is published alongside each zip.
 
