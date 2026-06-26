@@ -9,6 +9,7 @@ struct WobbleConfig {
     int division = 3;
     int shape = 0;
     float freeRateHz = 0.5f;
+    float startDegrees = 0.0f;
 };
 
 struct WobbleFrame {

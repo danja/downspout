@@ -595,6 +595,7 @@ private:
             static_cast<int>(params_.values[static_cast<std::size_t>(ParamId::wobbleDivision)]),
             static_cast<int>(params_.values[static_cast<std::size_t>(ParamId::wobbleShape)]),
             params_.values[static_cast<std::size_t>(ParamId::lfoFrequency)],
+            params_.values[static_cast<std::size_t>(ParamId::wobbleStart)],
         };
     }
 

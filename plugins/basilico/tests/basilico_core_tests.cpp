@@ -1,4 +1,5 @@
 #include "basilico_engine.hpp"
+#include "basilico_modulation.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -11,6 +12,8 @@ namespace {
 using downspout::basilico::BasilicoEngine;
 using downspout::basilico::ParamId;
 using downspout::basilico::TransportSnapshot;
+using downspout::basilico::WobbleConfig;
+using downspout::basilico::WobbleModulator;
 using downspout::basilico::kParameterSpecs;
 
 void require(const bool condition, const char* const message)
@@ -128,6 +131,10 @@ void defaultsAndClamping()
     engine.setParameter(ParamId::wobbleDivision, 4.6f);
     require(std::fabs(engine.getParameter(ParamId::wobbleDivision) - 5.0f) < 1.0e-6f,
             "basilico appended integer parameter should round");
+
+    engine.setParameter(ParamId::wobbleStart, 999.0f);
+    require(std::fabs(engine.getParameter(ParamId::wobbleStart) - 360.0f) < 1.0e-6f,
+            "basilico wobble start should clamp high");
 }
 
 void allModelsRender()
@@ -331,6 +338,32 @@ void ampWobbleChangesLevel()
             "basilico amp wobble should audibly modulate level");
 }
 
+void wobbleStartOffsetsCycleStart()
+{
+    WobbleModulator unshifted;
+    unshifted.reset();
+    WobbleModulator shifted;
+    shifted.reset();
+
+    WobbleConfig config {};
+    config.freeRateHz = 0.5f;
+    config.startDegrees = 0.0f;
+
+    WobbleConfig shiftedConfig = config;
+    shiftedConfig.startDegrees = 90.0f;
+
+    float unshiftedValue = 0.0f;
+    float shiftedValue = 0.0f;
+    for (int i = 0; i < 256; ++i)
+    {
+        unshiftedValue = unshifted.process(config, 48000.0f).bipolar;
+        shiftedValue = shifted.process(shiftedConfig, 48000.0f).bipolar;
+    }
+
+    require(shiftedValue > unshiftedValue + 0.75f,
+            "basilico wobble start should offset the modulation cycle");
+}
+
 void phaseWobbleCreatesStereoMotion()
 {
     BasilicoEngine engine {48000.0f};
@@ -427,6 +460,7 @@ int main()
     outputCanBoost();
     filterLfoChangesTone();
     ampWobbleChangesLevel();
+    wobbleStartOffsetsCycleStart();
     phaseWobbleCreatesStereoMotion();
     tempoSyncChangesWobbleRate();
     squelchChangesAcidTone();

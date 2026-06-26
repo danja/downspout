@@ -31,9 +31,11 @@ and `basilico_flanger` stereo phase/flange modulation.
 The original `lfo_frequency` and `lfo_depth` parameter slots are preserved as
 the free wobble rate and filter wobble target. New controls are appended after
 the original table: sync mode, division, shape, amp wobble, phase wobble, and
-squelch. `Squelch` is an Acid-compatible macro that increases resonant filter
-movement, shortens filter snap, and adds drive without changing the selected
-model.
+squelch. The later `wobble_start` slot is a 0-360 degree cycle offset for the
+shared modulation waveform and is appended to avoid renumbering existing
+controls.
+`Squelch` is an Acid-compatible macro that increases resonant filter movement,
+shortens filter snap, and adds drive without changing the selected model.
 
 ## Tests
 
@@ -47,5 +49,6 @@ model.
 - velocity accent behavior;
 - output boost and output bounding;
 - filter, amplitude, and phase/flange wobble;
+- wobble waveform start offset;
 - tempo-synced wobble rate;
 - acid squelch tone changes.

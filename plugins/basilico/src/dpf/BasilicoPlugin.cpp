@@ -164,6 +164,8 @@ protected:
         parameter.ranges.min = spec.minimum;
         parameter.ranges.max = spec.maximum;
         parameter.ranges.def = spec.defaultValue;
+        if (index == static_cast<uint32_t>(ParamId::wobbleStart))
+            parameter.unit = "deg";
 
         if (index == static_cast<uint32_t>(ParamId::model))
         {

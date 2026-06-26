@@ -119,6 +119,7 @@ WobbleFrame WobbleModulator::process(const WobbleConfig& config, const float sam
             freePhase_ -= std::floor(freePhase_);
     }
 
+    phase += config.startDegrees / 360.0f;
     const float target = basilicoWobbleShapeValue(config.shape, phase);
     const float smoothingMs = std::clamp(config.shape, 0, 4) == 4 ? 4.5f : 1.25f;
     const float coefficient = 1.0f - std::exp(-1.0f / (safeSampleRate * smoothingMs * 0.001f));

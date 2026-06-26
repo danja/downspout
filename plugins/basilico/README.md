@@ -31,7 +31,7 @@ and bounded output. The wobble path is split into small plugin-local modules:
 `basilico_flanger` owns the stereo phase/flange target.
 
 The `Wobble` controls can run free or follow host tempo divisions. The shared
-wobble signal can drive amplitude, filter cutoff pitch, and stereo
-phase/flange motion. `Squelch` is an acid-style macro over filter envelope,
-resonance, and drive. The DPF layer is intentionally thin and exposes one MIDI
-input with stereo audio output.
+wobble signal can start at a 0-360 degree cycle offset and can drive amplitude,
+filter cutoff pitch, and stereo phase/flange motion. `Squelch` is an acid-style
+macro over filter envelope, resonance, and drive. The DPF layer is
+intentionally thin and exposes one MIDI input with stereo audio output.
