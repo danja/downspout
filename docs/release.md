@@ -88,8 +88,9 @@ Two workflows are defined:
   artifacts are promoted to public releases.
 - `.github/workflows/release.yml`
   Runs for tags matching `v*`, builds Linux x86_64, macOS arm64, macOS x86_64,
-  and Windows x86_64 packages, then creates one GitHub Release with all zip and
-  checksum assets.
+  and Windows x86_64 packages, then creates one GitHub Release from whatever
+  assets were produced. Linux publication is required; macOS and Windows are
+  best-effort.
 
 The release workflow derives the artifact version from the tag by removing the
 leading `v`. For example, tag `v0.1.0` produces
@@ -135,6 +136,7 @@ Notes:
   runtime libraries used by the DPF UI path, including X11/OpenGL-related
   libraries.
 - macOS and Windows artifacts are built by CI but still need real-host
-  validation before treating them as public-quality releases.
+  validation before treating them as public-quality releases, and their
+  failures do not block the Linux release.
 - Host validation remains required before treating a tag as a public-quality
   release.

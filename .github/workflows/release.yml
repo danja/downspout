@@ -93,6 +93,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     needs: build-vst3
+    if: ${{ always() }}
 
     steps:
       - name: Download release artifacts
@@ -109,8 +110,8 @@ jobs:
           ASSET_DIR: ${{ runner.temp }}/release-assets
         run: |
           mapfile -t assets < <(find "$ASSET_DIR" -type f \( -name '*.zip' -o -name '*.sha256' \) | sort)
-          if [ "${#assets[@]}" -ne 8 ]; then
-            echo "Expected 8 release assets, found ${#assets[@]}:" >&2
+          if [ "${#assets[@]}" -lt 2 ]; then
+            echo "Expected at least the Linux release zip and checksum, found ${#assets[@]}:" >&2
             printf '%s\n' "${assets[@]}" >&2
             exit 1
           fi
@@ -121,15 +122,19 @@ jobs:
             exit 1
           fi
 
+          if [[ ! -f "$ASSET_DIR/downspout-${version}-linux-x86_64-vst3.zip" || ! -f "$ASSET_DIR/downspout-${version}-linux-x86_64-vst3.zip.sha256" ]]; then
+            echo "Linux release assets are missing; refusing to publish an incomplete release." >&2
+            exit 1
+          fi
+
           notes_file="$RUNNER_TEMP/release-notes.md"
           {
             echo "VST3 release builds for ${GITHUB_REF_NAME}."
             echo
             echo "Release assets:"
-            echo "- downspout-${version}-linux-x86_64-vst3.zip"
-            echo "- downspout-${version}-macos-arm64-vst3.zip"
-            echo "- downspout-${version}-macos-x86_64-vst3.zip"
-            echo "- downspout-${version}-windows-x86_64-vst3.zip"
+            for asset in "${assets[@]}"; do
+              echo "- $(basename "$asset")"
+            done
             echo
             echo "Included plugin bundles:"
             echo "- bassgen.vst3"
@@ -156,6 +161,7 @@ jobs:
             echo "- xoxolo.vst3"
             echo
             echo "Sidecar is currently Linux-only and is omitted from macOS and Windows release assets."
+            echo "macOS and Windows release builds are best-effort and do not block Linux publication."
             echo
             echo "Each .sha256 asset contains the checksum for the matching zip."
           } > "$notes_file"
