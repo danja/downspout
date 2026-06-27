@@ -14,3 +14,7 @@ DrumGen emits MIDI drum patterns that stay aligned with host transport. It can
 create new patterns, mutate the current pattern, target fills, and switch
 between straight, folk-oriented, breakbeat-inspired, Jazz, and sparse Fugue
 metrical vocabularies.
+
+### Status
+
+Usable. The user interface and pattern generation still need some more tightening up.

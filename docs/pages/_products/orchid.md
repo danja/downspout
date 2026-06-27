@@ -17,3 +17,7 @@ loop capture without becoming a sampler.
 
 The UI exposes capture mode, grid, hold length, retrigger behavior, and detector
 status so the capture logic remains visible while playing.
+
+### Status
+
+Good fun as a glitch effect.

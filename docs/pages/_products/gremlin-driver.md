@@ -16,3 +16,7 @@ animate Gremlin without hand-programming every gesture. Its lanes cover cyclic,
 stepped, random, pulse, reverse-ramp, and exponential modulation shapes. The
 `Pass Input` switch can block incoming MIDI when only generated control output
 should reach the next plugin.
+
+### Status
+
+In progress. It works but is waiting for Gremlin to be tidied up to make it actually useful.

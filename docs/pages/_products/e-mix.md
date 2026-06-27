@@ -13,3 +13,7 @@ summary: Transport-aware Euclidean stereo gate with density, block, pattern, and
 E-Mix applies Euclidean-style rhythmic gating to stereo audio. It exposes the
 cycle, density, block length, and fade shape so repeated audio can be carved
 into structured rhythmic patterns.
+
+### Status
+
+Awaiting review - largely untested in practice.

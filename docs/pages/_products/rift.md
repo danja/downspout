@@ -22,3 +22,7 @@ changing the main transport grid.
 The sample path maps the loaded file across the declared beat length, defaulting
 to four beats, before feeding it into the same rolling-buffer processor as live
 input. Current file support is focused on RIFF/WAVE PCM and 32-bit float WAV.
+
+### Status
+
+The effect is very compelling but the algorithms need tightening up and a lot of work is needed to make the user interface more intuitive. 

@@ -15,3 +15,7 @@ agents. Lower rows create stable bass and chord movement, upper rows add melody
 fragments and drum sparks, and the plugin sends LED feedback back to the
 controller when the host routes its MIDI output to the Launchpad. Unhandled
 input MIDI is blocked by default, with a `Pass` switch for deliberate forwarding.
+
+### Status
+
+Basically functional but so far of limited practical use.

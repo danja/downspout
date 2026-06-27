@@ -19,3 +19,7 @@ It follows Luma's Launchpad control path by default: LED feedback puts the
 hardware into programmer mode, while LED-off use falls back to a simple
 chromatic grid. A pad-map control rotates the Launchpad orientation when the
 hardware and UI do not line up.
+
+### Status
+
+It works but the sounds aren't yet very good. The DSP needs some work.

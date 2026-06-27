@@ -17,3 +17,7 @@ token-free local phrases or request material from the separate
 The plugin never owns API keys and never performs network work from the
 audio/MIDI callback. Routed MIDI is used as generation context rather than
 passed through.
+
+### Status
+
+Taken to proof-of-concept, and left there.

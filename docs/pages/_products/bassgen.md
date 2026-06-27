@@ -19,3 +19,7 @@ sources such as Ground. Its Jazz mode outlines ii-V-I-turnaround
 movement with chord-tone targeting, dominant color, chromatic approaches, and
 simple enclosures. Its Fugue mode uses a tonic subject, dominant answer,
 episode, and tonic pedal/cadence shape for Bach-like continuo movement.
+
+### Status
+
+This works quite nicely for short, repetitive phrases. Its tracking of input midi still needs more work.

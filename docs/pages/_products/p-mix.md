@@ -13,3 +13,7 @@ summary: Stereo audio effect for transport-aware probabilistic switching and fad
 P-Mix gates or blends stereo audio around bar-aware probability decisions. It is
 intended for rhythmic muting, controlled dropouts, and evolving transitions that
 remain tied to host playback.
+
+### Status
+
+The user interface isn't exactly intuitive but the basic functionality is there. This has shown itself to be very useful in automatically generating mixes (one instance per DAW track).
