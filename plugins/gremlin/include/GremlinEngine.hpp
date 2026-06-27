@@ -243,14 +243,21 @@ public:
             }
         }
 
+        float modeDamage = damage_;
+        float modeCrunch = crunch_;
+        float modeFold = fold_;
+        float noiseScale = 1.0f;
+        conditionModeSource(source, noiseScale, modeDamage, modeCrunch, modeFold);
+
         const float noiseGate = std::clamp(0.16f + transient_ * 0.82f + env_ * 0.18f, 0.0f, 1.0f);
-        source += whiteNoise() * noise_ * (0.02f + 0.10f * chaosAbs_ + 0.14f * transient_ * burstFactor) * noiseGate;
+        source += whiteNoise() * noise_ * noiseScale
+                * (0.02f + 0.10f * chaosAbs_ + 0.14f * transient_ * burstFactor) * noiseGate;
         source *= (0.24f + velocity_ * 0.9f) * env_ * (0.36f + sourceGain_ * 1.35f);
 
-        const float crushed = processCrunch(source);
-        const float driven = crushed * (1.0f + damage_ * 3.5f + fold_ * 4.5f);
-        const float folded = foldback(driven, std::max(0.14f, 1.0f - fold_ * 0.8f));
-        const float shaped = std::tanh(folded * (1.0f + damage_ * 1.7f));
+        const float crushed = processCrunch(source, modeCrunch, modeDamage);
+        const float driven = crushed * (1.0f + modeDamage * 3.5f + modeFold * 4.5f);
+        const float folded = foldback(driven, std::max(0.14f, 1.0f - modeFold * 0.8f));
+        const float shaped = std::tanh(folded * (1.0f + modeDamage * 1.7f));
         const float toned = toneFilter_.process(shaped);
 
         const StereoFrame delayed = processDelay(toned);
@@ -277,6 +284,10 @@ private:
 
     static float clampDelay(float value) {
         return std::clamp(value, 1.0f, static_cast<float>(kDelayBufferSize - 4));
+    }
+
+    static float clampUnit(float value) {
+        return std::clamp(value, 0.0f, 1.0f);
     }
 
     static float pitchRatio(float semitoneOffset) {
@@ -332,13 +343,79 @@ private:
         }
     }
 
-    float processCrunch(float input) {
+    void conditionModeSource(float& source,
+                             float& noiseScale,
+                             float& modeDamage,
+                             float& modeCrunch,
+                             float& modeFold) {
+        switch (mode_) {
+            case SHARD: {
+                modeStateA_ += (source - modeStateA_) * 0.030f;
+                const float edge = source - modeStateA_;
+                source = source * 0.10f + edge * (1.42f + damage_ * 0.68f)
+                       + transient_ * 0.024f * (fastChaos_ > 0.0f ? 1.0f : -1.0f);
+                modeDamage = clampUnit(modeDamage * 1.05f + 0.06f);
+                modeCrunch = clampUnit(modeCrunch * 0.95f + 0.12f);
+                modeFold = clampUnit(modeFold * 0.85f + 0.08f);
+                noiseScale = 0.38f;
+                break;
+            }
+            case SERVO:
+                modeStateA_ += (source - modeStateA_) * (0.020f + (1.0f - damage_) * 0.050f);
+                modeStateB_ += (modeStateA_ - modeStateB_) * 0.006f;
+                source = modeStateA_ * 0.88f + (modeStateA_ - modeStateB_) * (0.42f + chaos_ * 0.28f);
+                modeDamage = clampUnit(modeDamage * 0.55f);
+                modeCrunch = clampUnit(modeCrunch * 0.42f);
+                modeFold = clampUnit(modeFold * 0.46f);
+                noiseScale = 0.28f;
+                break;
+            case SPRAY:
+                modeStateA_ = heldNoise_;
+                source = source * 0.38f + heldNoise_ * (0.34f + noise_ * 0.62f + transient_ * 0.075f)
+                       + whiteNoise() * (0.055f + chaos_ * 0.12f);
+                modeDamage = clampUnit(modeDamage * 0.80f + 0.08f);
+                modeCrunch = clampUnit(modeCrunch * 1.55f + 0.22f);
+                modeFold = clampUnit(modeFold * 0.66f);
+                noiseScale = 3.10f;
+                break;
+            case COLLAPSE:
+                modeStateA_ += (source - modeStateA_) * 0.0045f;
+                source = source * 0.42f + modeStateA_ * (0.88f + feedback_ * 0.48f)
+                       + std::sin(2.0f * kPi * (phaseA_ * 0.5f + slowChaos_ * 0.035f)) * (0.16f + damage_ * 0.16f)
+                       + std::sin(2.0f * kPi * (phaseB_ * 0.25f - henonChaos_ * 0.025f)) * (0.08f + fold_ * 0.10f);
+                modeDamage = clampUnit(modeDamage * 1.35f + 0.16f);
+                modeCrunch = clampUnit(modeCrunch * 0.52f);
+                modeFold = clampUnit(modeFold * 1.34f + 0.18f);
+                noiseScale = 0.54f;
+                break;
+            case RING:
+                modeStateA_ += (source - modeStateA_) * 0.050f;
+                source = source * 1.05f + (source * modeStateA_) * (0.30f + fold_ * 0.42f);
+                modeDamage = clampUnit(modeDamage * 0.86f + 0.08f);
+                modeCrunch = clampUnit(modeCrunch * 0.55f + 0.04f);
+                modeFold = clampUnit(modeFold * 1.20f + 0.10f);
+                noiseScale = 0.42f;
+                break;
+            case VAPOR:
+            default:
+                modeStateA_ += (source - modeStateA_) * (0.004f + tone_ * 0.012f);
+                modeStateB_ += (modeStateA_ - modeStateB_) * 0.0018f;
+                source = modeStateA_ * 0.82f + modeStateB_ * 0.46f + heldNoise_ * (0.025f + space_ * 0.045f);
+                modeDamage = clampUnit(modeDamage * 0.40f);
+                modeCrunch = clampUnit(modeCrunch * 0.22f);
+                modeFold = clampUnit(modeFold * 0.30f);
+                noiseScale = 0.52f;
+                break;
+        }
+    }
+
+    float processCrunch(float input, float crunchAmount, float damageAmount) {
         if (--decimationCounter_ <= 0) {
-            decimationCounter_ = 1 + static_cast<int>(crunch_ * 48.0f + damage_ * 28.0f);
+            decimationCounter_ = 1 + static_cast<int>(crunchAmount * 48.0f + damageAmount * 28.0f);
             crushedSample_ = input;
         }
 
-        const int bits = std::clamp(15 - static_cast<int>(crunch_ * 10.0f + damage_ * 3.0f), 3, 16);
+        const int bits = std::clamp(15 - static_cast<int>(crunchAmount * 10.0f + damageAmount * 3.0f), 3, 16);
         const float scale = static_cast<float>((1u << bits) - 1u);
         return std::round(crushedSample_ * scale) / scale;
     }
@@ -380,16 +457,54 @@ private:
             return;
         }
 
+        float modeChance = 1.0f;
+        float modeLength = 1.0f;
+        float modeBlend = 0.0f;
+        switch (mode_) {
+            case SHARD:
+                modeChance = 0.62f;
+                modeLength = 0.45f;
+                modeBlend = -0.10f;
+                break;
+            case SERVO:
+                modeChance = 0.34f;
+                modeLength = 0.72f;
+                modeBlend = -0.24f;
+                break;
+            case SPRAY:
+                modeChance = 2.35f;
+                modeLength = 0.34f;
+                modeBlend = 0.12f;
+                break;
+            case COLLAPSE:
+                modeChance = 0.82f;
+                modeLength = 1.65f;
+                modeBlend = 0.05f;
+                break;
+            case RING:
+                modeChance = 0.58f;
+                modeLength = 0.86f;
+                modeBlend = -0.05f;
+                break;
+            case VAPOR:
+            default:
+                modeChance = 0.26f;
+                modeLength = 2.10f;
+                modeBlend = -0.18f;
+                break;
+        }
+
         const float noteBias = std::clamp(0.08f + transient_ * 0.55f + glitchExcite_ * 0.95f, 0.0f, 1.4f);
         const float chance = (0.000004f + stutter_ * 0.00008f)
             * (0.45f + chaos_ * 0.55f + damage_ * 0.25f + glitchLength_ * 0.25f)
-            * noteBias;
+            * noteBias * modeChance;
         if ((whiteNoise() * 0.5f + 0.5f) < chance) {
             const float shortScale = 0.18f + glitchLength_ * 0.75f;
             const float maxShortDelay = std::max(24.0f, std::min(baseDelaySamples * shortScale * (0.55f + 0.45f * chaosAbs_), sampleRate_ * 0.18f));
             glitchDelaySamples_ = 12.0f + (whiteNoise() * 0.5f + 0.5f) * (maxShortDelay - 12.0f);
-            glitchBlend_ = std::clamp(0.24f + 0.52f * stutter_ + 0.12f * glitchExcite_, 0.0f, 0.95f);
-            glitchHold_ = 48 + static_cast<int>((0.003f + 0.028f * stutter_ + 0.036f * glitchLength_) * sampleRate_ * (0.7f + 0.3f * chaosAbs_));
+            glitchBlend_ = std::clamp(0.24f + 0.52f * stutter_ + 0.12f * glitchExcite_ + modeBlend, 0.0f, 0.95f);
+            glitchHold_ = 48 + static_cast<int>((0.003f + 0.028f * stutter_ + 0.036f * glitchLength_)
+                                                * sampleRate_ * (0.7f + 0.3f * chaosAbs_) * modeLength);
             glitchExcite_ *= 0.35f;
         } else {
             glitchBlend_ = 0.0f;
@@ -397,11 +512,65 @@ private:
     }
 
     StereoFrame processDelay(float source) {
-        const float baseDelaySamples = 12.0f + std::pow(delayTime_, 1.8f) * (sampleRate_ * 0.65f);
+        float baseDelaySamples = 12.0f + std::pow(delayTime_, 1.8f) * (sampleRate_ * 0.65f);
+        float wetScale = 1.0f;
+        float feedbackBias = 0.0f;
+        float warpScale = 1.0f;
+        float spaceScale = 1.0f;
+
+        switch (mode_) {
+            case SHARD:
+                baseDelaySamples = 8.0f + std::pow(delayTime_, 1.3f) * (sampleRate_ * 0.055f);
+                wetScale = 0.58f;
+                feedbackBias = -0.10f;
+                warpScale = 0.62f;
+                spaceScale = 0.55f;
+                break;
+            case SERVO:
+                baseDelaySamples = 36.0f + std::pow(delayTime_, 2.1f) * (sampleRate_ * 0.18f);
+                wetScale = 0.64f;
+                feedbackBias = -0.04f;
+                warpScale = 0.48f;
+                spaceScale = 0.42f;
+                break;
+            case SPRAY:
+                baseDelaySamples = 6.0f + std::pow(delayTime_, 1.15f) * (sampleRate_ * 0.085f);
+                wetScale = 0.76f;
+                feedbackBias = -0.08f;
+                warpScale = 1.30f;
+                spaceScale = 0.75f;
+                break;
+            case COLLAPSE:
+                baseDelaySamples = 24.0f + std::pow(delayTime_, 1.7f) * (sampleRate_ * 0.55f);
+                wetScale = 1.16f;
+                feedbackBias = 0.07f;
+                warpScale = 1.15f;
+                spaceScale = 1.28f;
+                break;
+            case RING: {
+                const float combHz = std::clamp(baseFrequency_ * (1.0f + pitchSpread_ * 4.0f), 35.0f, sampleRate_ * 0.20f);
+                const float combPeriod = sampleRate_ / combHz;
+                baseDelaySamples = combPeriod * (2.0f + std::round(delayTime_ * 13.0f));
+                wetScale = 0.72f;
+                feedbackBias = -0.02f;
+                warpScale = 0.36f;
+                spaceScale = 0.70f;
+                break;
+            }
+            case VAPOR:
+            default:
+                baseDelaySamples = 140.0f + std::pow(delayTime_, 1.45f) * (sampleRate_ * 0.78f);
+                wetScale = 1.22f;
+                feedbackBias = 0.03f;
+                warpScale = 0.78f;
+                spaceScale = 1.45f;
+                break;
+        }
+        baseDelaySamples = clampDelay(baseDelaySamples);
         maybeTriggerGlitch(baseDelaySamples);
 
-        const float warpSamples = warp_ * (18.0f + baseDelaySamples * 0.22f) * (0.75f * fastChaos_ + 0.35f * henonChaos_);
-        const float spaceSamples = space_ * (10.0f + baseDelaySamples * 0.14f);
+        const float warpSamples = warp_ * warpScale * (18.0f + baseDelaySamples * 0.22f) * (0.75f * fastChaos_ + 0.35f * henonChaos_);
+        const float spaceSamples = space_ * spaceScale * (10.0f + baseDelaySamples * 0.14f);
 
         float leftDelay = clampDelay(baseDelaySamples + warpSamples + spaceSamples);
         float rightDelay = clampDelay(baseDelaySamples - warpSamples - spaceSamples);
@@ -417,7 +586,9 @@ private:
         const float filteredLeft = feedbackFilterLeft_.process(delayedLeft);
         const float filteredRight = feedbackFilterRight_.process(delayedRight);
 
-        const float feedbackGain = std::min(0.985f, 0.06f + std::pow(feedback_, 1.2f) * 0.91f + damage_ * 0.03f);
+        const float feedbackGain = std::clamp(0.06f + std::pow(feedback_, 1.2f) * 0.91f + damage_ * 0.03f + feedbackBias,
+                                              0.0f,
+                                              0.985f);
         const float crossAmount = crossFeedback_ * space_ * (0.05f + 0.22f * chaos_);
         const float collapsePolarity = (mode_ == COLLAPSE && fastChaos_ < 0.0f) ? -0.82f : 1.0f;
         float inputSource = source;
@@ -437,7 +608,9 @@ private:
         delayRight_[static_cast<size_t>(writePos_)] = writeRight;
         writePos_ = (writePos_ + 1) % kDelayBufferSize;
 
-        const float wet = std::clamp(0.01f + delayMix_ * (0.40f + feedback_ * 0.28f + warp_ * 0.12f + stutter_ * 0.06f), 0.0f, 1.0f);
+        const float wet = std::clamp((0.01f + delayMix_ * (0.40f + feedback_ * 0.28f + warp_ * 0.12f + stutter_ * 0.06f)) * wetScale,
+                                     0.0f,
+                                     1.0f);
         const float dry = 1.0f - wet * 0.88f;
         float left = source * dry + delayedLeft * wet;
         float right = source * dry + delayedRight * wet;
@@ -526,6 +699,8 @@ private:
     float heldNoise_ = 0.0f;
     int decimationCounter_ = 1;
     float crushedSample_ = 0.0f;
+    float modeStateA_ = 0.0f;
+    float modeStateB_ = 0.0f;
 
     std::array<float, kDelayBufferSize> delayLeft_ {};
     std::array<float, kDelayBufferSize> delayRight_ {};

@@ -15,6 +15,21 @@ performance ideas but uses a DAW-friendly panel with tall, narrow fader blocks:
 
 This is intentionally a functional reinterpretation, not a literal X11 port.
 
+## Sound mode direction
+
+The mode DSP intentionally diverges after the initial port so the six sources do
+not collapse into one generic glitch sound:
+
+- `Shard`: short, bright, edge-weighted transients with restrained delay.
+- `Servo`: smoother pitched malfunction with reduced crush and fold.
+- `Spray`: particulate noise bursts, stronger decimation, and short glitches.
+- `Collapse`: darker low/body instability with heavier folding and feedback.
+- `Ring`: metallic cross-modulation and comb-like delay behavior.
+- `Vapor`: softer smeared cloud tones with longer, wetter delay.
+
+Factory scenes and source randomisation are biased toward those identities
+rather than using one broad midrange set of breakage values for every mode.
+
 ## MIDI behavior
 
 - note input still plays the synth

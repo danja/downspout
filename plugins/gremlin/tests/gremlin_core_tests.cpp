@@ -7,6 +7,13 @@
 
 namespace {
 
+struct ModeSignature {
+    float rms = 0.0f;
+    float zeroCrossRate = 0.0f;
+    float sideRatio = 0.0f;
+    float peak = 0.0f;
+};
+
 bool nearlyEqual(const float a, const float b, const float epsilon = 1.0e-5f)
 {
     return std::fabs(a - b) <= epsilon;
@@ -38,6 +45,61 @@ bool containsMidi(const downspout::gremlin::MidiMessage* events,
         }
     }
     return false;
+}
+
+ModeSignature renderModeSignature(const std::size_t mode)
+{
+    using downspout::gremlin::LiveParamId;
+    using downspout::gremlin::MidiMessage;
+    using downspout::gremlin::Processor;
+
+    Processor processor;
+    processor.init(48000.0);
+    processor.setLiveParameter(LiveParamId::mode, static_cast<float>(mode));
+
+    MidiMessage noteOn {};
+    noteOn.size = 3;
+    noteOn.data[0] = 0x90;
+    noteOn.data[1] = 60;
+    noteOn.data[2] = 108;
+
+    std::array<float, 4096> left {};
+    std::array<float, 4096> right {};
+    processor.processBlock(left.data(), right.data(), static_cast<std::uint32_t>(left.size()), &noteOn, 1);
+
+    ModeSignature signature {};
+    int crossings = 0;
+    int samples = 0;
+    float energy = 0.0f;
+    float side = 0.0f;
+    float previous = 0.0f;
+    for (std::size_t i = 256; i < left.size(); ++i)
+    {
+        const float mono = 0.5f * (left[i] + right[i]);
+        if (samples > 0 && ((previous < 0.0f && mono >= 0.0f) || (previous > 0.0f && mono <= 0.0f)))
+            ++crossings;
+        previous = mono;
+
+        energy += mono * mono;
+        side += std::fabs(left[i] - right[i]);
+        signature.peak = std::max(signature.peak, std::max(std::fabs(left[i]), std::fabs(right[i])));
+        ++samples;
+    }
+
+    signature.rms = samples > 0 ? std::sqrt(energy / static_cast<float>(samples)) : 0.0f;
+    signature.zeroCrossRate = samples > 0 ? static_cast<float>(crossings) / static_cast<float>(samples) : 0.0f;
+    signature.sideRatio = energy > 0.0f ? side / (std::sqrt(energy) * static_cast<float>(samples)) : 0.0f;
+    return signature;
+}
+
+float signatureDistance(const ModeSignature& a, const ModeSignature& b)
+{
+    const float rmsA = std::max(a.rms, 1.0e-6f);
+    const float rmsB = std::max(b.rms, 1.0e-6f);
+    return std::fabs(std::log(rmsA / rmsB)) * 0.35f
+         + std::fabs(a.zeroCrossRate - b.zeroCrossRate) * 2.2f
+         + std::fabs(a.sideRatio - b.sideRatio) * 1.4f
+         + std::fabs(a.peak - b.peak) * 0.35f;
 }
 
 }  // namespace
@@ -122,6 +184,31 @@ int main()
             modePeak = std::max(modePeak, std::max(std::fabs(synthLeft[i]), std::fabs(synthRight[i])));
 
         require(modePeak > 0.005f, "gremlin mode should emit audio after note-on");
+    }
+
+    std::array<ModeSignature, downspout::gremlin::kModeCount> signatures {};
+    for (std::size_t mode = 0; mode < downspout::gremlin::kModeCount; ++mode)
+        signatures[mode] = renderModeSignature(mode);
+
+    for (std::size_t mode = 0; mode < downspout::gremlin::kModeCount; ++mode)
+    {
+        float nearest = 999.0f;
+        std::size_t nearestMode = mode;
+        for (std::size_t other = 0; other < downspout::gremlin::kModeCount; ++other)
+        {
+            if (mode == other)
+                continue;
+            const float distance = signatureDistance(signatures[mode], signatures[other]);
+            if (distance < nearest)
+            {
+                nearest = distance;
+                nearestMode = other;
+            }
+        }
+        if (nearest <= 0.035f)
+            std::cerr << "nearest signature distance for mode " << mode << " was " << nearest
+                      << " against mode " << nearestMode << '\n';
+        require(nearest > 0.035f, "gremlin mode signatures should remain separated");
     }
 
     float monoOnly[128] {};
