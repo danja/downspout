@@ -17,3 +17,7 @@ major/minor scales can lean into circle-of-fifths support and suspended
 dominants. The extended chord mode can voice 9ths, 11ths, and 13ths. Spread
 opens the voicing range, and Arpeggio moves playback from solid chords toward
 broken fragments or rotating single-note chord tones.
+
+### Status
+
+This basically works as intended though a little more work is needed in fine-tuning the user interface, it could be more intuitive.

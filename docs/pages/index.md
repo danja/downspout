@@ -8,9 +8,7 @@ description: Screenshots and short notes for the Downspout VST3 plugin set.
   <p class="kicker">Downspout</p>
   <h1>Transport-aware VST3 tools for generated parts, gated movement, and playable disruption.</h1>
   <p>
-    These pages are a lightweight end-user guide around the current plugin
-    screenshots. The descriptions are intentionally short so they can be
-    expanded as the public documentation settles.
+    These plugins are all experimental, with various levels of success for their intended purposes.
   </p>
 </section>
 

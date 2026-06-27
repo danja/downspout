@@ -15,3 +15,7 @@ cells generate melodic, multi-channel, or drum MIDI events, then the pattern
 evolves on the next beat. The UI and Launchpad can both flip cells, load seeds,
 randomize the board, step manually, and show LED feedback. Unhandled controller
 MIDI is blocked by default, with a `Pass` switch when forwarding is intentional.
+
+### Status
+
+A fun experiment, taken to proof-of-concept. A glider pattern did once emerge on the Launchpad.

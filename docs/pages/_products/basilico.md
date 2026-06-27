@@ -16,3 +16,7 @@ velocity accent, body controls, and drive models across five bass characters.
 Its wobble section can run free or tempo-synced, with separate amplitude,
 filter, and phase/flange targets, while `Squelch` pushes Acid-style filter
 snap and resonance into any model.
+
+### Status
+
+This is still a little rough around the edges and rather eccentric in its sounds. It can do a general-purpose tame bass sounds as well as varieties found in electro-pop and acid/techno. The features intended to cover wobble bass as found in dubstep give interesting if not entirely convincing results.

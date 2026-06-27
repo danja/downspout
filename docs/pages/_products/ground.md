@@ -27,6 +27,10 @@ notes are folded back into a bass register lane after form generation, phrase
 refresh, cell mutation, and loop variation. That keeps long-form motion from
 turning into large octave jumps when the part is used as the low anchor.
 
+### Status
+
+Under evaluation. It can generate useful long-form patterns but the user interface isn't very intuitive.
+
 ## Controls To Watch
 
 - `Register` chooses the base lane for the bass part.

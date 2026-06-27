@@ -14,3 +14,7 @@ Counterpointer follows incoming MIDI and generates a complementary monophonic
 line. Controls shape how closely it follows, how often it moves contrary to the
 source, and how much rhythmic answering, chromatic color, or randomness is
 introduced.
+
+### Status
+
+Functional, as far as it goes, but could maybe be improved with more deterministic patterns. 

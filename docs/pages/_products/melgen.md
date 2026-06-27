@@ -15,3 +15,7 @@ call-and-answer shape, color, and cadence behavior. The follow control lets
 incoming MIDI pull the generated line toward another part without simply
 copying it. High Structure with Call Answer and low Leap/Rest gives it a
 Fugue-friendly tonic subject and dominant answer region.
+
+### Status
+
+Working, but the melodies generated are questionable. Algorithms under review.

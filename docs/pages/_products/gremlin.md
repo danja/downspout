@@ -15,3 +15,7 @@ changes, fader-block macro controls, and momentary performance actions. It is
 designed for unstable tones, damaged gestures, and controller-driven variation.
 It can also send Akai MIDImix button LED feedback from its MIDI output when the
 host routes that output back to the controller.
+
+### Status
+
+Tuning in progress. It's currently overly glitchy.

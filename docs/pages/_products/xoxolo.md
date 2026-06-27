@@ -17,3 +17,7 @@ all pattern steps visible.
 The first version uses 11 Downspout lanes or 29 AVL-Drumkits lanes, selectable
 8-32 step patterns, channel 10 by default, and explicit text state for cells,
 lane notes, and the selected preset.
+
+### Status
+
+Close to the required functionality, real-world testing in progress.

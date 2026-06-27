@@ -14,3 +14,7 @@ Floozy is a playable stereo instrument derived from `floozy-poly`. It exposes
 source algorithm, interface/body model, quantized body tuning, feedback,
 filter, modulation, reverb, and output controls while keeping the voice engine
 deterministic and bounded.
+
+### Status
+
+This can make many useful sounds but it is a little hit & miss trying to find them.
