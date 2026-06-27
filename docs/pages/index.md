@@ -1,12 +1,12 @@
 ---
-layout: default
+layout: default 
 title: Downspout Plugins
 description: Screenshots and short notes for the Downspout VST3 plugin set.
 ---
 
 <section class="home-hero">
   <p class="kicker">Downspout</p>
-  <h1>Transport-aware VST3 tools for generated parts, gated movement, and playable disruption.</h1>
+  <h2>Transport-aware VST3 tools for generated parts, gated movement, and playable disruption.</h2>
   <p>
     These plugins are all experimental, with various levels of success for their intended purposes.
 
