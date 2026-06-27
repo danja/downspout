@@ -25,6 +25,12 @@ affects output level and punch, while `Accent` is a short filter emphasis
 driven by the punch decay rather than a sustained cutoff lift for the whole
 note.
 
+Host bypass is exposed through DPF's `dpf_bypass` parameter designation. When
+the host disables the instrument, Basilico resets its active voice, emits
+silence, and ignores incoming note-ons until bypass is cleared. All-notes-off
+controller messages are still accepted while bypassed so the processor can
+discard stale held-note state.
+
 ## Wobble and squelch
 
 Wobble support is implemented as plugin-local portable DSP rather than DPF
@@ -52,6 +58,7 @@ shortens filter snap, and adds drive without changing the selected model.
 - glide behavior;
 - legato glide envelope behavior;
 - velocity accent behavior;
+- host bypass silence and note ignoring;
 - output boost and output bounding;
 - filter, amplitude, and phase/flange wobble;
 - wobble waveform start offset;

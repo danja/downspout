@@ -355,15 +355,20 @@ public:
         if (index >= kParameterCount)
             return;
 
+        const bool wasBypassed = bypassed();
         const auto& spec = kParameterSpecs[index];
         float clamped = std::clamp(std::isfinite(value) ? value : spec.defaultValue, spec.minimum, spec.maximum);
         if (spec.integer)
             clamped = std::round(clamped);
         params_.values[index] = clamped;
+        if (!wasBypassed && bypassed())
+            reset();
     }
 
     void noteOn(const int midiNote, const std::uint8_t velocity)
     {
+        if (bypassed())
+            return;
         if (midiNote < 0 || midiNote > 127)
             return;
         if (velocity == 0)
@@ -430,6 +435,13 @@ public:
         const std::uint8_t note = size > 1 ? data[1] : 0;
         const std::uint8_t value = size > 2 ? data[2] : 0;
 
+        if (bypassed())
+        {
+            if (status == 0xb0 && (note == 120 || note == 123))
+                allNotesOff();
+            return;
+        }
+
         switch (status)
         {
         case 0x80:
@@ -449,6 +461,9 @@ public:
 
     StereoFrame processStereo()
     {
+        if (bypassed())
+            return {};
+
         syncEnvelopes();
 
         const float amp = ampEnv_.process();
@@ -504,6 +519,11 @@ public:
     float sampleRate() const { return sampleRate_; }
 
 private:
+    bool bypassed() const
+    {
+        return params_.values[static_cast<std::size_t>(ParamId::bypass)] >= 0.5f;
+    }
+
     bool glideEnabled() const
     {
         return params_.values[static_cast<std::size_t>(ParamId::glide)] >= 0.015f;

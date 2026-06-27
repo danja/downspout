@@ -361,6 +361,25 @@ void outputCanBoost()
     require(boostedPeak > nominalPeak * 1.25f, "basilico output should boost above midpoint");
 }
 
+void bypassSilencesAndIgnoresNotes()
+{
+    BasilicoEngine engine {48000.0f};
+    engine.noteOn(40, 110);
+    require(renderPeak(engine, 1024) > 0.001f, "basilico should sound before bypass");
+
+    engine.setParameter(ParamId::bypass, 1.0f);
+    require(renderPeak(engine, 2048) == 0.0f, "basilico bypass should emit silence");
+
+    engine.noteOn(47, 120);
+    require(renderPeak(engine, 2048) == 0.0f, "basilico should ignore notes while bypassed");
+
+    engine.setParameter(ParamId::bypass, 0.0f);
+    require(renderPeak(engine, 2048) == 0.0f, "basilico should not resume bypassed notes after re-enable");
+
+    engine.noteOn(47, 120);
+    require(renderPeak(engine, 2048) > 0.001f, "basilico should sound after bypass is disabled and a new note arrives");
+}
+
 void filterLfoChangesTone()
 {
     BasilicoEngine steady {48000.0f};
@@ -540,6 +559,7 @@ int main()
     velocityAccentChangesOutput();
     filterAccentIsTransient();
     outputCanBoost();
+    bypassSilencesAndIgnoresNotes();
     filterLfoChangesTone();
     ampWobbleChangesLevel();
     wobbleStartOffsetsCycleStart();

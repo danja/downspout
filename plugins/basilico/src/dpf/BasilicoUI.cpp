@@ -30,7 +30,7 @@ struct Rect {
 
     bool contains(const float px, const float py) const noexcept
     {
-        return px >= x && px <= x + w && py >= y && py <= y + h;
+        return w > 0.0f && h > 0.0f && px >= x && px <= x + w && py >= y && py <= y + h;
     }
 };
 

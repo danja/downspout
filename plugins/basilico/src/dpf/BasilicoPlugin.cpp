@@ -155,6 +155,12 @@ protected:
         if (index >= kParameterCount)
             return;
 
+        if (index == static_cast<uint32_t>(ParamId::bypass))
+        {
+            parameter.initDesignation(kParameterDesignationBypass);
+            return;
+        }
+
         const auto& spec = kParameterSpecs[index];
         parameter.name = spec.name;
         parameter.symbol = spec.symbol;
@@ -222,6 +228,11 @@ protected:
     }
 
     void activate() override
+    {
+        engine_.reset();
+    }
+
+    void deactivate() override
     {
         engine_.reset();
     }
