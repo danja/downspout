@@ -372,10 +372,12 @@ public:
             return;
         }
 
+        const bool hadHeldNotes = !heldNotes_.empty();
         removeHeld(midiNote);
         heldNotes_.push_back(midiNote);
 
         const bool canGlide = glideEnabled() && currentNote_ >= 0;
+        const bool legatoGlide = canGlide && hadHeldNotes;
         currentNote_ = midiNote;
         targetFrequency_ = midiNoteToFrequency(midiNote);
         if (!canGlide)
@@ -388,11 +390,14 @@ public:
             bodyHigh_.reset();
         }
 
-        ampEnv_.gateOn();
-        filterEnv_.gateOn();
+        if (!legatoGlide)
+        {
+            ampEnv_.gateOn();
+            filterEnv_.gateOn();
+            punch_ = std::clamp(static_cast<float>(velocity) / 127.0f, 0.0f, 1.0f);
+        }
         active_ = true;
         velocity_ = std::clamp(static_cast<float>(velocity) / 127.0f, 0.0f, 1.0f);
-        punch_ = velocity_;
     }
 
     void noteOff(const int midiNote)
@@ -616,7 +621,7 @@ private:
         const float squelch = params_.values[static_cast<std::size_t>(ParamId::squelch)];
         const float envAmount = params_.values[static_cast<std::size_t>(ParamId::filterEnv)] * (profile.envScale + squelch * 0.36f);
         const float keyTrack = params_.values[static_cast<std::size_t>(ParamId::keyTrack)];
-        const float accent = params_.values[static_cast<std::size_t>(ParamId::accent)] * velocity_;
+        const float accent = params_.values[static_cast<std::size_t>(ParamId::accent)] * std::clamp(punch_, 0.0f, 1.0f);
         const float lfoDepth = params_.values[static_cast<std::size_t>(ParamId::lfoDepth)];
         const float normalized = std::clamp(profile.cutoffBias + (cutoffParam - 0.5f) * 0.85f +
                                                 env * envAmount * (0.65f + squelch * 0.28f) +

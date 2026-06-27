@@ -221,6 +221,48 @@ void middleGlideIsAudible()
     require(current < expectedFrequency(48) - 8.0f, "basilico middle glide should remain audible after attack");
 }
 
+void legatoGlideAvoidsFilterRetrigger()
+{
+    BasilicoEngine glide {48000.0f};
+    glide.setParameter(ParamId::model, 3.0f);
+    glide.setParameter(ParamId::glide, 0.60f);
+    glide.setParameter(ParamId::cutoff, 0.28f);
+    glide.setParameter(ParamId::resonance, 0.70f);
+    glide.setParameter(ParamId::filterEnv, 0.85f);
+    glide.setParameter(ParamId::accent, 1.0f);
+    glide.noteOn(36, 116);
+    for (int i = 0; i < 12000; ++i)
+        (void)glide.processStereo();
+
+    BasilicoEngine retriggered {48000.0f};
+    retriggered.setParameter(ParamId::model, 3.0f);
+    retriggered.setParameter(ParamId::glide, 0.60f);
+    retriggered.setParameter(ParamId::cutoff, 0.28f);
+    retriggered.setParameter(ParamId::resonance, 0.70f);
+    retriggered.setParameter(ParamId::filterEnv, 0.85f);
+    retriggered.setParameter(ParamId::accent, 1.0f);
+    retriggered.noteOn(36, 116);
+    for (int i = 0; i < 12000; ++i)
+        (void)retriggered.processStereo();
+
+    glide.noteOn(48, 116);
+    retriggered.noteOff(36);
+    retriggered.noteOn(48, 116);
+
+    float legatoEnergy = 0.0f;
+    float retriggerEnergy = 0.0f;
+    for (int i = 0; i < 2048; ++i)
+    {
+        const auto a = glide.processStereo();
+        const auto b = retriggered.processStereo();
+        legatoEnergy += std::fabs(a.left) + std::fabs(a.right);
+        retriggerEnergy += std::fabs(b.left) + std::fabs(b.right);
+    }
+
+    require(retriggerEnergy > legatoEnergy * 1.08f,
+            "basilico legato glide should avoid a full envelope retrigger");
+}
+
 void bodyChangesTone()
 {
     BasilicoEngine dry {48000.0f};
@@ -264,6 +306,44 @@ void velocityAccentChangesOutput()
     const float loudEnergy = renderEnergy(loud, 4096);
 
     require(loudEnergy > softEnergy * 1.6f, "basilico velocity should affect output/accent");
+}
+
+void filterAccentIsTransient()
+{
+    BasilicoEngine plain {48000.0f};
+    plain.setParameter(ParamId::model, 3.0f);
+    plain.setParameter(ParamId::waveform, 2.0f);
+    plain.setParameter(ParamId::cutoff, 0.32f);
+    plain.setParameter(ParamId::resonance, 0.62f);
+    plain.setParameter(ParamId::filterEnv, 0.0f);
+    plain.setParameter(ParamId::accent, 0.0f);
+    plain.noteOn(36, 116);
+
+    BasilicoEngine accented {48000.0f};
+    accented.setParameter(ParamId::model, 3.0f);
+    accented.setParameter(ParamId::waveform, 2.0f);
+    accented.setParameter(ParamId::cutoff, 0.32f);
+    accented.setParameter(ParamId::resonance, 0.62f);
+    accented.setParameter(ParamId::filterEnv, 0.0f);
+    accented.setParameter(ParamId::accent, 1.0f);
+    accented.noteOn(36, 116);
+
+    float earlyDifference = 0.0f;
+    float lateDifference = 0.0f;
+    for (int i = 0; i < 36000; ++i)
+    {
+        const auto a = plain.processStereo();
+        const auto b = accented.processStereo();
+        require(std::isfinite(a.left) && std::isfinite(b.left), "basilico filter accent rendered non-finite audio");
+        const float difference = std::fabs(a.left - b.left) + std::fabs(a.right - b.right);
+        if (i >= 256 && i < 4096)
+            earlyDifference += difference;
+        if (i >= 24000)
+            lateDifference += difference;
+    }
+
+    require(earlyDifference > lateDifference * 0.9f,
+            "basilico filter accent should be concentrated near note attack");
 }
 
 void outputCanBoost()
@@ -455,8 +535,10 @@ int main()
     tracksMidiPitch();
     glideMovesTowardTarget();
     middleGlideIsAudible();
+    legatoGlideAvoidsFilterRetrigger();
     bodyChangesTone();
     velocityAccentChangesOutput();
+    filterAccentIsTransient();
     outputCanBoost();
     filterLfoChangesTone();
     ampWobbleChangesLevel();

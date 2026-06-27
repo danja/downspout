@@ -18,8 +18,12 @@ parameter table remains stable.
 ## MIDI behavior
 
 Basilico is monophonic with last-note priority. Overlapping notes glide when
-the `Glide` parameter is active. Velocity affects output level, punch, and
-filter accent.
+the `Glide` parameter is active. A true overlapping legato glide does not
+retrigger the amp/filter envelopes or punch transient; a new note after release
+can still glide from the previous pitch but retriggers normally. Velocity
+affects output level and punch, while `Accent` is a short filter emphasis
+driven by the punch decay rather than a sustained cutoff lift for the whole
+note.
 
 ## Wobble and squelch
 
@@ -46,6 +50,7 @@ shortens filter snap, and adds drive without changing the selected model.
 - note-off release;
 - MIDI pitch tracking;
 - glide behavior;
+- legato glide envelope behavior;
 - velocity accent behavior;
 - output boost and output bounding;
 - filter, amplitude, and phase/flange wobble;
