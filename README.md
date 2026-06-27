@@ -6,9 +6,9 @@ The repository is organized around portable C++ cores, deterministic tests, thin
 DPF wrappers, and custom NanoVG UIs. VST3 metadata is normalized across the
 plugins with creator `danja`, group `Downspout`, and plugin-specific categories.
 
-Rough demos -
+Demo -
 
-* [Generative jazz](https://www.youtube.com/shorts/6cv-nQ_2TNM) 
+* [Jack's Dream](https://youtu.be/Rd-ACU0JUdo) 
 * [Another example](https://www.youtube.com/watch?v=DrAHdaJolyc) 
 
 See also : [flues](https://github.com/danja/flues) LV2 plugins
