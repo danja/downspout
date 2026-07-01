@@ -18,6 +18,7 @@ useful while still producing accidental ideas. `rift` fills that gap.
 The plugin keeps a rolling audio buffer of recent input. At each rhythmic block
 boundary, it either:
 
+- follows an enabled sequence cell;
 - passes audio through unchanged; or
 - replays a slice from the recent past using one of a small set of actions.
 
@@ -61,10 +62,24 @@ The UI avoids exposing too many microscopic options. Instead it uses:
 - a simple live/sample source selector;
 - a bottom strip of named mode recipes for quick direction changes;
 - an explicit blend control for loop-wrap smoothing;
-- visual explanations of the block plan and action bias.
+- a 16-cell sequence editor for repeatable stutters and replay gestures;
+- visual explanations of action bias.
 
 That tradeoff matters. This plugin is supposed to spark ideas in a DAW session,
 not ask the user to become a scheduler debugger.
+
+## Sequence editing
+
+The sequence lane is the deterministic path. When all cells are empty, `rift`
+uses the macro-driven probabilistic chooser. When any cell is enabled, the
+sequence repeats over 16 block boundaries: empty cells pass dry audio and
+enabled cells force their recipe.
+
+The initial recipes are intentionally musical rather than implementation-shaped:
+`Ratchet`, `1/2 beat`, `1 beat`, `2 beat`, `Reverse`, `Smear`, and `Slip`.
+The beat recipes replay that much source material from the rolling input buffer,
+and hold for that musical duration across the global block grid. A cell can
+therefore be made into a two-beat stutter without changing the sequence grid.
 
 ## Transition smoothing
 

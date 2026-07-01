@@ -2,6 +2,7 @@
 
 #include "rift_engine.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <string>
 #include <string_view>
@@ -17,6 +18,17 @@ bool parseFloat(std::string_view text, float& value) {
     return parseEnd != nullptr && *parseEnd == '\0';
 }
 
+bool parseInt(std::string_view text, int& value) {
+    std::string local(text);
+    char* parseEnd = nullptr;
+    const long parsed = std::strtol(local.c_str(), &parseEnd, 10);
+    if (parseEnd == nullptr || *parseEnd != '\0') {
+        return false;
+    }
+    value = static_cast<int>(parsed);
+    return true;
+}
+
 std::vector<std::string_view> split(std::string_view text, const char delimiter) {
     std::vector<std::string_view> parts;
     std::size_t start = 0;
@@ -30,6 +42,13 @@ std::vector<std::string_view> split(std::string_view text, const char delimiter)
         start = pos + 1;
     }
     return parts;
+}
+
+[[nodiscard]] SequenceCellKind clampSequenceKind(const int value) {
+    if (value < 0 || value >= kSequenceCellKindCount) {
+        return SequenceCellKind::Empty;
+    }
+    return static_cast<SequenceCellKind>(value);
 }
 
 }  // namespace
@@ -99,6 +118,67 @@ std::optional<Parameters> deserializeParameters(const std::string& text) {
     }
 
     return clampParameters(parameters);
+}
+
+std::string serializeSequencePattern(const SequencePattern& pattern) {
+    std::string out = "version=1\ncells=";
+    for (const SequenceCell& cell : pattern.cells) {
+        out += std::to_string(static_cast<int>(cell.kind));
+        out += ',';
+    }
+    out += '\n';
+    return out;
+}
+
+std::optional<SequencePattern> deserializeSequencePattern(const std::string& text) {
+    SequencePattern pattern;
+
+    for (const std::string_view line : split(text, '\n')) {
+        if (line.empty()) {
+            continue;
+        }
+
+        const std::size_t sep = line.find('=');
+        if (sep == std::string_view::npos) {
+            return std::nullopt;
+        }
+
+        const std::string_view key = line.substr(0, sep);
+        const std::string_view value = line.substr(sep + 1);
+
+        if (key == "version") {
+            continue;
+        }
+
+        if (key != "cells") {
+            return std::nullopt;
+        }
+
+        const std::vector<std::string_view> parts = split(value, ',');
+        const std::size_t count = std::min(parts.size(), pattern.cells.size());
+        for (std::size_t i = 0; i < count; ++i) {
+            if (parts[i].empty()) {
+                continue;
+            }
+
+            int parsed = 0;
+            if (!parseInt(parts[i], parsed)) {
+                return std::nullopt;
+            }
+            pattern.cells[i].kind = clampSequenceKind(parsed);
+        }
+    }
+
+    return pattern;
+}
+
+bool sequencePatternHasCells(const SequencePattern& pattern) {
+    for (const SequenceCell& cell : pattern.cells) {
+        if (cell.kind != SequenceCellKind::Empty) {
+            return true;
+        }
+    }
+    return false;
 }
 
 }  // namespace downspout::rift

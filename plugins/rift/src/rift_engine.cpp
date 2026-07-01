@@ -398,26 +398,102 @@ void armTriggers(EngineState& state, const Triggers& triggers) {
     if (triggers.recoverSerial != 0 && triggers.recoverSerial != state.lastRecoverSerial) {
         state.lastRecoverSerial = triggers.recoverSerial;
         state.scatterBlocksRemaining = 0;
+        state.sequenceBlocksRemaining = 0;
         state.recoverBlocksRemaining = 4;
     }
+}
+
+struct SequenceSelection {
+    bool active = false;
+    ActionType action = ActionType::Pass;
+    double sourceBeats = 0.0;
+};
+
+[[nodiscard]] bool hasSequenceCells(const SequencePattern& sequence) {
+    for (const SequenceCell& cell : sequence.cells) {
+        if (cell.kind != SequenceCellKind::Empty) {
+            return true;
+        }
+    }
+    return false;
+}
+
+[[nodiscard]] SequenceSelection sequenceSelectionFor(const SequencePattern& sequence, const std::int64_t blockSerial) {
+    if (!hasSequenceCells(sequence)) {
+        return {};
+    }
+
+    std::int64_t wrapped = blockSerial % kSequenceCellCount;
+    if (wrapped < 0) {
+        wrapped += kSequenceCellCount;
+    }
+
+    SequenceSelection selection;
+    selection.active = true;
+
+    const SequenceCell& cell = sequence.cells[static_cast<std::size_t>(wrapped)];
+    switch (cell.kind) {
+    case SequenceCellKind::Empty:
+        selection.action = ActionType::Pass;
+        break;
+    case SequenceCellKind::Ratchet:
+        selection.action = ActionType::Repeat;
+        selection.sourceBeats = 0.125;
+        break;
+    case SequenceCellKind::HalfBeat:
+        selection.action = ActionType::Repeat;
+        selection.sourceBeats = 0.5;
+        break;
+    case SequenceCellKind::OneBeat:
+        selection.action = ActionType::Repeat;
+        selection.sourceBeats = 1.0;
+        break;
+    case SequenceCellKind::TwoBeat:
+        selection.action = ActionType::Repeat;
+        selection.sourceBeats = 2.0;
+        break;
+    case SequenceCellKind::Reverse:
+        selection.action = ActionType::Reverse;
+        selection.sourceBeats = 1.0;
+        break;
+    case SequenceCellKind::Smear:
+        selection.action = ActionType::Smear;
+        selection.sourceBeats = 2.0;
+        break;
+    case SequenceCellKind::Slip:
+        selection.action = ActionType::Slip;
+        selection.sourceBeats = 1.0;
+        break;
+    }
+
+    return selection;
 }
 
 void selectBlock(EngineState& state,
                  const Parameters& parameters,
                  const Triggers& triggers,
+                 const SequencePattern& sequence,
                  const std::int64_t blockSerial,
                  const double blockFrames,
+                 const double framesPerBeat,
                  const double framesPerBar) {
     armTriggers(state, triggers);
 
     if (state.recoverBlocksRemaining > 0) {
         applySelectedBlock(state, makePassBlock(), blockSerial);
         state.recoverBlocksRemaining -= 1u;
+        state.sequenceBlocksRemaining = 0;
         return;
     }
 
     if (parameters.hold >= 0.5f && state.activeBlock.valid) {
         state.activeBlockSerial = blockSerial;
+        return;
+    }
+
+    if (state.sequenceBlocksRemaining > 0u && state.activeBlock.valid) {
+        state.activeBlockSerial = blockSerial;
+        state.sequenceBlocksRemaining -= 1u;
         return;
     }
 
@@ -430,14 +506,23 @@ void selectBlock(EngineState& state,
     BlockSpec block {};
     block.valid = true;
 
-    const ActionType action = chooseAction(parameters, state.rngState, forceMutation);
+    const SequenceSelection sequenceSelection = sequenceSelectionFor(sequence, blockSerial);
+    const ActionType action = sequenceSelection.active
+        ? sequenceSelection.action
+        : chooseAction(parameters, state.rngState, forceMutation);
     if (action == ActionType::Pass) {
         applySelectedBlock(state, makePassBlock(), blockSerial);
+        state.sequenceBlocksRemaining = 0;
         return;
     }
 
     const std::uint32_t blockSourceLength = std::max<std::uint32_t>(1u, static_cast<std::uint32_t>(std::llround(blockFrames)));
-    const std::uint32_t sourceLength = choppedSourceLength(parameters, blockSourceLength);
+    const std::uint32_t selectedSourceLength = sequenceSelection.sourceBeats > 0.0
+        ? std::max<std::uint32_t>(1u, static_cast<std::uint32_t>(std::llround(framesPerBeat * sequenceSelection.sourceBeats)))
+        : blockSourceLength;
+    const std::uint32_t sourceLength = sequenceSelection.active
+        ? selectedSourceLength
+        : choppedSourceLength(parameters, blockSourceLength);
     const std::uint32_t memoryFrames = std::max<std::uint32_t>(
         blockSourceLength + 8u,
         static_cast<std::uint32_t>(std::llround(framesPerBar * std::max(1.0f, parameters.memoryBars))));
@@ -498,6 +583,14 @@ void selectBlock(EngineState& state,
     }
 
     applySelectedBlock(state, block, blockSerial);
+    if (sequenceSelection.active && sequenceSelection.sourceBeats > 0.0 && framesPerBeat > 0.0 && blockFrames > 0.0) {
+        const double beatsPerBlock = blockFrames / framesPerBeat;
+        const std::uint32_t durationBlocks = static_cast<std::uint32_t>(
+            std::max(1.0, std::ceil(sequenceSelection.sourceBeats / beatsPerBlock)));
+        state.sequenceBlocksRemaining = durationBlocks > 0u ? durationBlocks - 1u : 0u;
+    } else {
+        state.sequenceBlocksRemaining = 0;
+    }
 }
 
 [[nodiscard]] float renderBlockSample(const EngineState& state,
@@ -605,6 +698,17 @@ OutputStatus processBlock(EngineState& state,
                           const std::uint32_t nframes,
                           const double sampleRate,
                           const AudioBlock& audio) {
+    return processBlock(state, rawParameters, triggers, SequencePattern {}, transport, nframes, sampleRate, audio);
+}
+
+OutputStatus processBlock(EngineState& state,
+                          const Parameters& rawParameters,
+                          const Triggers& triggers,
+                          const SequencePattern& sequence,
+                          const TransportSnapshot& transport,
+                          const std::uint32_t nframes,
+                          const double sampleRate,
+                          const AudioBlock& audio) {
     const Parameters parameters = clampParameters(rawParameters);
     const std::uint32_t channelCount = std::max<std::uint32_t>(1u, std::min(audio.channelCount, kMaxChannels));
     ensureBuffer(state, parameters, transport, sampleRate, channelCount);
@@ -623,6 +727,7 @@ OutputStatus processBlock(EngineState& state,
         state.transportWasPlaying = false;
         state.activeBlock = makePassBlock();
         state.activeBlockSerial = -1;
+        state.sequenceBlocksRemaining = 0;
         clearTransition(state);
 
         for (std::uint32_t frame = 0; frame < nframes; ++frame) {
@@ -648,7 +753,7 @@ OutputStatus processBlock(EngineState& state,
     const double absBeatsStart = transport.bar * transport.beatsPerBar + transport.barBeat;
     const std::int64_t currentBlockSerial = static_cast<std::int64_t>(std::floor(absBeatsStart / beatsPerBlock + 1e-9));
     if (!state.transportWasPlaying || currentBlockSerial != state.activeBlockSerial || !state.activeBlock.valid) {
-        selectBlock(state, parameters, triggers, currentBlockSerial, blockFrames, framesPerBar);
+        selectBlock(state, parameters, triggers, sequence, currentBlockSerial, blockFrames, framesPerBeat, framesPerBar);
     } else {
         armTriggers(state, triggers);
     }
@@ -686,8 +791,10 @@ OutputStatus processBlock(EngineState& state,
             selectBlock(state,
                         parameters,
                         triggers,
+                        sequence,
                         boundaries[boundaryIndex].blockSerial,
                         blockFrames,
+                        framesPerBeat,
                         framesPerBar);
             ++boundaryIndex;
         }
@@ -747,8 +854,20 @@ OutputStatus processBlock(EngineState& state,
                           const double sampleRate,
                           const AudioBlock& audio,
                           const SamplePlayback& samplePlayback) {
+    return processBlock(state, parameters, triggers, SequencePattern {}, transport, nframes, sampleRate, audio, samplePlayback);
+}
+
+OutputStatus processBlock(EngineState& state,
+                          const Parameters& parameters,
+                          const Triggers& triggers,
+                          const SequencePattern& sequence,
+                          const TransportSnapshot& transport,
+                          const std::uint32_t nframes,
+                          const double sampleRate,
+                          const AudioBlock& audio,
+                          const SamplePlayback& samplePlayback) {
     if (samplePlayback.mode == InputSourceMode::LiveInput) {
-        return processBlock(state, parameters, triggers, transport, nframes, sampleRate, audio);
+        return processBlock(state, parameters, triggers, sequence, transport, nframes, sampleRate, audio);
     }
 
     const std::uint32_t channelCount = std::max<std::uint32_t>(1u, std::min(audio.channelCount, kMaxChannels));
@@ -773,7 +892,7 @@ OutputStatus processBlock(EngineState& state,
         sourcedAudio.inputs[channel] = state.sourceInputScratch.data() + static_cast<std::size_t>(channel) * nframes;
     }
 
-    return processBlock(state, parameters, triggers, transport, nframes, sampleRate, sourcedAudio);
+    return processBlock(state, parameters, triggers, sequence, transport, nframes, sampleRate, sourcedAudio);
 }
 
 }  // namespace downspout::rift

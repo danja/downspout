@@ -2,6 +2,7 @@
 
 #include "rift_engine.hpp"
 #include "rift_params.hpp"
+#include "rift_serialization.hpp"
 
 #include <algorithm>
 #include <array>
@@ -15,8 +16,10 @@ START_NAMESPACE_DISTRHO
 namespace {
 
 using CoreParameters = downspout::rift::Parameters;
+using CoreSequencePattern = downspout::rift::SequencePattern;
 using downspout::rift::ActionType;
 using downspout::rift::ActionWeights;
+using downspout::rift::SequenceCellKind;
 using downspout::rift::kActionCount;
 using downspout::rift::kActionNames;
 using downspout::rift::kParamBlend;
@@ -37,6 +40,9 @@ using downspout::rift::kParamStatusAction;
 using downspout::rift::kParamStatusActivity;
 using downspout::rift::kParameterCount;
 using downspout::rift::kStateKeySamplePath;
+using downspout::rift::kStateKeySequence;
+using downspout::rift::kSequenceCellCount;
+using downspout::rift::kSequenceCellKindNames;
 
 struct Rect {
     float x = 0.0f;
@@ -81,12 +87,12 @@ struct ModePreset {
 };
 
 constexpr std::array<SliderDef, 9> kSliders = {{
-    {kParamGrid, "Grid", "Blocks per bar", 1.0f, 16.0f},
+    {kParamGrid, "Window", "Main repeat window", 1.0f, 16.0f},
     {kParamDensity, "Density", "How often blocks mutate", 0.0f, 100.0f},
     {kParamDamage, "Damage", "Bias toward disruptive actions", 0.0f, 100.0f},
-    {kParamChop, "Chop", "Sub-slice stutter depth", 0.0f, 100.0f},
-    {kParamMemoryBars, "Memory", "Eligible history window", 1.0f, 8.0f},
-    {kParamDrift, "Drift", "Slice distance and instability", 0.0f, 100.0f},
+    {kParamChop, "Ratchet", "Sub-window retrigger depth", 0.0f, 100.0f},
+    {kParamMemoryBars, "Input", "Bars of source history", 1.0f, 8.0f},
+    {kParamDrift, "Reach", "Distance through input history", 0.0f, 100.0f},
     {kParamPitch, "Pitch", "Slip semitone offset", -12.0f, 12.0f},
     {kParamBlend, "Blend", "Crossfade each slice wrap", 0.0f, 100.0f},
     {kParamMix, "Mix", "Wet layer amount", 0.0f, 100.0f},
@@ -105,15 +111,25 @@ constexpr std::array<SourceModeDef, 3> kSourceModes = {{
 }};
 
 constexpr std::array<ModePreset, 6> kModes = {{
-    {"Pocket", "low-risk drift", 88, 125, 154, {8.0f, 18.0f, 18.0f, 2.0f, 10.0f, 0.0f, 58.0f, 18.0f, 0.0f, 0.0f, 4.0f, 0.0f}},
-    {"Stutter", "tight repeats", 205, 151, 79, {16.0f, 72.0f, 24.0f, 1.0f, 10.0f, 0.0f, 100.0f, 42.0f, 0.0f, 0.0f, 4.0f, 76.0f}},
-    {"Flip", "harder turns", 145, 110, 208, {8.0f, 56.0f, 70.0f, 2.0f, 26.0f, 0.0f, 100.0f, 22.0f, 0.0f, 0.0f, 4.0f, 18.0f}},
-    {"Smear", "slow melt", 78, 166, 169, {8.0f, 52.0f, 60.0f, 3.0f, 72.0f, 0.0f, 92.0f, 32.0f, 0.0f, 0.0f, 4.0f, 12.0f}},
-    {"Slip", "pitched drag", 93, 149, 224, {8.0f, 58.0f, 58.0f, 2.0f, 48.0f, 7.0f, 92.0f, 26.0f, 0.0f, 0.0f, 4.0f, 10.0f}},
-    {"Ruin", "full wreck", 196, 82, 82, {16.0f, 90.0f, 90.0f, 4.0f, 86.0f, -5.0f, 100.0f, 36.0f, 0.0f, 0.0f, 4.0f, 46.0f}},
+    {"Pocket", "light edits", 88, 125, 154, {8.0f, 22.0f, 16.0f, 2.0f, 10.0f, 0.0f, 64.0f, 18.0f, 0.0f, 0.0f, 4.0f, 12.0f}},
+    {"Ratchet", "locked repeats", 205, 151, 79, {16.0f, 78.0f, 20.0f, 1.0f, 12.0f, 0.0f, 100.0f, 28.0f, 0.0f, 0.0f, 4.0f, 82.0f}},
+    {"Stammer", "nervous 1/16", 223, 116, 79, {16.0f, 88.0f, 34.0f, 1.0f, 20.0f, 0.0f, 100.0f, 18.0f, 0.0f, 0.0f, 4.0f, 96.0f}},
+    {"Backspin", "break flips", 145, 110, 208, {8.0f, 64.0f, 72.0f, 2.0f, 32.0f, 0.0f, 100.0f, 20.0f, 0.0f, 0.0f, 4.0f, 28.0f}},
+    {"Smear", "long drag", 78, 166, 169, {4.0f, 50.0f, 58.0f, 4.0f, 74.0f, 0.0f, 92.0f, 36.0f, 0.0f, 0.0f, 4.0f, 8.0f}},
+    {"Slip", "pitched catch", 93, 149, 224, {8.0f, 62.0f, 48.0f, 2.0f, 40.0f, 7.0f, 94.0f, 24.0f, 0.0f, 0.0f, 4.0f, 18.0f}},
 }};
 
-constexpr std::size_t kPreviewBlockCount = 24;
+constexpr std::array<SequenceCellKind, 7> kCellPalette = {{
+    SequenceCellKind::Ratchet,
+    SequenceCellKind::HalfBeat,
+    SequenceCellKind::OneBeat,
+    SequenceCellKind::TwoBeat,
+    SequenceCellKind::Reverse,
+    SequenceCellKind::Smear,
+    SequenceCellKind::Slip,
+}};
+
+constexpr std::size_t kPreviewBlockCount = static_cast<std::size_t>(kSequenceCellCount);
 
 [[nodiscard]] float clampf(const float value, const float minValue, const float maxValue)
 {
@@ -133,13 +149,31 @@ constexpr std::size_t kPreviewBlockCount = 24;
 [[nodiscard]] std::string formatValue(const SliderDef& def, const float value)
 {
     char buf[64];
-    if (def.index == kParamGrid || def.index == kParamMemoryBars) {
-        std::snprintf(buf, sizeof(buf), "%d", static_cast<int>(std::lround(value)));
+    if (def.index == kParamGrid) {
+        const int grid = std::max(1, static_cast<int>(std::lround(value)));
+        if (grid == 1)
+            std::snprintf(buf, sizeof(buf), "1 bar");
+        else
+            std::snprintf(buf, sizeof(buf), "1/%d bar", grid);
+    } else if (def.index == kParamMemoryBars) {
+        const int bars = std::max(1, static_cast<int>(std::lround(value)));
+        std::snprintf(buf, sizeof(buf), "%d bar%s", bars, bars == 1 ? "" : "s");
     } else if (def.index == kParamPitch) {
         std::snprintf(buf, sizeof(buf), "%+d st", static_cast<int>(std::lround(value)));
     } else {
         std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::lround(value)));
     }
+    return buf;
+}
+
+[[nodiscard]] std::string formatBlockWindow(const CoreParameters& parameters)
+{
+    const int grid = std::max(1, static_cast<int>(std::lround(parameters.grid)));
+    char buf[32];
+    if (grid == 1)
+        std::snprintf(buf, sizeof(buf), "1 bar");
+    else
+        std::snprintf(buf, sizeof(buf), "1/%d bar", grid);
     return buf;
 }
 
@@ -186,6 +220,25 @@ struct ActionColor {
     return {77, 97, 111};
 }
 
+[[nodiscard]] ActionColor cellKindColor(const SequenceCellKind kind)
+{
+    switch (kind) {
+    case SequenceCellKind::Empty: return actionColor(ActionType::Pass);
+    case SequenceCellKind::Ratchet:
+    case SequenceCellKind::HalfBeat:
+    case SequenceCellKind::OneBeat:
+    case SequenceCellKind::TwoBeat:
+        return actionColor(ActionType::Repeat);
+    case SequenceCellKind::Reverse:
+        return actionColor(ActionType::Reverse);
+    case SequenceCellKind::Smear:
+        return actionColor(ActionType::Smear);
+    case SequenceCellKind::Slip:
+        return actionColor(ActionType::Slip);
+    }
+    return actionColor(ActionType::Pass);
+}
+
 [[nodiscard]] bool parameterMatches(const float lhs, const float rhs)
 {
     return std::fabs(lhs - rhs) < 0.01f;
@@ -202,6 +255,7 @@ public:
         values_.fill(0.0f);
         buttonPulse_.fill(0);
         modePulse_.fill(0);
+        previewPulse_.fill(0);
 
         const CoreParameters defaults = downspout::rift::clampParameters(CoreParameters {});
         values_[kParamGrid] = defaults.grid;
@@ -237,6 +291,15 @@ protected:
 
     void stateChanged(const char* key, const char* value) override
     {
+        if (std::strcmp(key, kStateKeySequence) == 0) {
+            const auto sequence = downspout::rift::deserializeSequencePattern(value != nullptr ? value : "");
+            if (sequence.has_value()) {
+                sequence_ = *sequence;
+                repaint();
+            }
+            return;
+        }
+
         if (std::strcmp(key, kStateKeySamplePath) != 0) {
             return;
         }
@@ -259,6 +322,12 @@ protected:
             }
         }
         for (int& pulse : modePulse_) {
+            if (pulse > 0) {
+                --pulse;
+                needsRepaint = true;
+            }
+        }
+        for (int& pulse : previewPulse_) {
             if (pulse > 0) {
                 --pulse;
                 needsRepaint = true;
@@ -319,6 +388,21 @@ protected:
             }
         }
 
+        for (std::size_t i = 0; i < paletteRects_.size(); ++i) {
+            if (paletteRects_[i].contains(x, y)) {
+                selectedCellKind_ = kCellPalette[i];
+                repaint();
+                return true;
+            }
+        }
+
+        for (std::size_t i = 0; i < previewBlockRects_.size(); ++i) {
+            if (previewBlockRects_[i].contains(x, y)) {
+                editSequenceCell(static_cast<int>(i));
+                return true;
+            }
+        }
+
         if (sampleLoadRect_.contains(x, y)) {
             awaitingSampleFile_ = requestStateFile(kStateKeySamplePath);
             return true;
@@ -375,7 +459,12 @@ private:
     Rect sampleLoadRect_ {};
     std::array<Rect, kModes.size()> modeRects_ {};
     std::array<int, kModes.size()> modePulse_ {};
+    std::array<Rect, kCellPalette.size()> paletteRects_ {};
+    std::array<Rect, kPreviewBlockCount> previewBlockRects_ {};
+    std::array<int, kPreviewBlockCount> previewPulse_ {};
+    CoreSequencePattern sequence_ {};
     std::string samplePath_ {};
+    SequenceCellKind selectedCellKind_ = SequenceCellKind::TwoBeat;
     int draggingSlider_ = -1;
     bool awaitingSampleFile_ = false;
 
@@ -473,28 +562,27 @@ private:
         fillColor(228, 233, 238, 255);
         text(x, y, "Performance Controls", nullptr);
 
-        const float buttonY = y + 28.0f;
+        const float buttonY = y + 24.0f;
         const float buttonGap = 12.0f;
         const float buttonW = (w - buttonGap * 2.0f) / 3.0f;
         for (std::size_t i = 0; i < kButtons.size(); ++i) {
             const float bx = x + static_cast<float>(i) * (buttonW + buttonGap);
-            buttonRects_[i] = {bx, buttonY, buttonW, 38.0f};
+            buttonRects_[i] = {bx, buttonY, buttonW, 34.0f};
             drawButton(kButtons[i], buttonRects_[i], static_cast<int>(i), parameters);
         }
 
-        drawSourceSelector(x, buttonY + 58.0f, w, 30.0f, parameters);
-        drawSampleLoader(x, buttonY + 96.0f, w, 28.0f);
+        drawSourceSelector(x, buttonY + 50.0f, w, 28.0f, parameters);
+        drawSampleLoader(x, buttonY + 84.0f, w, 26.0f);
 
-        const float sliderStartY = buttonY + 132.0f;
-        const float rowGap = 0.0f;
-        const float rowH = 32.0f;
+        const float sliderStartY = buttonY + 120.0f;
+        const float rowH = 35.0f;
         for (std::size_t i = 0; i < kSliders.size(); ++i) {
-            const float rowY = sliderStartY + static_cast<float>(i) * (rowH + rowGap);
+            const float rowY = sliderStartY + static_cast<float>(i) * rowH;
             if (rowY + rowH > y + h) {
                 sliderRects_[i] = {-1000.0f, -1000.0f, 0.0f, 0.0f};
                 continue;
             }
-            sliderRects_[i] = {x, rowY + 17.0f, w, 10.0f};
+            sliderRects_[i] = {x, rowY + 20.0f, w, 8.0f};
             drawSlider(kSliders[i], sliderRects_[i], parameters, draggingSlider_ == static_cast<int>(i));
         }
     }
@@ -654,11 +742,10 @@ private:
         const ActionType action = currentAction();
         const char* label = kActionNames[static_cast<std::size_t>(action)];
         const float activity = clampf(values_[kParamStatusActivity], 0.0f, 1.0f);
-        const float blockBars = 1.0f / std::max(1.0f, parameters.grid);
-
         drawMetric(x + 18.0f, top + 16.0f, "Action", label);
-        drawMetric(x + 18.0f + w * 0.27f, top + 16.0f, "Block", formatBars(blockBars).c_str());
-        drawMetric(x + 18.0f + w * 0.52f, top + 16.0f, "Memory", formatBars(parameters.memoryBars).c_str());
+        const std::string windowText = formatBlockWindow(parameters);
+        drawMetric(x + 18.0f + w * 0.27f, top + 16.0f, "Window", windowText.c_str());
+        drawMetric(x + 18.0f + w * 0.52f, top + 16.0f, "Input", formatBars(parameters.memoryBars).c_str());
 
         char buf[32];
         std::snprintf(buf, sizeof(buf), "%.0f%%", activity * 100.0f);
@@ -683,10 +770,12 @@ private:
 
     void drawPreview(const float x, const float y, const float w, const float h, const CoreParameters& parameters)
     {
+        (void)parameters;
+
         fontSize(16.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fillColor(228, 233, 238, 255);
-        text(x, y, "Preview Lane", nullptr);
+        text(x, y, "Sequence", nullptr);
 
         const float top = y + 30.0f;
         beginPath();
@@ -697,7 +786,7 @@ private:
 
         fontSize(12.0f);
         fillColor(140, 156, 168, 255);
-        text(x + 18.0f, top + 14.0f, "Conceptual next blocks from the current macro state", nullptr);
+        text(x + 18.0f, top + 14.0f, "Pick a recipe, then click cells to write repeatable edits", nullptr);
 
         const float stripX = x + 18.0f;
         const float stripY = top + 44.0f;
@@ -707,18 +796,31 @@ private:
         const float blockH = 50.0f;
 
         for (std::size_t i = 0; i < kPreviewBlockCount; ++i) {
-            ActionType action = downspout::rift::previewActionForBlock(parameters, i);
-            if (parameters.hold >= 0.5f && values_[kParamStatusAction] > 0.0f) {
-                action = currentAction();
-            }
-            const ActionColor color = actionColor(action);
+            const SequenceCellKind kind = sequence_.cells[i].kind;
+            const ActionColor color = cellKindColor(kind);
             const float bx = stripX + static_cast<float>(i) * (blockW + blockGap);
+            previewBlockRects_[i] = {bx, stripY, blockW, blockH};
 
             beginPath();
             roundedRect(bx, stripY, blockW, blockH, blockW > 12.0f ? 5.0f : 2.0f);
-            fillColor(color.r, color.g, color.b, 255);
+            fillColor(color.r, color.g, color.b, kind == SequenceCellKind::Empty ? 62 : 230);
             fill();
             closePath();
+
+            beginPath();
+            roundedRect(bx, stripY, blockW, blockH, blockW > 12.0f ? 5.0f : 2.0f);
+            strokeColor(color.r, color.g, color.b, previewPulse_[i] > 0 ? 255 : 120);
+            strokeWidth(previewPulse_[i] > 0 ? 2.0f : 1.0f);
+            stroke();
+            closePath();
+
+            fontSize(blockW < 30.0f ? 9.0f : 10.0f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            fillColor(246, 247, 249, kind == SequenceCellKind::Empty ? 96 : 255);
+            const char* label = kind == SequenceCellKind::Empty
+                ? "-"
+                : kSequenceCellKindNames[static_cast<std::size_t>(kind)];
+            textBox(bx + 2.0f, stripY + 8.0f, blockW - 4.0f, label, nullptr);
         }
 
         beginPath();
@@ -730,34 +832,40 @@ private:
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fillColor(116, 132, 144, 255);
-        text(stripX, stripY + blockH + 12.0f, "Now", nullptr);
+        text(stripX, stripY + blockH + 10.0f, "Cell 1", nullptr);
 
-        drawPreviewLegend(x + 18.0f, top + 118.0f);
+        drawSequencePalette(x + 90.0f, stripY + blockH + 6.0f, w - 108.0f);
     }
 
-    void drawPreviewLegend(const float x, const float y)
+    void drawSequencePalette(const float x, const float y, const float w)
     {
-        const std::array<ActionType, kActionCount> actions = {{
-            ActionType::Pass, ActionType::Repeat, ActionType::Reverse,
-            ActionType::Skip, ActionType::Smear, ActionType::Slip,
-        }};
-
-        float cursor = x;
-        for (const ActionType action : actions) {
-            const ActionColor color = actionColor(action);
+        const float gap = 6.0f;
+        const float buttonW = (w - gap * static_cast<float>(kCellPalette.size() - 1u)) /
+                              static_cast<float>(kCellPalette.size());
+        for (std::size_t i = 0; i < kCellPalette.size(); ++i) {
+            const SequenceCellKind kind = kCellPalette[i];
+            const ActionColor color = cellKindColor(kind);
+            const float bx = x + static_cast<float>(i) * (buttonW + gap);
+            paletteRects_[i] = {bx, y, buttonW, 24.0f};
+            const bool active = selectedCellKind_ == kind;
 
             beginPath();
-            roundedRect(cursor, y, 14.0f, 14.0f, 3.0f);
-            fillColor(color.r, color.g, color.b, 255);
+            roundedRect(bx, y, buttonW, 24.0f, 6.0f);
+            fillColor(color.r, color.g, color.b, active ? 118 : 48);
             fill();
             closePath();
 
-            fontSize(11.0f);
-            textAlign(ALIGN_LEFT | ALIGN_TOP);
-            fillColor(140, 156, 168, 255);
-            const char* label = kActionNames[static_cast<std::size_t>(action)];
-            text(cursor + 20.0f, y + 1.0f, label, nullptr);
-            cursor += 74.0f;
+            beginPath();
+            roundedRect(bx, y, buttonW, 24.0f, 6.0f);
+            strokeColor(color.r, color.g, color.b, active ? 235 : 120);
+            strokeWidth(active ? 2.0f : 1.0f);
+            stroke();
+            closePath();
+
+            fontSize(10.0f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            fillColor(241, 243, 246, 255);
+            text(bx + buttonW * 0.5f, y + 13.0f, kSequenceCellKindNames[static_cast<std::size_t>(kind)], nullptr);
         }
     }
 
@@ -958,6 +1066,24 @@ private:
         commitParameter(kParamHold, 0.0f, false);
         modePulse_[static_cast<std::size_t>(modeIndex)] = 18;
         repaint();
+    }
+
+    void editSequenceCell(const int cellIndex)
+    {
+        if (cellIndex < 0 || cellIndex >= static_cast<int>(sequence_.cells.size())) {
+            return;
+        }
+
+        auto& cell = sequence_.cells[static_cast<std::size_t>(cellIndex)];
+        cell.kind = cell.kind == selectedCellKind_ ? SequenceCellKind::Empty : selectedCellKind_;
+        previewPulse_[static_cast<std::size_t>(cellIndex)] = 18;
+        pushSequenceState();
+        repaint();
+    }
+
+    void pushSequenceState()
+    {
+        setState(kStateKeySequence, downspout::rift::serializeSequencePattern(sequence_).c_str());
     }
 
     [[nodiscard]] float valueForIndex(const uint32_t index, const CoreParameters& parameters) const

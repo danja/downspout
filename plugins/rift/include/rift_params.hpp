@@ -27,10 +27,12 @@ enum ParameterIndex : std::uint32_t {
 enum StateIndex : std::uint32_t {
     kStateParameters = 0,
     kStateSamplePath,
+    kStateSequence,
     kStateCount
 };
 
 inline constexpr const char* kStateKeyParameters = "parameters";
 inline constexpr const char* kStateKeySamplePath = "sample_path";
+inline constexpr const char* kStateKeySequence = "sequence";
 
 }  // namespace downspout::rift

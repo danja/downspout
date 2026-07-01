@@ -10,6 +10,8 @@ namespace downspout::rift {
 
 inline constexpr std::uint32_t kMaxChannels = 8;
 inline constexpr std::size_t kActionCount = 6;
+inline constexpr int kSequenceCellCount = 16;
+inline constexpr int kSequenceCellKindCount = 8;
 
 enum class ActionType : std::uint8_t {
     Pass = 0,
@@ -34,6 +36,28 @@ enum class InputSourceMode : std::uint8_t {
     Sample,
     LiveAndSample,
 };
+
+enum class SequenceCellKind : std::uint8_t {
+    Empty = 0,
+    Ratchet,
+    HalfBeat,
+    OneBeat,
+    TwoBeat,
+    Reverse,
+    Smear,
+    Slip,
+};
+
+inline constexpr std::array<const char*, kSequenceCellKindCount> kSequenceCellKindNames = {{
+    "Empty",
+    "Ratchet",
+    "1/2 beat",
+    "1 beat",
+    "2 beat",
+    "Reverse",
+    "Smear",
+    "Slip",
+}};
 
 struct Parameters {
     float grid = 8.0f;
@@ -88,6 +112,14 @@ struct SamplePlayback {
     double loopBeats = 0.0;
 };
 
+struct SequenceCell {
+    SequenceCellKind kind = SequenceCellKind::Empty;
+};
+
+struct SequencePattern {
+    std::array<SequenceCell, static_cast<std::size_t>(kSequenceCellCount)> cells {};
+};
+
 struct BlockSpec {
     ActionType action = ActionType::Pass;
     double readPosition = 0.0;
@@ -120,6 +152,7 @@ struct EngineState {
     std::uint32_t lastRecoverSerial = 0;
     std::uint32_t scatterBlocksRemaining = 0;
     std::uint32_t recoverBlocksRemaining = 0;
+    std::uint32_t sequenceBlocksRemaining = 0;
 
     std::uint32_t rngState = 0x2457ac13u;
 };

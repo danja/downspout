@@ -20,6 +20,13 @@ beat-mapped to the host transport before it enters the same rolling-buffer
 engine, so a break can be treated as a four-beat phrase even when the raw file
 duration does not match the current DAW tempo.
 
+`rift` also has a 16-cell sequence lane for repeatable edits. Pick a recipe in
+the UI, then click cells to store it. For example, select `2 beat` and click a
+cell to make that position hold a two-beat stutter across the grid. When the
+sequence is empty, `Density`, `Damage`, and the other macro controls keep the
+older probabilistic behavior. As soon as any cell is enabled, empty cells are
+dry/pass and enabled cells force their stored recipe.
+
 ## Controls
 
 - `Grid`
@@ -58,6 +65,10 @@ duration does not match the current DAW tempo.
   Force the next few blocks into mutation.
 - `Recover`
   Clear scatter pressure and force several dry blocks.
+- `Sequence`
+  Sixteen saved cells that override the random action chooser when any cell is
+  enabled. Cell recipes include `Ratchet`, `1/2 beat`, `1 beat`, `2 beat`,
+  `Reverse`, `Smear`, and `Slip`.
 
 ## UI
 
@@ -68,7 +79,7 @@ The UI is intentionally product-style rather than dev-style:
 - a `Source` selector and `Load WAV` button for sample-backed processing;
 - a bottom `Modes` strip with quick parameter recipes such as `Stutter`,
   `Smear`, and `Ruin`;
-- a preview lane that shows the next conceptual block pattern;
+- a sequence lane where cells store repeatable stutter/replay recipes;
 - an action-bias panel that makes the musical consequences of the macros legible.
 
 ## Sample loading
@@ -101,6 +112,7 @@ spitting a click at every restart.
 
 - a portable core with deterministic tests;
 - WAV sample-source loading and beat-mapped sample playback;
+- saved 16-cell sequence state for repeatable stutter edits;
 - text parameter state serialization;
 - a DPF-backed `rift.vst3` wrapper target with a custom UI and file browser.
 

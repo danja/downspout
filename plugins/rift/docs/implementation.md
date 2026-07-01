@@ -5,7 +5,7 @@
 `rift` follows the normal `downspout` pattern:
 
 - portable core in `include/` and `src/`;
-- text state serialization;
+- text state serialization for parameters and the sequence lane;
 - thin DPF VST3 wrapper;
 - custom NanoVG UI;
 - deterministic core tests.
@@ -29,6 +29,19 @@ surprises are usually the wrong default.
   to the new one for a short fixed window so large read-head jumps do not click.
 - when a slice loops back to its start, the core can also crossfade the tail
   into the next pass, controlled by the user-facing `Blend` parameter.
+
+## Sequence state
+
+The UI stores a 16-cell sequence under the plugin-local `sequence` state key.
+Each cell stores a recipe id. The DSP wrapper deserializes that state and passes
+it to the portable engine for live input and sample-backed processing.
+
+An empty sequence preserves the original probabilistic action chooser. If any
+cell is enabled, the sequence repeats over block boundaries. Empty cells become
+explicit dry/pass cells and enabled cells force their action recipe. Beat-window
+recipes such as `2 beat` override the source slice length and hold the active
+recipe for the matching musical duration while the global block grid still
+decides the underlying boundary resolution.
 
 ## Sample source
 

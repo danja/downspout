@@ -26,6 +26,7 @@ using CoreParameters = downspout::rift::Parameters;
 using CoreSamplePlayback = downspout::rift::SamplePlayback;
 using CoreSampleSource = downspout::rift::SampleSource;
 using CoreSampleLoadResult = downspout::rift::SampleLoadResult;
+using CoreSequencePattern = downspout::rift::SequencePattern;
 using CoreTransport = downspout::rift::TransportSnapshot;
 using CoreTriggers = downspout::rift::Triggers;
 
@@ -53,8 +54,10 @@ using downspout::rift::kParameterCount;
 using downspout::rift::kStateCount;
 using downspout::rift::kStateKeyParameters;
 using downspout::rift::kStateKeySamplePath;
+using downspout::rift::kStateKeySequence;
 using downspout::rift::kStateParameters;
 using downspout::rift::kStateSamplePath;
+using downspout::rift::kStateSequence;
 
 ParameterEnumerationValue kActionEnumValues[] = {
     {0.0f, "Pass"},
@@ -363,6 +366,15 @@ protected:
             state.hints = kStateIsFilenamePath;
             state.defaultValue = "";
         }
+        else if (index == kStateSequence)
+        {
+            static const std::string defaultSequenceState =
+                downspout::rift::serializeSequencePattern(CoreSequencePattern {});
+            state.key = kStateKeySequence;
+            state.label = "Sequence";
+            state.hints = kStateIsOnlyForDSP;
+            state.defaultValue = defaultSequenceState.c_str();
+        }
     }
 
     float getParameterValue(uint32_t index) const override
@@ -428,6 +440,8 @@ protected:
             return String(downspout::rift::serializeParameters(parameters_).c_str());
         if (std::strcmp(key, kStateKeySamplePath) == 0)
             return String(samplePath_.c_str());
+        if (std::strcmp(key, kStateKeySequence) == 0)
+            return String(downspout::rift::serializeSequencePattern(sequence_).c_str());
 
         return String();
     }
@@ -446,6 +460,14 @@ protected:
         if (std::strcmp(key, kStateKeySamplePath) == 0)
         {
             loadSamplePath(value != nullptr ? value : "");
+            return;
+        }
+
+        if (std::strcmp(key, kStateKeySequence) == 0)
+        {
+            const auto sequence = downspout::rift::deserializeSequencePattern(value != nullptr ? value : "");
+            if (sequence.has_value())
+                sequence_ = *sequence;
             return;
         }
     }
@@ -490,6 +512,7 @@ protected:
             status = downspout::rift::processBlock(engineState_,
                                                    parameters_,
                                                    triggers_,
+                                                   sequence_,
                                                    transport,
                                                    frames,
                                                    getSampleRate(),
@@ -501,6 +524,7 @@ protected:
             status = downspout::rift::processBlock(engineState_,
                                                    parameters_,
                                                    triggers_,
+                                                   sequence_,
                                                    transport,
                                                    frames,
                                                    getSampleRate(),
@@ -536,6 +560,7 @@ private:
 
     CoreParameters parameters_ {};
     CoreTriggers triggers_ {};
+    CoreSequencePattern sequence_ {};
     CoreEngineState engineState_ {};
     CoreSampleSource testSampleSource_ {};
     std::atomic<std::shared_ptr<const CoreSampleSource>> fileSampleSource_ {};

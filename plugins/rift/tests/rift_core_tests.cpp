@@ -9,6 +9,7 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <string>
 
 using namespace downspout::rift;
 
@@ -478,6 +479,65 @@ void testChopShortensMutationSlice() {
     assert(state.activeBlock.sourceLengthFrames <= 2u);
 }
 
+void testSequenceCellForcesTwoBeatRepeat() {
+    EngineState state;
+    activate(state, 8.0, 1);
+
+    Parameters parameters;
+    parameters.grid = 4.0f;
+    parameters.density = 0.0f;
+    parameters.memoryBars = 2.0f;
+    parameters.mix = 100.0f;
+
+    SequencePattern sequence;
+    sequence.cells[8].kind = SequenceCellKind::TwoBeat;
+
+    std::array<float, 80> input {};
+    std::array<float, 80> output {};
+    for (std::size_t i = 0; i < input.size(); ++i) {
+        input[i] = static_cast<float>(i) * 0.02f;
+    }
+
+    AudioBlock audio;
+    audio.inputs[0] = input.data();
+    audio.outputs[0] = output.data();
+    audio.channelCount = 1;
+
+    TransportSnapshot transport;
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 0.0;
+    transport.barBeat = 0.0;
+    transport.beatsPerBar = 4.0;
+    transport.bpm = 60.0;
+
+    for (int block = 0; block < 8; ++block) {
+        audio.inputs[0] = input.data() + static_cast<std::size_t>(block) * 8u;
+        audio.outputs[0] = output.data() + static_cast<std::size_t>(block) * 8u;
+        transport.bar = static_cast<double>(block / 4);
+        transport.barBeat = static_cast<double>(block % 4);
+        (void)processBlock(state, parameters, Triggers {}, sequence, transport, 8u, 8.0, audio);
+    }
+
+    audio.inputs[0] = input.data() + 64;
+    audio.outputs[0] = output.data() + 64;
+    transport.bar = 2.0;
+    transport.barBeat = 0.0;
+    const OutputStatus status = processBlock(state, parameters, Triggers {}, sequence, transport, 8u, 8.0, audio);
+
+    assert(status.action == ActionType::Repeat);
+    assert(state.activeBlock.sourceLengthFrames == 16u);
+    assert(state.sequenceBlocksRemaining == 1u);
+
+    audio.inputs[0] = input.data() + 72;
+    audio.outputs[0] = output.data() + 72;
+    transport.bar = 2.0;
+    transport.barBeat = 1.0;
+    const OutputStatus held = processBlock(state, parameters, Triggers {}, sequence, transport, 8u, 8.0, audio);
+    assert(held.action == ActionType::Repeat);
+    assert(state.sequenceBlocksRemaining == 0u);
+}
+
 void testSerializationRoundTrip() {
     Parameters parameters;
     parameters.grid = 5.0f;
@@ -507,6 +567,22 @@ void testSerializationRoundTrip() {
     assert(std::fabs(roundTrip->sourceMode - 2.0f) < 1e-6f);
     assert(std::fabs(roundTrip->sampleBeats - 8.0f) < 1e-6f);
     assert(std::fabs(roundTrip->chop - 63.0f) < 1e-6f);
+}
+
+void testSequenceSerializationRoundTrip() {
+    SequencePattern pattern;
+    pattern.cells[0].kind = SequenceCellKind::Ratchet;
+    pattern.cells[3].kind = SequenceCellKind::TwoBeat;
+    pattern.cells[7].kind = SequenceCellKind::Reverse;
+
+    const std::string text = serializeSequencePattern(pattern);
+    const auto parsed = deserializeSequencePattern(text);
+    assert(parsed.has_value());
+    assert(parsed->cells[0].kind == SequenceCellKind::Ratchet);
+    assert(parsed->cells[3].kind == SequenceCellKind::TwoBeat);
+    assert(parsed->cells[7].kind == SequenceCellKind::Reverse);
+    assert(parsed->cells[1].kind == SequenceCellKind::Empty);
+    assert(sequencePatternHasCells(*parsed));
 }
 
 void testEarlierStateFormatDefaultsBlend() {
@@ -597,7 +673,9 @@ int main() {
     testSamplePlaybackUsesDeclaredLoopBeats();
     testSamplePlaybackFeedsExistingMutationBuffer();
     testChopShortensMutationSlice();
+    testSequenceCellForcesTwoBeatRepeat();
     testSerializationRoundTrip();
+    testSequenceSerializationRoundTrip();
     testEarlierStateFormatDefaultsBlend();
     testLoadWavSampleSource();
     return 0;
