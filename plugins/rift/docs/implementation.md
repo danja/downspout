@@ -36,12 +36,14 @@ The UI stores a 16-cell sequence under the plugin-local `sequence` state key.
 Each cell stores a recipe id. The DSP wrapper deserializes that state and passes
 it to the portable engine for live input and sample-backed processing.
 
-An empty sequence preserves the original probabilistic action chooser. If any
-cell is enabled, the sequence repeats over block boundaries. Empty cells become
-explicit dry/pass cells and enabled cells force their action recipe. Beat-window
-recipes such as `2 beat` override the source slice length and hold the active
-recipe for the matching musical duration while the global block grid still
-decides the underlying boundary resolution.
+An empty sequence uses the density-gated probabilistic action chooser. The
+factory default density is `0`, so a fresh instance passes dry audio until the
+user either raises `Density` or writes sequence cells. If any cell is enabled,
+the sequence repeats over block boundaries. Empty cells become explicit dry/pass
+cells and enabled cells force their action recipe. Beat-window recipes such as
+`2 beat` override the source slice length and hold the active recipe for the
+matching musical duration while the global block grid still decides the
+underlying boundary resolution.
 
 ## Sample source
 

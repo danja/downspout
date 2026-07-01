@@ -225,7 +225,7 @@ protected:
             parameter.hints |= kParameterIsInteger;
             parameter.ranges.min = 0.0f;
             parameter.ranges.max = 100.0f;
-            parameter.ranges.def = 35.0f;
+            parameter.ranges.def = 0.0f;
             break;
         case kParamDamage:
             parameter.name = "Damage";

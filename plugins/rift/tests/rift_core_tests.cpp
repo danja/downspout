@@ -84,6 +84,43 @@ void testStoppedTransportPassesThrough() {
     }
 }
 
+void testDefaultParametersPassThroughWhilePlaying() {
+    EngineState state;
+    activate(state, 8.0, 1);
+
+    std::array<float, 32> input {};
+    std::array<float, 32> output {};
+    for (std::size_t i = 0; i < input.size(); ++i) {
+        input[i] = static_cast<float>(i) * 0.03f;
+    }
+
+    AudioBlock audio;
+    audio.inputs[0] = input.data();
+    audio.outputs[0] = output.data();
+    audio.channelCount = 1;
+
+    TransportSnapshot transport;
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 0.0;
+    transport.barBeat = 0.0;
+    transport.beatsPerBar = 4.0;
+    transport.bpm = 60.0;
+
+    const OutputStatus status = processBlock(state,
+                                             Parameters {},
+                                             Triggers {},
+                                             transport,
+                                             static_cast<std::uint32_t>(input.size()),
+                                             8.0,
+                                             audio);
+
+    assert(status.action == ActionType::Pass);
+    for (std::size_t i = 0; i < input.size(); ++i) {
+        assert(std::fabs(output[i] - input[i]) < 1e-6f);
+    }
+}
+
 void testScatterMutatesAndRecoverReturnsDry() {
     EngineState state;
     activate(state, 8.0, 1);
@@ -668,6 +705,7 @@ int main() {
     testClampParameters();
     testPreviewActionHonorsZeroDensity();
     testStoppedTransportPassesThrough();
+    testDefaultParametersPassThroughWhilePlaying();
     testScatterMutatesAndRecoverReturnsDry();
     testBlockTransitionsArmCrossfade();
     testSamplePlaybackUsesDeclaredLoopBeats();

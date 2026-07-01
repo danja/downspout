@@ -70,10 +70,11 @@ not ask the user to become a scheduler debugger.
 
 ## Sequence editing
 
-The sequence lane is the deterministic path. When all cells are empty, `rift`
-uses the macro-driven probabilistic chooser. When any cell is enabled, the
-sequence repeats over 16 block boundaries: empty cells pass dry audio and
-enabled cells force their recipe.
+The sequence lane is the deterministic path. With the factory default
+`Density = 0`, an empty sequence passes dry audio. Raising `Density` above zero
+enables the macro-driven probabilistic chooser when no cells are programmed.
+When any cell is enabled, the sequence repeats over 16 block boundaries: empty
+cells pass dry audio and enabled cells force their recipe.
 
 The initial recipes are intentionally musical rather than implementation-shaped:
 `Ratchet`, `1/2 beat`, `1 beat`, `2 beat`, `Reverse`, `Smear`, and `Slip`.

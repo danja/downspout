@@ -22,17 +22,21 @@ duration does not match the current DAW tempo.
 
 `rift` also has a 16-cell sequence lane for repeatable edits. Pick a recipe in
 the UI, then click cells to store it. For example, select `2 beat` and click a
-cell to make that position hold a two-beat stutter across the grid. When the
-sequence is empty, `Density`, `Damage`, and the other macro controls keep the
-older probabilistic behavior. As soon as any cell is enabled, empty cells are
-dry/pass and enabled cells force their stored recipe.
+cell to make that position hold a two-beat stutter across the grid. With the
+factory default `Density = 0`, an empty sequence is dry/pass-through. Manual
+sequence cells can be added from silence. Raising `Density` above zero enables
+the older probabilistic behavior when the sequence is empty. As soon as any
+cell is enabled, empty cells are dry/pass and enabled cells force their stored
+recipe.
 
 ## Controls
 
 - `Grid`
   Blocks per bar. The mutation engine only changes actions on these boundaries.
 - `Density`
-  How often a block mutates instead of passing through.
+  How often an empty-sequence block mutates instead of passing through. The
+  default is `0` so a fresh instance does not process until cells are added or
+  density is raised.
 - `Damage`
   Bias toward more disruptive actions such as reverse, skip, and smear.
 - `Chop`

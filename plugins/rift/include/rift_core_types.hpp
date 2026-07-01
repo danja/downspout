@@ -61,7 +61,7 @@ inline constexpr std::array<const char*, kSequenceCellKindCount> kSequenceCellKi
 
 struct Parameters {
     float grid = 8.0f;
-    float density = 35.0f;
+    float density = 0.0f;
     float damage = 45.0f;
     float memoryBars = 2.0f;
     float drift = 20.0f;
