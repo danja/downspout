@@ -121,6 +121,13 @@ void testDeterministicGeneration() {
     }
 }
 
+void testSubdivisionStepCounts() {
+    assert(stepsPerBeatForSubdivision(SubdivisionId::quarter) == 1);
+    assert(stepsPerBeatForSubdivision(SubdivisionId::eighth) == 2);
+    assert(stepsPerBeatForSubdivision(SubdivisionId::sixteenth) == 4);
+    assert(stepsPerBeatForSubdivision(SubdivisionId::sixteenthTriplet) == 6);
+}
+
 void testRhythmRegenerationKeepsPreviousNotes() {
     Controls controls;
     controls.seed = 77u;
@@ -987,6 +994,7 @@ void testEngineActionCountersRegenerateAndResync() {
 
 int main() {
     testDeterministicGeneration();
+    testSubdivisionStepCounts();
     testRhythmRegenerationKeepsPreviousNotes();
     testTransportHelpers();
     testVariationMutatesAfterLoopThreshold();

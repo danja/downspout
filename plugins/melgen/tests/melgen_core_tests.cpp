@@ -89,6 +89,14 @@ void testDeterministicGeneration()
     assert(first.phraseCount > 1);
 }
 
+void testSubdivisionStepCounts()
+{
+    assert(stepsPerBeatForSubdivision(SubdivisionId::quarter) == 1);
+    assert(stepsPerBeatForSubdivision(SubdivisionId::eighth) == 2);
+    assert(stepsPerBeatForSubdivision(SubdivisionId::sixteenth) == 4);
+    assert(stepsPerBeatForSubdivision(SubdivisionId::sixteenthTriplet) == 6);
+}
+
 void testCallAnswerPhraseMetadata()
 {
     Controls controls;
@@ -313,6 +321,7 @@ void testSerializationRoundTrip()
 int main()
 {
     testDeterministicGeneration();
+    testSubdivisionStepCounts();
     testCallAnswerPhraseMetadata();
     testStructureChangesPhraseRelationship();
     testCadenceTargetsRoot();

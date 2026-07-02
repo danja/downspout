@@ -560,6 +560,7 @@ bool structuralControlsChanged(const Controls& a, const Controls& b)
 int stepsPerBeatForSubdivision(const SubdivisionId subdivision)
 {
     switch (subdivision) {
+    case SubdivisionId::quarter: return 1;
     case SubdivisionId::eighth: return 2;
     case SubdivisionId::sixteenthTriplet: return 6;
     case SubdivisionId::sixteenth:

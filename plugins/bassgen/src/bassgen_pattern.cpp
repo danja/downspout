@@ -1525,6 +1525,7 @@ int stepsPerBeatForSubdivision(SubdivisionId subdivision) {
     case SubdivisionId::eighth: return 2;
     case SubdivisionId::sixteenth: return 4;
     case SubdivisionId::sixteenthTriplet: return 6;
+    case SubdivisionId::quarter: return 1;
     default: return 4;
     }
 }

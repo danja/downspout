@@ -84,7 +84,7 @@ constexpr const char* kScaleNames[] = {
     "Whole-Half Dim", "Bebop Dom", "Bebop Major", "Bebop Minor"
 };
 
-constexpr const char* kSubdivisionNames[] = {"1/8", "1/16", "1/16T"};
+constexpr const char* kSubdivisionNames[] = {"1/8", "1/16", "1/16T", "1/4"};
 constexpr const char* kPeriodNames[] = {"Free", "A A", "A B", "A A'", "Call Answer", "A B A"};
 constexpr const char* kContourNames[] = {"Wander", "Flat", "Rise", "Fall", "Arch", "Inv Arch"};
 constexpr const char* kAnswerNames[] = {"Related", "Same", "Transpose", "Invert", "Compress", "Expand"};
@@ -123,7 +123,7 @@ constexpr std::array<SelectorDef, 6> kSelectors = {{
     {kParamPeriod, "Period", kPeriodNames, 6},
     {kParamContour, "Contour", kContourNames, 6},
     {kParamAnswer, "Answer", kAnswerNames, 6},
-    {kParamSubdivision, "Grid", kSubdivisionNames, 3},
+    {kParamSubdivision, "Grid", kSubdivisionNames, 4},
     {kParamChannel, "Channel", kChannelNames, 16},
 }};
 
