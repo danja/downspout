@@ -19,6 +19,9 @@ The source can be live input, a loaded WAV loop, or both. Sample playback is
 beat-mapped to the host transport before it enters the same rolling-buffer
 engine, so a break can be treated as a four-beat phrase even when the raw file
 duration does not match the current DAW tempo.
+Loaded samples feed the edit buffer; they are not automatically heard as the
+dry signal. With `Density = 0` and no sequence cells, `Sample` mode passes the
+plugin input, or silence when there is no input.
 
 `rift` also has a 16-cell sequence lane for repeatable edits. Pick a recipe in
 the UI, then click cells to store it. For example, select `2 beat` and click a
@@ -55,9 +58,9 @@ recipe.
 - `Mix`
   Wet level of the slice playback layer.
 - `Source`
-  Selects `Live`, `Sample`, or `Live + Sample` input. `Sample` uses the loaded
-  WAV file, falling back to a built-in four-beat test loop when no file is
-  loaded.
+  Selects what feeds the edit buffer: `Live`, `Sample`, or `Live + Sample`.
+  `Sample` uses the loaded WAV file, falling back to a built-in four-beat test
+  loop when no file is loaded. Dry/pass output remains the plugin input.
 - `Load WAV`
   Opens a file picker and stores the selected sample path in plugin state.
 - `Sample Beats`
@@ -95,6 +98,12 @@ MP3 are not supported yet.
 Loaded samples are decoded outside the audio callback and then published to the
 processor as immutable PCM data. If a selected file cannot be loaded, `Sample`
 mode falls back to the built-in test loop rather than breaking the plugin.
+The loaded sample is only heard when density, scatter, or sequence cells select
+a wet action.
+
+Changing source mode, changing the declared sample beat length, or loading or
+clearing a sample resets the rolling history. This avoids processing a newly
+loaded sample through stale live-input or fallback-loop memory.
 
 Transient detection is not implemented yet. The current sample path maps the
 whole file evenly across the declared beat length, then lets the existing

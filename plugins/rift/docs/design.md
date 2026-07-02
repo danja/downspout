@@ -33,6 +33,9 @@ mode, a loaded WAV file is mapped by musical beat position and then fed into the
 same rolling-buffer engine as live input. This keeps the action set and
 smoothing behavior shared: sample playback is source material for `rift`, not a
 separate effect that bypasses the existing processor.
+Pass-through still means the original plugin input. A loaded sample only becomes
+audible when the engine selects a wet action from density, scatter, or an
+enabled sequence cell.
 
 Sample mapping uses an explicit loop length in beats. The current DAW-facing
 default is four beats because break loops often need to be treated as one

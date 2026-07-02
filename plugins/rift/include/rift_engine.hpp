@@ -12,6 +12,7 @@ namespace downspout::rift {
 [[nodiscard]] bool sequencePatternHasCells(const SequencePattern& pattern);
 
 void activate(EngineState& state, double sampleRate, std::uint32_t channelCount);
+void resetHistory(EngineState& state);
 [[nodiscard]] OutputStatus processBlock(EngineState& state,
                                         const Parameters& parameters,
                                         const Triggers& triggers,

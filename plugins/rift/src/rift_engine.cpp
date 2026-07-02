@@ -244,6 +244,16 @@ void writeInputFrame(EngineState& state, const AudioBlock& audio, const std::uin
     state.filledFrames = std::min(state.filledFrames + 1u, state.bufferFrames);
 }
 
+[[nodiscard]] float dryInputFrame(const AudioBlock& audio, const std::uint32_t channel, const std::uint32_t frame) {
+    const float* dry = audio.dryInputs[channel];
+    if (dry != nullptr) {
+        return dry[frame];
+    }
+
+    const float* in = audio.inputs[channel];
+    return in ? in[frame] : 0.0f;
+}
+
 [[nodiscard]] float readSampleAtFrame(const SampleSource& source,
                                       const std::uint32_t outputChannel,
                                       double position) {
@@ -691,6 +701,20 @@ void activate(EngineState& state, const double sampleRate, const std::uint32_t c
     ensureBuffer(state, Parameters {}, TransportSnapshot {}, sampleRate, channelCount);
 }
 
+void resetHistory(EngineState& state) {
+    std::fill(state.buffer.begin(), state.buffer.end(), 0.0f);
+    std::fill(state.sourceInputScratch.begin(), state.sourceInputScratch.end(), 0.0f);
+    state.writeHead = 0;
+    state.filledFrames = 0;
+    state.transportWasPlaying = false;
+    state.activeBlock = {};
+    state.activeBlockSerial = -1;
+    state.sequenceBlocksRemaining = 0;
+    state.scatterBlocksRemaining = 0;
+    state.recoverBlocksRemaining = 0;
+    clearTransition(state);
+}
+
 OutputStatus processBlock(EngineState& state,
                           const Parameters& rawParameters,
                           const Triggers& triggers,
@@ -736,8 +760,7 @@ OutputStatus processBlock(EngineState& state,
                 if (!out) {
                     continue;
                 }
-                const float* in = audio.inputs[channel];
-                out[frame] = in ? in[frame] : 0.0f;
+                out[frame] = dryInputFrame(audio, channel, frame);
             }
             writeInputFrame(state, audio, frame);
         }
@@ -805,8 +828,7 @@ OutputStatus processBlock(EngineState& state,
                 continue;
             }
 
-            const float* in = audio.inputs[channel];
-            const float live = in ? in[frame] : 0.0f;
+            const float live = dryInputFrame(audio, channel, frame);
             const float currentOutput = renderBlockSample(state, state.activeBlock, channel, live);
 
             if (state.transitionFramesRemaining > 0u && state.transitionBlock.valid) {
@@ -886,6 +908,7 @@ OutputStatus processBlock(EngineState& state,
     }
 
     AudioBlock sourcedAudio;
+    sourcedAudio.dryInputs = audio.inputs;
     sourcedAudio.outputs = audio.outputs;
     sourcedAudio.channelCount = channelCount;
     for (std::uint32_t channel = 0; channel < channelCount; ++channel) {

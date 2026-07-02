@@ -414,8 +414,16 @@ protected:
         case kParamMix: parameters_.mix = value; break;
         case kParamBlend: parameters_.blend = value; break;
         case kParamHold: parameters_.hold = value; break;
-        case kParamSourceMode: parameters_.sourceMode = value; break;
-        case kParamSampleBeats: parameters_.sampleBeats = value; break;
+        case kParamSourceMode:
+            if (std::fabs(parameters_.sourceMode - value) >= 0.5f)
+                pendingHistoryReset_.store(true, std::memory_order_release);
+            parameters_.sourceMode = value;
+            break;
+        case kParamSampleBeats:
+            if (std::fabs(parameters_.sampleBeats - value) >= 0.5f)
+                pendingHistoryReset_.store(true, std::memory_order_release);
+            parameters_.sampleBeats = value;
+            break;
         case kParamChop: parameters_.chop = value; break;
         case kParamScatter:
             if (value >= 0.5f && scatterValue_ < 0.5f)
@@ -482,6 +490,9 @@ protected:
 
     void run(const float** inputs, float** outputs, uint32_t frames) override
     {
+        if (pendingHistoryReset_.exchange(false, std::memory_order_acq_rel))
+            downspout::rift::resetHistory(engineState_);
+
         std::array<const float*, downspout::rift::kMaxChannels> safeInputs {};
         std::array<float*, downspout::rift::kMaxChannels> safeOutputs {};
 
@@ -543,6 +554,7 @@ private:
         if (samplePath_.empty())
         {
             fileSampleSource_.store(nullptr, std::memory_order_release);
+            pendingHistoryReset_.store(true, std::memory_order_release);
             return;
         }
 
@@ -551,11 +563,13 @@ private:
         {
             sampleLoadError_ = loaded.error;
             fileSampleSource_.store(nullptr, std::memory_order_release);
+            pendingHistoryReset_.store(true, std::memory_order_release);
             return;
         }
 
         fileSampleSource_.store(std::make_shared<const CoreSampleSource>(std::move(loaded.source)),
                                 std::memory_order_release);
+        pendingHistoryReset_.store(true, std::memory_order_release);
     }
 
     CoreParameters parameters_ {};
@@ -564,6 +578,7 @@ private:
     CoreEngineState engineState_ {};
     CoreSampleSource testSampleSource_ {};
     std::atomic<std::shared_ptr<const CoreSampleSource>> fileSampleSource_ {};
+    std::atomic<bool> pendingHistoryReset_ {false};
     std::string samplePath_ {};
     std::string sampleLoadError_ {};
     float scatterValue_ = 0.0f;

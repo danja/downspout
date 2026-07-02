@@ -324,7 +324,7 @@ void testBlockTransitionsArmCrossfade() {
     assert(!state.transitionBlock.valid);
 }
 
-void testSamplePlaybackUsesDeclaredLoopBeats() {
+void testSamplePlaybackPassesDryInputAtZeroDensity() {
     EngineState state;
     activate(state, 2.0, 1);
 
@@ -337,6 +337,53 @@ void testSamplePlaybackUsesDeclaredLoopBeats() {
 
     assert(isSampleSourceUsable(source));
     assert(std::fabs(sampleLoopBeats(source) - 4.0) < 1e-6);
+
+    Parameters parameters;
+    parameters.density = 0.0f;
+
+    std::array<float, 4> dry {0.25f, 0.5f, 0.75f, 1.0f};
+    std::array<float, 4> out {};
+    AudioBlock audio;
+    audio.inputs[0] = dry.data();
+    audio.outputs[0] = out.data();
+    audio.channelCount = 1;
+
+    TransportSnapshot transport;
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 0.0;
+    transport.barBeat = 0.0;
+    transport.beatsPerBar = 4.0;
+    transport.bpm = 120.0;
+
+    SamplePlayback playback;
+    playback.source = &source;
+    playback.mode = InputSourceMode::Sample;
+
+    const OutputStatus status = processBlock(state,
+                                             parameters,
+                                             Triggers {},
+                                             transport,
+                                             static_cast<std::uint32_t>(out.size()),
+                                             2.0,
+                                             audio,
+                                             playback);
+
+    assert(status.action == ActionType::Pass);
+    for (std::size_t i = 0; i < dry.size(); ++i) {
+        assert(std::fabs(out[i] - dry[i]) < 1e-6f);
+    }
+}
+
+void testSamplePlaybackIsSilentWithoutDryInputAtZeroDensity() {
+    EngineState state;
+    activate(state, 2.0, 1);
+
+    SampleSource source;
+    source.channelCount = 1;
+    source.sampleRate = 4.0;
+    source.loopBeats = 4.0;
+    source.interleaved = {0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f};
 
     Parameters parameters;
     parameters.density = 0.0f;
@@ -368,10 +415,9 @@ void testSamplePlaybackUsesDeclaredLoopBeats() {
                                              playback);
 
     assert(status.action == ActionType::Pass);
-    assert(std::fabs(out[0] - 0.0f) < 1e-6f);
-    assert(std::fabs(out[1] - 2.0f) < 1e-6f);
-    assert(std::fabs(out[2] - 4.0f) < 1e-6f);
-    assert(std::fabs(out[3] - 6.0f) < 1e-6f);
+    for (const float value : out) {
+        assert(std::fabs(value) < 1e-6f);
+    }
 }
 
 void testSamplePlaybackFeedsExistingMutationBuffer() {
@@ -459,6 +505,95 @@ void testSamplePlaybackFeedsExistingMutationBuffer() {
         }
     }
     assert(changed);
+}
+
+void testSamplePlaybackMatchesLiveInputForSequence() {
+    EngineState liveState;
+    EngineState sampleState;
+    activate(liveState, 8.0, 1);
+    activate(sampleState, 8.0, 1);
+
+    SampleSource source;
+    source.channelCount = 1;
+    source.sampleRate = 8.0;
+    source.loopBeats = 16.0;
+    source.interleaved.resize(128);
+    for (std::size_t i = 0; i < source.interleaved.size(); ++i) {
+        source.interleaved[i] = static_cast<float>(i) * 0.01f;
+    }
+
+    Parameters parameters;
+    parameters.grid = 4.0f;
+    parameters.density = 0.0f;
+    parameters.memoryBars = 2.0f;
+    parameters.drift = 0.0f;
+    parameters.mix = 100.0f;
+    parameters.blend = 0.0f;
+
+    SequencePattern sequence;
+    sequence.cells[8].kind = SequenceCellKind::TwoBeat;
+
+    SamplePlayback playback;
+    playback.source = &source;
+    playback.mode = InputSourceMode::Sample;
+    playback.loopBeats = source.loopBeats;
+
+    TransportSnapshot transport;
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 0.0;
+    transport.barBeat = 0.0;
+    transport.beatsPerBar = 4.0;
+    transport.bpm = 60.0;
+
+    std::array<float, 80> liveIn {};
+    std::array<float, 80> liveOut {};
+    std::array<float, 80> sampleOut {};
+    for (std::size_t i = 0; i < liveIn.size(); ++i) {
+        liveIn[i] = source.interleaved[i];
+    }
+
+    AudioBlock liveAudio;
+    liveAudio.inputs[0] = liveIn.data();
+    liveAudio.outputs[0] = liveOut.data();
+    liveAudio.channelCount = 1;
+
+    AudioBlock sampleAudio;
+    sampleAudio.inputs[0] = liveIn.data();
+    sampleAudio.outputs[0] = sampleOut.data();
+    sampleAudio.channelCount = 1;
+
+    for (int block = 0; block < 10; ++block) {
+        liveAudio.inputs[0] = liveIn.data() + static_cast<std::size_t>(block) * 8u;
+        liveAudio.outputs[0] = liveOut.data() + static_cast<std::size_t>(block) * 8u;
+        sampleAudio.inputs[0] = liveIn.data() + static_cast<std::size_t>(block) * 8u;
+        sampleAudio.outputs[0] = sampleOut.data() + static_cast<std::size_t>(block) * 8u;
+        transport.bar = static_cast<double>(block / 4);
+        transport.barBeat = static_cast<double>(block % 4);
+
+        const OutputStatus liveStatus = processBlock(liveState,
+                                                     parameters,
+                                                     Triggers {},
+                                                     sequence,
+                                                     transport,
+                                                     8u,
+                                                     8.0,
+                                                     liveAudio);
+        const OutputStatus sampleStatus = processBlock(sampleState,
+                                                       parameters,
+                                                       Triggers {},
+                                                       sequence,
+                                                       transport,
+                                                       8u,
+                                                       8.0,
+                                                       sampleAudio,
+                                                       playback);
+        assert(liveStatus.action == sampleStatus.action);
+    }
+
+    for (std::size_t i = 0; i < liveOut.size(); ++i) {
+        assert(std::fabs(liveOut[i] - sampleOut[i]) < 1e-6f);
+    }
 }
 
 void testChopShortensMutationSlice() {
@@ -708,8 +843,10 @@ int main() {
     testDefaultParametersPassThroughWhilePlaying();
     testScatterMutatesAndRecoverReturnsDry();
     testBlockTransitionsArmCrossfade();
-    testSamplePlaybackUsesDeclaredLoopBeats();
+    testSamplePlaybackPassesDryInputAtZeroDensity();
+    testSamplePlaybackIsSilentWithoutDryInputAtZeroDensity();
     testSamplePlaybackFeedsExistingMutationBuffer();
+    testSamplePlaybackMatchesLiveInputForSequence();
     testChopShortensMutationSlice();
     testSequenceCellForcesTwoBeatRepeat();
     testSerializationRoundTrip();

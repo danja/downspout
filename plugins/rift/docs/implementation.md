@@ -66,6 +66,13 @@ The DPF wrapper exposes a host-visible `Source` parameter for DAW testing:
 - `Live + Sample` mixes live input with the loaded/fallback sample before the
   rolling buffer.
 
+For sample-backed modes, the generated sample stream is the capture/source
+signal, not the dry signal. The portable processor now keeps separate source
+and dry inputs: source frames are written to the rolling buffer, while `Pass`
+and dry/wet mix use the original plugin input. This keeps `Density = 0` with no
+sequence cells aligned with live-input behavior: it passes the track input, or
+silence when the track has no input, instead of auditioning the loaded loop.
+
 The UI has a `Load WAV` control that stores the selected path in the
 `sample_path` state slot. The DSP wrapper decodes the file outside the audio
 callback and publishes an immutable sample snapshot to the processor. Current
@@ -80,9 +87,15 @@ beats. This means a two-second break can still be treated as one four-beat bar
 at the host tempo.
 
 The sample path intentionally feeds the generated source frames into the normal
-`AudioBlock` input path. That means pass-through, history capture, scatter,
-recover, slice selection, and crossfades continue to use the existing engine
-logic.
+history-capture path. That means history capture, scatter, recover, slice
+selection, and crossfades continue to use the existing engine logic while dry
+output remains independent from the selected source.
+
+When the wrapper changes source mode, changes the declared sample beat length,
+or loads/clears a sample file, it clears `rift`'s rolling history before the
+next render block. That keeps a loaded sample from being processed against stale
+live-input or fallback-loop memory, which would otherwise make sample-backed
+processing feel different from running the same material through the live input.
 
 When sample-only mode is selected and host transport cannot be mapped, the
 generated source is silence. This preserves the transport-gated behavior that

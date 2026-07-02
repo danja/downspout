@@ -92,6 +92,7 @@ struct TransportSnapshot {
 
 struct AudioBlock {
     std::array<const float*, kMaxChannels> inputs {};
+    std::array<const float*, kMaxChannels> dryInputs {};
     std::array<float*, kMaxChannels> outputs {};
     std::uint32_t channelCount = 2;
 };
