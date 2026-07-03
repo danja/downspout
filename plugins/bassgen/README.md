@@ -52,9 +52,13 @@ Implementation status:
 - the appended Rock genre preserves existing genre IDs while adding hard
   beat-start anchors, root/fifth/octave-biased note choice, longer holds, and
   stronger velocities for riff-like bass lines;
+- the appended Moroder genre preserves existing genre IDs while adding a
+  happy, repetitive subdivision-pulse bass line with tonic/fifth/octave focus
+  and slider-driven color turns, density holes, short holds, and accents;
 - the general `Color` control is serialized and exposed in the UI, and affects
   Jazz dominant color, Fugue leading tones, and genre-specific tension choices
-  for Funk, Acid, Dub, Ambient, Sabbath, Rock, and the electronic styles;
+  for Funk, Acid, Dub, Ambient, Sabbath, Rock, Moroder, and the electronic
+  styles;
 - incoming MIDI follow/dodge controls are wired through the wrapper, core, and
   UI, including channel/any-note input matching and input sensitivity for
   Ground-guided companion lines.

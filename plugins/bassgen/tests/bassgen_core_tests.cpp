@@ -458,7 +458,8 @@ void testFugueGenreIsAppendedAndAnswersAtDominant() {
     assert(static_cast<int>(GenreId::jazz) == 8);
     assert(static_cast<int>(GenreId::fugue) == 9);
     assert(static_cast<int>(GenreId::rock) == 10);
-    assert(static_cast<int>(GenreId::count) == 11);
+    assert(static_cast<int>(GenreId::moroder) == 11);
+    assert(static_cast<int>(GenreId::count) == 12);
 
     Controls controls;
     controls.seed = 1701u;
@@ -509,6 +510,53 @@ void testRockGenrePinsBeatAnchors() {
         assert(event != nullptr);
         assert(event->velocity >= 100);
     }
+}
+
+void testMoroderGenreUsesRepetitiveBrightPulse() {
+    Controls controls;
+    controls.seed = 1977u;
+    controls.genre = GenreId::moroder;
+    controls.scale = ScaleId::major;
+    controls.rootNote = 36;
+    controls.lengthBeats = 8;
+    controls.subdivision = SubdivisionId::sixteenth;
+    controls.density = 0.82f;
+    controls.hold = 0.12f;
+    controls.accent = 0.70f;
+    controls.color = 0.15f;
+
+    PatternState lowColor;
+    regeneratePattern(lowColor, controls, ::downspout::Meter {}, true, true);
+
+    assert(lowColor.stepsPerBeat == 4);
+    assert(lowColor.patternSteps == 32);
+    for (int step = 0; step < 12; ++step) {
+        assert(hasEventStartingAt(lowColor, step));
+    }
+
+    const NoteEvent* first = eventStartingAt(lowColor, 0);
+    const NoteEvent* second = eventStartingAt(lowColor, 1);
+    assert(first != nullptr);
+    assert(second != nullptr);
+    assert(relativePitchClass(first->note, controls.rootNote) == 0);
+    assert(relativePitchClass(second->note, controls.rootNote) == 7);
+    assert(first->velocity > second->velocity);
+
+    controls.color = 0.95f;
+    PatternState highColor;
+    regeneratePattern(highColor, controls, ::downspout::Meter {}, true, true);
+
+    bool hasBrightTurn = false;
+    for (int index = 0; index < highColor.eventCount; ++index) {
+        const int pc = relativePitchClass(highColor.events[index].note, controls.rootNote);
+        if (pc == 4 || pc == 9 || pc == 11 || pc == 2) {
+            hasBrightTurn = true;
+            break;
+        }
+    }
+
+    assert(hasBrightTurn);
+    assert(patternsDiffer(lowColor, highColor));
 }
 
 void testBebopDominantScaleConstrainsGeneratedNotes() {
@@ -1009,6 +1057,7 @@ int main() {
     testJazzScaleIdsAreAppended();
     testFugueGenreIsAppendedAndAnswersAtDominant();
     testRockGenrePinsBeatAnchors();
+    testMoroderGenreUsesRepetitiveBrightPulse();
     testBebopDominantScaleConstrainsGeneratedNotes();
     testStateSanitization();
     testEngineRewindResyncAndStopNoteOff();

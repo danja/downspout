@@ -40,10 +40,16 @@ Current `downspout`-specific port note:
 - Rock is implemented as an appended genre value after Fugue. It preserves
   saved-state genre IDs while forcing beat-start anchors and riff-like
   root/fifth/octave emphasis;
+- Moroder is implemented as an appended genre value after Rock. It preserves
+  saved-state genre IDs while reinforcing short subdivision pulses and a
+  compact tonic/fifth/octave cell. `Density`, `Hold`, `Accent`, `Color`,
+  `Scale`, `Register`, `Subdivision`, and `Seed` still shape holes, note
+  length, velocity, brightness, pitch vocabulary, range, pulse grid, and
+  deterministic variation;
 - the appended `Color` control is serialized in text state and exposed through
   DPF/UI. It is intentionally general rather than Jazz-only: Jazz uses it for
   dominant color intensity, Fugue uses it for leading-tone pickup behavior, and
-  Rock and other genres use it to increase
+  Rock, Moroder, and other genres use it to increase
   vocabulary-appropriate tension or motion without changing existing enum IDs.
 
 Likely reusable source modules:

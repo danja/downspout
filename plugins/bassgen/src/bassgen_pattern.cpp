@@ -165,6 +165,12 @@ constexpr ScaleDef kScales[] = {
             if (roll < 0.96f) return 7;
             return 2;
         }
+        if (genre == GenreId::moroder) {
+            if (roll < 0.58f - color * 0.10f) return 0;
+            if (roll < 0.78f) return 7;
+            if (roll < 0.90f + color * 0.06f) return 4;
+            return color > 0.62f ? 5 : 2;
+        }
         if (roll < 0.45f) return 0;
         if (roll < 0.70f) return 4;
         if (roll < 0.82f) return 2;
@@ -202,6 +208,12 @@ constexpr ScaleDef kScales[] = {
         if (roll < 0.82f + color * 0.08f) return 7;
         if (roll < 0.92f) return prevDegree == 0 ? 4 : 0;
         return 2;
+    case GenreId::moroder:
+        if (roll < 0.42f - color * 0.10f) return 0;
+        if (roll < 0.60f) return prevDegree == 0 ? 7 : 0;
+        if (roll < 0.76f) return 4;
+        if (roll < 0.88f + color * 0.08f) return 5;
+        return color > 0.55f ? 6 : 2;
     case GenreId::acid:
         if (roll < 0.25f - color * 0.10f) return prevDegree;
         if (roll < 0.55f - color * 0.08f) return clampi(prevDegree + rng.nextInt(-1, 1), 0, 6);
@@ -1003,6 +1015,7 @@ constexpr ScaleDef kScales[] = {
     case GenreId::jazz: return strong ? 1.35f : 0.26f;
     case GenreId::fugue: return strong ? 1.48f : 0.42f;
     case GenreId::rock: return strong ? 1.55f : 0.18f;
+    case GenreId::moroder: return strong ? 1.10f : 1.34f;
     default: return 1.0f;
     }
 }
@@ -1194,6 +1207,36 @@ void reinforceRockBeatAnchors(std::array<bool, kMaxPatternSteps>& onset,
     }
 }
 
+void reinforceMoroderPulse(std::array<bool, kMaxPatternSteps>& onset,
+                           const PatternState& pattern,
+                           const Controls& controls,
+                           Rng& rng) {
+    if (controls.genre != GenreId::moroder ||
+        pattern.stepsPerBeat <= 0 ||
+        pattern.patternSteps <= 0) {
+        return;
+    }
+
+    const int pulseStep = std::max(1, pattern.stepsPerBeat / 4);
+    const int phraseSteps = pattern.stepsPerBar > 0 ? pattern.stepsPerBar : pattern.stepsPerBeat * 4;
+    for (int step = 0; step < pattern.patternSteps; step += pulseStep) {
+        const int local = phraseSteps > 0 ? step % phraseSteps : step;
+        const bool beatStart = isBeatStartStep(pattern, step);
+        const bool offbeatPulse = !beatStart && (step % pulseStep) == 0;
+        const bool phraseTurn = local >= std::max(0, phraseSteps - pattern.stepsPerBeat);
+
+        float probability = beatStart ? 0.88f : 0.72f;
+        probability += controls.density * 0.20f;
+        probability += offbeatPulse ? controls.color * 0.08f : 0.0f;
+        probability -= phraseTurn ? (0.14f - controls.hold * 0.08f) : 0.0f;
+
+        if (step == 0 || (controls.density >= 0.78f && !phraseTurn) ||
+            rng.nextFloat() < clampf(probability, 0.52f, 0.99f)) {
+            onset[step] = true;
+        }
+    }
+}
+
 [[nodiscard]] int nextOnsetStep(const std::array<bool, kMaxPatternSteps>& onset, int patternSteps, int step) {
     for (int index = step + 1; index < patternSteps; ++index) {
         if (onset[index]) {
@@ -1222,6 +1265,9 @@ void reinforceRockBeatAnchors(std::array<bool, kMaxPatternSteps>& onset,
         break;
     case GenreId::rock:
         holdBias = clampf(holdBias * 1.15f + 0.10f, 0.0f, 1.0f);
+        break;
+    case GenreId::moroder:
+        holdBias = clampf(holdBias * 0.35f + 0.08f, 0.0f, 1.0f);
         break;
     case GenreId::jazz:
         holdBias *= 0.58f;
@@ -1323,6 +1369,42 @@ void buildSabbathDegreeCell(std::array<int, 4>& cell, int cellLen, Rng& rng) {
     }
 }
 
+[[nodiscard]] int moroderDegreeForEvent(const PatternState& pattern,
+                                        const Controls& controls,
+                                        Rng& rng,
+                                        const NoteEvent& event,
+                                        const int previousDegree) {
+    const int degreeCount = std::max(1, scaleDegreeCount(controls));
+    const int stepInBar = stepInBarFor(pattern, event.startStep);
+    const int pulseStep = std::max(1, pattern.stepsPerBeat / 4);
+    const int pulseIndex = pulseStep > 0 ? stepInBar / pulseStep : 0;
+    const int beatIndex = pattern.stepsPerBeat > 0 ? stepInBar / pattern.stepsPerBeat : 0;
+    const bool beatStart = pattern.stepsPerBeat > 0 && (stepInBar % pattern.stepsPerBeat) == 0;
+    const bool phraseEnd = pattern.stepsPerBar > 0 && stepInBar >= pattern.stepsPerBar - pattern.stepsPerBeat;
+    const int fifth = std::min(4, degreeCount - 1);
+    const int sixth = std::min(5, degreeCount - 1);
+    const int seventh = std::min(6, degreeCount - 1);
+    const int third = std::min(2, degreeCount - 1);
+    const int second = std::min(1, degreeCount - 1);
+
+    int degree = 0;
+    if ((pulseIndex % 4) == 1) {
+        degree = fifth + degreeCount;
+    } else if ((pulseIndex % 4) == 3) {
+        degree = controls.color > 0.58f ? sixth : fifth;
+    } else if ((beatIndex % 2) == 1 && controls.color > 0.44f) {
+        degree = third;
+    }
+
+    if (phraseEnd && controls.color > 0.68f && rng.nextFloat() < 0.42f + controls.density * 0.24f) {
+        degree = rng.nextFloat() < 0.58f ? seventh : second;
+    } else if (!beatStart && controls.density > 0.62f && rng.nextFloat() < controls.color * 0.22f) {
+        degree = previousDegree <= third ? third : 0;
+    }
+
+    return clampi(degree, 0, degreeCount * 3 - 1);
+}
+
 [[nodiscard]] int sabbathCellDegree(const PatternState& pattern,
                                     Rng& rng,
                                     const std::array<int, 4>& cell,
@@ -1393,6 +1475,7 @@ void generateRhythm(PatternState& pattern,
     reinforceJazzWalkingBeats(onset, pattern, controls, rng);
     reinforceFugueSubjectSteps(onset, pattern, controls, rng);
     reinforceRockBeatAnchors(onset, pattern, controls);
+    reinforceMoroderPulse(onset, pattern, controls, rng);
 
     for (int step = 0; step < pattern.patternSteps && pattern.eventCount < kMaxEvents; ++step) {
         if (!onset[step]) {
@@ -1440,13 +1523,17 @@ void generateNotes(PatternState& pattern, const Controls& controls, Rng& rng) {
                 ? jazzDegreeForEvent(pattern, controls, rng, event, prevDegree)
                 : (controls.genre == GenreId::sabbath)
                     ? sabbathCellDegree(pattern, rng, sabbathCell, sabbathCellLen, index)
-                    : chooseDegree(rng, controls, strong, prevDegree);
+                    : (controls.genre == GenreId::moroder)
+                        ? moroderDegreeForEvent(pattern, controls, rng, event, prevDegree)
+                        : chooseDegree(rng, controls, strong, prevDegree);
             prevDegree = degree;
             event.note = noteFromDegree(controls, degree);
             prevJazzNote = event.note;
         }
 
-        const int baseVelocity = controls.genre == GenreId::rock ? 92 : 86;
+        const int baseVelocity = controls.genre == GenreId::rock
+            ? 92
+            : (controls.genre == GenreId::moroder ? 88 : 86);
         const int accentBoost = strong
             ? static_cast<int>(std::lround(controls.accent * 28.0f))
             : (secondaryAccent
