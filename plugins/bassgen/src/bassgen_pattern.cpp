@@ -1378,7 +1378,9 @@ void buildSabbathDegreeCell(std::array<int, 4>& cell, int cellLen, Rng& rng) {
     const int stepInBar = stepInBarFor(pattern, event.startStep);
     const int pulseStep = std::max(1, pattern.stepsPerBeat / 4);
     const int pulseIndex = pulseStep > 0 ? stepInBar / pulseStep : 0;
+    const int barIndex = pattern.stepsPerBar > 0 ? event.startStep / pattern.stepsPerBar : 0;
     const int beatIndex = pattern.stepsPerBeat > 0 ? stepInBar / pattern.stepsPerBeat : 0;
+    const int stepInBeat = pattern.stepsPerBeat > 0 ? stepInBar % pattern.stepsPerBeat : 0;
     const bool beatStart = pattern.stepsPerBeat > 0 && (stepInBar % pattern.stepsPerBeat) == 0;
     const bool phraseEnd = pattern.stepsPerBar > 0 && stepInBar >= pattern.stepsPerBar - pattern.stepsPerBeat;
     const int fifth = std::min(4, degreeCount - 1);
@@ -1386,20 +1388,65 @@ void buildSabbathDegreeCell(std::array<int, 4>& cell, int cellLen, Rng& rng) {
     const int seventh = std::min(6, degreeCount - 1);
     const int third = std::min(2, degreeCount - 1);
     const int second = std::min(1, degreeCount - 1);
+    const int fourth = std::min(3, degreeCount - 1);
 
-    int degree = 0;
-    if ((pulseIndex % 4) == 1) {
-        degree = fifth + degreeCount;
-    } else if ((pulseIndex % 4) == 3) {
-        degree = controls.color > 0.58f ? sixth : fifth;
-    } else if ((beatIndex % 2) == 1 && controls.color > 0.44f) {
-        degree = third;
+    int phraseRoot = 0;
+    switch (((barIndex % 4) + 4) % 4) {
+    case 1:
+        phraseRoot = controls.color > 0.42f ? third : 0;
+        break;
+    case 2:
+        phraseRoot = controls.color > 0.62f ? fourth : 0;
+        break;
+    case 3:
+        phraseRoot = controls.color > 0.72f ? second : 0;
+        break;
+    default:
+        break;
+    }
+
+    int degree = phraseRoot;
+    switch (((pulseIndex % 16) + 16) % 16) {
+    case 1:
+    case 5:
+    case 9:
+    case 13:
+        degree = phraseRoot + fifth + degreeCount;
+        break;
+    case 3:
+        degree = phraseRoot + (controls.color > 0.46f ? sixth : fifth);
+        break;
+    case 6:
+        degree = phraseRoot + (controls.color > 0.34f ? third : 0);
+        break;
+    case 7:
+        degree = phraseRoot + (controls.color > 0.66f ? second : fifth);
+        break;
+    case 10:
+        degree = phraseRoot + (controls.color > 0.54f ? fourth : 0);
+        break;
+    case 11:
+        degree = phraseRoot + (controls.color > 0.58f ? sixth : fifth);
+        break;
+    case 14:
+        degree = phraseRoot + (controls.color > 0.50f ? third : 0);
+        break;
+    case 15:
+        degree = phraseRoot + (controls.color > 0.68f ? seventh : fifth);
+        break;
+    default:
+        break;
     }
 
     if (phraseEnd && controls.color > 0.68f && rng.nextFloat() < 0.42f + controls.density * 0.24f) {
         degree = rng.nextFloat() < 0.58f ? seventh : second;
-    } else if (!beatStart && controls.density > 0.62f && rng.nextFloat() < controls.color * 0.22f) {
-        degree = previousDegree <= third ? third : 0;
+    } else if (!beatStart && controls.density > 0.62f && rng.nextFloat() < controls.color * 0.30f) {
+        const bool risingTurn = previousDegree <= (phraseRoot + third);
+        degree = phraseRoot + (risingTurn ? third : second);
+    } else if (stepInBeat == std::max(0, pattern.stepsPerBeat - 1) &&
+               controls.color > 0.78f &&
+               rng.nextFloat() < 0.26f + controls.density * 0.18f) {
+        degree = phraseRoot + (rng.nextFloat() < 0.5f ? second : seventh);
     }
 
     return clampi(degree, 0, degreeCount * 3 - 1);

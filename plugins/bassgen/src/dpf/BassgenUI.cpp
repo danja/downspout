@@ -221,6 +221,7 @@ protected:
     {
         if (index < values_.size()) {
             values_[index] = value;
+            syncActionCounter(index, value);
             repaint();
         }
     }
@@ -339,6 +340,7 @@ protected:
 
 private:
     std::array<float, kParameterCount> values_ {};
+    std::array<int, std::size(kButtons)> actionCounters_ {};
     std::array<Rect, std::size(kSliders)> sliderRects_ {};
     std::array<Rect, std::size(kSelectors)> selectorRects_ {};
     std::array<Rect, std::size(kButtons)> buttonRects_ {};
@@ -711,13 +713,30 @@ private:
         return {menuX, menuY, menuW, menuH};
     }
 
+    void syncActionCounter(uint32_t index, float value)
+    {
+        for (std::size_t i = 0; i < std::size(kButtons); ++i) {
+            if (kButtons[i].index == index) {
+                actionCounters_[i] = std::max(actionCounters_[i], clampi(static_cast<int>(std::lround(value)), 0, 1048576));
+                return;
+            }
+        }
+    }
+
     void triggerButton(int buttonIndex)
     {
-        const uint32_t index = kButtons[buttonIndex].index;
-        float value = values_[index] + 1.0f;
-        if (value > 1048576.0f) {
-            value = 1.0f;
+        if (buttonIndex < 0 || buttonIndex >= static_cast<int>(std::size(kButtons))) {
+            return;
         }
+
+        const uint32_t index = kButtons[buttonIndex].index;
+        int next = actionCounters_[static_cast<std::size_t>(buttonIndex)] + 1;
+        if (next > 1048576) {
+            next = 1;
+        }
+        actionCounters_[static_cast<std::size_t>(buttonIndex)] = next;
+
+        const float value = static_cast<float>(next);
         editParameter(index, true);
         setParameterValue(index, value);
         editParameter(index, false);

@@ -547,15 +547,21 @@ void testMoroderGenreUsesRepetitiveBrightPulse() {
     regeneratePattern(highColor, controls, ::downspout::Meter {}, true, true);
 
     bool hasBrightTurn = false;
+    bool pitchClasses[12] {};
+    int pitchClassCount = 0;
     for (int index = 0; index < highColor.eventCount; ++index) {
         const int pc = relativePitchClass(highColor.events[index].note, controls.rootNote);
+        if (!pitchClasses[pc]) {
+            pitchClasses[pc] = true;
+            ++pitchClassCount;
+        }
         if (pc == 4 || pc == 9 || pc == 11 || pc == 2) {
             hasBrightTurn = true;
-            break;
         }
     }
 
     assert(hasBrightTurn);
+    assert(pitchClassCount >= 4);
     assert(patternsDiffer(lowColor, highColor));
 }
 
