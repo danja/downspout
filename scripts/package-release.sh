@@ -89,6 +89,18 @@ if [[ -n "${DPF_ROOT:-}" ]]; then
   cmake_args+=("-DDPF_ROOT=$DPF_ROOT")
 fi
 
+if [[ -n "${DOWNSPOUT_CMAKE_TOOLCHAIN_FILE:-}" ]]; then
+  cmake_args+=("-DCMAKE_TOOLCHAIN_FILE=$DOWNSPOUT_CMAKE_TOOLCHAIN_FILE")
+fi
+
+if [[ -n "${DOWNSPOUT_CMAKE_OSX_ARCHITECTURES:-}" ]]; then
+  cmake_args+=("-DCMAKE_OSX_ARCHITECTURES=$DOWNSPOUT_CMAKE_OSX_ARCHITECTURES")
+fi
+
+if [[ -n "${DOWNSPOUT_CMAKE_OSX_DEPLOYMENT_TARGET:-}" ]]; then
+  cmake_args+=("-DCMAKE_OSX_DEPLOYMENT_TARGET=$DOWNSPOUT_CMAKE_OSX_DEPLOYMENT_TARGET")
+fi
+
 echo "Configuring downspout $version ($build_type)"
 cmake "${cmake_args[@]}"
 

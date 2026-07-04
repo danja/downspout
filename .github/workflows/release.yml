@@ -17,6 +17,7 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
       matrix:
@@ -24,15 +25,25 @@ jobs:
           - name: Linux x86_64 VST3 Release
             runner: ubuntu-24.04
             platform: linux-x86_64
-          - name: macOS arm64 VST3 Release
+            experimental: false
+            run_tests: "1"
+            strip: "1"
+          - name: macOS Universal VST3 Release
             runner: macos-15
-            platform: macos-arm64
-          - name: macOS x86_64 VST3 Release
-            runner: macos-15-intel
-            platform: macos-x86_64
+            platform: macos-universal
+            experimental: true
+            cmake_osx_architectures: "x86_64;arm64"
+            cmake_osx_deployment_target: "10.15"
+            run_tests: "1"
+            strip: "1"
           - name: Windows x86_64 VST3 Release
-            runner: windows-2022
+            runner: ubuntu-22.04
             platform: windows-x86_64
+            experimental: true
+            cmake_toolchain_file: cmake/toolchains/mingw-x86_64.cmake
+            run_tests: "0"
+            strip: "0"
+            build_jobs: "2"
 
     steps:
       - name: Check out source
@@ -53,6 +64,15 @@ jobs:
             libxext-dev \
             libxrandr-dev \
             libxrender-dev
+
+      - name: Install Windows cross build dependencies
+        if: matrix.platform == 'windows-x86_64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            binutils-mingw-w64-x86-64 \
+            g++-mingw-w64-x86-64 \
+            mingw-w64
 
       - name: Show toolchain versions
         shell: bash
@@ -78,6 +98,12 @@ jobs:
           DOWNSPOUT_DIST_DIR: ${{ runner.temp }}/downspout-dist
           DOWNSPOUT_RELEASE_PLATFORM: ${{ matrix.platform }}
           DOWNSPOUT_VERSION: ${{ steps.version.outputs.version }}
+          DOWNSPOUT_CMAKE_TOOLCHAIN_FILE: ${{ matrix.cmake_toolchain_file }}
+          DOWNSPOUT_CMAKE_OSX_ARCHITECTURES: ${{ matrix.cmake_osx_architectures }}
+          DOWNSPOUT_CMAKE_OSX_DEPLOYMENT_TARGET: ${{ matrix.cmake_osx_deployment_target }}
+          DOWNSPOUT_RUN_TESTS: ${{ matrix.run_tests }}
+          DOWNSPOUT_STRIP: ${{ matrix.strip }}
+          DOWNSPOUT_BUILD_JOBS: ${{ matrix.build_jobs }}
         run: bash scripts/package-release.sh
 
       - name: Upload workflow artifact
