@@ -89,6 +89,7 @@ void testStoppedTransportPassesThrough() {
                                              audio);
 
     assert(status.action == ActionType::Pass);
+    assert(status.sequenceCell == -1);
     for (std::size_t i = 0; i < inL.size(); ++i) {
         assert(std::fabs(outL[i] - inL[i]) < 1e-6f);
         assert(std::fabs(outR[i] - inR[i]) < 1e-6f);
@@ -127,9 +128,90 @@ void testDefaultParametersPassThroughWhilePlaying() {
                                              audio);
 
     assert(status.action == ActionType::Pass);
+    assert(status.sequenceCell == 7);
     for (std::size_t i = 0; i < input.size(); ++i) {
         assert(std::fabs(output[i] - input[i]) < 1e-6f);
     }
+}
+
+void testStatusReportsTransportSequenceCell() {
+    EngineState state;
+    activate(state, 8.0, 1);
+
+    std::array<float, 8> input {};
+    std::array<float, 8> output {};
+
+    AudioBlock audio;
+    audio.inputs[0] = input.data();
+    audio.outputs[0] = output.data();
+    audio.channelCount = 1;
+
+    TransportSnapshot transport;
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 1.0;
+    transport.barBeat = 2.0;
+    transport.beatsPerBar = 4.0;
+    transport.bpm = 60.0;
+
+    Parameters parameters;
+    parameters.grid = 4.0f;
+
+    const OutputStatus status = processBlock(state,
+                                             parameters,
+                                             Triggers {},
+                                             transport,
+                                             static_cast<std::uint32_t>(input.size()),
+                                             8.0,
+                                             audio);
+
+    assert(status.action == ActionType::Pass);
+    assert(status.sequenceCell == 6);
+}
+
+void testSequenceCellsContinueAcrossOneBarLoop() {
+    EngineState state;
+    activate(state, 8.0, 1);
+
+    Parameters parameters;
+    parameters.grid = 8.0f;
+    parameters.density = 0.0f;
+    parameters.memoryBars = 2.0f;
+    parameters.mix = 100.0f;
+
+    SequencePattern sequence;
+    sequence.cells[8].kind = SequenceCellKind::Dub;
+    sequence.cells[15].kind = SequenceCellKind::Reverse;
+
+    std::array<float, 72> input {};
+    std::array<float, 72> output {};
+    for (std::size_t i = 0; i < input.size(); ++i) {
+        input[i] = static_cast<float>(i) * 0.01f;
+    }
+
+    AudioBlock audio;
+    audio.channelCount = 1;
+
+    TransportSnapshot transport;
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 0.0;
+    transport.beatsPerBar = 4.0;
+    transport.bpm = 60.0;
+
+    OutputStatus status;
+    for (int step = 0; step < 16; ++step) {
+        audio.inputs[0] = input.data() + static_cast<std::size_t>(step) * 4u;
+        audio.outputs[0] = output.data() + static_cast<std::size_t>(step) * 4u;
+        transport.bar = 0.0;
+        transport.barBeat = static_cast<double>(step % 8) * 0.5;
+        status = processBlock(state, parameters, Triggers {}, sequence, transport, 4u, 8.0, audio);
+
+        assert(status.sequenceCell == step);
+    }
+
+    assert(status.action == ActionType::Reverse);
+    assert(state.activeSequenceSerial == 15);
 }
 
 void testScatterMutatesAndRecoverReturnsDry() {
@@ -708,6 +790,7 @@ void testSequenceCellForcesTwoBeatRepeat() {
     const OutputStatus status = processBlock(state, parameters, Triggers {}, sequence, transport, 8u, 8.0, audio);
 
     assert(status.action == ActionType::Repeat);
+    assert(status.sequenceCell == 8);
     assert(state.activeBlock.sourceLengthFrames == 16u);
     assert(state.sequenceBlocksRemaining == 1u);
 
@@ -717,6 +800,7 @@ void testSequenceCellForcesTwoBeatRepeat() {
     transport.barBeat = 1.0;
     const OutputStatus held = processBlock(state, parameters, Triggers {}, sequence, transport, 8u, 8.0, audio);
     assert(held.action == ActionType::Repeat);
+    assert(held.sequenceCell == 9);
     assert(state.sequenceBlocksRemaining == 0u);
 }
 
@@ -767,6 +851,7 @@ void testSequenceCellForcesDubEcho() {
     const OutputStatus status = processBlock(state, parameters, Triggers {}, sequence, transport, 8u, 8.0, audio);
 
     assert(status.action == ActionType::Dub);
+    assert(status.sequenceCell == 8);
     assert(state.activeBlock.sourceLengthFrames == 8u);
 }
 
@@ -907,6 +992,8 @@ int main() {
     testPreviewActionHonorsDubProbability();
     testStoppedTransportPassesThrough();
     testDefaultParametersPassThroughWhilePlaying();
+    testStatusReportsTransportSequenceCell();
+    testSequenceCellsContinueAcrossOneBarLoop();
     testScatterMutatesAndRecoverReturnsDry();
     testBlockTransitionsArmCrossfade();
     testSamplePlaybackPassesDryInputAtZeroDensity();

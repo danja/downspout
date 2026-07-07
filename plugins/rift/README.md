@@ -10,7 +10,7 @@ rolling memory window and, on rhythmic block boundaries, can:
 - skip it;
 - smear it at a slower replay rate;
 - pitch-slip it at a different replay rate.
-- add a short dub-style multi-tap echo.
+- add a driven dub-style multi-tap echo.
 
 The goal is not total destruction by default. `rift` is meant to create
 repeatable, groove-locked disruption that still feels musically attached to the
@@ -42,8 +42,8 @@ recipe.
   default is `0` so a fresh instance does not process until cells are added or
   density is raised.
 - `Dub`
-  Independent per-block probability for the dub echo action. The default is
-  `0`, so existing dry/default behavior is unchanged.
+  Independent per-block probability for a pronounced dub echo throw. The
+  default is `0`, so existing dry/default behavior is unchanged.
 - `Damage`
   Bias toward more disruptive actions such as reverse, skip, and smear.
 - `Chop`
@@ -91,6 +91,7 @@ The UI is intentionally product-style rather than dev-style:
 - a bottom `Modes` strip with quick parameter recipes such as `Stutter`,
   `Smear`, and `Ruin`;
 - a sequence lane where cells store repeatable stutter/replay recipes;
+- a transport-synced marker showing the currently active sequence cell;
 - an action-bias panel that makes the musical consequences of the macros legible.
 
 ## Sample loading

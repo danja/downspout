@@ -51,6 +51,7 @@ using downspout::rift::kParamSampleBeats;
 using downspout::rift::kParamSourceMode;
 using downspout::rift::kParamStatusAction;
 using downspout::rift::kParamStatusActivity;
+using downspout::rift::kParamStatusSequenceCell;
 using downspout::rift::kParameterCount;
 using downspout::rift::kStateCount;
 using downspout::rift::kStateKeyParameters;
@@ -341,6 +342,14 @@ protected:
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = 0.0f;
             break;
+        case kParamStatusSequenceCell:
+            parameter.name = "Current Sequence Cell";
+            parameter.symbol = "status_sequence_cell";
+            parameter.hints = kParameterIsOutput | kParameterIsInteger;
+            parameter.ranges.min = -1.0f;
+            parameter.ranges.max = static_cast<float>(downspout::rift::kSequenceCellCount - 1);
+            parameter.ranges.def = -1.0f;
+            break;
         case kParamChop:
             parameter.name = "Chop";
             parameter.symbol = "chop";
@@ -408,6 +417,7 @@ protected:
         case kParamRecover: return recoverValue_;
         case kParamStatusAction: return statusAction_;
         case kParamStatusActivity: return statusActivity_;
+        case kParamStatusSequenceCell: return statusSequenceCell_;
         default: return 0.0f;
         }
     }
@@ -498,6 +508,7 @@ protected:
         testSampleSource_ = makeTestSampleSource(getSampleRate());
         statusAction_ = 0.0f;
         statusActivity_ = 0.0f;
+        statusSequenceCell_ = -1.0f;
     }
 
     void run(const float** inputs, float** outputs, uint32_t frames) override
@@ -555,6 +566,7 @@ protected:
         }
         statusAction_ = static_cast<float>(status.action);
         statusActivity_ = status.activity;
+        statusSequenceCell_ = static_cast<float>(status.sequenceCell);
     }
 
 private:
@@ -597,6 +609,7 @@ private:
     float recoverValue_ = 0.0f;
     float statusAction_ = 0.0f;
     float statusActivity_ = 0.0f;
+    float statusSequenceCell_ = -1.0f;
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RiftPlugin)
 };

@@ -149,6 +149,7 @@ struct EngineState {
 
     bool transportWasPlaying = false;
     std::int64_t activeBlockSerial = -1;
+    std::int64_t activeSequenceSerial = -1;
     BlockSpec activeBlock {};
     BlockSpec transitionBlock {};
     std::uint32_t transitionFramesRemaining = 0;
@@ -174,6 +175,7 @@ struct ActionWeights {
 struct OutputStatus {
     ActionType action = ActionType::Pass;
     float activity = 0.0f;
+    int sequenceCell = -1;
 };
 
 }  // namespace downspout::rift

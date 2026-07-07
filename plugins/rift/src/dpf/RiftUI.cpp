@@ -39,6 +39,7 @@ using downspout::rift::kParamSampleBeats;
 using downspout::rift::kParamSourceMode;
 using downspout::rift::kParamStatusAction;
 using downspout::rift::kParamStatusActivity;
+using downspout::rift::kParamStatusSequenceCell;
 using downspout::rift::kParameterCount;
 using downspout::rift::kStateKeySamplePath;
 using downspout::rift::kStateKeySequence;
@@ -279,6 +280,7 @@ public:
         values_[kParamChop] = defaults.chop;
         values_[kParamStatusAction] = 0.0f;
         values_[kParamStatusActivity] = 0.0f;
+        values_[kParamStatusSequenceCell] = -1.0f;
 
        #ifdef DGL_NO_SHARED_RESOURCES
         createFontFromFile("sans", "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf");
@@ -499,6 +501,15 @@ private:
         const int raw = static_cast<int>(std::lround(values_[kParamStatusAction]));
         const int clamped = std::max(0, std::min(raw, static_cast<int>(kActionCount - 1)));
         return static_cast<ActionType>(clamped);
+    }
+
+    [[nodiscard]] int currentSequenceCell() const
+    {
+        const int raw = static_cast<int>(std::lround(values_[kParamStatusSequenceCell]));
+        if (raw < 0 || raw >= static_cast<int>(kPreviewBlockCount)) {
+            return -1;
+        }
+        return raw;
     }
 
     void drawBackground(const float width, const float height)
@@ -798,16 +809,18 @@ private:
         const float blockGap = 3.0f;
         const float blockW = (stripW - blockGap * static_cast<float>(kPreviewBlockCount - 1)) / static_cast<float>(kPreviewBlockCount);
         const float blockH = 50.0f;
+        const int activeCell = currentSequenceCell();
 
         for (std::size_t i = 0; i < kPreviewBlockCount; ++i) {
             const SequenceCellKind kind = sequence_.cells[i].kind;
             const ActionColor color = cellKindColor(kind);
             const float bx = stripX + static_cast<float>(i) * (blockW + blockGap);
             previewBlockRects_[i] = {bx, stripY, blockW, blockH};
+            const bool transportActive = activeCell == static_cast<int>(i);
 
             beginPath();
             roundedRect(bx, stripY, blockW, blockH, blockW > 12.0f ? 5.0f : 2.0f);
-            fillColor(color.r, color.g, color.b, kind == SequenceCellKind::Empty ? 62 : 230);
+            fillColor(color.r, color.g, color.b, transportActive ? 255 : (kind == SequenceCellKind::Empty ? 62 : 230));
             fill();
             closePath();
 
@@ -818,9 +831,24 @@ private:
             stroke();
             closePath();
 
+            if (transportActive) {
+                beginPath();
+                roundedRect(bx - 2.0f, stripY - 2.0f, blockW + 4.0f, blockH + 4.0f, blockW > 12.0f ? 7.0f : 3.0f);
+                strokeColor(250, 239, 169, 255);
+                strokeWidth(3.0f);
+                stroke();
+                closePath();
+
+                beginPath();
+                roundedRect(bx + 4.0f, stripY + 4.0f, std::max(6.0f, blockW - 8.0f), 4.0f, 2.0f);
+                fillColor(255, 245, 180, 255);
+                fill();
+                closePath();
+            }
+
             fontSize(blockW < 30.0f ? 9.0f : 10.0f);
             textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-            fillColor(246, 247, 249, kind == SequenceCellKind::Empty ? 96 : 255);
+            fillColor(246, 247, 249, transportActive ? 255 : (kind == SequenceCellKind::Empty ? 96 : 255));
             const char* label = kind == SequenceCellKind::Empty
                 ? "-"
                 : kSequenceCellKindNames[static_cast<std::size_t>(kind)];

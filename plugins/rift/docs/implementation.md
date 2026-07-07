@@ -47,7 +47,14 @@ underlying boundary resolution.
 
 `Dub` is an additional independent random probability on top of `Density`.
 At zero it is inert. When selected randomly or forced by a sequence cell, it
-renders a short multi-tap echo from the rolling input buffer.
+renders a driven multi-tap echo from the rolling input buffer and includes some
+of the live transient in the wet throw so hits read more clearly.
+
+The processor reports the active transport cell as an output status parameter.
+The UI uses that value for the sequence-lane marker instead of trying to infer
+timing locally. The sequence phase is counted separately from the host's raw
+bar/window serial so one-bar loops with an eight-window grid can still advance
+through cells 8-15 before wrapping.
 
 ## Sample source
 

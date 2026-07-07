@@ -179,12 +179,16 @@ void clearTransition(EngineState& state) {
     return block;
 }
 
-void applySelectedBlock(EngineState& state, const BlockSpec& block, const std::int64_t blockSerial) {
+void applySelectedBlock(EngineState& state,
+                        const BlockSpec& block,
+                        const std::int64_t blockSerial,
+                        const std::int64_t sequenceSerial) {
     const BlockSpec previous = state.activeBlock;
 
     state.activeBlock = block;
     state.activeBlock.valid = true;
     state.activeBlockSerial = blockSerial;
+    state.activeSequenceSerial = sequenceSerial;
 
     if (!previous.valid || blocksEquivalent(previous, state.activeBlock)) {
         clearTransition(state);
@@ -232,6 +236,7 @@ void ensureBuffer(EngineState& state,
     state.sampleRate = sampleRate;
     state.activeBlock = {};
     state.activeBlockSerial = -1;
+    state.activeSequenceSerial = -1;
     clearTransition(state);
 }
 
@@ -434,15 +439,37 @@ struct SequenceSelection {
     return false;
 }
 
+[[nodiscard]] int sequenceCellIndexForSerial(const std::int64_t blockSerial) {
+    std::int64_t wrapped = blockSerial % kSequenceCellCount;
+    if (wrapped < 0) {
+        wrapped += kSequenceCellCount;
+    }
+    return static_cast<int>(wrapped);
+}
+
+[[nodiscard]] std::int64_t sequenceSerialForTransportBlock(const EngineState& state,
+                                                           const std::int64_t transportBlockSerial) {
+    if (!state.transportWasPlaying || state.activeSequenceSerial < 0 || state.activeBlockSerial < 0) {
+        return transportBlockSerial;
+    }
+
+    if (transportBlockSerial > state.activeBlockSerial) {
+        return state.activeSequenceSerial + (transportBlockSerial - state.activeBlockSerial);
+    }
+
+    if (transportBlockSerial < state.activeBlockSerial) {
+        return state.activeSequenceSerial + 1;
+    }
+
+    return state.activeSequenceSerial;
+}
+
 [[nodiscard]] SequenceSelection sequenceSelectionFor(const SequencePattern& sequence, const std::int64_t blockSerial) {
     if (!hasSequenceCells(sequence)) {
         return {};
     }
 
-    std::int64_t wrapped = blockSerial % kSequenceCellCount;
-    if (wrapped < 0) {
-        wrapped += kSequenceCellCount;
-    }
+    const int wrapped = sequenceCellIndexForSerial(blockSerial);
 
     SequenceSelection selection;
     selection.active = true;
@@ -494,13 +521,14 @@ void selectBlock(EngineState& state,
                  const Triggers& triggers,
                  const SequencePattern& sequence,
                  const std::int64_t blockSerial,
+                 const std::int64_t sequenceSerial,
                  const double blockFrames,
                  const double framesPerBeat,
                  const double framesPerBar) {
     armTriggers(state, triggers);
 
     if (state.recoverBlocksRemaining > 0) {
-        applySelectedBlock(state, makePassBlock(), blockSerial);
+        applySelectedBlock(state, makePassBlock(), blockSerial, sequenceSerial);
         state.recoverBlocksRemaining -= 1u;
         state.sequenceBlocksRemaining = 0;
         return;
@@ -508,11 +536,13 @@ void selectBlock(EngineState& state,
 
     if (parameters.hold >= 0.5f && state.activeBlock.valid) {
         state.activeBlockSerial = blockSerial;
+        state.activeSequenceSerial = sequenceSerial;
         return;
     }
 
     if (state.sequenceBlocksRemaining > 0u && state.activeBlock.valid) {
         state.activeBlockSerial = blockSerial;
+        state.activeSequenceSerial = sequenceSerial;
         state.sequenceBlocksRemaining -= 1u;
         return;
     }
@@ -526,12 +556,12 @@ void selectBlock(EngineState& state,
     BlockSpec block {};
     block.valid = true;
 
-    const SequenceSelection sequenceSelection = sequenceSelectionFor(sequence, blockSerial);
+    const SequenceSelection sequenceSelection = sequenceSelectionFor(sequence, sequenceSerial);
     const ActionType action = sequenceSelection.active
         ? sequenceSelection.action
         : chooseAction(parameters, state.rngState, forceMutation);
     if (action == ActionType::Pass) {
-        applySelectedBlock(state, makePassBlock(), blockSerial);
+        applySelectedBlock(state, makePassBlock(), blockSerial, sequenceSerial);
         state.sequenceBlocksRemaining = 0;
         return;
     }
@@ -548,7 +578,7 @@ void selectBlock(EngineState& state,
         static_cast<std::uint32_t>(std::llround(framesPerBar * std::max(1.0f, parameters.memoryBars))));
     const std::uint32_t availableHistory = std::min(state.filledFrames, memoryFrames);
     if (availableHistory <= sourceLength + 8u) {
-        applySelectedBlock(state, makePassBlock(), blockSerial);
+        applySelectedBlock(state, makePassBlock(), blockSerial, sequenceSerial);
         return;
     }
 
@@ -606,7 +636,7 @@ void selectBlock(EngineState& state,
         break;
     }
 
-    applySelectedBlock(state, block, blockSerial);
+    applySelectedBlock(state, block, blockSerial, sequenceSerial);
     if (sequenceSelection.active && sequenceSelection.sourceBeats > 0.0 && framesPerBeat > 0.0 && blockFrames > 0.0) {
         const double beatsPerBlock = blockFrames / framesPerBeat;
         const std::uint32_t durationBlocks = static_cast<std::uint32_t>(
@@ -642,7 +672,14 @@ void selectBlock(EngineState& state,
         const float tapA = readBuffer(state, block, channel, block.readPosition - length * 0.375);
         const float tapB = readBuffer(state, block, wideChannel, block.readPosition - length * 0.625);
         const float tapC = readBuffer(state, block, channel, block.readPosition - length * 0.875);
-        const float effected = std::tanh((head * 0.70f + tapA * 0.44f + tapB * 0.30f + tapC * 0.20f) * 1.15f);
+        const float tapD = readBuffer(state, block, wideChannel, block.readPosition - length * 0.1875);
+        const float throwInput = live * 0.72f +
+                                 head * 1.10f +
+                                 tapA * 0.82f +
+                                 tapB * 0.66f +
+                                 tapC * 0.48f +
+                                 tapD * 0.36f;
+        const float effected = clampf(std::tanh(throwInput * 1.85f) * 1.12f, -1.0f, 1.0f);
         return live * block.dry + effected * block.wet;
     }
     }
@@ -736,6 +773,7 @@ void resetHistory(EngineState& state) {
     state.transportWasPlaying = false;
     state.activeBlock = {};
     state.activeBlockSerial = -1;
+    state.activeSequenceSerial = -1;
     state.sequenceBlocksRemaining = 0;
     state.scatterBlocksRemaining = 0;
     state.recoverBlocksRemaining = 0;
@@ -778,6 +816,7 @@ OutputStatus processBlock(EngineState& state,
         state.transportWasPlaying = false;
         state.activeBlock = makePassBlock();
         state.activeBlockSerial = -1;
+        state.activeSequenceSerial = -1;
         state.sequenceBlocksRemaining = 0;
         clearTransition(state);
 
@@ -803,7 +842,16 @@ OutputStatus processBlock(EngineState& state,
     const double absBeatsStart = transport.bar * transport.beatsPerBar + transport.barBeat;
     const std::int64_t currentBlockSerial = static_cast<std::int64_t>(std::floor(absBeatsStart / beatsPerBlock + 1e-9));
     if (!state.transportWasPlaying || currentBlockSerial != state.activeBlockSerial || !state.activeBlock.valid) {
-        selectBlock(state, parameters, triggers, sequence, currentBlockSerial, blockFrames, framesPerBeat, framesPerBar);
+        const std::int64_t currentSequenceSerial = sequenceSerialForTransportBlock(state, currentBlockSerial);
+        selectBlock(state,
+                    parameters,
+                    triggers,
+                    sequence,
+                    currentBlockSerial,
+                    currentSequenceSerial,
+                    blockFrames,
+                    framesPerBeat,
+                    framesPerBar);
     } else {
         armTriggers(state, triggers);
     }
@@ -838,11 +886,14 @@ OutputStatus processBlock(EngineState& state,
     std::size_t boundaryIndex = 0;
     for (std::uint32_t frame = 0; frame < nframes; ++frame) {
         if (boundaryIndex < boundaryCount && frame == boundaries[boundaryIndex].frame) {
+            const std::int64_t boundarySequenceSerial =
+                sequenceSerialForTransportBlock(state, boundaries[boundaryIndex].blockSerial);
             selectBlock(state,
                         parameters,
                         triggers,
                         sequence,
                         boundaries[boundaryIndex].blockSerial,
+                        boundarySequenceSerial,
                         blockFrames,
                         framesPerBeat,
                         framesPerBar);
@@ -892,6 +943,7 @@ OutputStatus processBlock(EngineState& state,
     OutputStatus status;
     status.action = state.activeBlock.action;
     status.activity = (state.activeBlock.action == ActionType::Pass) ? 0.0f : state.activeBlock.wet;
+    status.sequenceCell = sequenceCellIndexForSerial(state.activeSequenceSerial);
     return status;
 }
 
