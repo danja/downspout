@@ -76,11 +76,14 @@ not ask the user to become a scheduler debugger.
 The sequence lane is the deterministic path. With the factory default
 `Density = 0`, an empty sequence passes dry audio. Raising `Density` above zero
 enables the macro-driven probabilistic chooser when no cells are programmed.
+`Dub` is separate: it gives the dub echo action its own random per-block chance
+so snare-style throws can appear without raising general mutation density.
 When any cell is enabled, the sequence repeats over 16 block boundaries: empty
 cells pass dry audio and enabled cells force their recipe.
 
 The initial recipes are intentionally musical rather than implementation-shaped:
-`Ratchet`, `1/2 beat`, `1 beat`, `2 beat`, `Reverse`, `Smear`, and `Slip`.
+`Ratchet`, `1/2 beat`, `1 beat`, `2 beat`, `Reverse`, `Smear`, `Slip`, and
+`Dub`.
 The beat recipes replay that much source material from the rolling input buffer,
 and hold for that musical duration across the global block grid. A cell can
 therefore be made into a two-beat stutter without changing the sequence grid.

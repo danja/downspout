@@ -19,6 +19,7 @@ void testClampParameters() {
     Parameters parameters;
     parameters.grid = 42.0f;
     parameters.density = -5.0f;
+    parameters.dub = 140.0f;
     parameters.damage = 120.0f;
     parameters.memoryBars = 99.0f;
     parameters.drift = -1.0f;
@@ -33,6 +34,7 @@ void testClampParameters() {
     const Parameters clamped = clampParameters(parameters);
     assert(std::fabs(clamped.grid - 16.0f) < 1e-6f);
     assert(std::fabs(clamped.density) < 1e-6f);
+    assert(std::fabs(clamped.dub - 100.0f) < 1e-6f);
     assert(std::fabs(clamped.damage - 100.0f) < 1e-6f);
     assert(std::fabs(clamped.memoryBars - 8.0f) < 1e-6f);
     assert(std::fabs(clamped.drift) < 1e-6f);
@@ -50,6 +52,15 @@ void testPreviewActionHonorsZeroDensity() {
     parameters.density = 0.0f;
     for (std::uint64_t index = 0; index < 32; ++index) {
         assert(previewActionForBlock(parameters, index) == ActionType::Pass);
+    }
+}
+
+void testPreviewActionHonorsDubProbability() {
+    Parameters parameters;
+    parameters.density = 0.0f;
+    parameters.dub = 100.0f;
+    for (std::uint64_t index = 0; index < 32; ++index) {
+        assert(previewActionForBlock(parameters, index) == ActionType::Dub);
     }
 }
 
@@ -709,10 +720,61 @@ void testSequenceCellForcesTwoBeatRepeat() {
     assert(state.sequenceBlocksRemaining == 0u);
 }
 
+void testSequenceCellForcesDubEcho() {
+    EngineState state;
+    activate(state, 8.0, 1);
+
+    Parameters parameters;
+    parameters.grid = 4.0f;
+    parameters.density = 0.0f;
+    parameters.memoryBars = 2.0f;
+    parameters.mix = 100.0f;
+
+    SequencePattern sequence;
+    sequence.cells[8].kind = SequenceCellKind::Dub;
+
+    std::array<float, 72> input {};
+    std::array<float, 72> output {};
+    for (std::size_t i = 0; i < input.size(); ++i) {
+        input[i] = static_cast<float>(i) * 0.03f;
+    }
+
+    AudioBlock audio;
+    audio.inputs[0] = input.data();
+    audio.outputs[0] = output.data();
+    audio.channelCount = 1;
+
+    TransportSnapshot transport;
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 0.0;
+    transport.barBeat = 0.0;
+    transport.beatsPerBar = 4.0;
+    transport.bpm = 60.0;
+
+    for (int block = 0; block < 8; ++block) {
+        audio.inputs[0] = input.data() + static_cast<std::size_t>(block) * 8u;
+        audio.outputs[0] = output.data() + static_cast<std::size_t>(block) * 8u;
+        transport.bar = static_cast<double>(block / 4);
+        transport.barBeat = static_cast<double>(block % 4);
+        (void)processBlock(state, parameters, Triggers {}, sequence, transport, 8u, 8.0, audio);
+    }
+
+    audio.inputs[0] = input.data() + 64;
+    audio.outputs[0] = output.data() + 64;
+    transport.bar = 2.0;
+    transport.barBeat = 0.0;
+    const OutputStatus status = processBlock(state, parameters, Triggers {}, sequence, transport, 8u, 8.0, audio);
+
+    assert(status.action == ActionType::Dub);
+    assert(state.activeBlock.sourceLengthFrames == 8u);
+}
+
 void testSerializationRoundTrip() {
     Parameters parameters;
     parameters.grid = 5.0f;
     parameters.density = 62.0f;
+    parameters.dub = 27.0f;
     parameters.damage = 71.0f;
     parameters.memoryBars = 4.0f;
     parameters.drift = 55.0f;
@@ -728,6 +790,7 @@ void testSerializationRoundTrip() {
     assert(roundTrip.has_value());
     assert(std::fabs(roundTrip->grid - 5.0f) < 1e-6f);
     assert(std::fabs(roundTrip->density - 62.0f) < 1e-6f);
+    assert(std::fabs(roundTrip->dub - 27.0f) < 1e-6f);
     assert(std::fabs(roundTrip->damage - 71.0f) < 1e-6f);
     assert(std::fabs(roundTrip->memoryBars - 4.0f) < 1e-6f);
     assert(std::fabs(roundTrip->drift - 55.0f) < 1e-6f);
@@ -745,6 +808,7 @@ void testSequenceSerializationRoundTrip() {
     pattern.cells[0].kind = SequenceCellKind::Ratchet;
     pattern.cells[3].kind = SequenceCellKind::TwoBeat;
     pattern.cells[7].kind = SequenceCellKind::Reverse;
+    pattern.cells[10].kind = SequenceCellKind::Dub;
 
     const std::string text = serializeSequencePattern(pattern);
     const auto parsed = deserializeSequencePattern(text);
@@ -752,6 +816,7 @@ void testSequenceSerializationRoundTrip() {
     assert(parsed->cells[0].kind == SequenceCellKind::Ratchet);
     assert(parsed->cells[3].kind == SequenceCellKind::TwoBeat);
     assert(parsed->cells[7].kind == SequenceCellKind::Reverse);
+    assert(parsed->cells[10].kind == SequenceCellKind::Dub);
     assert(parsed->cells[1].kind == SequenceCellKind::Empty);
     assert(sequencePatternHasCells(*parsed));
 }
@@ -769,6 +834,7 @@ void testEarlierStateFormatDefaultsBlend() {
         "hold=0\n");
 
     assert(parsed.has_value());
+    assert(std::fabs(parsed->dub) < 1e-6f);
     assert(std::fabs(parsed->blend - 20.0f) < 1e-6f);
     assert(std::fabs(parsed->sourceMode) < 1e-6f);
     assert(std::fabs(parsed->sampleBeats - 4.0f) < 1e-6f);
@@ -838,6 +904,7 @@ void testLoadWavSampleSource() {
 int main() {
     testClampParameters();
     testPreviewActionHonorsZeroDensity();
+    testPreviewActionHonorsDubProbability();
     testStoppedTransportPassesThrough();
     testDefaultParametersPassThroughWhilePlaying();
     testScatterMutatesAndRecoverReturnsDry();
@@ -848,6 +915,7 @@ int main() {
     testSamplePlaybackMatchesLiveInputForSequence();
     testChopShortensMutationSlice();
     testSequenceCellForcesTwoBeatRepeat();
+    testSequenceCellForcesDubEcho();
     testSerializationRoundTrip();
     testSequenceSerializationRoundTrip();
     testEarlierStateFormatDefaultsBlend();

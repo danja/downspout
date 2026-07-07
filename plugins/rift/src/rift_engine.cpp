@@ -46,6 +46,7 @@ constexpr double kHalfPi = 1.5707963267948966;
     std::uint32_t seed = mixU32(static_cast<std::uint32_t>(blockIndex * 2654435761ull));
     seed ^= mixU32(static_cast<std::uint32_t>(std::lround(parameters.grid * 97.0f)));
     seed ^= mixU32(static_cast<std::uint32_t>(std::lround(parameters.density * 53.0f)));
+    seed ^= mixU32(static_cast<std::uint32_t>(std::lround(parameters.dub * 47.0f)));
     seed ^= mixU32(static_cast<std::uint32_t>(std::lround(parameters.damage * 41.0f)));
     seed ^= mixU32(static_cast<std::uint32_t>(std::lround(parameters.memoryBars * 29.0f)));
     seed ^= mixU32(static_cast<std::uint32_t>(std::lround((parameters.drift + 50.0f) * 19.0f)));
@@ -61,6 +62,11 @@ constexpr double kHalfPi = 1.5707963267948966;
 
 [[nodiscard]] ActionType chooseAction(const Parameters& parameters, std::uint32_t& rngState, const bool forceMutation) {
     const float densityNorm = clampf(parameters.density * 0.01f, 0.0f, 1.0f);
+    const float dubNorm = clampf(parameters.dub * 0.01f, 0.0f, 1.0f);
+    if (dubNorm > 0.0f && rand01(rngState) <= dubNorm) {
+        return ActionType::Dub;
+    }
+
     if (!forceMutation && rand01(rngState) > densityNorm) {
         return ActionType::Pass;
     }
@@ -474,6 +480,10 @@ struct SequenceSelection {
         selection.action = ActionType::Slip;
         selection.sourceBeats = 1.0;
         break;
+    case SequenceCellKind::Dub:
+        selection.action = ActionType::Dub;
+        selection.sourceBeats = 1.0;
+        break;
     }
 
     return selection;
@@ -532,7 +542,7 @@ void selectBlock(EngineState& state,
         : blockSourceLength;
     const std::uint32_t sourceLength = sequenceSelection.active
         ? selectedSourceLength
-        : choppedSourceLength(parameters, blockSourceLength);
+        : (action == ActionType::Dub ? blockSourceLength : choppedSourceLength(parameters, blockSourceLength));
     const std::uint32_t memoryFrames = std::max<std::uint32_t>(
         blockSourceLength + 8u,
         static_cast<std::uint32_t>(std::llround(framesPerBar * std::max(1.0f, parameters.memoryBars))));
@@ -588,6 +598,10 @@ void selectBlock(EngineState& state,
         block.readRate = std::pow(2.0, static_cast<double>(semitones) / 12.0);
         break;
     }
+    case ActionType::Dub:
+        block.readPosition = static_cast<double>(block.sourceStartFrame);
+        block.readRate = 1.0;
+        break;
     case ActionType::Pass:
         break;
     }
@@ -619,6 +633,18 @@ void selectBlock(EngineState& state,
         const float effected = readBuffer(state, block, channel, block.readPosition);
         return live * block.dry + effected * block.wet;
     }
+    case ActionType::Dub: {
+        const double length = static_cast<double>(std::max<std::uint32_t>(1u, block.sourceLengthFrames));
+        const std::uint32_t wideChannel = state.bufferChannels > 1u
+            ? (channel + 1u) % state.bufferChannels
+            : channel;
+        const float head = readBuffer(state, block, channel, block.readPosition);
+        const float tapA = readBuffer(state, block, channel, block.readPosition - length * 0.375);
+        const float tapB = readBuffer(state, block, wideChannel, block.readPosition - length * 0.625);
+        const float tapC = readBuffer(state, block, channel, block.readPosition - length * 0.875);
+        const float effected = std::tanh((head * 0.70f + tapA * 0.44f + tapB * 0.30f + tapC * 0.20f) * 1.15f);
+        return live * block.dry + effected * block.wet;
+    }
     }
 
     return live;
@@ -638,6 +664,7 @@ Parameters clampParameters(const Parameters& raw) {
     Parameters parameters = raw;
     parameters.grid = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.grid)), 1, 16));
     parameters.density = clampf(parameters.density, 0.0f, 100.0f);
+    parameters.dub = clampf(parameters.dub, 0.0f, 100.0f);
     parameters.damage = clampf(parameters.damage, 0.0f, 100.0f);
     parameters.memoryBars = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.memoryBars)), 1, 8));
     parameters.drift = clampf(parameters.drift, 0.0f, 100.0f);

@@ -27,6 +27,7 @@ using downspout::rift::kParamChop;
 using downspout::rift::kParamDamage;
 using downspout::rift::kParamDensity;
 using downspout::rift::kParamDrift;
+using downspout::rift::kParamDub;
 using downspout::rift::kParamGrid;
 using downspout::rift::kParamHold;
 using downspout::rift::kParamMemoryBars;
@@ -86,9 +87,10 @@ struct ModePreset {
     CoreParameters parameters;
 };
 
-constexpr std::array<SliderDef, 9> kSliders = {{
+constexpr std::array<SliderDef, 10> kSliders = {{
     {kParamGrid, "Window", "Main repeat window", 1.0f, 16.0f},
     {kParamDensity, "Density", "How often blocks mutate", 0.0f, 100.0f},
+    {kParamDub, "Dub", "Random echo hit probability", 0.0f, 100.0f},
     {kParamDamage, "Damage", "Bias toward disruptive actions", 0.0f, 100.0f},
     {kParamChop, "Ratchet", "Sub-window retrigger depth", 0.0f, 100.0f},
     {kParamMemoryBars, "Input", "Bars of source history", 1.0f, 8.0f},
@@ -111,15 +113,15 @@ constexpr std::array<SourceModeDef, 3> kSourceModes = {{
 }};
 
 constexpr std::array<ModePreset, 6> kModes = {{
-    {"Pocket", "light edits", 88, 125, 154, {8.0f, 22.0f, 16.0f, 2.0f, 10.0f, 0.0f, 64.0f, 18.0f, 0.0f, 0.0f, 4.0f, 12.0f}},
-    {"Ratchet", "locked repeats", 205, 151, 79, {16.0f, 78.0f, 20.0f, 1.0f, 12.0f, 0.0f, 100.0f, 28.0f, 0.0f, 0.0f, 4.0f, 82.0f}},
-    {"Stammer", "nervous 1/16", 223, 116, 79, {16.0f, 88.0f, 34.0f, 1.0f, 20.0f, 0.0f, 100.0f, 18.0f, 0.0f, 0.0f, 4.0f, 96.0f}},
-    {"Backspin", "break flips", 145, 110, 208, {8.0f, 64.0f, 72.0f, 2.0f, 32.0f, 0.0f, 100.0f, 20.0f, 0.0f, 0.0f, 4.0f, 28.0f}},
-    {"Smear", "long drag", 78, 166, 169, {4.0f, 50.0f, 58.0f, 4.0f, 74.0f, 0.0f, 92.0f, 36.0f, 0.0f, 0.0f, 4.0f, 8.0f}},
-    {"Slip", "pitched catch", 93, 149, 224, {8.0f, 62.0f, 48.0f, 2.0f, 40.0f, 7.0f, 94.0f, 24.0f, 0.0f, 0.0f, 4.0f, 18.0f}},
+    {"Pocket", "light edits", 88, 125, 154, {8.0f, 22.0f, 0.0f, 16.0f, 2.0f, 10.0f, 0.0f, 64.0f, 18.0f, 0.0f, 0.0f, 4.0f, 12.0f}},
+    {"Ratchet", "locked repeats", 205, 151, 79, {16.0f, 78.0f, 0.0f, 20.0f, 1.0f, 12.0f, 0.0f, 100.0f, 28.0f, 0.0f, 0.0f, 4.0f, 82.0f}},
+    {"Stammer", "nervous 1/16", 223, 116, 79, {16.0f, 88.0f, 0.0f, 34.0f, 1.0f, 20.0f, 0.0f, 100.0f, 18.0f, 0.0f, 0.0f, 4.0f, 96.0f}},
+    {"Backspin", "break flips", 145, 110, 208, {8.0f, 64.0f, 0.0f, 72.0f, 2.0f, 32.0f, 0.0f, 100.0f, 20.0f, 0.0f, 0.0f, 4.0f, 28.0f}},
+    {"Smear", "long drag", 78, 166, 169, {4.0f, 50.0f, 0.0f, 58.0f, 4.0f, 74.0f, 0.0f, 92.0f, 36.0f, 0.0f, 0.0f, 4.0f, 8.0f}},
+    {"Slip", "pitched catch", 93, 149, 224, {8.0f, 62.0f, 0.0f, 48.0f, 2.0f, 40.0f, 7.0f, 94.0f, 24.0f, 0.0f, 0.0f, 4.0f, 18.0f}},
 }};
 
-constexpr std::array<SequenceCellKind, 7> kCellPalette = {{
+constexpr std::array<SequenceCellKind, 8> kCellPalette = {{
     SequenceCellKind::Ratchet,
     SequenceCellKind::HalfBeat,
     SequenceCellKind::OneBeat,
@@ -127,6 +129,7 @@ constexpr std::array<SequenceCellKind, 7> kCellPalette = {{
     SequenceCellKind::Reverse,
     SequenceCellKind::Smear,
     SequenceCellKind::Slip,
+    SequenceCellKind::Dub,
 }};
 
 constexpr std::size_t kPreviewBlockCount = static_cast<std::size_t>(kSequenceCellCount);
@@ -216,6 +219,7 @@ struct ActionColor {
     case ActionType::Skip: return {196, 82, 82};
     case ActionType::Smear: return {78, 166, 169};
     case ActionType::Slip: return {93, 149, 224};
+    case ActionType::Dub: return {80, 178, 112};
     }
     return {77, 97, 111};
 }
@@ -235,6 +239,8 @@ struct ActionColor {
         return actionColor(ActionType::Smear);
     case SequenceCellKind::Slip:
         return actionColor(ActionType::Slip);
+    case SequenceCellKind::Dub:
+        return actionColor(ActionType::Dub);
     }
     return actionColor(ActionType::Pass);
 }
@@ -260,6 +266,7 @@ public:
         const CoreParameters defaults = downspout::rift::clampParameters(CoreParameters {});
         values_[kParamGrid] = defaults.grid;
         values_[kParamDensity] = defaults.density;
+        values_[kParamDub] = defaults.dub;
         values_[kParamDamage] = defaults.damage;
         values_[kParamMemoryBars] = defaults.memoryBars;
         values_[kParamDrift] = defaults.drift;
@@ -343,10 +350,10 @@ protected:
         const float width = static_cast<float>(getWidth());
         const float height = static_cast<float>(getHeight());
         const float pad = 24.0f;
-        const float headerH = 96.0f;
+        const float headerH = 72.0f;
         const float modeStripH = 80.0f;
         const float sectionGap = 18.0f;
-        const float contentY = pad + headerH + 18.0f;
+        const float contentY = pad + headerH + 14.0f;
         const float contentH = height - contentY - pad;
         const float mainH = contentH - modeStripH - sectionGap;
         const float leftW = 370.0f;
@@ -473,6 +480,7 @@ private:
         CoreParameters parameters;
         parameters.grid = values_[kParamGrid];
         parameters.density = values_[kParamDensity];
+        parameters.dub = values_[kParamDub];
         parameters.damage = values_[kParamDamage];
         parameters.memoryBars = values_[kParamMemoryBars];
         parameters.drift = values_[kParamDrift];
@@ -527,13 +535,9 @@ private:
         fillColor(240, 242, 246, 255);
         text(x + 24.0f, y + 18.0f, "Rift", nullptr);
 
-        fontSize(14.0f);
-        fillColor(156, 171, 182, 255);
-        text(x + 26.0f, y + 58.0f, "Transport-locked buffer damage for rhythmic accidents that still feel intentional", nullptr);
-
         const ActionType liveAction = currentAction();
         const ActionColor color = actionColor(liveAction);
-        drawPill(x + w - 214.0f, y + 18.0f, 188.0f, 30.0f, kActionNames[static_cast<std::size_t>(liveAction)], color);
+        drawPill(x + w - 214.0f, y + 20.0f, 188.0f, 30.0f, kActionNames[static_cast<std::size_t>(liveAction)], color);
     }
 
     void drawPill(const float x, const float y, const float w, const float h, const char* label, const ActionColor color)
@@ -574,8 +578,8 @@ private:
         drawSourceSelector(x, buttonY + 50.0f, w, 28.0f, parameters);
         drawSampleLoader(x, buttonY + 84.0f, w, 26.0f);
 
-        const float sliderStartY = buttonY + 120.0f;
-        const float rowH = 35.0f;
+        const float sliderStartY = buttonY + 112.0f;
+        const float rowH = 33.0f;
         for (std::size_t i = 0; i < kSliders.size(); ++i) {
             const float rowY = sliderStartY + static_cast<float>(i) * rowH;
             if (rowY + rowH > y + h) {
@@ -829,12 +833,7 @@ private:
         fill();
         closePath();
 
-        fontSize(11.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(116, 132, 144, 255);
-        text(stripX, stripY + blockH + 10.0f, "Cell 1", nullptr);
-
-        drawSequencePalette(x + 90.0f, stripY + blockH + 6.0f, w - 108.0f);
+        drawSequencePalette(stripX, stripY + blockH + 6.0f, stripW);
     }
 
     void drawSequencePalette(const float x, const float y, const float w)
@@ -1028,6 +1027,7 @@ private:
     {
         return parameterMatches(parameters.grid, preset.parameters.grid) &&
                parameterMatches(parameters.density, preset.parameters.density) &&
+               parameterMatches(parameters.dub, preset.parameters.dub) &&
                parameterMatches(parameters.damage, preset.parameters.damage) &&
                parameterMatches(parameters.chop, preset.parameters.chop) &&
                parameterMatches(parameters.memoryBars, preset.parameters.memoryBars) &&
@@ -1056,6 +1056,7 @@ private:
         const ModePreset& preset = kModes[static_cast<std::size_t>(modeIndex)];
         commitParameter(kParamGrid, preset.parameters.grid, false);
         commitParameter(kParamDensity, preset.parameters.density, false);
+        commitParameter(kParamDub, preset.parameters.dub, false);
         commitParameter(kParamDamage, preset.parameters.damage, false);
         commitParameter(kParamChop, preset.parameters.chop, false);
         commitParameter(kParamMemoryBars, preset.parameters.memoryBars, false);
@@ -1091,6 +1092,7 @@ private:
         switch (index) {
         case kParamGrid: return parameters.grid;
         case kParamDensity: return parameters.density;
+        case kParamDub: return parameters.dub;
         case kParamDamage: return parameters.damage;
         case kParamChop: return parameters.chop;
         case kParamMemoryBars: return parameters.memoryBars;

@@ -45,6 +45,10 @@ cells and enabled cells force their action recipe. Beat-window recipes such as
 matching musical duration while the global block grid still decides the
 underlying boundary resolution.
 
+`Dub` is an additional independent random probability on top of `Density`.
+At zero it is inert. When selected randomly or forced by a sequence cell, it
+renders a short multi-tap echo from the rolling input buffer.
+
 ## Sample source
 
 The sample-source implementation adds:

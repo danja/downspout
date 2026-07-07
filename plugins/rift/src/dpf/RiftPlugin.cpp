@@ -43,6 +43,7 @@ using downspout::rift::kParamBlend;
 using downspout::rift::kParamChop;
 using downspout::rift::kParamMemoryBars;
 using downspout::rift::kParamMix;
+using downspout::rift::kParamDub;
 using downspout::rift::kParamPitch;
 using downspout::rift::kParamRecover;
 using downspout::rift::kParamScatter;
@@ -66,6 +67,7 @@ ParameterEnumerationValue kActionEnumValues[] = {
     {3.0f, "Skip"},
     {4.0f, "Smear"},
     {5.0f, "Slip"},
+    {6.0f, "Dub"},
 };
 
 ParameterEnumerationValue kSourceModeEnumValues[] = {
@@ -347,6 +349,14 @@ protected:
             parameter.ranges.max = 100.0f;
             parameter.ranges.def = 0.0f;
             break;
+        case kParamDub:
+            parameter.name = "Dub";
+            parameter.symbol = "dub";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 100.0f;
+            parameter.ranges.def = 0.0f;
+            break;
         }
     }
 
@@ -393,6 +403,7 @@ protected:
         case kParamSourceMode: return parameters_.sourceMode;
         case kParamSampleBeats: return parameters_.sampleBeats;
         case kParamChop: return parameters_.chop;
+        case kParamDub: return parameters_.dub;
         case kParamScatter: return scatterValue_;
         case kParamRecover: return recoverValue_;
         case kParamStatusAction: return statusAction_;
@@ -425,6 +436,7 @@ protected:
             parameters_.sampleBeats = value;
             break;
         case kParamChop: parameters_.chop = value; break;
+        case kParamDub: parameters_.dub = value; break;
         case kParamScatter:
             if (value >= 0.5f && scatterValue_ < 0.5f)
                 triggers_.scatterSerial += 1u;

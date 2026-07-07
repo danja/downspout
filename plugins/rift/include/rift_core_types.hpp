@@ -9,9 +9,9 @@
 namespace downspout::rift {
 
 inline constexpr std::uint32_t kMaxChannels = 8;
-inline constexpr std::size_t kActionCount = 6;
+inline constexpr std::size_t kActionCount = 7;
 inline constexpr int kSequenceCellCount = 16;
-inline constexpr int kSequenceCellKindCount = 8;
+inline constexpr int kSequenceCellKindCount = 9;
 
 enum class ActionType : std::uint8_t {
     Pass = 0,
@@ -20,6 +20,7 @@ enum class ActionType : std::uint8_t {
     Skip,
     Smear,
     Slip,
+    Dub,
 };
 
 inline constexpr std::array<const char*, kActionCount> kActionNames = {{
@@ -29,6 +30,7 @@ inline constexpr std::array<const char*, kActionCount> kActionNames = {{
     "Skip",
     "Smear",
     "Slip",
+    "Dub",
 }};
 
 enum class InputSourceMode : std::uint8_t {
@@ -46,6 +48,7 @@ enum class SequenceCellKind : std::uint8_t {
     Reverse,
     Smear,
     Slip,
+    Dub,
 };
 
 inline constexpr std::array<const char*, kSequenceCellKindCount> kSequenceCellKindNames = {{
@@ -57,11 +60,13 @@ inline constexpr std::array<const char*, kSequenceCellKindCount> kSequenceCellKi
     "Reverse",
     "Smear",
     "Slip",
+    "Dub",
 }};
 
 struct Parameters {
     float grid = 8.0f;
     float density = 0.0f;
+    float dub = 0.0f;
     float damage = 45.0f;
     float memoryBars = 2.0f;
     float drift = 20.0f;
