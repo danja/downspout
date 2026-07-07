@@ -1,0 +1,4 @@
+interface:
+  display_name: "Downspout Add Plugin"
+  short_description: "Add a new plugin end to end"
+  default_prompt: "Use $downspout-add-plugin to add a new downspout plugin and keep release assets synchronized."

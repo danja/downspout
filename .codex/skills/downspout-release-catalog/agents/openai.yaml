@@ -1,0 +1,4 @@
+interface:
+  display_name: "Downspout Release Catalog"
+  short_description: "Maintain releases and Pages catalog"
+  default_prompt: "Use $downspout-release-catalog to update downspout packaging, screenshots, and catalog metadata."

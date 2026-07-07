@@ -1,0 +1,4 @@
+interface:
+  display_name: "Downspout Extend Plugin"
+  short_description: "Modify plugin behavior safely"
+  default_prompt: "Use $downspout-extend-plugin to add or change behavior in a downspout plugin."
