@@ -180,7 +180,15 @@ inline constexpr std::array<ParameterSpec, kParameterCount> kParameterSpecs = {{
 [[nodiscard]] inline float normalizedKickPitchToHz(const float value)
 {
     const float clamped = std::clamp(value, 0.0f, 1.0f);
-    return 60.0f * std::pow(250.0f / 60.0f, clamped);
+    constexpr float oldMinimumHz = 60.0f;
+    constexpr float minimumHz = 30.0f;
+    constexpr float maximumHz = 250.0f;
+    constexpr float defaultNormalized = 0.35f;
+    constexpr float defaultHz = oldMinimumHz * std::pow(maximumHz / oldMinimumHz, defaultNormalized);
+    if (clamped <= defaultNormalized) {
+        return minimumHz * std::pow(defaultHz / minimumHz, clamped / defaultNormalized);
+    }
+    return defaultHz * std::pow(maximumHz / defaultHz, (clamped - defaultNormalized) / (1.0f - defaultNormalized));
 }
 
 inline constexpr std::array<InstrumentSpec, kInstrumentCount> kInstrumentSpecs = {{

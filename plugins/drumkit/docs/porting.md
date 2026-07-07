@@ -30,8 +30,9 @@ UI decisions:
   affect the shared bus and remain active even when individual voices are
   muted.
 - The kick pitch slider remains stored as the inherited normalized value, but
-  the custom UI formats it through the same 60-250 Hz exponential mapping used
-  by the portable kick voice.
+  the custom UI formats it through the same 30-250 Hz mapping used by the
+  portable kick voice. The mapping is anchored so the inherited default remains
+  near its previous pitch while the minimum reaches 30 Hz.
 
 Resource behavior:
 

@@ -39,6 +39,17 @@ void kickRendersAudio()
     assert(renderEnergy(engine, 512) > 0.01f);
 }
 
+void kickPitchMapsToExtendedLowRange()
+{
+    const float minimum = downspout::drumkit::normalizedKickPitchToHz(0.0f);
+    const float defaultPitch = downspout::drumkit::normalizedKickPitchToHz(0.35f);
+    const float maximum = downspout::drumkit::normalizedKickPitchToHz(1.0f);
+
+    assert(std::fabs(minimum - 30.0f) < 0.001f);
+    assert(defaultPitch > 98.0f && defaultPitch < 100.0f);
+    assert(std::fabs(maximum - 250.0f) < 0.001f);
+}
+
 void mutedKickDoesNotTrigger()
 {
     downspout::drumkit::Engine engine {48000.0f};
@@ -167,6 +178,7 @@ void metalChangesTargetVoices()
 int main()
 {
     kickRendersAudio();
+    kickPitchMapsToExtendedLowRange();
     mutedKickDoesNotTrigger();
     kickTransientAddsAttackEnergy();
     closedHatChokesOpenHatEvenWhenClosedHatMuted();

@@ -1,6 +1,6 @@
 // KickVoice.hpp
 // Kick drum synthesis with pitch envelope, sine oscillator, transient noise, distortion, and punch
-// Parameters: Pitch (60-250Hz start), Decay (50-1500ms), Drive (1-10×), Punch (click amount), Transient (pink burst)
+// Parameters: Pitch (30-250Hz start), Decay (50-1500ms), Drive (1-10×), Punch (click amount), Transient (pink burst)
 
 #ifndef KICK_VOICE_HPP
 #define KICK_VOICE_HPP
@@ -103,7 +103,7 @@ public:
 
     /**
      * Set pitch parameter (normalized 0-1)
-     * Maps to starting pitch 60-250 Hz
+     * Maps to starting pitch 30-250 Hz, anchored to keep the default near 99 Hz
      */
     void setPitch(float value) {
         pitchStart = normalizedKickPitchToHz(value);
