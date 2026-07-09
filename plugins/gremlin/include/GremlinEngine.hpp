@@ -149,6 +149,12 @@ public:
         gate_ = true;
         velocity_ = std::clamp(velocity, 0.0f, 1.0f);
         baseFrequency_ = midiToHz(midiNote);
+        phaseA_ = 0.0f;
+        phaseB_ = 0.125f;
+        phaseC_ = 0.375f;
+        phaseD_ = 0.0f;
+        modeStateA_ *= 0.35f;
+        modeStateB_ *= 0.35f;
         transient_ = 1.25f + velocity_ * 0.9f;
         glitchExcite_ = 1.0f;
     }
@@ -176,26 +182,44 @@ public:
         updateChaosState();
         updateSampleHold();
 
-        const float freqA = std::clamp(baseFrequency_ * pitchModSemitone(0.85f), 18.0f, sampleRate_ * 0.45f);
-        const float freqB = std::clamp(baseFrequency_ * (1.18f + pitchSpread_ * 1.35f + 0.22f * chaos_ + 0.18f * damage_)
-                                       * pitchRatio(0.25f * slowChaos_ + 0.15f * fastChaos_), 18.0f, sampleRate_ * 0.45f);
-        const float freqC = std::clamp(baseFrequency_ * (1.55f + pitchSpread_ * 2.6f + 0.55f * damage_ + 0.28f * chaosAbs_)
-                                       * pitchRatio(0.12f * tentChaos_), 18.0f, sampleRate_ * 0.45f);
+        const float extremityTarget = std::clamp((damage_ * 0.95f + fold_ * 0.75f + feedback_ * 0.55f
+                                                + stutter_ * 0.55f + crunch_ * 0.40f - 1.15f) / 2.05f,
+                                               0.0f,
+                                               1.0f);
+        catastrophe_ += (extremityTarget - catastrophe_) * (0.0012f + chaosRate_ * 0.0045f);
+
+        const float freqA = std::clamp(baseFrequency_ * pitchModSemitone(0.62f + catastrophe_ * 0.55f),
+                                       18.0f,
+                                       sampleRate_ * 0.45f);
+        const float intervalB = musicalIntervalSemitones(1);
+        const float intervalC = musicalIntervalSemitones(2);
+        const float detuneB = (slowChaos_ * drift_ * 1.8f + fastChaos_ * chaos_ * 1.2f) * (0.28f + catastrophe_ * 1.20f);
+        const float detuneC = (tentChaos_ * drift_ * 1.4f - henonChaos_ * chaos_ * 1.0f) * (0.24f + catastrophe_ * 1.15f);
+        const float freqB = std::clamp(baseFrequency_ * pitchRatio(intervalB + detuneB), 18.0f, sampleRate_ * 0.45f);
+        const float freqC = std::clamp(baseFrequency_ * pitchRatio(intervalC + detuneC), 18.0f, sampleRate_ * 0.45f);
+        const float freqD = std::clamp(baseFrequency_ * pitchRatio(musicalIntervalSemitones(3) - 12.0f + slowChaos_ * 2.0f),
+                                       18.0f,
+                                       sampleRate_ * 0.45f);
 
         phaseA_ = wrapPhase(phaseA_ + freqA / sampleRate_);
         phaseB_ = wrapPhase(phaseB_ + freqB / sampleRate_);
         phaseC_ = wrapPhase(phaseC_ + freqC / sampleRate_);
+        phaseD_ = wrapPhase(phaseD_ + freqD / sampleRate_);
 
         const float sawA = 2.0f * phaseA_ - 1.0f;
         const float sawB = 2.0f * phaseB_ - 1.0f;
         const float triC = 1.0f - 4.0f * std::fabs(phaseC_ - 0.5f);
+        const float triD = 1.0f - 4.0f * std::fabs(phaseD_ - 0.5f);
         const float squareA = phaseA_ < (0.5f + 0.12f * fastChaos_) ? 1.0f : -1.0f;
         const float squareB = phaseB_ < (0.48f - 0.10f * tentChaos_) ? 1.0f : -1.0f;
         const float sineA = std::sin(2.0f * kPi * (phaseA_ + 0.07f * fastChaos_ * chaos_));
         const float sineB = std::sin(2.0f * kPi * phaseB_);
         const float sineC = std::sin(2.0f * kPi * phaseC_);
+        const float sineD = std::sin(2.0f * kPi * phaseD_);
         const float comparator = sawA > sawB ? 1.0f : -1.0f;
         const float chaosAudio = std::tanh((henonChaos_ * 0.9f + fastChaos_ * 0.7f + tentChaos_ * 0.35f) * (1.4f + 2.0f * chaos_));
+        const float consonance = 1.0f - catastrophe_ * 0.45f;
+        const float subBody = (0.68f * sineD + 0.32f * triD) * (0.12f + 0.32f * (1.0f - tone_) + 0.22f * catastrophe_);
 
         float source = 0.0f;
         const float burstFactor = 0.35f + burst_ * 1.65f;
@@ -205,12 +229,12 @@ public:
         const float gritGate = std::clamp(0.18f + transient_ * (0.62f + burst_ * 0.20f), 0.0f, 1.0f);
         switch (mode_) {
             case SHARD:
-                source = 0.38f * sawA + 0.22f * comparator + 0.14f * (squareA * squareB)
+                source = 0.30f * sawA + 0.18f * sineB * consonance + 0.22f * comparator + 0.14f * (squareA * squareB)
                        + 0.40f * attackTone + 0.10f * metallicTone + 0.08f * chaosAudio;
                 break;
             case SERVO:
                 source = 0.70f * std::sin(2.0f * kPi * (phaseA_ + chaosAudio * (0.12f + 0.22f * chaos_)))
-                       + 0.22f * (sawB * triC)
+                       + 0.22f * (sineB * (0.62f + 0.24f * consonance) + sawB * triC * 0.38f)
                        + 0.32f * attackTone
                        + 0.05f * heldNoise_ * gritGate;
                 break;
@@ -220,15 +244,21 @@ public:
                        + 0.16f * transient_ * burstFactor * (0.5f + 0.5f * chaosAbs_);
                 break;
             case COLLAPSE:
-                source = 0.24f * chaosAudio + 0.16f * sawA + 0.28f * sineA + 0.12f * comparator
+                source = 0.24f * chaosAudio + 0.16f * sawA + 0.24f * sineA + 0.18f * subBody + 0.12f * comparator
                        + 0.08f * heldNoise_ * gritGate + 0.30f * attackTone + 0.10f * metallicTone;
                 break;
             case RING: {
                 const float ring = (sineA * sineB) * (0.72f + 0.42f * damage_)
                                  + (squareA * sineC) * (0.14f + 0.40f * fold_);
+                const float brightRing = (sineC * squareB + sineB * triC) * (0.26f + 0.28f * pitchSpread_);
+                const float bellSideband = std::sin(2.0f * kPi * (phaseC_ * 3.0f + phaseB_ * 0.5f))
+                                          * (0.18f + pitchSpread_ * 0.28f);
+                const float upperBell = std::sin(2.0f * kPi * (phaseC_ * 5.0f + phaseB_ * 2.0f))
+                                      * (0.10f + pitchSpread_ * 0.20f);
                 const float fm = std::sin(2.0f * kPi * (phaseA_ + sineC * (0.08f + chaos_ * 0.32f)));
-                source = 0.34f * ring + 0.28f * fm + 0.18f * comparator
-                       + 0.18f * attackTone + 0.18f * metallicTone + 0.08f * chaosAudio;
+                source = 0.38f * ring + 0.12f * fm + 0.18f * brightRing + 0.34f * bellSideband
+                       + 0.24f * upperBell + 0.04f * comparator
+                       + 0.08f * attackTone + 0.34f * metallicTone + 0.12f * chaosAudio;
                 break;
             }
             case VAPOR:
@@ -237,10 +267,17 @@ public:
                                             * (1.0f + chaos_ * 1.8f));
                 const float airy = std::sin(2.0f * kPi * (phaseC_ + slowChaos_ * 0.08f))
                                  * (0.32f + 0.42f * space_);
-                source = 0.30f * cloud + 0.26f * airy + 0.18f * sineA + 0.14f * triC
+                source = 0.26f * cloud + 0.28f * airy + 0.18f * sineA + 0.14f * sineB * consonance + 0.14f * triC
                        + 0.14f * attackTone + 0.05f * metallicTone;
                 break;
             }
+        }
+        if (catastrophe_ > 0.001f) {
+            const float shred = foldback(source * (2.4f + catastrophe_ * 8.5f) + chaosAudio * (0.45f + chaos_ * 0.70f),
+                                         0.20f + (1.0f - fold_) * 0.30f);
+            const float alarm = std::sin(2.0f * kPi * (phaseB_ + phaseC_ * (0.22f + fold_ * 0.55f)))
+                              * (squareA * 0.55f + comparator * 0.45f);
+            source += catastrophe_ * (0.30f * shred + 0.18f * alarm + 0.14f * subBody);
         }
 
         float modeDamage = damage_;
@@ -303,6 +340,32 @@ private:
         return pitchRatio(semitone);
     }
 
+    float musicalIntervalSemitones(int voice) const {
+        const std::array<float, 4> shard {{0.0f, 7.0f, 12.0f, 19.0f}};
+        const std::array<float, 4> servo {{0.0f, 5.0f, 12.0f, 17.0f}};
+        const std::array<float, 4> spray {{0.0f, 10.0f, 14.0f, 22.0f}};
+        const std::array<float, 4> collapse {{0.0f, -12.0f, 7.0f, 12.0f}};
+        const std::array<float, 4> ring {{0.0f, 6.0f, 10.0f, 18.0f}};
+        const std::array<float, 4> vapor {{0.0f, 12.0f, 19.0f, 24.0f}};
+
+        const std::array<float, 4>* intervals = &shard;
+        switch (mode_) {
+            case SHARD: intervals = &shard; break;
+            case SERVO: intervals = &servo; break;
+            case SPRAY: intervals = &spray; break;
+            case COLLAPSE: intervals = &collapse; break;
+            case RING: intervals = &ring; break;
+            case VAPOR:
+            default: intervals = &vapor; break;
+        }
+
+        const int wrappedVoice = std::clamp(voice, 0, 3);
+        const float base = (*intervals)[static_cast<std::size_t>(wrappedVoice)];
+        const float spreadLift = pitchSpread_ * static_cast<float>(wrappedVoice) * 5.0f;
+        const float extremeLift = catastrophe_ * static_cast<float>(wrappedVoice == 0 ? 0 : wrappedVoice + 1) * 3.5f;
+        return base + spreadLift + extremeLift;
+    }
+
     float whiteNoise() {
         rngState_ = rngState_ * 1664525u + 1013904223u;
         return static_cast<float>((rngState_ >> 8) & 0x00FFFFFFu) * (1.0f / 8388607.5f) - 1.0f;
@@ -352,8 +415,8 @@ private:
             case SHARD: {
                 modeStateA_ += (source - modeStateA_) * 0.030f;
                 const float edge = source - modeStateA_;
-                source = source * 0.10f + edge * (1.42f + damage_ * 0.68f)
-                       + transient_ * 0.024f * (fastChaos_ > 0.0f ? 1.0f : -1.0f);
+                source = source * 0.08f + edge * (1.70f + damage_ * 0.82f)
+                       + transient_ * 0.030f * (fastChaos_ > 0.0f ? 1.0f : -1.0f);
                 modeDamage = clampUnit(modeDamage * 1.05f + 0.06f);
                 modeCrunch = clampUnit(modeCrunch * 0.95f + 0.12f);
                 modeFold = clampUnit(modeFold * 0.85f + 0.08f);
@@ -390,11 +453,11 @@ private:
                 break;
             case RING:
                 modeStateA_ += (source - modeStateA_) * 0.050f;
-                source = source * 1.05f + (source * modeStateA_) * (0.30f + fold_ * 0.42f);
-                modeDamage = clampUnit(modeDamage * 0.86f + 0.08f);
-                modeCrunch = clampUnit(modeCrunch * 0.55f + 0.04f);
-                modeFold = clampUnit(modeFold * 1.20f + 0.10f);
-                noiseScale = 0.42f;
+                source = source * 1.45f + (source * modeStateA_) * (0.54f + fold_ * 0.58f);
+                modeDamage = clampUnit(modeDamage * 1.04f + 0.14f);
+                modeCrunch = clampUnit(modeCrunch * 0.74f + 0.08f);
+                modeFold = clampUnit(modeFold * 1.46f + 0.16f);
+                noiseScale = 0.95f;
                 break;
             case VAPOR:
             default:
@@ -495,15 +558,15 @@ private:
         }
 
         const float noteBias = std::clamp(0.08f + transient_ * 0.55f + glitchExcite_ * 0.95f, 0.0f, 1.4f);
-        const float chance = (0.000004f + stutter_ * 0.00008f)
-            * (0.45f + chaos_ * 0.55f + damage_ * 0.25f + glitchLength_ * 0.25f)
+        const float chance = (0.000004f + stutter_ * (0.00008f + catastrophe_ * 0.00014f))
+            * (0.45f + chaos_ * 0.55f + damage_ * 0.25f + glitchLength_ * 0.25f + catastrophe_ * 0.45f)
             * noteBias * modeChance;
         if ((whiteNoise() * 0.5f + 0.5f) < chance) {
-            const float shortScale = 0.18f + glitchLength_ * 0.75f;
+            const float shortScale = 0.10f + glitchLength_ * 0.72f + catastrophe_ * 0.16f;
             const float maxShortDelay = std::max(24.0f, std::min(baseDelaySamples * shortScale * (0.55f + 0.45f * chaosAbs_), sampleRate_ * 0.18f));
             glitchDelaySamples_ = 12.0f + (whiteNoise() * 0.5f + 0.5f) * (maxShortDelay - 12.0f);
-            glitchBlend_ = std::clamp(0.24f + 0.52f * stutter_ + 0.12f * glitchExcite_ + modeBlend, 0.0f, 0.95f);
-            glitchHold_ = 48 + static_cast<int>((0.003f + 0.028f * stutter_ + 0.036f * glitchLength_)
+            glitchBlend_ = std::clamp(0.24f + 0.52f * stutter_ + 0.12f * glitchExcite_ + 0.22f * catastrophe_ + modeBlend, 0.0f, 0.98f);
+            glitchHold_ = 24 + static_cast<int>((0.002f + 0.026f * stutter_ + 0.034f * glitchLength_ + catastrophe_ * 0.014f)
                                                 * sampleRate_ * (0.7f + 0.3f * chaosAbs_) * modeLength);
             glitchExcite_ *= 0.35f;
         } else {
@@ -586,10 +649,11 @@ private:
         const float filteredLeft = feedbackFilterLeft_.process(delayedLeft);
         const float filteredRight = feedbackFilterRight_.process(delayedRight);
 
-        const float feedbackGain = std::clamp(0.06f + std::pow(feedback_, 1.2f) * 0.91f + damage_ * 0.03f + feedbackBias,
+        const float feedbackGain = std::clamp(0.06f + std::pow(feedback_, 1.2f) * 0.91f + damage_ * 0.03f
+                                                + catastrophe_ * 0.055f + feedbackBias,
                                               0.0f,
-                                              0.985f);
-        const float crossAmount = crossFeedback_ * space_ * (0.05f + 0.22f * chaos_);
+                                              0.992f);
+        const float crossAmount = crossFeedback_ * space_ * (0.05f + 0.22f * chaos_ + 0.18f * catastrophe_);
         const float collapsePolarity = (mode_ == COLLAPSE && fastChaos_ < 0.0f) ? -0.82f : 1.0f;
         float inputSource = source;
         if (duck_ > 0.0001f) {
@@ -608,7 +672,8 @@ private:
         delayRight_[static_cast<size_t>(writePos_)] = writeRight;
         writePos_ = (writePos_ + 1) % kDelayBufferSize;
 
-        const float wet = std::clamp((0.01f + delayMix_ * (0.40f + feedback_ * 0.28f + warp_ * 0.12f + stutter_ * 0.06f)) * wetScale,
+        const float wet = std::clamp((0.01f + delayMix_ * (0.40f + feedback_ * 0.28f + warp_ * 0.12f + stutter_ * 0.06f)
+                                        + catastrophe_ * 0.10f) * wetScale,
                                      0.0f,
                                      1.0f);
         const float dry = 1.0f - wet * 0.88f;
@@ -683,6 +748,8 @@ private:
     float phaseA_ = 0.0f;
     float phaseB_ = 0.0f;
     float phaseC_ = 0.0f;
+    float phaseD_ = 0.0f;
+    float catastrophe_ = 0.0f;
 
     uint32_t rngState_ = 0x73419a5du;
     float logistic_ = 0.63f;

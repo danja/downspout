@@ -12,6 +12,7 @@ struct ModeSignature {
     float zeroCrossRate = 0.0f;
     float sideRatio = 0.0f;
     float peak = 0.0f;
+    float roughness = 0.0f;
 };
 
 bool nearlyEqual(const float a, const float b, const float epsilon = 1.0e-5f)
@@ -47,6 +48,37 @@ bool containsMidi(const downspout::gremlin::MidiMessage* events,
     return false;
 }
 
+ModeSignature measureRenderedSignature(const std::array<float, 4096>& left, const std::array<float, 4096>& right)
+{
+    ModeSignature signature {};
+    int crossings = 0;
+    int samples = 0;
+    float energy = 0.0f;
+    float side = 0.0f;
+    float roughness = 0.0f;
+    float previous = 0.0f;
+    for (std::size_t i = 1024; i < left.size(); ++i)
+    {
+        const float mono = 0.5f * (left[i] + right[i]);
+        if (samples > 0 && ((previous < 0.0f && mono >= 0.0f) || (previous > 0.0f && mono <= 0.0f)))
+            ++crossings;
+        if (samples > 0)
+            roughness += std::fabs(mono - previous);
+        previous = mono;
+
+        energy += mono * mono;
+        side += std::fabs(left[i] - right[i]);
+        signature.peak = std::max(signature.peak, std::max(std::fabs(left[i]), std::fabs(right[i])));
+        ++samples;
+    }
+
+    signature.rms = samples > 0 ? std::sqrt(energy / static_cast<float>(samples)) : 0.0f;
+    signature.zeroCrossRate = samples > 0 ? static_cast<float>(crossings) / static_cast<float>(samples) : 0.0f;
+    signature.sideRatio = energy > 0.0f ? side / (std::sqrt(energy) * static_cast<float>(samples)) : 0.0f;
+    signature.roughness = samples > 0 ? roughness / static_cast<float>(samples) : 0.0f;
+    return signature;
+}
+
 ModeSignature renderModeSignature(const std::size_t mode)
 {
     using downspout::gremlin::LiveParamId;
@@ -67,29 +99,28 @@ ModeSignature renderModeSignature(const std::size_t mode)
     std::array<float, 4096> right {};
     processor.processBlock(left.data(), right.data(), static_cast<std::uint32_t>(left.size()), &noteOn, 1);
 
-    ModeSignature signature {};
-    int crossings = 0;
-    int samples = 0;
-    float energy = 0.0f;
-    float side = 0.0f;
-    float previous = 0.0f;
-    for (std::size_t i = 256; i < left.size(); ++i)
-    {
-        const float mono = 0.5f * (left[i] + right[i]);
-        if (samples > 0 && ((previous < 0.0f && mono >= 0.0f) || (previous > 0.0f && mono <= 0.0f)))
-            ++crossings;
-        previous = mono;
+    return measureRenderedSignature(left, right);
+}
 
-        energy += mono * mono;
-        side += std::fabs(left[i] - right[i]);
-        signature.peak = std::max(signature.peak, std::max(std::fabs(left[i]), std::fabs(right[i])));
-        ++samples;
-    }
+ModeSignature renderSceneSignature(const downspout::gremlin::SceneId scene)
+{
+    using downspout::gremlin::MidiMessage;
+    using downspout::gremlin::Processor;
 
-    signature.rms = samples > 0 ? std::sqrt(energy / static_cast<float>(samples)) : 0.0f;
-    signature.zeroCrossRate = samples > 0 ? static_cast<float>(crossings) / static_cast<float>(samples) : 0.0f;
-    signature.sideRatio = energy > 0.0f ? side / (std::sqrt(energy) * static_cast<float>(samples)) : 0.0f;
-    return signature;
+    Processor processor;
+    processor.init(48000.0);
+    processor.loadScene(scene);
+
+    MidiMessage noteOn {};
+    noteOn.size = 3;
+    noteOn.data[0] = 0x90;
+    noteOn.data[1] = 60;
+    noteOn.data[2] = 112;
+
+    std::array<float, 4096> left {};
+    std::array<float, 4096> right {};
+    processor.processBlock(left.data(), right.data(), static_cast<std::uint32_t>(left.size()), &noteOn, 1);
+    return measureRenderedSignature(left, right);
 }
 
 float signatureDistance(const ModeSignature& a, const ModeSignature& b)
@@ -99,7 +130,8 @@ float signatureDistance(const ModeSignature& a, const ModeSignature& b)
     return std::fabs(std::log(rmsA / rmsB)) * 0.35f
          + std::fabs(a.zeroCrossRate - b.zeroCrossRate) * 2.2f
          + std::fabs(a.sideRatio - b.sideRatio) * 1.4f
-         + std::fabs(a.peak - b.peak) * 0.35f;
+         + std::fabs(a.peak - b.peak) * 0.35f
+         + std::fabs(a.roughness - b.roughness) * 18.0f;
 }
 
 }  // namespace
@@ -207,9 +239,27 @@ int main()
         }
         if (nearest <= 0.035f)
             std::cerr << "nearest signature distance for mode " << mode << " was " << nearest
-                      << " against mode " << nearestMode << '\n';
+                      << " against mode " << nearestMode << "\nmode " << mode
+                      << " rms=" << signatures[mode].rms
+                      << " zc=" << signatures[mode].zeroCrossRate
+                      << " side=" << signatures[mode].sideRatio
+                      << " peak=" << signatures[mode].peak
+                      << " rough=" << signatures[mode].roughness
+                      << "\nmode " << nearestMode
+                      << " rms=" << signatures[nearestMode].rms
+                      << " zc=" << signatures[nearestMode].zeroCrossRate
+                      << " side=" << signatures[nearestMode].sideRatio
+                      << " peak=" << signatures[nearestMode].peak
+                      << " rough=" << signatures[nearestMode].roughness << '\n';
         require(nearest > 0.035f, "gremlin mode signatures should remain separated");
     }
+
+    const ModeSignature musicalScene = renderSceneSignature(SceneId::melt);
+    const ModeSignature extremeScene = renderSceneSignature(SceneId::tunnel);
+    require(musicalScene.peak > 0.005f, "gremlin musical scene should emit audio");
+    require(extremeScene.peak > 0.005f, "gremlin extreme scene should emit audio");
+    require(signatureDistance(musicalScene, extremeScene) > 0.08f,
+            "gremlin musical and extreme scenes should remain audibly separated");
 
     float monoOnly[128] {};
     processor.processBlock(monoOnly, nullptr, 128, nullptr, 0);

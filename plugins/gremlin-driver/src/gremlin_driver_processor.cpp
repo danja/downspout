@@ -310,22 +310,22 @@ std::uint8_t Processor::randomPrimaryKnobValue(const std::uint8_t cc)
 {
     switch (cc)
     {
-    case 16: return randomCc(20, 82);
-    case 20: return randomCc(18, 78);
-    case 24: return randomCc(0, 40);
-    case 28: return randomCc(8, 58);
-    case 46: return randomCc(0, 52);
-    case 50: return randomCc(10, 55);
-    case 54: return randomCc(0, 20);
-    case 58: return randomCc(6, 40);
-    case 17: return randomCc(10, 70);
-    case 21: return randomCc(18, 78);
-    case 25: return randomCc(5, 60);
-    case 29: return randomCc(8, 62);
-    case 47: return randomCc(60, 118);
-    case 51: return randomCc(42, 98);
-    case 55: return randomCc(16, 82);
-    case 59: return randomCc(30, 76);
+    case 16: return randomCc(18, 120);
+    case 20: return randomCc(22, 122);
+    case 24: return randomCc(0, 104);
+    case 28: return randomCc(8, 86);
+    case 46: return randomCc(4, 116);
+    case 50: return randomCc(8, 126);
+    case 54: return randomCc(0, 18);
+    case 58: return randomCc(5, 70);
+    case 17: return randomCc(6, 100);
+    case 21: return randomCc(22, 116);
+    case 25: return randomCc(6, 104);
+    case 29: return randomCc(8, 110);
+    case 47: return randomCc(42, 120);
+    case 51: return randomCc(34, 102);
+    case 55: return randomCc(18, 110);
+    case 59: return randomCc(36, 76);
     default: return randomCc();
     }
 }
@@ -334,14 +334,14 @@ std::uint8_t Processor::randomHiddenKnobValue(const std::uint8_t cc)
 {
     switch (cc)
     {
-    case 18: return randomCc(58, 104);
-    case 22: return randomCc(70, 127);
-    case 26: return randomCc(10, 68);
-    case 30: return randomCc(20, 72);
-    case 48: return randomCc(12, 68);
-    case 52: return randomCc(10, 54);
-    case 56: return randomCc(18, 76);
-    case 60: return randomCc(28, 86);
+    case 18: return randomCc(52, 116);
+    case 22: return randomCc(46, 127);
+    case 26: return randomCc(18, 127);
+    case 30: return randomCc(20, 112);
+    case 48: return randomCc(12, 112);
+    case 52: return randomCc(10, 108);
+    case 56: return randomCc(18, 122);
+    case 60: return randomCc(12, 82);
     default: return randomCc();
     }
 }

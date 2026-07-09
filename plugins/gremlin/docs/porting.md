@@ -29,6 +29,11 @@ not collapse into one generic glitch sound:
 
 Factory scenes and source randomisation are biased toward those identities
 rather than using one broad midrange set of breakage values for every mode.
+Normal-to-moderate settings keep the additional voices locked to mode-specific
+interval sets so pitched notes read more musically. High combined damage, fold,
+feedback, stutter, and crunch introduce a smoothed catastrophe layer with
+stronger foldback, alarm tones, denser glitch holds, and wetter cross-feedback
+so pushed patches become much more extreme.
 
 ## MIDI behavior
 
