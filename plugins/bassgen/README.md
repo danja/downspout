@@ -16,6 +16,10 @@ note, any note on the listen channel, or any note at all. `Input Sensitivity`
 scales how strongly that input affects follow/dodge probability and, in channel
 or any-note matching, how far injected follow notes are pulled toward a
 companion interval above the incoming guide pitch.
+Channel 10 keeps the exact listen-note trigger behavior used for drum-style
+hits. Channel 1 note-ons are also accepted as musical guides: when follow
+injection happens, their pitch steers the injected note toward a related
+bass-register pitch instead of acting only as a trigger.
 The `Color` control adjusts harmonic tension: for Jazz it moves dominant bars
 from inside/bebop material toward altered, diminished, and whole-tone colors,
 for Fugue it adds leading-tone pickup behavior, while other genres use it for

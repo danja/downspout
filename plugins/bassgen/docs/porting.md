@@ -25,7 +25,10 @@ Current `downspout`-specific port note:
   channel, or any note. `Input Sensitivity` scales the bipolar follow/dodge
   response. In channel or any-note matching, matched input pitch is retained so
   injected follow notes can become a fifth or octave companion above a guide
-  line such as Ground;
+  line such as Ground. Channel 10 preserves the exact listen-note trigger use
+  case, while channel 1 note-ons are treated as musical guides and steer
+  follow-injected notes toward bass-register pitch classes related to the
+  incoming note;
 - Jazz is implemented as an appended genre value for state compatibility. It
   adds ii-V-I-turnaround roots, walking beat anchors, explicit chord-role
   targets, dominant color choices, and chromatic approach/enclosure behavior.

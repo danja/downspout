@@ -10,6 +10,8 @@
 namespace downspout::bassgen {
 namespace {
 
+constexpr int kMusicalGuideChannel = 1;
+
 [[nodiscard]] int clampi(int value, int minValue, int maxValue) {
     if (value < minValue) {
         return minValue;
@@ -86,6 +88,7 @@ void resetTransportState(EngineState& state) {
     state.inputTriggerPending = false;
     state.inputTriggerVelocity = 0;
     state.injectedNoteEndBoundary = -1;
+    state.inputTriggerMusicalGuide = false;
 }
 
 void handleStoppedTransport(EngineState& state, BlockResult& result) {
@@ -151,12 +154,20 @@ PatternUpdateResult updatePatternIfNeeded(EngineState& state,
     return event.size >= 3 && (event.data[0] & 0xf0u) == 0x90u && event.data[2] > 0;
 }
 
+[[nodiscard]] int midiChannel(const InputMidiEvent& event) {
+    return static_cast<int>(event.data[0] & 0x0fu) + 1;
+}
+
+[[nodiscard]] int midiNote(const InputMidiEvent& event) {
+    return static_cast<int>(event.data[1]);
+}
+
 [[nodiscard]] bool inputMatchesListenTarget(const Controls& controls, const InputMidiEvent& event) {
     if (!isNoteOn(event)) {
         return false;
     }
-    const int channel = static_cast<int>(event.data[0] & 0x0fu) + 1;
-    const int note = static_cast<int>(event.data[1]);
+    const int channel = midiChannel(event);
+    const int note = midiNote(event);
     switch (controls.inputMatchMode) {
     case InputMatchModeId::exact:
         return channel == controls.listenChannel && note == controls.listenNote;
@@ -170,13 +181,62 @@ PatternUpdateResult updatePatternIfNeeded(EngineState& state,
     return false;
 }
 
+[[nodiscard]] int nearestPitchClassNote(const int pitchClass, const int referenceNote) {
+    int best = clampi((referenceNote / 12) * 12 + pitchClass, 0, 127);
+    int bestDistance = std::abs(best - referenceNote);
+    for (int octave = -2; octave <= 2; ++octave) {
+        const int candidate = clampi(best + octave * 12, 0, 127);
+        const int distance = std::abs(candidate - referenceNote);
+        if (distance < bestDistance || (distance == bestDistance && candidate < best)) {
+            best = candidate;
+            bestDistance = distance;
+        }
+    }
+    return best;
+}
+
+[[nodiscard]] int musicalGuideTargetNote(const EngineState& state, const int generatedNote, const int localStep) {
+    const int guideNote = clampi(state.inputTriggerNote, 0, 127);
+    const int guidePitchClass = guideNote % 12;
+    const int direct = nearestPitchClassNote(guidePitchClass, generatedNote);
+
+    const bool strongStep = state.pattern.stepsPerBeat > 0 && (localStep % state.pattern.stepsPerBeat) == 0;
+    if (strongStep) {
+        return direct;
+    }
+
+    const int fifth = nearestPitchClassNote((guidePitchClass + 7) % 12, generatedNote);
+    const int octaveBelow = clampi(direct > generatedNote + 5 ? direct - 12 : direct, 0, 127);
+    const std::uint32_t choice =
+        (state.controls.seed ^
+         (static_cast<std::uint32_t>(localStep + 257) * 3266489917u) ^
+         (static_cast<std::uint32_t>(guideNote + 129) * 668265263u)) %
+        4u;
+    if (choice == 0u) {
+        return fifth;
+    }
+    if (choice == 1u) {
+        return octaveBelow;
+    }
+    return direct;
+}
+
 void consumeInputMidi(EngineState& state, const InputMidiEvent& event) {
+    if (isNoteOn(event) && midiChannel(event) == kMusicalGuideChannel) {
+        state.inputTriggerPending = true;
+        state.inputTriggerVelocity = clampi(static_cast<int>(event.data[2]), 1, 127);
+        state.inputTriggerNote = clampi(midiNote(event), 0, 127);
+        state.inputTriggerMusicalGuide = true;
+        return;
+    }
+
     if (!inputMatchesListenTarget(state.controls, event)) {
         return;
     }
     state.inputTriggerPending = true;
     state.inputTriggerVelocity = clampi(static_cast<int>(event.data[2]), 1, 127);
-    state.inputTriggerNote = clampi(static_cast<int>(event.data[1]), 0, 127);
+    state.inputTriggerNote = clampi(midiNote(event), 0, 127);
+    state.inputTriggerMusicalGuide = false;
 }
 
 void consumeInputUntil(EngineState& state,
@@ -241,11 +301,19 @@ void consumeInputUntil(EngineState& state,
         generated.velocity = 96;
     }
     if (state.inputTriggerNote >= 0 && state.controls.inputMatchMode != InputMatchModeId::exact) {
-        const int octaveTarget = clampi(state.inputTriggerNote + 12, 0, 127);
-        const int fifthTarget = clampi(state.inputTriggerNote + 7, 0, 127);
-        const int guideTarget = std::abs(generated.note - octaveTarget) <= std::abs(generated.note - fifthTarget)
-            ? octaveTarget
-            : fifthTarget;
+        const int guideTarget = state.inputTriggerMusicalGuide
+            ? musicalGuideTargetNote(state, generated.note, localStep)
+            : (std::abs(generated.note - clampi(state.inputTriggerNote + 12, 0, 127)) <=
+                       std::abs(generated.note - clampi(state.inputTriggerNote + 7, 0, 127))
+                   ? clampi(state.inputTriggerNote + 12, 0, 127)
+                   : clampi(state.inputTriggerNote + 7, 0, 127));
+        const float sensitivity = clampf(state.controls.inputSensitivity, 0.0f, 1.0f);
+        generated.note = clampi(static_cast<int>(std::lround(static_cast<float>(generated.note) * (1.0f - sensitivity) +
+                                                             static_cast<float>(guideTarget) * sensitivity)),
+                                0,
+                                127);
+    } else if (state.inputTriggerMusicalGuide && state.inputTriggerNote >= 0) {
+        const int guideTarget = musicalGuideTargetNote(state, generated.note, localStep);
         const float sensitivity = clampf(state.controls.inputSensitivity, 0.0f, 1.0f);
         generated.note = clampi(static_cast<int>(std::lround(static_cast<float>(generated.note) * (1.0f - sensitivity) +
                                                              static_cast<float>(guideTarget) * sensitivity)),
@@ -357,6 +425,7 @@ BlockResult processBlock(EngineState& state,
         state.inputTriggerPending = false;
         state.inputTriggerVelocity = 0;
         state.inputTriggerNote = -1;
+        state.inputTriggerMusicalGuide = false;
         midiEvents = nullptr;
         midiEventCount = 0;
     }

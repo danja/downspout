@@ -827,6 +827,78 @@ void testIncomingMidiChannelGuideInjectsCompanionNote() {
     assert(engine.activeNote == 57);
 }
 
+void testIncomingMidiChannelOneGuidesMusicalBassNote() {
+    Controls controls;
+    controls.followDodge = 1.0f;
+    controls.inputSensitivity = 1.0f;
+    controls.inputMatchMode = InputMatchModeId::exact;
+    controls.listenChannel = 10;
+    controls.listenNote = 36;
+
+    EngineState engine;
+    activate(engine, controls);
+
+    engine.patternValid = true;
+    engine.pattern.patternSteps = 16;
+    engine.pattern.stepsPerBeat = 4;
+    engine.pattern.stepsPerBar = 16;
+    engine.pattern.meter = ::downspout::Meter {};
+    engine.pattern.eventCount = 1;
+    engine.pattern.events[0] = NoteEvent{8, 2, 36, 92};
+    engine.wasPlaying = true;
+    engine.lastTransportStep = 3;
+
+    const InputMidiEvent input = noteOn(0, 1, 52, 120);
+    const BlockResult result = processBlock(engine,
+                                            controls,
+                                            playingTransport(0.999),
+                                            1024,
+                                            48000.0,
+                                            &input,
+                                            1);
+
+    assert(result.eventCount == 1);
+    assert(result.events[0].type == MidiEventType::noteOn);
+    assert(result.events[0].data1 == 40);
+    assert(engine.activeNote == 40);
+}
+
+void testIncomingMidiChannelTenExactTriggerStaysNonPitchGuided() {
+    Controls controls;
+    controls.followDodge = 1.0f;
+    controls.inputSensitivity = 1.0f;
+    controls.inputMatchMode = InputMatchModeId::exact;
+    controls.listenChannel = 10;
+    controls.listenNote = 36;
+
+    EngineState engine;
+    activate(engine, controls);
+
+    engine.patternValid = true;
+    engine.pattern.patternSteps = 16;
+    engine.pattern.stepsPerBeat = 4;
+    engine.pattern.stepsPerBar = 16;
+    engine.pattern.meter = ::downspout::Meter {};
+    engine.pattern.eventCount = 1;
+    engine.pattern.events[0] = NoteEvent{8, 2, 36, 92};
+    engine.wasPlaying = true;
+    engine.lastTransportStep = 3;
+
+    const InputMidiEvent input = noteOn(0, 10, 36, 120);
+    const BlockResult result = processBlock(engine,
+                                            controls,
+                                            playingTransport(0.999),
+                                            1024,
+                                            48000.0,
+                                            &input,
+                                            1);
+
+    assert(result.eventCount == 1);
+    assert(result.events[0].type == MidiEventType::noteOn);
+    assert(result.events[0].data1 == 36);
+    assert(engine.activeNote == 36);
+}
+
 void testIncomingMidiSensitivityZeroIgnoresGuide() {
     Controls controls;
     controls.followDodge = 1.0f;
@@ -1071,6 +1143,8 @@ int main() {
     testIncomingMidiDodgeSuppressesMatchedStep();
     testIncomingMidiFollowInjectsMatchedStep();
     testIncomingMidiChannelGuideInjectsCompanionNote();
+    testIncomingMidiChannelOneGuidesMusicalBassNote();
+    testIncomingMidiChannelTenExactTriggerStaysNonPitchGuided();
     testIncomingMidiSensitivityZeroIgnoresGuide();
     testSerializationRoundTrip();
     testCompoundMeterGenerationTracksPulseGrid();
