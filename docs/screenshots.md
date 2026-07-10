@@ -68,6 +68,7 @@ Current output filenames:
 - `drumkit.png`
 - `xoxolo.png`
 - `cadence.png`
+- `arpgen.png`
 - `counterpointer.png`
 - `sidecar.png`
 - `gremlin.png`

@@ -22,6 +22,7 @@ option(DOWNSPOUT_BUILD_AMBO "Configure the ambo original ambient effect target" 
 option(DOWNSPOUT_BUILD_DRUMGEN "Configure the drumgen port target" ON)
 option(DOWNSPOUT_BUILD_DRUMKIT "Configure the drumkit port target" ON)
 option(DOWNSPOUT_BUILD_CADENCE "Configure the cadence port target" ON)
+option(DOWNSPOUT_BUILD_ARPGEN "Configure the arpgen MIDI arpeggiator target" ON)
 option(DOWNSPOUT_BUILD_COUNTERPOINTER "Configure the counterpointer MIDI target" ON)
 option(DOWNSPOUT_BUILD_SIDECAR "Configure the Sidecar AI phrase target" ON)
 option(DOWNSPOUT_BUILD_AI_COORDINATOR "Configure the local AI coordinator tool target" ON)
@@ -107,6 +108,10 @@ endif()
 
 if(DOWNSPOUT_BUILD_CADENCE)
     add_subdirectory(plugins/cadence)
+endif()
+
+if(DOWNSPOUT_BUILD_ARPGEN)
+    add_subdirectory(plugins/arpgen)
 endif()
 
 if(DOWNSPOUT_BUILD_COUNTERPOINTER)

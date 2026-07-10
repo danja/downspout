@@ -28,6 +28,7 @@ plugins=(
   "drumkit:drumkit"
   "xoxolo:xoxolo"
   "cadence:cadence"
+  "arpgen:arpgen"
   "counterpointer:counterpointer"
   "sidecar:sidecar"
   "gremlin:gremlin"

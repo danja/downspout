@@ -67,6 +67,7 @@ cmake_args=(
   -DDOWNSPOUT_BUILD_ORCHID=ON
   -DDOWNSPOUT_BUILD_AMBO=ON
   -DDOWNSPOUT_BUILD_CADENCE=ON
+  -DDOWNSPOUT_BUILD_ARPGEN=ON
   -DDOWNSPOUT_BUILD_COUNTERPOINTER=ON
   -DDOWNSPOUT_BUILD_SIDECAR="$sidecar_build"
   -DDOWNSPOUT_BUILD_AI_COORDINATOR=OFF
@@ -122,9 +123,9 @@ fi
 echo "Installing release payload to $staging_dir"
 cmake --install "$build_dir" --config "$build_type" --prefix "$staging_dir"
 
-required_bundles=(bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 melgen.vst3 rift.vst3 orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 cadence.vst3 counterpointer.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 floozy.vst3 basilico.vst3 canticle.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3 xoxolo.vst3)
+required_bundles=(bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 melgen.vst3 rift.vst3 orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 cadence.vst3 arpgen.vst3 counterpointer.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 floozy.vst3 basilico.vst3 canticle.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3 xoxolo.vst3)
 if [[ "$sidecar_build" == "ON" ]]; then
-  required_bundles=(bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 melgen.vst3 rift.vst3 orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 cadence.vst3 counterpointer.vst3 sidecar.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 floozy.vst3 basilico.vst3 canticle.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3 xoxolo.vst3)
+  required_bundles=(bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 melgen.vst3 rift.vst3 orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 cadence.vst3 arpgen.vst3 counterpointer.vst3 sidecar.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 floozy.vst3 basilico.vst3 canticle.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3 xoxolo.vst3)
 fi
 for bundle in "${required_bundles[@]}"; do
   if [[ ! -d "$staging_dir/$bundle" ]]; then

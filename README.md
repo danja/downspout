@@ -27,7 +27,7 @@ Unpack it, then copy the `.vst3` bundles to your system VST3 folder. On Linux:
 
 ```bash
 mkdir -p ~/.vst3
-cp -r bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 melgen.vst3 rift.vst3 orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 cadence.vst3 counterpointer.vst3 sidecar.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 floozy.vst3 basilico.vst3 canticle.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3 xoxolo.vst3 ~/.vst3/
+cp -r bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 melgen.vst3 rift.vst3 orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 cadence.vst3 arpgen.vst3 counterpointer.vst3 sidecar.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 floozy.vst3 basilico.vst3 canticle.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3 xoxolo.vst3 ~/.vst3/
 ```
 
 Typical VST3 install locations are `~/.vst3` on Linux,
@@ -74,6 +74,7 @@ installed bundle.
 | [drumgen](plugins/drumgen/README.md) | `drumgen.vst3` | MIDI drum generator | Pattern generator with meter-aware styles, fills, and Breakbeat/Amen/Jungle/Hip Hop genres. |
 | [drumkit](plugins/drumkit/README.md) | `drumkit.vst3` | Instrument | Port of the `flues` drum synth with stereo output, one MIDI input, and mixer-style UI. |
 | [cadence](plugins/cadence/README.md) | `cadence.vst3` | MIDI effect | Transport-aware MIDI harmonizer and comping generator. |
+| [arpgen](plugins/arpgen/README.md) | `arpgen.vst3` | MIDI effect | Transport-synced chord-capture and scale-derived arpeggiator. |
 | [counterpointer](plugins/counterpointer/README.md) | `counterpointer.vst3` | MIDI generator/effect | Learns incoming MIDI and emits a monophonic counter-melody. |
 | [Sidecar](plugins/sidecar/README.md) | `sidecar.vst3` | MIDI generator | MIDI phrase player for generated solo material with local deterministic and localhost coordinator modes. |
 | [gremlin](plugins/gremlin/README.md) | `gremlin.vst3` | Instrument | Chaotic glitch instrument with scenes, macros, actions, and performance controls. |
@@ -128,7 +129,7 @@ than large architecture changes.
 
 Near-term priorities:
 
-1. validate all twenty-three bundles in real hosts after clean installs and rescans;
+1. validate all twenty-four bundles in real hosts after clean installs and rescans;
 2. keep release packaging aligned with local installs;
 3. extend musical style vocabulary where it improves actual generator behavior;
 4. publish and verify the first public tagged release artifact.

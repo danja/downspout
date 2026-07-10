@@ -148,6 +148,9 @@ Progress as of 2026-05-27:
 - `drumgen` now has a portable core library, a host-neutral MIDI engine, text serialization helpers, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `drumkit` now ports the `flues` drum synth through a portable core and a first VST3 instrument wrapper with UI via vendored DPF;
 - `cadence` now has a portable core library, a host-neutral learning/playback engine, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
+- `arpgen` now exists as an original transport-synced MIDI arpeggiator with
+  meter-relative chord capture, scale-derived material, deterministic tests,
+  and a DPF/VST3 wrapper with custom UI;
 - `counterpointer` now has a portable core, deterministic tests, text state
   serialization, and a first DPF/VST3 wrapper with custom UI;
 - `sidecar` now exists as an original AI-ready MIDI phrase player with local
@@ -174,7 +177,7 @@ Current main gap:
 - `install.sh` and `scripts/package-release.sh` now install and package real
   `bassgen.vst3`, `p_mix.vst3`, `e_mix.vst3`, `m_mix.vst3`, `melgen.vst3`,
   `rift.vst3`, `orchid.vst3`, `ambo.vst3`, `drumgen.vst3`, `drumkit.vst3`,
-  `cadence.vst3`, `counterpointer.vst3`, `sidecar.vst3`, `gremlin.vst3`,
+  `cadence.vst3`, `arpgen.vst3`, `counterpointer.vst3`, `sidecar.vst3`, `gremlin.vst3`,
   `gremlin_driver.vst3`, `ground.vst3`, `floozy.vst3`, `basilico.vst3`,
   `canticle.vst3`, `luma.vst3`, `paunchlad.vst3`, `lifeform.vst3`, and
   `xoxolo.vst3` bundles.

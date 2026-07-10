@@ -210,6 +210,7 @@ The release script currently expects these bundles:
 - `drumgen.vst3`
 - `drumkit.vst3`
 - `cadence.vst3`
+- `arpgen.vst3`
 - `counterpointer.vst3`
 - `sidecar.vst3`
 - `gremlin.vst3`

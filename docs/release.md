@@ -30,6 +30,7 @@ downspout-<version>-<platform>-vst3.zip
 ├── drumgen.vst3/
 ├── drumkit.vst3/
 ├── cadence.vst3/
+├── arpgen.vst3/
 ├── counterpointer.vst3/
 ├── gremlin.vst3/
 ├── gremlin_driver.vst3/
