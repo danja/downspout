@@ -30,6 +30,10 @@ Learning and reset behavior:
   Learning state after ordinary sound-shaping changes.
 - The DPF wrapper exposes `MIDI Input Activity` and `MIDI Output Activity`
   output parameters, mirrored in the UI header, to diagnose host MIDI routing.
+  Input activity remains visible for one second so sparse bass lines do not
+  appear disconnected between notes.
+- The VST3 advertises `Instrument` alongside `Fx|Generator` so hosts can expose
+  its event input consistently even though Cadence has no audio ports.
 
 Jazz note:
 

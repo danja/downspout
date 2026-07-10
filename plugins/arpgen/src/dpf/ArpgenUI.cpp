@@ -123,6 +123,8 @@ protected:
         drawTimingBand(28.0f, 178.0f, width - 56.0f, 100.0f);
         drawSourceBand(28.0f, 304.0f, width - 56.0f, 116.0f);
         drawPerformanceBand(28.0f, 446.0f, width - 56.0f, height - 470.0f);
+        if (openSelector_ >= 0)
+            drawOpenSelectorMenu(openSelector_);
     }
 
     bool onMouse(const MouseEvent& event) override
@@ -135,6 +137,13 @@ protected:
         }
         const float x = static_cast<float>(event.pos.getX());
         const float y = static_cast<float>(event.pos.getY());
+
+        if (openSelector_ >= 0) {
+            if (handleOpenSelectorClick(x, y))
+                return true;
+            openSelector_ = -1;
+        }
+
         for (int i = 0; i < 2; ++i) {
             if (modeRects_[static_cast<std::size_t>(i)].contains(x, y)) {
                 setValue(kParamMode, static_cast<float>(i));
@@ -143,7 +152,8 @@ protected:
         }
         for (std::size_t i = 0; i < choiceRects_.size(); ++i) {
             if (choiceRects_[i].contains(x, y)) {
-                cycleChoice(static_cast<int>(i), 1);
+                openSelector_ = static_cast<int>(i);
+                repaint();
                 return true;
             }
         }
@@ -159,8 +169,8 @@ protected:
             return true;
         }
         if (channelRect_.contains(x, y)) {
-            const int next = (static_cast<int>(std::lround(values_[kParamOutputChannel])) + 1) % 17;
-            setValue(kParamOutputChannel, static_cast<float>(next));
+            openSelector_ = kOutputSelectorIndex;
+            repaint();
             return true;
         }
         return false;
@@ -181,9 +191,15 @@ protected:
         const int direction = event.delta.getY() > 0.0f ? -1 : 1;
         for (std::size_t i = 0; i < choiceRects_.size(); ++i) {
             if (choiceRects_[i].contains(x, y)) {
+                openSelector_ = -1;
                 cycleChoice(static_cast<int>(i), direction);
                 return true;
             }
+        }
+        if (channelRect_.contains(x, y)) {
+            openSelector_ = -1;
+            cycleOutputChannel(direction);
+            return true;
         }
         return false;
     }
@@ -196,11 +212,18 @@ private:
     Rect passRect_ {};
     Rect channelRect_ {};
     int dragging_ = -1;
+    int openSelector_ = -1;
+
+    static constexpr int kOutputSelectorIndex = static_cast<int>(kChoices.size());
+    static constexpr int kSelectorMenuMaxRows = 10;
+    static constexpr float kSelectorItemHeight = 26.0f;
 
     void setValue(const std::uint32_t parameter, const float value)
     {
         values_[parameter] = value;
+        editParameter(parameter, true);
         setParameterValue(parameter, value);
+        editParameter(parameter, false);
         repaint();
     }
 
@@ -304,7 +327,8 @@ private:
              choice.values[index], nullptr);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
         fillColor(126, 219, 179, 255);
-        text(rectValue.x + rectValue.w - 11.0f, rectValue.y + 18.0f + (rectValue.h - 18.0f) * 0.5f, ">", nullptr);
+        text(rectValue.x + rectValue.w - 11.0f, rectValue.y + 18.0f + (rectValue.h - 18.0f) * 0.5f,
+             openSelector_ == choiceIndex ? "^" : "v", nullptr);
     }
 
     void drawTimingBand(const float x, const float y, const float w, const float h)
@@ -386,7 +410,7 @@ private:
         channelRect_ = {x + w - 180.0f, contentY, 164.0f, 50.0f};
         drawSmallChoice(passRect_, "PASS INPUT", kPass[values_[kParamPassInput] >= 0.5f ? 1 : 0], values_[kParamPassInput] >= 0.5f);
         const int channel = clampi(static_cast<int>(std::lround(values_[kParamOutputChannel])), 0, 16);
-        drawSmallChoice(channelRect_, "OUTPUT", kChannels[channel], false);
+        drawSmallChoice(channelRect_, "OUTPUT", kChannels[channel], openSelector_ == kOutputSelectorIndex);
 
         const float keyboardY = y + h - 32.0f;
         const float keyW = (w - 32.0f) / 12.0f;
@@ -407,6 +431,154 @@ private:
         int current = static_cast<int>(std::lround(values_[choice.parameter] - choice.minimum));
         current = (current + direction + choice.count) % choice.count;
         setValue(choice.parameter, static_cast<float>(current) + choice.minimum);
+    }
+
+    void cycleOutputChannel(const int direction)
+    {
+        const int current = clampi(static_cast<int>(std::lround(values_[kParamOutputChannel])), 0, 16);
+        setValue(kParamOutputChannel, static_cast<float>(clampi(current + direction, 0, 16)));
+    }
+
+    [[nodiscard]] int selectorCount(const int selectorIndex) const
+    {
+        return selectorIndex == kOutputSelectorIndex
+            ? static_cast<int>(std::size(kChannels))
+            : kChoices[static_cast<std::size_t>(selectorIndex)].count;
+    }
+
+    [[nodiscard]] float selectorMinimum(const int selectorIndex) const
+    {
+        return selectorIndex == kOutputSelectorIndex
+            ? 0.0f
+            : kChoices[static_cast<std::size_t>(selectorIndex)].minimum;
+    }
+
+    [[nodiscard]] std::uint32_t selectorParameter(const int selectorIndex) const
+    {
+        return selectorIndex == kOutputSelectorIndex
+            ? kParamOutputChannel
+            : kChoices[static_cast<std::size_t>(selectorIndex)].parameter;
+    }
+
+    [[nodiscard]] const char* selectorItem(const int selectorIndex, const int item) const
+    {
+        return selectorIndex == kOutputSelectorIndex
+            ? kChannels[item]
+            : kChoices[static_cast<std::size_t>(selectorIndex)].values[item];
+    }
+
+    [[nodiscard]] const Rect& selectorBaseRect(const int selectorIndex) const
+    {
+        return selectorIndex == kOutputSelectorIndex
+            ? channelRect_
+            : choiceRects_[static_cast<std::size_t>(selectorIndex)];
+    }
+
+    [[nodiscard]] int selectorMenuColumnCount(const int selectorIndex) const
+    {
+        return std::max(1, (selectorCount(selectorIndex) + kSelectorMenuMaxRows - 1) /
+                           kSelectorMenuMaxRows);
+    }
+
+    [[nodiscard]] int selectorMenuRowCount(const int selectorIndex) const
+    {
+        const int columns = selectorMenuColumnCount(selectorIndex);
+        return (selectorCount(selectorIndex) + columns - 1) / columns;
+    }
+
+    [[nodiscard]] Rect selectorMenuRect(const int selectorIndex) const
+    {
+        const Rect& base = selectorBaseRect(selectorIndex);
+        const int columns = selectorMenuColumnCount(selectorIndex);
+        const int rows = selectorMenuRowCount(selectorIndex);
+        const float itemWidth = std::max(base.w, 150.0f);
+        const float menuWidth = itemWidth * static_cast<float>(columns);
+        const float menuHeight = kSelectorItemHeight * static_cast<float>(rows);
+        const float margin = 14.0f;
+        const float windowWidth = static_cast<float>(getWidth());
+        const float windowHeight = static_cast<float>(getHeight());
+
+        float menuX = clampf(base.x, margin, std::max(margin, windowWidth - margin - menuWidth));
+        float menuY = base.y + base.h + 6.0f;
+        if (menuY + menuHeight > windowHeight - margin)
+            menuY = base.y - menuHeight - 6.0f;
+        menuY = clampf(menuY, margin, std::max(margin, windowHeight - margin - menuHeight));
+        return {menuX, menuY, menuWidth, menuHeight};
+    }
+
+    void drawOpenSelectorMenu(const int selectorIndex)
+    {
+        const Rect& base = selectorBaseRect(selectorIndex);
+        if (base.w <= 0.0f || base.h <= 0.0f) {
+            openSelector_ = -1;
+            return;
+        }
+
+        const int count = selectorCount(selectorIndex);
+        const int selected = clampi(static_cast<int>(std::lround(
+                                        values_[selectorParameter(selectorIndex)] - selectorMinimum(selectorIndex))),
+                                    0,
+                                    count - 1);
+        const Rect menu = selectorMenuRect(selectorIndex);
+        const int columns = selectorMenuColumnCount(selectorIndex);
+        const int rows = selectorMenuRowCount(selectorIndex);
+        const float itemWidth = menu.w / static_cast<float>(columns);
+
+        beginPath();
+        roundedRect(menu.x, menu.y, menu.w, menu.h, 10.0f);
+        fillColor(22, 28, 31, 250);
+        fill();
+        strokeColor(79, 103, 96, 255);
+        strokeWidth(1.0f);
+        stroke();
+        closePath();
+
+        for (int item = 0; item < count; ++item) {
+            const int column = item / rows;
+            const int row = item % rows;
+            const float itemX = menu.x + static_cast<float>(column) * itemWidth;
+            const float itemY = menu.y + static_cast<float>(row) * kSelectorItemHeight;
+            if (item == selected) {
+                beginPath();
+                roundedRect(itemX + 3.0f, itemY + 3.0f,
+                            itemWidth - 6.0f, kSelectorItemHeight - 6.0f, 6.0f);
+                fillColor(43, 68, 57, 255);
+                fill();
+                closePath();
+            }
+
+            fontSize(columns > 1 ? 11.0f : 12.0f);
+            textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+            fillColor(228, 231, 224, 255);
+            text(itemX + 11.0f, itemY + kSelectorItemHeight * 0.5f,
+                 selectorItem(selectorIndex, item), nullptr);
+        }
+    }
+
+    bool handleOpenSelectorClick(const float x, const float y)
+    {
+        if (selectorBaseRect(openSelector_).contains(x, y)) {
+            openSelector_ = -1;
+            repaint();
+            return true;
+        }
+
+        const Rect menu = selectorMenuRect(openSelector_);
+        if (!menu.contains(x, y))
+            return false;
+
+        const int columns = selectorMenuColumnCount(openSelector_);
+        const int rows = selectorMenuRowCount(openSelector_);
+        const float itemWidth = menu.w / static_cast<float>(columns);
+        const int column = clampi(static_cast<int>((x - menu.x) / itemWidth), 0, columns - 1);
+        const int row = clampi(static_cast<int>((y - menu.y) / kSelectorItemHeight), 0, rows - 1);
+        const int item = column * rows + row;
+        if (item < selectorCount(openSelector_)) {
+            setValue(selectorParameter(openSelector_),
+                     selectorMinimum(openSelector_) + static_cast<float>(item));
+            openSelector_ = -1;
+        }
+        return true;
     }
 
     void updateSlider(const int sliderIndex, const float x)

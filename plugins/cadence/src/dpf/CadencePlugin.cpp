@@ -511,7 +511,11 @@ protected:
                                              inputEvents.data(),
                                              eventCount);
 
-        const float decay = static_cast<float>(frames) / static_cast<float>(std::max(1.0, getSampleRate()) * 0.20);
+        // Keep sparse musical input visible between beats. This is only a UI
+        // activity envelope; capture still receives every event immediately.
+        constexpr double kActivityHoldSeconds = 1.0;
+        const float decay = static_cast<float>(frames) /
+                            static_cast<float>(std::max(1.0, getSampleRate()) * kActivityHoldSeconds);
         midiInputStatus_ = std::max(0.0f, midiInputStatus_ - decay);
         midiOutputStatus_ = std::max(0.0f, midiOutputStatus_ - decay);
         if (eventCount > 0)

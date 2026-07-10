@@ -19,6 +19,10 @@ Changing source material restarts traversal at its directional endpoint. This
 makes each chord or newly held scale shape articulate clearly. Up/down and
 down/up use a `2N - 2` cycle, avoiding repeated top and bottom notes.
 
+Discrete UI controls open menus for direct selection. The mode switch and Pass
+Input remain explicit buttons, and selector values can still be adjusted with
+the mouse wheel.
+
 ## Transport and MIDI mapping
 
 - DPF BBT time is converted to absolute quarter-note position using both

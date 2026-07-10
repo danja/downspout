@@ -389,6 +389,41 @@ void testEngineLearnsAndEmitsOnNextCycle()
     assert(sawNoteOn);
 }
 
+void testEngineLearnsFromSparseBassInput()
+{
+    EngineState state;
+    activate(state);
+
+    Controls controls = defaultControls();
+    controls.cycle_bars = 1;
+    controls.granularity = GRANULARITY_BEAT;
+    controls.pass_input = false;
+
+    const std::array<InputMidiEvent, 2> bassNote = {{
+        makeEvent(0, 0x90, 36, 64),
+        makeEvent(12000, 0x80, 36, 0),
+    }};
+
+    TransportSnapshot transport;
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 0.0;
+    transport.barBeat = 0.0;
+    transport.beatsPerBar = 4.0;
+    transport.bpm = 120.0;
+
+    const BlockResult learned = processBlock(state,
+                                             controls,
+                                             transport,
+                                             96000,
+                                             48000.0,
+                                             bassNote.data(),
+                                             static_cast<std::uint32_t>(bassNote.size()));
+    assert(learned.ready);
+    assert(state.ready);
+    assert(state.haveLearnedCapture);
+}
+
 void testHarmonyChangeKeepsLearnedProgressionReady()
 {
     EngineState state;
@@ -562,6 +597,7 @@ int main()
     testSpreadControlWidensVoicings();
     testStoppedTransportPassThrough();
     testEngineLearnsAndEmitsOnNextCycle();
+    testEngineLearnsFromSparseBassInput();
     testHarmonyChangeKeepsLearnedProgressionReady();
     testRestoredProgressionSurvivesVoicingChange();
     testArpeggioCanEmitSingleNotes();
