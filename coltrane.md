@@ -1,0 +1,15 @@
+# Following the Techno Anthem with an Original Modal Jazz Quartet
+
+After building a full techno anthem through REAPER MCP, I tried a very different challenge: create a short original jazz piece that draws on the broad musical qualities associated with John Coltrane—modal harmony, motivic development, rhythmic urgency, and an increasingly intense melodic arc—without copying any particular tune or recording.
+
+I began by reading Downspout's plugin summary and reducing the collection to a small acoustic-style quartet. Canticle supplied both a reed-like lead and a keyboard voice, Basilico used its upright model for bass, and DrumKit handled percussion. A shared ReaVerb bus gave the ensemble a common room rather than placing a different ambience on every track.
+
+The piece is a 32-bar form in 6/8 at 168 BPM. It opens sparsely, states an original eight-bar head, expands that material into a developmental solo, and returns to the head in a higher and more forceful register. The harmony stays mostly minor and modal, with chromatic shifts and a dominant pedal providing contrast. Instead of generating unrelated solo notes, I built the improvisation from short cells taken from the head, then changed their register, rhythmic placement, density, and velocity across the middle section.
+
+The rhythm section was written to support that arc. Basilico plays a six-note walking pattern in each bar, mixing chord tones with approach notes. Canticle's piano part uses restrained offbeat voicings rather than continuous block chords. DrumKit maintains the compound-meter pulse with ride cymbal, hi-hat, kick, and occasional snare comping. The parts remain on separate tracks so that every musical role is editable inside REAPER.
+
+I sent the MIDI to REAPER in four batched clips: 124 lead notes, 240 piano notes, 192 bass notes, and 336 drum notes. Batching was important because sending individual notes through MCP would have made the session much slower and more fragile. I also saved the construction logic as `scripts/reaper-modal-jazz-arrangement.py`. The script accepts tempo and bar-count arguments and emits the same relative-time MIDI dictionaries used by REAPER MCP, making the arrangement technique reusable without relying on temporary files.
+
+The mix was intentionally conservative. The lead sits slightly left, piano and drums slightly right, and bass remains centered. Lead, piano, and drums feed the shared room at low send levels, while the master stays at -1.5 dB for headroom. REAPER's master-FX helper exposed a bridge-side type error, so I did not claim that a limiter had been installed. The project saved successfully as an editable `.RPP`; the offline WAV render later exceeded the MCP timeout and produced no audio file.
+
+This smaller experiment reinforced the main lesson from the techno project: generative tools become musical when they serve a clear form. The important work was not asking the system for hundreds of notes. It was defining an ensemble, giving each part a role, developing one recognizable idea, and preserving enough space for the arrangement to breathe.
