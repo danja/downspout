@@ -37,8 +37,27 @@ Initial plugin targets:
   Shared public headers.
 - `tests/`
   Automated tests. Prefer deterministic tests over manual-only verification.
+- `scripts/`
+  Reusable repository automation, including parameterized REAPER composition
+  and MIDI-generation helpers. Keep reusable scripts here rather than in
+  temporary directories.
+- `skills/`
+  Repository-visible snapshots of reusable agent skills. Personal installed
+  copies may live outside the repository and are not a substitute for the
+  version kept here.
 - `third_party/`
   Approved vendored dependencies such as DPF.
+
+## REAPER composition guidance
+
+- Read `docs/summary.md` before selecting Downspout generators, instruments,
+  effects, or their ordering in a REAPER project.
+- Preserve the current REAPER session before creating a new project, batch MIDI
+  note creation where possible, and save the editable `.RPP` before rendering.
+- Treat MCP tool response fields as authoritative. Do not claim that an effect,
+  render, or analysis succeeded when the response reports an error or timeout.
+- Save reusable composition logic under `scripts/` and repository skills under
+  `skills/`; do not use `/tmp` for durable artifacts.
 
 ## Porting guidance
 

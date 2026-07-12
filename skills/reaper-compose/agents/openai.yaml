@@ -1,0 +1,4 @@
+interface:
+  display_name: "REAPER Composer"
+  short_description: "Compose, arrange, and verify music in REAPER"
+  default_prompt: "Use $reaper-compose to build an original arranged song in the connected REAPER session."
