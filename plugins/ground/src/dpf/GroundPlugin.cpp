@@ -92,6 +92,7 @@ ParameterEnumerationValue kStyleEnumValues[] = {
     {7.0f, "Jazz"},
     {8.0f, "Rock"},
     {9.0f, "Descend"},
+    {10.0f, "Ascend"},
 };
 
 ParameterEnumerationValue kFormShapeEnumValues[] = {

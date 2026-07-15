@@ -47,6 +47,8 @@ planner still owns the larger statement, answer, climb, pedal, cadence, and
 release arc. Descend favors slower beat and half-bar anchors, longer legato,
 and falling diatonic degree paths so a classical/fugue/rondo form can support
 ascending melody material with a harmonizing bass descent.
+Ascend mirrors that slower, legato construction with rising diatonic degree
+paths and upward leading-tone cadences.
 
 `Form Shape` is separate from Style. `Free` uses the generic phrase arc. Named
 shapes force their own form and phrase grid, then assign phrase roles and root

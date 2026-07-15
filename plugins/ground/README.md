@@ -61,7 +61,8 @@ leans toward walking-bass motion and approach tones. `Rock` pins beat-start
 riff anchors with shorter, more separated notes. `Descend` uses a slower,
 stepwise falling bass path for passacaglia, canon, and Renaissance-style
 contrary support while the phrase roles still decide statement, answer, pedal,
-and cadence behavior.
+and cadence behavior. `Ascend` uses the same slow, legato approach in the
+opposite direction, with rising diatonic paths and upward cadences.
 
 `Sequence` lets answer/release phrases derive material from the previous
 phrase. With high `Sequence` and high `Cadence`, the planner enters a
@@ -93,7 +94,7 @@ same state and seed, generation is deterministic.
 `Scale`: pitch collection used when choosing notes.
 
 `Style`: rhythmic feel. Grounded, Ostinato, March, Pulse, Drone, Climb, Dub,
-Jazz, Rock, and Descend bias the local note pattern differently.
+Jazz, Rock, Descend, and Ascend bias the local note pattern differently.
 
 `Shape`: section template. `Free` follows Form/Phrase; named shapes impose a
 known structure.

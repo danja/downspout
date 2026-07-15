@@ -65,6 +65,7 @@ const char* styleName(const StyleId style) noexcept
     case StyleId::jazz: return "jazz";
     case StyleId::rock: return "rock";
     case StyleId::descend: return "descend";
+    case StyleId::ascend: return "ascend";
     case StyleId::count: break;
     }
     return "grounded";

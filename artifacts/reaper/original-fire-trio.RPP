@@ -1,0 +1,2025 @@
+<REAPER_PROJECT 0.1 "7.77/linux-x86_64" 1783887701 0
+  <NOTES 0 2
+  >
+  RIPPLE 0 0
+  GROUPOVERRIDE 0 0 0 0
+  AUTOXFADE 129
+  ENVATTACH 3
+  POOLEDENVATTACH 0
+  TCPUIFLAGS 0
+  MIXERUIFLAGS 11 48 0
+  ENVFADESZ10 40
+  PEAKGAIN 1
+  FEEDBACK 0
+  PANLAW 1
+  PROJOFFS 0 0 0
+  MAXPROJLEN 0 0
+  GRID 3199 8 1 8 1 0 0 0
+  TIMEMODE 1 5 -1 30 0 0 -1 0
+  VIDEO_CONFIG 0 0 65792
+  PANMODE 3
+  PANLAWFLAGS 3
+  CURSOR 0
+  ZOOM 100 2526 0
+  VZOOMEX 6 0
+  USE_REC_CFG 0
+  RECMODE 1
+  SMPTESYNC 0 30 100 40 1000 300 0 0 1 0 0
+  LOOP 0
+  LOOPGRAN 0 4
+  RECORD_PATH "Media" ""
+  <RECORD_CFG
+    ZXZhdxgAAQ==
+  >
+  <APPLYFX_CFG
+  >
+  RENDER_FILE ""
+  RENDER_PATTERN ""
+  RENDER_FMT 0 2 0
+  RENDER_1X 0
+  RENDER_RANGE 1 0 0 0 1000
+  RENDER_RESAMPLE 3 0 1
+  RENDER_ADDTOPROJ 0
+  RENDER_STEMS 0
+  RENDER_DITHER 0
+  RENDER_TRIM 0.000001 0.000001 0 0
+  TIMELOCKMODE 1
+  TEMPOENVLOCKMODE 1
+  ITEMMIX 1
+  DEFPITCHMODE 589824 0
+  TAKELANE 1
+  SAMPLERATE 44100 0 0
+  <RENDER_CFG
+    ZXZhdxgAAQ==
+  >
+  LOCK 1
+  <METRONOME 6 2
+    VOL 0.25 0.125
+    BEATLEN 4
+    FREQ 1760 880 1
+    SAMPLES "" "" "" ""
+    SPLIGNORE 0 0
+    SPLDEF 2 660 "" 0 ""
+    SPLDEF 3 440 "" 0 ""
+    PATTERN 0 169
+    PATTERNSTR ABBB
+    MULT 1
+  >
+  GLOBAL_AUTO -1
+  TEMPO 152 4 4 0
+  PLAYRATE 1 0 0.25 4
+  SELECTION 0 0
+  SELECTION2 0 0
+  MASTERAUTOMODE 0
+  MASTERTRACKHEIGHT 0 0
+  MASTERPEAKCOL 16576
+  MASTERMUTESOLO 0
+  MASTERTRACKVIEW 0 0.6667 0.5 0.5 0 0 0 0 0 0 0 0 0 0 1
+  MASTERHWOUT 0 0 1 0 0 0 0 -1
+  MASTER_NCH 2 2
+  MASTER_VOLUME 1 0 -1 -1 1
+  MASTER_PANMODE 3
+  MASTER_PANLAWFLAGS 3
+  MASTER_FX 1
+  MASTER_SEL 0
+  <MASTERPLAYSPEEDENV
+    EGUID {3175DB27-7D91-5576-5954-5288B1E6B5DB}
+    ACT 0 -1
+    VIS 0 1 1
+    LANEHEIGHT 0 0
+    ARM 0
+    DEFSHAPE 0 -1 -1
+  >
+  <TEMPOENVEX
+    EGUID {61858968-25D8-15DC-87FB-C798AA3EEB7E}
+    ACT 1 -1
+    VIS 1 0 1
+    LANEHEIGHT 0 0
+    ARM 0
+    DEFSHAPE 1 -1 -1
+    PT 0.000000000000 152.0000000000 1 262148 0 1 0 "" 0 169 0 ABBB
+  >
+  RULERHEIGHT 86 86
+  RULERLANE 1 4 "" 0 -1 0
+  RULERLANE 2 8 "" 0 -1 0
+  <PROJBAY
+  >
+  <TRACK {AA35C8B3-26DA-F792-827C-1F61AA073422}
+    NAME "TENOR SAX — Zyn Fat Reed"
+    PEAKCOL 19674804
+    BEAT -1
+    AUTOMODE 0
+    PANLAWFLAGS 3
+    VOLPAN 1 -0.06 -1 -1 1
+    MUTESOLO 0 0 0
+    IPHASE 0
+    PLAYOFFS 0 1
+    ISBUS 0 0
+    BUSCOMP 0 0 0 0 0
+    SHOWINMIX 1 0.6667 0.5 1 0.5 0 0 0 0
+    FIXEDLANES 9 0 0 0 0
+    LANEREC -1 -1 -1 0
+    SEL 0
+    REC 0 4096 1 0 0 0 0 0
+    VU 64
+    TRACKHEIGHT 0 0 0 0 0 0 0
+    INQ 0 0 0 0.5 100 0 0 100
+    NCHAN 2
+    FX 1
+    TRACKID {AA35C8B3-26DA-F792-827C-1F61AA073422}
+    PERF 0
+    MIDIOUT -1 -1
+    MAINSEND 1 0
+    <VOLENV2
+      EGUID {B48F3CB1-8FA6-2904-F938-2B738C3321FE}
+      ACT 1 -1
+      VIS 1 1 1
+      LANEHEIGHT 0 0
+      ARM 1
+      DEFSHAPE 0 -1 -1
+      VOLTYPE 1
+      PT 0 0.22387211 0
+      PT 1.2 0.35481339 0
+      PT 6.32 0.44668359 0
+      PT 12.63 0.56234133 0
+      PT 22.11 0.74989421 0
+      PT 31.58 0.44668359 0
+      PT 36.8 0.31622777 0
+      PT 37.89 0.12589254 0
+    >
+    <FXCHAIN
+      SHOW 0
+      LASTSEL 0
+      DOCKED 0
+      BYPASS 0 0 0
+      <LV2 "LV2i: sfizz (SFZTools) (2 out)" http://sfztools.github.io/sfizz ""
+        CFG 0 0 0 ""
+        MIDI control 0 0 
+        P volume 0 num_voices 64 oversampling 1 preload_size 8192 scala_root_key 60 tuning_frequency 440 stretched_tuning 0
+        P sample_quality 2 oscillator_quality 1 freewheeling_sample_quality 10 freewheeling_oscillator_quality 3
+        P sustain_cancels_release 0
+        <STATE
+          P http://sfztools.github.io/sfizz:sfzfile /usr/lib/lv2/sfizz.lv2//Contents/Resources/DefaultInstrument.sfz 1
+          P http://sfztools.github.io/sfizz:tuningfile /usr/lib/lv2/sfizz.lv2//Contents/Resources/DefaultScale.scl 1
+          F http://sfztools.github.io/sfizz#cc007 0.787401556968689 1
+          F http://sfztools.github.io/sfizz#cc010 0.5 1
+          F http://sfztools.github.io/sfizz#cc011 1 1
+        >
+      >
+      FLOATPOS 0 0 0 0
+      FXID {6D2538A9-EA00-7B64-7020-35D06CA7DCD5}
+      WAK 0 0
+      BYPASS 0 0 0
+      <VST "VST: ReaEQ (Cockos)" reaeq.vst.so 0 "" 1919247729<56535472656571726561657100000000> ""
+        cWVlcu5e7f4CAAAAAQAAAAAAAAACAAAAAAAAAAIAAAABAAAAAAAAAAIAAAAAAAAAzQAAAAEAAAAAABAA
+        IQAAAAUAAAAAAAAAAQAAAAAAAAAAAFlAAAAAAAAA8D+amZmZmZnpPwEIAAAAAQAAAAAAAAAAwHJAAAAAAAAA8D8AAAAAAAAAQAEIAAAAAQAAAAAAAAAAQI9AAAAAAAAA
+        8D8AAAAAAAAAQAEBAAAAAQAAAAAAAAAAiLNAAAAAAAAA8D+amZmZmZnpPwEEAAAAAAAAAAAAAAAAAFlAAAAAAAAA8D8AAAAAAAAAQAEBAAAAAQAAAAAAAAAAAPA/AAAA
+        AAAAAAAAAAAAAgABAA==
+        AAAQAAAA
+      >
+      FLOATPOS 0 0 0 0
+      FXID {6210AD70-E604-1A80-D4D5-1F759591D742}
+      WAK 0 0
+      BYPASS 0 0 0
+      <VST "VST: ReaComp (Cockos)" reacomp.vst.so 0 "" 1919247213<5653547265636D726561636F6D700000> ""
+        bWNlcu9e7f4EAAAAAQAAAAAAAAACAAAAAAAAAAQAAAAAAAAACAAAAAAAAAACAAAAAQAAAAAAAAACAAAAAAAAAFwAAAAAAAAAAAAQAA==
+        776t3g3wrd4AAIA/ED74PKabxDsK16M8AAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAnNEHMwAAgD8AAAAAzcxMPQAAAAAAAAAAAAAAAAAAgD4AAAAAAAAAAAAAAAA=
+        AAAQAAAA
+      >
+      FLOATPOS 0 0 0 0
+      FXID {C17DE50B-1026-5569-7026-9EDF0F89C3EF}
+      WAK 0 0
+    >
+    <ITEM
+      POSITION 0
+      SNAPOFFS 0
+      LENGTH 37.89473684210526
+      LOOP 1
+      ALLTAKES 0
+      FADEIN 1 0 0 1 0 0 0
+      FADEOUT 1 0 0 1 0 0 0
+      MUTE 0 0
+      SEL 0
+      IGUID {8A9C25B3-82A2-0F51-F899-A5F0FCFDC54A}
+      IID 5522
+      NAME ""
+      VOLPAN 1 0 1 -1
+      SOFFS 0 0
+      PLAYRATE 1 1 0 -1 0 0.0025
+      CHANMODE 0
+      GUID {133E2431-B1C6-A990-43AC-786B439EC5B2}
+      <SOURCE MIDI
+        HASDATA 1 960 QN
+        CCINTERP 32
+        POOLEDEVTS {075E1922-8952-25E6-982D-375C86BFA038}
+        E 0 90 3e 4e
+        E 2649 80 3e 00
+        E 231 90 45 4e
+        E 883 80 45 00
+        E 77 90 41 53
+        E 1766 80 41 00
+        E 154 90 48 53
+        E 1766 80 48 00
+        E 154 90 46 58
+        E 883 80 46 00
+        E 77 90 3d 58
+        E 1766 80 3d 00
+        E 154 90 43 58
+        E 883 80 43 00
+        E 77 90 40 5d
+        E 2649 80 40 00
+        E 231 90 3a 5d
+        E 883 80 3a 00
+        E 77 90 3e 4e
+        E 883 80 3e 00
+        E 77 90 4a 4e
+        E 1766 80 4a 00
+        E 154 90 44 4e
+        E 883 80 44 00
+        E 77 90 41 53
+        E 1766 80 41 00
+        E 154 90 47 53
+        E 883 80 47 00
+        E 77 90 3c 53
+        E 883 80 3c 00
+        E 77 90 45 58
+        E 2649 80 45 00
+        E 231 90 3f 58
+        E 883 80 3f 00
+        E 77 90 3e 5d
+        E 3532 80 3e 00
+        E 893 90 44 66
+        E 336 80 44 00
+        E 250 90 4b 54
+        E 230 80 4b 00
+        E 355 90 40 5b
+        E 336 80 40 00
+        E 250 90 47 62
+        E 230 80 47 00
+        E 356 90 3e 69
+        E 748 80 3e 00
+        E 327 90 41 6a
+        E 230 80 41 00
+        E 355 90 3d 58
+        E 336 80 3d 00
+        E 250 90 49 5f
+        E 230 80 49 00
+        E 356 90 45 66
+        E 748 80 45 00
+        E 1172 90 3a 5c
+        E 230 80 3a 00
+        E 355 90 46 63
+        E 336 80 46 00
+        E 250 90 3f 6a
+        E 230 80 3f 00
+        E 355 90 4c 58
+        E 336 80 4c 00
+        E 250 90 43 5f
+        E 749 80 43 00
+        E 912 90 45 67
+        E 230 80 45 00
+        E 355 90 3c 55
+        E 336 80 3c 00
+        E 250 90 4a 5c
+        E 230 80 4a 00
+        E 356 90 42 63
+        E 336 80 42 00
+        E 249 90 51 6a
+        E 231 80 51 00
+        E 1104 90 3f 59
+        E 230 80 3f 00
+        E 355 90 48 60
+        E 336 80 48 00
+        E 250 90 3b 67
+        E 230 80 3b 00
+        E 355 90 4d 55
+        E 749 80 4d 00
+        E 1498 90 43 64
+        E 230 80 43 00
+        E 355 90 3d 52
+        E 336 80 3d 00
+        E 250 90 4f 59
+        E 230 80 4f 00
+        E 941 90 4a 67
+        E 749 80 4a 00
+        E 586 90 3e 56
+        E 230 80 3e 00
+        E 355 90 44 5d
+        E 336 80 44 00
+        E 835 90 40 52
+        E 336 80 40 00
+        E 250 90 47 59
+        E 230 80 47 00
+        E 356 90 4a 60
+        E 748 80 4a 00
+        E 327 90 41 61
+        E 230 80 41 00
+        E 941 90 49 56
+        E 230 80 49 00
+        E 356 90 51 5d
+        E 748 80 51 00
+        E 1757 90 46 5a
+        E 336 80 46 00
+        E 250 90 3f 61
+        E 230 80 3f 00
+        E 355 90 4c 68
+        E 336 80 4c 00
+        E 250 90 4f 56
+        E 749 80 4f 00
+        E 912 90 45 5e
+        E 230 80 45 00
+        E 355 90 3c 65
+        E 336 80 3c 00
+        E 250 90 4a 53
+        E 230 80 4a 00
+        E 356 90 42 5a
+        E 336 80 42 00
+        E 249 90 51 61
+        E 231 80 51 00
+        E 355 90 51 68
+        E 749 80 51 00
+        E 0 90 3f 69
+        E 230 80 3f 00
+        E 355 90 48 57
+        E 336 80 48 00
+        E 250 90 3b 5e
+        E 230 80 3b 00
+        E 355 90 59 65
+        E 749 80 59 00
+        E 1498 90 43 5b
+        E 230 80 43 00
+        E 355 90 3d 62
+        E 336 80 3d 00
+        E 250 90 4f 69
+        E 230 80 4f 00
+        E 356 90 44 57
+        E 336 80 44 00
+        E 249 90 56 5e
+        E 749 80 56 00
+        E 586 90 3e 4e
+        E 1296 80 3e 00
+        E 432 90 51 53
+        E 604 80 51 00
+        E 548 90 44 58
+        E 691 80 44 00
+        E 269 90 41 5d
+        E 864 80 41 00
+        E 336 90 54 62
+        E 475 80 54 00
+        E 629 90 3d 4e
+        E 1209 80 3d 00
+        E 327 90 46 53
+        E 604 80 46 00
+        E 308 90 3a 58
+        E 691 80 3a 00
+        E 365 90 4f 5d
+        E 561 80 4f 00
+        E 351 90 40 62
+        E 864 80 40 00
+        E 96 90 3e 4e
+        E 864 80 3e 00
+        E 288 90 4a 53
+        E 518 80 4a 00
+        E 346 90 39 58
+        E 1468 80 39 00
+        E 356 b0 7b 00
+        CCINTERP 32
+        CHASE_CC_TAKEOFFS 1
+        GUID {5E497EBF-35E2-2506-3640-EAA6FE6C9C05}
+        IGNTEMPO 0 120 4 4
+        SRCCOLOR 5789
+        EVTFILTER 0 -1 -1 -1 -1 0 0 0 0 -1 -1 -1 -1 0 -1 0 -1 -1
+      >
+    >
+  >
+  <TRACK {B3E34FFA-E2C1-9243-54FD-56EC67B2842B}
+    NAME "BASS — Zyn Bass"
+    PEAKCOL 19810408
+    BEAT -1
+    AUTOMODE 0
+    PANLAWFLAGS 3
+    VOLPAN 1 0 -1 -1 1
+    MUTESOLO 0 0 0
+    IPHASE 0
+    PLAYOFFS 0 1
+    ISBUS 0 0
+    BUSCOMP 0 0 0 0 0
+    SHOWINMIX 1 0.6667 0.5 1 0.5 0 0 0 0
+    FIXEDLANES 9 0 0 0 0
+    LANEREC -1 -1 -1 0
+    SEL 0
+    REC 0 4096 1 0 0 0 0 0
+    VU 64
+    TRACKHEIGHT 0 0 0 0 0 0 0
+    INQ 0 0 0 0.5 100 0 0 100
+    NCHAN 2
+    FX 1
+    TRACKID {B3E34FFA-E2C1-9243-54FD-56EC67B2842B}
+    PERF 0
+    MIDIOUT -1 -1
+    MAINSEND 1 0
+    <VOLENV2
+      EGUID {53540573-DCD7-B959-54D1-FAC20C6E8DE2}
+      ACT 1 -1
+      VIS 1 1 1
+      LANEHEIGHT 0 0
+      ARM 1
+      DEFSHAPE 0 -1 -1
+      VOLTYPE 1
+      PT 0 0.31622777 0
+      PT 6.32 0.4216965 0
+      PT 12.63 0.50118723 0
+      PT 22.11 0.59566214 0
+      PT 31.58 0.44668359 0
+      PT 37.89 0.19952623 0
+    >
+    <FXCHAIN
+      SHOW 0
+      LASTSEL 0
+      DOCKED 0
+      BYPASS 0 0 0
+      <LV2 "LV2i: ZynAddSubFX (ZynAddSubFX Team) (2 out)" http://zynaddsubfx.sourceforge.net ""
+        CFG 0 0 0 ""
+        MIDI lv2_events_in 2 0 
+        P slot1 0.5 slot2 0.5 slot3 0.5 slot4 0.5 slot5 0.5 slot6 0.5 slot7 0.5 slot8 0.5 slot9 0.5 slot10 0.5
+        P slot11 0.5 slot12 0.5 slot13 0.5 slot14 0.5 slot15 0.5 slot16 0.5
+        <STATE
+          <S urn:distrho:state 3
+             |
+            n|<?xml version="1.0f" encoding="UTF-8"?>
+            n|<!DOCTYPE ZynAddSubFX-data>
+            n|<ZynAddSubFX-data version-major="3" version-minor="0"
+            n|version-revision="6" ZynAddSubFX-author="Nasca Octavian Paul">
+            n|<INFORMATION />
+            n|<BASE_PARAMETERS>
+            n|<par name="max_midi_parts" value="16" />
+            n|<par name="max_kit_items_per_instrument" value="16" />
+            n|<par name="max_system_effects" value="4" />
+            n|<par name="max_insertion_effects" value="8" />
+            n|<par name="max_instrument_effects" value="3" />
+            n|<par name="max_addsynth_voices" value="8" />
+            n|</BASE_PARAMETERS>
+            n|<MASTER>
+            n|<par_real name="volume" value="-6.66667" exact_value="0xC0D55556" />
+            n|<par name="key_shift" value="64" />
+            n|<par_bool name="nrpn_receive" value="yes" />
+            n|<MICROTONAL>
+            n|<string name="name">12tET</string>
+            n|<string name="comment">Equal Temperament 12 notes per octave</string>
+            n|<par_bool name="invert_up_down" value="no" />
+            n|<par name="invert_up_down_center" value="60" />
+            n|<par_bool name="enabled" value="no" />
+            n|<par name="global_fine_detune" value="64" />
+            n|<par name="a_note" value="69" />
+            n|<par_real name="a_freq" value="440" exact_value="0x43DC0000" />
+            n|</MICROTONAL>
+            n|<automation>
+            n|<mgr-info nslots="16" nautomations="4" ncontrol="8" />
+            n|</automation>
+            n|<PART id="0">
+            n|<par_bool name="enabled" value="yes" />
+            n|<par_real name="volume" value="0" exact_value="0x00000000" />
+            n|<par name="panning" value="64" />
+            n|<par name="min_key" value="0" />
+            n|<par name="max_key" value="127" />
+            n|<par name="key_shift" value="64" />
+            n|<par name="rcv_chn" value="0" />
+            n|<par name="velocity_sensing" value="64" />
+            n|<par name="velocity_offset" value="64" />
+            n|<par_bool name="note_on" value="yes" />
+            n|<par_bool name="poly_mode" value="yes" />
+            n|<par name="legato_mode" value="0" />
+            n|<par name="key_limit" value="15" />
+            n|<par name="voice_limit" value="0" />
+            n|<INSTRUMENT>
+            n|<INFO>
+            n|<string name="name"></string>
+            n|<string name="author"></string>
+            n|<string name="comments"></string>
+            n|<par name="type" value="0" />
+            n|</INFO>
+            n|<INSTRUMENT_KIT>
+            n|<par name="kit_mode" value="0" />
+            n|<par_bool name="drum_mode" value="no" />
+            n|<INSTRUMENT_KIT_ITEM id="0">
+            n|<par_bool name="enabled" value="yes" />
+            n|<string name="name"></string>
+            n|<par_bool name="muted" value="no" />
+            n|<par name="min_key" value="0" />
+            n|<par name="max_key" value="127" />
+            n|<par name="send_to_instrument_effect" value="0" />
+            n|<par_bool name="add_enabled" value="yes" />
+            n|<ADD_SYNTH_PARAMETERS>
+            n|<par_bool name="stereo" value="yes" />
+            n|<AMPLITUDE_PARAMETERS>
+            n|<par_real name="volume" value="8.29" exact_value="0x4104A3D7" />
+            n|<par name="panning" value="64" />
+            n|<par name="velocity_sensing" value="64" />
+            n|<par name="fadein_adjustment" value="20" />
+            n|<par name="punch_strength" value="0" />
+            n|<par name="punch_time" value="60" />
+            n|<par name="punch_stretch" value="64" />
+            n|<par name="punch_velocity_sensing" value="72" />
+            n|<par name="harmonic_randomness_grouping" value="0" />
+            n|<AMPLITUDE_ENVELOPE>
+            n|<par_bool name="free_mode" value="no" />
+            n|<par name="env_points" value="4" />
+            n|<par name="env_sustain" value="2" />
+            n|<par name="env_stretch" value="64" />
+            n|<par_bool name="forced_release" value="yes" />
+            n|<par_bool name="linear_envelope" value="no" />
+            n|<par_bool name="repeating_envelope" value="no" />
+            n|<par_real name="A_dt" value="0" exact_value="0x00000000" />
+            n|<par_real name="D_dt" value="0.127" exact_value="0x3E020C4A" />
+            n|<par_real name="R_dt" value="0.041" exact_value="0x3D27EF9E" />
+            n|<par name="A_val" value="64" />
+            n|<par name="D_val" value="64" />
+            n|<par name="S_val" value="127" />
+            n|<par name="R_val" value="64" />
+            n|</AMPLITUDE_ENVELOPE>
+            n|<AMPLITUDE_LFO>
+            n|<par_real name="freq" value="6.49" exact_value="0x40CFAE14" />
+            n|<par name="intensity" value="0" />
+            n|<par name="start_phase" value="64" />
+            n|<par name="cutoff" value="127" />
+            n|<par name="lfo_type" value="0" />
+            n|<par name="randomness_amplitude" value="0" />
+            n|<par name="randomness_frequency" value="0" />
+            n|<par_real name="delay" value="0" exact_value="0x00000000" />
+            n|<par_real name="fadein" value="0" exact_value="0x00000000" />
+            n|<par_real name="fadeout" value="10" exact_value="0x41200000" />
+            n|<par name="stretch" value="64" />
+            n|<par_bool name="continous" value="no" />
+            n|<par name="numerator" value="0" />
+            n|<par name="denominator" value="4" />
+            n|</AMPLITUDE_LFO>
+            n|</AMPLITUDE_PARAMETERS>
+            n|<FREQUENCY_PARAMETERS>
+            n|<par name="detune" value="8192" />
+            n|<par name="coarse_detune" value="0" />
+            n|<par name="detune_type" value="1" />
+            n|<par name="bandwidth" value="64" />
+            n|<FREQUENCY_ENVELOPE>
+            n|<par_bool name="free_mode" value="no" />
+            n|<par name="env_points" value="3" />
+            n|<par name="env_sustain" value="1" />
+            n|<par name="env_stretch" value="0" />
+            n|<par_bool name="forced_release" value="no" />
+            n|<par_bool name="linear_envelope" value="no" />
+            n|<par_bool name="repeating_envelope" value="no" />
+            n|<par_real name="A_dt" value="0.254" exact_value="0x3E820C4A" />
+            n|<par_real name="D_dt" value="0.009" exact_value="0x3C1374BC" />
+            n|<par_real name="R_dt" value="0.499" exact_value="0x3EFF7CEE" />
+            n|<par name="A_val" value="64" />
+            n|<par name="D_val" value="64" />
+            n|<par name="S_val" value="64" />
+            n|<par name="R_val" value="64" />
+            n|</FREQUENCY_ENVELOPE>
+            n|<FREQUENCY_LFO>
+            n|<par_real name="freq" value="3.71" exact_value="0x406D70A4" />
+            n|<par name="intensity" value="0" />
+            n|<par name="start_phase" value="64" />
+            n|<par name="cutoff" value="127" />
+            n|<par name="lfo_type" value="0" />
+            n|<par name="randomness_amplitude" value="0" />
+            n|<par name="randomness_frequency" value="0" />
+            n|<par_real name="delay" value="0" exact_value="0x00000000" />
+            n|<par_real name="fadein" value="0" exact_value="0x00000000" />
+            n|<par_real name="fadeout" value="10" exact_value="0x41200000" />
+            n|<par name="stretch" value="64" />
+            n|<par_bool name="continous" value="no" />
+            n|<par name="numerator" value="0" />
+            n|<par name="denominator" value="4" />
+            n|</FREQUENCY_LFO>
+            n|</FREQUENCY_PARAMETERS>
+            n|<FILTER_PARAMETERS>
+            n|<par name="velocity_sensing_amplitude" value="0" />
+            n|<par name="velocity_sensing" value="64" />
+            n|<FILTER>
+            n|<par name="category" value="0" />
+            n|<par name="type" value="2" />
+            n|<par_real name="basefreq" value="30313.2" exact_value="0x46ECD26C" />
+            n|<par_real name="baseq" value="1.08427" exact_value="0x3F8AC956" />
+            n|<par name="stages" value="0" />
+            n|<par_real name="freq_tracking" value="0" exact_value="0x00000000" />
+            n|<par_real name="gain" value="0" exact_value="0x00000000" />
+            n|</FILTER>
+            n|<FILTER_ENVELOPE>
+            n|<par_bool name="free_mode" value="no" />
+            n|<par name="env_points" value="4" />
+            n|<par name="env_sustain" value="2" />
+            n|<par name="env_stretch" value="0" />
+            n|<par_bool name="forced_release" value="yes" />
+            n|<par_bool name="linear_envelope" value="no" />
+            n|<par_bool name="repeating_envelope" value="no" />
+            n|<par_real name="A_dt" value="0.127" exact_value="0x3E020C4A" />
+            n|<par_real name="D_dt" value="0.97" exact_value="0x3F7851EC" />
+            n|<par_real name="R_dt" value="0.499" exact_value="0x3EFF7CEE" />
+            n|<par name="A_val" value="64" />
+            n|<par name="D_val" value="64" />
+            n|<par name="S_val" value="64" />
+            n|<par name="R_val" value="64" />
+            n|</FILTER_ENVELOPE>
+            n|<FILTER_LFO>
+            n|<par_real name="freq" value="6.49" exact_value="0x40CFAE14" />
+            n|<par name="intensity" value="0" />
+            n|<par name="start_phase" value="64" />
+            n|<par name="cutoff" value="127" />
+            n|<par name="lfo_type" value="0" />
+            n|<par name="randomness_amplitude" value="0" />
+            n|<par name="randomness_frequency" value="0" />
+            n|<par_real name="delay" value="0" exact_value="0x00000000" />
+            n|<par_real name="fadein" value="0" exact_value="0x00000000" />
+            n|<par_real name="fadeout" value="10" exact_value="0x41200000" />
+            n|<par name="stretch" value="64" />
+            n|<par_bool name="continous" value="no" />
+            n|<par name="numerator" value="0" />
+            n|<par name="denominator" value="4" />
+            n|</FILTER_LFO>
+            n|</FILTER_PARAMETERS>
+            n|<RESONANCE>
+            n|<par_bool name="enabled" value="no" />
+            n|</RESONANCE>
+            n|<VOICE id="0">
+            n|<par_bool name="enabled" value="yes" />
+            n|<par name="type" value="0" />
+            n|<par name="unison_size" value="1" />
+            n|<par name="unison_frequency_spread" value="60" />
+            n|<par name="unison_stereo_spread" value="64" />
+            n|<par name="unison_vibratto" value="64" />
+            n|<par name="unison_vibratto_speed" value="64" />
+            n|<par name="unison_invert_phase" value="0" />
+            n|<par name="unison_phase_randomness" value="127" />
+            n|<par name="delay" value="0" />
+            n|<par_bool name="resonance" value="yes" />
+            n|<par name="ext_oscil" value="-1" />
+            n|<par name="ext_fm_oscil" value="-1" />
+            n|<par name="oscil_phase" value="64" />
+            n|<par name="oscil_fm_phase" value="64" />
+            n|<par_bool name="filter_enabled" value="no" />
+            n|<par_bool name="filter_bypass" value="no" />
+            n|<par name="fm_enabled" value="0" />
+            n|<OSCIL>
+            n|<par name="harmonic_mag_type" value="0" />
+            n|<par name="base_function" value="0" />
+            n|<par name="base_function_par" value="64" />
+            n|<par name="base_function_modulation" value="0" />
+            n|<par name="base_function_modulation_par1" value="64" />
+            n|<par name="base_function_modulation_par2" value="64" />
+            n|<par name="base_function_modulation_par3" value="32" />
+            n|<par name="modulation" value="0" />
+            n|<par name="modulation_par1" value="64" />
+            n|<par name="modulation_par2" value="64" />
+            n|<par name="modulation_par3" value="32" />
+            n|<par name="wave_shaping" value="64" />
+            n|<par name="wave_shaping_function" value="0" />
+            n|<par name="filter_type" value="0" />
+            n|<par name="filter_par1" value="64" />
+            n|<par name="filter_par2" value="64" />
+            n|<par name="filter_before_wave_shaping" value="0" />
+            n|<par name="spectrum_adjust_type" value="0" />
+            n|<par name="spectrum_adjust_par" value="64" />
+            n|<par name="rand" value="64" />
+            n|<par name="amp_rand_type" value="0" />
+            n|<par name="amp_rand_power" value="64" />
+            n|<par name="harmonic_shift" value="0" />
+            n|<par_bool name="harmonic_shift_first" value="no" />
+            n|<par name="adaptive_harmonics" value="0" />
+            n|<par name="adaptive_harmonics_base_frequency" value="128" />
+            n|<par name="adaptive_harmonics_power" value="100" />
+            n|<par name="adaptive_harmonics_par" value="50" />
+            n|<HARMONICS>
+            n|<HARMONIC id="1">
+            n|<par name="mag" value="127" />
+            n|<par name="phase" value="64" />
+            n|</HARMONIC>
+            n|</HARMONICS>
+            n|</OSCIL>
+            n|<AMPLITUDE_PARAMETERS>
+            n|<par name="panning" value="64" />
+            n|<par_real name="volume" value="-12.7559" exact_value="0xC14C1832" />
+            n|<par_bool name="volume_minus" value="no" />
+            n|<par name="velocity_sensing" value="127" />
+            n|<par_bool name="amp_envelope_enabled" value="no" />
+            n|<par_bool name="amp_lfo_enabled" value="no" />
+            n|</AMPLITUDE_PARAMETERS>
+            n|<FREQUENCY_PARAMETERS>
+            n|<par_bool name="fixed_freq" value="no" />
+            n|<par name="fixed_freq_et" value="0" />
+            n|<par name="bend_adjust" value="88" />
+            n|<par name="offset_hz" value="64" />
+            n|<par name="detune" value="8192" />
+            n|<par name="coarse_detune" value="0" />
+            n|<par name="detune_type" value="0" />
+            n|<par_bool name="freq_envelope_enabled" value="no" />
+            n|<par_bool name="freq_lfo_enabled" value="no" />
+            n|</FREQUENCY_PARAMETERS>
+            n|</VOICE>
+            n|<VOICE id="1">
+            n|<par_bool name="enabled" value="no" />
+            n|</VOICE>
+            n|<VOICE id="2">
+            n|<par_bool name="enabled" value="no" />
+            n|</VOICE>
+            n|<VOICE id="3">
+            n|<par_bool name="enabled" value="no" />
+            n|</VOICE>
+            n|<VOICE id="4">
+            n|<par_bool name="enabled" value="no" />
+            n|</VOICE>
+            n|<VOICE id="5">
+            n|<par_bool name="enabled" value="no" />
+            n|</VOICE>
+            n|<VOICE id="6">
+            n|<par_bool name="enabled" value="no" />
+            n|</VOICE>
+            n|<VOICE id="7">
+            n|<par_bool name="enabled" value="no" />
+            n|</VOICE>
+            n|</ADD_SYNTH_PARAMETERS>
+            n|<par_bool name="sub_enabled" value="no" />
+            n|<par_bool name="pad_enabled" value="no" />
+            n|</INSTRUMENT_KIT_ITEM>
+            n|<INSTRUMENT_KIT_ITEM id="1">
+            n|<par_bool name="enabled" value="no" />
+            n|</INSTRUMENT_KIT_ITEM>
+            n|<INSTRUMENT_KIT_ITEM id="2">
+            n|<par_bool name="enabled" value="no" />
+            n|</INSTRUMENT_KIT_ITEM>
+            n|<INSTRUMENT_KIT_ITEM id="3">
+            n|<par_bool name="enabled" value="no" />
+            n|</INSTRUMENT_KIT_ITEM>
+            n|<INSTRUMENT_KIT_ITEM id="4">
+            n|<par_bool name="enabled" value="no" />
+            n|</INSTRUMENT_KIT_ITEM>
+            n|<INSTRUMENT_KIT_ITEM id="5">
+            n|<par_bool name="enabled" value="no" />
+            n|</INSTRUMENT_KIT_ITEM>
+            n|<INSTRUMENT_KIT_ITEM id="6">
+            n|<par_bool name="enabled" value="no" />
+            n|</INSTRUMENT_KIT_ITEM>
+            n|<INSTRUMENT_KIT_ITEM id="7">
+            n|<par_bool name="enabled" value="no" />
+            n|</INSTRUMENT_KIT_ITEM>
+            n|<INSTRUMENT_KIT_ITEM id="8">
+            n|<par_bool name="enabled" value="no" />
+            n|</INSTRUMENT_KIT_ITEM>
+            n|<INSTRUMENT_KIT_ITEM id="9">
+            n|<par_bool name="enabled" value="no" />
+            n|</INSTRUMENT_KIT_ITEM>
+            n|<INSTRUMENT_KIT_ITEM id="10">
+            n|<par_bool name="enabled" value="no" />
+            n|</INSTRUMENT_KIT_ITEM>
+            n|<INSTRUMENT_KIT_ITEM id="11">
+            n|<par_bool name="enabled" value="no" />
+            n|</INSTRUMENT_KIT_ITEM>
+            n|<INSTRUMENT_KIT_ITEM id="12">
+            n|<par_bool name="enabled" value="no" />
+            n|</INSTRUMENT_KIT_ITEM>
+            n|<INSTRUMENT_KIT_ITEM id="13">
+            n|<par_bool name="enabled" value="no" />
+            n|</INSTRUMENT_KIT_ITEM>
+            n|<INSTRUMENT_KIT_ITEM id="14">
+            n|<par_bool name="enabled" value="no" />
+            n|</INSTRUMENT_KIT_ITEM>
+            n|<INSTRUMENT_KIT_ITEM id="15">
+            n|<par_bool name="enabled" value="no" />
+            n|</INSTRUMENT_KIT_ITEM>
+            n|</INSTRUMENT_KIT>
+            n|<INSTRUMENT_EFFECTS>
+            n|<INSTRUMENT_EFFECT id="0">
+            n|<EFFECT>
+            n|<par name="type" value="0" />
+            n|</EFFECT>
+            n|<par name="route" value="0" />
+            n|<par_bool name="bypass" value="no" />
+            n|</INSTRUMENT_EFFECT>
+            n|<INSTRUMENT_EFFECT id="1">
+            n|<EFFECT>
+            n|<par name="type" value="0" />
+            n|</EFFECT>
+            n|<par name="route" value="0" />
+            n|<par_bool name="bypass" value="no" />
+            n|</INSTRUMENT_EFFECT>
+            n|<INSTRUMENT_EFFECT id="2">
+            n|<EFFECT>
+            n|<par name="type" value="0" />
+            n|</EFFECT>
+            n|<par name="route" value="0" />
+            n|<par_bool name="bypass" value="no" />
+            n|</INSTRUMENT_EFFECT>
+            n|</INSTRUMENT_EFFECTS>
+            n|</INSTRUMENT>
+            n|<CONTROLLER>
+            n|<par name="pitchwheel_bendrange" value="200" />
+            n|<par name="pitchwheel_bendrange_down" value="0" />
+            n|<par_bool name="pitchwheel_split" value="no" />
+            n|<par_bool name="expression_receive" value="yes" />
+            n|<par name="panning_depth" value="64" />
+            n|<par name="filter_cutoff_depth" value="64" />
+            n|<par name="filter_q_depth" value="64" />
+            n|<par name="bandwidth_depth" value="64" />
+            n|<par name="mod_wheel_depth" value="80" />
+            n|<par_bool name="mod_wheel_exponential" value="no" />
+            n|<par_bool name="fm_amp_receive" value="yes" />
+            n|<par_bool name="volume_receive" value="yes" />
+            n|<par_bool name="sustain_receive" value="yes" />
+            n|<par_bool name="portamento_receive" value="yes" />
+            n|<par name="portamento_time" value="64" />
+            n|<par name="portamento_pitchthresh" value="3" />
+            n|<par name="portamento_pitchthreshtype" value="1" />
+            n|<par name="portamento_portamento" value="0" />
+            n|<par name="portamento_updowntimestretch" value="64" />
+            n|<par name="portamento_proportional" value="0" />
+            n|<par name="portamento_proprate" value="80" />
+            n|<par name="portamento_propdepth" value="90" />
+            n|<par name="resonance_center_depth" value="64" />
+            n|<par name="resonance_bandwidth_depth" value="64" />
+            n|</CONTROLLER>
+            n|</PART>
+            n|<PART id="1">
+            n|<par_bool name="enabled" value="no" />
+            n|</PART>
+            n|<PART id="2">
+            n|<par_bool name="enabled" value="no" />
+            n|</PART>
+            n|<PART id="3">
+            n|<par_bool name="enabled" value="no" />
+            n|</PART>
+            n|<PART id="4">
+            n|<par_bool name="enabled" value="no" />
+            n|</PART>
+            n|<PART id="5">
+            n|<par_bool name="enabled" value="no" />
+            n|</PART>
+            n|<PART id="6">
+            n|<par_bool name="enabled" value="no" />
+            n|</PART>
+            n|<PART id="7">
+            n|<par_bool name="enabled" value="no" />
+            n|</PART>
+            n|<PART id="8">
+            n|<par_bool name="enabled" value="no" />
+            n|</PART>
+            n|<PART id="9">
+            n|<par_bool name="enabled" value="no" />
+            n|</PART>
+            n|<PART id="10">
+            n|<par_bool name="enabled" value="no" />
+            n|</PART>
+            n|<PART id="11">
+            n|<par_bool name="enabled" value="no" />
+            n|</PART>
+            n|<PART id="12">
+            n|<par_bool name="enabled" value="no" />
+            n|</PART>
+            n|<PART id="13">
+            n|<par_bool name="enabled" value="no" />
+            n|</PART>
+            n|<PART id="14">
+            n|<par_bool name="enabled" value="no" />
+            n|</PART>
+            n|<PART id="15">
+            n|<par_bool name="enabled" value="no" />
+            n|</PART>
+            n|<SYSTEM_EFFECTS>
+            n|<SYSTEM_EFFECT id="0">
+            n|<EFFECT>
+            n|<par name="type" value="0" />
+            n|</EFFECT>
+            n|<VOLUME id="0">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="1">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="2">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="3">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="4">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="5">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="6">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="7">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="8">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="9">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="10">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="11">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="12">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="13">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="14">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="15">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<SENDTO id="1">
+            n|<par name="send_vol" value="0" />
+            n|</SENDTO>
+            n|<SENDTO id="2">
+            n|<par name="send_vol" value="0" />
+            n|</SENDTO>
+            n|<SENDTO id="3">
+            n|<par name="send_vol" value="0" />
+            n|</SENDTO>
+            n|</SYSTEM_EFFECT>
+            n|<SYSTEM_EFFECT id="1">
+            n|<EFFECT>
+            n|<par name="type" value="0" />
+            n|</EFFECT>
+            n|<VOLUME id="0">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="1">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="2">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="3">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="4">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="5">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="6">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="7">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="8">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="9">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="10">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="11">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="12">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="13">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="14">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="15">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<SENDTO id="2">
+            n|<par name="send_vol" value="0" />
+            n|</SENDTO>
+            n|<SENDTO id="3">
+            n|<par name="send_vol" value="0" />
+            n|</SENDTO>
+            n|</SYSTEM_EFFECT>
+            n|<SYSTEM_EFFECT id="2">
+            n|<EFFECT>
+            n|<par name="type" value="0" />
+            n|</EFFECT>
+            n|<VOLUME id="0">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="1">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="2">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="3">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="4">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="5">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="6">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="7">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="8">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="9">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="10">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="11">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="12">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="13">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="14">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="15">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<SENDTO id="3">
+            n|<par name="send_vol" value="0" />
+            n|</SENDTO>
+            n|</SYSTEM_EFFECT>
+            n|<SYSTEM_EFFECT id="3">
+            n|<EFFECT>
+            n|<par name="type" value="0" />
+            n|</EFFECT>
+            n|<VOLUME id="0">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="1">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="2">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="3">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="4">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="5">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="6">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="7">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="8">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="9">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="10">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="11">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="12">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="13">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="14">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|<VOLUME id="15">
+            n|<par name="vol" value="0" />
+            n|</VOLUME>
+            n|</SYSTEM_EFFECT>
+            n|</SYSTEM_EFFECTS>
+            n|<INSERTION_EFFECTS>
+            n|<INSERTION_EFFECT id="0">
+            n|<par name="part" value="-1" />
+            n|<EFFECT>
+            n|<par name="type" value="0" />
+            n|</EFFECT>
+            n|</INSERTION_EFFECT>
+            n|<INSERTION_EFFECT id="1">
+            n|<par name="part" value="-1" />
+            n|<EFFECT>
+            n|<par name="type" value="0" />
+            n|</EFFECT>
+            n|</INSERTION_EFFECT>
+            n|<INSERTION_EFFECT id="2">
+            n|<par name="part" value="-1" />
+            n|<EFFECT>
+            n|<par name="type" value="0" />
+            n|</EFFECT>
+            n|</INSERTION_EFFECT>
+            n|<INSERTION_EFFECT id="3">
+            n|<par name="part" value="-1" />
+            n|<EFFECT>
+            n|<par name="type" value="0" />
+            n|</EFFECT>
+            n|</INSERTION_EFFECT>
+            n|<INSERTION_EFFECT id="4">
+            n|<par name="part" value="-1" />
+            n|<EFFECT>
+            n|<par name="type" value="0" />
+            n|</EFFECT>
+            n|</INSERTION_EFFECT>
+            n|<INSERTION_EFFECT id="5">
+            n|<par name="part" value="-1" />
+            n|<EFFECT>
+            n|<par name="type" value="0" />
+            n|</EFFECT>
+            n|</INSERTION_EFFECT>
+            n|<INSERTION_EFFECT id="6">
+            n|<par name="part" value="-1" />
+            n|<EFFECT>
+            n|<par name="type" value="0" />
+            n|</EFFECT>
+            n|</INSERTION_EFFECT>
+            n|<INSERTION_EFFECT id="7">
+            n|<par name="part" value="-1" />
+            n|<EFFECT>
+            n|<par name="type" value="0" />
+            n|</EFFECT>
+            n|</INSERTION_EFFECT>
+            n|</INSERTION_EFFECTS>
+            n|</MASTER>
+            n|</ZynAddSubFX-data>
+            n|
+          >
+        >
+      >
+      FLOATPOS 0 0 0 0
+      FXID {47E0A1B1-685B-0E7B-6C7F-9F1E0A8D1829}
+      WAK 0 0
+      BYPASS 0 0 0
+      <VST "VST: ReaEQ (Cockos)" reaeq.vst.so 0 "" 1919247729<56535472656571726561657100000000> ""
+        cWVlcu5e7f4CAAAAAQAAAAAAAAACAAAAAAAAAAIAAAABAAAAAAAAAAIAAAAAAAAAzQAAAAEAAAAAABAA
+        IQAAAAUAAAAAAAAAAQAAAAAAAAAAAFlAAAAAAAAA8D+amZmZmZnpPwEIAAAAAQAAAAAAAAAAwHJAAAAAAAAA8D8AAAAAAAAAQAEIAAAAAQAAAAAAAAAAQI9AAAAAAAAA
+        8D8AAAAAAAAAQAEBAAAAAQAAAAAAAAAAiLNAAAAAAAAA8D+amZmZmZnpPwEEAAAAAAAAAAAAAAAAAFlAAAAAAAAA8D8AAAAAAAAAQAEBAAAAAQAAAAAAAAAAAPA/AAAA
+        AAAAAAAAAAAAAgABAA==
+        AFByb2dyYW0gMQAQAAAA
+      >
+      FLOATPOS 0 0 0 0
+      FXID {FD355379-F56E-5AE6-DDD6-9F9EB434D54C}
+      WAK 0 0
+      BYPASS 0 0 0
+      <VST "VST: ReaComp (Cockos)" reacomp.vst.so 0 "" 1919247213<5653547265636D726561636F6D700000> ""
+        bWNlcu9e7f4EAAAAAQAAAAAAAAACAAAAAAAAAAQAAAAAAAAACAAAAAAAAAACAAAAAQAAAAAAAAACAAAAAAAAAFwAAAAAAAAAAAAQAA==
+        776t3g3wrd4AAIA/ED74PKabxDsK16M8AAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAnNEHMwAAgD8AAAAAzcxMPQAAAAAAAAAAAAAAAAAAgD4AAAAAAAAAAAAAAAA=
+        AFByb2dyYW0gMQAQAAAA
+      >
+      FLOATPOS 0 0 0 0
+      FXID {97034C77-60B6-4B14-E1A9-E06DDC6B1EC2}
+      WAK 0 0
+    >
+    <ITEM
+      POSITION 0
+      SNAPOFFS 0
+      LENGTH 37.89473684210526
+      LOOP 1
+      ALLTAKES 0
+      FADEIN 1 0 0 1 0 0 0
+      FADEOUT 1 0 0 1 0 0 0
+      MUTE 0 0
+      SEL 0
+      IGUID {83A39EB8-CCEE-976C-BAE9-EA0B2F82E49D}
+      IID 5523
+      NAME ""
+      VOLPAN 1 0 1 -1
+      SOFFS 0 0
+      PLAYRATE 1 1 0 -1 0 0.0025
+      CHANMODE 0
+      GUID {3CAB71ED-5FE7-9578-AC02-052C74901589}
+      <SOURCE MIDI
+        HASDATA 1 960 QN
+        CCINTERP 32
+        POOLEDEVTS {5027DBC5-0D3F-1C90-887B-70957FFE1977}
+        E 0 90 26 46
+        E 2544 80 26 00
+        E 144 90 2d 3e
+        E 1008 80 2d 00
+        E 144 90 2d 4b
+        E 2544 80 2d 00
+        E 144 90 34 46
+        E 1008 80 34 00
+        E 144 90 29 50
+        E 2544 80 29 00
+        E 144 90 30 3e
+        E 1008 80 30 00
+        E 144 90 22 46
+        E 2544 80 22 00
+        E 144 90 29 46
+        E 1008 80 29 00
+        E 144 90 26 4b
+        E 2544 80 26 00
+        E 144 90 2d 3e
+        E 1008 80 2d 00
+        E 144 90 2c 50
+        E 2544 80 2c 00
+        E 144 90 33 46
+        E 1008 80 33 00
+        E 144 90 24 46
+        E 2544 80 24 00
+        E 144 90 2b 3e
+        E 1008 80 2b 00
+        E 144 90 26 4b
+        E 2544 80 26 00
+        E 144 90 2d 46
+        E 1008 80 2d 00
+        E 144 90 26 4c
+        E 460 80 26 00
+        E 365 90 2d 55
+        E 672 80 2d 00
+        E 154 90 27 46
+        E 461 80 27 00
+        E 364 90 22 4f
+        E 672 80 22 00
+        E 816 90 26 4d
+        E 461 80 26 00
+        E 365 90 2c 56
+        E 672 80 2c 00
+        E 154 90 29 47
+        E 460 80 29 00
+        E 365 90 25 50
+        E 615 90 1a 5c
+        E 57 80 25 00
+        E 423 80 1a 00
+        E 144 90 21 4e
+        E 460 80 21 00
+        E 365 90 28 57
+        E 672 80 28 00
+        E 154 90 2e 48
+        E 461 80 2e 00
+        E 364 90 26 51
+        E 672 80 26 00
+        E 816 90 26 4f
+        E 461 80 26 00
+        E 365 90 23 58
+        E 672 80 23 00
+        E 154 90 2b 49
+        E 460 80 2b 00
+        E 365 90 31 52
+        E 672 80 31 00
+        E 567 90 26 50
+        E 460 80 26 00
+        E 365 90 2d 59
+        E 672 80 2d 00
+        E 154 90 27 4a
+        E 461 80 27 00
+        E 364 90 22 53
+        E 672 80 22 00
+        E 68 90 1a 5c
+        E 480 80 1a 00
+        E 268 90 26 51
+        E 461 80 26 00
+        E 365 90 2c 5a
+        E 672 80 2c 00
+        E 154 90 29 4b
+        E 460 80 29 00
+        E 365 90 25 54
+        E 672 80 25 00
+        E 567 90 21 52
+        E 460 80 21 00
+        E 365 90 28 5b
+        E 672 80 28 00
+        E 154 90 2e 4c
+        E 461 80 2e 00
+        E 364 90 26 55
+        E 672 80 26 00
+        E 816 90 26 53
+        E 461 80 26 00
+        E 365 90 23 44
+        E 672 80 23 00
+        E 154 90 2b 4d
+        E 460 80 2b 00
+        E 365 90 31 56
+        E 615 90 1a 5c
+        E 57 80 31 00
+        E 423 80 1a 00
+        E 144 90 26 54
+        E 460 80 26 00
+        E 365 90 2d 45
+        E 672 80 2d 00
+        E 154 90 27 4e
+        E 461 80 27 00
+        E 364 90 22 57
+        E 672 80 22 00
+        E 816 90 26 55
+        E 461 80 26 00
+        E 365 90 2c 46
+        E 672 80 2c 00
+        E 154 90 29 4f
+        E 460 80 29 00
+        E 365 90 25 58
+        E 672 80 25 00
+        E 567 90 21 56
+        E 460 80 21 00
+        E 365 90 28 47
+        E 672 80 28 00
+        E 154 90 2e 50
+        E 461 80 2e 00
+        E 364 90 26 59
+        E 672 80 26 00
+        E 68 90 1a 5c
+        E 480 80 1a 00
+        E 268 90 26 57
+        E 461 80 26 00
+        E 365 90 23 48
+        E 672 80 23 00
+        E 154 90 2b 51
+        E 460 80 2b 00
+        E 365 90 31 5a
+        E 672 80 31 00
+        E 567 90 26 4c
+        E 1440 80 26 00
+        E 211 90 32 56
+        E 432 80 32 00
+        E 249 90 2c 48
+        E 365 80 2c 00
+        E 259 90 2d 50
+        E 749 80 2d 00
+        E 135 90 29 4c
+        E 1440 80 29 00
+        E 211 90 35 56
+        E 432 80 35 00
+        E 249 90 2f 48
+        E 365 80 2f 00
+        E 259 90 30 50
+        E 749 80 30 00
+        E 135 90 22 4c
+        E 1440 80 22 00
+        E 211 90 2e 56
+        E 432 80 2e 00
+        E 249 90 28 48
+        E 365 80 28 00
+        E 259 90 29 50
+        E 749 80 29 00
+        E 135 90 26 4c
+        E 1440 80 26 00
+        E 211 90 32 56
+        E 432 80 32 00
+        E 249 90 2c 48
+        E 365 80 2c 00
+        E 259 90 2d 50
+        E 749 80 2d 00
+        E 135 b0 7b 00
+        CCINTERP 32
+        CHASE_CC_TAKEOFFS 1
+        GUID {67996117-7ED1-4929-175E-98D81D17477A}
+        IGNTEMPO 0 120 4 4
+        SRCCOLOR 5790
+        EVTFILTER 0 -1 -1 -1 -1 0 0 0 0 -1 -1 -1 -1 0 -1 0 -1 -1
+      >
+    >
+  >
+  <TRACK {6F1DCD03-0699-2796-5CDF-6818A0112C16}
+    NAME "DRUMS — AVL Blonde Bop"
+    PEAKCOL 20880068
+    BEAT -1
+    AUTOMODE 0
+    PANLAWFLAGS 3
+    VOLPAN 1 0.08 -1 -1 1
+    MUTESOLO 0 0 0
+    IPHASE 0
+    PLAYOFFS 0 1
+    ISBUS 0 0
+    BUSCOMP 0 0 0 0 0
+    SHOWINMIX 1 0.6667 0.5 1 0.5 0 0 0 0
+    FIXEDLANES 9 0 0 0 0
+    LANEREC -1 -1 -1 0
+    SEL 0
+    REC 0 4096 1 0 0 0 0 0
+    VU 64
+    TRACKHEIGHT 0 0 0 0 0 0 0
+    INQ 0 0 0 0.5 100 0 0 100
+    NCHAN 2
+    FX 1
+    TRACKID {6F1DCD03-0699-2796-5CDF-6818A0112C16}
+    PERF 0
+    MIDIOUT -1 -1
+    MAINSEND 1 0
+    <VOLENV2
+      EGUID {6EB31165-FCDB-C341-1218-9C66B53097B8}
+      ACT 1 -1
+      VIS 1 1 1
+      LANEHEIGHT 0 0
+      ARM 1
+      DEFSHAPE 0 -1 -1
+      VOLTYPE 1
+      PT 0 0.25118864 0
+      PT 6.32 0.39810717 0
+      PT 12.63 0.50118723 0
+      PT 22.11 0.66834392 0
+      PT 31.58 0.39810717 0
+      PT 37.89 0.15848932 0
+    >
+    <FXCHAIN
+      SHOW 0
+      LASTSEL 0
+      DOCKED 0
+      BYPASS 0 0 0
+      <LV2 "LV2i: Blonde Bop Drumkit (Robin Gareus) (2 out)" http://gareus.org/oss/lv2/avldrums#BlondeBop ""
+        CFG 0 0 0 ""
+        MIDI control 0 0 
+      >
+      FLOATPOS 0 0 0 0
+      FXID {80D9DD88-F779-CF62-2B23-1C475DBE9758}
+      WAK 0 0
+      BYPASS 0 0 0
+      <VST "VST: ReaComp (Cockos)" reacomp.vst.so 0 "" 1919247213<5653547265636D726561636F6D700000> ""
+        bWNlcu9e7f4EAAAAAQAAAAAAAAACAAAAAAAAAAQAAAAAAAAACAAAAAAAAAACAAAAAQAAAAAAAAACAAAAAAAAAFwAAAAAAAAAAAAQAA==
+        776t3g3wrd4AAIA/ED74PKabxDsK16M8AAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAnNEHMwAAgD8AAAAAzcxMPQAAAAAAAAAAAAAAAAAAgD4AAAAAAAAAAAAAAAA=
+        AFByb2dyYW0gMQAQAAAA
+      >
+      FLOATPOS 0 0 0 0
+      FXID {78D03C79-1C74-D065-DF52-30929B765FB3}
+      WAK 0 0
+    >
+    <ITEM
+      POSITION 0
+      SNAPOFFS 0
+      LENGTH 37.89473684210526
+      LOOP 1
+      ALLTAKES 0
+      FADEIN 1 0 0 1 0 0 0
+      FADEOUT 1 0 0 1 0 0 0
+      MUTE 0 0
+      SEL 0
+      IGUID {CE46CC95-4E60-F06D-5B4B-E6E586CCDFEC}
+      IID 5524
+      NAME ""
+      VOLPAN 1 0 1 -1
+      SOFFS 0 0
+      PLAYRATE 1 1 0 -1 0 0.0025
+      CHANMODE 0
+      GUID {4215791F-110A-E33B-463A-480588E2DE66}
+      <SOURCE MIDI
+        HASDATA 1 960 QN
+        CCINTERP 32
+        POOLEDEVTS {04B27BE3-5B6F-412E-3B82-A5283518D429}
+        E 0 99 24 4e
+        E 172 89 24 00
+        E 788 99 26 48
+        E 153 89 26 00
+        E 807 99 24 42
+        E 172 89 24 00
+        E 788 99 26 52
+        E 153 89 26 00
+        E 807 99 24 4e
+        E 172 89 24 00
+        E 788 99 26 4e
+        E 153 89 26 00
+        E 807 99 24 42
+        E 172 89 24 00
+        E 788 99 26 52
+        E 153 89 26 00
+        E 807 99 24 4e
+        E 172 89 24 00
+        E 308 99 33 3a
+        E 115 89 33 00
+        E 365 99 26 54
+        E 153 89 26 00
+        E 327 99 33 42
+        E 115 89 33 00
+        E 365 99 24 42
+        E 172 89 24 00
+        E 308 99 33 3d
+        E 115 89 33 00
+        E 365 99 26 52
+        E 153 89 26 00
+        E 327 99 33 48
+        E 115 89 33 00
+        E 365 99 24 4e
+        E 172 89 24 00
+        E 308 99 33 3a
+        E 115 89 33 00
+        E 365 99 26 48
+        E 153 89 26 00
+        E 327 99 33 42
+        E 115 89 33 00
+        E 365 99 24 42
+        E 172 89 24 00
+        E 308 99 33 3d
+        E 115 89 33 00
+        E 365 99 26 52
+        E 153 89 26 00
+        E 87 99 2f 50
+        E 144 89 2f 00
+        E 96 99 33 48
+        E 76 99 2d 58
+        E 39 89 33 00
+        E 105 89 2d 00
+        E 260 99 24 4e
+        E 172 89 24 00
+        E 308 99 33 3a
+        E 115 89 33 00
+        E 365 99 26 4e
+        E 153 89 26 00
+        E 327 99 33 42
+        E 115 89 33 00
+        E 365 99 24 42
+        E 172 89 24 00
+        E 308 99 33 3d
+        E 115 89 33 00
+        E 365 99 26 52
+        E 153 89 26 00
+        E 327 99 33 48
+        E 115 89 33 00
+        E 365 99 24 4e
+        E 172 89 24 00
+        E 308 99 33 3a
+        E 115 89 33 00
+        E 365 99 26 54
+        E 153 89 26 00
+        E 327 99 33 42
+        E 115 89 33 00
+        E 365 99 24 42
+        E 172 89 24 00
+        E 308 99 33 3d
+        E 115 89 33 00
+        E 365 99 26 52
+        E 153 89 26 00
+        E 327 99 33 48
+        E 115 89 33 00
+        E 365 99 24 4e
+        E 172 89 24 00
+        E 308 99 33 3a
+        E 115 89 33 00
+        E 365 99 26 48
+        E 153 89 26 00
+        E 327 99 33 42
+        E 115 89 33 00
+        E 365 99 24 42
+        E 172 89 24 00
+        E 308 99 33 3d
+        E 115 89 33 00
+        E 365 99 26 52
+        E 153 89 26 00
+        E 327 99 33 48
+        E 115 89 33 00
+        E 365 99 24 4e
+        E 172 89 24 00
+        E 308 99 33 3a
+        E 115 89 33 00
+        E 365 99 26 4e
+        E 153 89 26 00
+        E 327 99 33 42
+        E 115 89 33 00
+        E 365 99 24 42
+        E 172 89 24 00
+        E 308 99 33 3d
+        E 115 89 33 00
+        E 365 99 26 52
+        E 153 89 26 00
+        E 87 99 2f 50
+        E 144 89 2f 00
+        E 96 99 33 48
+        E 76 99 2d 58
+        E 39 89 33 00
+        E 105 89 2d 00
+        E 471 99 24 3f
+        E 96 89 24 00
+        E 259 99 2d 50
+        E 96 89 2d 00
+        E 259 99 31 61
+        E 96 89 31 00
+        E 259 99 26 42
+        E 96 89 26 00
+        E 260 99 2f 53
+        E 96 89 2f 00
+        E 259 99 2a 64
+        E 96 89 2a 00
+        E 259 99 33 45
+        E 96 89 33 00
+        E 259 99 32 56
+        E 96 89 32 00
+        E 259 99 24 37
+        E 96 89 24 00
+        E 260 99 2d 48
+        E 96 89 2d 00
+        E 336 99 26 4c
+        E 67 99 33 47
+        E 29 89 26 00
+        E 67 89 33 00
+        E 192 99 2f 5d
+        E 96 89 2f 00
+        E 259 99 2a 3e
+        E 96 89 2a 00
+        E 259 99 33 4f
+        E 96 89 33 00
+        E 259 99 32 60
+        E 96 89 32 00
+        E 260 99 24 41
+        E 96 89 24 00
+        E 259 99 2d 52
+        E 96 89 2d 00
+        E 259 99 31 63
+        E 96 89 31 00
+        E 259 99 26 44
+        E 96 89 26 00
+        E 259 99 2f 55
+        E 96 89 2f 00
+        E 260 99 2a 66
+        E 96 89 2a 00
+        E 297 99 33 59
+        E 67 99 2d 54
+        E 29 89 33 00
+        E 67 89 2d 00
+        E 192 99 32 3a
+        E 68 99 31 65
+        E 28 89 32 00
+        E 68 89 31 00
+        E 192 99 24 4b
+        E 67 99 26 46
+        E 29 89 24 00
+        E 67 89 26 00
+        E 192 99 2d 5c
+        E 96 89 2d 00
+        E 259 99 31 3d
+        E 96 89 31 00
+        E 259 99 26 4e
+        E 96 89 26 00
+        E 259 99 2f 5f
+        E 96 89 2f 00
+        E 260 99 2a 40
+        E 96 89 2a 00
+        E 259 99 33 51
+        E 96 89 33 00
+        E 259 99 32 62
+        E 96 89 32 00
+        E 259 99 24 43
+        E 96 89 24 00
+        E 87 99 31 6c
+        E 211 99 2d 66
+        E 57 89 31 00
+        E 10 99 2f 61
+        E 29 89 2d 00
+        E 67 89 2f 00
+        E 192 99 31 47
+        E 67 99 2a 42
+        E 29 89 31 00
+        E 67 89 2a 00
+        E 192 99 26 58
+        E 67 99 33 53
+        E 29 89 26 00
+        E 67 89 33 00
+        E 192 99 2f 39
+        E 68 99 32 64
+        E 28 89 2f 00
+        E 68 89 32 00
+        E 192 99 2a 4a
+        E 67 99 24 45
+        E 29 89 2a 00
+        E 67 89 24 00
+        E 192 99 33 5b
+        E 96 89 33 00
+        E 259 99 32 3c
+        E 96 89 32 00
+        E 259 99 24 4d
+        E 96 89 24 00
+        E 259 99 2d 5e
+        E 96 89 2d 00
+        E 260 99 31 3f
+        E 96 89 31 00
+        E 259 99 26 50
+        E 77 99 2f 43
+        E 19 89 26 00
+        E 77 89 2f 00
+        E 259 99 2a 54
+        E 96 89 2a 00
+        E 259 99 33 65
+        E 96 89 33 00
+        E 259 99 32 46
+        E 96 89 32 00
+        E 259 99 24 57
+        E 96 89 24 00
+        E 260 99 2d 38
+        E 96 89 2d 00
+        E 259 99 31 49
+        E 96 89 31 00
+        E 259 99 26 5a
+        E 96 89 26 00
+        E 259 99 2f 3b
+        E 96 89 2f 00
+        E 259 99 2a 4c
+        E 96 89 2a 00
+        E 653 99 32 50
+        E 67 99 31 4b
+        E 29 89 32 00
+        E 67 89 31 00
+        E 192 99 24 61
+        E 96 89 24 00
+        E 260 99 2d 42
+        E 96 89 2d 00
+        E 259 99 31 53
+        E 96 89 31 00
+        E 259 99 26 64
+        E 96 89 26 00
+        E 259 99 2f 45
+        E 96 89 2f 00
+        E 259 99 2a 56
+        E 96 89 2a 00
+        E 260 99 33 37
+        E 96 89 33 00
+        E 259 99 32 48
+        E 96 89 32 00
+        E 259 99 24 59
+        E 96 89 24 00
+        E 259 99 2d 3a
+        E 96 89 2d 00
+        E 298 99 31 5d
+        E 67 99 2a 58
+        E 29 89 31 00
+        E 67 89 2a 00
+        E 192 99 26 3e
+        E 67 99 33 39
+        E 29 89 26 00
+        E 67 89 33 00
+        E 192 99 2f 4f
+        E 67 99 32 4a
+        E 29 89 2f 00
+        E 67 89 32 00
+        E 192 99 2a 60
+        E 96 89 2a 00
+        E 260 99 33 41
+        E 96 89 33 00
+        E 259 99 32 52
+        E 96 89 32 00
+        E 259 99 24 63
+        E 96 89 24 00
+        E 259 99 2d 44
+        E 96 89 2d 00
+        E 259 99 31 55
+        E 96 89 31 00
+        E 260 99 26 66
+        E 96 89 26 00
+        E 259 99 2f 47
+        E 77 99 2a 3a
+        E 0 99 31 6c
+        E 19 89 2f 00
+        E 48 99 24 65
+        E 29 89 2a 00
+        E 67 89 24 00
+        E 105 89 31 00
+        E 87 99 33 4b
+        E 67 99 2d 46
+        E 29 89 33 00
+        E 67 89 2d 00
+        E 192 99 32 5c
+        E 67 99 31 57
+        E 29 89 32 00
+        E 67 89 31 00
+        E 192 99 24 3d
+        E 67 99 26 38
+        E 29 89 24 00
+        E 67 89 26 00
+        E 192 99 2d 4e
+        E 68 99 2f 49
+        E 28 89 2d 00
+        E 68 89 2f 00
+        E 192 99 31 5f
+        E 96 89 31 00
+        E 259 99 26 40
+        E 96 89 26 00
+        E 259 99 2f 51
+        E 96 89 2f 00
+        E 259 99 2a 62
+        E 96 89 2a 00
+        E 259 99 33 43
+        E 96 89 33 00
+        E 260 99 32 54
+        E 96 89 32 00
+        E 297 99 24 47
+        E 96 89 24 00
+        E 259 99 2d 58
+        E 96 89 2d 00
+        E 260 99 31 39
+        E 96 89 31 00
+        E 259 99 26 4a
+        E 96 89 26 00
+        E 259 99 2f 5b
+        E 96 89 2f 00
+        E 259 99 2a 3c
+        E 96 89 2a 00
+        E 259 99 33 4d
+        E 96 89 33 00
+        E 260 99 32 5e
+        E 96 89 32 00
+        E 259 99 24 3f
+        E 96 89 24 00
+        E 259 99 2d 50
+        E 96 89 2d 00
+        E 653 99 26 54
+        E 67 99 33 4f
+        E 29 89 26 00
+        E 67 89 33 00
+        E 192 99 2f 65
+        E 96 89 2f 00
+        E 259 99 2a 46
+        E 96 89 2a 00
+        E 259 99 33 57
+        E 96 89 33 00
+        E 260 99 32 38
+        E 96 89 32 00
+        E 259 99 24 49
+        E 96 89 24 00
+        E 259 99 2d 5a
+        E 96 89 2d 00
+        E 259 99 31 3b
+        E 96 89 31 00
+        E 259 99 26 4c
+        E 96 89 26 00
+        E 260 99 2f 5d
+        E 96 89 2f 00
+        E 259 99 2a 3e
+        E 77 99 33 61
+        E 19 89 2a 00
+        E 48 99 2d 5c
+        E 29 89 33 00
+        E 67 89 2d 00
+        E 192 99 32 42
+        E 67 99 31 3d
+        E 29 89 32 00
+        E 67 89 31 00
+        E 192 99 24 53
+        E 67 99 26 4e
+        E 29 89 24 00
+        E 67 89 26 00
+        E 192 99 2d 64
+        E 96 89 2d 00
+        E 259 99 31 45
+        E 96 89 31 00
+        E 260 99 26 56
+        E 96 89 26 00
+        E 259 99 2f 37
+        E 96 89 2f 00
+        E 259 99 2a 48
+        E 96 89 2a 00
+        E 259 99 33 59
+        E 96 89 33 00
+        E 259 99 32 3a
+        E 96 89 32 00
+        E 260 99 24 4b
+        E 96 89 24 00
+        E 192 99 31 6c
+        E 105 99 2d 3e
+        E 67 99 2f 39
+        E 29 89 2d 00
+        E 67 89 31 00
+        E 0 89 2f 00
+        E 192 99 31 4f
+        E 68 99 2a 4a
+        E 28 89 31 00
+        E 68 89 2a 00
+        E 192 99 26 60
+        E 67 99 33 5b
+        E 29 89 26 00
+        E 67 89 33 00
+        E 192 99 2f 41
+        E 67 99 32 3c
+        E 29 89 2f 00
+        E 67 89 32 00
+        E 192 99 2a 52
+        E 67 99 24 4d
+        E 29 89 2a 00
+        E 67 89 24 00
+        E 192 99 33 63
+        E 96 89 33 00
+        E 259 99 32 44
+        E 96 89 32 00
+        E 260 99 24 55
+        E 96 89 24 00
+        E 259 99 2d 66
+        E 96 89 2d 00
+        E 259 99 31 47
+        E 96 89 31 00
+        E 259 99 26 58
+        E 96 89 26 00
+        E 87 99 24 52
+        E 192 89 24 00
+        E 1027 99 26 4a
+        E 153 89 26 00
+        E 663 99 2d 44
+        E 153 89 2d 00
+        E 1008 99 33 3a
+        E 135 89 33 00
+        E 509 99 24 52
+        E 192 89 24 00
+        E 1027 99 26 4a
+        E 153 89 26 00
+        E 663 99 2d 44
+        E 153 89 2d 00
+        E 1008 99 33 3a
+        E 135 89 33 00
+        E 509 99 24 52
+        E 192 89 24 00
+        E 1027 99 26 4a
+        E 153 89 26 00
+        E 663 99 2d 44
+        E 153 89 2d 00
+        E 1008 99 33 3a
+        E 135 89 33 00
+        E 509 99 24 52
+        E 192 89 24 00
+        E 1027 99 26 4a
+        E 153 89 26 00
+        E 663 99 2d 44
+        E 153 89 2d 00
+        E 1008 99 33 3a
+        E 135 89 33 00
+        E 77 99 31 60
+        E 288 89 31 00
+        E 144 b0 7b 00
+        CCINTERP 32
+        CHASE_CC_TAKEOFFS 1
+        GUID {D6B611AB-C001-7CBC-2FFF-2DDB8F8C0188}
+        IGNTEMPO 0 120 4 4
+        SRCCOLOR 5791
+        EVTFILTER 0 -1 -1 -1 -1 0 0 0 0 -1 -1 -1 -1 0 -1 0 -1 -1
+      >
+    >
+  >
+  <TRACK {1DB67ADC-72A8-BE06-8468-B6F936C11B4D}
+    NAME "ROOM — ReaVerb"
+    PEAKCOL 25054300
+    BEAT -1
+    AUTOMODE 0
+    PANLAWFLAGS 3
+    VOLPAN 1 0 -1 -1 1
+    MUTESOLO 0 0 0
+    IPHASE 0
+    PLAYOFFS 0 1
+    ISBUS 0 0
+    BUSCOMP 0 0 0 0 0
+    SHOWINMIX 1 0.6667 0.5 1 0.5 0 0 0 0
+    FIXEDLANES 9 0 0 0 0
+    LANEREC -1 -1 -1 0
+    SEL 0
+    REC 0 0 1 0 0 0 0 0
+    VU 64
+    TRACKHEIGHT 0 0 0 0 0 0 0
+    INQ 0 0 0 0.5 100 0 0 100
+    NCHAN 2
+    FX 1
+    TRACKID {1DB67ADC-72A8-BE06-8468-B6F936C11B4D}
+    PERF 0
+    AUXRECV 0 0 0.14125375446228 0 0 0 0 0 0 -1:U 0 -1 ''
+    AUXRECV 1 0 0.07079457843841 0 0 0 0 0 0 -1:U 0 -1 ''
+    AUXRECV 2 0 0.1122018454302 0 0 0 0 0 0 -1:U 0 -1 ''
+    MIDIOUT -1 -1
+    MAINSEND 1 0
+    <VOLENV2
+      EGUID {01AD5B0F-C350-361C-6EE6-CBA158B7910C}
+      ACT 1 -1
+      VIS 1 1 1
+      LANEHEIGHT 0 0
+      ARM 1
+      DEFSHAPE 0 -1 -1
+      VOLTYPE 1
+      PT 0 0.12589254 0
+      PT 6.32 0.17782794 0
+      PT 12.63 0.22387211 0
+      PT 22.11 0.31622777 0
+      PT 31.58 0.19952623 0
+      PT 37.89 0.07943282 0
+    >
+    <FXCHAIN
+      SHOW 0
+      LASTSEL 0
+      DOCKED 0
+      BYPASS 0 0 0
+      <VST "VST: ReaVerb (Cockos)" reaverb.vst.so 0 "" 1919252066<56535472657662726561766572620000> ""
+        YnZlcu5e7f4CAAAAAQAAAAAAAAACAAAAAAAAAAIAAAABAAAAAAAAAAIAAAAAAAAAKAAAAAEAAAAAABAA
+        AAAQwcybgD4AAIA/AAAAAAAAgD8AAIA/AAAAPwAAgD8AAIA/AAAAQA==
+        AFByb2dyYW0gMQAQAAAA
+      >
+      FLOATPOS 0 0 0 0
+      FXID {6D58A9ED-E1E7-2A4F-047B-EBAC1B6D5A2A}
+      WAK 0 0
+    >
+  >
+  <EXTENSIONS
+  >
+>

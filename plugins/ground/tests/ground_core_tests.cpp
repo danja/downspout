@@ -320,6 +320,50 @@ void testDescendStyleWalksDownAndCadences()
     assert((finalEvent.note % 12) == (controls.rootNote % 12));
 }
 
+void testAscendStyleWalksUpAndCadences()
+{
+    Controls controls;
+    controls.rootNote = 36;
+    controls.scale = ScaleId::minor;
+    controls.style = StyleId::ascend;
+    controls.formShape = FormShapeId::classical16;
+    controls.formBars = 16;
+    controls.phraseBars = 4;
+    controls.density = 0.70f;
+    controls.motion = 0.78f;
+    controls.cadence = 0.85f;
+    controls.noteLength = 0.80f;
+    controls.noteLengthVariation = 0.0f;
+    controls.seed = 2901u;
+
+    FormState form;
+    regenerateForm(form, controls, ::downspout::Meter {});
+
+    assert(form.eventCount > 0);
+    assert(form.phraseCount == 4);
+    const PhrasePlan& first = form.phrases[0];
+    assert(first.eventCount >= 4);
+
+    int downMoves = 0;
+    int upMoves = 0;
+    int previous = form.events[static_cast<std::size_t>(first.eventStartIndex)].note;
+    for (int i = 1; i < first.eventCount; ++i) {
+        const int note = form.events[static_cast<std::size_t>(first.eventStartIndex + i)].note;
+        if (note < previous) {
+            ++downMoves;
+        } else if (note > previous) {
+            ++upMoves;
+        }
+        previous = note;
+    }
+
+    assert(upMoves >= downMoves);
+
+    const PhrasePlan& cadence = form.phrases[form.phraseCount - 1];
+    const NoteEvent& finalEvent = form.events[static_cast<std::size_t>(cadence.eventStartIndex + cadence.eventCount - 1)];
+    assert((finalEvent.note % 12) == (controls.rootNote % 12));
+}
+
 void testNoteLengthControlsDurations()
 {
     Controls shortControls;
@@ -604,19 +648,26 @@ void testDubJazzAndRockStylesAreExplicit()
     descend.motion = 0.74f;
     descend.seed = 2026u;
 
+    Controls ascend = descend;
+    ascend.style = StyleId::ascend;
+    ascend.seed = 2027u;
+
     FormState dubForm;
     FormState jazzForm;
     FormState rockForm;
     FormState descendForm;
+    FormState ascendForm;
     regenerateForm(dubForm, dub, ::downspout::Meter {});
     regenerateForm(jazzForm, jazz, ::downspout::Meter {});
     regenerateForm(rockForm, rock, ::downspout::Meter {});
     regenerateForm(descendForm, descend, ::downspout::Meter {});
+    regenerateForm(ascendForm, ascend, ::downspout::Meter {});
 
     assert(dubForm.eventCount > 0);
     assert(jazzForm.eventCount > dubForm.eventCount);
     assert(rockForm.eventCount > 0);
     assert(descendForm.eventCount > 0);
+    assert(ascendForm.eventCount > 0);
     assert(hasPhraseEventAtLocalStep(rockForm, 0, 0));
     assert(hasPhraseEventAtLocalStep(rockForm, 0, 4));
     assert(hasPhraseEventAtLocalStep(rockForm, 0, 8));
@@ -626,19 +677,23 @@ void testDubJazzAndRockStylesAreExplicit()
     const auto jazzRoundTrip = deserializeControls(serializeControls(jazz));
     const auto rockRoundTrip = deserializeControls(serializeControls(rock));
     const auto descendRoundTrip = deserializeControls(serializeControls(descend));
+    const auto ascendRoundTrip = deserializeControls(serializeControls(ascend));
     assert(dubRoundTrip.has_value());
     assert(jazzRoundTrip.has_value());
     assert(rockRoundTrip.has_value());
     assert(descendRoundTrip.has_value());
+    assert(ascendRoundTrip.has_value());
     assert(dubRoundTrip->style == StyleId::dub);
     assert(jazzRoundTrip->style == StyleId::jazz);
     assert(rockRoundTrip->style == StyleId::rock);
     assert(descendRoundTrip->style == StyleId::descend);
+    assert(ascendRoundTrip->style == StyleId::ascend);
 
     assert(styleName(StyleId::dub) == std::string("dub"));
     assert(styleName(StyleId::jazz) == std::string("jazz"));
     assert(styleName(StyleId::rock) == std::string("rock"));
     assert(styleName(StyleId::descend) == std::string("descend"));
+    assert(styleName(StyleId::ascend) == std::string("ascend"));
 
     const std::string jazzSummary = summarizeGroundAiState(jazz, jazzForm, 0);
     assert(jazzSummary.find("\"style\":\"jazz\"") != std::string::npos);
@@ -646,6 +701,8 @@ void testDubJazzAndRockStylesAreExplicit()
     assert(rockSummary.find("\"style\":\"rock\"") != std::string::npos);
     const std::string descendSummary = summarizeGroundAiState(descend, descendForm, 0);
     assert(descendSummary.find("\"style\":\"descend\"") != std::string::npos);
+    const std::string ascendSummary = summarizeGroundAiState(ascend, ascendForm, 0);
+    assert(ascendSummary.find("\"style\":\"ascend\"") != std::string::npos);
 }
 
 void testAiStateSummaryIncludesCurrentPhraseContext()
@@ -835,6 +892,7 @@ int main()
     testCompoundMeterShape();
     testGroundedPhraseGetsSyncopationAndLegato();
     testDescendStyleWalksDownAndCadences();
+    testAscendStyleWalksUpAndCadences();
     testNoteLengthControlsDurations();
     testFugalFormPlansSubjectAnswerPedalCadence();
     testTwelveBarBluesFormShapes();
