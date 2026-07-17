@@ -15,6 +15,23 @@ constexpr const char* kStateKeyUiEvent = "ui_event";
 ParameterEnumerationValue kWaveforms[] = {{0, "Sine"}, {1, "Square"}, {2, "Triangle"}};
 ParameterEnumerationValue kLimiters[] = {{0, "Wrap"}, {1, "Reflect"}, {2, "Reflect Repeat"}};
 ParameterEnumerationValue kTunings[] = {{0, "Computed"}, {1, "Ratios"}, {2, "Table"}};
+
+downspout::tuney_vst::TransportSnapshot toCoreTransport(const TimePosition& timePosition)
+{
+    downspout::tuney_vst::TransportSnapshot transport;
+    transport.playing = timePosition.playing;
+    transport.valid = timePosition.bbt.valid;
+    if (timePosition.bbt.valid) {
+        transport.bar = static_cast<double>(timePosition.bbt.bar - 1);
+        transport.barBeat = static_cast<double>(timePosition.bbt.beat - 1) +
+            (timePosition.bbt.ticksPerBeat > 0.0
+                ? timePosition.bbt.tick / timePosition.bbt.ticksPerBeat
+                : 0.0);
+        transport.beatsPerBar = timePosition.bbt.beatsPerBar;
+        transport.bpm = timePosition.bbt.beatsPerMinute;
+    }
+    return transport;
+}
 }
 
 class TuneyVstPlugin final : public Plugin {
@@ -100,7 +117,7 @@ protected:
     void run(const float**, float** outputs, uint32_t frames, const MidiEvent*, uint32_t) override
     {
         downspout::tuney_vst::ProcessResult result;
-        engine_.process(outputs[0], outputs[1], frames, result);
+        engine_.process(outputs[0], outputs[1], frames, result, toCoreTransport(getTimePosition()));
         for (std::size_t i = 0; i < result.midiCount; ++i) {
             MidiEvent event {}; event.frame = result.midi[i].frame; event.size = 3;
             event.data[0] = result.midi[i].data[0]; event.data[1] = result.midi[i].data[1]; event.data[2] = result.midi[i].data[2];

@@ -47,6 +47,7 @@ enum ParamId : std::uint32_t {
     kParamTimingScale,
     kParamOverlapMs,
     kParamTimingSeed,
+    kParamTransportSync,
     kParamCount
 };
 
@@ -101,6 +102,15 @@ struct ProcessResult {
     std::size_t midiCount = 0;
 };
 
+struct TransportSnapshot {
+    bool valid = false;
+    bool playing = false;
+    double bar = 0.0;
+    double barBeat = 0.0;
+    double beatsPerBar = 4.0;
+    double bpm = 120.0;
+};
+
 class TuneyEngine {
 public:
     explicit TuneyEngine(double sampleRate = 48000.0);
@@ -118,6 +128,8 @@ public:
     void startPlayback();
     void stopPlayback();
     void process(float* left, float* right, std::uint32_t frames, ProcessResult& result);
+    void process(float* left, float* right, std::uint32_t frames, ProcessResult& result,
+                 const TransportSnapshot& transport);
 
     [[nodiscard]] int mapCharacter(std::string_view utf8) const;
     [[nodiscard]] double frequencyForLogicalNote(int logicalNote) const;
@@ -126,6 +138,7 @@ public:
 
 private:
     struct ScheduledEvent { std::uint64_t sample = 0; int note = 0; bool on = false; };
+    struct BeatScheduledEvent { double beat = 0.0; int note = 0; bool on = false; };
     struct Voice {
         bool active = false;
         int logicalNote = 0;
@@ -141,7 +154,10 @@ private:
 
     void rebuildDerived();
     void rebuildSchedule();
-    void applyEvent(int note, bool on, std::uint32_t frame, ProcessResult& result);
+    void processSynced(float* left, float* right, std::uint32_t frames,
+                       ProcessResult& result, const TransportSnapshot& transport);
+    void applyEvent(int note, bool on, std::uint32_t frame, ProcessResult& result,
+                    bool honorMinimumNote = true);
     void allNotesOff(std::uint32_t frame, ProcessResult& result);
     void drainTyped(ProcessResult& result);
     float renderVoice(Voice& voice);
@@ -158,8 +174,11 @@ private:
     std::vector<double> table_;
     static constexpr std::size_t kMaxScheduleEvents = 8192;
     std::array<std::array<ScheduledEvent, kMaxScheduleEvents>, 2> schedules_ {};
+    std::array<std::array<BeatScheduledEvent, kMaxScheduleEvents>, 2> beatSchedules_ {};
     std::array<std::size_t, 2> scheduleCounts_ {};
+    std::array<std::size_t, 2> beatScheduleCounts_ {};
     std::array<std::uint64_t, 2> scheduleLengths_ {};
+    std::array<double, 2> beatScheduleLengths_ {};
     std::atomic<int> preparedSchedule_ {0};
     int playbackSchedule_ = 0;
     std::array<Voice, 32> voices_ {};
@@ -169,6 +188,11 @@ private:
     bool playing_ = false;
     bool stopRequested_ = false;
     bool playRequested_ = false;
+    bool syncArmed_ = true;
+    bool syncWasTransportPlaying_ = false;
+    double syncPlayheadBeats_ = 0.0;
+    double expectedHostBeat_ = -1.0;
+    std::uint64_t syncCycle_ = 0;
 
     static constexpr std::size_t kTypedQueueSize = 64;
     std::array<PendingTyped, kTypedQueueSize> typedQueue_ {};

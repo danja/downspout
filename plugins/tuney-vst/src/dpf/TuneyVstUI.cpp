@@ -85,12 +85,13 @@ protected:
         textBox(textRect_.x + 22, textRect_.y + 22, textRect_.w - 44, shown.c_str(), nullptr);
 
         const float by = 438;
-        play_ = {22, by, 146, 56}; stop_ = {180, by, 146, 56}; clear_ = {338, by, 146, 56};
-        audio_ = {496, by, 146, 56}; midi_ = {654, by, 146, 56}; wave_ = {812, by, 206, 56};
+        play_ = {22, by, 132, 56}; stop_ = {164, by, 132, 56}; clear_ = {306, by, 132, 56};
+        audio_ = {448, by, 132, 56}; midi_ = {590, by, 132, 56}; sync_ = {732, by, 132, 56}; wave_ = {874, by, 144, 56};
         drawButton(play_, "PLAY", Color(77, 174, 132)); drawButton(stop_, "STOP", Color(208, 99, 91));
         drawButton(clear_, "CLEAR", Color(91, 107, 139));
         drawButton(audio_, values_[downspout::tuney_vst::kParamAudioEnabled] > 0.5f ? "AUDIO ON" : "AUDIO OFF", Color(83, 125, 190));
         drawButton(midi_, values_[downspout::tuney_vst::kParamMidiEnabled] > 0.5f ? "MIDI ON" : "MIDI OFF", Color(128, 96, 184));
+        drawButton(sync_, values_[downspout::tuney_vst::kParamTransportSync] > 0.5f ? "SYNC ON" : "SYNC OFF", Color(173, 105, 73));
         static constexpr const char* waves[] = {"SINE", "SQUARE", "TRIANGLE"};
         drawButton(wave_, waves[std::clamp(static_cast<int>(values_[downspout::tuney_vst::kParamWaveform]), 0, 2)], Color(152, 111, 56));
 
@@ -112,6 +113,7 @@ protected:
         if (clear_.contains(x, y)) { state_.text.clear(); pushState(); setState(kStateKeyUiEvent, "clear"); repaint(); return true; }
         if (audio_.contains(x, y)) { toggle(downspout::tuney_vst::kParamAudioEnabled); return true; }
         if (midi_.contains(x, y)) { toggle(downspout::tuney_vst::kParamMidiEnabled); return true; }
+        if (sync_.contains(x, y)) { toggle(downspout::tuney_vst::kParamTransportSync); return true; }
         if (wave_.contains(x, y)) { setParam(downspout::tuney_vst::kParamWaveform, std::fmod(values_[downspout::tuney_vst::kParamWaveform] + 1.0f, 3.0f)); return true; }
         if (preset_.contains(x, y)) { presetIndex_ = (presetIndex_ + 1) % 5; applyPreset(); return true; }
         return textRect_.contains(x, y);
@@ -203,7 +205,7 @@ private:
 
     std::array<float, downspout::tuney_vst::kParamCount> values_ {};
     downspout::tuney_vst::TuneyState state_ {};
-    Rect textRect_ {}, play_ {}, stop_ {}, clear_ {}, audio_ {}, midi_ {}, wave_ {}, preset_ {};
+    Rect textRect_ {}, play_ {}, stop_ {}, clear_ {}, audio_ {}, midi_ {}, sync_ {}, wave_ {}, preset_ {};
     int presetIndex_ = 0;
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TuneyVstUI)
 };

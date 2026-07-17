@@ -196,6 +196,7 @@ const std::array<ParameterSpec, kParamCount> kParameterSpecs {{
     {"MIDI Channel", "midi_channel", 1, 16, 1, true, false}, {"MIDI Velocity", "midi_velocity", 1, 127, 64, true, false},
     {"MIDI Offset", "midi_note_offset", -99, 99, 0, true, false}, {"Timing Scale", "timing_scale", 0.05f, 8, 3, false, false},
     {"Overlap", "overlap_ms", 0, 1000, 20, false, false}, {"Timing Seed", "timing_seed", 0, 9999, 0, true, false},
+    {"Host Sync", "transport_sync", 0, 1, 0, true, true},
 }};
 
 std::vector<std::string> splitUtf8(std::string_view text)
@@ -293,15 +294,23 @@ void TuneyEngine::reset()
 {
     for (auto& v : voices_) v = {};
     scheduleIndex_ = 0; playhead_ = 0; playing_ = false; stopRequested_ = false; playRequested_ = false;
+    syncWasTransportPlaying_ = false; syncPlayheadBeats_ = 0.0; expectedHostBeat_ = -1.0; syncCycle_ = 0;
     typedRead_.store(typedWrite_.load());
 }
 
 void TuneyEngine::setParameter(std::uint32_t index, float value)
 {
     if (index >= kParamCount) return;
+    const float previous = parameters_[index];
     parameters_[index] = clampParameter(kParameterSpecs[index], value);
     if (index == kParamPlay && value > 0.5f) playRequested_ = true;
     if (index == kParamStop && value > 0.5f) stopRequested_ = true;
+    if (index == kParamTransportSync && parameters_[index] != previous) {
+        syncArmed_ = parameters_[index] > 0.5f;
+        syncWasTransportPlaying_ = false;
+        expectedHostBeat_ = -1.0;
+        if (!syncArmed_) stopRequested_ = true;
+    }
 }
 
 float TuneyEngine::getParameter(std::uint32_t index) const { return index < kParamCount ? parameters_[index] : 0.0f; }
@@ -442,11 +451,14 @@ void TuneyEngine::rebuildSchedule()
 {
     const int target = 1 - playbackSchedule_;
     auto& schedule = schedules_[target];
+    auto& beatSchedule = beatSchedules_[target];
     std::size_t count = 0;
+    std::size_t beatCount = 0;
     static constexpr double timings[] = {56.04, 63.29, 68.44, 72.75, 80.12, 85.36, 89.54, 94.59, 100.38, 107.68, 116.24, 128.57, 141.9, 157.76, 171.46, 188.67, 210.69, 246.01, 299.94, 419.5};
     std::mt19937 rng(static_cast<std::uint32_t>(parameters_[kParamTimingSeed]));
     std::uniform_int_distribution<std::size_t> pick(0, std::size(timings) - 1);
     double timeMs = 0.0;
+    double timeBeats = 0.0;
     const double scale = parameters_[kParamTimingScale] / parameters_[kParamRate];
     const auto chars = splitUtf8(state_.text);
     std::string previous;
@@ -466,6 +478,10 @@ void TuneyEngine::rebuildSchedule()
         const bool alphabetic = isAsciiAlpha(c) || std::find(alphabet_.begin(), alphabet_.end(), c) != alphabet_.end();
         if (alphabetic || explicitTiming || !state_.alphaOnly) {
             const double duration = (punctuation + timings[pick(rng)]) * scale;
+            double beatDuration = 0.25;
+            if (c == ",") beatDuration = 0.5;
+            else if (c == "." || c == ":" || c == ";") beatDuration = 1.0;
+            else if (c == "\n") beatDuration = 4.0;
             const int note = mapCharacter(c);
             if (note != std::numeric_limits<int>::min()) {
                 const auto on = static_cast<std::uint64_t>(std::llround(timeMs * sampleRate_ / 1000.0));
@@ -473,14 +489,21 @@ void TuneyEngine::rebuildSchedule()
                 if (count + 2 <= schedule.size()) {
                     schedule[count++] = {on, note, true}; schedule[count++] = {off, note, false};
                 }
+                if (beatCount + 2 <= beatSchedule.size()) {
+                    beatSchedule[beatCount++] = {timeBeats, note, true};
+                    beatSchedule[beatCount++] = {timeBeats + beatDuration, note, false};
+                }
             }
             timeMs += std::max(0.0, duration - parameters_[kParamOverlapMs] * scale);
+            timeBeats += beatDuration;
         }
         previous = sourceChar;
     }
     std::stable_sort(schedule.begin(), schedule.begin() + static_cast<std::ptrdiff_t>(count), [](const auto& a, const auto& b) { return a.sample < b.sample; });
     scheduleCounts_[target] = count;
+    beatScheduleCounts_[target] = beatCount;
     scheduleLengths_[target] = static_cast<std::uint64_t>(std::llround(timeMs * sampleRate_ / 1000.0)) + (count == 0 ? 0 : 1);
+    beatScheduleLengths_[target] = timeBeats;
     preparedSchedule_.store(target, std::memory_order_release);
 }
 
@@ -492,7 +515,8 @@ void TuneyEngine::emitMidi(int note, bool on, std::uint32_t frame, ProcessResult
     result.midi[result.midiCount++] = {frame, {static_cast<std::uint8_t>((on ? 0x90 : 0x80) | channel), static_cast<std::uint8_t>(midiNote), static_cast<std::uint8_t>(on ? parameters_[kParamMidiVelocity] : 0)}};
 }
 
-void TuneyEngine::applyEvent(int note, bool on, std::uint32_t frame, ProcessResult& result)
+void TuneyEngine::applyEvent(int note, bool on, std::uint32_t frame, ProcessResult& result,
+                             bool honorMinimumNote)
 {
     if (on) {
         for (const auto& v : voices_) if (v.active && v.logicalNote == note && v.releaseAt == UINT64_MAX) return;
@@ -511,7 +535,9 @@ void TuneyEngine::applyEvent(int note, bool on, std::uint32_t frame, ProcessResu
         emitMidi(note, true, frame, result);
     } else {
         for (auto& v : voices_) if (v.active && v.logicalNote == note && v.releaseAt == UINT64_MAX) {
-            v.releaseAt = std::max(v.age, static_cast<std::uint64_t>(parameters_[kParamMinimumNoteMs] * sampleRate_ / 1000.0));
+            v.releaseAt = honorMinimumNote
+                ? std::max(v.age, static_cast<std::uint64_t>(parameters_[kParamMinimumNoteMs] * sampleRate_ / 1000.0))
+                : v.age;
             emitMidi(note, false, frame, result);
             v.midiOn = false;
         }
@@ -563,8 +589,111 @@ float TuneyEngine::renderVoice(Voice& v)
     return wave * env;
 }
 
+void TuneyEngine::processSynced(float* left, float* right, std::uint32_t frames,
+                                ProcessResult& result, const TransportSnapshot& transport)
+{
+    result.midiCount = 0;
+    bool restartRequested = false;
+    if (stopRequested_) {
+        allNotesOff(0, result);
+        playing_ = false;
+        syncArmed_ = false;
+        stopRequested_ = false;
+    }
+    if (playRequested_) {
+        allNotesOff(0, result);
+        playing_ = false;
+        syncArmed_ = true;
+        restartRequested = true;
+        playRequested_ = false;
+    }
+
+    const bool transportUsable = transport.valid && transport.playing &&
+        transport.bpm > 0.0 && transport.beatsPerBar > 0.0 && sampleRate_ > 0.0;
+    const double absoluteBeat = transport.bar * transport.beatsPerBar + transport.barBeat;
+    const double hostBeatPerSample = transportUsable ? transport.bpm / (60.0 * sampleRate_) : 0.0;
+    const double continuityTolerance = std::max(1.0e-3, hostBeatPerSample * 4.0);
+    const bool discontinuity = transportUsable && expectedHostBeat_ >= 0.0 &&
+        std::fabs(absoluteBeat - expectedHostBeat_) > continuityTolerance;
+
+    if (syncArmed_ && transportUsable &&
+        (restartRequested || !syncWasTransportPlaying_ || discontinuity)) {
+        allNotesOff(0, result);
+        playbackSchedule_ = preparedSchedule_.load(std::memory_order_acquire);
+        scheduleIndex_ = 0;
+        syncCycle_ = 0;
+        syncPlayheadBeats_ = 0.0;
+        playing_ = true;
+    } else if (!transportUsable || !syncArmed_) {
+        if (playing_) allNotesOff(0, result);
+        playing_ = false;
+    }
+
+    drainTyped(result);
+    const auto& schedule = beatSchedules_[playbackSchedule_];
+    const std::size_t scheduleCount = beatScheduleCounts_[playbackSchedule_];
+    const double scheduleLength = beatScheduleLengths_[playbackSchedule_];
+    const double sequenceBeatPerSample = hostBeatPerSample * parameters_[kParamRate];
+
+    for (std::uint32_t frame = 0; frame < frames; ++frame) {
+        const double currentBeat = syncPlayheadBeats_ + frame * sequenceBeatPerSample;
+        while (playing_) {
+            if (scheduleIndex_ < scheduleCount) {
+                const auto& event = schedule[scheduleIndex_];
+                const double eventBeat = syncCycle_ * scheduleLength + event.beat;
+                if (eventBeat <= currentBeat + 1.0e-12) {
+                    ++scheduleIndex_;
+                    applyEvent(event.note, event.on, frame, result, false);
+                    continue;
+                }
+            }
+
+            const double cycleEnd = (syncCycle_ + 1) * scheduleLength;
+            if (scheduleLength <= 0.0 ||
+                (scheduleIndex_ >= scheduleCount && currentBeat >= cycleEnd - 1.0e-12)) {
+                if (parameters_[kParamLoop] > 0.5f && scheduleCount != 0 && scheduleLength > 0.0) {
+                    allNotesOff(frame, result);
+                    scheduleIndex_ = 0;
+                    ++syncCycle_;
+                    continue;
+                }
+                playing_ = false;
+            }
+            break;
+        }
+
+        for (auto& voice : voices_) if (voice.active && voice.midiOn &&
+            voice.releaseAt != UINT64_MAX && voice.age >= voice.releaseAt) {
+            emitMidi(voice.logicalNote, false, frame, result);
+            voice.midiOn = false;
+        }
+        float sample = 0.0f;
+        for (auto& voice : voices_) sample += renderVoice(voice);
+        sample = std::clamp(sample * parameters_[kParamGain] / parameters_[kParamHeadroom], -1.0f, 1.0f);
+        if (parameters_[kParamAudioEnabled] < 0.5f) sample = 0.0f;
+        left[frame] = right[frame] = sample;
+    }
+
+    if (transportUsable && syncArmed_)
+        syncPlayheadBeats_ += frames * sequenceBeatPerSample;
+    expectedHostBeat_ = transportUsable ? absoluteBeat + frames * hostBeatPerSample : -1.0;
+    syncWasTransportPlaying_ = transportUsable;
+}
+
 void TuneyEngine::process(float* left, float* right, std::uint32_t frames, ProcessResult& result)
 {
+    process(left, right, frames, result, {});
+}
+
+void TuneyEngine::process(float* left, float* right, std::uint32_t frames,
+                          ProcessResult& result, const TransportSnapshot& transport)
+{
+    if (parameters_[kParamTransportSync] > 0.5f) {
+        processSynced(left, right, frames, result, transport);
+        return;
+    }
+    syncWasTransportPlaying_ = false;
+    expectedHostBeat_ = -1.0;
     result.midiCount = 0;
     if (stopRequested_) { allNotesOff(0, result); playing_ = false; stopRequested_ = false; }
     if (playRequested_) { allNotesOff(0, result); playbackSchedule_ = preparedSchedule_.load(std::memory_order_acquire); scheduleIndex_ = 0; playhead_ = 0; playing_ = true; playRequested_ = false; }

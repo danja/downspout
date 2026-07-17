@@ -13,7 +13,19 @@ typing uses the `ui_event` state channel and a bounded queue.
 Internal audio uses Tuney's scale and tuning frequencies. Generated MIDI uses
 ordinary note number, channel, velocity, and offset values, so microtonal
 frequencies are not represented as pitch bends. Text playback uses the plugin
-sample clock and Tuney-style seeded millisecond timing rather than host BBT.
+sample clock and Tuney-style seeded millisecond timing by default.
+
+`SYNC ON` replaces that free-time scheduler with a deterministic host BBT grid.
+Mapped characters and spaces occupy one sixteenth-note slot, commas one
+eighth-note slot, periods/colons/semicolons one quarter-note slot, and blank-line
+rests four quarter-note beats. Rate scales this beat timeline. Timing Scale,
+Timing Seed, Overlap, Minimum Note, and the punctuation millisecond fields do
+not determine scheduled note/rest lengths while sync is enabled. Host play
+starts the stored text from its beginning, host stop silences it, and host
+restart, rewind, loop, or a discontinuous bar/meter change restarts it. The
+plugin's Loop control repeats the text on its own beat-length boundary. PLAY
+re-arms/restarts synced playback; STOP disarms it until PLAY or sync is enabled
+again. Live typed notes remain immediate rather than quantized.
 
 The v1 expression grammar accepts numeric literals, `+ - * / % ^`, parentheses,
 and `cents(...)`. Python module/function expressions and random evaluation are
