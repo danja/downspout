@@ -10,7 +10,7 @@ summary: Focused typing and stored text become microtonal synthesized audio and 
 
 ## Functionality
 
-Tuney VST ports the musical core of Tom Ritchford's MIT-licensed Tuney 0.3.39.
+Tuney VST ports the musical core of Tom Ritchford's MIT-licensed [Tuney](https://github.com/rec/tuney/) 0.3.39.
 It records focused Unicode typing or accepts pasted text, maps characters into a
 configurable note range, and replays the result using deterministic millisecond
 timing. Its internal synth supports computed, ratio, and table tunings while its

@@ -59,6 +59,17 @@ If `actionlint` is available and workflows changed:
 actionlint
 ```
 
+## VST3 validator
+
+```bash
+/home/danny/tools/vst3sdk-build/bin/Release/validator \
+  build/bin/<bundle>.vst3 > /tmp/<bundle>-validator.log 2>&1
+```
+
+Check both the process exit status and the log's final result. For a host scan
+failure, compare the same validator version against a known-working installed
+bundle such as `~/.vst3/gremlin.vst3`.
+
 ## Interpreting failures
 
 - Missing `CMakeCache.txt`: configure first, then build.

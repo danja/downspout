@@ -44,4 +44,21 @@ Use the plugin-local `CMakeLists.txt` to confirm exact target names. Hyphenated 
 - Screenshot or Pages changes: use the screenshot/catalog workflow skill.
 - Shared code changes: broaden tests to all impacted plugins.
 
+## VST3 validation
+
+When a VST3 bundle is rejected by a host, run Steinberg's command-line
+`validator` against the built or installed bundle. Compare with a known-working
+Downspout bundle when the output might reflect a DPF-wide limitation.
+
+The locally installed validator is currently:
+
+```bash
+/home/danny/tools/vst3sdk-build/bin/Release/validator /path/to/plugin.vst3
+```
+
+Treat a signal, non-zero exit status, sanitizer report, or failed test as a
+failure even if earlier tests are marked `Succeeded`. Validator output can be
+very large for DPF MIDI plugins, so capture it to a temporary log and search for
+`Failed`, `invalid`, `AddressSanitizer`, and the final `Result:` line.
+
 Read [references/commands.md](references/commands.md) for target naming, useful commands, and validation heuristics.

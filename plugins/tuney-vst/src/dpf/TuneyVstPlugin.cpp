@@ -53,11 +53,11 @@ protected:
         parameter.ranges.max = spec.maximum;
         parameter.ranges.def = spec.defaultValue;
         if (index == downspout::tuney_vst::kParamWaveform) {
-            parameter.enumValues.count = 3; parameter.enumValues.restrictedMode = true; parameter.enumValues.values = kWaveforms;
+            parameter.enumValues.count = 3; parameter.enumValues.restrictedMode = true; parameter.enumValues.values = kWaveforms; parameter.enumValues.deleteLater = false;
         } else if (index == downspout::tuney_vst::kParamLimiter) {
-            parameter.enumValues.count = 3; parameter.enumValues.restrictedMode = true; parameter.enumValues.values = kLimiters;
+            parameter.enumValues.count = 3; parameter.enumValues.restrictedMode = true; parameter.enumValues.values = kLimiters; parameter.enumValues.deleteLater = false;
         } else if (index == downspout::tuney_vst::kParamTuningType) {
-            parameter.enumValues.count = 3; parameter.enumValues.restrictedMode = true; parameter.enumValues.values = kTunings;
+            parameter.enumValues.count = 3; parameter.enumValues.restrictedMode = true; parameter.enumValues.values = kTunings; parameter.enumValues.deleteLater = false;
         }
     }
 
