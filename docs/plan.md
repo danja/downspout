@@ -169,6 +169,9 @@ Progress as of 2026-05-27:
 - `xoxolo` now exists as an original simple MIDI drum pattern editor with a
   fixed 11-lane drumkit map, 32-step maximum, text state serialization,
   deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
+- `tuney-vst` now ports Tuney 0.3.39's text-to-music core as a focused-typing
+  instrument/MIDI generator with portable mapping, tuning, free-time
+  scheduling, synthesis, versioned text state, deterministic tests, and a DPF UI;
 - `install.sh` exists as the intended build/install entrypoint for local VST deployment.
 
 Current main gap:
@@ -180,7 +183,7 @@ Current main gap:
   `cadence.vst3`, `arpgen.vst3`, `counterpointer.vst3`, `sidecar.vst3`, `gremlin.vst3`,
   `gremlin_driver.vst3`, `ground.vst3`, `floozy.vst3`, `basilico.vst3`,
   `canticle.vst3`, `luma.vst3`, `paunchlad.vst3`, `lifeform.vst3`, and
-  `xoxolo.vst3` bundles.
+  `xoxolo.vst3`, and `tuney_vst.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set, validating the first tagged GitHub Actions release, and pushing the shared meter/style/color model further up the musical stack where it improves generator behavior.
 

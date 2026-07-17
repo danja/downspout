@@ -41,6 +41,7 @@ plugins=(
   "luma:luma"
   "paunchlad:paunchlad"
   "lifeform:lifeform"
+  "tuney-vst:tuney_vst"
 )
 
 usage() {

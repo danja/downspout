@@ -1,6 +1,6 @@
 # Downspout Plugin Capability Summary
 
-Downspout is a collection of 24 mostly generative and algorithmic VST3 plugins. The common architecture is a portable C++ musical/DSP core, thin DPF host wrapper, persistent text state where needed, deterministic tests, and a custom NanoVG interface. REAPER identifies the plugins below with maker `danja`.
+Downspout is a collection of 25 mostly generative and algorithmic VST3 plugins. The common architecture is a portable C++ musical/DSP core, thin DPF host wrapper, persistent text state where needed, deterministic tests, and a custom NanoVG interface. REAPER identifies the plugins below with maker `danja`.
 
 ## MIDI generators and processors
 
@@ -77,6 +77,10 @@ Eight-voice hybrid physical/modulation synthesizer derived from `floozy-poly`. S
 ### Gremlin (`gremlin.vst3`)
 
 Chaotic glitch instrument with performance scenes, live and hidden parameters, macros, momentary controls, randomization actions, delay-oriented behaviors, controller feedback, and a master trim. GremlinDriver is its intended automation companion.
+
+### Tuney VST (`tuney_vst.vst3`)
+
+Text-to-music instrument and MIDI generator derived from Tuney 0.3.39. Focused Unicode typing or stored text is mapped through configurable alphabets, scales, and microtonal tunings, then played with seeded free-time phrasing through a simple polyphonic synth and ordinary MIDI output.
 
 ## Audio effects
 

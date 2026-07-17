@@ -223,6 +223,7 @@ The release script currently expects these bundles:
 - `paunchlad.vst3`
 - `lifeform.vst3`
 - `xoxolo.vst3`
+- `tuney_vst.vst3`
 
 This list should match the bundles installed by `install.sh`; if a plugin is
 added to the local install path, release packaging should be updated in the same

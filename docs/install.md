@@ -50,7 +50,7 @@ Public release packaging is handled separately by
 
 ## Current outputs
 
-The repository currently installs twenty-four real wrapper targets:
+The repository currently installs twenty-five real wrapper targets:
 
 - `bassgen.vst3` with UI
 - `p_mix.vst3` with UI
@@ -76,8 +76,9 @@ The repository currently installs twenty-four real wrapper targets:
 - `paunchlad.vst3` with UI
 - `lifeform.vst3` with UI
 - `xoxolo.vst3` with UI
+- `tuney_vst.vst3` with UI
 
-The next install-related validation is host-side confirmation that all twenty-four bundles behave correctly in `Release` builds.
+The next install-related validation is host-side confirmation that all twenty-five bundles behave correctly in `Release` builds.
 
 `install.sh` updates the VST3 bundles, but it does not modify DAW plugin
 caches. If a DAW still shows stale names, makers, categories, or homepage
@@ -117,3 +118,4 @@ The script has been smoke-tested with a temporary install root under `/tmp`:
 - confirmed `paunchlad.vst3` bundle output and install
 - confirmed `lifeform.vst3` bundle output and install
 - confirmed `xoxolo.vst3` bundle output and install
+- confirmed `tuney_vst.vst3` bundle output and install

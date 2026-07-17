@@ -186,6 +186,7 @@ jobs:
             echo "- paunchlad.vst3"
             echo "- lifeform.vst3"
             echo "- xoxolo.vst3"
+            echo "- tuney_vst.vst3"
             echo
             echo "Sidecar is currently Linux-only and is omitted from macOS and Windows release assets."
             echo "macOS and Windows release builds are best-effort and do not block Linux publication."
