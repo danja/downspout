@@ -25,6 +25,8 @@ plugin boundary.
 
 DPF exposes a MIDI input for synth-category compatibility, but Tuney VST ignores
 incoming host MIDI in v1; its UI text/typing interface is the note source.
+While the plugin UI has keyboard focus, printable typing is consumed by the
+editor so host shortcuts such as REAPER's Space transport action do not fire.
 
 ## Text examples
 

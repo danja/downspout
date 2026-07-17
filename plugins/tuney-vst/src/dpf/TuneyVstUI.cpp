@@ -12,6 +12,38 @@ namespace {
 struct Rect { float x, y, w, h; bool contains(float px, float py) const { return px >= x && px <= x + w && py >= y && py <= y + h; } };
 constexpr const char* kStateKeyTuney = "tuney_state";
 constexpr const char* kStateKeyUiEvent = "ui_event";
+
+std::string characterText(const DGL_NAMESPACE::Widget::CharacterInputEvent& ev)
+{
+    if (ev.string[0] != '\0') {
+        const unsigned char first = static_cast<unsigned char>(ev.string[0]);
+        if (first < 0x20 || first == 0x7f) return {};
+        return ev.string;
+    }
+
+    const std::uint32_t codepoint = ev.character;
+    if (codepoint < 0x20 || codepoint > 0x10ffff ||
+        (codepoint >= 0xd800 && codepoint <= 0xdfff))
+        return {};
+
+    std::string text;
+    if (codepoint <= 0x7f) {
+        text.push_back(static_cast<char>(codepoint));
+    } else if (codepoint <= 0x7ff) {
+        text.push_back(static_cast<char>(0xc0 | (codepoint >> 6)));
+        text.push_back(static_cast<char>(0x80 | (codepoint & 0x3f)));
+    } else if (codepoint <= 0xffff) {
+        text.push_back(static_cast<char>(0xe0 | (codepoint >> 12)));
+        text.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f)));
+        text.push_back(static_cast<char>(0x80 | (codepoint & 0x3f)));
+    } else {
+        text.push_back(static_cast<char>(0xf0 | (codepoint >> 18)));
+        text.push_back(static_cast<char>(0x80 | ((codepoint >> 12) & 0x3f)));
+        text.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f)));
+        text.push_back(static_cast<char>(0x80 | (codepoint & 0x3f)));
+    }
+    return text;
+}
 }
 
 class TuneyVstUI final : public UI {
@@ -77,7 +109,7 @@ protected:
         const float x = ev.pos.getX(), y = ev.pos.getY();
         if (play_.contains(x, y)) { setState(kStateKeyUiEvent, "play"); return true; }
         if (stop_.contains(x, y)) { setState(kStateKeyUiEvent, "stop"); return true; }
-        if (clear_.contains(x, y)) { state_.text.clear(); pushState(); setState(kStateKeyUiEvent, "clear"); return true; }
+        if (clear_.contains(x, y)) { state_.text.clear(); pushState(); setState(kStateKeyUiEvent, "clear"); repaint(); return true; }
         if (audio_.contains(x, y)) { toggle(downspout::tuney_vst::kParamAudioEnabled); return true; }
         if (midi_.contains(x, y)) { toggle(downspout::tuney_vst::kParamMidiEnabled); return true; }
         if (wave_.contains(x, y)) { setParam(downspout::tuney_vst::kParamWaveform, std::fmod(values_[downspout::tuney_vst::kParamWaveform] + 1.0f, 3.0f)); return true; }
@@ -87,8 +119,8 @@ protected:
 
     bool onCharacterInput(const CharacterInputEvent& ev) override
     {
-        if (!ev.string[0]) return false;
-        const std::string character(ev.string);
+        const std::string character = characterText(ev);
+        if (character.empty()) return false;
         if (character == "\r") return true;
         state_.text += character;
         setState(kStateKeyUiEvent, (std::string("type:") + character).c_str());
@@ -98,13 +130,20 @@ protected:
 
     bool onKeyboard(const KeyboardEvent& ev) override
     {
-        if (!ev.press) return false;
-        if (ev.key == kKeyBackspace) {
-            auto chars = downspout::tuney_vst::splitUtf8(state_.text);
-            if (!chars.empty()) chars.pop_back();
-            state_.text.clear(); for (const auto& c : chars) state_.text += c;
-            pushState(); repaint(); return true;
+        // Steinberg VST3 uses raw virtual-key code 1 for Backspace. Accept
+        // either representation because hosts differ in which field they set.
+        if (ev.key == kKeyBackspace || ev.keycode == 1) {
+            if (ev.press) eraseLastCharacter();
+            return true;
         }
+        // Text arrives separately through onCharacterInput, but VST3 hosts still
+        // need the key event marked as handled or they may apply DAW shortcuts
+        // such as Space for transport. Claim printable typing on press and
+        // release without inserting it here, which would duplicate text events.
+        if (ev.key >= kKeySpace && ev.key < kKeyDelete &&
+            (ev.mod & (kModifierControl | kModifierSuper)) == 0)
+            return true;
+        if (!ev.press) return false;
         if ((ev.mod & (kModifierControl | kModifierSuper)) != 0 && (ev.key == 'v' || ev.key == 'V')) {
             std::size_t size = 0; const void* data = getClipboard(size);
             if (data && size) { state_.text.append(static_cast<const char*>(data), size); pushState(); repaint(); }
@@ -128,6 +167,16 @@ private:
     void setParam(std::uint32_t index, float value) { editParameter(index, true); setParameterValue(index, value); editParameter(index, false); values_[index] = value; repaint(); }
     void toggle(std::uint32_t index) { setParam(index, values_[index] > 0.5f ? 0.0f : 1.0f); }
     void pushState() { const std::string text = downspout::tuney_vst::serializeState(state_); setState(kStateKeyTuney, text.c_str()); }
+    void eraseLastCharacter()
+    {
+        auto chars = downspout::tuney_vst::splitUtf8(state_.text);
+        if (chars.empty()) return;
+        chars.pop_back();
+        state_.text.clear();
+        for (const auto& character : chars) state_.text += character;
+        pushState();
+        repaint();
+    }
     void applyPreset()
     {
         state_.notes.clear();
