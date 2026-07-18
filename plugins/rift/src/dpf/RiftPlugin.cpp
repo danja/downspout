@@ -534,7 +534,8 @@ protected:
         CoreOutputStatus status;
         if (parameters_.sourceMode >= 0.5f)
         {
-            const std::shared_ptr<const CoreSampleSource> fileSample = fileSampleSource_.load(std::memory_order_acquire);
+            const std::shared_ptr<const CoreSampleSource> fileSample =
+                std::atomic_load_explicit(&fileSampleSource_, std::memory_order_acquire);
             const CoreSampleSource* source = fileSample && downspout::rift::isSampleSourceUsable(*fileSample)
                 ? fileSample.get()
                 : &testSampleSource_;
@@ -577,7 +578,9 @@ private:
 
         if (samplePath_.empty())
         {
-            fileSampleSource_.store(nullptr, std::memory_order_release);
+            std::atomic_store_explicit(&fileSampleSource_,
+                                       std::shared_ptr<const CoreSampleSource> {},
+                                       std::memory_order_release);
             pendingHistoryReset_.store(true, std::memory_order_release);
             return;
         }
@@ -586,13 +589,17 @@ private:
         if (!loaded.error.empty())
         {
             sampleLoadError_ = loaded.error;
-            fileSampleSource_.store(nullptr, std::memory_order_release);
+            std::atomic_store_explicit(&fileSampleSource_,
+                                       std::shared_ptr<const CoreSampleSource> {},
+                                       std::memory_order_release);
             pendingHistoryReset_.store(true, std::memory_order_release);
             return;
         }
 
-        fileSampleSource_.store(std::make_shared<const CoreSampleSource>(std::move(loaded.source)),
-                                std::memory_order_release);
+        std::atomic_store_explicit(
+            &fileSampleSource_,
+            std::make_shared<const CoreSampleSource>(std::move(loaded.source)),
+            std::memory_order_release);
         pendingHistoryReset_.store(true, std::memory_order_release);
     }
 
@@ -601,7 +608,10 @@ private:
     CoreSequencePattern sequence_ {};
     CoreEngineState engineState_ {};
     CoreSampleSource testSampleSource_ {};
-    std::atomic<std::shared_ptr<const CoreSampleSource>> fileSampleSource_ {};
+    // Use the C++11 shared_ptr atomic free functions rather than
+    // std::atomic<shared_ptr<T>>. The latter is unavailable in older MinGW
+    // libstdc++ versions used by the Windows cross-build.
+    std::shared_ptr<const CoreSampleSource> fileSampleSource_ {};
     std::atomic<bool> pendingHistoryReset_ {false};
     std::string samplePath_ {};
     std::string sampleLoadError_ {};

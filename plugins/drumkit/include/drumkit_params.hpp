@@ -184,7 +184,10 @@ inline constexpr std::array<ParameterSpec, kParameterCount> kParameterSpecs = {{
     constexpr float minimumHz = 30.0f;
     constexpr float maximumHz = 250.0f;
     constexpr float defaultNormalized = 0.35f;
-    constexpr float defaultHz = oldMinimumHz * std::pow(maximumHz / oldMinimumHz, defaultNormalized);
+    // std::pow is not constexpr on the libc++ shipped with the macOS runner.
+    // This value is constant for the algorithm, but it need not be a
+    // translation-time constant.
+    const float defaultHz = oldMinimumHz * std::pow(maximumHz / oldMinimumHz, defaultNormalized);
     if (clamped <= defaultNormalized) {
         return minimumHz * std::pow(defaultHz / minimumHz, clamped / defaultNormalized);
     }
