@@ -7,17 +7,17 @@ being proven.
 ## Current status
 
 - Linux `linux-x86_64` builds and packages on `ubuntu-24.04`.
-- macOS now builds a single `macos-universal` package on `macos-15` with
-  `CMAKE_OSX_ARCHITECTURES=x86_64;arm64` and
-  `CMAKE_OSX_DEPLOYMENT_TARGET=10.15`. This path is wired in CI/release, but
-  still needs confirmation on GitHub Actions and a DAW/plugin scan on macOS.
-- Windows now builds `windows-x86_64` from `ubuntu-22.04` with MinGW rather
-  than native `windows-2022`/MSVC. The toolchain file is
-  `cmake/toolchains/mingw-x86_64.cmake`.
-- Windows package builds currently set `DOWNSPOUT_RUN_TESTS=0`,
-  `DOWNSPOUT_STRIP=0`, and `DOWNSPOUT_BUILD_JOBS=2`. Tests are disabled
-  because this is a cross build; parallelism is capped because full parallel
-  VST3 linking was too opaque and slow locally.
+- macOS now uses `distrho/dpf-cmake-action@v1` with its explicit universal
+  `macos-10.15` target on `macos-15`. The action supplies the architecture,
+  deployment-target, and DPF-specific setup; downspout then repackages its
+  `bin/*.vst3` output into the normal zip/checksum format.
+- Windows now uses the same action’s `win64` target from `ubuntu-22.04`. This
+  uses the DPF-tested MinGW/Wine cross-build setup rather than the repository’s
+  generic CMake toolchain path. The generated bundles are repackaged by
+  `scripts/package-built-bundles.sh`.
+- The DPF action’s non-Linux package jobs disable `BUILD_TESTING` and Sidecar:
+  tests are not useful during a cross-package build, and Sidecar has additional
+  Linux-only runtime dependencies.
 - A local Windows package smoke succeeded on Linux after installing MinGW:
   `/tmp/downspout-win-package-dist/downspout-ci-local-windows-x86_64-vst3.zip`.
   The archive contained the expected `Contents/x86_64-win/*.vst3` layout for
@@ -45,20 +45,21 @@ but it will be needed when cross-built test execution or validation is enabled.
 
 Local references:
 
-- `/home/danny/github/dpf-makefile-action`
+- `/home/danny/github/dpf-cmake-action`
 - `/home/danny/github/PawPaw`
 
 Upstream sources:
 
-- https://github.com/DISTRHO/dpf-makefile-action
+- https://github.com/DISTRHO/dpf-cmake-action
 - https://github.com/DISTRHO/PawPaw
 
 Relevant observations from those references:
 
 - DPF's reference Windows builds use Linux runners with MinGW/Wine, not native
-  Windows/MSVC runners.
+  Windows/MSVC runners; the action also sets the compiler-ar/randlib and VST3
+  architecture values that the old generic path omitted.
 - DPF's reference macOS builds use explicit architecture and deployment target
-  settings rather than relying on runner defaults.
+  settings and package the DPF bundle output on the macOS runner.
 - PawPaw is still useful if future plugin dependencies need cross-built support
   beyond the current DPF-only dependency set.
 
@@ -80,6 +81,6 @@ Relevant observations from those references:
 6. If Windows CI remains slow, add a package-only CMake target or disable core
    test executable targets for cross-package builds so `cmake --build` does not
    compile unused `.exe` tests.
-7. If macOS fails on GitHub Actions, compare against
-   `dpf-makefile-action`'s macOS setup: Homebrew tool installation/removal,
-   deployment target flags, and DPF bundle packaging expectations.
+7. If macOS or Windows still fails on GitHub Actions, compare the failing step
+   with the pinned DPF action release before changing downspout’s portable
+   plugin code.

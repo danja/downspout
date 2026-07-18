@@ -31,26 +31,22 @@ jobs:
           - name: macOS Universal VST3 Release
             runner: macos-15
             platform: macos-universal
+            dpf_target: macos-10.15
             experimental: true
-            cmake_osx_architectures: "x86_64;arm64"
-            cmake_osx_deployment_target: "10.15"
-            run_tests: "1"
-            strip: "1"
+            build_driver: dpf-action
           - name: Windows x86_64 VST3 Release
             runner: ubuntu-22.04
             platform: windows-x86_64
+            dpf_target: win64
             experimental: true
-            cmake_toolchain_file: cmake/toolchains/mingw-x86_64.cmake
-            run_tests: "0"
-            strip: "0"
-            build_jobs: "2"
+            build_driver: dpf-action
 
     steps:
       - name: Check out source
         uses: actions/checkout@v4
 
       - name: Install Linux build dependencies
-        if: runner.os == 'Linux'
+        if: matrix.build_driver != 'dpf-action'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -64,15 +60,6 @@ jobs:
             libxext-dev \
             libxrandr-dev \
             libxrender-dev
-
-      - name: Install Windows cross build dependencies
-        if: matrix.platform == 'windows-x86_64'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            binutils-mingw-w64-x86-64 \
-            g++-mingw-w64-x86-64 \
-            mingw-w64
 
       - name: Show toolchain versions
         shell: bash
@@ -91,20 +78,40 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Build, test, and package
+      - name: Build, test, and package (CMake)
+        if: matrix.build_driver != 'dpf-action'
         shell: bash
         env:
           DOWNSPOUT_BUILD_DIR: build/release-${{ matrix.platform }}
           DOWNSPOUT_DIST_DIR: ${{ runner.temp }}/downspout-dist
           DOWNSPOUT_RELEASE_PLATFORM: ${{ matrix.platform }}
           DOWNSPOUT_VERSION: ${{ steps.version.outputs.version }}
-          DOWNSPOUT_CMAKE_TOOLCHAIN_FILE: ${{ matrix.cmake_toolchain_file }}
-          DOWNSPOUT_CMAKE_OSX_ARCHITECTURES: ${{ matrix.cmake_osx_architectures }}
-          DOWNSPOUT_CMAKE_OSX_DEPLOYMENT_TARGET: ${{ matrix.cmake_osx_deployment_target }}
-          DOWNSPOUT_RUN_TESTS: ${{ matrix.run_tests }}
-          DOWNSPOUT_STRIP: ${{ matrix.strip }}
-          DOWNSPOUT_BUILD_JOBS: ${{ matrix.build_jobs }}
+          DOWNSPOUT_RUN_TESTS: "1"
+          DOWNSPOUT_STRIP: "1"
         run: bash scripts/package-release.sh
+
+      - name: Build with DPF CMake action
+        if: matrix.build_driver == 'dpf-action'
+        uses: distrho/dpf-cmake-action@v1
+        with:
+          target: ${{ matrix.dpf_target }}
+          dpf_path: third_party/DPF
+          release: false
+          extraargs: >-
+            -DBUILD_TESTING=OFF
+            -DDOWNSPOUT_BUILD_SIDECAR=OFF
+            -DDOWNSPOUT_BUILD_AI_COORDINATOR=OFF
+
+      - name: Package DPF action bundles
+        if: matrix.build_driver == 'dpf-action'
+        shell: bash
+        env:
+          DOWNSPOUT_BIN_DIR: bin
+          DOWNSPOUT_DIST_DIR: ${{ runner.temp }}/downspout-dist
+          DOWNSPOUT_RELEASE_PLATFORM: ${{ matrix.platform }}
+          DOWNSPOUT_VERSION: ${{ steps.version.outputs.version }}
+          DOWNSPOUT_BUILD_SIDECAR: "OFF"
+        run: bash scripts/package-built-bundles.sh
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

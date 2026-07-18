@@ -134,6 +134,9 @@ Notes:
 
 - Public release publishing currently uses GitHub-hosted Ubuntu, macOS, and
   Windows runners.
+- Linux uses `scripts/package-release.sh`; macOS and Windows use
+  `distrho/dpf-cmake-action@v1` for platform setup and
+  `scripts/package-built-bundles.sh` for downspout’s zip/checksum format.
 - The VST3 bundles are dynamically linked against normal Linux desktop/plugin
   runtime libraries used by the DPF UI path, including X11/OpenGL-related
   libraries.

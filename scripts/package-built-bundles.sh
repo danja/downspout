@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+bin_dir="${DOWNSPOUT_BIN_DIR:-$repo_root/bin}"
+dist_dir="${DOWNSPOUT_DIST_DIR:-$repo_root/dist}"
+version="${DOWNSPOUT_VERSION:?DOWNSPOUT_VERSION must be set}"
+platform="${DOWNSPOUT_RELEASE_PLATFORM:?DOWNSPOUT_RELEASE_PLATFORM must be set}"
+sidecar_build="${DOWNSPOUT_BUILD_SIDECAR:-OFF}"
+
+required_bundles=(
+  bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 melgen.vst3 rift.vst3
+  orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 cadence.vst3 arpgen.vst3
+  counterpointer.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 floozy.vst3
+  basilico.vst3 canticle.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3
+  xoxolo.vst3 tuney_vst.vst3
+)
+if [[ "$sidecar_build" == "ON" ]]; then
+  required_bundles=(
+    bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 melgen.vst3 rift.vst3
+    orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 cadence.vst3 arpgen.vst3
+    counterpointer.vst3 sidecar.vst3 gremlin.vst3 gremlin_driver.vst3
+    ground.vst3 floozy.vst3 basilico.vst3 canticle.vst3 luma.vst3 paunchlad.vst3
+    lifeform.vst3 xoxolo.vst3 tuney_vst.vst3
+  )
+fi
+
+for bundle in "${required_bundles[@]}"; do
+  if [[ ! -d "$bin_dir/$bundle" ]]; then
+    echo "Missing expected VST3 bundle: $bin_dir/$bundle" >&2
+    exit 1
+  fi
+done
+
+package_dir="$(mktemp -d "${TMPDIR:-/tmp}/downspout-package.XXXXXX")"
+trap 'rm -rf "$package_dir"' EXIT
+
+for bundle in "${required_bundles[@]}"; do
+  cmake -E copy_directory "$bin_dir/$bundle" "$package_dir/$bundle"
+done
+cmake -E copy "$repo_root/LICENSE" "$package_dir/LICENSE"
+cmake -E copy "$repo_root/README.md" "$package_dir/README.md"
+cmake -E make_directory "$dist_dir"
+
+artifact_base="downspout-$version-$platform-vst3.zip"
+artifact_path="$dist_dir/$artifact_base"
+(
+  cd "$package_dir"
+  cmake -E tar cf "$artifact_path" --format=zip "${required_bundles[@]}" LICENSE README.md
+)
+
+if command -v sha256sum >/dev/null 2>&1; then
+  (cd "$dist_dir" && sha256sum "$artifact_base" > "$artifact_base.sha256")
+elif command -v shasum >/dev/null 2>&1; then
+  (cd "$dist_dir" && shasum -a 256 "$artifact_base" > "$artifact_base.sha256")
+fi
+
+echo "Release artifact:"
+echo "$artifact_path"
+[[ -f "$artifact_path.sha256" ]] && echo "$artifact_path.sha256"
