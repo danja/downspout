@@ -1,3 +1,6 @@
+Thanks to [u/ChapelHeel66 on Reddit](https://www.reddit.com/user/ChapelHeel66/)
+for testing Ambo and providing the detailed feedback below.
+
 Just to get things rolling, I tried Ambo on a synth sequence in StudioOne 7 on Windows.  Then tried it on some pads.  My Notes:
 
 1.  Seemed to be fully functional.  No crashes.  All the parameters seemed to be working.  
