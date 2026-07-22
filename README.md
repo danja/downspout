@@ -109,6 +109,8 @@ while deeper pickup, phrase-ending, and folk-idiom behavior remains future work.
 
 ## Reference Docs
 
+- [docs/process.md](docs/process.md): AI-assisted development workflow,
+  instructions and skills, testing, builds, publishing, and definition of done.
 - [docs/architecture.md](docs/architecture.md): build graph, layering, state,
   transport, UI, install, and release conventions.
 - [docs/install.md](docs/install.md): local build and VST3 install behavior.
