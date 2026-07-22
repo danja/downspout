@@ -511,7 +511,7 @@ private:
             fillColor(188, 210, 201, 255);
             char buf[16];
             std::snprintf(buf, sizeof(buf), "%.0f%%", level * 100.0f);
-            text(cellX + cellW - 12.0f, laneY + cellH - 24.0f, buf, nullptr);
+            text(cellX + cellW - 12.0f, laneY + 10.0f, buf, nullptr);
         }
     }
 
