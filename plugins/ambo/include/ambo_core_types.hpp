@@ -37,6 +37,7 @@ struct Parameters {
     float feedback = 0.18f;
     float mix = 0.55f;
     float output = 0.0f;
+    float bypass = 0.0f;
 };
 
 struct AudioBlock {
@@ -71,6 +72,13 @@ struct EngineState {
     float tapePhase = 0.0f;
     float spectralPhase = 0.0f;
     float shimmerPhase = 0.0f;
+
+    Parameters smoothedParameters {};
+    bool smoothingInitialized = false;
+    int activeChain = 0;
+    int pendingChain = 0;
+    float chainTransition = 1.0f;
+    bool chainFadingOut = false;
 };
 
 struct OutputStatus {

@@ -9,6 +9,8 @@ namespace {
 
 constexpr float kPi = 3.14159265358979323846f;
 constexpr double kMaxDelaySeconds = 8.0;
+constexpr double kParameterSmoothingSeconds = 0.012;
+constexpr double kChainFadeSeconds = 0.006;
 
 [[nodiscard]] float clampf(float value, float minValue, float maxValue)
 {
@@ -27,6 +29,11 @@ constexpr double kMaxDelaySeconds = 8.0;
 [[nodiscard]] float dbToGain(float db)
 {
     return std::pow(10.0f, db / 20.0f);
+}
+
+void smoothTowards(float& current, float target, float coefficient)
+{
+    current += (target - current) * coefficient;
 }
 
 [[nodiscard]] float readChannel(const std::vector<float>& buffer,
@@ -394,12 +401,18 @@ Parameters clampParameters(const Parameters& raw)
     parameters.feedback = clampf(parameters.feedback, 0.0f, 0.96f);
     parameters.mix = clampf(parameters.mix, 0.0f, 1.0f);
     parameters.output = clampf(parameters.output, -24.0f, 12.0f);
+    parameters.bypass = clampf(parameters.bypass, 0.0f, 1.0f);
     return parameters;
 }
 
 void activate(EngineState& state, double sampleRate)
 {
     ensureBuffers(state, sampleRate);
+    state.smoothingInitialized = false;
+    state.activeChain = 0;
+    state.pendingChain = 0;
+    state.chainTransition = 1.0f;
+    state.chainFadingOut = false;
 }
 
 OutputStatus processBlock(EngineState& state,
@@ -415,16 +428,53 @@ OutputStatus processBlock(EngineState& state,
     if (sampleRate <= 0.0)
         sampleRate = state.sampleRate > 0.0 ? state.sampleRate : 48000.0;
 
-    const Parameters parameters = clampParameters(rawParameters);
-    const std::array<ModuleId, kModuleCount> modules = chainModules(chainIndex(parameters.chain));
+    const Parameters targetParameters = clampParameters(rawParameters);
+    if (!state.smoothingInitialized) {
+        state.smoothedParameters = targetParameters;
+        state.activeChain = chainIndex(targetParameters.chain);
+        state.pendingChain = state.activeChain;
+        state.smoothingInitialized = true;
+    }
+
+    const int targetChain = chainIndex(targetParameters.chain);
+    if (targetChain != state.activeChain) {
+        state.pendingChain = targetChain;
+        state.chainFadingOut = true;
+    }
+
     const std::uint32_t channelCount = std::min<std::uint32_t>(audio.channelCount, kMaxChannels);
-    const float wetMix = parameters.mix;
-    const float dryMix = 1.0f - wetMix;
-    const float outputGain = dbToGain(parameters.output);
-    const float feedbackAmount = parameters.feedback;
     const float phaseStep = static_cast<float>((2.0 * kPi) / std::max(1.0, sampleRate));
+    const float smoothingCoefficient = 1.0f - std::exp(-1.0f / static_cast<float>(sampleRate * kParameterSmoothingSeconds));
+    const float chainFadeStep = 1.0f / std::max(1.0f, static_cast<float>(sampleRate * kChainFadeSeconds));
 
     for (std::uint32_t frame = 0; frame < nframes; ++frame) {
+        Parameters& parameters = state.smoothedParameters;
+        smoothTowards(parameters.time, targetParameters.time, smoothingCoefficient);
+        smoothTowards(parameters.spectral, targetParameters.spectral, smoothingCoefficient);
+        smoothTowards(parameters.tape, targetParameters.tape, smoothingCoefficient);
+        smoothTowards(parameters.shimmer, targetParameters.shimmer, smoothingCoefficient);
+        smoothTowards(parameters.delay, targetParameters.delay, smoothingCoefficient);
+        smoothTowards(parameters.drive, targetParameters.drive, smoothingCoefficient);
+        smoothTowards(parameters.feedback, targetParameters.feedback, smoothingCoefficient);
+        smoothTowards(parameters.mix, targetParameters.mix, smoothingCoefficient);
+        smoothTowards(parameters.output, targetParameters.output, smoothingCoefficient);
+        smoothTowards(parameters.bypass, targetParameters.bypass, smoothingCoefficient);
+
+        if (state.chainFadingOut) {
+            state.chainTransition = std::max(0.0f, state.chainTransition - chainFadeStep);
+            if (state.chainTransition <= 0.0f) {
+                state.activeChain = state.pendingChain;
+                state.chainFadingOut = false;
+            }
+        } else if (state.chainTransition < 1.0f) {
+            state.chainTransition = std::min(1.0f, state.chainTransition + chainFadeStep);
+        }
+
+        const std::array<ModuleId, kModuleCount> modules = chainModules(state.activeChain);
+        const float wetMix = parameters.mix;
+        const float dryMix = 1.0f - wetMix;
+        const float outputGain = dbToGain(parameters.output);
+        const float feedbackAmount = parameters.feedback;
         std::array<float, kMaxChannels> dry {};
         for (std::uint32_t channel = 0; channel < kMaxChannels; ++channel) {
             const float* in = channel < channelCount ? audio.inputs[channel] : nullptr;
@@ -434,9 +484,13 @@ OutputStatus processBlock(EngineState& state,
         writeChannel(state.timeBuffer, state.bufferFrames, state.writeHead, 0, dry[0]);
         writeChannel(state.timeBuffer, state.bufferFrames, state.writeHead, 1, dry[1]);
 
+        const std::array<float, kMaxChannels> feedbackReturn {
+            state.feedback[1] * feedbackAmount * 0.72f + state.feedback[0] * feedbackAmount * 0.28f,
+            state.feedback[0] * feedbackAmount * 0.72f + state.feedback[1] * feedbackAmount * 0.28f,
+        };
         std::array<float, kMaxChannels> wet {
-            dry[0] + state.feedback[1] * feedbackAmount * 0.72f + state.feedback[0] * feedbackAmount * 0.28f,
-            dry[1] + state.feedback[0] * feedbackAmount * 0.72f + state.feedback[1] * feedbackAmount * 0.28f,
+            dry[0] + feedbackReturn[0],
+            dry[1] + feedbackReturn[1],
         };
 
         for (ModuleId module : modules)
@@ -451,12 +505,15 @@ OutputStatus processBlock(EngineState& state,
             float* out = audio.outputs[channel];
             if (out == nullptr)
                 continue;
-            const float mixed = (dry[channel] * dryMix + wet[channel] * wetMix) * outputGain;
+            const float effected = (dry[channel] * dryMix + wet[channel] * wetMix) * outputGain;
+            const float transitionMix = parameters.bypass
+                + (1.0f - parameters.bypass) * (1.0f - state.chainTransition);
+            const float mixed = effected + (dry[channel] - effected) * transitionMix;
             out[frame] = clampf(mixed, -1.5f, 1.5f);
         }
 
-        status.wetEnergy += std::fabs(wet[0]) + std::fabs(wet[1]);
-        status.feedbackEnergy += std::fabs(state.feedback[0]) + std::fabs(state.feedback[1]);
+        status.wetEnergy += (std::fabs(wet[0]) + std::fabs(wet[1])) * wetMix * (1.0f - parameters.bypass);
+        status.feedbackEnergy += std::fabs(feedbackReturn[0]) + std::fabs(feedbackReturn[1]);
 
         state.writeHead = (state.writeHead + 1u) % state.bufferFrames;
         state.delayWriteHead = (state.delayWriteHead + 1u) % state.bufferFrames;

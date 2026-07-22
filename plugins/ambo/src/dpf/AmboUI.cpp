@@ -16,6 +16,7 @@ namespace {
 using CoreParameters = downspout::ambo::Parameters;
 
 using downspout::ambo::kParamChain;
+using downspout::ambo::kParamBypass;
 using downspout::ambo::kParamDelay;
 using downspout::ambo::kParamDrive;
 using downspout::ambo::kParamFeedback;
@@ -38,6 +39,12 @@ struct Rect {
     [[nodiscard]] bool contains(float px, float py) const noexcept
     {
         return px >= x && px <= (x + w) && py >= y && py <= (y + h);
+    }
+
+    [[nodiscard]] bool containsExpanded(float px, float py, float amount) const noexcept
+    {
+        return px >= (x - amount) && px <= (x + w + amount)
+            && py >= (y - amount) && py <= (y + h + amount);
     }
 };
 
@@ -94,17 +101,6 @@ constexpr std::array<uint32_t, 3> kUtilityParamOrder = {{
     return nullptr;
 }
 
-[[nodiscard]] std::array<uint32_t, 9> sliderOrderForChain(int chain)
-{
-    chain = clampi(chain, 0, static_cast<int>(downspout::ambo::kChainCount) - 1);
-    std::array<uint32_t, 9> order {};
-    for (std::size_t i = 0; i < kChainParamOrder[static_cast<std::size_t>(chain)].size(); ++i)
-        order[i] = kChainParamOrder[static_cast<std::size_t>(chain)][i];
-    for (std::size_t i = 0; i < kUtilityParamOrder.size(); ++i)
-        order[kChainParamOrder[0].size() + i] = kUtilityParamOrder[i];
-    return order;
-}
-
 [[nodiscard]] float parameterValue(const CoreParameters& parameters, uint32_t index)
 {
     switch (index) {
@@ -118,6 +114,7 @@ constexpr std::array<uint32_t, 3> kUtilityParamOrder = {{
     case kParamFeedback: return parameters.feedback;
     case kParamMix: return parameters.mix;
     case kParamOutput: return parameters.output;
+    case kParamBypass: return parameters.bypass;
     default: return 0.0f;
     }
 }
@@ -135,8 +132,14 @@ void setCoreParameterValue(CoreParameters& parameters, uint32_t index, float val
     case kParamFeedback: parameters.feedback = value; break;
     case kParamMix: parameters.mix = value; break;
     case kParamOutput: parameters.output = value; break;
+    case kParamBypass: parameters.bypass = value; break;
     default: break;
     }
+}
+
+[[nodiscard]] float defaultParameterValue(uint32_t index)
+{
+    return parameterValue(downspout::ambo::clampParameters(CoreParameters {}), index);
 }
 
 [[nodiscard]] std::string formatValue(const SliderDef& def, float value)
@@ -193,7 +196,7 @@ protected:
             return;
 
         values_[index] = value;
-        if (index < kParamStatusWet) {
+        if (index != kParamStatusWet && index != kParamStatusFeedback) {
             CoreParameters parameters = currentParameters();
             setCoreParameterValue(parameters, index, value);
             parameters = downspout::ambo::clampParameters(parameters);
@@ -208,7 +211,7 @@ protected:
         const float height = static_cast<float>(getHeight());
         const float pad = 22.0f;
         const float headerH = 94.0f;
-        const float chainH = 166.0f;
+        const float chainH = 220.0f;
         const float contentY = pad + headerH + chainH + 34.0f;
         const float contentH = height - contentY - pad;
         const float leftW = width * 0.61f;
@@ -232,11 +235,17 @@ protected:
 
         if (!ev.press) {
             draggingSlider_ = -1;
+            draggingModule_ = -1;
             draggingField_ = false;
             return false;
         }
 
         if (fieldRect_.contains(x, y)) {
+            if ((ev.mod & kModifierControl) != 0) {
+                commitParameter(kParamMix, defaultParameterValue(kParamMix));
+                commitParameter(kParamFeedback, defaultParameterValue(kParamFeedback));
+                return true;
+            }
             draggingField_ = true;
             updateFieldFromPosition(x, y);
             return true;
@@ -249,8 +258,28 @@ protected:
             }
         }
 
+
+        for (std::size_t i = 0; i < moduleRects_.size(); ++i) {
+            if (moduleRects_[i].contains(x, y)) {
+                if ((ev.mod & kModifierControl) != 0) {
+                    commitParameter(moduleParams_[i], defaultParameterValue(moduleParams_[i]));
+                    return true;
+                }
+                draggingModule_ = static_cast<int>(i);
+                updateModuleFromPosition(draggingModule_, y);
+                return true;
+            }
+        }
+
         for (std::size_t i = 0; i < sliderRects_.size(); ++i) {
-            if (sliderRects_[i].contains(x, y)) {
+            if (sliderRects_[i].containsExpanded(x, y, 8.0f)) {
+                const SliderDef* slider = sliderForIndex(kUtilityParamOrder[i]);
+                if (slider == nullptr)
+                    return false;
+                if ((ev.mod & kModifierControl) != 0) {
+                    commitParameter(slider->index, defaultParameterValue(slider->index));
+                    return true;
+                }
                 draggingSlider_ = static_cast<int>(i);
                 updateSliderFromPosition(draggingSlider_, x);
                 return true;
@@ -267,6 +296,12 @@ protected:
             return true;
         }
 
+
+        if (draggingModule_ >= 0) {
+            updateModuleFromPosition(draggingModule_, static_cast<float>(ev.pos.getY()));
+            return true;
+        }
+
         if (draggingSlider_ < 0)
             return false;
 
@@ -280,12 +315,8 @@ protected:
         const float y = static_cast<float>(ev.pos.getY());
 
         for (std::size_t i = 0; i < sliderRects_.size(); ++i) {
-            if (sliderRects_[i].contains(x, y)) {
-                const int activeChain = clampi(static_cast<int>(std::lround(values_[kParamChain])),
-                                               0,
-                                               static_cast<int>(downspout::ambo::kChainCount) - 1);
-                const std::array<uint32_t, 9> order = sliderOrderForChain(activeChain);
-                const SliderDef* sliderPtr = sliderForIndex(order[i]);
+            if (sliderRects_[i].containsExpanded(x, y, 8.0f)) {
+                const SliderDef* sliderPtr = sliderForIndex(kUtilityParamOrder[i]);
                 if (sliderPtr == nullptr)
                     return false;
                 const SliderDef& slider = *sliderPtr;
@@ -302,10 +333,13 @@ protected:
 
 private:
     std::array<float, kParameterCount> values_ {};
-    std::array<Rect, kSliders.size()> sliderRects_ {};
+    std::array<Rect, kUtilityParamOrder.size()> sliderRects_ {};
     std::array<Rect, downspout::ambo::kChainCount> chainRects_ {};
+    std::array<Rect, downspout::ambo::kModuleCount> moduleRects_ {};
+    std::array<uint32_t, downspout::ambo::kModuleCount> moduleParams_ {};
     Rect fieldRect_ {};
     int draggingSlider_ = -1;
+    int draggingModule_ = -1;
     bool draggingField_ = false;
 
     [[nodiscard]] CoreParameters currentParameters() const
@@ -321,6 +355,7 @@ private:
         parameters.feedback = values_[kParamFeedback];
         parameters.mix = values_[kParamMix];
         parameters.output = values_[kParamOutput];
+        parameters.bypass = values_[kParamBypass];
         return downspout::ambo::clampParameters(parameters);
     }
 
@@ -336,6 +371,7 @@ private:
         values_[kParamFeedback] = parameters.feedback;
         values_[kParamMix] = parameters.mix;
         values_[kParamOutput] = parameters.output;
+        values_[kParamBypass] = parameters.bypass;
     }
 
     void drawBackground(float width, float height)
@@ -376,37 +412,6 @@ private:
         fillColor(160, 174, 184, 255);
         text(x + 22.0f, y + 53.0f, "Ambient module chain with time smear, spectral haze, shimmer, delay, tape, drive, and feedback", nullptr);
 
-        drawStatusCard(x + w - 282.0f, y + 14.0f, 124.0f, h - 28.0f, "Wet", values_[kParamStatusWet], 104, 190, 178);
-        drawStatusCard(x + w - 144.0f, y + 14.0f, 124.0f, h - 28.0f, "Return", values_[kParamStatusFeedback], 224, 170, 91);
-    }
-
-    void drawStatusCard(float x, float y, float w, float h, const char* label, float value, int r, int g, int b)
-    {
-        beginPath();
-        roundedRect(x, y, w, h, 14.0f);
-        fillColor(18, 23, 29, 255);
-        fill();
-        strokeColor(r, g, b, 145);
-        strokeWidth(1.0f);
-        stroke();
-        closePath();
-
-        fontSize(12.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(148, 162, 174, 255);
-        text(x + 12.0f, y + 10.0f, label, nullptr);
-
-        beginPath();
-        roundedRect(x + 12.0f, y + h - 21.0f, w - 24.0f, 8.0f, 4.0f);
-        fillColor(33, 42, 50, 255);
-        fill();
-        closePath();
-
-        beginPath();
-        roundedRect(x + 12.0f, y + h - 21.0f, (w - 24.0f) * clampf(value, 0.0f, 1.0f), 8.0f, 4.0f);
-        fillColor(r, g, b, 230);
-        fill();
-        closePath();
     }
 
     void drawChainPanel(float x, float y, float w, float h)
@@ -461,6 +466,8 @@ private:
         for (std::size_t module = 0; module < order.size(); ++module) {
             const float cellX = laneX + static_cast<float>(module) * (cellW + gap);
             const float level = parameterValue(currentParameters(), order[module]);
+            moduleRects_[module] = {cellX, laneY, cellW, cellH};
+            moduleParams_[module] = order[module];
 
             beginPath();
             roundedRect(cellX, laneY, cellW, cellH, 14.0f);
@@ -471,13 +478,21 @@ private:
             stroke();
             closePath();
 
+            const float controlTop = laneY + 51.0f;
+            const float controlBottom = laneY + cellH - 15.0f;
+            const float handleY = controlBottom - (controlBottom - controlTop) * level;
             beginPath();
-            roundedRect(cellX + 8.0f,
-                        laneY + cellH - 12.0f - (cellH - 50.0f) * level,
-                        cellW - 16.0f,
-                        (cellH - 50.0f) * level,
-                        9.0f);
-            fillColor(97, 181, 166, 82 + static_cast<int>(level * 120.0f));
+            roundedRect(cellX + cellW * 0.5f - 3.0f, controlTop, 6.0f, controlBottom - controlTop, 3.0f);
+            fillColor(42, 57, 63, 255);
+            fill();
+            closePath();
+
+            beginPath();
+            roundedRect(cellX + 14.0f, handleY - 3.0f, cellW - 28.0f, 6.0f, 3.0f);
+            fillColor(draggingModule_ == static_cast<int>(module) ? 233 : 181,
+                      draggingModule_ == static_cast<int>(module) ? 217 : 205,
+                      174,
+                      255);
             fill();
             closePath();
 
@@ -511,25 +526,17 @@ private:
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fillColor(230, 235, 239, 255);
-        text(x + 18.0f, y + 16.0f, "Modules", nullptr);
+        text(x + 18.0f, y + 16.0f, "Feedback / Mix / Output", nullptr);
 
-        const int activeChain = clampi(static_cast<int>(std::lround(values_[kParamChain])),
-                                       0,
-                                       static_cast<int>(downspout::ambo::kChainCount) - 1);
-        const std::array<uint32_t, 9> order = sliderOrderForChain(activeChain);
-        const float colGap = 30.0f;
-        const float colW = (w - 36.0f - colGap) * 0.5f;
-        const float rowH = 54.0f;
-        const float startY = y + 54.0f;
-        for (std::size_t i = 0; i < order.size(); ++i) {
-            const SliderDef* slider = sliderForIndex(order[i]);
+        const float rowH = 92.0f;
+        const float startY = y + 73.0f;
+        for (std::size_t i = 0; i < kUtilityParamOrder.size(); ++i) {
+            const SliderDef* slider = sliderForIndex(kUtilityParamOrder[i]);
             if (slider == nullptr)
                 continue;
-            const int col = static_cast<int>(i % 2u);
-            const int row = static_cast<int>(i / 2u);
-            const float sx = x + 18.0f + static_cast<float>(col) * (colW + colGap);
-            const float sy = startY + static_cast<float>(row) * rowH;
-            sliderRects_[i] = {sx, sy + 28.0f, colW, 14.0f};
+            const float sx = x + 18.0f;
+            const float sy = startY + static_cast<float>(i) * rowH;
+            sliderRects_[i] = {sx, sy + 28.0f, w - 36.0f, 14.0f};
             drawSlider(*slider, sliderRects_[i], draggingSlider_ == static_cast<int>(i));
         }
     }
@@ -538,6 +545,9 @@ private:
     {
         const float value = values_[slider.index];
         const float t = normalizedFromValue(slider, value);
+        constexpr float knobRadius = 7.0f;
+        const float usableW = std::max(1.0f, rect.w - knobRadius * 2.0f);
+        const float handleX = rect.x + knobRadius + usableW * t;
 
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
@@ -562,8 +572,9 @@ private:
 
         if (slider.bipolar) {
             const float zero = normalizedFromValue(slider, 0.0f);
-            const float fillX = rect.x + rect.w * std::min(zero, t);
-            const float fillW = rect.w * std::fabs(t - zero);
+            const float zeroX = rect.x + knobRadius + usableW * zero;
+            const float fillX = std::min(zeroX, handleX);
+            const float fillW = std::fabs(handleX - zeroX);
             beginPath();
             roundedRect(fillX, rect.y, std::max(6.0f, fillW), rect.h, 7.0f);
             fillColor(active ? 221 : 186, active ? 176 : 141, 95, 255);
@@ -571,14 +582,14 @@ private:
             closePath();
         } else {
             beginPath();
-            roundedRect(rect.x, rect.y, std::max(7.0f, rect.w * t), rect.h, 7.0f);
+            roundedRect(rect.x, rect.y, std::max(7.0f, handleX - rect.x), rect.h, 7.0f);
             fillColor(active ? 114 : 86, active ? 203 : 159, active ? 182 : 155, 255);
             fill();
             closePath();
         }
 
         beginPath();
-        circle(rect.x + rect.w * t, rect.y + rect.h * 0.5f, 7.0f);
+        circle(handleX, rect.y + rect.h * 0.5f, knobRadius);
         fillColor(241, 244, 238, 255);
         fill();
         closePath();
@@ -595,15 +606,16 @@ private:
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fillColor(230, 235, 239, 255);
-        text(x + 18.0f, y + 16.0f, "Field", nullptr);
+        text(x + 18.0f, y + 16.0f, "Mix / Feedback XY", nullptr);
 
-        fieldRect_ = {x + 24.0f, y + 56.0f, w - 48.0f, h - 154.0f};
-        const float wet = clampf(values_[kParamStatusWet], 0.0f, 1.0f);
-        const float feedback = clampf(values_[kParamStatusFeedback], 0.0f, 1.0f);
+        fieldRect_ = {x + 24.0f, y + 66.0f, w - 48.0f, h - 120.0f};
         const float mix = clampf(values_[kParamMix], 0.0f, 1.0f);
         const float feedbackControl = clampf(values_[kParamFeedback] / 0.96f, 0.0f, 1.0f);
-        const float px = fieldRect_.x + fieldRect_.w * mix;
-        const float py = fieldRect_.y + fieldRect_.h * (1.0f - feedbackControl);
+        constexpr float handleInset = 10.0f;
+        const float usableW = std::max(1.0f, fieldRect_.w - handleInset * 2.0f);
+        const float usableH = std::max(1.0f, fieldRect_.h - handleInset * 2.0f);
+        const float px = fieldRect_.x + handleInset + usableW * mix;
+        const float py = fieldRect_.y + handleInset + usableH * (1.0f - feedbackControl);
 
         beginPath();
         roundedRect(fieldRect_.x, fieldRect_.y, fieldRect_.w, fieldRect_.h, 14.0f);
@@ -636,18 +648,6 @@ private:
         }
 
         beginPath();
-        circle(fieldRect_.x + fieldRect_.w * 0.35f, fieldRect_.y + fieldRect_.h * 0.52f, fieldRect_.w * (0.16f + wet * 0.18f));
-        fillColor(87, 176, 164, 36 + static_cast<int>(wet * 90.0f));
-        fill();
-        closePath();
-
-        beginPath();
-        circle(fieldRect_.x + fieldRect_.w * 0.68f, fieldRect_.y + fieldRect_.h * 0.43f, fieldRect_.w * (0.13f + feedback * 0.17f));
-        fillColor(222, 163, 84, 34 + static_cast<int>(feedback * 100.0f));
-        fill();
-        closePath();
-
-        beginPath();
         moveTo(px, fieldRect_.y + 10.0f);
         lineTo(px, fieldRect_.y + fieldRect_.h - 10.0f);
         moveTo(fieldRect_.x + 10.0f, py);
@@ -669,58 +669,57 @@ private:
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fillColor(138, 153, 161, 255);
-        text(fieldRect_.x, fieldRect_.y + fieldRect_.h + 12.0f, "Mix", nullptr);
+        text(fieldRect_.x, fieldRect_.y + fieldRect_.h + 12.0f, "X: Mix", nullptr);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        text(fieldRect_.x + fieldRect_.w, fieldRect_.y + fieldRect_.h + 12.0f, "Feedback", nullptr);
-
-        drawMiniMeter(x + 24.0f, y + h - 84.0f, w - 48.0f, "wet", wet, 104, 190, 178);
-        drawMiniMeter(x + 24.0f, y + h - 50.0f, w - 48.0f, "return", feedback, 224, 170, 91);
-    }
-
-    void drawMiniMeter(float x, float y, float w, const char* label, float value, int r, int g, int b)
-    {
-        fontSize(11.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(145, 158, 168, 255);
-        text(x, y - 17.0f, label, nullptr);
-
-        beginPath();
-        roundedRect(x, y, w, 10.0f, 5.0f);
-        fillColor(35, 44, 52, 255);
-        fill();
-        closePath();
-
-        beginPath();
-        roundedRect(x, y, w * clampf(value, 0.0f, 1.0f), 10.0f, 5.0f);
-        fillColor(r, g, b, 225);
-        fill();
-        closePath();
+        text(fieldRect_.x + fieldRect_.w, fieldRect_.y + fieldRect_.h + 12.0f, "Y: Feedback", nullptr);
     }
 
     void updateSliderFromPosition(int sliderIndex, float x)
     {
-        if (sliderIndex < 0 || sliderIndex >= static_cast<int>(kSliders.size()))
+        if (sliderIndex < 0 || sliderIndex >= static_cast<int>(sliderRects_.size()))
             return;
 
-        const int activeChain = clampi(static_cast<int>(std::lround(values_[kParamChain])),
-                                       0,
-                                       static_cast<int>(downspout::ambo::kChainCount) - 1);
-        const std::array<uint32_t, 9> order = sliderOrderForChain(activeChain);
-        const SliderDef* sliderPtr = sliderForIndex(order[static_cast<std::size_t>(sliderIndex)]);
+        const SliderDef* sliderPtr = sliderForIndex(kUtilityParamOrder[static_cast<std::size_t>(sliderIndex)]);
         if (sliderPtr == nullptr)
             return;
 
         const SliderDef& slider = *sliderPtr;
         const Rect& rect = sliderRects_[static_cast<std::size_t>(sliderIndex)];
-        const float normalized = rect.w > 0.0f ? (x - rect.x) / rect.w : 0.0f;
+        constexpr float knobRadius = 7.0f;
+        const float usableW = rect.w - knobRadius * 2.0f;
+        const float normalized = usableW > 0.0f ? (x - rect.x - knobRadius) / usableW : 0.0f;
         const float value = valueFromNormalized(slider, normalized);
         commitParameter(slider.index, value);
     }
 
+    void updateModuleFromPosition(int moduleIndex, float y)
+    {
+        if (moduleIndex < 0 || moduleIndex >= static_cast<int>(moduleRects_.size()))
+            return;
+
+        const Rect& rect = moduleRects_[static_cast<std::size_t>(moduleIndex)];
+        const float controlTop = rect.y + 51.0f;
+        const float controlBottom = rect.y + rect.h - 15.0f;
+        const float usableH = controlBottom - controlTop;
+        const float normalized = usableH > 0.0f ? (controlBottom - y) / usableH : 0.0f;
+        const uint32_t parameter = moduleParams_[static_cast<std::size_t>(moduleIndex)];
+        const SliderDef* slider = sliderForIndex(parameter);
+        if (slider != nullptr)
+            commitParameter(parameter, valueFromNormalized(*slider, normalized));
+    }
+
     void updateFieldFromPosition(float x, float y)
     {
-        const float mix = fieldRect_.w > 0.0f ? clampf((x - fieldRect_.x) / fieldRect_.w, 0.0f, 1.0f) : values_[kParamMix];
-        const float feedback = fieldRect_.h > 0.0f ? clampf(1.0f - ((y - fieldRect_.y) / fieldRect_.h), 0.0f, 0.96f) : values_[kParamFeedback];
+        constexpr float handleInset = 10.0f;
+        const float usableW = fieldRect_.w - handleInset * 2.0f;
+        const float usableH = fieldRect_.h - handleInset * 2.0f;
+        const float mix = usableW > 0.0f
+            ? clampf((x - fieldRect_.x - handleInset) / usableW, 0.0f, 1.0f)
+            : values_[kParamMix];
+        const float feedbackNormalized = usableH > 0.0f
+            ? clampf(1.0f - ((y - fieldRect_.y - handleInset) / usableH), 0.0f, 1.0f)
+            : values_[kParamFeedback] / 0.96f;
+        const float feedback = feedbackNormalized * 0.96f;
 
         commitParameter(kParamMix, mix);
         commitParameter(kParamFeedback, feedback);

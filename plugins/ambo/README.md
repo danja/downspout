@@ -38,9 +38,17 @@ high settings can become dense quickly.
 - `Mix`: dry/wet balance.
 - `Output`: final gain trim in dB.
 
-The UI shows the selected chain as one active block lane. The module sliders are
-ordered to match that lane, followed by Feedback, Mix, and Output. The Field pane
-is an XY control: left-to-right adjusts Mix, and bottom-to-top adjusts Feedback.
+The selected chain is an active block lane. Each block is its module's vertical
+control, so the adjustable controls and signal order are the same left-to-right
+sequence. Feedback, Mix, and Output remain conventional sliders. The explicitly
+labelled Mix/Feedback XY pane is an alternate performance control: left-to-right
+adjusts Mix, and bottom-to-top adjusts Feedback. Control-click any module block
+or slider to restore its default; Control-click the XY pane restores both Mix and
+Feedback.
+
+Continuous controls are smoothed in the processor. Chain changes use a short
+dry-signal transition while the module topology switches, and host bypass uses
+DPF's designated bypass parameter with the same click-safe smoothing.
 
 ## Build Notes
 

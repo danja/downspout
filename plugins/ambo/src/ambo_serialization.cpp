@@ -49,7 +49,8 @@ std::string serializeParameters(const Parameters& rawParameters)
            "drive=" + std::to_string(parameters.drive) + "\n"
            "feedback=" + std::to_string(parameters.feedback) + "\n"
            "mix=" + std::to_string(parameters.mix) + "\n"
-           "output=" + std::to_string(parameters.output) + "\n";
+           "output=" + std::to_string(parameters.output) + "\n"
+           "bypass=" + std::to_string(parameters.bypass) + "\n";
 }
 
 std::optional<Parameters> deserializeParameters(const std::string& text)
@@ -90,6 +91,8 @@ std::optional<Parameters> deserializeParameters(const std::string& text)
             parameters.mix = floatValue;
         } else if (key == "output" && parseFloat(value, floatValue)) {
             parameters.output = floatValue;
+        } else if (key == "bypass" && parseFloat(value, floatValue)) {
+            parameters.bypass = floatValue;
         } else {
             return std::nullopt;
         }

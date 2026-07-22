@@ -24,10 +24,18 @@ portable-core/DPF-shell pattern used by `rift`, while taking visual cues from
 
 ## UI Mapping
 
-Only the selected route is shown as a block lane, so module controls are not
-presented as duplicate controls across inactive chains. Module sliders are
-reordered to match the active lane. The Field pane is an XY pad for performance
-control: X maps to Mix and Y maps to Feedback.
+Only the selected route is shown as a block lane. Its six blocks are vertical
+module controls, making the editable controls and processing order identical
+from left to right. Feedback, Mix, and Output use conventional sliders. The
+clearly labelled XY pad is an alternate performance control: X maps to Mix and Y
+maps to Feedback. Decorative and duplicate wet/return meters are intentionally
+omitted; the host-visible status outputs instead report audible wet contribution
+and the signal actually injected into the feedback return.
+
+Continuous parameters use a short one-pole smoothing ramp. A chain change fades
+the effected result to unity dry over 6 ms, switches the module order, then fades
+the effected result back in over 6 ms. The DPF-designated bypass parameter uses a
+smoothed unity-dry transition while DSP tails continue internally.
 
 ## State Contract
 

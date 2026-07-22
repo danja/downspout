@@ -17,6 +17,7 @@ using CoreOutputStatus = downspout::ambo::OutputStatus;
 using CoreParameters = downspout::ambo::Parameters;
 
 using downspout::ambo::kParamChain;
+using downspout::ambo::kParamBypass;
 using downspout::ambo::kParamDelay;
 using downspout::ambo::kParamDrive;
 using downspout::ambo::kParamFeedback;
@@ -168,6 +169,9 @@ protected:
             parameter.name = "Feedback Activity";
             parameter.symbol = "feedback_activity";
             break;
+        case kParamBypass:
+            parameter.initDesignation(kParameterDesignationBypass);
+            break;
         }
     }
 
@@ -196,6 +200,7 @@ protected:
         case kParamOutput: return parameters_.output;
         case kParamStatusWet: return status_.wetEnergy;
         case kParamStatusFeedback: return status_.feedbackEnergy;
+        case kParamBypass: return parameters_.bypass;
         default: return 0.0f;
         }
     }
@@ -213,6 +218,7 @@ protected:
         case kParamFeedback: parameters_.feedback = value; break;
         case kParamMix: parameters_.mix = value; break;
         case kParamOutput: parameters_.output = value; break;
+        case kParamBypass: parameters_.bypass = value; break;
         default: break;
         }
 

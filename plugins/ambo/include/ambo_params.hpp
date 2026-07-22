@@ -17,6 +17,7 @@ enum ParameterIndex : std::uint32_t {
     kParamOutput,
     kParamStatusWet,
     kParamStatusFeedback,
+    kParamBypass,
     kParameterCount
 };
 

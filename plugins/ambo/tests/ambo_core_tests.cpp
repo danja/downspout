@@ -50,6 +50,7 @@ void testSerializationRoundTrip()
     parameters.feedback = 0.44f;
     parameters.mix = 0.67f;
     parameters.output = -3.5f;
+    parameters.bypass = 1.0f;
 
     const std::string text = serializeParameters(parameters);
     const auto decoded = deserializeParameters(text);
@@ -64,6 +65,7 @@ void testSerializationRoundTrip()
     assert(std::fabs(decoded->feedback - parameters.feedback) < 1e-6f);
     assert(std::fabs(decoded->mix - parameters.mix) < 1e-6f);
     assert(std::fabs(decoded->output - parameters.output) < 1e-6f);
+    assert(std::fabs(decoded->bypass - parameters.bypass) < 1e-6f);
     assert(!deserializeParameters("time=0.5\nunknown=1\n").has_value());
 }
 
@@ -100,11 +102,139 @@ void testDryMixPassesInput()
 
     const OutputStatus status = processBlock(state, parameters, static_cast<std::uint32_t>(inL.size()), 48000.0, audio);
     assert(status.wetEnergy >= 0.0f);
+    assert(status.wetEnergy == 0.0f);
 
     for (std::size_t i = 0; i < inL.size(); ++i) {
         assert(std::fabs(outL[i] - inL[i]) < 1e-6f);
         assert(std::fabs(outR[i] - inR[i]) < 1e-6f);
     }
+}
+
+void testActivityStatusesHaveDistinctSemantics()
+{
+    EngineState state;
+    activate(state, 1000.0);
+
+    Parameters parameters;
+    parameters.time = 0.0f;
+    parameters.spectral = 0.0f;
+    parameters.tape = 0.0f;
+    parameters.shimmer = 0.0f;
+    parameters.delay = 0.0f;
+    parameters.drive = 0.0f;
+    parameters.feedback = 0.0f;
+    parameters.mix = 1.0f;
+
+    std::array<float, 64> input {};
+    std::array<float, 64> outputL {};
+    std::array<float, 64> outputR {};
+    input[0] = 1.0f;
+    AudioBlock audio;
+    audio.inputs[0] = input.data();
+    audio.inputs[1] = input.data();
+    audio.outputs[0] = outputL.data();
+    audio.outputs[1] = outputR.data();
+    audio.channelCount = 2;
+
+    const OutputStatus noReturn = processBlock(state, parameters, 64, 1000.0, audio);
+    assert(noReturn.wetEnergy > 0.0f);
+    assert(noReturn.feedbackEnergy == 0.0f);
+
+    parameters.feedback = 0.8f;
+    input.fill(0.25f);
+    const OutputStatus withReturn = processBlock(state, parameters, 64, 1000.0, audio);
+    assert(withReturn.feedbackEnergy > 0.0f);
+    assert(std::fabs(withReturn.wetEnergy - withReturn.feedbackEnergy) > 1e-4f);
+}
+
+void testChainChangeUsesDryTransition()
+{
+    EngineState state;
+    activate(state, 1000.0);
+
+    Parameters parameters;
+    parameters.mix = 1.0f;
+    parameters.feedback = 0.0f;
+    std::array<float, 32> input {};
+    std::array<float, 32> outputL {};
+    std::array<float, 32> outputR {};
+    input.fill(0.2f);
+    AudioBlock audio;
+    audio.inputs[0] = input.data();
+    audio.inputs[1] = input.data();
+    audio.outputs[0] = outputL.data();
+    audio.outputs[1] = outputR.data();
+    audio.channelCount = 2;
+
+    (void)processBlock(state, parameters, 32, 1000.0, audio);
+    parameters.chain = 3.0f;
+    (void)processBlock(state, parameters, 32, 1000.0, audio);
+
+    assert(state.activeChain == 3);
+    assert(state.chainTransition == 1.0f);
+    for (std::size_t i = 1; i < outputL.size(); ++i)
+        assert(std::fabs(outputL[i] - outputL[i - 1]) < 0.5f);
+}
+
+void testRapidParameterChangesAreSmoothedAndBounded()
+{
+    EngineState state;
+    activate(state, 48000.0);
+    Parameters parameters;
+    parameters.mix = 1.0f;
+
+    std::array<float, 64> input {};
+    std::array<float, 64> outputL {};
+    std::array<float, 64> outputR {};
+    input.fill(0.2f);
+    AudioBlock audio;
+    audio.inputs[0] = input.data();
+    audio.inputs[1] = input.data();
+    audio.outputs[0] = outputL.data();
+    audio.outputs[1] = outputR.data();
+    audio.channelCount = 2;
+
+    (void)processBlock(state, parameters, 64, 48000.0, audio);
+    for (int change = 0; change < 20; ++change) {
+        const float value = (change % 2) == 0 ? 1.0f : 0.0f;
+        parameters.time = value;
+        parameters.shimmer = value;
+        parameters.tape = value;
+        parameters.drive = value;
+        (void)processBlock(state, parameters, 64, 48000.0, audio);
+        for (std::size_t i = 0; i < outputL.size(); ++i) {
+            assert(std::isfinite(outputL[i]));
+            assert(std::isfinite(outputR[i]));
+            assert(std::fabs(outputL[i]) <= 1.5f);
+            assert(std::fabs(outputR[i]) <= 1.5f);
+        }
+    }
+}
+
+void testBypassSettlesToDrySignal()
+{
+    EngineState state;
+    activate(state, 1000.0);
+    Parameters parameters;
+    parameters.mix = 1.0f;
+    parameters.output = 12.0f;
+
+    std::array<float, 128> input {};
+    std::array<float, 128> outputL {};
+    std::array<float, 128> outputR {};
+    input.fill(0.23f);
+    AudioBlock audio;
+    audio.inputs[0] = input.data();
+    audio.inputs[1] = input.data();
+    audio.outputs[0] = outputL.data();
+    audio.outputs[1] = outputR.data();
+    audio.channelCount = 2;
+
+    (void)processBlock(state, parameters, 128, 1000.0, audio);
+    parameters.bypass = 1.0f;
+    (void)processBlock(state, parameters, 128, 1000.0, audio);
+    assert(std::fabs(outputL.back() - input.back()) < 1e-4f);
+    assert(std::fabs(outputR.back() - input.back()) < 1e-4f);
 }
 
 void testDelayAndFeedbackProduceTail()
@@ -203,7 +333,11 @@ int main()
     testClampParameters();
     testSerializationRoundTrip();
     testDryMixPassesInput();
+    testActivityStatusesHaveDistinctSemantics();
     testDelayAndFeedbackProduceTail();
     testAllChainsStayBounded();
+    testChainChangeUsesDryTransition();
+    testRapidParameterChangesAreSmoothedAndBounded();
+    testBypassSettlesToDrySignal();
     return 0;
 }
