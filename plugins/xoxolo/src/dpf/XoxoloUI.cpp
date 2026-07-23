@@ -1,12 +1,15 @@
 #include "DistrhoUI.hpp"
 
 #include "xoxolo_engine.hpp"
+#include "xoxolo_generator.hpp"
 #include "xoxolo_params.hpp"
 #include "xoxolo_serialization.hpp"
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <string>
 
@@ -63,6 +66,8 @@ public:
         values_[downspout::xoxolo::kParamNotePreset] =
             static_cast<float>(static_cast<int>(downspout::xoxolo::NotePresetId::downspout));
         values_[downspout::xoxolo::kParamCurrentStep] = -1.0f;
+        generationSeed_ = static_cast<std::uint32_t>(
+            std::chrono::high_resolution_clock::now().time_since_epoch().count());
 
        #ifdef DGL_NO_SHARED_RESOURCES
         createFontFromFile("sans", "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf");
@@ -109,8 +114,9 @@ protected:
 
     void uiIdle() override
     {
-        if (pulseFrames_ > 0) {
-            --pulseFrames_;
+        if (pulseFrames_ > 0 || generatorPulseFrames_ > 0) {
+            pulseFrames_ = std::max(0, pulseFrames_ - 1);
+            generatorPulseFrames_ = std::max(0, generatorPulseFrames_ - 1);
             repaint();
         }
     }
@@ -132,6 +138,7 @@ protected:
         drawGrid(gridX, gridY, gridW, gridH);
         drawControls(width - controlsW - pad, gridY, controlsW, gridH);
         drawNoteMenu();
+        drawStyleMenu();
     }
 
     bool onMouse(const MouseEvent& ev) override
@@ -142,10 +149,14 @@ protected:
         const float x = static_cast<float>(ev.pos.getX());
         const float y = static_cast<float>(ev.pos.getY());
 
-        if (!ev.press)
+        if (!ev.press) {
+            draggingGeneratorSlider_ = -1;
             return false;
+        }
 
         if (openNoteMenuLane_ >= 0 && handleNoteMenuClick(x, y))
+            return true;
+        if (styleMenuOpen_ && handleStyleMenuClick(x, y))
             return true;
 
         const int laneCount = downspout::xoxolo::activeLaneCountForPreset(pattern_.notePreset);
@@ -204,10 +215,46 @@ protected:
             repaint();
             return true;
         }
+        if (styleRect_.contains(x, y)) {
+            openNoteMenuLane_ = -1;
+            styleMenuOpen_ = !styleMenuOpen_;
+            repaint();
+            return true;
+        }
+        if (densityRect_.contains(x, y)) {
+            styleMenuOpen_ = false;
+            draggingGeneratorSlider_ = 0;
+            updateGeneratorSlider(0, x);
+            return true;
+        }
+        if (tensionRect_.contains(x, y)) {
+            styleMenuOpen_ = false;
+            draggingGeneratorSlider_ = 1;
+            updateGeneratorSlider(1, x);
+            return true;
+        }
+        if (goRect_.contains(x, y)) {
+            styleMenuOpen_ = false;
+            generationSeed_ += 0x9e3779b9u;
+            downspout::xoxolo::generatePattern(pattern_, generationSettings_, generationSeed_);
+            pushPatternState();
+            generatorPulseFrames_ = 8;
+            repaint();
+            return true;
+        }
 
         openNoteMenuLane_ = -1;
+        styleMenuOpen_ = false;
         repaint();
         return false;
+    }
+
+    bool onMotion(const MotionEvent& ev) override
+    {
+        if (draggingGeneratorSlider_ < 0)
+            return false;
+        updateGeneratorSlider(draggingGeneratorSlider_, static_cast<float>(ev.pos.getX()));
+        return true;
     }
 
     bool onScroll(const ScrollEvent& ev) override
@@ -239,6 +286,22 @@ protected:
             cycleChannel(direction);
             return true;
         }
+        if (styleRect_.contains(x, y)) {
+            cycleGenerationStyle(direction);
+            return true;
+        }
+        if (densityRect_.contains(x, y)) {
+            generationSettings_.density =
+                std::max(0.0f, std::min(1.0f, generationSettings_.density + 0.05f * static_cast<float>(direction)));
+            repaint();
+            return true;
+        }
+        if (tensionRect_.contains(x, y)) {
+            generationSettings_.tension =
+                std::max(0.0f, std::min(1.0f, generationSettings_.tension + 0.05f * static_cast<float>(direction)));
+            repaint();
+            return true;
+        }
         return false;
     }
 
@@ -253,8 +316,17 @@ private:
     Rect resolutionRect_ {};
     Rect channelRect_ {};
     Rect clearRect_ {};
+    Rect styleRect_ {};
+    Rect densityRect_ {};
+    Rect tensionRect_ {};
+    Rect goRect_ {};
+    downspout::xoxolo::GenerationSettings generationSettings_ {};
     int pulseFrames_ = 0;
+    int generatorPulseFrames_ = 0;
     int openNoteMenuLane_ = -1;
+    int draggingGeneratorSlider_ = -1;
+    bool styleMenuOpen_ = false;
+    std::uint32_t generationSeed_ = 0;
 
     void drawBackground(const float width, const float height)
     {
@@ -488,11 +560,17 @@ private:
         fill();
         closePath();
 
-        presetRect_ = {x + 14.0f, y + 42.0f, w - 28.0f, 44.0f};
-        stepsRect_ = {x + 14.0f, y + 102.0f, w - 28.0f, 44.0f};
-        resolutionRect_ = {x + 14.0f, y + 162.0f, w - 28.0f, 44.0f};
-        channelRect_ = {x + 14.0f, y + 222.0f, w - 28.0f, 44.0f};
-        clearRect_ = {x + 14.0f, y + h - 58.0f, w - 28.0f, 42.0f};
+        presetRect_ = {x + 14.0f, y + 38.0f, w - 28.0f, 40.0f};
+        stepsRect_ = {x + 14.0f, y + 88.0f, w - 28.0f, 40.0f};
+        resolutionRect_ = {x + 14.0f, y + 138.0f, w - 28.0f, 40.0f};
+        channelRect_ = {x + 14.0f, y + 188.0f, w - 28.0f, 40.0f};
+        clearRect_ = {x + 14.0f, y + 238.0f, w - 28.0f, 38.0f};
+
+        const float dividerY = y + 296.0f;
+        styleRect_ = {x + 14.0f, dividerY + 38.0f, w - 28.0f, 42.0f};
+        densityRect_ = {x + 14.0f, dividerY + 94.0f, w - 28.0f, 46.0f};
+        tensionRect_ = {x + 14.0f, dividerY + 154.0f, w - 28.0f, 46.0f};
+        goRect_ = {x + 14.0f, y + h - 58.0f, w - 28.0f, 42.0f};
 
         fontSize(14.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
@@ -509,7 +587,27 @@ private:
         char channelValue[12];
         std::snprintf(channelValue, sizeof(channelValue), "%d", pattern_.channel);
         drawSelector(channelRect_, "Channel", channelValue);
-        drawButton(clearRect_, "Clear");
+        drawButton(clearRect_, "Clear", pulseFrames_ > 0);
+
+        beginPath();
+        moveTo(x + 14.0f, dividerY);
+        lineTo(x + w - 14.0f, dividerY);
+        strokeColor(56, 65, 71, 255);
+        strokeWidth(1.0f);
+        stroke();
+        closePath();
+
+        fontSize(14.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(226, 232, 235, 255);
+        text(x + 14.0f, dividerY + 12.0f, "Generate", nullptr);
+
+        drawSelector(styleRect_,
+                     "Style",
+                     downspout::xoxolo::generationStyleName(generationSettings_.style));
+        drawGeneratorSlider(densityRect_, "Density", generationSettings_.density, draggingGeneratorSlider_ == 0);
+        drawGeneratorSlider(tensionRect_, "Tension", generationSettings_.tension, draggingGeneratorSlider_ == 1);
+        drawButton(goRect_, "Go", generatorPulseFrames_ > 0);
     }
 
     void drawSelector(const Rect& rect, const char* label, const char* value)
@@ -532,9 +630,9 @@ private:
         text(rect.x + rect.w - 10.0f, rect.y + rect.h * 0.5f, ">", nullptr);
     }
 
-    void drawButton(const Rect& rect, const char* label)
+    void drawButton(const Rect& rect, const char* label, const bool active = false)
     {
-        const int pulse = pulseFrames_ > 0 ? 18 : 0;
+        const int pulse = active ? 18 : 0;
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 8.0f);
         fillColor(111 + pulse, 73 + pulse, 67 + pulse, 255);
@@ -545,6 +643,126 @@ private:
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
         fillColor(245, 239, 236, 255);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f, label, nullptr);
+    }
+
+    void drawGeneratorSlider(const Rect& rect, const char* label, const float value, const bool active)
+    {
+        char valueText[8];
+        std::snprintf(valueText, sizeof(valueText), "%d%%", static_cast<int>(std::lround(value * 100.0f)));
+
+        fontSize(10.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(146, 158, 164, 255);
+        text(rect.x, rect.y + 2.0f, label, nullptr);
+        textAlign(ALIGN_RIGHT | ALIGN_TOP);
+        fillColor(202, 211, 216, 255);
+        text(rect.x + rect.w, rect.y + 2.0f, valueText, nullptr);
+
+        const float trackY = rect.y + 27.0f;
+        beginPath();
+        roundedRect(rect.x, trackY, rect.w, 8.0f, 4.0f);
+        fillColor(39, 47, 53, 255);
+        fill();
+        closePath();
+
+        beginPath();
+        roundedRect(rect.x, trackY, rect.w * value, 8.0f, 4.0f);
+        fillColor(214, 112, 74, 255);
+        fill();
+        closePath();
+
+        beginPath();
+        circle(rect.x + rect.w * value, trackY + 4.0f, active ? 8.0f : 6.0f);
+        fillColor(active ? 248 : 231, active ? 181 : 150, active ? 139 : 113, 255);
+        fill();
+        closePath();
+    }
+
+    Rect styleMenuRect() const
+    {
+        constexpr float itemHeight = 28.0f;
+        return {styleRect_.x,
+                styleRect_.y + styleRect_.h + 4.0f,
+                styleRect_.w,
+                itemHeight * static_cast<float>(static_cast<int>(downspout::xoxolo::GenerationStyle::count))};
+    }
+
+    void drawStyleMenu()
+    {
+        if (!styleMenuOpen_)
+            return;
+
+        constexpr float itemHeight = 28.0f;
+        const Rect menu = styleMenuRect();
+        beginPath();
+        roundedRect(menu.x, menu.y, menu.w, menu.h, 7.0f);
+        fillColor(18, 23, 27, 252);
+        fill();
+        strokeColor(83, 96, 106, 230);
+        strokeWidth(1.0f);
+        stroke();
+        closePath();
+
+        fontSize(12.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        for (int index = 0; index < static_cast<int>(downspout::xoxolo::GenerationStyle::count); ++index) {
+            const auto style = static_cast<downspout::xoxolo::GenerationStyle>(index);
+            const float itemY = menu.y + static_cast<float>(index) * itemHeight;
+            if (style == generationSettings_.style) {
+                beginPath();
+                roundedRect(menu.x + 3.0f, itemY + 2.0f, menu.w - 6.0f, itemHeight - 4.0f, 5.0f);
+                fillColor(117, 72, 61, 255);
+                fill();
+                closePath();
+            }
+            fillColor(224, 231, 234, 255);
+            text(menu.x + 9.0f,
+                 itemY + itemHeight * 0.5f,
+                 downspout::xoxolo::generationStyleName(style),
+                 nullptr);
+        }
+    }
+
+    bool handleStyleMenuClick(const float x, const float y)
+    {
+        constexpr float itemHeight = 28.0f;
+        const Rect menu = styleMenuRect();
+        if (menu.contains(x, y)) {
+            const int index = clampi(static_cast<int>((y - menu.y) / itemHeight),
+                                     0,
+                                     static_cast<int>(downspout::xoxolo::GenerationStyle::count) - 1);
+            generationSettings_.style = static_cast<downspout::xoxolo::GenerationStyle>(index);
+            styleMenuOpen_ = false;
+            repaint();
+            return true;
+        }
+        if (!styleRect_.contains(x, y)) {
+            styleMenuOpen_ = false;
+            repaint();
+            return true;
+        }
+        return false;
+    }
+
+    void updateGeneratorSlider(const int slider, const float x)
+    {
+        const Rect& rect = slider == 0 ? densityRect_ : tensionRect_;
+        const float value = std::max(0.0f, std::min(1.0f, (x - rect.x) / std::max(1.0f, rect.w)));
+        if (slider == 0)
+            generationSettings_.density = value;
+        else
+            generationSettings_.tension = value;
+        repaint();
+    }
+
+    void cycleGenerationStyle(const int direction)
+    {
+        const int count = static_cast<int>(downspout::xoxolo::GenerationStyle::count);
+        const int current = static_cast<int>(generationSettings_.style);
+        generationSettings_.style =
+            static_cast<downspout::xoxolo::GenerationStyle>((current + direction + count) % count);
+        styleMenuOpen_ = false;
+        repaint();
     }
 
     void applyParameterControlsToPattern(const bool pushState)

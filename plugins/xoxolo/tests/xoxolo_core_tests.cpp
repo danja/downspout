@@ -1,4 +1,5 @@
 #include "xoxolo_engine.hpp"
+#include "xoxolo_generator.hpp"
 #include "xoxolo_serialization.hpp"
 
 #include <cassert>
@@ -197,6 +198,112 @@ void serializationRoundTrips()
     assert(cellActive(*parsed, 10, 26));
 }
 
+int activeCellCount(const PatternState& pattern)
+{
+    int count = 0;
+    const int lanes = activeLaneCountForPreset(pattern.notePreset);
+    for (int lane = 0; lane < lanes; ++lane) {
+        for (int step = 0; step < pattern.totalSteps; ++step)
+            count += cellActive(pattern, lane, step) ? 1 : 0;
+    }
+    return count;
+}
+
+bool patternsMatch(const PatternState& first, const PatternState& second)
+{
+    if (first.totalSteps != second.totalSteps || first.notePreset != second.notePreset)
+        return false;
+    const int lanes = activeLaneCountForPreset(first.notePreset);
+    for (int lane = 0; lane < lanes; ++lane) {
+        for (int step = 0; step < first.totalSteps; ++step) {
+            if (cellActive(first, lane, step) != cellActive(second, lane, step))
+                return false;
+        }
+    }
+    return true;
+}
+
+void generationIsDeterministicAndSeeded()
+{
+    GenerationSettings settings {};
+    settings.style = GenerationStyle::drumAndBass;
+    settings.density = 0.7f;
+    settings.tension = 0.65f;
+
+    PatternState first = makeDefaultPattern();
+    PatternState second = makeDefaultPattern();
+    PatternState variation = makeDefaultPattern();
+    generatePattern(first, settings, 12345u);
+    generatePattern(second, settings, 12345u);
+    generatePattern(variation, settings, 98765u);
+
+    assert(patternsMatch(first, second));
+    assert(!patternsMatch(first, variation));
+    assert(activeCellCount(first) > 0);
+}
+
+void densityAndTensionAddOptionalHits()
+{
+    GenerationSettings sparse {};
+    sparse.style = GenerationStyle::funk;
+    sparse.density = 0.2f;
+    sparse.tension = 0.1f;
+    GenerationSettings dense = sparse;
+    dense.density = 0.95f;
+    GenerationSettings tense = dense;
+    tense.tension = 1.0f;
+
+    int sparseCount = 0;
+    int denseCount = 0;
+    int tenseCount = 0;
+    for (std::uint32_t seed = 1; seed <= 16; ++seed) {
+        PatternState sparsePattern = makeDefaultPattern();
+        PatternState densePattern = makeDefaultPattern();
+        PatternState tensePattern = makeDefaultPattern();
+        generatePattern(sparsePattern, sparse, seed);
+        generatePattern(densePattern, dense, seed);
+        generatePattern(tensePattern, tense, seed);
+        sparseCount += activeCellCount(sparsePattern);
+        denseCount += activeCellCount(densePattern);
+        tenseCount += activeCellCount(tensePattern);
+    }
+    assert(denseCount > sparseCount);
+    assert(tenseCount > denseCount);
+}
+
+void generationSupportsBothNotePresets()
+{
+    PatternState pattern = makeDefaultPattern();
+    applyNotePreset(pattern, NotePresetId::avlDrumkits);
+    const int kickNote = pattern.lanes[0].midiNote;
+    const int percussionNote = pattern.lanes[20].midiNote;
+
+    GenerationSettings settings {};
+    settings.style = GenerationStyle::latin;
+    settings.density = 1.0f;
+    settings.tension = 1.0f;
+    generatePattern(pattern, settings, 42u);
+
+    assert(pattern.notePreset == NotePresetId::avlDrumkits);
+    assert(pattern.lanes[0].midiNote == kickNote);
+    assert(pattern.lanes[20].midiNote == percussionNote);
+    assert(activeCellCount(pattern) > 0);
+}
+
+void generationSettingsClampAndStylesHaveNames()
+{
+    GenerationSettings settings {};
+    settings.style = GenerationStyle::count;
+    settings.density = -2.0f;
+    settings.tension = 3.0f;
+    settings = clampGenerationSettings(settings);
+    assert(settings.style == GenerationStyle::jazz);
+    assert(settings.density == 0.0f);
+    assert(settings.tension == 1.0f);
+    assert(std::string(generationStyleName(GenerationStyle::jazz)) == "Jazz");
+    assert(std::string(generationStyleName(GenerationStyle::drumAndBass)) == "Drum & Bass");
+}
+
 }  // namespace
 
 int main()
@@ -212,6 +319,10 @@ int main()
     boundaryEmitsLaterStep();
     previewEmitsOnePair();
     serializationRoundTrips();
+    generationIsDeterministicAndSeeded();
+    densityAndTensionAddOptionalHits();
+    generationSupportsBothNotePresets();
+    generationSettingsClampAndStylesHaveNames();
     std::cout << "xoxolo core tests passed\n";
     return 0;
 }

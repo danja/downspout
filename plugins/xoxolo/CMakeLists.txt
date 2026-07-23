@@ -1,5 +1,6 @@
 add_library(downspout_xoxolo_core STATIC
     src/xoxolo_engine.cpp
+    src/xoxolo_generator.cpp
     src/xoxolo_serialization.cpp
 )
 target_link_libraries(downspout_xoxolo_core PUBLIC downspout-project-options)

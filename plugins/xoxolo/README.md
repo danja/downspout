@@ -4,6 +4,12 @@
 11-lane step grid mapped by default to `drumkit.vst3`, loops from host
 transport, and emits MIDI notes on channel 10 by default.
 
+The right panel also includes a pattern generator. Choose one of the Jazz,
+Drum & Bass, House, Funk, Rock, or Latin templates, set Density and Tension,
+then click **Go** to replace the visible grid with a new variation. Density
+controls overall activity; Tension favors syncopated hits and end-of-phrase
+fills.
+
 The first version deliberately keeps the pattern small:
 
 - 11 Downspout lanes, or 29 AVL-Drumkits lanes;
@@ -15,6 +21,8 @@ The first version deliberately keeps the pattern small:
 
 Pattern cells, lane note numbers, and the selected note-name preset are stored
 in explicit text state rather than as individual cell parameters.
+Generated cells use that same pattern state, while generator settings remain
+local drafting controls and are not host-automatable.
 
 ## Default MIDI map
 
