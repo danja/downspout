@@ -27,6 +27,7 @@ layer plus a thin DPF wrapper.
 
 ## Main VST3 assumptions
 
-- keep the plugin MIDI-only with no audio ports
+- keep the portable processor MIDI-only while the DPF/VST3 wrapper exposes a
+  silent stereo output bus for host compatibility
 - preserve pass-through behavior
 - emit Gremlin-facing CCs and note triggers on the same MIDI output stream

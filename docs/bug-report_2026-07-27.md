@@ -66,7 +66,7 @@ Steinberg documents the validator as the SDK's command-line conformance host:
 
 ### Systematic Ableton pattern
 
-All twelve event-only plugins in the Windows release have zero audio outputs,
+All twelve event-only plugins in the Windows release had zero audio outputs,
 and every one is in the Ableton failure list:
 
 - BassGen, M-Mix, MelGen, and DrumGen;
@@ -105,25 +105,48 @@ Two entries need separate treatment:
    plugin-scanner log and test its editor in Steinberg's Windows
    VST3PluginTestHost; the command-line validator does not fully exercise
    opening the custom UI.
-3. Test the experimental BassGen Windows build with a silent stereo audio
-   output described below. If that build loads in Ableton, it confirms the
-   zero-audio-bus compatibility problem before the same wrapper approach is
-   considered for the other event-only plugins.
+3. Test a Windows build containing the silent-output rollout described below.
+   If the event-only plugins now load, it confirms the zero-audio-bus
+   compatibility problem. If they still fail, collect Ableton's plugin-scanner
+   log before changing the wrappers further.
 
-### BassGen silent-output experiment
+### Silent-output compatibility rollout
 
-BassGen's plugin-local DPF wrapper now advertises two silent audio outputs as
-one stereo bus. Both buffers are cleared on every process block, while the
-portable core and MIDI input/output behavior remain unchanged.
+The BassGen experiment passed its Linux smoke check, so the same plugin-local
+wrapper change was applied to all remaining event-only plugins: M-Mix, MelGen,
+DrumGen, Xoxolo, Cadence, ArpGen, Counterpointer, GremlinDriver, Ground, Luma,
+Lifeform, and the Linux-only Sidecar. Each wrapper advertises two silent audio
+outputs as one stereo bus and clears both buffers on every process block. The
+portable cores and MIDI input/output behavior remain unchanged.
 
-The experiment was built natively on Linux and cross-built for Windows x86_64.
-Steinberg's native and Windows-under-Wine validators both report:
+All thirteen affected plugins build natively on Linux. The twelve plugins
+included in Windows releases also cross-build for Windows x86_64. Steinberg's
+native validator reports the following for all thirteen, and its Windows
+validator under Wine reports the same for all twelve Windows targets:
 
 - zero audio input buses and one active stereo audio output bus;
-- one MIDI input bus and one MIDI output bus;
+- the plugins' existing MIDI input/output bus topology unchanged;
 - 47 tests passed and zero tests failed.
 
-The Windows test bundle is packaged at
-`build/bassgen-win-experiment/bassgen-silent-stereo-windows-x86_64.zip`.
-The remaining decisive check is whether this bundle loads in Ableton Live on
-Windows 11.
+All fourteen focused core suites also pass; that count includes P-Mix because
+its cosmetic header was rebuilt and tested alongside the event-only plugins.
+
+The twelve rebuilt Windows bundles are packaged for third-party Ableton testing
+at
+`build/bassgen-win-experiment/downspout-ableton-silent-output-windows-x86_64.zip`
+(SHA-256
+`29fcb64e5521166bb0cc0e4b81f6bc10afcc6bc7a4c27442391c314b56aee1c8`).
+
+The remaining decisive check is external because the Ableton report came from
+a third party and no local Ableton installation is available: install a
+Windows package containing this rollout, perform a full rescan, and confirm
+whether the twelve event-only plugins now load in Ableton Live on Windows 11.
+
+### Header cleanup
+
+BassGen, DrumGen, M-Mix, and P-Mix no longer show format labels styled like
+buttons in their headers. Their subtitle now shows plugin version `v0.1.0`.
+For each of these plugins, the UI string and VST3 `getVersion()` value are
+driven by the same plugin-local version constants so they cannot drift
+independently. This is the plugin metadata version, not the repository release
+tag.

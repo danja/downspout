@@ -274,9 +274,9 @@ private:
 
         fontSize(13.0f);
         fillColor(161, 177, 185, 255);
-        text(x + 24.0f, y + 50.0f, "MIDI pass/block pipeline with Euclidean timing and probabilistic transitions", nullptr);
-
-        drawPill(x + w - 174.0f, y + 18.0f, 150.0f, 28.0f, "MIDI VST3", 102, 184, 152);
+        text(x + 24.0f, y + 50.0f,
+             DOWNSPOUT_PLUGIN_VERSION_STRING "  |  MIDI pass/block pipeline with Euclidean timing and probabilistic transitions",
+             nullptr);
     }
 
     void drawControls(const float x, const float y, const float w, const float h)
@@ -388,23 +388,6 @@ private:
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
         fillColor(active ? 209 : 188, active ? 246 : 194, active ? 232 : 170, 255);
         text(rect.x + rect.w - 13.0f, rect.y + rect.h * 0.5f + 1.0f, active ? def.onLabel : def.offLabel, nullptr);
-    }
-
-    void drawPill(const float x, const float y, const float w, const float h, const char* label, const int r, const int g, const int b)
-    {
-        beginPath();
-        roundedRect(x, y, w, h, h * 0.5f);
-        fillColor(r, g, b, 34);
-        fill();
-        strokeColor(r, g, b, 170);
-        strokeWidth(1.0f);
-        stroke();
-        closePath();
-
-        fontSize(12.0f);
-        textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(r, g, b, 255);
-        text(x + w * 0.5f, y + h * 0.5f + 1.0f, label, nullptr);
     }
 
     void drawEuclideanStrip(const float x, const float y, const float w, const float h)

@@ -114,3 +114,9 @@ build/tools/ai-coordinator/downspout-ai-coordinator openai-from-midi /tmp/source
   not yet import those files through a UI file picker.
 - Host/UI status display may lag output parameter updates, but phrase queuing
   and playback happen inside the plugin once the worker returns.
+
+## Host compatibility
+
+The DPF/VST3 wrapper exposes a silent stereo output bus for compatibility with
+hosts that reject event-only plugins with no audio outputs. The portable core
+remains MIDI-only, and the wrapper clears both output channels every block.

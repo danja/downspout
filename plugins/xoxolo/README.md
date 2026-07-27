@@ -50,3 +50,9 @@ covering notes 36 through 64.
 `plugins/xoxolo` follows the standard Downspout shape: portable C++ core,
 deterministic core tests, text serialization, thin DPF wrapper, and custom
 NanoVG UI.
+
+## Host compatibility
+
+The DPF/VST3 wrapper exposes a silent stereo output bus for compatibility with
+hosts that reject event-only plugins with no audio outputs. The portable core
+remains MIDI-only, and the wrapper clears both output channels every block.

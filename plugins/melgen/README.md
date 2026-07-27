@@ -41,3 +41,9 @@ UI notes:
   channel selectors plus `New`, `Notes`, and `Rhythm` action buttons.
 - The default UI height is intentionally taller than `bassgen` because the
   melody surface has more shaping controls.
+
+## Host compatibility
+
+The DPF/VST3 wrapper exposes a silent stereo output bus for compatibility with
+hosts that reject event-only plugins with no audio outputs. The portable core
+remains MIDI-only, and the wrapper clears both output channels every block.

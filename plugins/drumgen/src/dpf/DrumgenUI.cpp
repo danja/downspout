@@ -381,9 +381,10 @@ private:
 
         fontSize(13.0f);
         fillColor(157, 174, 176, 255);
-        text(x + 24.0f, y + 53.0f, "Transport-synced polyphonic drum MIDI generator", nullptr);
+        text(x + 24.0f, y + 53.0f,
+             DOWNSPOUT_PLUGIN_VERSION_STRING "  |  Transport-synced polyphonic drum MIDI generator",
+             nullptr);
 
-        drawPill(x + w - 226.0f, y + 18.0f, 204.0f, 30.0f, "DPF VST3 port", 92, 191, 147);
         drawPill(x + w - 170.0f, y + 52.0f, 148.0f, 22.0f, "Action buttons armed", 197, 147, 68);
     }
 

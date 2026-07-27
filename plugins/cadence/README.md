@@ -46,3 +46,9 @@ Recommended next steps:
    Extended voicings and higher `Comp` settings;
 3. broaden tests around earlier-state-format handling and wrapper-facing state mapping;
 4. keep release packaging aligned with the now-public wrapper target.
+
+## Host compatibility
+
+The DPF/VST3 wrapper exposes a silent stereo output bus for compatibility with
+hosts that reject event-only plugins with no audio outputs. The portable core
+remains MIDI-only, and the wrapper clears both output channels every block.

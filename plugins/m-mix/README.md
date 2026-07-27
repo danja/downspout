@@ -12,3 +12,9 @@ released when the gate closes.
 Stopped transport passes MIDI through, except when mute is enabled. When a host
 does not provide BBT but does provide rolling frame position and tempo, the VST3
 wrapper derives bar position from those values so the gate still runs.
+
+## Host compatibility
+
+The DPF/VST3 wrapper exposes a silent stereo output bus for compatibility with
+hosts that reject event-only plugins with no audio outputs. The portable core
+remains MIDI-only, and the wrapper clears both output channels every block.

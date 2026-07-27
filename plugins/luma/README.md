@@ -65,3 +65,9 @@ ctest --test-dir ../../build --output-on-failure -R luma
 The portable core handles Launchpad grid/CC input, deterministic step
 scheduling, generated MIDI notes, pending note-offs, and LED feedback. The DPF
 wrapper is deliberately thin around parameters, transport, and MIDI I/O.
+
+## Host compatibility
+
+The DPF/VST3 wrapper exposes a silent stereo output bus for compatibility with
+hosts that reject event-only plugins with no audio outputs. The portable core
+remains MIDI-only, and the wrapper clears both output channels every block.

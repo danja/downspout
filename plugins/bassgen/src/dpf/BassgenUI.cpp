@@ -425,26 +425,9 @@ private:
 
         fontSize(13.0f);
         fillColor(154, 169, 183, 255);
-        text(x + 22.0f, y + 48.0f, "Transport-synced bassline generator", nullptr);
-
-        drawPill(x + w - 208.0f, y + 16.0f, 188.0f, 30.0f, "DPF VST3 port", 103, 185, 134);
-    }
-
-    void drawPill(float x, float y, float w, float h, const char* label, int r, int g, int b)
-    {
-        beginPath();
-        roundedRect(x, y, w, h, h * 0.5f);
-        fillColor(r, g, b, 36);
-        fill();
-        strokeColor(r, g, b, 180);
-        strokeWidth(1.0f);
-        stroke();
-        closePath();
-
-        fontSize(13.0f);
-        textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(r, g, b, 255);
-        text(x + w * 0.5f, y + h * 0.5f + 1.0f, label, nullptr);
+        text(x + 22.0f, y + 48.0f,
+             DOWNSPOUT_PLUGIN_VERSION_STRING "  |  Transport-synced bassline generator",
+             nullptr);
     }
 
     void drawSliderPanel(float x, float y, float w, float h)

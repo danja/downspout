@@ -240,26 +240,9 @@ private:
 
         fontSize(13.0f);
         fillColor(151, 168, 183, 255);
-        text(x + 24.0f, y + 50.0f, "Probabilistic transport-locked mixer", nullptr);
-
-        drawPill(x + w - 182.0f, y + 18.0f, 160.0f, 28.0f, "Stereo VST3", 100, 190, 170);
-    }
-
-    void drawPill(float x, float y, float w, float h, const char* label, int r, int g, int b)
-    {
-        beginPath();
-        roundedRect(x, y, w, h, h * 0.5f);
-        fillColor(r, g, b, 36);
-        fill();
-        strokeColor(r, g, b, 170);
-        strokeWidth(1.0f);
-        stroke();
-        closePath();
-
-        fontSize(12.0f);
-        textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(r, g, b, 255);
-        text(x + w * 0.5f, y + h * 0.5f + 1.0f, label, nullptr);
+        text(x + 24.0f, y + 50.0f,
+             DOWNSPOUT_PLUGIN_VERSION_STRING "  |  Probabilistic transport-locked mixer",
+             nullptr);
     }
 
     void drawControlPanel(float x, float y, float w, float h)

@@ -23,3 +23,9 @@ and one-shot patch randomisation bursts.
 That lets notes flow through while the driver adds controller movement and
 discrete Gremlin actions. Leave `Pass Input` on for that normal chain, or turn
 it off when the driver should emit only its own CCs and action notes.
+
+## Host compatibility
+
+The DPF/VST3 wrapper exposes a silent stereo output bus for compatibility with
+hosts that reject event-only plugins with no audio outputs. The portable core
+remains MIDI-only, and the wrapper clears both output channels every block.

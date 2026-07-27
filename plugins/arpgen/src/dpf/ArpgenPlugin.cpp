@@ -107,6 +107,15 @@ protected:
     std::uint32_t getVersion() const override { return d_version(0, 1, 0); }
     std::int64_t getUniqueId() const override { return d_cconst('A', 'r', 'p', 'g'); }
 
+    void initAudioPort(const bool input, const std::uint32_t index, AudioPort& port) override
+    {
+        Plugin::initAudioPort(input, index, port);
+        if (!input && index < 2)
+            port.groupId = kPortGroupStereo;
+        port.name = String(input ? "Input " : "Output ") + String(static_cast<int>(index + 1));
+        port.symbol = String(input ? "in_" : "out_") + String(static_cast<int>(index + 1));
+    }
+
     void initParameter(const std::uint32_t index, Parameter& parameter) override
     {
         parameter.hints = kParameterIsAutomatable;
@@ -227,9 +236,12 @@ protected:
     void activate() override { downspout::arpgen::activate(engine_); }
     void deactivate() override { downspout::arpgen::deactivate(engine_); }
 
-    void run(const float**, float**, const std::uint32_t frames,
+    void run(const float**, float** outputs, const std::uint32_t frames,
              const MidiEvent* midiEvents, const std::uint32_t midiEventCount) override
     {
+        std::fill_n(outputs[0], frames, 0.0f);
+        std::fill_n(outputs[1], frames, 0.0f);
+
         std::array<InputMidiEvent, kMaxInputEvents> input {};
         const auto count = std::min<std::uint32_t>(midiEventCount, input.size());
         for (std::uint32_t i = 0; i < count; ++i)

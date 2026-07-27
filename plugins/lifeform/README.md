@@ -62,7 +62,7 @@ Velocity comes from the `Velocity` control, with small lifts for higher rows,
 the current generation column, and newly born cells. Drum mode uses the palette
 `36, 38, 42, 46, 45, 50, 39, 51`.
 
-The plugin has no audio I/O. Route its MIDI output to an instrument track, and
+The musical core has no audio I/O. Route its MIDI output to an instrument track, and
 route the same MIDI output back to the Launchpad if you want hardware LEDs.
 `Pass` is off by default so unrecognised controller note/CC input does not leak
 into the instrument route. Enable it only when you intentionally want unhandled
@@ -88,3 +88,9 @@ then sends a bulk Launchpad LED clear message covering the 8x8 grid, side
 buttons, top buttons, and logo.
 
 See [docs/design.md](docs/design.md) for implementation notes.
+
+## Host compatibility
+
+The portable core has no audio I/O. The DPF/VST3 wrapper exposes a silent
+stereo output bus for compatibility with hosts that reject event-only plugins
+with no audio outputs, and clears both channels every block.

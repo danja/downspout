@@ -96,7 +96,9 @@ protected:
 
     uint32_t getVersion() const override
     {
-        return d_version(0, 1, 0);
+        return d_version(DOWNSPOUT_PLUGIN_VERSION_MAJOR,
+                         DOWNSPOUT_PLUGIN_VERSION_MINOR,
+                         DOWNSPOUT_PLUGIN_VERSION_PATCH);
     }
 
     int64_t getUniqueId() const override

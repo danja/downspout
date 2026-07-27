@@ -49,3 +49,9 @@ Current wrapper behavior note:
 - the manual `Fill` action now targets the current bar when there is still room
   to hear the fill, otherwise it targets the next bar, and it forces a stronger
   fill amount than the passive fill slider alone.
+
+## Host compatibility
+
+The DPF/VST3 wrapper exposes a silent stereo output bus for compatibility with
+hosts that reject event-only plugins with no audio outputs. The portable core
+remains MIDI-only, and the wrapper clears both output channels every block.

@@ -4,6 +4,7 @@
 #include "drumgen_pattern.hpp"
 #include "drumgen_serialization.hpp"
 
+#include <algorithm>
 #include <cstring>
 
 START_NAMESPACE_DISTRHO
@@ -124,12 +125,23 @@ protected:
 
     uint32_t getVersion() const override
     {
-        return d_version(0, 1, 0);
+        return d_version(DOWNSPOUT_PLUGIN_VERSION_MAJOR,
+                         DOWNSPOUT_PLUGIN_VERSION_MINOR,
+                         DOWNSPOUT_PLUGIN_VERSION_PATCH);
     }
 
     int64_t getUniqueId() const override
     {
         return d_cconst('D', 'r', 'G', 'n');
+    }
+
+    void initAudioPort(const bool input, const uint32_t index, AudioPort& port) override
+    {
+        Plugin::initAudioPort(input, index, port);
+        if (!input && index < 2)
+            port.groupId = kPortGroupStereo;
+        port.name = String(input ? "Input " : "Output ") + String(static_cast<int>(index + 1));
+        port.symbol = String(input ? "in_" : "out_") + String(static_cast<int>(index + 1));
     }
 
     void initParameter(uint32_t index, Parameter& parameter) override
@@ -430,8 +442,11 @@ protected:
         downspout::drumgen::deactivate(engine_);
     }
 
-    void run(const float**, float**, uint32_t frames) override
+    void run(const float**, float** outputs, uint32_t frames) override
     {
+        std::fill_n(outputs[0], frames, 0.0f);
+        std::fill_n(outputs[1], frames, 0.0f);
+
         const downspout::drumgen::BlockResult result =
             downspout::drumgen::processBlock(engine_,
                                              controls_,

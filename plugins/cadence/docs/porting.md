@@ -33,7 +33,8 @@ Learning and reset behavior:
   Input activity remains visible for one second so sparse bass lines do not
   appear disconnected between notes.
 - The VST3 advertises `Instrument` alongside `Fx|Generator` so hosts can expose
-  its event input consistently even though Cadence has no audio ports.
+  its event input consistently; the wrapper's silent stereo compatibility bus
+  does not participate in Cadence's musical behavior.
 
 Jazz note:
 

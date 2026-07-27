@@ -145,3 +145,9 @@ known structure.
 
 Each cell is one phrase. The label shows the phrase role. Click a cell to force
 a role, or choose `Auto` to let Ground plan that phrase.
+
+## Host compatibility
+
+The DPF/VST3 wrapper exposes a silent stereo output bus for compatibility with
+hosts that reject event-only plugins with no audio outputs. Ground still does
+not process audio; the wrapper clears both output channels every block.

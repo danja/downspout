@@ -47,3 +47,9 @@ Routing notes:
   and is probably still learning, muted by density, or not routed onward;
 - if `MIDI In` never lights, the problem is upstream host routing rather than
   the learned phrase model.
+
+## Host compatibility
+
+The DPF/VST3 wrapper exposes a silent stereo output bus for compatibility with
+hosts that reject event-only plugins with no audio outputs. The portable core
+remains MIDI-only, and the wrapper clears both output channels every block.

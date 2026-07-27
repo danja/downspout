@@ -168,6 +168,15 @@ protected:
         return d_cconst('G', 'r', 'D', 'v');
     }
 
+    void initAudioPort(const bool input, const uint32_t index, AudioPort& port) override
+    {
+        Plugin::initAudioPort(input, index, port);
+        if (!input && index < 2)
+            port.groupId = kPortGroupStereo;
+        port.name = String(input ? "Input " : "Output ") + String(static_cast<int>(index + 1));
+        port.symbol = String(input ? "in_" : "out_") + String(static_cast<int>(index + 1));
+    }
+
     void initParameter(uint32_t index, Parameter& parameter) override
     {
         parameter.hints = kParameterIsAutomatable;
@@ -430,11 +439,14 @@ protected:
     }
 
     void run(const float**,
-             float**,
+             float** outputs,
              uint32_t frames,
              const MidiEvent* midiEvents,
              uint32_t midiEventCount) override
     {
+        std::fill_n(outputs[0], frames, 0.0f);
+        std::fill_n(outputs[1], frames, 0.0f);
+
         std::array<MidiMessage, 256> coreEvents {};
         const std::uint32_t coreCount = std::min<std::uint32_t>(midiEventCount, coreEvents.size());
         for (std::uint32_t i = 0; i < coreCount; ++i)
