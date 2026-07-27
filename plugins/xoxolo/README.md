@@ -10,6 +10,10 @@ then click **Go** to replace the visible grid with a new variation. Density
 controls overall activity; Tension favors syncopated hits and end-of-phrase
 fills.
 
+The Pattern panel's Preset, Steps, Resolution, and Channel selectors open
+drop-down menus for direct selection. The mouse wheel still steps through
+their values when the pointer is over a selector.
+
 The first version deliberately keeps the pattern small:
 
 - 11 Downspout lanes, or 29 AVL-Drumkits lanes;

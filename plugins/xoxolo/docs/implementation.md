@@ -32,6 +32,13 @@ Generation decisions:
 - voice-to-lane mapping is isolated in the generator so both Downspout and
   AVL-Drumkits note presets retain their existing MIDI-note assignments.
 
+UI decisions:
+
+- Preset, Steps, Resolution, and Channel use explicit drop-down menus while
+  retaining mouse-wheel cycling;
+- the 25-value Steps menu uses two columns so it remains inside the fixed
+  plugin window.
+
 The default `Downspout` lane map mirrors `drumkit.vst3` so Xoxolo can
 immediately drive the Downspout drum synth without setup. The `AVL-Drumkits`
 preset follows the note names from `docs/avl-drum-map.md` and exposes all 29

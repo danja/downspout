@@ -50,6 +50,14 @@ constexpr int kNoteMenuRows = 16;
 constexpr float kNoteMenuItemHeight = 22.0f;
 constexpr float kNoteMenuItemWidth = 42.0f;
 
+enum class PatternMenuId {
+    none,
+    preset,
+    steps,
+    resolution,
+    channel
+};
+
 }  // namespace
 
 class XoxoloUI : public UI
@@ -139,6 +147,7 @@ protected:
         drawControls(width - controlsW - pad, gridY, controlsW, gridH);
         drawNoteMenu();
         drawStyleMenu();
+        drawPatternMenu();
     }
 
     bool onMouse(const MouseEvent& ev) override
@@ -157,6 +166,8 @@ protected:
         if (openNoteMenuLane_ >= 0 && handleNoteMenuClick(x, y))
             return true;
         if (styleMenuOpen_ && handleStyleMenuClick(x, y))
+            return true;
+        if (patternMenuOpen_ != PatternMenuId::none && handlePatternMenuClick(x, y))
             return true;
 
         const int laneCount = downspout::xoxolo::activeLaneCountForPreset(pattern_.notePreset);
@@ -188,22 +199,22 @@ protected:
 
         if (stepsRect_.contains(x, y)) {
             openNoteMenuLane_ = -1;
-            cycleSteps();
+            togglePatternMenu(PatternMenuId::steps);
             return true;
         }
         if (presetRect_.contains(x, y)) {
             openNoteMenuLane_ = -1;
-            cyclePreset();
+            togglePatternMenu(PatternMenuId::preset);
             return true;
         }
         if (resolutionRect_.contains(x, y)) {
             openNoteMenuLane_ = -1;
-            cycleResolution();
+            togglePatternMenu(PatternMenuId::resolution);
             return true;
         }
         if (channelRect_.contains(x, y)) {
             openNoteMenuLane_ = -1;
-            cycleChannel();
+            togglePatternMenu(PatternMenuId::channel);
             return true;
         }
         if (clearRect_.contains(x, y)) {
@@ -217,6 +228,7 @@ protected:
         }
         if (styleRect_.contains(x, y)) {
             openNoteMenuLane_ = -1;
+            patternMenuOpen_ = PatternMenuId::none;
             styleMenuOpen_ = !styleMenuOpen_;
             repaint();
             return true;
@@ -245,6 +257,7 @@ protected:
 
         openNoteMenuLane_ = -1;
         styleMenuOpen_ = false;
+        patternMenuOpen_ = PatternMenuId::none;
         repaint();
         return false;
     }
@@ -271,18 +284,22 @@ protected:
             }
         }
         if (stepsRect_.contains(x, y)) {
+            patternMenuOpen_ = PatternMenuId::none;
             cycleSteps(direction);
             return true;
         }
         if (presetRect_.contains(x, y)) {
+            patternMenuOpen_ = PatternMenuId::none;
             cyclePreset(direction);
             return true;
         }
         if (resolutionRect_.contains(x, y)) {
+            patternMenuOpen_ = PatternMenuId::none;
             cycleResolution(direction);
             return true;
         }
         if (channelRect_.contains(x, y)) {
+            patternMenuOpen_ = PatternMenuId::none;
             cycleChannel(direction);
             return true;
         }
@@ -326,6 +343,7 @@ private:
     int openNoteMenuLane_ = -1;
     int draggingGeneratorSlider_ = -1;
     bool styleMenuOpen_ = false;
+    PatternMenuId patternMenuOpen_ = PatternMenuId::none;
     std::uint32_t generationSeed_ = 0;
 
     void drawBackground(const float width, const float height)
@@ -577,16 +595,25 @@ private:
         fillColor(226, 232, 235, 255);
         text(x + 14.0f, y + 16.0f, "Pattern", nullptr);
 
-        drawSelector(presetRect_, "Preset", downspout::xoxolo::notePresetName(pattern_.notePreset));
+        drawSelector(presetRect_,
+                     "Preset",
+                     downspout::xoxolo::notePresetName(pattern_.notePreset),
+                     patternMenuOpen_ == PatternMenuId::preset);
 
         char stepsValue[12];
         std::snprintf(stepsValue, sizeof(stepsValue), "%d", pattern_.totalSteps);
-        drawSelector(stepsRect_, "Steps", stepsValue);
-        drawSelector(resolutionRect_, "Resolution", resolutionName(pattern_.resolution));
+        drawSelector(stepsRect_, "Steps", stepsValue, patternMenuOpen_ == PatternMenuId::steps);
+        drawSelector(resolutionRect_,
+                     "Resolution",
+                     resolutionName(pattern_.resolution),
+                     patternMenuOpen_ == PatternMenuId::resolution);
 
         char channelValue[12];
         std::snprintf(channelValue, sizeof(channelValue), "%d", pattern_.channel);
-        drawSelector(channelRect_, "Channel", channelValue);
+        drawSelector(channelRect_,
+                     "Channel",
+                     channelValue,
+                     patternMenuOpen_ == PatternMenuId::channel);
         drawButton(clearRect_, "Clear", pulseFrames_ > 0);
 
         beginPath();
@@ -604,13 +631,14 @@ private:
 
         drawSelector(styleRect_,
                      "Style",
-                     downspout::xoxolo::generationStyleName(generationSettings_.style));
+                     downspout::xoxolo::generationStyleName(generationSettings_.style),
+                     styleMenuOpen_);
         drawGeneratorSlider(densityRect_, "Density", generationSettings_.density, draggingGeneratorSlider_ == 0);
         drawGeneratorSlider(tensionRect_, "Tension", generationSettings_.tension, draggingGeneratorSlider_ == 1);
         drawButton(goRect_, "Go", generatorPulseFrames_ > 0);
     }
 
-    void drawSelector(const Rect& rect, const char* label, const char* value)
+    void drawSelector(const Rect& rect, const char* label, const char* value, const bool open = false)
     {
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 7.0f);
@@ -627,7 +655,7 @@ private:
         text(rect.x + 10.0f, rect.y + 25.0f, value, nullptr);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
         fillColor(131, 145, 153, 255);
-        text(rect.x + rect.w - 10.0f, rect.y + rect.h * 0.5f, ">", nullptr);
+        text(rect.x + rect.w - 10.0f, rect.y + rect.h * 0.5f, open ? "^" : "v", nullptr);
     }
 
     void drawButton(const Rect& rect, const char* label, const bool active = false)
@@ -742,6 +770,197 @@ private:
             return true;
         }
         return false;
+    }
+
+    Rect patternMenuBaseRect() const
+    {
+        switch (patternMenuOpen_) {
+        case PatternMenuId::preset: return presetRect_;
+        case PatternMenuId::steps: return stepsRect_;
+        case PatternMenuId::resolution: return resolutionRect_;
+        case PatternMenuId::channel: return channelRect_;
+        case PatternMenuId::none: break;
+        }
+        return {};
+    }
+
+    int patternMenuItemCount() const
+    {
+        switch (patternMenuOpen_) {
+        case PatternMenuId::preset:
+            return static_cast<int>(downspout::xoxolo::NotePresetId::count);
+        case PatternMenuId::steps:
+            return downspout::xoxolo::kMaxSteps - downspout::xoxolo::kMinSteps + 1;
+        case PatternMenuId::resolution:
+            return static_cast<int>(downspout::xoxolo::ResolutionId::count);
+        case PatternMenuId::channel:
+            return 16;
+        case PatternMenuId::none:
+            break;
+        }
+        return 0;
+    }
+
+    int patternMenuSelectedIndex() const
+    {
+        switch (patternMenuOpen_) {
+        case PatternMenuId::preset:
+            return static_cast<int>(pattern_.notePreset);
+        case PatternMenuId::steps:
+            return pattern_.totalSteps - downspout::xoxolo::kMinSteps;
+        case PatternMenuId::resolution:
+            return static_cast<int>(pattern_.resolution);
+        case PatternMenuId::channel:
+            return pattern_.channel - 1;
+        case PatternMenuId::none:
+            break;
+        }
+        return -1;
+    }
+
+    int patternMenuColumns() const
+    {
+        return patternMenuOpen_ == PatternMenuId::steps ? 2 : 1;
+    }
+
+    Rect patternMenuRect() const
+    {
+        constexpr float itemHeight = 28.0f;
+        const Rect base = patternMenuBaseRect();
+        const int columns = patternMenuColumns();
+        const int rows = (patternMenuItemCount() + columns - 1) / columns;
+        return {base.x,
+                base.y + base.h + 4.0f,
+                base.w,
+                itemHeight * static_cast<float>(rows)};
+    }
+
+    const char* patternMenuItemName(const int index, char* buffer, const std::size_t bufferSize) const
+    {
+        switch (patternMenuOpen_) {
+        case PatternMenuId::preset:
+            return downspout::xoxolo::notePresetName(
+                static_cast<downspout::xoxolo::NotePresetId>(index));
+        case PatternMenuId::steps:
+            std::snprintf(buffer, bufferSize, "%d", downspout::xoxolo::kMinSteps + index);
+            return buffer;
+        case PatternMenuId::resolution:
+            return resolutionName(static_cast<downspout::xoxolo::ResolutionId>(index));
+        case PatternMenuId::channel:
+            std::snprintf(buffer, bufferSize, "%d", index + 1);
+            return buffer;
+        case PatternMenuId::none:
+            break;
+        }
+        return "";
+    }
+
+    void drawPatternMenu()
+    {
+        if (patternMenuOpen_ == PatternMenuId::none)
+            return;
+
+        constexpr float itemHeight = 28.0f;
+        const Rect menu = patternMenuRect();
+        const int count = patternMenuItemCount();
+        const int columns = patternMenuColumns();
+        const float itemWidth = menu.w / static_cast<float>(columns);
+        const int selected = patternMenuSelectedIndex();
+
+        beginPath();
+        roundedRect(menu.x, menu.y, menu.w, menu.h, 7.0f);
+        fillColor(18, 23, 27, 252);
+        fill();
+        strokeColor(83, 96, 106, 230);
+        strokeWidth(1.0f);
+        stroke();
+        closePath();
+
+        fontSize(12.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        for (int index = 0; index < count; ++index) {
+            const int column = index % columns;
+            const int row = index / columns;
+            const float itemX = menu.x + static_cast<float>(column) * itemWidth;
+            const float itemY = menu.y + static_cast<float>(row) * itemHeight;
+            if (index == selected) {
+                beginPath();
+                roundedRect(itemX + 3.0f, itemY + 2.0f, itemWidth - 6.0f, itemHeight - 4.0f, 5.0f);
+                fillColor(117, 72, 61, 255);
+                fill();
+                closePath();
+            }
+            char label[16] {};
+            fillColor(224, 231, 234, 255);
+            text(itemX + 9.0f,
+                 itemY + itemHeight * 0.5f,
+                 patternMenuItemName(index, label, sizeof(label)),
+                 nullptr);
+        }
+    }
+
+    void selectPatternMenuItem(const int index)
+    {
+        switch (patternMenuOpen_) {
+        case PatternMenuId::preset: {
+            const auto preset = static_cast<downspout::xoxolo::NotePresetId>(index);
+            downspout::xoxolo::applyNotePreset(pattern_, preset);
+            setParameter(downspout::xoxolo::kParamNotePreset, static_cast<float>(index));
+            break;
+        }
+        case PatternMenuId::steps: {
+            const int steps = downspout::xoxolo::kMinSteps + index;
+            downspout::xoxolo::resizePattern(
+                pattern_, steps, pattern_.resolution, downspout::meterFromTimeSignature(4.0, 4.0));
+            setParameter(downspout::xoxolo::kParamSteps, static_cast<float>(steps));
+            break;
+        }
+        case PatternMenuId::resolution: {
+            pattern_.resolution = static_cast<downspout::xoxolo::ResolutionId>(index);
+            downspout::xoxolo::resizePattern(
+                pattern_, pattern_.totalSteps, pattern_.resolution, downspout::meterFromTimeSignature(4.0, 4.0));
+            setParameter(downspout::xoxolo::kParamResolution, static_cast<float>(index));
+            break;
+        }
+        case PatternMenuId::channel:
+            pattern_.channel = index + 1;
+            setParameter(downspout::xoxolo::kParamChannel, static_cast<float>(pattern_.channel));
+            break;
+        case PatternMenuId::none:
+            return;
+        }
+        patternMenuOpen_ = PatternMenuId::none;
+        pushPatternState();
+        repaint();
+    }
+
+    bool handlePatternMenuClick(const float x, const float y)
+    {
+        constexpr float itemHeight = 28.0f;
+        const Rect menu = patternMenuRect();
+        if (menu.contains(x, y)) {
+            const int columns = patternMenuColumns();
+            const float itemWidth = menu.w / static_cast<float>(columns);
+            const int column = clampi(static_cast<int>((x - menu.x) / itemWidth), 0, columns - 1);
+            const int row = std::max(0, static_cast<int>((y - menu.y) / itemHeight));
+            const int index = row * columns + column;
+            if (index < patternMenuItemCount())
+                selectPatternMenuItem(index);
+            return true;
+        }
+        if (!patternMenuBaseRect().contains(x, y)) {
+            patternMenuOpen_ = PatternMenuId::none;
+            repaint();
+            return true;
+        }
+        return false;
+    }
+
+    void togglePatternMenu(const PatternMenuId menu)
+    {
+        styleMenuOpen_ = false;
+        patternMenuOpen_ = patternMenuOpen_ == menu ? PatternMenuId::none : menu;
+        repaint();
     }
 
     void updateGeneratorSlider(const int slider, const float x)
