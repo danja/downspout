@@ -12,6 +12,13 @@ Notable source concerns to preserve:
 
 Current `downspout`-specific port note:
 
+- the VST3 wrapper advertises a silent stereo audio output while continuing to
+  generate MIDI normally. This is an Ableton compatibility experiment: the
+  portable core remains MIDI-only, and the DPF shell clears both output
+  channels on every process block so the added bus cannot emit stale or
+  unintended audio. Native Linux and cross-built Windows bundles both report
+  one stereo audio output plus the original MIDI input/output buses and pass
+  all 47 Steinberg validator tests; real Ableton validation is still pending;
 - the portable core now persists a normalized `Meter` in pattern state and
   derives pulse accents, pickups, and longer landmark note lengths from it, so
   `bassgen` no longer treats every bar like a flat quarter-beat grid even

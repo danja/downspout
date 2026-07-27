@@ -105,7 +105,25 @@ Two entries need separate treatment:
    plugin-scanner log and test its editor in Steinberg's Windows
    VST3PluginTestHost; the command-line validator does not fully exercise
    opening the custom UI.
-3. Produce one experimental BassGen Windows build with a silent stereo audio
-   output. If that build loads in Ableton, it confirms the zero-audio-bus
-   compatibility problem before the same wrapper approach is considered for
-   the other event-only plugins.
+3. Test the experimental BassGen Windows build with a silent stereo audio
+   output described below. If that build loads in Ableton, it confirms the
+   zero-audio-bus compatibility problem before the same wrapper approach is
+   considered for the other event-only plugins.
+
+### BassGen silent-output experiment
+
+BassGen's plugin-local DPF wrapper now advertises two silent audio outputs as
+one stereo bus. Both buffers are cleared on every process block, while the
+portable core and MIDI input/output behavior remain unchanged.
+
+The experiment was built natively on Linux and cross-built for Windows x86_64.
+Steinberg's native and Windows-under-Wine validators both report:
+
+- zero audio input buses and one active stereo audio output bus;
+- one MIDI input bus and one MIDI output bus;
+- 47 tests passed and zero tests failed.
+
+The Windows test bundle is packaged at
+`build/bassgen-win-experiment/bassgen-silent-stereo-windows-x86_64.zip`.
+The remaining decisive check is whether this bundle loads in Ableton Live on
+Windows 11.

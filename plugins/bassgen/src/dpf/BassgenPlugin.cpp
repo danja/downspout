@@ -155,6 +155,16 @@ protected:
         return d_cconst('B', 's', 'G', 'n');
     }
 
+    void initAudioPort(const bool input, const uint32_t index, AudioPort& port) override
+    {
+        Plugin::initAudioPort(input, index, port);
+
+        if (!input && index < 2)
+            port.groupId = kPortGroupStereo;
+        port.name = String(input ? "Input " : "Output ") + String(static_cast<int>(index + 1));
+        port.symbol = String(input ? "in_" : "out_") + String(static_cast<int>(index + 1));
+    }
+
     void initParameter(uint32_t index, Parameter& parameter) override
     {
         parameter.hints = kParameterIsAutomatable;
@@ -469,8 +479,15 @@ protected:
         downspout::bassgen::deactivate(engine_);
     }
 
-    void run(const float**, float**, uint32_t frames, const MidiEvent* midiEvents, uint32_t midiEventCount) override
+    void run(const float**,
+             float** outputs,
+             uint32_t frames,
+             const MidiEvent* midiEvents,
+             uint32_t midiEventCount) override
     {
+        std::fill_n(outputs[0], frames, 0.0f);
+        std::fill_n(outputs[1], frames, 0.0f);
+
         std::array<CoreInputMidiEvent, downspout::bassgen::kMaxInputMidiEvents> inputEvents {};
         const bool responseEnabled = std::fabs(controls_.followDodge) > 0.001f && controls_.inputSensitivity > 0.001f;
         const uint32_t inputCount = responseEnabled && midiEvents != nullptr
