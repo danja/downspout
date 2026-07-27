@@ -130,6 +130,52 @@ problems may additionally be checked with Steinberg's VST3 validator and compare
 with a known working Downspout bundle so framework-wide limitations are not
 misreported as plugin-local success or failure.
 
+### Windows cross-build and Wine validation
+
+A Windows VST3 can be cross-built locally on Linux with MinGW. Configure the
+build completely before starting it:
+
+```bash
+cmake -S . -B build/windows-x86_64 \
+  -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/mingw-x86_64.cmake \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_TESTING=OFF \
+  -DDOWNSPOUT_BUILD_SIDECAR=OFF \
+  -DDOWNSPOUT_BUILD_AI_COORDINATOR=OFF
+cmake --build build/windows-x86_64 --target <plugin>-vst3 --parallel
+```
+
+Sidecar is excluded because it has Linux-only runtime dependencies. Cross-built
+core tests are also disabled in this package-oriented build; portable behavior
+should already have passed the native Linux tests.
+
+For Windows-specific VST3 conformance checks, cross-build Steinberg's
+`validator.exe` from the VST3 SDK, run its self-test under Wine, and then pass
+it the cross-built bundle:
+
+```bash
+WINEDEBUG=-all WINEPREFIX=/tmp/downspout-wine-vst3 \
+  wine64 /path/to/validator.exe -selftest
+
+WINEDEBUG=-all WINEPREFIX=/tmp/downspout-wine-vst3 \
+  wine64 /path/to/validator.exe \
+  build/windows-x86_64/bin/<plugin>.vst3 \
+  > /tmp/<plugin>-windows-validator.log 2>&1
+```
+
+Some distributions provide `wine` instead of `wine64`. Treat Wine validation
+as failed if the process exits nonzero or the log reports failed tests, even
+when earlier checks succeeded. Record the final `Result:` line and relevant bus
+metadata; validator output for MIDI plugins can be very large.
+
+This check exercises the Windows bundle and binary through Wine, but it does
+not prove editor behavior, host-specific routing, scanning, or loading in a
+native Windows DAW. A real Windows host test remains required for issues such
+as the Ableton compatibility report. CI and release Windows packages use the
+DPF `win64` action path; Wine validation is currently an additional local
+diagnostic rather than a release-workflow gate. See
+[cross-platform.md](cross-platform.md) for the current platform status.
+
 Automated tests do not replace listening and host validation. Effects and
 instruments are tested in real sessions for routing, automation, saved-state
 recall, transport behavior, bypass, controller interaction, visual usability,
