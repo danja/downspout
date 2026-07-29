@@ -104,6 +104,7 @@ The DPF plugin class translates host concepts into core concepts:
 Examples:
 
 - [plugins/p-mix/src/dpf/PMixPlugin.cpp](../plugins/p-mix/src/dpf/PMixPlugin.cpp)
+- [plugins/t-mix/src/dpf/TMixPlugin.cpp](../plugins/t-mix/src/dpf/TMixPlugin.cpp)
 - [plugins/cadence/src/dpf/CadencePlugin.cpp](../plugins/cadence/src/dpf/CadencePlugin.cpp)
 
 ### 3. UI layer

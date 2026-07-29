@@ -61,6 +61,7 @@ Current output filenames:
 - `p-mix.png`
 - `e-mix.png`
 - `m-mix.png`
+- `t-mix.png`
 - `melgen.png`
 - `rift.png`
 - `orchid.png`

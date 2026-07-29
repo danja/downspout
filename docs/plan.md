@@ -143,6 +143,9 @@ Progress as of 2026-05-27:
 - `p-mix` now builds as a first VST3 wrapper with UI via vendored DPF;
 - `e-mix` now has a portable core library, deterministic tests, and a first VST3 wrapper target with a redesigned UI via vendored DPF;
 - `m-mix` now has a portable MIDI-gate core, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
+- `t-mix` now exists as an original eight-input stereo mixer with a portable
+  summing core, constant-power pan, mute/solo behavior, pre-fader meters,
+  deterministic tests, and a DPF/VST3 wrapper with a mixer-style UI;
 - `melgen` now has a phrase-aware MIDI melody core, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `rift` now exists as an original `downspout` transport-aware live/sample buffer effect with WAV loading, beat-mapped sample playback, a portable core, deterministic tests, and a VST3 wrapper target with UI via vendored DPF;
 - `drumgen` now has a portable core library, a host-neutral MIDI engine, text serialization helpers, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;

@@ -21,6 +21,7 @@ plugins=(
   "p-mix:p_mix"
   "e-mix:e_mix"
   "m-mix:m_mix"
+  "t-mix:t_mix"
   "melgen:melgen"
   "rift:rift"
   "orchid:orchid"

@@ -23,6 +23,7 @@ downspout-<version>-<platform>-vst3.zip
 ├── p_mix.vst3/
 ├── e_mix.vst3/
 ├── m_mix.vst3/
+├── t_mix.vst3/
 ├── melgen.vst3/
 ├── rift.vst3/
 ├── orchid.vst3/
