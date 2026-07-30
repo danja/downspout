@@ -225,6 +225,16 @@ The release script currently expects these bundles:
 - `lifeform.vst3`
 - `xoxolo.vst3`
 - `tuney_vst.vst3`
+- `harmonic_atlas.vst3`
+- `conductor.vst3`
+- `drift.vst3`
+- `mnemosyne.vst3`
+- `polymeter.vst3`
+- `oracle.vst3`
+- `mosaic.vst3`
+- `resonance_garden.vst3`
+- `orbit.vst3`
+- `guardian.vst3`
 
 This list should match the bundles installed by `install.sh`; if a plugin is
 added to the local install path, release packaging should be updated in the same
@@ -239,6 +249,7 @@ change.
 - keep plugin options independently switchable in CMake
 - avoid broad shared abstractions until at least two plugins clearly need them
 
-The shared abstraction that most recently became necessary was meter handling.
-It now lives under `include/downspout/meter.hpp`, and `bassgen`, `ground`, and
-`drumgen` are the first generator cores using it directly.
+The generative-workstation suite shares only plugin-suite-local transport/MIDI
+utilities and a parameter-panel UI under `plugins/generative-common`. Domain
+logic remains in each plugin core. Existing plugins do not depend on this
+suite-local layer.

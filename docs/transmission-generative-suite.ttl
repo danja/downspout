@@ -1,0 +1,66 @@
+@prefix trn: <http://purl.org/stuff/transmissions/> .
+@prefix dsp: <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+dsp:harmonic-atlas a trn:PluginProfile ;
+    rdfs:label "Harmonic Atlas" ;
+    trn:bundleName "harmonic_atlas.vst3" ; trn:vendor "danja" ;
+    trn:role trn:MidiGenerator ; trn:accepts trn:Midi ;
+    trn:produces trn:Midi, trn:HarmonyMidi ; trn:requires trn:HostTransport ;
+    trn:recommendedBefore dsp:canticle .
+
+dsp:conductor a trn:PluginProfile ;
+    rdfs:label "Conductor" ;
+    trn:bundleName "conductor.vst3" ; trn:vendor "danja" ;
+    trn:role trn:MidiGenerator ; trn:produces trn:Midi, trn:ControlMidi ;
+    trn:requires trn:HostTransport .
+
+dsp:drift a trn:PluginProfile ;
+    rdfs:label "Drift" ;
+    trn:bundleName "drift.vst3" ; trn:vendor "danja" ;
+    trn:role trn:MidiGenerator, trn:AudioEffect ;
+    trn:accepts trn:Audio ; trn:produces trn:Audio, trn:Midi ;
+    trn:requires trn:HostTransport .
+
+dsp:mnemosyne a trn:PluginProfile ;
+    rdfs:label "Mnemosyne" ;
+    trn:bundleName "mnemosyne.vst3" ; trn:vendor "danja" ;
+    trn:role trn:MidiProcessor ; trn:accepts trn:Midi ;
+    trn:produces trn:Midi, trn:MelodyMidi ; trn:requires trn:HostTransport .
+
+dsp:polymeter a trn:PluginProfile ;
+    rdfs:label "Polymeter" ;
+    trn:bundleName "polymeter.vst3" ; trn:vendor "danja" ;
+    trn:role trn:MidiGenerator ; trn:produces trn:Midi ;
+    trn:requires trn:HostTransport ; trn:recommendedBefore dsp:drumkit .
+
+dsp:oracle a trn:PluginProfile ;
+    rdfs:label "Oracle" ;
+    trn:bundleName "oracle.vst3" ; trn:vendor "danja" ;
+    trn:role trn:AudioEffect, trn:MidiProcessor ;
+    trn:accepts trn:Audio, trn:Midi ; trn:produces trn:Audio, trn:Midi .
+
+dsp:mosaic a trn:PluginProfile ;
+    rdfs:label "Mosaic" ;
+    trn:bundleName "mosaic.vst3" ; trn:vendor "danja" ;
+    trn:role trn:Instrument, trn:MidiGenerator ;
+    trn:accepts trn:Midi ; trn:produces trn:Audio ;
+    trn:requires trn:HostTransport .
+
+dsp:resonance-garden a trn:PluginProfile ;
+    rdfs:label "Resonance Garden" ;
+    trn:bundleName "resonance_garden.vst3" ; trn:vendor "danja" ;
+    trn:role trn:AudioEffect ; trn:accepts trn:Audio, trn:Midi ;
+    trn:produces trn:Audio .
+
+dsp:orbit a trn:PluginProfile ;
+    rdfs:label "Orbit" ;
+    trn:bundleName "orbit.vst3" ; trn:vendor "danja" ;
+    trn:role trn:AudioEffect ; trn:accepts trn:Audio ;
+    trn:produces trn:Audio ; trn:requires trn:HostTransport .
+
+dsp:guardian a trn:PluginProfile ;
+    rdfs:label "Guardian" ;
+    trn:bundleName "guardian.vst3" ; trn:vendor "danja" ;
+    trn:role trn:AudioEffect ; trn:accepts trn:Audio ;
+    trn:produces trn:Audio ; trn:recommendedAfter dsp:orbit .

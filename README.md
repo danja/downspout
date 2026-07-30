@@ -27,7 +27,7 @@ Unpack it, then copy the `.vst3` bundles to your system VST3 folder. On Linux:
 
 ```bash
 mkdir -p ~/.vst3
-cp -r bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 melgen.vst3 rift.vst3 orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 cadence.vst3 arpgen.vst3 counterpointer.vst3 sidecar.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 floozy.vst3 basilico.vst3 canticle.vst3 tuney_vst.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3 xoxolo.vst3 ~/.vst3/
+cp -r *.vst3 ~/.vst3/
 ```
 
 Typical VST3 install locations are `~/.vst3` on Linux,
@@ -89,6 +89,16 @@ installed bundle.
 | [paunchlad](plugins/paunchlad/README.md) | `paunchlad.vst3` | Audio effect/instrument | Launchpad dub performance effect with echo throws, sirens, spring splashes, dropouts, and chops. |
 | [lifeform](plugins/lifeform/README.md) | `lifeform.vst3` | MIDI generator | Conway Game of Life sequencer for Launchpad, evolving one generation per beat into melodic or drum MIDI. |
 | [xoxolo](plugins/xoxolo/README.md) | `xoxolo.vst3` | MIDI generator | Simple x0x-style drum pattern editor with 11 drumkit lanes and a 32-step maximum. |
+| [Harmonic Atlas](plugins/harmonic-atlas/README.md) | `harmonic_atlas.vst3` | MIDI generator | Autonomous tonal, modal, chromatic-mediant, and neo-Riemannian-inspired harmony. |
+| [Conductor](plugins/conductor/README.md) | `conductor.vst3` | MIDI generator | Long-form section and scene-command generator. |
+| [Drift](plugins/drift/README.md) | `drift.vst3` | MIDI modulator | Four seeded CC lanes with LFO, sample-and-hold, walk, chaos, and follower modes. |
+| [Mnemosyne](plugins/mnemosyne/README.md) | `mnemosyne.vst3` | MIDI effect | Fixed-capacity motif capture, memory, transformation, and recombination. |
+| [Polymeter](plugins/polymeter/README.md) | `polymeter.vst3` | MIDI generator | Four Euclidean lanes with coprime lengths, ratchets, probability, and drift. |
+| [Oracle](plugins/oracle/README.md) | `oracle.vst3` | Audio/MIDI effect | Bounded audio/MIDI analysis with CC and guarded note responses. |
+| [Mosaic](plugins/mosaic/README.md) | `mosaic.vst3` | Sampler instrument | Four-slot WAV sampler with deterministic slicing and autonomous triggering. |
+| [Resonance Garden](plugins/resonance-garden/README.md) | `resonance_garden.vst3` | Audio effect | MIDI-tuned damped resonator bank with internal-scale fallback. |
+| [Orbit](plugins/orbit/README.md) | `orbit.vst3` | Audio effect | Seeded transport-aware stereo trajectories, distance filtering, and conservative Doppler. |
+| [Guardian](plugins/guardian/README.md) | `guardian.vst3` | Safety effect | DC removal, look-ahead limiting, true-peak protection, and latched diagnostics. |
 
 ## Architecture
 

@@ -78,6 +78,16 @@ The repository currently installs twenty-six real wrapper targets:
 - `lifeform.vst3` with UI
 - `xoxolo.vst3` with UI
 - `tuney_vst.vst3` with UI
+- `harmonic_atlas.vst3` with UI
+- `conductor.vst3` with UI
+- `drift.vst3` with UI
+- `mnemosyne.vst3` with UI
+- `polymeter.vst3` with UI
+- `oracle.vst3` with UI
+- `mosaic.vst3` with UI
+- `resonance_garden.vst3` with UI
+- `orbit.vst3` with UI
+- `guardian.vst3` with UI
 
 The next install-related validation is host-side confirmation that all twenty-six bundles behave correctly in `Release` builds.
 
@@ -121,3 +131,5 @@ The script has been smoke-tested with a temporary install root under `/tmp`:
 - confirmed `lifeform.vst3` bundle output and install
 - confirmed `xoxolo.vst3` bundle output and install
 - confirmed `tuney_vst.vst3` bundle output and install
+- the ten generative-workstation bundles build locally and await broad
+  host-side install validation

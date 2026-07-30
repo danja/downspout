@@ -1,0 +1,18 @@
+#include "DistrhoPlugin.hpp"
+#include "mosaic_core.hpp"
+#include <array>
+#include <atomic>
+#include <cstring>
+#include <memory>
+START_NAMESPACE_DISTRHO
+namespace{using namespace downspout::mosaic;Transport ct(const TimePosition&x){Transport t;t.valid=x.bbt.valid;t.playing=x.playing;if(t.valid){t.bar=x.bbt.bar-1;t.barBeat=x.bbt.beat-1+(x.bbt.ticksPerBeat>0?x.bbt.tick/x.bbt.ticksPerBeat:0);t.beatsPerBar=x.bbt.beatsPerBar;t.beatType=x.bbt.beatType;t.bpm=x.bbt.beatsPerMinute;}return t;}}
+class MosaicPlugin:public Plugin{public:MosaicPlugin():Plugin(kParameterCount,0,kPoolSize){for(std::uint32_t i=0;i<kParameterCount;++i)p_[i]=kParameterSpecs[i].defaultValue;std::atomic_store(&pool_,std::make_shared<const Pool>());}
+protected:const char*getLabel()const override{return"Mosaic";}const char*getDescription()const override{return"Bounded four-slot generative sampler.";}const char*getMaker()const override{return"danja";}const char*getHomePage()const override{return"https://danja.github.io/downspout/";}const char*getLicense()const override{return"MIT";}std::uint32_t getVersion()const override{return d_version(0,1,0);}std::int64_t getUniqueId()const override{return d_cconst('M','o','s','C');}
+void initParameter(std::uint32_t i,Parameter&q)override{auto&s=kParameterSpecs[i];q.name=s.name;q.symbol=s.symbol;q.hints=s.output?kParameterIsOutput:kParameterIsAutomatable;if(s.integer)q.hints|=kParameterIsInteger;q.ranges={s.defaultValue,s.minimum,s.maximum};}
+void initState(std::uint32_t i,State&q)override{static const char*keys[]={"sample_1","sample_2","sample_3","sample_4"};q.key=keys[i];q.label=keys[i];q.defaultValue="";}
+float getParameterValue(std::uint32_t i)const override{if(i==kStatusLoaded)return s_.statusLoaded;if(i==kStatusMissing)return s_.statusMissing?1:0;if(i==kStatusVoices)return s_.statusVoices;return p_[i];}
+void setParameterValue(std::uint32_t i,float v)override{if(i<kParameterCount&&!kParameterSpecs[i].output)p_[i]=downspout::generative::clampParam(v,kParameterSpecs[i]);}
+String getState(const char*k)const override{for(int i=0;i<kPoolSize;++i)if(std::strcmp(k,keys_[i])==0)return String(paths_[i].c_str());return String();}
+void setState(const char*k,const char*v)override{for(int i=0;i<kPoolSize;++i)if(std::strcmp(k,keys_[i])==0){paths_[i]=v?v:"";auto current=std::atomic_load(&pool_);auto next=std::make_shared<Pool>(current?*current:Pool{});next->samples[i]={};if(!paths_[i].empty()){auto loaded=loadWav(paths_[i]);if(loaded.error.empty())next->samples[i]=std::move(loaded.sample);}std::atomic_store(&pool_,std::shared_ptr<const Pool>(next));break;}}
+void activate()override{reset(s_);}void run(const float**,float**out,std::uint32_t n,const MidiEvent*events,std::uint32_t count)override{std::array<downspout::generative::MidiEvent,512>mi{};count=std::min<std::uint32_t>(count,mi.size());for(std::uint32_t i=0;i<count;++i){mi[i].frame=events[i].frame;mi[i].size=static_cast<std::uint8_t>(std::min<std::uint32_t>(events[i].size,4));auto*d=events[i].size>MidiEvent::kDataSize?events[i].dataExt:events[i].data;for(std::uint8_t b=0;b<mi[i].size;++b)mi[i].data[b]=d[b];}auto pool=std::atomic_load(&pool_);process(s_,p_,ct(getTimePosition()),n,getSampleRate(),pool.get(),mi.data(),count,out[0],out[1]);}
+private:std::array<float,kParameterCount>p_{};downspout::mosaic::State s_{};std::shared_ptr<const Pool>pool_{};std::array<std::string,kPoolSize>paths_{};const std::array<const char*,kPoolSize>keys_{{"sample_1","sample_2","sample_3","sample_4"}};DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MosaicPlugin)};Plugin*createPlugin(){return new MosaicPlugin();}END_NAMESPACE_DISTRHO

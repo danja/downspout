@@ -38,6 +38,16 @@ option(DOWNSPOUT_BUILD_PAUNCHLAD "Configure the PaunchLad Launchpad dub effect t
 option(DOWNSPOUT_BUILD_LIFEFORM "Configure the Lifeform Launchpad Game of Life MIDI target" ON)
 option(DOWNSPOUT_BUILD_XOXOLO "Configure the Xoxolo MIDI drum pattern target" ON)
 option(DOWNSPOUT_BUILD_TUNEY_VST "Configure the Tuney VST text-to-music instrument target" ON)
+option(DOWNSPOUT_BUILD_HARMONIC_ATLAS "Configure the Harmonic Atlas harmony generator target" ON)
+option(DOWNSPOUT_BUILD_CONDUCTOR "Configure the Conductor form generator target" ON)
+option(DOWNSPOUT_BUILD_DRIFT "Configure the Drift MIDI modulator target" ON)
+option(DOWNSPOUT_BUILD_MNEMOSYNE "Configure the Mnemosyne motif processor target" ON)
+option(DOWNSPOUT_BUILD_POLYMETER "Configure the Polymeter rhythm generator target" ON)
+option(DOWNSPOUT_BUILD_ORACLE "Configure the Oracle listener/response target" ON)
+option(DOWNSPOUT_BUILD_MOSAIC "Configure the Mosaic sampler target" ON)
+option(DOWNSPOUT_BUILD_RESONANCE_GARDEN "Configure the Resonance Garden effect target" ON)
+option(DOWNSPOUT_BUILD_ORBIT "Configure the Orbit spatial effect target" ON)
+option(DOWNSPOUT_BUILD_GUARDIAN "Configure the Guardian safety effect target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 option(DOWNSPOUT_BUILD_SCREENSHOT_APPS "Build DPF standalone apps for documentation screenshots" OFF)
 
@@ -178,4 +188,44 @@ endif()
 
 if(DOWNSPOUT_BUILD_TUNEY_VST)
     add_subdirectory(plugins/tuney-vst)
+endif()
+
+if(DOWNSPOUT_BUILD_HARMONIC_ATLAS)
+    add_subdirectory(plugins/harmonic-atlas)
+endif()
+
+if(DOWNSPOUT_BUILD_CONDUCTOR)
+    add_subdirectory(plugins/conductor)
+endif()
+
+if(DOWNSPOUT_BUILD_DRIFT)
+    add_subdirectory(plugins/drift)
+endif()
+
+if(DOWNSPOUT_BUILD_MNEMOSYNE)
+    add_subdirectory(plugins/mnemosyne)
+endif()
+
+if(DOWNSPOUT_BUILD_POLYMETER)
+    add_subdirectory(plugins/polymeter)
+endif()
+
+if(DOWNSPOUT_BUILD_ORACLE)
+    add_subdirectory(plugins/oracle)
+endif()
+
+if(DOWNSPOUT_BUILD_MOSAIC)
+    add_subdirectory(plugins/mosaic)
+endif()
+
+if(DOWNSPOUT_BUILD_RESONANCE_GARDEN)
+    add_subdirectory(plugins/resonance-garden)
+endif()
+
+if(DOWNSPOUT_BUILD_ORBIT)
+    add_subdirectory(plugins/orbit)
+endif()
+
+if(DOWNSPOUT_BUILD_GUARDIAN)
+    add_subdirectory(plugins/guardian)
 endif()

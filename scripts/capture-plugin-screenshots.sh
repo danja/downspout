@@ -43,6 +43,16 @@ plugins=(
   "paunchlad:paunchlad"
   "lifeform:lifeform"
   "tuney-vst:tuney_vst"
+  "harmonic-atlas:harmonic_atlas"
+  "conductor:conductor"
+  "drift:drift"
+  "mnemosyne:mnemosyne"
+  "polymeter:polymeter"
+  "oracle:oracle"
+  "mosaic:mosaic"
+  "resonance-garden:resonance_garden"
+  "orbit:orbit"
+  "guardian:guardian"
 )
 
 usage() {
