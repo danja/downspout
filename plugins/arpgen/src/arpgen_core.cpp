@@ -198,11 +198,16 @@ int buildMaterial(const EngineState& state,
             ? scale.count
             : (state.controls.scaleShape == SHAPE_TRIAD ? 3 : 4);
         constexpr std::array<int, 4> stackDegrees {0, 2, 4, 6};
+        const bool haveHeldAnchor = std::any_of(
+            state.held.begin(), state.held.end(), [](const bool value) { return value; });
         for (int note = 0; note < 128; ++note) {
-            if (!state.held[static_cast<std::size_t>(note)])
+            if (haveHeldAnchor && !state.held[static_cast<std::size_t>(note)])
+                continue;
+            if (!haveHeldAnchor && note != 60 + state.controls.key)
                 continue;
             velocitySum += state.heldVelocity[static_cast<std::size_t>(note)];
-            ++velocityCount;
+            if (haveHeldAnchor)
+                ++velocityCount;
             const int anchorDegree = nearestScaleDegree(note, state.controls);
             for (int octave = 0; octave < state.controls.octaves; ++octave) {
                 for (int i = 0; i < shapeCount; ++i) {

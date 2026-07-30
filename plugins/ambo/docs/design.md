@@ -21,6 +21,10 @@ portable-core/DPF-shell pattern used by `rift`, while taking visual cues from
 - Non-linear distortion uses tanh saturation, mild foldback, asymmetry, and
   internal DC rejection.
 - Feedback is an explicit crossfed wet return into the start of the whole chain.
+- The shimmer tank, shared diffusion path, delay regeneration, and outer wet
+  feedback return each use an 8 Hz one-pole DC blocker. Recirculating writes are
+  finite-checked and bounded before storage so asymmetric nonlinear stages
+  cannot accumulate a persistent offset.
 
 ## UI Mapping
 

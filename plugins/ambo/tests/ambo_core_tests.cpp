@@ -326,6 +326,74 @@ void testAllChainsStayBounded()
     }
 }
 
+void testThirtySecondFeedbackTailRejectsDcAndPreservesAc()
+{
+    constexpr double sampleRate = 48000.0;
+    constexpr std::uint32_t blockFrames = 1024;
+    constexpr std::uint64_t totalFrames = static_cast<std::uint64_t>(sampleRate * 30.0);
+    constexpr std::uint64_t analysisStart = static_cast<std::uint64_t>(sampleRate * 25.0);
+
+    EngineState state;
+    activate(state, sampleRate);
+
+    Parameters parameters;
+    parameters.chain = 3.0f;
+    parameters.time = 0.72f;
+    parameters.spectral = 0.74f;
+    parameters.tape = 0.64f;
+    parameters.shimmer = 0.88f;
+    parameters.delay = 0.82f;
+    parameters.drive = 0.42f;
+    parameters.feedback = 0.90f;
+    parameters.mix = 1.0f;
+
+    std::array<float, blockFrames> inputL {};
+    std::array<float, blockFrames> inputR {};
+    std::array<float, blockFrames> outputL {};
+    std::array<float, blockFrames> outputR {};
+    AudioBlock audio;
+    audio.inputs[0] = inputL.data();
+    audio.inputs[1] = inputR.data();
+    audio.outputs[0] = outputL.data();
+    audio.outputs[1] = outputR.data();
+    audio.channelCount = 2;
+
+    double sum = 0.0;
+    double sumSquares = 0.0;
+    std::uint64_t sampleCount = 0;
+    for (std::uint64_t blockStart = 0; blockStart < totalFrames; blockStart += blockFrames) {
+        inputL.fill(0.0f);
+        inputR.fill(0.0f);
+        if (blockStart == 0) {
+            inputL[0] = 0.8f;
+            inputR[0] = -0.6f;
+        }
+        const auto frames = static_cast<std::uint32_t>(
+            std::min<std::uint64_t>(blockFrames, totalFrames - blockStart));
+        (void)processBlock(state, parameters, frames, sampleRate, audio);
+        for (std::uint32_t frame = 0; frame < frames; ++frame) {
+            assert(std::isfinite(outputL[frame]));
+            assert(std::isfinite(outputR[frame]));
+            assert(std::isfinite(state.feedback[0]));
+            assert(std::isfinite(state.feedback[1]));
+            assert(std::fabs(state.feedback[0]) <= 4.0f);
+            assert(std::fabs(state.feedback[1]) <= 4.0f);
+            if (blockStart + frame >= analysisStart) {
+                const double mono = 0.5 * (outputL[frame] + outputR[frame]);
+                sum += mono;
+                sumSquares += mono * mono;
+                ++sampleCount;
+            }
+        }
+    }
+
+    const double mean = sum / static_cast<double>(sampleCount);
+    const double acRms = std::sqrt(std::max(
+        0.0, sumSquares / static_cast<double>(sampleCount) - mean * mean));
+    assert(std::fabs(mean) < 0.002);
+    assert(acRms > 1.0e-5);
+}
+
 }  // namespace
 
 int main()
@@ -339,5 +407,6 @@ int main()
     testChainChangeUsesDryTransition();
     testRapidParameterChangesAreSmoothedAndBounded();
     testBypassSettlesToDrySignal();
+    testThirtySecondFeedbackTailRejectsDcAndPreservesAc();
     return 0;
 }

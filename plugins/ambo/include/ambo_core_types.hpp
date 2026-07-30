@@ -67,6 +67,14 @@ struct EngineState {
     std::array<float, kMaxChannels> tapeHigh {};
     std::array<float, kMaxChannels> driveDc {};
     std::array<float, kMaxChannels> feedback {};
+    std::array<float, kMaxChannels> feedbackDcInput {};
+    std::array<float, kMaxChannels> feedbackDcOutput {};
+    std::array<float, kMaxChannels> shimmerDcInput {};
+    std::array<float, kMaxChannels> shimmerDcOutput {};
+    std::array<float, kMaxChannels> diffusionDcInput {};
+    std::array<float, kMaxChannels> diffusionDcOutput {};
+    std::array<float, kMaxChannels> delayDcInput {};
+    std::array<float, kMaxChannels> delayDcOutput {};
 
     float timePhase = 0.0f;
     float tapePhase = 0.0f;

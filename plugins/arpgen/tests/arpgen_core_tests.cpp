@@ -194,21 +194,80 @@ void testStopAndRewindReleaseActiveNote()
     assert((rewound.events[0].data[0] & 0xf0) == 0x80);
 }
 
-void testScaleHeldNotesDoNotSurviveStop()
+void testScaleModeGeneratesWithoutInputAcrossBoundaries()
 {
     EngineState state;
     Controls controls;
     controls.mode = MODE_SCALE;
+    controls.key = 0;
+    controls.scale = SCALE_LYDIAN;
+    controls.scaleShape = SHAPE_SEVENTH;
+    controls.octaves = 1;
+    controls.order = ORDER_UP_DOWN;
+    controls.rate = RATE_SIXTEENTH;
+
+    constexpr std::uint32_t blockFrames = 1024;
+    constexpr double quartersPerBlock =
+        static_cast<double>(blockFrames) * 120.0 / (60.0 * kSampleRate);
+    int emitted = 0;
+    int emittedAfterBar = 0;
+    for (int block = 0; block < 220; ++block) {
+        const double start = block * quartersPerBlock;
+        const auto result = processBlock(state, controls, transport(start), blockFrames,
+                                         kSampleRate, nullptr, 0);
+        const int count = static_cast<int>(noteOns(result).size());
+        emitted += count;
+        if (start >= 4.0)
+            emittedAfterBar += count;
+        assert(result.materialCount == 4);
+    }
+    assert(emitted > 0);
+    assert(emittedAfterBar > 0);
+}
+
+void testScaleModeDoesNotUseCapturedChordMaterial()
+{
+    EngineState state;
+    Controls chordControls;
+    chordControls.rate = RATE_EIGHTH;
+    chordControls.octaves = 1;
+    const std::array<InputMidiEvent, 2> chord {{
+        noteEvent(0, true, 61), noteEvent(0, true, 68)
+    }};
+    runHalfBeat(state, chordControls, 0.0, chord.data(), chord.size());
+
+    Controls scaleControls;
+    scaleControls.mode = MODE_SCALE;
+    scaleControls.key = 2;
+    scaleControls.scale = SCALE_MAJOR;
+    scaleControls.scaleShape = SHAPE_TRIAD;
+    scaleControls.octaves = 1;
+    scaleControls.order = ORDER_UP;
+    scaleControls.rate = RATE_EIGHTH;
+
+    const std::array<InputMidiEvent, 2> releases {{
+        noteEvent(0, false, 61), noteEvent(0, false, 68)
+    }};
+    const auto result = runHalfBeat(state, scaleControls, 0.5, releases.data(), releases.size());
+    assert(noteOns(result) == std::vector<int>({62}));
+    assert(result.materialCount == 3);
+}
+
+void testScaleStopReleasesAndRestartResumesInternalMaterial()
+{
+    EngineState state;
+    Controls controls;
+    controls.mode = MODE_SCALE;
+    controls.rate = RATE_EIGHTH;
     controls.gate = 1.0f;
-    const auto input = noteEvent(0, true, 60);
-    const auto started = runHalfBeat(state, controls, 0.0, &input, 1);
+    const auto started = runHalfBeat(state, controls, 0.0);
     assert(!noteOns(started).empty());
     const auto stopped = processBlock(state, controls, transport(0.5, false), 12000,
                                       kSampleRate, nullptr, 0);
     assert(stopped.eventCount == 1);
     assert((stopped.events[0].data[0] & 0xf0) == 0x80);
     const auto restarted = runHalfBeat(state, controls, 1.0);
-    assert(noteOns(restarted).empty());
+    assert(!noteOns(restarted).empty());
 }
 
 void testNonFourFourBarFractions()
@@ -287,7 +346,9 @@ int main()
     testScaleRunSnapsAndStaysInKey();
     testScaleTriadUsesScaleDegrees();
     testStopAndRewindReleaseActiveNote();
-    testScaleHeldNotesDoNotSurviveStop();
+    testScaleModeGeneratesWithoutInputAcrossBoundaries();
+    testScaleModeDoesNotUseCapturedChordMaterial();
+    testScaleStopReleasesAndRestartResumesInternalMaterial();
     testNonFourFourBarFractions();
     testTempoChangeKeepsGridAndRescalesFrames();
     testContiguousBarBoundaryDoesNotResetPattern();

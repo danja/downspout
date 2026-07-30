@@ -162,14 +162,22 @@ public:
     void reset()
     {
         z_ = 0.0f;
+        coefficient_ = 0.0f;
+        previousCutoff_ = -1.0f;
+        previousSampleRate_ = -1.0f;
     }
 
     float process(const float input, const float cutoffHz, const float sampleRate)
     {
         const float safeRate = std::max(1000.0f, sampleRate);
         const float cutoff = std::clamp(cutoffHz, 30.0f, safeRate * 0.42f);
-        const float a = 1.0f - std::exp(-kTwoPi * cutoff / safeRate);
-        z_ += a * (input - z_);
+        if (cutoff != previousCutoff_ || safeRate != previousSampleRate_)
+        {
+            coefficient_ = 1.0f - std::exp(-kTwoPi * cutoff / safeRate);
+            previousCutoff_ = cutoff;
+            previousSampleRate_ = safeRate;
+        }
+        z_ += coefficient_ * (input - z_);
         if (!std::isfinite(z_))
             z_ = 0.0f;
         return z_;
@@ -177,6 +185,9 @@ public:
 
 private:
     float z_ = 0.0f;
+    float coefficient_ = 0.0f;
+    float previousCutoff_ = -1.0f;
+    float previousSampleRate_ = -1.0f;
 };
 
 struct ModelProfile {
@@ -298,6 +309,16 @@ public:
         lfoPhase_ = 0.0f;
         velocity_ = 0.0f;
         age_ = 0;
+        profile_ = {};
+        voiceFrequency_ = 440.0f;
+        detuneRatio_ = 1.0f;
+        movement_ = 0.0f;
+        body_ = 0.0f;
+        metal_ = 0.0f;
+        drive_ = 0.0f;
+        cutoff_ = 1000.0f;
+        panBase_ = 0.0f;
+        openRangeBoost_ = 0.0f;
     }
 
     void start(const int midiNote, const std::uint8_t velocity, const Params& params, const std::uint64_t serial)
@@ -311,7 +332,7 @@ public:
         phaseB_ = wrapPhase(phaseA_ + 0.31f);
         phaseC_ = wrapPhase(phaseA_ + 0.61f);
         lfoPhase_ = wrapPhase(static_cast<float>((midiNote * 11) % 97) / 97.0f);
-        configureEnvelope(params);
+        parametersChanged(params);
         env_.gateOn();
         filter_.reset();
     }
@@ -321,14 +342,49 @@ public:
         env_.gateOff();
     }
 
-    StereoFrame process(const Params& params)
+    void parametersChanged(const Params& params)
+    {
+        configureEnvelope(params);
+        const int model = paramChoice(params, ParamId::model, 4);
+        profile_ = profileForModel(model);
+        const int range = paramChoice(params, ParamId::range, 3);
+        const int ensemble = paramChoice(params, ParamId::ensemble, 3);
+        const float rangeRatio = range == 1 ? 0.5f : (range == 2 ? 2.0f : 1.0f);
+        const float ensembleDetuneScale = ensemble == 0 ? 0.65f
+            : (ensemble == 1 ? 1.00f : (ensemble == 2 ? 1.55f : 2.10f));
+        const float ensembleMovementScale = ensemble == 0 ? 0.70f
+            : (ensemble == 1 ? 1.00f : (ensemble == 2 ? 1.25f : 1.45f));
+        const float ensembleWidthBoost = ensemble == 0 ? -0.18f
+            : (ensemble == 1 ? 0.0f : (ensemble == 2 ? 0.16f : 0.28f));
+
+        voiceFrequency_ = frequency_ * rangeRatio;
+        const float detuneCents =
+            (params.values[static_cast<std::size_t>(ParamId::detune)] * 18.0f + 1.0f)
+            * ensembleDetuneScale;
+        detuneRatio_ = std::pow(2.0f, detuneCents / 1200.0f);
+        movement_ = params.values[static_cast<std::size_t>(ParamId::movement)]
+            * profile_.movementScale * ensembleMovementScale;
+        body_ = params.values[static_cast<std::size_t>(ParamId::body)];
+        metal_ = params.values[static_cast<std::size_t>(ParamId::metal)];
+        const float tone = params.values[static_cast<std::size_t>(ParamId::tone)];
+        drive_ = params.values[static_cast<std::size_t>(ParamId::drive)]
+            * profile_.driveScale + metal_ * 0.45f;
+        cutoff_ = profile_.cutoffBase + profile_.cutoffRange * tone * tone
+            + std::clamp(voiceFrequency_ * (0.8f + body_), 0.0f, 3200.0f)
+            + metal_ * (2400.0f + tone * 3600.0f);
+        const float width = std::clamp(
+            params.values[static_cast<std::size_t>(ParamId::width)] + ensembleWidthBoost,
+            0.0f, 1.0f);
+        panBase_ = (static_cast<float>((note_ * 37) % 101) / 100.0f - 0.5f)
+            * 1.35f * width;
+        openRangeBoost_ = range == 3 ? 0.22f : 0.0f;
+    }
+
+    StereoFrame process()
     {
         if (!env_.active())
             return {};
 
-        configureEnvelope(params);
-        const int model = static_cast<int>(std::lround(params.values[static_cast<std::size_t>(ParamId::model)]));
-        const ModelProfile profile = profileForModel(model);
         const float env = env_.process();
         if (!env_.active())
         {
@@ -336,56 +392,33 @@ public:
             return {};
         }
 
-        const int range = paramChoice(params, ParamId::range, 3);
-        const int ensemble = paramChoice(params, ParamId::ensemble, 3);
-        const float rangeSemitones = range == 1 ? -12.0f : (range == 2 ? 12.0f : 0.0f);
-        const float voiceFrequency = frequency_ * std::pow(2.0f, rangeSemitones / 12.0f);
-        const float ensembleDetuneScale = ensemble == 0 ? 0.65f : (ensemble == 1 ? 1.00f : (ensemble == 2 ? 1.55f : 2.10f));
-        const float ensembleMovementScale = ensemble == 0 ? 0.70f : (ensemble == 1 ? 1.00f : (ensemble == 2 ? 1.25f : 1.45f));
-        const float ensembleWidthBoost = ensemble == 0 ? -0.18f : (ensemble == 1 ? 0.0f : (ensemble == 2 ? 0.16f : 0.28f));
-        const float openRangeBoost = range == 3 ? 0.22f : 0.0f;
-
-        const float detuneCents = (params.values[static_cast<std::size_t>(ParamId::detune)] * 18.0f + 1.0f) *
-                                  ensembleDetuneScale;
-        const float detuneRatio = std::pow(2.0f, detuneCents / 1200.0f);
-        const float movement = params.values[static_cast<std::size_t>(ParamId::movement)] * profile.movementScale *
-                               ensembleMovementScale;
         const float lfo = sine(lfoPhase_);
-        lfoPhase_ = wrapPhase(lfoPhase_ + (0.08f + movement * 4.2f) / sampleRate_);
+        lfoPhase_ = wrapPhase(lfoPhase_ + (0.08f + movement_ * 4.2f) / sampleRate_);
 
-        const float vibrato = 1.0f + lfo * movement * 0.0045f;
-        const float incA = (voiceFrequency * vibrato) / sampleRate_;
-        const float incB = (voiceFrequency * detuneRatio * (1.0f - movement * 0.001f)) / sampleRate_;
-        const float incC = (voiceFrequency * 2.0f * (1.0f + movement * 0.0015f)) / sampleRate_;
+        const float vibrato = 1.0f + lfo * movement_ * 0.0045f;
+        const float incA = (voiceFrequency_ * vibrato) / sampleRate_;
+        const float incB = (voiceFrequency_ * detuneRatio_ * (1.0f - movement_ * 0.001f)) / sampleRate_;
+        const float incC = (voiceFrequency_ * 2.0f * (1.0f + movement_ * 0.0015f)) / sampleRate_;
         phaseA_ = wrapPhase(phaseA_ + incA);
         phaseB_ = wrapPhase(phaseB_ + incB);
         phaseC_ = wrapPhase(phaseC_ + incC);
 
-        const float raw = sine(phaseA_) * profile.sineMix +
-                          triangle(phaseB_) * profile.triMix +
-                          softSaw(phaseA_ + 0.15f * lfo) * profile.sawMix +
-                          sine(phaseC_) * (profile.octaveMix + openRangeBoost);
-        const float body = params.values[static_cast<std::size_t>(ParamId::body)];
-        const float metal = params.values[static_cast<std::size_t>(ParamId::metal)];
+        const float raw = sine(phaseA_) * profile_.sineMix +
+                          triangle(phaseB_) * profile_.triMix +
+                          softSaw(phaseA_ + 0.15f * lfo) * profile_.sawMix +
+                          sine(phaseC_) * (profile_.octaveMix + openRangeBoost_);
         const float metallic = sine(phaseA_ * 2.997f + phaseB_ * 0.173f) * 0.42f +
                                triangle(phaseB_ * 4.011f + phaseC_ * 0.071f) * 0.26f +
                                softSaw(phaseC_ * 3.731f + phaseA_ * 0.113f) * 0.20f;
         const float bodyTone = raw +
-                               body * profile.bodyScale * (sine(phaseA_ * 0.5f) + 0.35f * sine(phaseC_ * 0.5f)) +
-                               metal * (0.16f + body * 0.28f) * metallic;
-        const float tone = params.values[static_cast<std::size_t>(ParamId::tone)];
-        const float cutoff = profile.cutoffBase + profile.cutoffRange * tone * tone +
-                             std::clamp(voiceFrequency * (0.8f + body), 0.0f, 3200.0f) +
-                             metal * (2400.0f + tone * 3600.0f);
-        const float filtered = filter_.process(bodyTone, cutoff, sampleRate_);
-        const float drive = params.values[static_cast<std::size_t>(ParamId::drive)] * profile.driveScale + metal * 0.45f;
-        const float shaped = sanitizeAudio(filtered * (1.0f + drive * 3.5f) + metallic * metal * 0.08f);
+                               body_ * profile_.bodyScale * (sine(phaseA_ * 0.5f) + 0.35f * sine(phaseC_ * 0.5f)) +
+                               metal_ * (0.16f + body_ * 0.28f) * metallic;
+        const float filtered = filter_.process(bodyTone, cutoff_, sampleRate_);
+        const float shaped = sanitizeAudio(filtered * (1.0f + drive_ * 3.5f) + metallic * metal_ * 0.08f);
         const float amp = env * (0.18f + velocity_ * 0.82f);
         const float mono = sanitizeAudio(shaped * amp * 0.42f);
 
-        const float width = std::clamp(params.values[static_cast<std::size_t>(ParamId::width)] + ensembleWidthBoost, 0.0f, 1.0f);
-        const float panBase = (static_cast<float>((note_ * 37) % 101) / 100.0f - 0.5f) * 1.35f * width;
-        const float pan = std::clamp(panBase + lfo * movement * 0.15f, -0.88f, 0.88f);
+        const float pan = std::clamp(panBase_ + lfo * movement_ * 0.15f, -0.88f, 0.88f);
         const float leftGain = std::sqrt(0.5f * (1.0f - pan));
         const float rightGain = std::sqrt(0.5f * (1.0f + pan));
         ++age_;
@@ -446,6 +479,16 @@ private:
     float phaseC_ = 0.0f;
     float lfoPhase_ = 0.0f;
     float velocity_ = 0.0f;
+    ModelProfile profile_ {};
+    float voiceFrequency_ = 440.0f;
+    float detuneRatio_ = 1.0f;
+    float movement_ = 0.0f;
+    float body_ = 0.0f;
+    float metal_ = 0.0f;
+    float drive_ = 0.0f;
+    float cutoff_ = 1000.0f;
+    float panBase_ = 0.0f;
+    float openRangeBoost_ = 0.0f;
     std::uint64_t serial_ = 0;
     std::uint64_t age_ = 0;
     Envelope env_;
@@ -493,7 +536,12 @@ public:
         float clamped = std::clamp(std::isfinite(value) ? value : spec.defaultValue, spec.minimum, spec.maximum);
         if (spec.integer)
             clamped = std::round(clamped);
+        if (params_.values[index] == clamped)
+            return;
         params_.values[index] = clamped;
+        for (auto& voice : voices_)
+            if (voice.active())
+                voice.parametersChanged(params_);
     }
 
     void noteOn(const int midiNote, const std::uint8_t velocity)
@@ -561,7 +609,7 @@ public:
         float right = 0.0f;
         for (auto& voice : voices_)
         {
-            const StereoFrame frame = voice.process(params_);
+            const StereoFrame frame = voice.process();
             left += frame.left;
             right += frame.right;
         }

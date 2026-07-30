@@ -39,4 +39,9 @@ if(BUILD_TESTING)
     )
     target_link_libraries(downspout_canticle_core_tests PRIVATE downspout_canticle_core)
     add_test(NAME downspout_canticle_core_tests COMMAND downspout_canticle_core_tests)
+
+    add_executable(downspout_canticle_processing_benchmark
+        tests/canticle_processing_benchmark.cpp
+    )
+    target_link_libraries(downspout_canticle_processing_benchmark PRIVATE downspout_canticle_core)
 endif()

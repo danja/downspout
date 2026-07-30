@@ -11,6 +11,7 @@ constexpr float kPi = 3.14159265358979323846f;
 constexpr double kMaxDelaySeconds = 8.0;
 constexpr double kParameterSmoothingSeconds = 0.012;
 constexpr double kChainFadeSeconds = 0.006;
+constexpr double kDcBlockHz = 8.0;
 
 [[nodiscard]] float clampf(float value, float minValue, float maxValue)
 {
@@ -84,6 +85,24 @@ void writeChannel(std::vector<float>& buffer,
 [[nodiscard]] float softClip(float value)
 {
     return std::tanh(value);
+}
+
+[[nodiscard]] float dcBlock(float value,
+                            float& previousInput,
+                            float& previousOutput,
+                            double sampleRate)
+{
+    if (!std::isfinite(value)) {
+        previousInput = 0.0f;
+        previousOutput = 0.0f;
+        return 0.0f;
+    }
+    const float coefficient = static_cast<float>(
+        std::exp(-2.0 * static_cast<double>(kPi) * kDcBlockHz / std::max(1.0, sampleRate)));
+    const float output = value - previousInput + coefficient * previousOutput;
+    previousInput = value;
+    previousOutput = std::isfinite(output) ? output : 0.0f;
+    return previousOutput;
 }
 
 [[nodiscard]] float foldback(float value)
@@ -252,21 +271,33 @@ void writeChannel(std::vector<float>& buffer,
                                   * (1.0f + amount * 0.70f));
     const float brightR = softClip((tankR * 0.46f + bloomL * 0.26f + pitchL * 0.28f + diffuseR * 0.22f)
                                   * (1.0f + amount * 0.70f));
-    const float diffuseWriteL = in[0] * send + (brightR - diffuseR * 0.35f) * regen;
-    const float diffuseWriteR = in[1] * send + (brightL - diffuseL * 0.35f) * regen;
+    const std::array<float, kMaxChannels> diffuseWrite {{
+        dcBlock(in[0] * send + (brightR - diffuseR * 0.35f) * regen,
+                state.diffusionDcInput[0], state.diffusionDcOutput[0], sampleRate),
+        dcBlock(in[1] * send + (brightL - diffuseL * 0.35f) * regen,
+                state.diffusionDcInput[1], state.diffusionDcOutput[1], sampleRate),
+    }};
+    const std::array<float, kMaxChannels> shimmerWrite {{
+        dcBlock(in[0] * send + (brightR + diffuseWrite[0] * 0.24f) * regen,
+                state.shimmerDcInput[0], state.shimmerDcOutput[0], sampleRate),
+        dcBlock(in[1] * send + (brightL + diffuseWrite[1] * 0.24f) * regen,
+                state.shimmerDcInput[1], state.shimmerDcOutput[1], sampleRate),
+    }};
 
-    writeChannel(state.diffusionBuffer, state.bufferFrames, state.diffusionWriteHead, 0, diffuseWriteL);
-    writeChannel(state.diffusionBuffer, state.bufferFrames, state.diffusionWriteHead, 1, diffuseWriteR);
+    writeChannel(state.diffusionBuffer, state.bufferFrames, state.diffusionWriteHead, 0,
+                 clampf(diffuseWrite[0], -4.0f, 4.0f));
+    writeChannel(state.diffusionBuffer, state.bufferFrames, state.diffusionWriteHead, 1,
+                 clampf(diffuseWrite[1], -4.0f, 4.0f));
     writeChannel(state.shimmerBuffer,
                  state.bufferFrames,
                  state.shimmerWriteHead,
                  0,
-                 in[0] * send + (brightR + diffuseWriteL * 0.24f) * regen);
+                 clampf(shimmerWrite[0], -4.0f, 4.0f));
     writeChannel(state.shimmerBuffer,
                  state.bufferFrames,
                  state.shimmerWriteHead,
                  1,
-                 in[1] * send + (brightL + diffuseWriteR * 0.24f) * regen);
+                 clampf(shimmerWrite[1], -4.0f, 4.0f));
 
     return {
         in[0] * (1.0f - amount * 0.58f) + (brightL + diffuseL * 0.34f) * amount * 0.86f,
@@ -303,8 +334,14 @@ void writeChannel(std::vector<float>& buffer,
     const float filteredL = softClip(delayedL + (leftB - delayedL) * smear);
     const float filteredR = softClip(delayedR + (rightB - delayedR) * smear);
 
-    writeChannel(state.delayBuffer, state.bufferFrames, state.delayWriteHead, 0, in[0] * send + filteredR * regen);
-    writeChannel(state.delayBuffer, state.bufferFrames, state.delayWriteHead, 1, in[1] * send + filteredL * regen);
+    const float writeL = dcBlock(in[0] * send + filteredR * regen,
+                                 state.delayDcInput[0], state.delayDcOutput[0], sampleRate);
+    const float writeR = dcBlock(in[1] * send + filteredL * regen,
+                                 state.delayDcInput[1], state.delayDcOutput[1], sampleRate);
+    writeChannel(state.delayBuffer, state.bufferFrames, state.delayWriteHead, 0,
+                 clampf(writeL, -4.0f, 4.0f));
+    writeChannel(state.delayBuffer, state.bufferFrames, state.delayWriteHead, 1,
+                 clampf(writeR, -4.0f, 4.0f));
 
     return {
         in[0] * (1.0f - amount * 0.44f) + filteredL * amount,
@@ -380,6 +417,14 @@ void ensureBuffers(EngineState& state, double sampleRate)
     state.tapeHigh = {};
     state.driveDc = {};
     state.feedback = {};
+    state.feedbackDcInput = {};
+    state.feedbackDcOutput = {};
+    state.shimmerDcInput = {};
+    state.shimmerDcOutput = {};
+    state.diffusionDcInput = {};
+    state.diffusionDcOutput = {};
+    state.delayDcInput = {};
+    state.delayDcOutput = {};
     state.timePhase = 0.0f;
     state.tapePhase = 0.0f;
     state.spectralPhase = 0.0f;
@@ -496,8 +541,10 @@ OutputStatus processBlock(EngineState& state,
         for (ModuleId module : modules)
             wet = processModule(state, module, parameters, wet, sampleRate);
 
-        wet[0] = clampf(wet[0], -4.0f, 4.0f);
-        wet[1] = clampf(wet[1], -4.0f, 4.0f);
+        wet[0] = clampf(dcBlock(wet[0], state.feedbackDcInput[0],
+                                state.feedbackDcOutput[0], sampleRate), -4.0f, 4.0f);
+        wet[1] = clampf(dcBlock(wet[1], state.feedbackDcInput[1],
+                                state.feedbackDcOutput[1], sampleRate), -4.0f, 4.0f);
         state.feedback[0] = wet[0];
         state.feedback[1] = wet[1];
 

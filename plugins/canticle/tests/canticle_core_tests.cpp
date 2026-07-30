@@ -167,6 +167,26 @@ void metalAddsBrightEdge()
     require(metalHigh > plainHigh * 1.25f, "canticle metal should add a brighter edge");
 }
 
+void activeVoiceParameterChangesRemainBounded()
+{
+    CanticleEngine engine {48000.0f};
+    for (int voice = 0; voice < 8; ++voice)
+        engine.noteOn(48 + voice * 3, 110);
+    require(renderEnergy(engine, 256) > 0.001f,
+            "canticle should sound before active-voice parameter changes");
+
+    for (int model = 0; model <= 4; ++model)
+    {
+        engine.setParameter(ParamId::model, static_cast<float>(model));
+        engine.setParameter(ParamId::articulation, static_cast<float>(model % 4));
+        engine.setParameter(ParamId::range, static_cast<float>((model + 1) % 4));
+        engine.setParameter(ParamId::ensemble, static_cast<float>((model + 2) % 4));
+        engine.setParameter(ParamId::detune, 0.17f * static_cast<float>(model));
+        require(renderPeak(engine, 1024) <= 1.0f,
+                "canticle active-voice parameter change should remain bounded");
+    }
+}
+
 } // namespace
 
 int main()
@@ -178,6 +198,7 @@ int main()
     allNotesOffReleasesChord();
     outputIsBounded();
     metalAddsBrightEdge();
+    activeVoiceParameterChangesRemainBounded();
 
     std::cout << "canticle core tests passed\n";
     return 0;
