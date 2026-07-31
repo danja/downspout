@@ -84,7 +84,7 @@ protected:
         const float top = 104.0f;
         const float bottom = 24.0f;
         const float gap = 10.0f;
-        const float masterWidth = 126.0f;
+        const float masterWidth = 160.0f;
         const float stripWidth = (width - left * 2.0f - masterWidth - gap * 8.0f) / 8.0f;
         const float stripHeight = height - top - bottom;
 
@@ -132,6 +132,15 @@ protected:
         if (masterRect_.contains(x, y)) {
             beginDrag(kParamMaster);
             updateVertical(kParamMaster, masterRect_, y);
+            return true;
+        }
+        if (producerChannelRect_.contains(x, y)) {
+            const int current = static_cast<int>(std::lround(values_[kParamProducerControlChannel]));
+            commit(kParamProducerControlChannel, static_cast<float>((current + 1) % 17));
+            return true;
+        }
+        if (producerGateRect_.contains(x, y)) {
+            toggle(kParamRequireProducerGate);
             return true;
         }
         if (producerSlewRect_.contains(x, y)) {
@@ -185,6 +194,11 @@ protected:
             commit(kParamProducerSlew, clampf(values_[kParamProducerSlew] + direction * 5.0f, 0.0f, 500.0f));
             return true;
         }
+        if (producerChannelRect_.contains(x, y)) {
+            const float next = clampf(values_[kParamProducerControlChannel] + direction, 0.0f, 16.0f);
+            commit(kParamProducerControlChannel, next);
+            return true;
+        }
         return false;
     }
 
@@ -196,6 +210,8 @@ private:
     std::array<Rect, kInputChannelCount> soloRects_ {};
     Rect masterRect_ {};
     Rect producerSlewRect_ {};
+    Rect producerChannelRect_ {};
+    Rect producerGateRect_ {};
     int dragParameter_ = -1;
 
     void drawBackground(float width, float height)
@@ -228,7 +244,7 @@ private:
 
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
         fillColor(104, 135, 142, 255);
-        text(width - 26.0f, 43.0f, "LEVEL / AUTO CC20-27 / PAN / MUTE / SOLO", nullptr);
+        text(width - 26.0f, 43.0f, "PRODUCER BUS CC19 + CC20-27 / MIDI THRU", nullptr);
     }
 
     void drawPanel(const Rect& rect, bool master)
@@ -287,15 +303,48 @@ private:
         fillColor(229, 221, 192, 255);
         text(strip.x + strip.w * 0.5f, strip.y + 14.0f, "MASTER", nullptr);
 
-        fontSize(10.0f);
-        fillColor(118, 142, 146, 255);
-        text(strip.x + strip.w * 0.5f, strip.y + 46.0f, "STEREO OUT", nullptr);
+        drawProducerStatus({strip.x + 14.0f, strip.y + 43.0f, strip.w - 28.0f, 24.0f});
 
-        producerSlewRect_ = {strip.x + 14.0f, strip.y + 67.0f, strip.w - 28.0f, 35.0f};
+        producerChannelRect_ = {strip.x + 14.0f, strip.y + 76.0f, strip.w - 28.0f, 30.0f};
+        drawProducerChannel(producerChannelRect_);
+        producerGateRect_ = {strip.x + 14.0f, strip.y + 114.0f, strip.w - 28.0f, 30.0f};
+        drawProducerGate(producerGateRect_);
+        producerSlewRect_ = {strip.x + 14.0f, strip.y + 153.0f, strip.w - 28.0f, 35.0f};
         drawProducerSlew(producerSlewRect_);
 
-        masterRect_ = {strip.x + 27.0f, strip.y + 132.0f, strip.w - 54.0f, strip.h - 172.0f};
+        masterRect_ = {strip.x + 38.0f, strip.y + 224.0f, strip.w - 76.0f, strip.h - 264.0f};
         drawFader(masterRect_, values_[kParamMaster], true);
+    }
+
+    void drawProducerStatus(const Rect& rect)
+    {
+        const bool active = values_[kParamStatusProducerActive] >= 0.5f;
+        beginPath();
+        roundedRect(rect.x, rect.y, rect.w, rect.h, 5.0f);
+        fillColor(active ? 31 : 15, active ? 72 : 39, active ? 63 : 44, 255);
+        fill();
+        beginPath();
+        circle(rect.x + 13.0f, rect.y + rect.h * 0.5f, 4.0f);
+        fillColor(active ? 91 : 67, active ? 211 : 78, active ? 170 : 83, 255);
+        fill();
+        fontSize(9.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        fillColor(active ? 211 : 123, active ? 229 : 142, active ? 219 : 146, 255);
+        text(rect.x + 24.0f, rect.y + rect.h * 0.5f, active ? "PRODUCER ACTIVE" : "WAITING FOR BUS", nullptr);
+    }
+
+    void drawProducerChannel(const Rect& rect)
+    {
+        char label[28] {};
+        const int channel = static_cast<int>(std::lround(values_[kParamProducerControlChannel]));
+        std::snprintf(label, sizeof(label), channel == 0 ? "LISTEN: OMNI" : "LISTEN: CH %d", channel);
+        drawButton(rect, label, false, false);
+    }
+
+    void drawProducerGate(const Rect& rect)
+    {
+        drawButton(rect, values_[kParamRequireProducerGate] >= 0.5f ? "CC19 GATE: ON" : "CC19 GATE: OFF",
+                   values_[kParamRequireProducerGate] >= 0.5f, false);
     }
 
     void drawProducerGain(const Rect& rect, float gain)

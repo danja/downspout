@@ -28,10 +28,14 @@
   changes from 0 to 500 ms and defaults to 25 ms.
 - Effective producer gains are transient read-only output parameters. They are
   visible to the UI but are not serialized.
+- CC 19 value 127 acquires producer ownership and value 0 releases it, restoring
+  unity producer targets. `Require Producer Gate` defaults off for compatibility.
+- Control channel 0 is Omni; 1–16 filters the complete producer contract.
+- The DPF wrapper forwards all input MIDI unchanged for downstream effects.
 
 ## State
 
 The `parameters` state key stores a versioned text representation of all eight
 levels, pans, mute/solo values, the master level, and producer slew. Meter and
 effective producer-gain values are transient and are not serialized. Version 1
-states load with the default 25 ms producer slew.
+and 2 states load with the default Omni channel and optional gate disabled.

@@ -11,6 +11,7 @@ namespace downspout::lightverb {
 using downspout::generative::ParamSpec;
 inline constexpr std::uint8_t kMixController = 32;
 inline constexpr std::uint8_t kSpaceController = 33;
+inline constexpr std::uint8_t kProducerLifecycleController = 19;
 inline constexpr std::size_t kDelayLineCount = 4;
 
 enum Parameter : std::uint32_t {
@@ -30,6 +31,9 @@ enum Parameter : std::uint32_t {
     kStatusTail,
     kStatusInputPeak,
     kStatusOutputPeak,
+    kControlChannel,
+    kRequireProducerGate,
+    kStatusProducerActive,
     kParameterCount
 };
 
@@ -50,6 +54,9 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs {{
     {"status_tail", "Tail energy", 0.0f, 1.0f, 0.0f, false, true},
     {"status_input_peak", "Input peak", 0.0f, 1.0f, 0.0f, false, true},
     {"status_output_peak", "Output peak", 0.0f, 1.0f, 0.0f, false, true},
+    {"control_channel", "Producer control channel", 0.0f, 16.0f, 0.0f, true},
+    {"require_producer_gate", "Require producer gate", 0.0f, 1.0f, 0.0f, true},
+    {"status_producer_active", "Producer bus active", 0.0f, 1.0f, 0.0f, true, true},
 }};
 
 struct Parameters {
@@ -78,6 +85,7 @@ struct OutputStatus {
     float tail = 0.0f;
     float inputPeak = 0.0f;
     float outputPeak = 0.0f;
+    bool producerActive = false;
 };
 
 struct State {
@@ -96,6 +104,7 @@ struct State {
     bool mixMidiActive = false;
     float spaceMidiValue = 0.0f;
     float mixMidiValue = 0.0f;
+    bool producerActive = false;
 };
 
 void prepare(State& state, double sampleRate);
@@ -103,7 +112,9 @@ void reset(State& state) noexcept;
 void releaseMidiTakeover(State& state) noexcept;
 [[nodiscard]] Parameters clampParameters(const Parameters& parameters) noexcept;
 [[nodiscard]] bool handleMidi(State& state, const std::uint8_t* data,
-                              std::uint32_t size, bool enabled) noexcept;
+                              std::uint32_t size, bool enabled,
+                              int controlChannel = 0,
+                              bool requireProducerGate = false) noexcept;
 [[nodiscard]] float effectiveSpace(const State& state, const Parameters& parameters) noexcept;
 [[nodiscard]] float effectiveMix(const State& state, const Parameters& parameters) noexcept;
 [[nodiscard]] OutputStatus process(State& state, const Parameters& parameters,

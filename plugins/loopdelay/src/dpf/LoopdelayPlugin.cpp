@@ -64,7 +64,8 @@ protected:
         if (spec.integer)
             parameter.hints |= kParameterIsInteger;
         if (index == kMidiEnabled || index == kClear || index == kResetMidi
-            || index == kStatusTimeMidi || index == kStatusFeedbackMidi)
+            || index == kStatusTimeMidi || index == kStatusFeedbackMidi
+            || index == kRequireProducerGate || index == kStatusProducerActive)
             parameter.hints |= kParameterIsBoolean;
         parameter.ranges = {spec.defaultValue, spec.minimum, spec.maximum};
         if (index == kFreeTimeMs || index == kStatusDelayMs)
@@ -95,6 +96,7 @@ protected:
         case kStatusLoopProgress: return status_.loopProgress;
         case kStatusInputPeak: return status_.inputPeak;
         case kStatusOutputPeak: return status_.outputPeak;
+        case kStatusProducerActive: return status_.producerActive ? 1.0f : 0.0f;
         default: return parameters_.values[index];
         }
     }
@@ -146,6 +148,8 @@ protected:
         const AudioBlock audio {inputs[0], inputs[1], outputs[0], outputs[1]};
         status_ = process(engine_, parameters_, toCoreTransport(getTimePosition()), frames,
                           audio, controls.data(), count);
+        for (std::uint32_t index = 0; index < midiEventCount; ++index)
+            writeMidiEvent(midiEvents[index]);
     }
 
 private:

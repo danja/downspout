@@ -22,6 +22,8 @@ void testClampAndSerialization()
     parameters.channels[5].solo = 0.2f;
     parameters.masterDb = 30.0f;
     parameters.producerSlewMs = 900.0f;
+    parameters.producerControlChannel = 99.0f;
+    parameters.requireProducerGate = 0.8f;
 
     const Parameters clamped = clampParameters(parameters);
     assert(clamped.channels[0].levelDb == kMaximumLevelDb);
@@ -32,6 +34,8 @@ void testClampAndSerialization()
     assert(clamped.channels[5].solo == 0.0f);
     assert(clamped.masterDb == kMaximumLevelDb);
     assert(clamped.producerSlewMs == 500.0f);
+    assert(clamped.producerControlChannel == 16.0f);
+    assert(clamped.requireProducerGate == 1.0f);
 
     const auto decoded = deserializeParameters(serializeParameters(clamped));
     assert(decoded.has_value());
@@ -182,13 +186,13 @@ void testProducerCcContractAndSmoothing()
 {
     EngineState state;
     activate(state);
-    const std::uint8_t unrelated[] {0xb0, 19, 0};
+    Parameters parameters;
+    const std::uint8_t unrelated[] {0xb0, 18, 0};
     const std::uint8_t channelEight[] {0xbf, static_cast<std::uint8_t>(kProducerCcBase + 7), 64};
-    assert(!handleMidi(state, unrelated, 3));
-    assert(handleMidi(state, channelEight, 3));
+    assert(!handleMidi(state, unrelated, 3, parameters));
+    assert(handleMidi(state, channelEight, 3, parameters));
     assert(std::fabs(state.producerTargets[7] - 64.0f / 127.0f) < kTolerance);
 
-    Parameters parameters;
     parameters.producerSlewMs = 25.0f;
     std::array<float, 64> silence {};
     AudioBlock audio;
@@ -196,6 +200,28 @@ void testProducerCcContractAndSmoothing()
     (void)processBlock(state, parameters, 64, 48000.0, audio);
     assert(state.producerGains[7] < 1.0f);
     assert(state.producerGains[7] > state.producerTargets[7]);
+}
+
+void testProducerLifecycleAndChannelIsolation()
+{
+    EngineState state;
+    activate(state);
+    Parameters parameters;
+    parameters.requireProducerGate = 1.0f;
+    parameters.producerControlChannel = 3.0f;
+    const std::uint8_t wrongAcquire[] {0xb0, kProducerLifecycleCc, 127};
+    const std::uint8_t payload[] {0xb2, kProducerCcBase, 0};
+    const std::uint8_t acquire[] {0xb2, kProducerLifecycleCc, 127};
+    const std::uint8_t release[] {0xb2, kProducerLifecycleCc, 0};
+    assert(!handleMidi(state, wrongAcquire, 3, parameters));
+    assert(!handleMidi(state, payload, 3, parameters));
+    assert(handleMidi(state, acquire, 3, parameters));
+    assert(state.producerActive);
+    assert(handleMidi(state, payload, 3, parameters));
+    assert(state.producerTargets[0] == 0.0f);
+    assert(handleMidi(state, release, 3, parameters));
+    assert(!state.producerActive);
+    assert(state.producerTargets[0] == 1.0f);
 }
 
 }  // namespace
@@ -209,5 +235,6 @@ int main()
     testMetersArePreFaderAndDecay();
     testProducerCcControlsTheMatchingChannelAtItsFrame();
     testProducerCcContractAndSmoothing();
+    testProducerLifecycleAndChannelIsolation();
     return 0;
 }

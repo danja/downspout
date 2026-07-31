@@ -105,6 +105,9 @@ installed bundle.
 
 ## Architecture
 
+Mixgen, T-Mix, Loopdelay, and Lightverb can form a loosely coupled automatic
+mix chain through [Producer Control Bus v1](docs/producer-control-bus.md).
+
 The repeated implementation pattern is:
 
 1. keep DSP, MIDI, transport, and state behavior in a host-agnostic C++ core;

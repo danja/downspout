@@ -26,12 +26,4 @@ if(BUILD_TESTING)
     add_executable(downspout_mixgen_core_tests tests/mixgen_core_tests.cpp)
     target_link_libraries(downspout_mixgen_core_tests PRIVATE downspout_mixgen_core)
     add_test(NAME downspout_mixgen_core_tests COMMAND downspout_mixgen_core_tests)
-    if(TARGET downspout_t_mix_core)
-        add_executable(downspout_mixgen_t_mix_contract_tests
-            tests/mixgen_t_mix_contract_tests.cpp)
-        target_link_libraries(downspout_mixgen_t_mix_contract_tests PRIVATE
-            downspout_mixgen_core downspout_t_mix_core)
-        add_test(NAME downspout_mixgen_t_mix_contract_tests
-            COMMAND downspout_mixgen_t_mix_contract_tests)
-    endif()
 endif()

@@ -12,7 +12,7 @@ public:
     MixgenUI()
         : GenerativePanelUI(
             "Mixgen",
-            "Automatic producer for T-Mix · routes eight musical gain lanes to CC 20–27",
+            "Producer Control Bus · T-Mix CC 20–27 · Loopdelay 30–31 · Lightverb 32–33",
             downspout::mixgen::kParameterSpecs.data(),
             downspout::mixgen::kParameterCount, 105, 196, 216) {}
 
@@ -22,7 +22,7 @@ private:
         using namespace downspout::mixgen;
         beginPanel();
 
-        drawSection(24, 102, 500, 192, "PATTERN", "when should channels lead or recede?");
+        drawSection(24, 102, 500, 160, "PATTERN", "when should channels lead or recede?");
         static constexpr const char* modes[] {"Random", "Quasi", "Euclidean"};
         drawChoice(kMode, 38, 137, 472, "Producer logic", modes, 3,
                    "Random repeats a seeded pattern; Quasi reduces clumps; Euclidean distributes activity evenly.");
@@ -33,7 +33,7 @@ private:
         drawSlider(kSeed, 394, 197, 116, "Seed", "",
                    "Change this to generate a different repeatable arrangement.", 0);
 
-        drawSection(540, 102, 516, 192, "MIX SHAPE", "how strongly should it produce?");
+        drawSection(540, 102, 516, 160, "MIX SHAPE", "how strongly should it produce?");
         drawPercentSlider(kDensity, 554, 137, 238, "Active density",
                           "How often channels occupy the foreground.");
         drawPercentSlider(kDepth, 804, 137, 238, "Depth",
@@ -43,17 +43,42 @@ private:
         drawPercentSlider(kSpread, 804, 197, 238, "Lane spread",
                           "Offset decisions across channels instead of moving them together.");
 
-        drawSection(24, 310, 1032, 84, "CONNECTION", "send Mixgen MIDI to the T-Mix track");
-        drawToggle(kEnabled, 38, 342, 206, "Producer enabled",
-                   "Turning this off sends unity to all eight channels.");
-        drawChannelSlider(kMidiChannel, 258, 339, 188, "MIDI output",
-                          "T-Mix accepts the contract on any MIDI channel.");
-        drawReadout(460, 337, 268, 44, "FIXED DESTINATION", "T-Mix channels 1–8");
-        drawReadout(742, 337, 300, 44, "MIDI CONTRACT", "CC 20 21 22 23 24 25 26 27");
+        drawSection(24, 278, 1032, 84, "BUS ROUTING", "one MIDI send can drive the complete serial chain");
+        drawToggle(kEnabled, 38, 310, 176, "Producer enabled",
+                   "Off sends CC 19 release and restores T-Mix unity overlays.");
+        drawChannelSlider(kMidiChannel, 226, 307, 142, "Bus channel",
+                          "Match the Control channel in each receiving plugin.");
+        static constexpr const char* profiles[] {"T-Mix", "FX only", "Full bus"};
+        drawChoice(kRoutingProfile, 380, 304, 382, "Factory routing", profiles, 3,
+                   "T-Mix sends CC 20–27; FX sends four configurable macro lanes; Full sends both.");
+        drawReadout(774, 307, 268, 44, "LIFECYCLE", "CC 19 · acquire / release");
 
-        drawSection(24, 410, 1032, 270, "PRODUCER BOARD",
+        drawSection(24, 378, 1032, 152, "PRODUCER BOARD",
                     "pattern preview · blue bar is the live gain sent to T-Mix");
-        drawBoard(38, 447, 1004, 216);
+        drawBoard(38, 411, 1004, 104);
+
+        drawSection(24, 546, 1032, 134, "FX MACRO ROUTER",
+                    "select a lane, then choose its pattern source, CC destination, range, and polarity");
+        static constexpr const char* fxLanes[] {"Delay time", "Delay FB", "Verb mix", "Verb space"};
+        drawChoice(kFxEditLane, 38, 577, 300, "Edit macro", fxLanes, 4,
+                   "Select which of the four effect-control lanes is being edited.");
+        const int fx = std::clamp(static_cast<int>(std::lround(value(kFxEditLane))), 0, kFxLaneCount - 1);
+        drawChannelSlider(kFxSourceBase + fx, 350, 577, 136, "Pattern source",
+                          "Mix lane whose pattern drives this macro.");
+        drawCcSlider(kFxCcBase + fx, 498, 577, 138, "Destination CC",
+                     "Change this to address a third-party MIDI-controlled effect.");
+        drawPercentSlider(kFxMinimumBase + fx, 648, 577, 124, "Minimum",
+                          "Lowest normalized value emitted by this macro.");
+        drawPercentSlider(kFxMaximumBase + fx, 784, 577, 124, "Maximum",
+                          "Highest normalized value emitted by this macro.");
+        drawToggle(kFxInvertBase + fx, 920, 580, 122, "Invert",
+                   "Make effects rise when the selected mix lane recedes.");
+        drawLamp(38, 637, 176, "BUS ACTIVE", value(kStatusBusActive) >= 0.5f);
+        char live[32] {};
+        std::snprintf(live, sizeof(live), "%s · %d%%", kFxLaneNames[fx],
+                      static_cast<int>(std::lround(value(kStatusFxBase + fx) * 100.0f)));
+        drawReadout(226, 634, 410, 38, "LIVE MACRO", live);
+        drawReadout(648, 634, 394, 38, "DEFAULT FULL BUS", "CC 30 delay · 31 feedback · 32 mix · 33 space");
         endPanel();
     }
 
@@ -87,12 +112,12 @@ private:
                 beginPath();
                 fillColor(step == current ? 72 : 34, step == current ? 99 : 42,
                           step == current ? 108 : 49, 255);
-                roundedRect(cx, rowY + 4.0f, cellWidth, rowHeight - 8.0f, 3.0f);
+                roundedRect(cx, rowY + 2.0f, cellWidth, rowHeight - 4.0f, 3.0f);
                 fill();
                 beginPath();
                 fillColor(105, 196, 216, 225);
-                rect(cx + 2.0f, rowY + rowHeight - 6.0f - gain * (rowHeight - 12.0f),
-                     std::max(1.0f, cellWidth - 4.0f), gain * (rowHeight - 12.0f));
+                rect(cx + 2.0f, rowY + rowHeight - 3.0f - gain * (rowHeight - 6.0f),
+                     std::max(1.0f, cellWidth - 4.0f), gain * (rowHeight - 6.0f));
                 fill();
             }
             const float liveX = x + labelWidth + gridWidth + 14.0f;

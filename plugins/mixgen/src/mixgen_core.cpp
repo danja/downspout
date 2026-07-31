@@ -82,6 +82,21 @@ float gainForStep(const std::array<float, kParameterCount>& parameters,
     return std::clamp(1.0f - variation * depth * 0.35f * accentRandom, low, 1.0f);
 }
 
+float fxValueForStep(const std::array<float, kParameterCount>& parameters,
+                     const int rawFxLane,
+                     const std::int64_t step) noexcept
+{
+    const int fxLane = std::clamp(rawFxLane, 0, kFxLaneCount - 1);
+    const int source = std::clamp(static_cast<int>(std::lround(
+        parameterValue(parameters, kFxSourceBase + fxLane))) - 1, 0, kLaneCount - 1);
+    float sourceValue = gainForStep(parameters, source, step);
+    if (parameterValue(parameters, kFxInvertBase + fxLane) >= 0.5f)
+        sourceValue = 1.0f - sourceValue;
+    const float minimum = parameterValue(parameters, kFxMinimumBase + fxLane);
+    const float maximum = parameterValue(parameters, kFxMaximumBase + fxLane);
+    return std::clamp(minimum + sourceValue * (maximum - minimum), 0.0f, 1.0f);
+}
+
 MidiBlock process(State& state,
                   const std::array<float, kParameterCount>& parameters,
                   const Transport& transport,
@@ -90,7 +105,23 @@ MidiBlock process(State& state,
 {
     MidiBlock result;
     state.statusEvents = 0;
-    if (!transport.valid || !transport.playing || frames == 0 || sampleRate <= 0.0) {
+    if (frames == 0 || sampleRate <= 0.0)
+        return result;
+    const int midiChannel = static_cast<int>(std::lround(parameterValue(parameters, kMidiChannel)));
+    const bool enabled = parameterValue(parameters, kEnabled) >= 0.5f;
+    const auto emitRelease = [&](const int channel) {
+        result.push(0, downspout::generative::ccStatus(channel), kProducerLifecycleCc, 0);
+        for (int lane = 0; lane < kLaneCount; ++lane)
+            result.push(0, downspout::generative::ccStatus(channel),
+                        static_cast<std::uint8_t>(kTargetCcBase + lane), 127);
+    };
+    if (!transport.valid || !transport.playing || !enabled) {
+        if (state.busActive) {
+            emitRelease(state.activeChannel);
+            state.statusEvents = static_cast<int>(result.count);
+            state.busActive = false;
+            state.gains.fill(1.0f);
+        }
         state.havePosition = false;
         return result;
     }
@@ -102,8 +133,18 @@ MidiBlock process(State& state,
         reset(state);
 
     const double rate = parameterValue(parameters, kRate);
-    const bool enabled = parameterValue(parameters, kEnabled) >= 0.5f;
-    const int midiChannel = static_cast<int>(std::lround(parameterValue(parameters, kMidiChannel)));
+    if (state.busActive && state.activeChannel != midiChannel) {
+        emitRelease(state.activeChannel);
+        state.busActive = false;
+    }
+    if (!state.busActive) {
+        result.push(0, downspout::generative::ccStatus(midiChannel), kProducerLifecycleCc, 127);
+        state.busActive = true;
+        state.activeChannel = midiChannel;
+    }
+    const int profile = static_cast<int>(std::lround(parameterValue(parameters, kRoutingProfile)));
+    const bool sendMix = profile != 1;
+    const bool sendFx = profile != 0;
     std::int64_t step = static_cast<std::int64_t>(std::floor((start + 1.0e-8) / rate));
     if (step <= state.lastStep)
         step = state.lastStep + 1;
@@ -114,8 +155,8 @@ MidiBlock process(State& state,
             break;
         state.lastStep = step;
         state.statusStep = wrapStep(step, static_cast<int>(std::lround(parameterValue(parameters, kSteps))));
-        for (int lane = 0; lane < kLaneCount; ++lane) {
-            const float gain = enabled ? gainForStep(parameters, lane, step) : 1.0f;
+        if (sendMix) for (int lane = 0; lane < kLaneCount; ++lane) {
+            const float gain = gainForStep(parameters, lane, step);
             state.gains[static_cast<std::size_t>(lane)] = gain;
             const int value = std::clamp(static_cast<int>(std::lround(gain * 127.0f)), 0, 127);
             result.push(downspout::generative::frameAt(std::max(start, boundary), start,
@@ -125,10 +166,22 @@ MidiBlock process(State& state,
                         static_cast<std::uint8_t>(value));
             ++state.statusEvents;
         }
+        if (sendFx) for (int lane = 0; lane < kFxLaneCount; ++lane) {
+            const float value = fxValueForStep(parameters, lane, step);
+            state.fxValues[static_cast<std::size_t>(lane)] = value;
+            result.push(downspout::generative::frameAt(std::max(start, boundary), start,
+                                                       quartersPerFrame, frames),
+                        downspout::generative::ccStatus(midiChannel),
+                        static_cast<std::uint8_t>(std::lround(
+                            parameterValue(parameters, kFxCcBase + lane))),
+                        static_cast<std::uint8_t>(std::lround(value * 127.0f)));
+            ++state.statusEvents;
+        }
     }
 
     state.havePosition = true;
     state.previousEnd = end;
+    state.statusEvents = static_cast<int>(result.count);
     return result;
 }
 

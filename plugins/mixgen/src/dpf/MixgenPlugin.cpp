@@ -57,7 +57,7 @@ protected:
         parameter.hints = spec.output ? kParameterIsOutput : kParameterIsAutomatable;
         if (spec.integer)
             parameter.hints |= kParameterIsInteger;
-        if (index == kEnabled)
+        if (index == kEnabled || (index >= kFxInvertBase && index < kFxInvertBase + kFxLaneCount))
             parameter.hints |= kParameterIsBoolean;
         parameter.ranges = {spec.defaultValue, spec.minimum, spec.maximum};
     }
@@ -69,7 +69,14 @@ protected:
         if (index == kStatusEvents)
             return static_cast<float>(state_.statusEvents);
         if (index >= kStatusGainBase && index < kParameterCount)
-            return state_.gains[index - kStatusGainBase];
+        {
+            if (index < kStatusGainBase + kLaneCount)
+                return state_.gains[index - kStatusGainBase];
+            if (index >= kStatusFxBase && index < kStatusFxBase + kFxLaneCount)
+                return state_.fxValues[index - kStatusFxBase];
+            if (index == kStatusBusActive)
+                return state_.busActive ? 1.0f : 0.0f;
+        }
         return parameters_[index];
     }
 

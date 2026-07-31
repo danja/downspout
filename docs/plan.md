@@ -160,6 +160,10 @@ Progress as of 2026-05-27:
   path, using a fixed-cost four-line feedback-delay network, exact dry and
   100%-wet send operation, non-conflicting CC 32/33 producer control,
   deterministic safety/allocation tests, and a focused DPF/VST3 UI;
+- Producer Control Bus v1 now loosely coordinates Mixgen, T-Mix, Loopdelay, and
+  Lightverb through CC 19 lifecycle, CC 20–33 payloads, per-chain channel
+  filtering, optional ownership gates, transparent MIDI-through, configurable
+  Mixgen FX macro routing, and an end-to-end portable contract test;
 - `melgen` now has a phrase-aware MIDI melody core, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `rift` now exists as an original `downspout` transport-aware live/sample buffer effect with WAV loading, beat-mapped sample playback, a portable core, deterministic tests, and a VST3 wrapper target with UI via vendored DPF;
 - `drumgen` now has a portable core library, a host-neutral MIDI engine, text serialization helpers, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;

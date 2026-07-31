@@ -61,6 +61,8 @@ Straightforward x0x-style drum sequencer with 11 DrumKit-oriented lanes and patt
 Transport-synchronized automatic producer for T-Mix. Eight repeatable gain
 lanes use random, low-discrepancy quasi-random, or Euclidean patterns. Route
 its MIDI output to the T-Mix track; fixed CC 20-27 address strips 1-8.
+T-Mix, FX-only, and Full-bus profiles can also route four configurable macros
+to Loopdelay and Lightverb. CC 19 owns/releases the producer bus.
 
 ### Loopdelay (`loopdelay.vst3`)
 
@@ -69,6 +71,8 @@ Time can run freely from 20–4000 ms or follow the host BBT from a quarter beat
 through four bars. Route controller MIDI to its track to drive time with fixed
 CC 30 and feedback with CC 31; either CC temporarily takes over its saved panel
 value until **Release MIDI** is pressed.
+It supports optional CC 19 gating, per-chain MIDI channel filtering, and MIDI
+through to the next effect.
 
 ### Lightverb (`lightverb.vst3`)
 
@@ -77,6 +81,8 @@ natural-room simulation. It works as an insert or a 100% wet send, normally in
 `T-Mix → Loopdelay → Lightverb → Guardian`. Producer MIDI uses fixed CC 32 for
 Wet mix and CC 33 for Space, continuing the suite's non-conflicting control
 range.
+It supports the same CC 19 lifecycle, channel isolation, and MIDI-through
+behavior as Loopdelay.
 
 ## Instruments
 
@@ -146,6 +152,9 @@ Launchpad dub performance effect/instrument. Pads trigger echo throws, spring sp
 - Live dub transitions: a drum or full-mix bus -> PaunchLad.
 - Automatic arrangement: route instruments into T-Mix, then route Mixgen MIDI
   to T-Mix and tune Density, Depth, Variation, and Lane Spread.
+- Full producer bus: set Mixgen to Full bus and route one MIDI send to a chain
+  of T-Mix, Loopdelay, and Lightverb. Match their Control channel and optionally
+  require CC 19 ownership. See [Producer Control Bus v1](producer-control-bus.md).
 
 ## Host notes
 

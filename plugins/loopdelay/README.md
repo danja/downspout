@@ -10,5 +10,8 @@ For automatic production, route MIDI from a controller generator to the
 Loopdelay track. CC 30 controls time and CC 31 controls feedback on any MIDI
 channel. Incoming CC temporarily takes over the saved panel value; **Release
 MIDI** returns both controls to their saved defaults.
+CC 19 can acquire/release the complete producer bus. Control channel filtering
+and an optional required gate isolate multiple chains, while MIDI-through keeps
+downstream Lightverb or other controllers reachable.
 
-Recommended effect order: `T-Mix → Loopdelay → Guardian`.
+Recommended effect order: `T-Mix → Loopdelay → Lightverb → Guardian`.

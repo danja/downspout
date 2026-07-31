@@ -128,6 +128,14 @@ Examples:
 - [plugins/rift/src/dpf/RiftUI.cpp](../plugins/rift/src/dpf/RiftUI.cpp)
 - [plugins/floozy/src/dpf/FloozyUI.cpp](../plugins/floozy/src/dpf/FloozyUI.cpp)
 
+### Producer Control Bus
+
+Mixgen, T-Mix, Loopdelay, and Lightverb interoperate through the versioned
+[Producer Control Bus](producer-control-bus.md), an ordinary MIDI CC protocol.
+There are no runtime links or shared state between the binaries. Receivers own
+their smoothing and safety behavior, can filter by MIDI channel, optionally
+require CC 19 ownership, and forward MIDI to the next processor.
+
 ## State and serialization pattern
 
 For stateful plugins, `downspout` prefers explicit text serialization instead of

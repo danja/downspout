@@ -132,6 +132,7 @@ void reset(State& state) noexcept
     state.feedbackMidiActive = false;
     state.timeMidiValue = 0.0f;
     state.feedbackMidiValue = 0.0f;
+    state.producerActive = false;
 }
 
 void requestClear(State& state) noexcept
@@ -143,25 +144,40 @@ void releaseMidiTakeover(State& state) noexcept
 {
     state.timeMidiActive = false;
     state.feedbackMidiActive = false;
+    state.producerActive = false;
     state.loopCaptureRequested = true;
 }
 
 bool handleMidi(State& state, const std::uint8_t* data, const std::uint32_t size,
-                const bool midiEnabled) noexcept
+                const bool midiEnabled, const int controlChannel,
+                const bool requireProducerGate) noexcept
 {
     if (!midiEnabled || data == nullptr || size < 3 || (data[0] & 0xf0u) != 0xb0u)
         return false;
     const std::uint8_t controller = data[1] & 0x7fu;
+    const int messageChannel = (data[0] & 0x0fu) + 1;
+    if (controlChannel != 0 && std::clamp(controlChannel, 1, 16) != messageChannel)
+        return false;
+    if (controller == kProducerLifecycleController) {
+        state.producerActive = (data[2] & 0x7fu) >= 64;
+        if (!state.producerActive)
+            releaseMidiTakeover(state);
+        return true;
+    }
+    if (requireProducerGate && !state.producerActive)
+        return false;
     const float value = static_cast<float>(data[2] & 0x7fu) / 127.0f;
     if (controller == kTimeController) {
         state.timeMidiValue = value;
         state.timeMidiActive = true;
         state.loopCaptureRequested = true;
+        state.producerActive = true;
         return true;
     }
     if (controller == kFeedbackController) {
         state.feedbackMidiValue = value;
         state.feedbackMidiActive = true;
+        state.producerActive = true;
         return true;
     }
     return false;
@@ -223,6 +239,8 @@ OutputStatus process(State& state,
     const float overdub = parameters.values[kOverdub];
     const float trim = outputGain(parameters.values[kOutputDb]);
     const bool midiEnabled = parameters.values[kMidiEnabled] >= 0.5f;
+    const int controlChannel = static_cast<int>(std::lround(parameters.values[kControlChannel]));
+    const bool requireProducerGate = parameters.values[kRequireProducerGate] >= 0.5f;
     const float delaySmoothing = 1.0f - std::exp(-1.0f / static_cast<float>(state.sampleRate * 0.040));
     const float feedbackSmoothing = 1.0f - std::exp(-1.0f / static_cast<float>(state.sampleRate * 0.020));
     const float cutoff = 450.0f + tone * tone * 17500.0f;
@@ -234,7 +252,8 @@ OutputStatus process(State& state,
         while (midiEvents != nullptr && eventIndex < midiEventCount
                && midiEvents[eventIndex].frame <= frame) {
             (void)handleMidi(state, midiEvents[eventIndex].data.data(),
-                             midiEvents[eventIndex].size, midiEnabled);
+                             midiEvents[eventIndex].size, midiEnabled,
+                             controlChannel, requireProducerGate);
             ++eventIndex;
         }
 
@@ -317,6 +336,7 @@ OutputStatus process(State& state,
         status.feedback = targetFeedback;
         status.timeMidi = state.timeMidiActive;
         status.feedbackMidi = state.feedbackMidiActive;
+        status.producerActive = state.producerActive;
     }
     return status;
 }

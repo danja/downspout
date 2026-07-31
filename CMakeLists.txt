@@ -113,6 +113,17 @@ if(DOWNSPOUT_BUILD_LIGHTVERB)
     add_subdirectory(plugins/lightverb)
 endif()
 
+if(BUILD_TESTING AND TARGET downspout_mixgen_core AND TARGET downspout_t_mix_core
+   AND TARGET downspout_loopdelay_core AND TARGET downspout_lightverb_core)
+    add_executable(downspout_producer_bus_contract_tests
+        plugins/mixgen/tests/mixgen_t_mix_contract_tests.cpp)
+    target_link_libraries(downspout_producer_bus_contract_tests PRIVATE
+        downspout_mixgen_core downspout_t_mix_core
+        downspout_loopdelay_core downspout_lightverb_core)
+    add_test(NAME downspout_producer_bus_contract_tests
+        COMMAND downspout_producer_bus_contract_tests)
+endif()
+
 if(DOWNSPOUT_BUILD_MELGEN)
     add_subdirectory(plugins/melgen)
 endif()

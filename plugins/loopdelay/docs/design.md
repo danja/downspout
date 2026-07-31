@@ -14,8 +14,10 @@ storage is capped at 16 seconds.
 CC 30 controls time and CC 31 controls feedback on every MIDI channel. In Free
 mode the time mapping is exponential; in Sync mode it selects one of the seven
 musical lengths. MIDI takeover is transient and deliberately excluded from
-saved state. The loop audio itself is also transient; only panel parameters
-are serialized.
+saved state. CC 19 acquires or releases takeover, Control channel 0 is Omni,
+and channels 1–16 isolate separate producer chains. Requiring CC 19 is optional
+for compatibility. The wrapper forwards incoming MIDI unchanged. The loop
+audio itself is also transient; only panel parameters are serialized.
 
 Entering Loop mode, changing effective loop time, or pressing Clear starts a
 fresh one-pass capture. Host stop, loop boundaries, and rewinds do not erase a

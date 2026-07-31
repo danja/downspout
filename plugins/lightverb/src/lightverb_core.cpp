@@ -75,28 +75,45 @@ void reset(State& state) noexcept
     state.mixMidiActive = false;
     state.spaceMidiValue = 0.0f;
     state.mixMidiValue = 0.0f;
+    state.producerActive = false;
 }
 
 void releaseMidiTakeover(State& state) noexcept
 {
     state.spaceMidiActive = false;
     state.mixMidiActive = false;
+    state.producerActive = false;
 }
 
 bool handleMidi(State& state, const std::uint8_t* data, const std::uint32_t size,
-                const bool enabled) noexcept
+                const bool enabled, const int controlChannel,
+                const bool requireProducerGate) noexcept
 {
     if (!enabled || data == nullptr || size < 3 || (data[0] & 0xf0u) != 0xb0u)
         return false;
-    const float value = static_cast<float>(data[2] & 0x7fu) / 127.0f;
-    if ((data[1] & 0x7fu) == kMixController) {
-        state.mixMidiValue = value;
-        state.mixMidiActive = true;
+    const int messageChannel = (data[0] & 0x0fu) + 1;
+    if (controlChannel != 0 && std::clamp(controlChannel, 1, 16) != messageChannel)
+        return false;
+    const std::uint8_t controller = data[1] & 0x7fu;
+    if (controller == kProducerLifecycleController) {
+        state.producerActive = (data[2] & 0x7fu) >= 64;
+        if (!state.producerActive)
+            releaseMidiTakeover(state);
         return true;
     }
-    if ((data[1] & 0x7fu) == kSpaceController) {
+    if (requireProducerGate && !state.producerActive)
+        return false;
+    const float value = static_cast<float>(data[2] & 0x7fu) / 127.0f;
+    if (controller == kMixController) {
+        state.mixMidiValue = value;
+        state.mixMidiActive = true;
+        state.producerActive = true;
+        return true;
+    }
+    if (controller == kSpaceController) {
         state.spaceMidiValue = value;
         state.spaceMidiActive = true;
+        state.producerActive = true;
         return true;
     }
     return false;
@@ -133,6 +150,8 @@ OutputStatus process(State& state, const Parameters& raw, const std::uint32_t fr
     const float width = pv(parameters, kWidth);
     const float trim = gainFromDb(pv(parameters, kOutputDb));
     const bool midiEnabled = pv(parameters, kMidiEnabled) >= 0.5f;
+    const int controlChannel = static_cast<int>(std::lround(pv(parameters, kControlChannel)));
+    const bool requireProducerGate = pv(parameters, kRequireProducerGate) >= 0.5f;
     const float controlSmoothing = 1.0f - std::exp(-1.0f / static_cast<float>(state.sampleRate * 0.080));
     const float cutoff = 1100.0f + (1.0f - damping) * (1.0f - damping) * 16900.0f;
     const float safeCutoff = std::min(cutoff, static_cast<float>(state.sampleRate * 0.45));
@@ -144,7 +163,8 @@ OutputStatus process(State& state, const Parameters& raw, const std::uint32_t fr
     for (std::uint32_t frame = 0; frame < frames; ++frame) {
         while (midiEvents && eventIndex < midiEventCount && midiEvents[eventIndex].frame <= frame) {
             (void)handleMidi(state, midiEvents[eventIndex].data.data(),
-                             midiEvents[eventIndex].size, midiEnabled);
+                             midiEvents[eventIndex].size, midiEnabled,
+                             controlChannel, requireProducerGate);
             ++eventIndex;
         }
         const float targetSpace = effectiveSpace(state, parameters);
@@ -230,6 +250,7 @@ OutputStatus process(State& state, const Parameters& raw, const std::uint32_t fr
         status.mix = targetMix;
         status.spaceMidi = state.spaceMidiActive;
         status.mixMidi = state.mixMidiActive;
+        status.producerActive = state.producerActive;
     }
     return status;
 }

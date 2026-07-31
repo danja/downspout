@@ -120,6 +120,21 @@ protected:
             parameter.symbol = String("channel_") + String(static_cast<int>(channel + 1)) + "_producer_gain";
             parameter.hints = kParameterIsOutput;
             parameter.ranges = {1.0f, 0.0f, 1.0f};
+        } else if (index == kParamProducerControlChannel) {
+            parameter.name = "Producer Control Channel";
+            parameter.symbol = "producer_control_channel";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges = {0.0f, 0.0f, 16.0f};
+        } else if (index == kParamRequireProducerGate) {
+            parameter.name = "Require Producer Gate";
+            parameter.symbol = "require_producer_gate";
+            parameter.hints |= kParameterIsInteger | kParameterIsBoolean;
+            parameter.ranges = {0.0f, 0.0f, 1.0f};
+        } else if (index == kParamStatusProducerActive) {
+            parameter.name = "Producer Bus Active";
+            parameter.symbol = "producer_bus_active";
+            parameter.hints = kParameterIsOutput | kParameterIsInteger | kParameterIsBoolean;
+            parameter.ranges = {0.0f, 0.0f, 1.0f};
         }
     }
 
@@ -151,6 +166,12 @@ protected:
             return parameters_.producerSlewMs;
         if (inRange(index, kParamProducerGainBase))
             return status_.producerGains[index - kParamProducerGainBase];
+        if (index == kParamProducerControlChannel)
+            return parameters_.producerControlChannel;
+        if (index == kParamRequireProducerGate)
+            return parameters_.requireProducerGate;
+        if (index == kParamStatusProducerActive)
+            return status_.producerActive ? 1.0f : 0.0f;
         return 0.0f;
     }
 
@@ -168,6 +189,10 @@ protected:
             parameters_.masterDb = value;
         else if (index == kParamProducerSlew)
             parameters_.producerSlewMs = value;
+        else if (index == kParamProducerControlChannel)
+            parameters_.producerControlChannel = value;
+        else if (index == kParamRequireProducerGate)
+            parameters_.requireProducerGate = value;
         parameters_ = clampParameters(parameters_);
     }
 
@@ -215,6 +240,8 @@ protected:
         }
         status_ = processBlock(engineState_, parameters_, frames, getSampleRate(), audio,
                                controls.data(), count);
+        for (uint32_t index = 0; index < midiEventCount; ++index)
+            writeMidiEvent(midiEvents[index]);
     }
 
 private:

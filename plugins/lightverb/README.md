@@ -12,4 +12,9 @@ master path is `T-Mix → Loopdelay → Lightverb → Guardian`.
 
 All normal parameters are host-automatable. Producer MIDI uses CC 32 for Wet
 mix and CC 33 for Space on any MIDI channel. Incoming CC temporarily takes over
-the saved panel value; **Release MIDI** restores the manual settings.
+the saved panel value; **Release MIDI** restores the manual settings. CC 19
+optionally gates ownership of both controls. A selectable control channel
+isolates parallel chains, and transparent MIDI-through keeps later processors
+reachable from the same producer send.
+
+See [Producer Control Bus v1](../../docs/producer-control-bus.md).

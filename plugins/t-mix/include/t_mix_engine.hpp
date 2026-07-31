@@ -9,7 +9,8 @@ namespace downspout::tmix {
 void activate(EngineState& state);
 [[nodiscard]] bool handleMidi(EngineState& state,
                               const std::uint8_t* data,
-                              std::uint32_t size);
+                              std::uint32_t size,
+                              const Parameters& parameters);
 [[nodiscard]] OutputStatus processBlock(EngineState& state,
                                         const Parameters& parameters,
                                         std::uint32_t frameCount,

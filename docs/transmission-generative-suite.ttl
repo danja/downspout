@@ -27,7 +27,8 @@ dsp:mixgen a trn:PluginProfile ;
     trn:bundleName "mixgen.vst3" ; trn:vendor "danja" ;
     trn:role trn:MidiGenerator, trn:AudioEffect ;
     trn:accepts trn:Audio ; trn:produces trn:Audio, trn:Midi, trn:ControlMidi ;
-    trn:requires trn:HostTransport ; trn:recommendedBefore dsp:t-mix .
+    trn:requires trn:HostTransport ; trn:recommendedBefore dsp:t-mix,
+        dsp:loopdelay, dsp:lightverb .
 
 dsp:t-mix a trn:PluginProfile ;
     rdfs:label "T-Mix" ;

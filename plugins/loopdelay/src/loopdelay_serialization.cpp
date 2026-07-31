@@ -19,10 +19,13 @@ bool parseFloat(const std::string_view text, float& value)
 std::string serializeParameters(const Parameters& raw)
 {
     const Parameters parameters = clampParameters(raw);
-    std::string result = "version=1\n";
-    for (std::uint32_t index = 0; index <= kMidiEnabled; ++index)
+    std::string result = "version=2\n";
+    for (std::uint32_t index = 0; index < kParameterCount; ++index) {
+        if (kParameterSpecs[index].output || index == kClear || index == kResetMidi)
+            continue;
         result += std::string(kParameterSpecs[index].symbol) + "="
             + std::to_string(parameters.values[index]) + "\n";
+    }
     return result;
 }
 
@@ -47,7 +50,9 @@ std::optional<Parameters> deserializeParameters(const std::string& text)
         if (!parseFloat(line.substr(separator + 1), value))
             return std::nullopt;
         bool found = false;
-        for (std::uint32_t index = 0; index <= kMidiEnabled; ++index) {
+        for (std::uint32_t index = 0; index < kParameterCount; ++index) {
+            if (kParameterSpecs[index].output || index == kClear || index == kResetMidi)
+                continue;
             if (key == kParameterSpecs[index].symbol) {
                 parameters.values[index] = value;
                 found = true;

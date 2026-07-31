@@ -32,6 +32,8 @@ Parameters clampParameters(const Parameters& raw)
     }
     parameters.masterDb = clampf(parameters.masterDb, kMinimumLevelDb, kMaximumLevelDb);
     parameters.producerSlewMs = clampf(parameters.producerSlewMs, 0.0f, 500.0f);
+    parameters.producerControlChannel = std::round(clampf(parameters.producerControlChannel, 0.0f, 16.0f));
+    parameters.requireProducerGate = enabled(parameters.requireProducerGate) ? 1.0f : 0.0f;
     return parameters;
 }
 
@@ -47,17 +49,33 @@ void activate(EngineState& state)
     state.meters.fill(0.0f);
     state.producerGains.fill(1.0f);
     state.producerTargets.fill(1.0f);
+    state.producerActive = false;
 }
 
-bool handleMidi(EngineState& state, const std::uint8_t* data, const std::uint32_t size)
+bool handleMidi(EngineState& state, const std::uint8_t* data, const std::uint32_t size,
+                const Parameters& rawParameters)
 {
     if (data == nullptr || size < 3 || (data[0] & 0xf0u) != 0xb0u)
         return false;
+    const Parameters parameters = clampParameters(rawParameters);
+    const int messageChannel = (data[0] & 0x0fu) + 1;
+    const int controlChannel = static_cast<int>(std::lround(parameters.producerControlChannel));
+    if (controlChannel != 0 && controlChannel != messageChannel)
+        return false;
     const std::uint8_t controller = data[1] & 0x7fu;
+    if (controller == kProducerLifecycleCc) {
+        state.producerActive = (data[2] & 0x7fu) >= 64;
+        if (!state.producerActive)
+            state.producerTargets.fill(1.0f);
+        return true;
+    }
     if (controller < kProducerCcBase || controller >= kProducerCcBase + kInputChannelCount)
+        return false;
+    if (enabled(parameters.requireProducerGate) && !state.producerActive)
         return false;
     const std::uint32_t channel = controller - kProducerCcBase;
     state.producerTargets[channel] = static_cast<float>(data[2] & 0x7fu) / 127.0f;
+    state.producerActive = true;
     return true;
 }
 
@@ -99,7 +117,8 @@ OutputStatus processBlock(EngineState& state,
     for (std::uint32_t frame = 0; frame < frameCount; ++frame) {
         while (eventIndex < midiEventCount && midiEvents != nullptr
                && midiEvents[eventIndex].frame <= frame) {
-            (void)handleMidi(state, midiEvents[eventIndex].data.data(), midiEvents[eventIndex].size);
+            (void)handleMidi(state, midiEvents[eventIndex].data.data(), midiEvents[eventIndex].size,
+                             parameters);
             ++eventIndex;
         }
         float left = 0.0f;
@@ -129,7 +148,7 @@ OutputStatus processBlock(EngineState& state,
                                                   state.meters[channel] * release));
     }
 
-    return {state.meters, state.producerGains};
+    return {state.meters, state.producerGains, state.producerActive};
 }
 
 }  // namespace downspout::tmix

@@ -17,3 +17,6 @@ CC 32 controls Wet mix and CC 33 controls Space on every MIDI channel. These
 assignments follow T-Mix CC 20–27 and Loopdelay CC 30–31 without collision.
 MIDI takeover and the reverb tail are transient; the versioned state contains
 only the saved panel parameters.
+CC 19 provides acquire/release lifecycle, with an optional required gate and
+0/Omni or 1–16 control-channel filtering. The DPF wrapper forwards all incoming
+MIDI events unchanged to the next processor.

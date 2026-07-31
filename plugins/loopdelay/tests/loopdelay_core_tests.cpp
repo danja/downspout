@@ -117,6 +117,32 @@ void testMidiTimeAndFeedbackContract()
     assert(!handleMidi(state, time, 3, false));
 }
 
+void testProducerLifecycleAndChannelIsolation()
+{
+    State state;
+    prepare(state, 1000.0);
+    Parameters parameters;
+    const std::uint8_t wrongAcquire[] {0xb0, kProducerLifecycleController, 127};
+    const std::uint8_t acquire[] {0xb3, kProducerLifecycleController, 127};
+    const std::uint8_t payload[] {0xb3, kFeedbackController, 100};
+    const std::uint8_t release[] {0xb3, kProducerLifecycleController, 0};
+    assert(!handleMidi(state, wrongAcquire, 3, true, 4, true));
+    assert(!handleMidi(state, payload, 3, true, 4, true));
+    assert(handleMidi(state, acquire, 3, true, 4, true));
+    assert(state.producerActive);
+    assert(handleMidi(state, payload, 3, true, 4, true));
+    assert(state.feedbackMidiActive);
+    assert(handleMidi(state, release, 3, true, 4, true));
+    assert(!state.producerActive && !state.feedbackMidiActive && !state.timeMidiActive);
+
+    parameters.values[kControlChannel] = 4.0f;
+    parameters.values[kRequireProducerGate] = 1.0f;
+    const auto decoded = deserializeParameters(serializeParameters(parameters));
+    assert(decoded.has_value());
+    assert(decoded->values[kControlChannel] == 4.0f);
+    assert(decoded->values[kRequireProducerGate] == 1.0f);
+}
+
 void testMidiEventIsAppliedAtItsFrame()
 {
     State state;
@@ -241,6 +267,7 @@ int main()
     testBbtSynchronization();
     testFreeDelayProducesARepeat();
     testMidiTimeAndFeedbackContract();
+    testProducerLifecycleAndChannelIsolation();
     testMidiEventIsAppliedAtItsFrame();
     testTransportChangesAndRewindRemainStable();
     testDryPathIsTransparent();

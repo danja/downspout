@@ -14,6 +14,7 @@ using downspout::generative::Transport;
 inline constexpr float kMaximumDelaySeconds = 16.0f;
 inline constexpr std::uint8_t kTimeController = 30;
 inline constexpr std::uint8_t kFeedbackController = 31;
+inline constexpr std::uint8_t kProducerLifecycleController = 19;
 inline constexpr int kSyncChoiceCount = 7;
 
 enum Parameter : std::uint32_t {
@@ -38,6 +39,9 @@ enum Parameter : std::uint32_t {
     kStatusLoopProgress,
     kStatusInputPeak,
     kStatusOutputPeak,
+    kControlChannel,
+    kRequireProducerGate,
+    kStatusProducerActive,
     kParameterCount
 };
 
@@ -63,6 +67,9 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs {{
     {"status_loop_progress", "Loop progress", 0.0f, 1.0f, 0.0f, false, true},
     {"status_input_peak", "Input peak", 0.0f, 1.0f, 0.0f, false, true},
     {"status_output_peak", "Output peak", 0.0f, 1.0f, 0.0f, false, true},
+    {"control_channel", "Producer control channel", 0.0f, 16.0f, 0.0f, true},
+    {"require_producer_gate", "Require producer gate", 0.0f, 1.0f, 0.0f, true},
+    {"status_producer_active", "Producer bus active", 0.0f, 1.0f, 0.0f, true, true},
 }};
 
 inline constexpr std::array<const char*, 2> kModeNames {{"Delay", "Loop"}};
@@ -99,6 +106,7 @@ struct OutputStatus {
     float loopProgress = 0.0f;
     float inputPeak = 0.0f;
     float outputPeak = 0.0f;
+    bool producerActive = false;
 };
 
 struct State {
@@ -120,6 +128,7 @@ struct State {
     bool feedbackMidiActive = false;
     float timeMidiValue = 0.0f;
     float feedbackMidiValue = 0.0f;
+    bool producerActive = false;
     int previousMode = -1;
     bool loopCaptureRequested = false;
     bool loopCapturing = false;
@@ -133,7 +142,8 @@ void requestClear(State& state) noexcept;
 void releaseMidiTakeover(State& state) noexcept;
 [[nodiscard]] Parameters clampParameters(const Parameters& parameters) noexcept;
 [[nodiscard]] bool handleMidi(State& state, const std::uint8_t* data, std::uint32_t size,
-                              bool midiEnabled) noexcept;
+                              bool midiEnabled, int controlChannel = 0,
+                              bool requireProducerGate = false) noexcept;
 [[nodiscard]] float effectiveDelayMilliseconds(const State& state,
                                                const Parameters& parameters,
                                                const Transport& transport) noexcept;

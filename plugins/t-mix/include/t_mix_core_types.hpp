@@ -10,6 +10,7 @@ inline constexpr std::uint32_t kOutputChannelCount = 2;
 inline constexpr float kMinimumLevelDb = -60.0f;
 inline constexpr float kMaximumLevelDb = 12.0f;
 inline constexpr std::uint8_t kProducerCcBase = 20;
+inline constexpr std::uint8_t kProducerLifecycleCc = 19;
 inline constexpr float kDefaultProducerSlewMs = 25.0f;
 
 struct ChannelParameters {
@@ -23,6 +24,8 @@ struct Parameters {
     std::array<ChannelParameters, kInputChannelCount> channels {};
     float masterDb = 0.0f;
     float producerSlewMs = kDefaultProducerSlewMs;
+    float producerControlChannel = 0.0f;
+    float requireProducerGate = 0.0f;
 };
 
 struct AudioBlock {
@@ -40,11 +43,13 @@ struct EngineState {
     std::array<float, kInputChannelCount> meters {};
     std::array<float, kInputChannelCount> producerGains {};
     std::array<float, kInputChannelCount> producerTargets {};
+    bool producerActive = false;
 };
 
 struct OutputStatus {
     std::array<float, kInputChannelCount> meters {};
     std::array<float, kInputChannelCount> producerGains {};
+    bool producerActive = false;
 };
 
 }  // namespace downspout::tmix

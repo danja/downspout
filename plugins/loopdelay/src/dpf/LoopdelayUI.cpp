@@ -61,14 +61,19 @@ private:
         drawSlider(kOutputDb, 666, 332, 376, "Output trim", " dB",
                    "Match the processed signal to the surrounding chain.", 1);
 
-        drawSection(24, 420, 612, 164, "MIDI PRODUCER", "route Mixgen-style controller MIDI to this track");
-        drawToggle(kMidiEnabled, 38, 454, 188, "Accept MIDI control",
+        drawSection(24, 420, 612, 240, "PRODUCER CONTROL BUS", "CC 19 lifecycle · MIDI passes through to the next effect");
+        drawToggle(kMidiEnabled, 38, 454, 176, "Accept MIDI control",
                    "Listen for the fixed Loopdelay MIDI contract on every channel.");
-        drawReadout(240, 451, 180, 46, "CC 30 · TIME", sync ? "selects musical length" : "20–4000 ms curve");
-        drawReadout(434, 451, 188, 46, "CC 31 · FEEDBACK", "0–100% regeneration");
-        drawLamp(38, 514, 188, "TIME TAKEN OVER", value(kStatusTimeMidi) >= 0.5f);
-        drawLamp(240, 514, 180, "FEEDBACK TAKEN", value(kStatusFeedbackMidi) >= 0.5f);
-        drawAction(1, 434, 514, 188, 37, "RELEASE MIDI",
+        drawSlider(kControlChannel, 226, 451, 190, "Control channel · 0 = Omni", "",
+                   "0 is Omni; 1–16 isolates this chain from other producer buses.", 0);
+        drawToggle(kRequireProducerGate, 428, 454, 194, "Require CC 19 gate",
+                   "When enabled, ignore CC 30/31 until the producer acquires this bus with CC 19.");
+        drawReadout(38, 512, 282, 46, "CC 30 · TIME", sync ? "selects musical length" : "20–4000 ms curve");
+        drawReadout(334, 512, 288, 46, "CC 31 · FEEDBACK", "0–100% regeneration");
+        drawLamp(38, 574, 136, "BUS ACTIVE", value(kStatusProducerActive) >= 0.5f);
+        drawLamp(186, 574, 136, "TIME TAKEN", value(kStatusTimeMidi) >= 0.5f);
+        drawLamp(334, 574, 136, "FEEDBACK", value(kStatusFeedbackMidi) >= 0.5f);
+        drawAction(1, 482, 574, 140, 37, "RELEASE MIDI",
                    "Return time and feedback to the saved panel values.");
 
         drawSection(652, 420, 404, 240, "LIVE", "effective values from the audio engine");
