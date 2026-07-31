@@ -195,6 +195,66 @@ Current main gap:
   validating the expanded release payload, and deeper interaction testing of
   the generative-workstation suite in Transmission.
 
+## Generative-workstation UI readiness
+
+The first implementation of Harmonic Atlas, Conductor, Drift, Mnemosyne,
+Polymeter, Oracle, Mosaic, Resonance Garden, Orbit, and Guardian proved the
+portable cores and host wrappers, but rendered every parameter through the same
+anonymous slider grid. That made choice values, switches, MIDI routing,
+processor status, and musical relationships difficult to understand in
+practice.
+
+The approved UI-readiness pass for these ten plugins is:
+
+1. Replace numeric enum and boolean sliders with named choices, switches, and
+   action buttons. Display musical notes, pitch classes, MIDI channels, CC
+   destinations, beat/bar units, percentages, milliseconds, and decibels in
+   domain terms.
+2. Use explicit workflow sections and separate read-only processor feedback
+   from editable controls. Provide default reset gestures, concise contextual
+   help, and strong disabled-state treatment where a control is not currently
+   relevant.
+3. Give Harmonic Atlas a current-chord/keyboard view; Conductor a section
+   timeline; Mnemosyne a reservoir view; Oracle an analysis dashboard;
+   Resonance Garden a resonator-energy view; Orbit a trajectory view; and
+   Guardian conventional safety meters and diagnostic lamps.
+4. Give Drift and Polymeter consistent four-lane layouts with per-lane mode or
+   pattern previews rather than splitting lanes across unrelated columns.
+5. Give Mosaic a complete four-slot sample workflow with visible load,
+   replace, clear, filename, and error/empty status controls. File loading
+   remains on the DPF state/control path and never occurs in audio processing.
+6. Rebuild the ten core tests and VST3 targets, validate the bundles, capture
+   and inspect updated catalogue screenshots, and document a practical host
+   test recipe before considering the suite UI-ready.
+
+Per-plugin usability targets:
+
+- **Harmonic Atlas:** named movement/voicing choices, musical pitch-class
+  labels, clear routing, and a live root/keyboard view.
+- **Conductor:** a visible section timeline, named form modes, coherent section
+  weights, and separately grouped advanced MIDI commands.
+- **Drift:** four complete lane cards with named sources, shape previews,
+  musical timing, bounded ranges, and readable CC destinations.
+- **Mnemosyne:** visible reservoir occupancy, named modes/transforms,
+  capture guidance, and an explicit clear-memory workflow.
+- **Polymeter:** one coherent view per lane with Euclidean pattern/playhead,
+  note names, and primary rhythm controls kept together.
+- **Oracle:** separate listening, response, and routing workflows with live
+  analysis meters and musical response boundaries.
+- **Mosaic:** four visible sample slots with load/replace/clear actions,
+  filenames, pool status, and a slice/grain visualization.
+- **Resonance Garden:** grouped resonance/tuning/output controls and a live
+  eight-voice pitch/energy view.
+- **Orbit:** named trajectories, musical timing, contextual seed control, and
+  a live path/position view.
+- **Guardian:** conventional limiter meters, protection switches, neutral
+  diagnostics, reported look-ahead, and a real diagnostic-reset button.
+
+The shared implementation remains local to `plugins/generative-common`; it is
+not a replacement for established plugin UIs elsewhere in the repository.
+The practical host checklist is maintained in
+[docs/generative-suite-test.md](generative-suite-test.md).
+
 ## Meter direction
 
 The next architectural addition was shared meter handling.

@@ -5,3 +5,7 @@ Delay memory is allocated only on sample-rate changes. The callback replaces
 non-finite input with silence, increments a fault counter, applies an 8 Hz DC
 blocker, uses immediate attack and bounded release gain, then clamps output to
 the selected ceiling. Reset clears latched diagnostics and audio history.
+
+The UI presents conventional gain-reduction and true-peak meters, protection
+switches, diagnostic lamps, recovered-fault count, selected look-ahead, and a
+dedicated latched-diagnostics reset action.

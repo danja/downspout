@@ -1,12 +1,111 @@
 #include "generative_panel_ui.hpp"
 #include "harmonic_atlas_core.hpp"
+
+#include <cmath>
+
 START_NAMESPACE_DISTRHO
+
 class HarmonicAtlasUI : public GenerativePanelUI {
 public:
-    HarmonicAtlasUI() : GenerativePanelUI(
-        "Harmonic Atlas", "autonomous tonal, modal, chromatic-mediant and neo-Riemannian movement",
-        downspout::harmonic_atlas::kParameterSpecs.data(),
-        downspout::harmonic_atlas::kParameterCount, 104, 188, 206) {}
+    HarmonicAtlasUI()
+        : GenerativePanelUI(
+            "Harmonic Atlas",
+            "Choose a harmonic language, shape its voicing, then follow the current root",
+            downspout::harmonic_atlas::kParameterSpecs.data(),
+            downspout::harmonic_atlas::kParameterCount, 104, 188, 206) {}
+
+private:
+    void onNanoDisplay() override
+    {
+        using namespace downspout::harmonic_atlas;
+        static constexpr const char* movements[] {
+            "Tonal", "Modal", "Chromatic", "Neo-Riemannian"
+        };
+        static constexpr const char* inversions[] {
+            "Close", "Spread", "Drop", "Open"
+        };
+
+        beginPanel();
+
+        drawSection(24, 104, 576, 184, "HARMONY", "what changes, and how often");
+        drawChoice(kStyle, 38, 136, 548, "Movement language", movements, 4,
+                   "Select the harmonic movement family.");
+        drawSlider(kRhythmBars, 38, 195, 264, "Chord every", " bars",
+                   "How many bars each chord lasts.", 0);
+        drawSlider(kCadenceBars, 310, 195, 276, "Cadence every", " bars",
+                   "How often the progression aims for a cadence.", 0);
+
+        drawSection(24, 300, 576, 282, "VOICING", "shape and density");
+        drawPercentSlider(kTension, 38, 333, 264, "Tension", "Harmonic color and instability.");
+        drawPercentSlider(kVoiceLeading, 310, 333, 276, "Voice-leading", "Prefer smaller movements between chords.");
+        drawChoice(kInversionRange, 38, 389, 548, "Voicing spread", inversions, 4,
+                   "Select how widely chord notes may be distributed.");
+        drawSlider(kVoiceCount, 38, 448, 264, "Chord voices", "", "Maximum chord-note count.", 0);
+        drawPercentSlider(kScaleNotes, 310, 448, 276, "Colour-note chance", "Chance of adding an in-scale colour note.");
+
+        drawSection(614, 104, 322, 231, "INPUT & ROUTING", "optional MIDI guidance");
+        drawToggle(kFollowInput, 628, 137, 294, "Follow incoming pitch classes",
+                   "Use the most recent incoming note as the harmonic root.");
+        drawPitchClassSlider(kRoot, 628, 187, 294, "Fallback root",
+                             "Root used when input following is disabled or no note has arrived.");
+        drawChannelSlider(kChannel, 628, 243, 142, "Output", "MIDI output channel.");
+        drawSlider(kSeed, 778, 243, 144, "Seed", "", "Right-click to restore the default seed.", 0);
+
+        drawSection(614, 348, 322, 234, "NOW PLAYING", "read-only processor state");
+        const int root = static_cast<int>(std::lround(value(kStatusRoot)));
+        char rootText[32] {};
+        std::snprintf(rootText, sizeof(rootText), "%s  ·  step %d",
+                      pitchClassName(root), static_cast<int>(std::lround(value(kStatusChord))));
+        drawReadout(628, 382, 294, 58, "Current harmonic position", rootText);
+        const std::int64_t chord = static_cast<std::int64_t>(std::llround(value(kStatusChord)));
+        const bool minor = static_cast<int>(std::lround(value(kStyle))) == 1
+            || downspout::generative::randomUnit(
+                static_cast<std::uint64_t>(std::lround(value(kSeed))), chord + 71)
+                < value(kTension) * 0.45f;
+        drawKeyboard(628, 458, 294, 94, root, minor,
+                     static_cast<int>(std::lround(value(kVoiceCount))),
+                     value(kTension));
+
+        endPanel();
+    }
+
+    void drawKeyboard(const float x,
+                      const float y,
+                      const float w,
+                      const float h,
+                      const int root,
+                      const bool minor,
+                      const int voices,
+                      const float tension)
+    {
+        static constexpr int whitePitch[] {0, 2, 4, 5, 7, 9, 11};
+        const int intervals[] {0, minor ? 3 : 4, 7, tension > 0.45f ? 10 : 11, 14, 17};
+        const float whiteW = w / 7.0f;
+        for (int i = 0; i < 7; ++i) {
+            bool active = false;
+            for (int voice = 0; voice < std::clamp(voices, 0, 6); ++voice)
+                active = active || whitePitch[i] == (root + intervals[voice]) % 12;
+            beginPath();
+            fillColor(active ? accentR() : 222, active ? accentG() : 226,
+                      active ? accentB() : 222, 255);
+            roundedRect(x + i * whiteW + 1.0f, y, whiteW - 2.0f, h, 2.0f);
+            fill();
+        }
+        static constexpr int blackAfter[] {0, 1, 3, 4, 5};
+        static constexpr int blackPitch[] {1, 3, 6, 8, 10};
+        for (int i = 0; i < 5; ++i) {
+            bool active = false;
+            for (int voice = 0; voice < std::clamp(voices, 0, 6); ++voice)
+                active = active || blackPitch[i] == (root + intervals[voice]) % 12;
+            beginPath();
+            fillColor(active ? accentR() : 25, active ? accentG() : 30,
+                      active ? accentB() : 35, 255);
+            roundedRect(x + (blackAfter[i] + 0.68f) * whiteW, y, whiteW * 0.62f, h * 0.62f, 2.0f);
+            fill();
+        }
+    }
 };
+
 UI* createUI() { return new HarmonicAtlasUI(); }
+
 END_NAMESPACE_DISTRHO
