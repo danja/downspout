@@ -97,6 +97,18 @@ void allModelsRender()
     }
 }
 
+void defaultSingleNotesHaveUsefulLevel()
+{
+    for (int model = 0; model <= 4; ++model)
+    {
+        CanticleEngine engine {48000.0f};
+        engine.setParameter(ParamId::model, static_cast<float>(model));
+        engine.noteOn(60, 100);
+        require(renderPeak(engine, 96000) >= 0.32f,
+                "canticle default single-note output should reach -10 dBFS");
+    }
+}
+
 void polyphonyAndVoiceStealing()
 {
     CanticleEngine engine {48000.0f};
@@ -193,6 +205,7 @@ int main()
 {
     defaultsAndClamping();
     allModelsRender();
+    defaultSingleNotesHaveUsefulLevel();
     polyphonyAndVoiceStealing();
     noteOffReleases();
     allNotesOffReleasesChord();

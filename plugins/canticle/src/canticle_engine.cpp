@@ -9,6 +9,7 @@ namespace {
 
 constexpr float kPi = 3.14159265358979323846f;
 constexpr float kTwoPi = kPi * 2.0f;
+constexpr float kOutputGain = 3.0f;
 
 float clampUnit(const float value)
 {
@@ -614,7 +615,9 @@ public:
             right += frame.right;
         }
 
-        const float output = params_.values[static_cast<std::size_t>(ParamId::output)] * 1.65f;
+        // Keep lead lines useful at nominal host gain while the final soft clip
+        // below protects dense chords from exceeding full scale.
+        const float output = params_.values[static_cast<std::size_t>(ParamId::output)] * kOutputGain;
         left *= output;
         right *= output;
 

@@ -19,6 +19,9 @@ Mapping decisions:
   and can be automated.
 - Output is always stereo and bounded with a final soft clip so dense Cadence
   chords cannot emit non-finite or runaway audio.
+- The Output range is calibrated so a velocity-100 single note reaches at
+  least -10 dBFS at the default setting across all five models. Dense chords
+  remain bounded by the final soft clip.
 
 Performance can be measured without a host using the
 `downspout_canticle_processing_benchmark` target. It renders deterministic
