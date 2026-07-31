@@ -1,0 +1,14 @@
+#include "lightverb_core.hpp"
+#include "lightverb_serialization.hpp"
+#include <array>
+#include <cassert>
+#include <cmath>
+using namespace downspout::lightverb;
+
+void testDefaultsClampAndState(){Parameters p;p.values[kDecaySeconds]=99;p.values[kOutputDb]=-99;const auto c=clampParameters(p);assert(c.values[kDecaySeconds]==8);assert(c.values[kOutputDb]==-12);const auto decoded=deserializeParameters(serializeParameters(c));assert(decoded&&decoded->values[kDecaySeconds]==8);assert(!deserializeParameters("bad=1\n"));}
+void testDryTransparency(){State s;prepare(s,48000);Parameters p;p.values[kMix]=0;std::array<float,8>in{.5f,-.5f,.25f,-.25f,.1f,-.1f,.75f,-.75f},l{},r{};const AudioBlock b{in.data(),in.data(),l.data(),r.data()};(void)process(s,p,in.size(),b);for(std::size_t i=0;i<in.size();++i){assert(l[i]==in[i]);assert(r[i]==in[i]);}}
+void testImpulseMakesTail(){State s;prepare(s,48000);Parameters p;p.values[kPreDelayMs]=0;p.values[kMix]=1;std::array<float,8192>in{},l{},r{};in[0]=.7f;const AudioBlock b{in.data(),in.data(),l.data(),r.data()};const auto status=process(s,p,in.size(),b);float energy=0;for(std::size_t i=1000;i<l.size();++i)energy+=std::fabs(l[i])+std::fabs(r[i]);assert(energy>0.1f);assert(status.tail>0);}
+void testMidiContract(){State s;prepare(s,48000);Parameters p;const std::uint8_t mix[]{0xbf,kMixController,127},space[]{0xb2,kSpaceController,0},other[]{0xb0,31,64};assert(handleMidi(s,mix,3,true));assert(handleMidi(s,space,3,true));assert(!handleMidi(s,other,3,true));assert(effectiveMix(s,p)==1);assert(effectiveSpace(s,p)==0);releaseMidiTakeover(s);assert(!s.mixMidiActive&&!s.spaceMidiActive);assert(!handleMidi(s,mix,3,false));}
+void testSampleAccurateMidiAndNoAllocation(){State s;prepare(s,48000);const auto* address=s.delays[0].data();const auto capacity=s.delays[0].capacity();Parameters p;std::array<float,16>in{},l{},r{};MidiControlEvent event;event.frame=8;event.data={0xb0,kMixController,127};const AudioBlock b{in.data(),in.data(),l.data(),r.data()};const auto status=process(s,p,in.size(),b,&event,1);assert(status.mixMidi&&status.mix==1);assert(s.delays[0].data()==address&&s.delays[0].capacity()==capacity);}
+void testBoundedFinite(){State s;prepare(s,48000);Parameters p;p.values[kDecaySeconds]=8;p.values[kSpace]=1;p.values[kMix]=1;std::array<float,32768>in{},l{},r{};in[0]=20;const AudioBlock b{in.data(),in.data(),l.data(),r.data()};(void)process(s,p,in.size(),b);for(float v:l){assert(std::isfinite(v));assert(std::fabs(v)<=1);}}
+int main(){testDefaultsClampAndState();testDryTransparency();testImpulseMakesTail();testMidiContract();testSampleAccurateMidiAndNoAllocation();testBoundedFinite();}

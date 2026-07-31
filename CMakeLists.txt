@@ -18,6 +18,7 @@ option(DOWNSPOUT_BUILD_MMIX "Configure the m-mix MIDI target" ON)
 option(DOWNSPOUT_BUILD_TMIX "Configure the t-mix eight-input mixer target" ON)
 option(DOWNSPOUT_BUILD_MIXGEN "Configure the Mixgen automatic producer target" ON)
 option(DOWNSPOUT_BUILD_LOOPDELAY "Configure the Loopdelay stereo delay/looper target" ON)
+option(DOWNSPOUT_BUILD_LIGHTVERB "Configure the Lightverb low-CPU reverb target" ON)
 option(DOWNSPOUT_BUILD_MELGEN "Configure the melgen MIDI melody target" ON)
 option(DOWNSPOUT_BUILD_RIFT "Configure the rift original effect target" ON)
 option(DOWNSPOUT_BUILD_ORCHID "Configure the orchid voiced freeze effect target" ON)
@@ -106,6 +107,10 @@ endif()
 
 if(DOWNSPOUT_BUILD_LOOPDELAY)
     add_subdirectory(plugins/loopdelay)
+endif()
+
+if(DOWNSPOUT_BUILD_LIGHTVERB)
+    add_subdirectory(plugins/lightverb)
 endif()
 
 if(DOWNSPOUT_BUILD_MELGEN)

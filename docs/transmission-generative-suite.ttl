@@ -42,6 +42,13 @@ dsp:loopdelay a trn:PluginProfile ;
     trn:produces trn:Audio ; trn:requires trn:HostTransport ;
     trn:recommendedAfter dsp:t-mix ; trn:recommendedBefore dsp:guardian .
 
+dsp:lightverb a trn:PluginProfile ;
+    rdfs:label "Lightverb" ;
+    trn:bundleName "lightverb.vst3" ; trn:vendor "danja" ;
+    trn:role trn:AudioEffect ; trn:accepts trn:Audio, trn:Midi ;
+    trn:produces trn:Audio ; trn:recommendedAfter dsp:loopdelay ;
+    trn:recommendedBefore dsp:guardian .
+
 dsp:mnemosyne a trn:PluginProfile ;
     rdfs:label "Mnemosyne" ;
     trn:bundleName "mnemosyne.vst3" ; trn:vendor "danja" ;

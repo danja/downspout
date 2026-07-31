@@ -107,6 +107,7 @@ Examples:
 - [plugins/t-mix/src/dpf/TMixPlugin.cpp](../plugins/t-mix/src/dpf/TMixPlugin.cpp)
 - [plugins/mixgen/src/dpf/MixgenPlugin.cpp](../plugins/mixgen/src/dpf/MixgenPlugin.cpp)
 - [plugins/loopdelay/src/dpf/LoopdelayPlugin.cpp](../plugins/loopdelay/src/dpf/LoopdelayPlugin.cpp)
+- [plugins/lightverb/src/dpf/LightverbPlugin.cpp](../plugins/lightverb/src/dpf/LightverbPlugin.cpp)
 - [plugins/cadence/src/dpf/CadencePlugin.cpp](../plugins/cadence/src/dpf/CadencePlugin.cpp)
 
 ### 3. UI layer
@@ -209,6 +210,7 @@ The release script currently expects these bundles:
 - `t_mix.vst3`
 - `mixgen.vst3`
 - `loopdelay.vst3`
+- `lightverb.vst3`
 - `melgen.vst3`
 - `rift.vst3`
 - `orchid.vst3`

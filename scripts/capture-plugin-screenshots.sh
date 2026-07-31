@@ -24,6 +24,7 @@ plugins=(
   "t-mix:t_mix"
   "mixgen:mixgen"
   "loopdelay:loopdelay"
+  "lightverb:lightverb"
   "melgen:melgen"
   "rift:rift"
   "orchid:orchid"

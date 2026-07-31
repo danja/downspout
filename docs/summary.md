@@ -70,6 +70,14 @@ through four bars. Route controller MIDI to its track to drive time with fixed
 CC 30 and feedback with CC 31; either CC temporarily takes over its saved panel
 value until **Release MIDI** is pressed.
 
+### Lightverb (`lightverb.vst3`)
+
+Fixed-cost stereo feedback-delay-network reverb that favors low CPU use over
+natural-room simulation. It works as an insert or a 100% wet send, normally in
+`T-Mix → Loopdelay → Lightverb → Guardian`. Producer MIDI uses fixed CC 32 for
+Wet mix and CC 33 for Space, continuing the suite's non-conflicting control
+range.
+
 ## Instruments
 
 ### DrumKit (`drumkit.vst3`)

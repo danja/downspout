@@ -64,6 +64,7 @@ Current output filenames:
 - `t-mix.png`
 - `mixgen.png`
 - `loopdelay.png`
+- `lightverb.png`
 - `melgen.png`
 - `rift.png`
 - `orchid.png`

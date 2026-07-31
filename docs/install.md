@@ -50,7 +50,7 @@ Public release packaging is handled separately by
 
 ## Current outputs
 
-The repository currently installs thirty-eight real wrapper targets:
+The repository currently installs thirty-nine real wrapper targets:
 
 - `bassgen.vst3` with UI
 - `p_mix.vst3` with UI
@@ -59,6 +59,7 @@ The repository currently installs thirty-eight real wrapper targets:
 - `t_mix.vst3` with UI
 - `mixgen.vst3` with UI
 - `loopdelay.vst3` with UI
+- `lightverb.vst3` with UI
 - `melgen.vst3` with UI
 - `rift.vst3` with UI
 - `orchid.vst3` with UI
