@@ -5,6 +5,8 @@
 #include "t_mix_serialization.hpp"
 
 #include <cstring>
+#include <array>
+#include <algorithm>
 #include <string>
 
 START_NAMESPACE_DISTRHO
@@ -107,6 +109,17 @@ protected:
             parameter.symbol = String("channel_") + String(static_cast<int>(channel + 1)) + "_meter";
             parameter.hints = kParameterIsOutput;
             parameter.ranges = {0.0f, 0.0f, 1.0f};
+        } else if (index == kParamProducerSlew) {
+            parameter.name = "Producer Slew";
+            parameter.symbol = "producer_slew_ms";
+            parameter.unit = "ms";
+            parameter.ranges = {kDefaultProducerSlewMs, 0.0f, 500.0f};
+        } else if (inRange(index, kParamProducerGainBase)) {
+            const uint32_t channel = index - kParamProducerGainBase;
+            parameter.name = String("Channel ") + String(static_cast<int>(channel + 1)) + " Producer Gain";
+            parameter.symbol = String("channel_") + String(static_cast<int>(channel + 1)) + "_producer_gain";
+            parameter.hints = kParameterIsOutput;
+            parameter.ranges = {1.0f, 0.0f, 1.0f};
         }
     }
 
@@ -134,6 +147,10 @@ protected:
             return parameters_.masterDb;
         if (inRange(index, kParamMeterBase))
             return status_.meters[index - kParamMeterBase];
+        if (index == kParamProducerSlew)
+            return parameters_.producerSlewMs;
+        if (inRange(index, kParamProducerGainBase))
+            return status_.producerGains[index - kParamProducerGainBase];
         return 0.0f;
     }
 
@@ -149,6 +166,8 @@ protected:
             parameters_.channels[index - kParamSoloBase].solo = value;
         else if (index == kParamMaster)
             parameters_.masterDb = value;
+        else if (index == kParamProducerSlew)
+            parameters_.producerSlewMs = value;
         parameters_ = clampParameters(parameters_);
     }
 
@@ -173,14 +192,29 @@ protected:
         downspout::tmix::activate(engineState_);
     }
 
-    void run(const float** inputs, float** outputs, uint32_t frames) override
+    void run(const float** inputs,
+             float** outputs,
+             uint32_t frames,
+             const MidiEvent* midiEvents,
+             uint32_t midiEventCount) override
     {
         AudioBlock audio;
         for (uint32_t channel = 0; channel < kInputChannelCount; ++channel)
             audio.inputs[channel] = inputs[channel];
         for (uint32_t channel = 0; channel < kOutputChannelCount; ++channel)
             audio.outputs[channel] = outputs[channel];
-        status_ = processBlock(engineState_, parameters_, frames, getSampleRate(), audio);
+        std::array<MidiControlEvent, 512> controls {};
+        const uint32_t count = std::min<uint32_t>(midiEventCount, controls.size());
+        for (uint32_t index = 0; index < count; ++index) {
+            controls[index].frame = std::min(midiEvents[index].frame, frames > 0 ? frames - 1 : 0);
+            controls[index].size = static_cast<std::uint8_t>(std::min<uint32_t>(midiEvents[index].size, 3));
+            const uint8_t* source = midiEvents[index].size > MidiEvent::kDataSize
+                ? midiEvents[index].dataExt : midiEvents[index].data;
+            for (uint32_t byte = 0; byte < controls[index].size; ++byte)
+                controls[index].data[byte] = source[byte];
+        }
+        status_ = processBlock(engineState_, parameters_, frames, getSampleRate(), audio,
+                               controls.data(), count);
     }
 
 private:

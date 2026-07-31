@@ -134,6 +134,11 @@ protected:
             updateVertical(kParamMaster, masterRect_, y);
             return true;
         }
+        if (producerSlewRect_.contains(x, y)) {
+            beginDrag(kParamProducerSlew);
+            updateProducerSlew(x);
+            return true;
+        }
         return false;
     }
 
@@ -146,6 +151,8 @@ protected:
         const float y = static_cast<float>(event.pos.getY());
         if (parameter == kParamMaster)
             updateVertical(parameter, masterRect_, y);
+        else if (parameter == kParamProducerSlew)
+            updateProducerSlew(x);
         else if (parameter >= kParamLevelBase && parameter < kParamPanBase)
             updateVertical(parameter, levelRects_[parameter - kParamLevelBase], y);
         else if (parameter >= kParamPanBase && parameter < kParamMuteBase)
@@ -174,6 +181,10 @@ protected:
             commit(kParamMaster, clampf(values_[kParamMaster] + direction, kMinimumLevelDb, kMaximumLevelDb));
             return true;
         }
+        if (producerSlewRect_.contains(x, y)) {
+            commit(kParamProducerSlew, clampf(values_[kParamProducerSlew] + direction * 5.0f, 0.0f, 500.0f));
+            return true;
+        }
         return false;
     }
 
@@ -184,6 +195,7 @@ private:
     std::array<Rect, kInputChannelCount> muteRects_ {};
     std::array<Rect, kInputChannelCount> soloRects_ {};
     Rect masterRect_ {};
+    Rect producerSlewRect_ {};
     int dragParameter_ = -1;
 
     void drawBackground(float width, float height)
@@ -216,7 +228,7 @@ private:
 
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
         fillColor(104, 135, 142, 255);
-        text(width - 26.0f, 43.0f, "LEVEL  /  PAN  /  MUTE  /  SOLO", nullptr);
+        text(width - 26.0f, 43.0f, "LEVEL / AUTO CC20-27 / PAN / MUTE / SOLO", nullptr);
     }
 
     void drawPanel(const Rect& rect, bool master)
@@ -247,6 +259,8 @@ private:
 
         const Rect meter {strip.x + 18.0f, strip.y + 42.0f, strip.w - 36.0f, 12.0f};
         drawMeter(meter, values_[kParamMeterBase + channel]);
+        drawProducerGain({strip.x + 18.0f, strip.y + 61.0f, strip.w - 36.0f, 5.0f},
+                         values_[kParamProducerGainBase + channel]);
 
         panRects_[channel] = {strip.x + (strip.w - 64.0f) * 0.5f, strip.y + 70.0f, 64.0f, 70.0f};
         drawPan(panRects_[channel], values_[kParamPanBase + channel]);
@@ -273,12 +287,47 @@ private:
         fillColor(229, 221, 192, 255);
         text(strip.x + strip.w * 0.5f, strip.y + 14.0f, "MASTER", nullptr);
 
-        fontSize(11.0f);
+        fontSize(10.0f);
         fillColor(118, 142, 146, 255);
-        text(strip.x + strip.w * 0.5f, strip.y + 48.0f, "STEREO OUT", nullptr);
+        text(strip.x + strip.w * 0.5f, strip.y + 46.0f, "STEREO OUT", nullptr);
 
-        masterRect_ = {strip.x + 27.0f, strip.y + 92.0f, strip.w - 54.0f, strip.h - 132.0f};
+        producerSlewRect_ = {strip.x + 14.0f, strip.y + 67.0f, strip.w - 28.0f, 35.0f};
+        drawProducerSlew(producerSlewRect_);
+
+        masterRect_ = {strip.x + 27.0f, strip.y + 132.0f, strip.w - 54.0f, strip.h - 172.0f};
         drawFader(masterRect_, values_[kParamMaster], true);
+    }
+
+    void drawProducerGain(const Rect& rect, float gain)
+    {
+        beginPath();
+        roundedRect(rect.x, rect.y, rect.w, rect.h, 2.0f);
+        fillColor(7, 10, 13, 255);
+        fill();
+        beginPath();
+        roundedRect(rect.x, rect.y, std::max(1.0f, rect.w * clampf(gain, 0.0f, 1.0f)), rect.h, 2.0f);
+        fillColor(87, 173, 211, 230);
+        fill();
+    }
+
+    void drawProducerSlew(const Rect& rect)
+    {
+        char value[24];
+        std::snprintf(value, sizeof(value), "AUTO %d ms",
+                      static_cast<int>(std::lround(values_[kParamProducerSlew])));
+        fontSize(9.5f);
+        textAlign(ALIGN_CENTER | ALIGN_TOP);
+        fillColor(126, 154, 163, 255);
+        text(rect.x + rect.w * 0.5f, rect.y, value, nullptr);
+        const float trackY = rect.y + 21.0f;
+        beginPath();
+        roundedRect(rect.x, trackY, rect.w, 5.0f, 2.0f);
+        fillColor(7, 10, 13, 255);
+        fill();
+        beginPath();
+        roundedRect(rect.x, trackY, std::max(2.0f, rect.w * values_[kParamProducerSlew] / 500.0f), 5.0f, 2.0f);
+        fillColor(87, 173, 211, 230);
+        fill();
     }
 
     void drawMeter(const Rect& rect, float peak)
@@ -403,6 +452,15 @@ private:
         const uint32_t parameter = kParamPanBase + channel;
         values_[parameter] = value;
         setParameterValue(parameter, value);
+        repaint();
+    }
+
+    void updateProducerSlew(float x)
+    {
+        const float unit = clampf((x - producerSlewRect_.x) / producerSlewRect_.w, 0.0f, 1.0f);
+        const float value = unit * 500.0f;
+        values_[kParamProducerSlew] = value;
+        setParameterValue(kParamProducerSlew, value);
         repaint();
     }
 

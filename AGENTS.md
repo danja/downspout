@@ -80,6 +80,22 @@ Initial plugin targets:
 - Update `docs/plan.md` when project direction changes materially.
 - Record per-plugin migration decisions in that plugin’s `docs/` directory rather than bloating the root plan.
 
+## UI screenshot review
+
+- Treat a rendered screenshot as a product review artifact, not merely catalog
+  output. After adding a plugin or materially changing its UI, capture the real
+  standalone/plugin interface and inspect the image at full resolution.
+- Review it as a first-time user: the plugin's purpose and signal flow should be
+  apparent; primary controls should have clear names, values, units, grouping,
+  and hierarchy; modes, routing contracts, and live status should be visible;
+  defaults should communicate useful behavior; and text or controls must not be
+  clipped, crowded, ambiguous, or too small.
+- Iterate on the UI and recapture the screenshot until the main workflow is
+  understandable without consulting source code. Do not call a new or changed
+  UI ready solely because it compiles or renders.
+- If screenshot capture or image inspection is unavailable, record that exact
+  limitation and leave visual acceptance explicitly pending.
+
 ## New plugin completion checklist
 
 When adding a new plugin, keep the local build, release artifact, and GitHub
@@ -96,6 +112,8 @@ Pages catalog in sync in the same change:
 - add `docs/pages/_products/<plugin>.md` with front matter, add the plugin to
   `scripts/capture-plugin-screenshots.sh`, and generate
   `docs/pages/assets/plugins/<plugin>.png`;
+- inspect the generated screenshot from a first-time user's perspective using
+  the UI screenshot review criteria above, then revise and recapture as needed;
 - update `docs/screenshots.md` and `docs/pages/README.md` when screenshot or
   Pages processes change;
 - run at least the plugin core tests, the plugin VST3 target build, shell

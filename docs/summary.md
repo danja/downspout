@@ -1,6 +1,6 @@
 # Downspout Plugin Capability Summary
 
-Downspout is a collection of 25 mostly generative and algorithmic VST3 plugins. The common architecture is a portable C++ musical/DSP core, thin DPF host wrapper, persistent text state where needed, deterministic tests, and a custom NanoVG interface. REAPER identifies the plugins below with maker `danja`.
+Downspout is a collection of mostly generative and algorithmic VST3 plugins. The common architecture is a portable C++ musical/DSP core, thin DPF host wrapper, persistent text state where needed, deterministic tests, and a custom NanoVG interface. REAPER identifies the plugins below with maker `danja`.
 
 ## MIDI generators and processors
 
@@ -56,6 +56,20 @@ Conway's Game of Life MIDI sequencer for Launchpad. Each beat advances a cellula
 
 Straightforward x0x-style drum sequencer with 11 DrumKit-oriented lanes and patterns up to 32 steps. Useful when explicit hand-programmed dance patterns are preferable to generative rhythm.
 
+### Mixgen (`mixgen.vst3`)
+
+Transport-synchronized automatic producer for T-Mix. Eight repeatable gain
+lanes use random, low-discrepancy quasi-random, or Euclidean patterns. Route
+its MIDI output to the T-Mix track; fixed CC 20-27 address strips 1-8.
+
+### Loopdelay (`loopdelay.vst3`)
+
+Stereo delay and capture looper designed for `T-Mix → Loopdelay → Guardian`.
+Time can run freely from 20–4000 ms or follow the host BBT from a quarter beat
+through four bars. Route controller MIDI to its track to drive time with fixed
+CC 30 and feedback with CC 31; either CC temporarily takes over its saved panel
+value until **Release MIDI** is pressed.
+
 ## Instruments
 
 ### DrumKit (`drumkit.vst3`)
@@ -83,6 +97,12 @@ Chaotic glitch instrument with performance scenes, live and hidden parameters, m
 Text-to-music instrument and MIDI generator derived from Tuney 0.3.39. Focused Unicode typing or stored text is mapped through configurable alphabets, scales, and microtonal tunings, then played with seeded free-time phrasing through a simple polyphonic synth and ordinary MIDI output.
 
 ## Audio effects
+
+### T-Mix (`t_mix.vst3`)
+
+Eight-input mono-to-stereo mixer with level, pan, mute, solo, meters, and a
+master fader. Its producer layer accepts Mixgen CC 20-27 as click-smoothed
+transient gain multipliers while preserving manual faders as the saved balance.
 
 ### P-Mix (`p_mix.vst3`)
 
@@ -116,7 +136,9 @@ Launchpad dub performance effect/instrument. Pads trigger echo throws, spring sp
 - Glitch lead: GremlinDriver -> Gremlin, optionally followed by Rift or Ambo.
 - Breakdown atmosphere: Canticle/Floozy -> Orchid -> Ambo.
 - Live dub transitions: a drum or full-mix bus -> PaunchLad.
+- Automatic arrangement: route instruments into T-Mix, then route Mixgen MIDI
+  to T-Mix and tune Density, Depth, Variation, and Lane Spread.
 
 ## Host notes
 
-Generators and MIDI effects must precede their receiving instrument in the track FX chain or route MIDI to another instrument track. Transport-aware plugins need valid host tempo/play-state information. Launchpad-focused plugins remain usable without hardware where their UI exposes equivalent controls, but their intended performance feedback depends on Launchpad MIDI I/O. High Ambo feedback, stacked delay/shimmer, Rift repeats, and Gremlin randomization can become dense quickly, so conservative output trims are advisable.
+Generators and MIDI effects must precede their receiving instrument in the track FX chain or route MIDI to another instrument track. Mixgen normally belongs on a control track whose MIDI send targets the T-Mix track. Transport-aware plugins need valid host tempo/play-state information. Launchpad-focused plugins remain usable without hardware where their UI exposes equivalent controls, but their intended performance feedback depends on Launchpad MIDI I/O. High Ambo feedback, stacked delay/shimmer, Rift repeats, and Gremlin randomization can become dense quickly, so conservative output trims are advisable.

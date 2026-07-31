@@ -62,6 +62,8 @@ Current output filenames:
 - `e-mix.png`
 - `m-mix.png`
 - `t-mix.png`
+- `mixgen.png`
+- `loopdelay.png`
 - `melgen.png`
 - `rift.png`
 - `orchid.png`

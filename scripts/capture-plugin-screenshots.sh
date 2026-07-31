@@ -22,6 +22,8 @@ plugins=(
   "e-mix:e_mix"
   "m-mix:m_mix"
   "t-mix:t_mix"
+  "mixgen:mixgen"
+  "loopdelay:loopdelay"
   "melgen:melgen"
   "rift:rift"
   "orchid:orchid"

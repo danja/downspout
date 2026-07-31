@@ -22,6 +22,26 @@ dsp:drift a trn:PluginProfile ;
     trn:accepts trn:Audio ; trn:produces trn:Audio, trn:Midi ;
     trn:requires trn:HostTransport .
 
+dsp:mixgen a trn:PluginProfile ;
+    rdfs:label "Mixgen" ;
+    trn:bundleName "mixgen.vst3" ; trn:vendor "danja" ;
+    trn:role trn:MidiGenerator, trn:AudioEffect ;
+    trn:accepts trn:Audio ; trn:produces trn:Audio, trn:Midi, trn:ControlMidi ;
+    trn:requires trn:HostTransport ; trn:recommendedBefore dsp:t-mix .
+
+dsp:t-mix a trn:PluginProfile ;
+    rdfs:label "T-Mix" ;
+    trn:bundleName "t_mix.vst3" ; trn:vendor "danja" ;
+    trn:role trn:AudioEffect ; trn:accepts trn:Audio, trn:Midi ;
+    trn:produces trn:Audio .
+
+dsp:loopdelay a trn:PluginProfile ;
+    rdfs:label "Loopdelay" ;
+    trn:bundleName "loopdelay.vst3" ; trn:vendor "danja" ;
+    trn:role trn:AudioEffect ; trn:accepts trn:Audio, trn:Midi ;
+    trn:produces trn:Audio ; trn:requires trn:HostTransport ;
+    trn:recommendedAfter dsp:t-mix ; trn:recommendedBefore dsp:guardian .
+
 dsp:mnemosyne a trn:PluginProfile ;
     rdfs:label "Mnemosyne" ;
     trn:bundleName "mnemosyne.vst3" ; trn:vendor "danja" ;

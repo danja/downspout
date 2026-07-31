@@ -68,6 +68,8 @@ installed bundle.
 | [e-mix](plugins/e-mix/README.md) | `e_mix.vst3` | Audio effect | Transport-aware Euclidean stereo gate with redesigned UI. |
 | [m-mix](plugins/m-mix/README.md) | `m_mix.vst3` | MIDI effect | Transport-aware MIDI gate combining `p-mix` transitions with `e-mix` Euclidean blocks. |
 | [t-mix](plugins/t-mix/README.md) | `t_mix.vst3` | Audio mixer | Eight mono input strips with level, pan, mute, solo, metering, and stereo master output. |
+| [Mixgen](plugins/mixgen/README.md) | `mixgen.vst3` | MIDI control generator | Random, quasi-random, and Euclidean producer lanes for T-Mix channel gains. |
+| [Loopdelay](plugins/loopdelay/README.md) | `loopdelay.vst3` | Audio effect | Stereo delay/capture looper with free or BBT-locked time and MIDI-controlled time/feedback. |
 | [melgen](plugins/melgen/README.md) | `melgen.vst3` | MIDI generator | Phrase-aware melody generator with contour, answer, structure, and follow controls. |
 | [rift](plugins/rift/README.md) | `rift.vst3` | Audio effect | Transport-locked live/sample buffer disruptor with WAV loading, chop/stutter repeats, reverse, skip, smear, and pitch-slip actions. |
 | [Orchid](plugins/orchid/README.md) | `orchid.vst3` | Audio effect | Transport-aware voiced freeze/hold effect with autocorrelation capture and grid-synced loop holds. |

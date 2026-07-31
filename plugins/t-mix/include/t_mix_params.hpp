@@ -12,7 +12,10 @@ inline constexpr std::uint32_t kParamMuteBase = kParamPanBase + kInputChannelCou
 inline constexpr std::uint32_t kParamSoloBase = kParamMuteBase + kInputChannelCount;
 inline constexpr std::uint32_t kParamMaster = kParamSoloBase + kInputChannelCount;
 inline constexpr std::uint32_t kParamMeterBase = kParamMaster + 1;
-inline constexpr std::uint32_t kParameterCount = kParamMeterBase + kInputChannelCount;
+// Producer parameters are appended so existing projects retain every old ID.
+inline constexpr std::uint32_t kParamProducerSlew = kParamMeterBase + kInputChannelCount;
+inline constexpr std::uint32_t kParamProducerGainBase = kParamProducerSlew + 1;
+inline constexpr std::uint32_t kParameterCount = kParamProducerGainBase + kInputChannelCount;
 
 enum StateIndex : std::uint32_t {
     kStateParameters = 0,

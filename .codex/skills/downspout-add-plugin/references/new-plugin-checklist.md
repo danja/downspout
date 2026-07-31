@@ -63,3 +63,16 @@ bash -n scripts/package-release.sh
 ```
 
 Also run a static consistency check that package-release expected bundles match plugin CMake install declarations. If screenshots/catalog changed, run or explicitly defer screenshot generation.
+
+For a plugin with a UI, screenshot generation is followed by visual inspection,
+not treated as sufficient by itself. Open the produced PNG at full resolution
+and verify:
+
+- a first-time user can infer purpose, signal flow, and the primary action;
+- control names, current values, units, groups, and priority are clear;
+- choices, toggles, routing contracts, and processor status are visible;
+- the default state communicates useful behavior;
+- text and controls are readable, unclipped, and not overcrowded.
+
+Revise and recapture until these checks pass, or record visual acceptance as
+pending when the capture/viewing tools are unavailable.

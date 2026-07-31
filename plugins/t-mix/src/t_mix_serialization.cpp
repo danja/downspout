@@ -43,7 +43,8 @@ bool parseChannelKey(std::string_view key,
 std::string serializeParameters(const Parameters& rawParameters)
 {
     const Parameters parameters = clampParameters(rawParameters);
-    std::string text = "version=1\nmaster_db=" + std::to_string(parameters.masterDb) + "\n";
+    std::string text = "version=2\nmaster_db=" + std::to_string(parameters.masterDb) +
+        "\nproducer_slew_ms=" + std::to_string(parameters.producerSlewMs) + "\n";
     for (std::uint32_t channel = 0; channel < kInputChannelCount; ++channel) {
         const std::string prefix = "channel" + std::to_string(channel) + ".";
         const ChannelParameters& strip = parameters.channels[channel];
@@ -80,6 +81,10 @@ std::optional<Parameters> deserializeParameters(const std::string& text)
             return std::nullopt;
         if (key == "master_db") {
             parameters.masterDb = parsed;
+            continue;
+        }
+        if (key == "producer_slew_ms") {
+            parameters.producerSlewMs = parsed;
             continue;
         }
 

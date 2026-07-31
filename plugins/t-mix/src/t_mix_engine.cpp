@@ -31,6 +31,7 @@ Parameters clampParameters(const Parameters& raw)
         channel.solo = enabled(channel.solo) ? 1.0f : 0.0f;
     }
     parameters.masterDb = clampf(parameters.masterDb, kMinimumLevelDb, kMaximumLevelDb);
+    parameters.producerSlewMs = clampf(parameters.producerSlewMs, 0.0f, 500.0f);
     return parameters;
 }
 
@@ -44,13 +45,29 @@ float decibelsToGain(float decibels)
 void activate(EngineState& state)
 {
     state.meters.fill(0.0f);
+    state.producerGains.fill(1.0f);
+    state.producerTargets.fill(1.0f);
+}
+
+bool handleMidi(EngineState& state, const std::uint8_t* data, const std::uint32_t size)
+{
+    if (data == nullptr || size < 3 || (data[0] & 0xf0u) != 0xb0u)
+        return false;
+    const std::uint8_t controller = data[1] & 0x7fu;
+    if (controller < kProducerCcBase || controller >= kProducerCcBase + kInputChannelCount)
+        return false;
+    const std::uint32_t channel = controller - kProducerCcBase;
+    state.producerTargets[channel] = static_cast<float>(data[2] & 0x7fu) / 127.0f;
+    return true;
 }
 
 OutputStatus processBlock(EngineState& state,
                           const Parameters& rawParameters,
                           std::uint32_t frameCount,
                           double sampleRate,
-                          const AudioBlock& audio)
+                          const AudioBlock& audio,
+                          const MidiControlEvent* midiEvents,
+                          const std::uint32_t midiEventCount)
 {
     const Parameters parameters = clampParameters(rawParameters);
     const bool anySolo = std::any_of(parameters.channels.begin(),
@@ -74,15 +91,27 @@ OutputStatus processBlock(EngineState& state,
 
     std::array<float, kInputChannelCount> peaks {};
     const float masterGain = decibelsToGain(parameters.masterDb);
+    const float slewSamples = static_cast<float>(sampleRate) * parameters.producerSlewMs * 0.001f;
+    const float producerCoefficient = slewSamples > 1.0f
+        ? 1.0f - std::exp(-1.0f / slewSamples)
+        : 1.0f;
+    std::uint32_t eventIndex = 0;
     for (std::uint32_t frame = 0; frame < frameCount; ++frame) {
+        while (eventIndex < midiEventCount && midiEvents != nullptr
+               && midiEvents[eventIndex].frame <= frame) {
+            (void)handleMidi(state, midiEvents[eventIndex].data.data(), midiEvents[eventIndex].size);
+            ++eventIndex;
+        }
         float left = 0.0f;
         float right = 0.0f;
         for (std::uint32_t channel = 0; channel < kInputChannelCount; ++channel) {
+            state.producerGains[channel] +=
+                (state.producerTargets[channel] - state.producerGains[channel]) * producerCoefficient;
             const float* input = audio.inputs[channel];
             const float sample = input != nullptr ? input[frame] : 0.0f;
             peaks[channel] = std::max(peaks[channel], std::fabs(sample));
-            left += sample * leftGains[channel];
-            right += sample * rightGains[channel];
+            left += sample * leftGains[channel] * state.producerGains[channel];
+            right += sample * rightGains[channel] * state.producerGains[channel];
         }
         if (audio.outputs[0] != nullptr)
             audio.outputs[0][frame] = left * masterGain;
@@ -100,7 +129,7 @@ OutputStatus processBlock(EngineState& state,
                                                   state.meters[channel] * release));
     }
 
-    return {state.meters};
+    return {state.meters, state.producerGains};
 }
 
 }  // namespace downspout::tmix

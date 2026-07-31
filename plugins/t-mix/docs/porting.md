@@ -18,8 +18,20 @@
   informative while a strip is muted and are exposed as read-only output
   parameters for the UI.
 
+## Producer control
+
+- MIDI CC 20-27 map to channels 1-8, on any MIDI channel. Values map linearly
+  from silence at 0 to unity at 127.
+- Producer gain multiplies the saved channel fader rather than replacing it.
+  Manual balance and host automation therefore remain the upper-level mix.
+- Incoming events are applied at their sample offset. `Producer Slew` smooths
+  changes from 0 to 500 ms and defaults to 25 ms.
+- Effective producer gains are transient read-only output parameters. They are
+  visible to the UI but are not serialized.
+
 ## State
 
 The `parameters` state key stores a versioned text representation of all eight
-levels, pans, mute/solo values, and the master level. Meter values are transient
-and are not serialized.
+levels, pans, mute/solo values, the master level, and producer slew. Meter and
+effective producer-gain values are transient and are not serialized. Version 1
+states load with the default 25 ms producer slew.

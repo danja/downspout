@@ -181,6 +181,8 @@ jobs:
             echo "- e_mix.vst3"
             echo "- m_mix.vst3"
             echo "- t_mix.vst3"
+            echo "- mixgen.vst3"
+            echo "- loopdelay.vst3"
             echo "- melgen.vst3"
             echo "- rift.vst3"
             echo "- orchid.vst3"

@@ -24,6 +24,8 @@ downspout-<version>-<platform>-vst3.zip
 ├── e_mix.vst3/
 ├── m_mix.vst3/
 ├── t_mix.vst3/
+├── mixgen.vst3/
+├── loopdelay.vst3/
 ├── melgen.vst3/
 ├── rift.vst3/
 ├── orchid.vst3/

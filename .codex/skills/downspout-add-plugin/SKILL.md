@@ -34,3 +34,14 @@ When adding a plugin, update all of these in the same change unless the user exp
 Build the plugin around a portable core first. Do not make the DPF wrapper own the architecture. Add explicit docs for LV2-to-DPF/VST3 mappings, especially transport, state, MIDI ports, and UI behavior.
 
 Read [references/new-plugin-checklist.md](references/new-plugin-checklist.md) for concrete file patterns and validation.
+
+## Visual acceptance gate
+
+After the real UI target renders, capture its screenshot and inspect the image
+at full resolution before declaring the plugin complete. Judge it as a
+first-time user: purpose, signal flow, primary workflow, grouping, labels,
+values, units, modes, routing, and live status must be understandable; defaults
+must look useful; and nothing may be clipped, crowded, ambiguous, or illegible.
+Fix the UI and repeat capture plus inspection until it passes. If the local
+environment cannot capture or inspect images, report visual acceptance as
+explicitly pending.

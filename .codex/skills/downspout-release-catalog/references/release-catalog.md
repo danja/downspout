@@ -79,6 +79,15 @@ Reuse an existing screenshot build only when it was configured with `DOWNSPOUT_B
 scripts/capture-plugin-screenshots.sh --skip-build
 ```
 
+After capture, open every new or changed PNG at full resolution. Treat this as
+a UI acceptance review, not a file-existence check. Verify that a first-time
+user can understand the plugin's purpose, signal flow, primary controls,
+current values and units, modes, routing contract, and live status; confirm the
+default state is informative and that no text or controls are clipped,
+overcrowded, ambiguous, or illegible. Iterate on the UI and recapture until it
+passes. If image inspection is unavailable, report visual acceptance as
+pending rather than complete.
+
 The script may need JACK, Xvfb, xdotool or xwininfo/xprop, and ImageMagick. If tools are unavailable, state exactly what could not be run and leave the catalog file updates consistent.
 
 ## Release package command

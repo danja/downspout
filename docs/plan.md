@@ -145,7 +145,17 @@ Progress as of 2026-05-27:
 - `m-mix` now has a portable MIDI-gate core, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `t-mix` now exists as an original eight-input stereo mixer with a portable
   summing core, constant-power pan, mute/solo behavior, pre-fader meters,
-  deterministic tests, and a DPF/VST3 wrapper with a mixer-style UI;
+  deterministic tests, and a DPF/VST3 wrapper with a mixer-style UI; it now
+  accepts sample-accurate, click-smoothed CC 20-27 producer-gain overlays while
+  preserving manual faders as the saved mix balance;
+- `mixgen` now exists as an original automatic producer for `t-mix`, with
+  repeatable random, low-discrepancy quasi-random, and Euclidean eight-lane
+  gain patterns, transport synchronization, live lane status, deterministic
+  tests, and a focused DPF/VST3 UI;
+- `loopdelay` now exists as a stereo delay and capture looper intended after
+  `t-mix`, with free or BBT-derived time, feedback/ping-pong/overdub shaping,
+  sample-accurate fixed CC 30/31 producer control, transient MIDI takeover,
+  deterministic transport tests, and a task-oriented DPF/VST3 UI;
 - `melgen` now has a phrase-aware MIDI melody core, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `rift` now exists as an original `downspout` transport-aware live/sample buffer effect with WAV loading, beat-mapped sample playback, a portable core, deterministic tests, and a VST3 wrapper target with UI via vendored DPF;
 - `drumgen` now has a portable core library, a host-neutral MIDI engine, text serialization helpers, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
@@ -181,7 +191,8 @@ Current main gap:
 
 - DPF is now vendored and all current wrapper targets build successfully.
 - `install.sh` and `scripts/package-release.sh` now install and package real
-  `bassgen.vst3`, `p_mix.vst3`, `e_mix.vst3`, `m_mix.vst3`, `melgen.vst3`,
+  `bassgen.vst3`, `p_mix.vst3`, `e_mix.vst3`, `m_mix.vst3`, `t_mix.vst3`,
+  `mixgen.vst3`, `loopdelay.vst3`, `melgen.vst3`,
   `rift.vst3`, `orchid.vst3`, `ambo.vst3`, `drumgen.vst3`, `drumkit.vst3`,
   `cadence.vst3`, `arpgen.vst3`, `counterpointer.vst3`, `sidecar.vst3`, `gremlin.vst3`,
   `gremlin_driver.vst3`, `ground.vst3`, `floozy.vst3`, `basilico.vst3`,

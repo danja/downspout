@@ -32,4 +32,12 @@ For transport-aware behavior, explicitly test stopped transport, first play bloc
 
 For UI changes, remove or move text before shrinking functional controls. Keep labels readable at the fixed plugin window size and make controls reflect processor output status where possible.
 
+After a material UI change, capture the actual rendered plugin screenshot and
+inspect it at full resolution as a first-time user. Check purpose and signal
+flow, primary workflow, grouping, labels, values, units, modes, routing, live
+status, useful defaults, clipping, crowding, and legibility. Iterate and
+recapture until the interface is understandable without reading source code.
+If capture or inspection cannot run locally, report visual acceptance as
+explicitly pending.
+
 Read [references/plugin-patterns.md](references/plugin-patterns.md) when you need concrete file patterns, reference plugins, or parameter/state checklists.
