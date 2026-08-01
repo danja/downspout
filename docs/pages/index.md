@@ -8,9 +8,11 @@ description: Screenshots and short notes for the Downspout VST3 plugin set.
   <p class="kicker">Downspout</p>
   <h2>Transport-aware VST3 tools for generated parts, gated movement, and playable disruption.</h2>
   <p>
-    These plugins are all experimental, with various levels of success for their intended purposes.
+    These plugins are all experimental, mostly work in progress, with various levels of success for their intended purposes.
 
     Demo - <a href="https://youtu.be/Rd-ACU0JUdo">Jack's Dream</a>
+
+    See also - <a href="https://github.com/danja/transmission">Transmission</a> Generative Audio Workstation
   </p>
 </section>
 
