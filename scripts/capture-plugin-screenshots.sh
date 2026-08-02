@@ -53,10 +53,12 @@ plugins=(
   "polymeter:polymeter"
   "oracle:oracle"
   "mosaic:mosaic"
-  "resonance-garden:resonance_garden"
+  "resonance_garden:resonance_garden"
   "orbit:orbit"
   "guardian:guardian"
-)
+  "gater:gater"
+  )
+
 
 usage() {
   cat <<EOF
