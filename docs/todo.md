@@ -1,1 +1,0 @@
- create a new plugin Gater that will have one audio input and two audio outputs. A midi input will control which output the input goes to. This should be usable with existing tools such as Conductor and maybe Polymeter (which may need minor extensions)
