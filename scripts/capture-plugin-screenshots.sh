@@ -30,6 +30,7 @@ plugins=(
   "orchid:orchid"
   "drumgen:drumgen"
   "drumkit:drumkit"
+  "syrinx:syrinx"
   "xoxolo:xoxolo"
   "cadence:cadence"
   "arpgen:arpgen"

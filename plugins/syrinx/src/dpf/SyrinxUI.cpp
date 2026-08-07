@@ -34,8 +34,21 @@ using downspout::syrinx::presetParam;
 using downspout::syrinx::getParameterSpec;
 using downspout::syrinx::kPresetNames;
 
-constexpr std::size_t kVoiceControlCount = 9; // params per preset (excluding mute)
+constexpr std::size_t kVoiceControlCount  = 9;
 constexpr std::size_t kMasterControlCount = 2;
+
+// Layout constants
+constexpr float kPad        = 22.0f;
+constexpr float kHeaderH    = 62.0f;
+constexpr float kSliderGapY = 16.0f;  // gap between header and slider area
+constexpr float kLabelAreaH = 60.0f;  // below track: label + value
+constexpr float kSliderW    = 90.0f;
+constexpr float kSliderGap  = 8.0f;
+constexpr float kMasterGap  = 30.0f;  // extra gap before master sliders
+constexpr float kTrackW        = 14.0f;
+constexpr float kThumbW        = 46.0f;
+constexpr float kThumbH        = 14.0f;
+constexpr float kDropdownItemH = 30.0f;
 
 struct Rect {
     float x=0, y=0, w=0, h=0;
@@ -44,20 +57,19 @@ struct Rect {
 };
 
 struct Color { int r, g, b; };
-
 struct ControlDef { std::uint32_t parameter; const char* label; };
 
 constexpr std::array<Color, kPresetCount> kPresetColors = {{
-    {165, 200, 110}, // Wren        - olive green
-    {120, 170, 210}, // Thrush      - slate blue
-    {215, 185,  90}, // Warbler     - warm yellow
-    {205, 115,  75}, // Finch       - burnt orange
-    {150, 200, 135}, // Robin       - soft green
-    { 90,  90, 120}, // Nightjar    - dark blue-grey
-    {175, 150, 195}, // Pigeon      - mauve
-    {100, 200, 175}, // Hummingbird - teal
-    {205, 165,  90}, // Starling    - golden
-    {155, 155, 155}, // Custom      - grey
+    {165, 200, 110}, // Wren
+    {120, 170, 210}, // Thrush
+    {215, 185,  90}, // Warbler
+    {205, 115,  75}, // Finch
+    {150, 200, 135}, // Robin
+    { 90,  90, 120}, // Nightjar
+    {175, 150, 195}, // Pigeon
+    {100, 200, 175}, // Hummingbird
+    {205, 165,  90}, // Starling
+    {155, 155, 155}, // Custom
 }};
 
 [[nodiscard]] float clampf(float v, float lo, float hi) { return std::max(lo, std::min(v, hi)); }
@@ -77,39 +89,32 @@ constexpr std::array<Color, kPresetCount> kPresetColors = {{
     if (spec.boolean) {
         std::snprintf(buf, sizeof(buf), "%s", value >= 0.5f ? "on" : "off");
     } else if (pp == kPresetParamVibRate) {
-        std::snprintf(buf, sizeof(buf), "%.1f Hz", value * 15.0f);
+        std::snprintf(buf, sizeof(buf), "%.1fHz", value * 15.0f);
     } else if (pp == kPresetParamVibDepth) {
-        std::snprintf(buf, sizeof(buf), "%.0f ct", value * 100.0f);
+        std::snprintf(buf, sizeof(buf), "%.0fct", value * 100.0f);
     } else if (pp == kPresetParamAMRate) {
-        std::snprintf(buf, sizeof(buf), "%.1f Hz", value * 30.0f);
-    } else if (pp == kPresetParamLevel) {
-        std::snprintf(buf, sizeof(buf), "%.2f", value);
-    } else if (spec.maximum <= 1.0f && spec.minimum >= 0.0f) {
-        std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::lround(value * 100.0f)));
+        std::snprintf(buf, sizeof(buf), "%.1fHz", value * 30.0f);
     } else if (pp == kPresetParamBend) {
         std::snprintf(buf, sizeof(buf), "%+.2f", value);
+    } else if (spec.maximum <= 1.0f && spec.minimum >= 0.0f) {
+        std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::lround(value * 100.0f)));
     } else {
         std::snprintf(buf, sizeof(buf), "%.2f", value);
     }
     return buf;
 }
 
-// Voice editor controls for the preset parameter editor
-constexpr std::array<ControlDef, kVoiceControlCount> makeVoiceControls(std::uint32_t preset)
-{
-    return {{ // preset offset is added at draw time via presetParam()
-        { kPresetParamLevel,     "Level"   },
-        { kPresetParamNoise,     "Noise"   },
-        { kPresetParamRoughness, "Rough"   },
-        { kPresetParamTimbre,    "Timbre"  },
-        { kPresetParamVibRate,   "Vib Rate"},
-        { kPresetParamVibDepth,  "Vib Dep" },
-        { kPresetParamBend,      "Bend"    },
-        { kPresetParamHarmonic,  "Harmonic"},
-        { kPresetParamAMRate,    "AM Rate" },
-    }};
-    (void)preset;
-}
+constexpr std::array<ControlDef, kVoiceControlCount> kVoiceControls = {{
+    { kPresetParamLevel,     "Level"    },
+    { kPresetParamNoise,     "Noise"    },
+    { kPresetParamRoughness, "Rough"    },
+    { kPresetParamTimbre,    "Timbre"   },
+    { kPresetParamVibRate,   "Vib Rate" },
+    { kPresetParamVibDepth,  "Vib Dep"  },
+    { kPresetParamBend,      "Bend"     },
+    { kPresetParamHarmonic,  "Harmonic" },
+    { kPresetParamAMRate,    "AM Rate"  },
+}};
 
 constexpr std::array<ControlDef, kMasterControlCount> kMasterControls = {{
     { kParamDistance,   "Distance" },
@@ -147,13 +152,16 @@ protected:
     {
         const float W = static_cast<float>(getWidth());
         const float H = static_cast<float>(getHeight());
-        const float pad = 22.0f;
 
         drawBackground(W, H);
-        drawHeader(pad, pad, W - pad * 2.0f, 72.0f);
-        drawPresetStrips(pad, 112.0f, W - pad * 2.0f, 258.0f);
-        drawVoiceEditor(pad, 404.0f, W * 0.62f - pad * 1.5f, H - 426.0f);
-        drawMasterPanel(W * 0.62f + pad * 0.5f, 404.0f, W * 0.38f - pad * 1.5f, H - 426.0f);
+        drawHeader(kPad, kPad, W - kPad * 2.0f, kHeaderH);
+
+        const float sliderY = kPad + kHeaderH + kSliderGapY;
+        drawSliders(kPad, sliderY, W - kPad * 2.0f, H - sliderY - kPad);
+
+        // Dropdown drawn last so it overlays sliders
+        if (dropdownOpen_)
+            drawDropdownList();
     }
 
     bool onMouse(const MouseEvent& ev) override
@@ -162,40 +170,51 @@ protected:
         const float x = static_cast<float>(ev.pos.getX());
         const float y = static_cast<float>(ev.pos.getY());
 
-        if (!ev.press) { activeControlParam_ = -1; activeLevelStrip_ = -1; return false; }
+        if (!ev.press) {
+            activeControlParam_ = -1;
+            activeControlRect_  = {};
+            return false;
+        }
 
-        // Randomize button
-        if (randomizeRect_.contains(x, y)) {
-            const auto seed = static_cast<std::uint32_t>(std::time(nullptr));
-            randomizeSelectedPreset(seed);
+        if (dropdownOpen_) {
+            for (std::size_t i = 0; i < kPresetCount; ++i) {
+                if (dropdownItemRects_[i].contains(x, y)) {
+                    selectedPreset_ = static_cast<int>(i);
+                    commitParameter(kParamSelectedPreset, static_cast<float>(selectedPreset_));
+                    dropdownOpen_ = false;
+                    repaint();
+                    return true;
+                }
+            }
+            dropdownOpen_ = false;
+            repaint();
             return true;
         }
 
-        for (std::size_t i = 0; i < kPresetCount; ++i) {
-            if (muteRects_[i].contains(x, y)) {
-                const std::uint32_t p = presetParam(static_cast<std::uint32_t>(i), kPresetParamMute);
-                commitParameter(p, values_[p] >= 0.5f ? 0.0f : 1.0f);
-                return true;
-            }
-            if (levelRects_[i].contains(x, y)) {
-                selectedPreset_ = static_cast<int>(i);
-                activeLevelStrip_ = selectedPreset_;
-                updateLevelFromPosition(selectedPreset_, y);
-                commitParameter(kParamSelectedPreset, static_cast<float>(selectedPreset_));
-                return true;
-            }
-            if (stripRects_[i].contains(x, y)) {
-                selectedPreset_ = static_cast<int>(i);
-                commitParameter(kParamSelectedPreset, static_cast<float>(selectedPreset_));
-                return true;
-            }
+        if (dropdownRect_.contains(x, y)) {
+            dropdownOpen_ = true;
+            repaint();
+            return true;
+        }
+
+        if (muteRect_.contains(x, y)) {
+            const std::uint32_t p = presetParam(static_cast<std::uint32_t>(selectedPreset_), kPresetParamMute);
+            commitParameter(p, values_[p] >= 0.5f ? 0.0f : 1.0f);
+            return true;
+        }
+
+        if (randomizeRect_.contains(x, y)) {
+            randomizeSelectedPreset(static_cast<std::uint32_t>(std::time(nullptr)));
+            return true;
         }
 
         for (std::size_t i = 0; i < kVoiceControlCount; ++i) {
             if (controlRects_[i].contains(x, y)) {
                 activeControlParam_ = static_cast<int>(
-                    presetParam(static_cast<std::uint32_t>(selectedPreset_), static_cast<std::uint32_t>(i)));
-                updateControlFromPosition(activeControlParam_, x, controlRects_[i]);
+                    presetParam(static_cast<std::uint32_t>(selectedPreset_),
+                                kVoiceControls[i].parameter));
+                activeControlRect_ = controlRects_[i];
+                updateControlFromY(activeControlParam_, y, activeControlRect_);
                 return true;
             }
         }
@@ -203,7 +222,8 @@ protected:
         for (std::size_t i = 0; i < kMasterControlCount; ++i) {
             if (masterRects_[i].contains(x, y)) {
                 activeControlParam_ = static_cast<int>(kMasterControls[i].parameter);
-                updateControlFromPosition(activeControlParam_, x, masterRects_[i]);
+                activeControlRect_  = masterRects_[i];
+                updateControlFromY(activeControlParam_, y, activeControlRect_);
                 return true;
             }
         }
@@ -213,43 +233,24 @@ protected:
 
     bool onMotion(const MotionEvent& ev) override
     {
-        if (activeLevelStrip_ >= 0) {
-            updateLevelFromPosition(activeLevelStrip_, static_cast<float>(ev.pos.getY()));
-            return true;
-        }
         if (activeControlParam_ >= 0) {
-            const std::uint32_t p = static_cast<std::uint32_t>(activeControlParam_);
-            for (std::size_t i = 0; i < kVoiceControlCount; ++i) {
-                if (presetParam(static_cast<std::uint32_t>(selectedPreset_), static_cast<std::uint32_t>(i)) == p) {
-                    updateControlFromPosition(activeControlParam_, static_cast<float>(ev.pos.getX()), controlRects_[i]);
-                    return true;
-                }
-            }
-            for (std::size_t i = 0; i < kMasterControlCount; ++i) {
-                if (kMasterControls[i].parameter == p) {
-                    updateControlFromPosition(activeControlParam_, static_cast<float>(ev.pos.getX()), masterRects_[i]);
-                    return true;
-                }
-            }
+            updateControlFromY(activeControlParam_, static_cast<float>(ev.pos.getY()), activeControlRect_);
+            return true;
         }
         return false;
     }
 
     bool onScroll(const ScrollEvent& ev) override
     {
-        const float x = static_cast<float>(ev.pos.getX());
-        const float y = static_cast<float>(ev.pos.getY());
+        if (dropdownOpen_) return false;
+        const float x   = static_cast<float>(ev.pos.getX());
+        const float y   = static_cast<float>(ev.pos.getY());
         const float dir = ev.delta.getY() > 0.0f ? 1.0f : -1.0f;
 
-        for (std::size_t i = 0; i < kPresetCount; ++i) {
-            if (levelRects_[i].contains(x, y)) {
-                nudgeParameter(presetParam(static_cast<std::uint32_t>(i), kPresetParamLevel), dir * 0.03f);
-                return true;
-            }
-        }
         for (std::size_t i = 0; i < kVoiceControlCount; ++i) {
             if (controlRects_[i].contains(x, y)) {
-                nudgeParameter(presetParam(static_cast<std::uint32_t>(selectedPreset_), static_cast<std::uint32_t>(i)), dir * 0.02f);
+                nudgeParameter(presetParam(static_cast<std::uint32_t>(selectedPreset_),
+                                           kVoiceControls[i].parameter), dir * 0.02f);
                 return true;
             }
         }
@@ -263,252 +264,221 @@ protected:
     }
 
 private:
-    std::array<float, kParameterCount> values_{};
-    std::array<Rect, kPresetCount>     stripRects_{};
-    std::array<Rect, kPresetCount>     muteRects_{};
-    std::array<Rect, kPresetCount>     levelRects_{};
-    std::array<Rect, kVoiceControlCount>   controlRects_{};
-    std::array<Rect, kMasterControlCount>  masterRects_{};
+    std::array<float, kParameterCount>    values_{};
+    std::array<Rect, kVoiceControlCount>  controlRects_{};
+    std::array<Rect, kMasterControlCount> masterRects_{};
+    std::array<Rect, kPresetCount>        dropdownItemRects_{};
+    Rect dropdownRect_{};
+    Rect muteRect_{};
     Rect randomizeRect_{};
+    Rect activeControlRect_{};
 
-    int selectedPreset_     = 0;
-    int activeLevelStrip_   = -1;
-    int activeControlParam_ = -1;
+    int  selectedPreset_    = 0;
+    int  activeControlParam_= -1;
+    bool dropdownOpen_      = false;
 
     // ---- Drawing ----
 
     void drawBackground(float W, float H)
     {
-        beginPath(); fillColor(13,15,17,255); rect(0,0,W,H); fill(); closePath();
-        beginPath(); fillColor(31,35,38,255); rect(0,0,W,386.0f); fill(); closePath();
-        beginPath(); fillColor(58,100,108,26); rect(0,386.0f,W,H-386.0f); fill(); closePath();
+        beginPath(); fillColor(13, 15, 17, 255); rect(0, 0, W, H); fill(); closePath();
     }
 
     void drawHeader(float x, float y, float w, float h)
     {
-        beginPath(); roundedRect(x,y,w,h,7.0f); fillColor(18,22,25,238); fill(); closePath();
+        beginPath(); roundedRect(x, y, w, h, 7.0f);
+        fillColor(18, 22, 25, 245); fill();
+        strokeColor(42, 52, 55, 255); strokeWidth(1.0f); stroke();
+        closePath();
 
-        fontSize(31.0f); textAlign(ALIGN_LEFT|ALIGN_TOP);
-        fillColor(238,241,239,255);
-        text(x+22.0f, y+15.0f, "Syrinx", nullptr);
+        // Plugin name
+        fontSize(30.0f); textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        fillColor(238, 241, 239, 255);
+        text(x + 22.0f, y + h * 0.5f, "Syrinx", nullptr);
 
-        fontSize(13.0f); fillColor(140,165,160,255);
-        text(x+145.0f, y+24.0f, "Mindlin-Laje syrinx model · chromatic MIDI · 10 presets", nullptr);
+        // Subtitle
+        fontSize(12.0f); fillColor(90, 120, 118, 200);
+        text(x + 150.0f, y + h * 0.5f, "Mindlin-Laje avian vocal model · chromatic MIDI", nullptr);
 
-        // Randomize button
-        const float rx = x + w - 152.0f;
-        const float ry = y + 18.0f;
-        randomizeRect_ = { rx, ry, 130.0f, 36.0f };
-        beginPath(); roundedRect(rx,ry,130.0f,36.0f,7.0f); fillColor(58,110,88,255); fill(); closePath();
-        fontSize(14.0f); textAlign(ALIGN_CENTER|ALIGN_MIDDLE); fillColor(200,235,215,255);
-        text(rx+65.0f, ry+19.0f, "RANDOMIZE", nullptr);
-    }
+        const Color& col  = kPresetColors[static_cast<std::size_t>(selectedPreset_)];
+        const bool   muted = values_[presetParam(static_cast<std::uint32_t>(selectedPreset_),
+                                                  kPresetParamMute)] >= 0.5f;
 
-    void drawPresetStrips(float x, float y, float w, float h)
-    {
-        const float gap    = 8.0f;
-        const float stripW = (w - gap * static_cast<float>(kPresetCount - 1)) / static_cast<float>(kPresetCount);
-        for (std::size_t i = 0; i < kPresetCount; ++i) {
-            const Rect strip{ x + static_cast<float>(i) * (stripW + gap), y, stripW, h };
-            stripRects_[i] = strip;
-            drawStrip(i, strip);
-        }
-    }
+        // Preset dropdown button
+        dropdownRect_ = { x + w - 484.0f, y + 10.0f, 210.0f, h - 20.0f };
+        beginPath(); roundedRect(dropdownRect_.x, dropdownRect_.y, dropdownRect_.w, dropdownRect_.h, 6.0f);
+        fillColor(col.r / 4, col.g / 4, col.b / 4, 255);
+        strokeColor(col.r, col.g, col.b, dropdownOpen_ ? 255 : 160);
+        strokeWidth(dropdownOpen_ ? 2.0f : 1.0f);
+        fill(); stroke(); closePath();
 
-    void drawStrip(std::size_t idx, const Rect& rect)
-    {
-        const bool   selected = static_cast<int>(idx) == selectedPreset_;
-        const bool   muted    = values_[presetParam(static_cast<std::uint32_t>(idx), kPresetParamMute)] >= 0.5f;
-        const Color& col      = kPresetColors[idx];
-
-        beginPath(); roundedRect(rect.x,rect.y,rect.w,rect.h,7.0f);
-        fillColor(selected?34:20, selected?40:24, selected?43:27, 255);
-        fill();
-        strokeColor(selected?col.r:52, selected?col.g:58, selected?col.b:60, selected?220:180);
-        strokeWidth(selected?2.0f:1.0f); stroke(); closePath();
-
-        // Coloured header bar
-        beginPath(); roundedRect(rect.x+8.0f, rect.y+8.0f, rect.w-16.0f, 6.0f, 3.0f);
-        fillColor(col.r, col.g, col.b, muted?70:220); fill(); closePath();
-
-        // Preset name
-        fontSize(10.0f); textAlign(ALIGN_CENTER|ALIGN_TOP);
-        fillColor(215,222,218, muted?120:255);
-        text(rect.x+rect.w*0.5f, rect.y+24.0f, kPresetNames[idx], nullptr);
-
-        // Pitch sparkline (simple static visual representation of Bend param)
-        drawBendSparkline(rect, idx, col, muted);
-
-        // Level fader
-        const Rect meter{ rect.x+rect.w*0.5f-8.0f, rect.y+90.0f, 16.0f, 110.0f };
-        levelRects_[idx] = meter;
-        drawLevelFader(static_cast<std::uint32_t>(idx), meter, col, muted);
+        fontSize(14.0f); textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        fillColor(col.r, col.g, col.b, 255);
+        char buf[64];
+        std::snprintf(buf, sizeof(buf), "%s  \xe2\x96\xbe", kPresetNames[selectedPreset_]);
+        text(dropdownRect_.x + 14.0f, dropdownRect_.y + dropdownRect_.h * 0.5f, buf, nullptr);
 
         // Mute button
-        const Rect mute{ rect.x+10.0f, rect.y+rect.h-42.0f, rect.w-20.0f, 28.0f };
-        muteRects_[idx] = mute;
-        drawMuteButton(mute, col, muted);
-    }
-
-    void drawBendSparkline(const Rect& rect, std::size_t idx, const Color& col, bool muted)
-    {
-        const float bend = values_[presetParam(static_cast<std::uint32_t>(idx), kPresetParamBend)];
-        const float sx = rect.x + 12.0f;
-        const float sw = rect.w - 24.0f;
-        const float sy = rect.y + 52.0f;
-        const float sh = 22.0f;
-
-        // Background
-        beginPath(); roundedRect(sx, sy, sw, sh, 3.0f);
-        fillColor(10, 12, 14, 200); fill(); closePath();
-
-        // Curve: draw a simple arc representing the bend direction
-        const float midX = sx + sw * 0.5f;
-        const float midY = sy + sh * 0.5f;
-        const float endY  = midY - bend * sh * 0.38f;
-        const float startY= midY + bend * sh * 0.38f;
-
-        beginPath();
-        moveTo(sx + 4.0f, startY);
-        quadTo(midX, midY + bend * sh * 0.1f, sx + sw - 4.0f, endY);
-        strokeColor(col.r, col.g, col.b, muted ? 80 : 200);
-        strokeWidth(1.5f); stroke(); closePath();
-    }
-
-    void drawLevelFader(std::uint32_t idx, const Rect& rect, const Color& col, bool muted)
-    {
-        const std::uint32_t levelParam = presetParam(idx, kPresetParamLevel);
-        const float norm = normalizedValue(levelParam, values_[levelParam]);
-
-        beginPath(); roundedRect(rect.x,rect.y,rect.w,rect.h,6.0f);
-        fillColor(9,11,12,255); fill(); closePath();
-
-        const float fillH = rect.h * norm;
-        if (fillH > 2.0f) {
-            beginPath();
-            roundedRect(rect.x+3.0f, rect.y+rect.h-fillH+3.0f, rect.w-6.0f, fillH-6.0f, 4.0f);
-            fillColor(col.r, col.g, col.b, muted?60:210); fill(); closePath();
-        }
-        const float thumbY = rect.y + rect.h - rect.h * norm;
-        beginPath(); roundedRect(rect.x-10.0f, thumbY-4.0f, rect.w+20.0f, 8.0f, 4.0f);
-        fillColor(228,232,230, muted?80:220); fill(); closePath();
-    }
-
-    void drawMuteButton(const Rect& rect, const Color& col, bool muted)
-    {
-        beginPath(); roundedRect(rect.x,rect.y,rect.w,rect.h,6.0f);
-        fillColor(muted?col.r:28, muted?col.g:33, muted?col.b:35, muted?225:255);
+        muteRect_ = { x + w - 266.0f, y + 10.0f, 70.0f, h - 20.0f };
+        beginPath(); roundedRect(muteRect_.x, muteRect_.y, muteRect_.w, muteRect_.h, 6.0f);
+        fillColor(muted ? col.r : 35, muted ? col.g : 40, muted ? col.b : 44, 255);
         fill(); closePath();
-        fontSize(12.0f); textAlign(ALIGN_CENTER|ALIGN_MIDDLE);
-        fillColor(muted?12:185, muted?14:195, muted?15:195, 255);
-        text(rect.x+rect.w*0.5f, rect.y+rect.h*0.5f+1.0f, "M", nullptr);
+        fontSize(13.0f); textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+        fillColor(muted ? 12 : 175, muted ? 14 : 190, muted ? 15 : 190, 255);
+        text(muteRect_.x + muteRect_.w * 0.5f, muteRect_.y + muteRect_.h * 0.5f, "MUTE", nullptr);
+
+        // Randomize button
+        randomizeRect_ = { x + w - 188.0f, y + 10.0f, 166.0f, h - 20.0f };
+        beginPath(); roundedRect(randomizeRect_.x, randomizeRect_.y, randomizeRect_.w, randomizeRect_.h, 6.0f);
+        fillColor(38, 86, 66, 255); fill(); closePath();
+        fontSize(13.0f); textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+        fillColor(175, 225, 195, 255);
+        text(randomizeRect_.x + randomizeRect_.w * 0.5f, randomizeRect_.y + randomizeRect_.h * 0.5f,
+             "RANDOMIZE", nullptr);
     }
 
-    void drawVoiceEditor(float x, float y, float w, float h)
+    void drawDropdownList()
     {
-        const Color& col = kPresetColors[static_cast<std::size_t>(selectedPreset_)];
-        drawPanel(x, y, w, h);
+        const Color& selCol = kPresetColors[static_cast<std::size_t>(selectedPreset_)];
+        const float listW = dropdownRect_.w;
+        const float listX = dropdownRect_.x;
+        const float listY = dropdownRect_.y + dropdownRect_.h + 6.0f;
+        const float listH = static_cast<float>(kPresetCount) * kDropdownItemH + 6.0f;
 
-        fontSize(17.0f); textAlign(ALIGN_LEFT|ALIGN_TOP);
-        fillColor(232,237,235,255);
-        text(x+18.0f, y+17.0f, kPresetNames[static_cast<std::size_t>(selectedPreset_)], nullptr);
+        beginPath(); roundedRect(listX, listY, listW, listH, 7.0f);
+        fillColor(18, 22, 25, 252); fill();
+        strokeColor(selCol.r, selCol.g, selCol.b, 180); strokeWidth(1.5f); stroke(); closePath();
 
-        fontSize(12.0f); fillColor(col.r, col.g, col.b, 255);
-        text(x+18.0f, y+42.0f, "play with MIDI keyboard · chromatic pitch tracking", nullptr);
+        for (std::size_t i = 0; i < kPresetCount; ++i) {
+            const Rect item{ listX + 3.0f, listY + 3.0f + static_cast<float>(i) * kDropdownItemH,
+                             listW - 6.0f, kDropdownItemH };
+            dropdownItemRects_[i] = item;
+            const bool active = static_cast<int>(i) == selectedPreset_;
+            const Color& pc  = kPresetColors[i];
 
-        const float startY = y + 80.0f;
-        const float rowH   = 38.0f;
-        const float rowGap = 9.0f;
+            if (active) {
+                beginPath(); roundedRect(item.x, item.y, item.w, item.h, 4.0f);
+                fillColor(pc.r / 3, pc.g / 3, pc.b / 3, 255); fill(); closePath();
+            }
 
-        const auto controls = makeVoiceControls(static_cast<std::uint32_t>(selectedPreset_));
+            // Color swatch
+            beginPath(); roundedRect(item.x + 8.0f, item.y + item.h * 0.5f - 6.0f, 12.0f, 12.0f, 3.0f);
+            fillColor(pc.r, pc.g, pc.b, active ? 255 : 190); fill(); closePath();
+
+            fontSize(13.0f); textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+            fillColor(active ? pc.r : 205, active ? pc.g : 212, active ? pc.b : 210, 255);
+            text(item.x + 28.0f, item.y + item.h * 0.5f, kPresetNames[i], nullptr);
+        }
+    }
+
+    void drawSliders(float x, float y, float w, float h)
+    {
+        // Total width of all sliders+gaps: 9*(sliderW+gap) + masterGap + 2*(sliderW+gap) - gap
+        // = 11*kSliderW + 10*kSliderGap + kMasterGap - kSliderGap
+        // = 11*90 + 9*8 + 30 = 990 + 72 + 30 = 1092
+        const float totalW = static_cast<float>(kVoiceControlCount + kMasterControlCount) * kSliderW
+                           + static_cast<float>(kVoiceControlCount + kMasterControlCount - 1) * kSliderGap
+                           + kMasterGap;
+        const float startX = x + (w - totalW) * 0.5f;
+
+        const Color& col   = kPresetColors[static_cast<std::size_t>(selectedPreset_)];
+        const bool   muted = values_[presetParam(static_cast<std::uint32_t>(selectedPreset_),
+                                                  kPresetParamMute)] >= 0.5f;
+        const float  trackH = h - kLabelAreaH;
+
+        // Voice sliders
         for (std::size_t i = 0; i < kVoiceControlCount; ++i) {
-            const Rect rect{ x+18.0f, startY + static_cast<float>(i)*(rowH+rowGap), w-36.0f, rowH };
-            controlRects_[i] = rect;
+            const float cx = startX + static_cast<float>(i) * (kSliderW + kSliderGap);
+            controlRects_[i] = { cx, y, kSliderW, h };
             const std::uint32_t paramIdx = presetParam(static_cast<std::uint32_t>(selectedPreset_),
-                                                       static_cast<std::uint32_t>(controls[i].parameter));
-            drawHorizontalControl({ paramIdx, controls[i].label }, rect, col);
+                                                        kVoiceControls[i].parameter);
+            drawVerticalSlider(controlRects_[i], trackH, paramIdx, kVoiceControls[i].label, col, muted);
         }
-    }
 
-    void drawMasterPanel(float x, float y, float w, float h)
-    {
-        const Color col{ 88, 165, 158 };
-        drawPanel(x, y, w, h);
+        // Divider
+        const float divX = startX + static_cast<float>(kVoiceControlCount) * (kSliderW + kSliderGap)
+                         - kSliderGap + kMasterGap * 0.5f;
+        beginPath();
+        moveTo(divX, y + 12.0f);
+        lineTo(divX, y + trackH - 12.0f);
+        strokeColor(52, 62, 66, 200); strokeWidth(1.0f); stroke(); closePath();
 
-        fontSize(17.0f); textAlign(ALIGN_LEFT|ALIGN_TOP);
-        fillColor(232,237,235,255); text(x+18.0f, y+17.0f, "Master", nullptr);
+        // "Master" label above divider area
+        const float masterStartX = startX + static_cast<float>(kVoiceControlCount) * (kSliderW + kSliderGap)
+                                 - kSliderGap + kMasterGap;
+        constexpr Color masterCol{ 88, 165, 158 };
 
-        fontSize(12.0f); fillColor(140,152,152,255);
-        text(x+18.0f, y+42.0f, "distance reverb · output gain", nullptr);
-
-        const float startY = y + 82.0f;
-        const float rowH   = 42.0f;
-        const float rowGap = 14.0f;
         for (std::size_t i = 0; i < kMasterControlCount; ++i) {
-            const Rect rect{ x+18.0f, startY+static_cast<float>(i)*(rowH+rowGap), w-36.0f, rowH };
-            masterRects_[i] = rect;
-            drawHorizontalControl(kMasterControls[i], rect, col);
+            const float cx = masterStartX + static_cast<float>(i) * (kSliderW + kSliderGap);
+            masterRects_[i] = { cx, y, kSliderW, h };
+            drawVerticalSlider(masterRects_[i], trackH, kMasterControls[i].parameter,
+                               kMasterControls[i].label, masterCol, false);
         }
 
-        // Selected preset info
-        fontSize(11.0f); fillColor(100, 130, 128, 255); textAlign(ALIGN_LEFT|ALIGN_TOP);
-        char buf[48];
-        std::snprintf(buf, sizeof(buf), "Active: %s (preset %d)", kPresetNames[selectedPreset_], selectedPreset_+1);
-        text(x+18.0f, startY + 2.0f*(rowH+rowGap) + 16.0f, buf, nullptr);
+        // Section labels below sliders
+        const float labelBaseY = y + trackH + kLabelAreaH - 8.0f;
+        fontSize(10.0f); textAlign(ALIGN_LEFT | ALIGN_BOTTOM);
+        fillColor(col.r, col.g, col.b, muted ? 80 : 150);
+        text(startX, labelBaseY, kPresetNames[static_cast<std::size_t>(selectedPreset_)], nullptr);
 
-        fontSize(10.0f); fillColor(80, 105, 103, 255);
-        text(x+18.0f, startY + 2.0f*(rowH+rowGap) + 34.0f, "CC1=vib  CC74=timbre  CC71=rough  CC91=dist", nullptr);
+        fillColor(masterCol.r, masterCol.g, masterCol.b, 130);
+        text(masterStartX, labelBaseY, "Master", nullptr);
     }
 
-    void drawPanel(float x, float y, float w, float h)
+    void drawVerticalSlider(const Rect& colRect, float trackH, std::uint32_t param,
+                            const char* label, const Color& col, bool muted)
     {
-        beginPath(); roundedRect(x,y,w,h,7.0f);
-        fillColor(18,22,24,238); fill();
-        strokeColor(45,54,56,255); strokeWidth(1.0f); stroke(); closePath();
-    }
+        const float value = values_[param];
+        const float norm  = normalizedValue(param, value);
+        const std::string txt = formatValue(param, value);
 
-    void drawHorizontalControl(const ControlDef& ctrl, const Rect& rect, const Color& col)
-    {
-        const float value = values_[ctrl.parameter];
-        const float norm  = normalizedValue(ctrl.parameter, value);
-        const std::string txt = formatValue(ctrl.parameter, value);
+        const float cx     = colRect.x + colRect.w * 0.5f;
+        const float trackX = cx - kTrackW * 0.5f;
+        const float trackY = colRect.y + 4.0f;
+        const float tH     = trackH - 8.0f;
 
-        fontSize(12.0f); textAlign(ALIGN_LEFT|ALIGN_TOP);
-        fillColor(208,215,213,255);
-        text(rect.x, rect.y-2.0f, ctrl.label, nullptr);
+        const float thumbCY = trackY + tH * (1.0f - norm);  // y-center of thumb
+        const float thumbY  = thumbCY - kThumbH * 0.5f;
+        const float fillH   = tH - (thumbCY - trackY);
 
-        textAlign(ALIGN_RIGHT|ALIGN_TOP); fillColor(col.r,col.g,col.b,255);
-        text(rect.x+rect.w, rect.y-2.0f, txt.c_str(), nullptr);
+        // Track background
+        beginPath(); roundedRect(trackX, trackY, kTrackW, tH, 6.0f);
+        fillColor(28, 33, 36, 255); fill(); closePath();
 
-        const float barY = rect.y + 20.0f;
-        beginPath(); roundedRect(rect.x, barY, rect.w, 12.0f, 6.0f);
-        fillColor(35,41,43,255); fill(); closePath();
+        // Filled portion (bottom up to thumb)
+        if (fillH > 3.0f) {
+            beginPath();
+            roundedRect(trackX + 2.0f, thumbCY, kTrackW - 4.0f, fillH, 4.0f);
+            fillColor(col.r, col.g, col.b, muted ? 70 : 175); fill(); closePath();
+        }
 
-        beginPath(); roundedRect(rect.x, barY, std::max(8.0f, rect.w*norm), 12.0f, 6.0f);
-        fillColor(col.r,col.g,col.b,210); fill(); closePath();
+        // Thumb
+        const float tx = cx - kThumbW * 0.5f;
+        beginPath(); roundedRect(tx, thumbY, kThumbW, kThumbH, kThumbH * 0.5f);
+        fillColor(225, 232, 228, muted ? 100 : 228); fill(); closePath();
 
-        beginPath(); roundedRect(rect.x+rect.w*norm-5.0f, barY-4.0f, 10.0f, 20.0f, 5.0f);
-        fillColor(234,239,236,255); fill(); closePath();
+        // Label
+        const float labelY = colRect.y + trackH + 10.0f;
+        fontSize(11.0f); textAlign(ALIGN_CENTER | ALIGN_TOP);
+        fillColor(185, 195, 192, muted ? 120 : 220);
+        text(cx, labelY, label, nullptr);
+
+        // Value
+        fontSize(10.0f);
+        fillColor(col.r, col.g, col.b, muted ? 80 : 195);
+        text(cx, labelY + 17.0f, txt.c_str(), nullptr);
     }
 
     // ---- Interaction helpers ----
 
-    void updateLevelFromPosition(int strip, float y)
-    {
-        if (strip < 0 || strip >= static_cast<int>(kPresetCount)) return;
-        const Rect& rect = levelRects_[static_cast<std::size_t>(strip)];
-        const float norm = clampf(1.0f - (y - rect.y) / rect.h, 0.0f, 1.0f);
-        const std::uint32_t p = presetParam(static_cast<std::uint32_t>(strip), kPresetParamLevel);
-        const auto spec = getParameterSpec(p);
-        commitParameter(p, spec.minimum + norm * (spec.maximum - spec.minimum));
-    }
-
-    void updateControlFromPosition(int paramIndex, float x, const Rect& rect)
+    void updateControlFromY(int paramIndex, float y, const Rect& rect)
     {
         if (paramIndex < 0 || paramIndex >= static_cast<int>(kParameterCount)) return;
         const std::uint32_t p = static_cast<std::uint32_t>(paramIndex);
-        const auto spec = getParameterSpec(p);
-        const float norm = clampf((x - rect.x) / rect.w, 0.0f, 1.0f);
+        const auto   spec   = getParameterSpec(p);
+        const float  trackY = rect.y + 4.0f;
+        const float  tH     = (rect.h - kLabelAreaH) - 8.0f;
+        const float  norm   = clampf(1.0f - (y - trackY) / tH, 0.0f, 1.0f);
         commitParameter(p, spec.minimum + norm * (spec.maximum - spec.minimum));
     }
 
@@ -521,7 +491,7 @@ private:
     void commitParameter(std::uint32_t p, float value)
     {
         if (p >= kParameterCount) return;
-        const auto spec = getParameterSpec(p);
+        const auto  spec    = getParameterSpec(p);
         const float clamped = spec.boolean
             ? (value >= 0.5f ? 1.0f : 0.0f)
             : clampf(value, spec.minimum, spec.maximum);

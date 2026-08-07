@@ -80,6 +80,7 @@ The repository currently installs thirty-nine real wrapper targets:
 - `paunchlad.vst3` with UI
 - `lifeform.vst3` with UI
 - `xoxolo.vst3` with UI
+- `syrinx.vst3` with UI
 - `tuney_vst.vst3` with UI
 - `harmonic_atlas.vst3` with UI
 - `conductor.vst3` with UI
@@ -133,6 +134,7 @@ The script has been smoke-tested with a temporary install root under `/tmp`:
 - confirmed `paunchlad.vst3` bundle output and install
 - confirmed `lifeform.vst3` bundle output and install
 - confirmed `xoxolo.vst3` bundle output and install
+- confirmed `syrinx.vst3` bundle output and install
 - confirmed `tuney_vst.vst3` bundle output and install
 - the ten generative-workstation bundles build locally and await broad
   host-side install validation

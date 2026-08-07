@@ -239,6 +239,7 @@ The release script currently expects these bundles:
 - `paunchlad.vst3`
 - `lifeform.vst3`
 - `xoxolo.vst3`
+- `syrinx.vst3`
 - `tuney_vst.vst3`
 - `harmonic_atlas.vst3`
 - `conductor.vst3`

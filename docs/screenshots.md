@@ -85,6 +85,7 @@ Current output filenames:
 - `luma.png`
 - `paunchlad.png`
 - `lifeform.png`
+- `syrinx.png`
 - `tuney-vst.png`
 
 The output path can be overridden:
