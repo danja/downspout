@@ -74,8 +74,8 @@ public:
         dt_          = 1.0f / (sampleRate_ * static_cast<float>(oversample_));
 
         // Timbre: blends tractQ and timbreGain
-        tractQ_      = 9.0f - p.timbre * 6.0f;                     // 9→3
-        timbreGain_  = 1.0f + p.timbre * 0.75f;                    // 1→1.75
+        tractQ_      = 9.0f - p.timbre * 7.0f;                     // 9→2
+        timbreGain_  = 1.0f + p.timbre * 1.5f;                     // 1→2.5
         betaMin_     = 0.15f;
 
         // Store preset params
@@ -158,14 +158,14 @@ public:
 
         // Pitch contour: linear log sweep over the first kBendDuration seconds
         const float bendU = std::min(1.0f, t / kBendDuration);
-        const float f0 = baseF0_ * vibFactor * std::exp(bend_ * 0.5f * kLn2 * (bendU - 0.5f));
+        const float f0 = baseF0_ * vibFactor * std::exp(bend_ * 1.5f * kLn2 * (bendU - 0.5f));
 
         // AM modulation of pressure
         float amFactor = 1.0f;
         if (amRateHz_ > 0.0f) {
             amPhase_ += 2.0f * kPi * amRateHz_ / sampleRate_;
             if (amPhase_ > 2.0f * kPi) amPhase_ -= 2.0f * kPi;
-            amFactor = 1.0f - 0.5f * (0.5f - 0.5f * std::cos(amPhase_));
+            amFactor = 0.5f + 0.5f * std::cos(amPhase_);  // full-depth trill: 0→1
         }
 
         // Pressure and alpha
@@ -218,7 +218,7 @@ public:
         // Tract filter
         float filtered = tract_.process(hp);
         if (harmonic_ > 0.0f)
-            filtered += harmonic_ * 0.5f * tractHarm_.process(hp);
+            filtered += harmonic_ * 0.9f * tractHarm_.process(hp);
 
         // DC block then tracheal LP
         const float dcOut = filtered - dcX_ + dcCoeff_ * dcY_;
@@ -234,7 +234,7 @@ private:
     static constexpr float kOdeX0         = 1.0e-4f;
     static constexpr float kPhiAtBetaOne  = 0.17061f;
     static constexpr float kSourceGain    = 5.0f;   // boosted from Lyrebird's 0.35 (no compressor here)
-    static constexpr float kNoiseGain     = 2.0f;   // scaled proportionally
+    static constexpr float kNoiseGain     = 6.0f;
     static constexpr float kNoisePsFloor  = 0.05f;
     static constexpr float kDefaultAttack = 0.008f;
     static constexpr float kReleaseTau    = 0.06f;  // 60 ms release
@@ -251,8 +251,8 @@ private:
     {
         if (!roughRng_.has_value() || roughness_ <= 0.0f) return 1.0f;
         roughLp_ = (1.0f - roughCoeff_) * roughRng_->next() + roughCoeff_ * roughLp_;
-        const float f = 1.0f + 0.12f * roughness_ * roughLp_ * roughScale_;
-        return std::clamp(f, 0.5f, 1.5f);
+        const float f = 1.0f + 0.30f * roughness_ * roughLp_ * roughScale_;
+        return std::clamp(f, 0.1f, 4.0f);
     }
 
     float updateEnvelope()

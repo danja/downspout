@@ -89,9 +89,9 @@ constexpr std::array<Color, kPresetCount> kPresetColors = {{
     if (spec.boolean) {
         std::snprintf(buf, sizeof(buf), "%s", value >= 0.5f ? "on" : "off");
     } else if (pp == kPresetParamVibRate) {
-        std::snprintf(buf, sizeof(buf), "%.1fHz", value * 15.0f);
+        std::snprintf(buf, sizeof(buf), "%.1fHz", value * 20.0f);
     } else if (pp == kPresetParamVibDepth) {
-        std::snprintf(buf, sizeof(buf), "%.0fct", value * 100.0f);
+        std::snprintf(buf, sizeof(buf), "%.0fct", value * 300.0f);
     } else if (pp == kPresetParamAMRate) {
         std::snprintf(buf, sizeof(buf), "%.1fHz", value * 30.0f);
     } else if (pp == kPresetParamBend) {

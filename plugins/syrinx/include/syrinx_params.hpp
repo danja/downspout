@@ -14,8 +14,8 @@ static constexpr std::uint32_t kPresetParamLevel      = 0;
 static constexpr std::uint32_t kPresetParamNoise      = 1;
 static constexpr std::uint32_t kPresetParamRoughness  = 2;
 static constexpr std::uint32_t kPresetParamTimbre     = 3;
-static constexpr std::uint32_t kPresetParamVibRate    = 4;  // normalized 0-1 → 0-15 Hz
-static constexpr std::uint32_t kPresetParamVibDepth   = 5;  // normalized 0-1 → 0-100 cents
+static constexpr std::uint32_t kPresetParamVibRate    = 4;  // normalized 0-1 → 0-20 Hz
+static constexpr std::uint32_t kPresetParamVibDepth   = 5;  // normalized 0-1 → 0-300 cents
 static constexpr std::uint32_t kPresetParamBend       = 6;  // -1 to +1
 static constexpr std::uint32_t kPresetParamHarmonic   = 7;
 static constexpr std::uint32_t kPresetParamAMRate     = 8;  // normalized 0-1 → 0-30 Hz
@@ -118,7 +118,7 @@ struct PresetParams {
     float roughness;
     float timbre;
     float vibratoRateHz;   // 0-15 Hz
-    float vibratoDepthCents; // 0-100 cents
+    float vibratoDepthCents; // 0-300 cents
     float bend;            // -1 to +1
     float harmonic;
     float amRateHz;        // 0-30 Hz
@@ -132,8 +132,8 @@ inline PresetParams decodePreset(const float* values, std::uint32_t preset)
     p.noise            = values[base + kPresetParamNoise];
     p.roughness        = values[base + kPresetParamRoughness];
     p.timbre           = values[base + kPresetParamTimbre];
-    p.vibratoRateHz    = values[base + kPresetParamVibRate]  * 15.0f;
-    p.vibratoDepthCents= values[base + kPresetParamVibDepth] * 100.0f;
+    p.vibratoRateHz    = values[base + kPresetParamVibRate]  * 20.0f;
+    p.vibratoDepthCents= values[base + kPresetParamVibDepth] * 300.0f;
     p.bend             = values[base + kPresetParamBend];
     p.harmonic         = values[base + kPresetParamHarmonic];
     p.amRateHz         = values[base + kPresetParamAMRate]   * 30.0f;
