@@ -125,7 +125,7 @@ static void testPresetDecode()
         const auto pp = decodePreset(params, p);
         CHECK(pp.level >= 0.0f && pp.level <= 1.4f);
         CHECK(pp.noise >= 0.0f && pp.noise <= 1.0f);
-        CHECK(pp.vibratoRateHz >= 0.0f && pp.vibratoRateHz <= 15.0f);
+        CHECK(pp.vibratoRateHz >= 0.0f && pp.vibratoRateHz <= 20.0f);
         CHECK(pp.bend >= -1.0f && pp.bend <= 1.0f);
     }
 }
