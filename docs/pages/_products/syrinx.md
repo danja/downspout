@@ -15,6 +15,7 @@ Mindlin-Laje ordinary differential equation syrinx model — the same physics th
 produces birdsong. Each voice runs an explicit Euler ODE at audio rate with
 optional oversampling, a pitch-tracking bandpass vocal-tract filter, formant
 bank, respiration model, and noise/roughness source modifiers.
+The DSP was ported from the glorious [Lyrebird](https://github.com/sha5b/Lyrebird) project.
 
 It responds chromatically to MIDI note input: note number maps to base
 frequency (A4 = 440 Hz) and velocity scales amplitude. Up to eight voices play
