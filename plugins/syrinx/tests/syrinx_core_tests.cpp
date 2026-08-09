@@ -127,6 +127,14 @@ static void testPresetDecode()
         CHECK(pp.noise >= 0.0f && pp.noise <= 1.0f);
         CHECK(pp.vibratoRateHz >= 0.0f && pp.vibratoRateHz <= 20.0f);
         CHECK(pp.bend >= -1.0f && pp.bend <= 1.0f);
+        CHECK(pp.pitchSemitones >= -12.0f && pp.pitchSemitones <= 12.0f);
+        CHECK(pp.durationSec >= 0.05f && pp.durationSec <= 2.0f);
+        CHECK(pp.respiration >= 0.0f && pp.respiration <= 1.0f);
+        CHECK(pp.amDepth >= 0.0f && pp.amDepth <= 1.0f);
+        CHECK(pp.formant1Hz >= 200.0f && pp.formant1Hz <= 8000.0f);
+        CHECK(pp.formant2Hz >= 200.0f && pp.formant2Hz <= 8000.0f);
+        CHECK(pp.formantQ >= 0.7f && pp.formantQ <= 20.0f);
+        CHECK(pp.coupling >= 0.0f && pp.coupling <= 1.0f);
     }
 }
 

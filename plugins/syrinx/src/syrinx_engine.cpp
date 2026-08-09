@@ -116,16 +116,21 @@ void Engine::handleCC(std::uint8_t cc, std::uint8_t value)
     };
 
     switch (cc) {
-    case 1:   setPreset(kPresetParamVibDepth, norm); break;      // mod wheel → vibrato depth
-    case 7:   setParameter(kParamMasterGain, norm); break;       // volume
-    case 71:  setPreset(kPresetParamRoughness, norm); break;
-    case 73:  setPreset(kPresetParamNoise, norm); break;
-    case 74:  setPreset(kPresetParamTimbre, norm); break;        // brightness/timbre
-    case 76:  setPreset(kPresetParamVibRate, norm); break;
-    case 77:  setPreset(kPresetParamNoise, norm); break;
-    case 78:  setPreset(kPresetParamHarmonic, norm); break;
-    case 91:  setParameter(kParamDistance, norm); break;         // reverb/distance
-    case 94:  setPreset(kPresetParamBend, norm * 2.0f - 1.0f); break;
+    case 1:   setPreset(kPresetParamVibDepth,    norm); break;
+    case 7:   setParameter(kParamMasterGain,     norm); break;
+    case 11:  setPreset(kPresetParamLevel,       norm * 1.4f); break;  // expression → level
+    case 71:  setPreset(kPresetParamRoughness,   norm); break;
+    case 73:  setPreset(kPresetParamDuration,    norm); break;
+    case 74:  setPreset(kPresetParamTimbre,      norm); break;
+    case 76:  setPreset(kPresetParamVibRate,     norm); break;
+    case 77:  setPreset(kPresetParamNoise,       norm); break;
+    case 78:  setPreset(kPresetParamHarmonic,    norm); break;
+    case 79:  setPreset(kPresetParamCoupling,    norm); break;
+    case 80:  setPreset(kPresetParamAMDepth,     norm); break;
+    case 83:  setPreset(kPresetParamPitch,       norm * 2.0f - 1.0f); break;
+    case 85:  setPreset(kPresetParamRespiration, norm); break;
+    case 91:  setParameter(kParamDistance,       norm); break;
+    case 94:  setPreset(kPresetParamBend,        norm * 2.0f - 1.0f); break;
     default:  break;
     }
 }
@@ -200,15 +205,23 @@ void Engine::randomizeSelectedPreset(std::uint32_t seed)
 
     auto randRange = [&](float lo, float hi) { return lo + lcg() * (hi - lo); };
 
-    setParameter(presetParam(preset, kPresetParamLevel),     randRange(0.5f, 1.2f));
-    setParameter(presetParam(preset, kPresetParamNoise),     randRange(0.0f, 0.4f));
-    setParameter(presetParam(preset, kPresetParamRoughness), randRange(0.0f, 0.3f));
-    setParameter(presetParam(preset, kPresetParamTimbre),    randRange(0.0f, 0.8f));
-    setParameter(presetParam(preset, kPresetParamVibRate),   randRange(0.1f, 0.8f));
-    setParameter(presetParam(preset, kPresetParamVibDepth),  randRange(0.0f, 0.4f));
-    setParameter(presetParam(preset, kPresetParamBend),      randRange(-0.7f, 0.7f));
-    setParameter(presetParam(preset, kPresetParamHarmonic),  randRange(0.0f, 1.0f));
-    setParameter(presetParam(preset, kPresetParamAMRate),    randRange(0.0f, 0.3f));
+    setParameter(presetParam(preset, kPresetParamLevel),        randRange(0.5f,   1.2f));
+    setParameter(presetParam(preset, kPresetParamNoise),        randRange(0.0f,   0.4f));
+    setParameter(presetParam(preset, kPresetParamRoughness),    randRange(0.0f,   0.3f));
+    setParameter(presetParam(preset, kPresetParamTimbre),       randRange(0.0f,   0.8f));
+    setParameter(presetParam(preset, kPresetParamVibRate),      randRange(0.1f,   0.8f));
+    setParameter(presetParam(preset, kPresetParamVibDepth),     randRange(0.0f,   0.4f));
+    setParameter(presetParam(preset, kPresetParamBend),         randRange(-0.7f,  0.7f));
+    setParameter(presetParam(preset, kPresetParamHarmonic),     randRange(0.0f,   1.0f));
+    setParameter(presetParam(preset, kPresetParamAMRate),       randRange(0.0f,   0.3f));
+    setParameter(presetParam(preset, kPresetParamPitch),        randRange(-0.25f, 0.25f));
+    setParameter(presetParam(preset, kPresetParamDuration),     randRange(0.04f,  0.55f));
+    setParameter(presetParam(preset, kPresetParamRespiration),  randRange(0.0f,   0.3f));
+    setParameter(presetParam(preset, kPresetParamAMDepth),      randRange(0.0f,   0.8f));
+    setParameter(presetParam(preset, kPresetParamFormant1),     randRange(400.0f, 4000.0f));
+    setParameter(presetParam(preset, kPresetParamFormant2),     randRange(800.0f, 7000.0f));
+    setParameter(presetParam(preset, kPresetParamFormantQ),     randRange(2.0f,   12.0f));
+    setParameter(presetParam(preset, kPresetParamCoupling),     randRange(0.0f,   0.4f));
     // preserve mute
 }
 

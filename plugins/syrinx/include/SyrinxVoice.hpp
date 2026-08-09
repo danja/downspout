@@ -39,6 +39,8 @@ public:
         : sampleRate_(sampleRate)
         , tract_(sampleRate, BiquadFilter::Type::Bandpass)
         , tractHarm_(sampleRate, BiquadFilter::Type::Bandpass)
+        , formant1_(sampleRate, BiquadFilter::Type::Bandpass)
+        , formant2_(sampleRate, BiquadFilter::Type::Bandpass)
     {
         dcCoeff_ = std::exp(-2.0f * kPi * 180.0f / sampleRate);
         lpCoeff_ = 1.0f - std::exp(-2.0f * kPi * 12000.0f / sampleRate);
@@ -51,13 +53,16 @@ public:
         lpCoeff_ = 1.0f - std::exp(-2.0f * kPi * 12000.0f / sr);
         tract_.setSampleRate(sr);
         tractHarm_.setSampleRate(sr);
+        formant1_.setSampleRate(sr);
+        formant2_.setSampleRate(sr);
     }
 
     // Trigger a new note. stream = unique noise stream id for xorshift.
     void trigger(std::uint8_t midiNote, float velocity, const PresetParams& p, std::uint32_t stream)
     {
-        // base pitch from MIDI
+        // base pitch from MIDI + preset pitch offset
         baseF0_  = 440.0f * std::pow(2.0f, (static_cast<float>(midiNote) - 69.0f) / 12.0f);
+        baseF0_ *= std::pow(2.0f, p.pitchSemitones / 12.0f);
         midiNote_= midiNote;
         velocity_= velocity;
 
@@ -86,7 +91,26 @@ public:
         bend_        = std::clamp(p.bend, -1.0f, 1.0f);
         harmonic_    = std::clamp(p.harmonic, 0.0f, 1.0f);
         amRateHz_    = p.amRateHz;
+        amDepth_     = std::clamp(p.amDepth, 0.0f, 1.0f);
         level_       = std::clamp(p.level, 0.0f, 1.4f);
+        durationSec_ = std::max(0.05f, p.durationSec);
+        respiration_ = std::clamp(p.respiration, 0.0f, 1.0f);
+        breathPhase_ = 0.0f;
+
+        // Formant filters (fixed-frequency resonances)
+        formant1Hz_  = std::clamp(p.formant1Hz, 200.0f, 8000.0f);
+        formant2Hz_  = std::clamp(p.formant2Hz, 200.0f, 8000.0f);
+        formantQ_    = std::clamp(p.formantQ, 0.7f, 20.0f);
+        coupling_    = std::clamp(p.coupling, 0.0f, 1.0f);
+
+        formant1_.setParameters(formant1Hz_, formantQ_);
+        formant1_.reset();
+        formant2_.setParameters(formant2Hz_, formantQ_);
+        formant2_.reset();
+
+        // Coupling: second oscillator state (slightly offset initial conditions)
+        x2_ = kOdeX0 * 1.5f;
+        y2_ = 0.0f;
 
         // Roughness LP
         roughCoeff_ = std::exp(-2.0f * kPi * 140.0f / sampleRate_);
@@ -146,6 +170,10 @@ public:
         ++sampleCount_;
         const float t = static_cast<float>(sampleCount_) / sampleRate_;
 
+        // Auto-release after syllable duration
+        if (envState_ == EnvSustain && t >= durationSec_)
+            envState_ = EnvRelease;
+
         // Envelope
         const float env = updateEnvelope();
         if (!active_) return 0.0f;
@@ -162,14 +190,15 @@ public:
 
         // AM modulation of pressure
         float amFactor = 1.0f;
-        if (amRateHz_ > 0.0f) {
+        if (amRateHz_ > 0.0f && amDepth_ > 0.0f) {
             amPhase_ += 2.0f * kPi * amRateHz_ / sampleRate_;
             if (amPhase_ > 2.0f * kPi) amPhase_ -= 2.0f * kPi;
-            amFactor = 0.5f + 0.5f * std::cos(amPhase_);  // full-depth trill: 0→1
+            // amDepth_=0: no modulation, amDepth_=1: full trill 0→1
+            amFactor = 1.0f - amDepth_ * (0.5f - 0.5f * std::cos(amPhase_));
         }
 
-        // Pressure and alpha
-        const float pressure = std::clamp(env * level_ * velocity_ * timbreGain_ * amFactor, 0.0f, 1.4f);
+        // Pressure drives ODE physics (level_ applied as output gain below)
+        const float pressure = std::clamp(env * velocity_ * timbreGain_ * amFactor, 0.0f, 1.4f);
         const float alpha    = 0.05f + 0.4f * pressure;
 
         // Beta (with gammaScale: gammaScale>1 → lower beta → richer harmonics)
@@ -210,22 +239,53 @@ public:
             source += noise_ * kNoiseGain * flow * noiseRng_->next();
         }
 
+        // Coupling: second ODE at slightly different frequency → beating/chorus
+        if (coupling_ > 0.0f) {
+            const float g2  = gamma_ * (1.0f + coupling_ * 0.02f);
+            const float g22 = g2 * g2;
+            float xv = x2_, yv = y2_;
+            for (int s = 0; s < oversample_; ++s) {
+                const float dx = yv;
+                const float dy = -alpha*g22 - beta*g22*xv - g22*xv*xv*xv
+                                 - g2*xv*xv*yv + g22*xv*xv - g2*xv*yv;
+                xv += dx * dt_;
+                yv += dy * dt_;
+            }
+            if (!(std::abs(xv) < 1e6f && std::abs(yv) < 1e12f)) { xv = kOdeX0 * 1.5f; yv = 0.0f; }
+            x2_ = xv; y2_ = yv;
+            const float ampPP2 = 0.5f + 3.4f * alpha + 0.62f * betaClean;
+            const float source2 = (y2_ / g2) * kSourceGain / ampPP2;
+            source = source * (1.0f - coupling_ * 0.4f) + source2 * coupling_ * 0.4f;
+        }
+
         // 180 Hz highpass on source (mirrors syrinx-processor §8.1)
         const float hp = source - srcHpX_ + dcCoeff_ * srcHpY_;
         srcHpX_ = source;
         srcHpY_ = hp;
 
-        // Tract filter
+        // Tract filter + harmonic
         float filtered = tract_.process(hp);
         if (harmonic_ > 0.0f)
             filtered += harmonic_ * 0.9f * tractHarm_.process(hp);
+
+        // Fixed-frequency formant resonances (supplementary vocal-tract coloring)
+        filtered += kFormantGain * formant1_.process(hp);
+        filtered += kFormantGain * formant2_.process(hp);
 
         // DC block then tracheal LP
         const float dcOut = filtered - dcX_ + dcCoeff_ * dcY_;
         dcX_ = filtered; dcY_ = dcOut;
         lpY_ += lpCoeff_ * (dcOut - lpY_);
 
-        return lpY_ * env;
+        // Breathing modulation
+        float breathFactor = 1.0f;
+        if (respiration_ > 0.0f) {
+            breathPhase_ += 2.0f * kPi * kBreathRateHz / sampleRate_;
+            if (breathPhase_ > 2.0f * kPi) breathPhase_ -= 2.0f * kPi;
+            breathFactor = 1.0f - respiration_ * 0.5f * (1.0f - std::cos(breathPhase_));
+        }
+
+        return lpY_ * env * level_ * breathFactor;
     }
 
 private:
@@ -238,7 +298,9 @@ private:
     static constexpr float kNoisePsFloor  = 0.05f;
     static constexpr float kDefaultAttack = 0.008f;
     static constexpr float kReleaseTau    = 0.06f;  // 60 ms release
-    static constexpr float kBendDuration  = 0.5f;   // sweep over first 0.5 s
+    static constexpr float kBendDuration  = 0.5f;   // pitch sweep over first 0.5 s
+    static constexpr float kBreathRateHz  = 0.8f;   // breathing cycle rate
+    static constexpr float kFormantGain   = 0.25f;  // fixed formant mix level
 
     enum EnvState { EnvIdle, EnvAttack, EnvSustain, EnvRelease };
 
@@ -285,13 +347,14 @@ private:
 
     // ---- DSP state ----
     float sampleRate_;
-    BiquadFilter tract_, tractHarm_;
+    BiquadFilter tract_, tractHarm_, formant1_, formant2_;
     float srcHpX_ = 0, srcHpY_ = 0;
     float dcX_ = 0, dcY_ = 0, lpY_ = 0;
     float dcCoeff_, lpCoeff_;
 
-    // ODE state
+    // ODE state (primary + coupling)
     float x_ = kOdeX0, y_ = 0.0f;
+    float x2_ = kOdeX0, y2_ = 0.0f;
     float gamma_, baseGamma_, gammaScale_;
     float dt_;
     int   oversample_;
@@ -317,7 +380,9 @@ private:
     float baseF0_, velocity_;
     float noise_, roughness_, timbre_, timbreGain_, tractQ_, betaMin_;
     float vibratoRateHz_, vibratoDepthCents_;
-    float bend_, harmonic_, amRateHz_, level_;
+    float bend_, harmonic_, amRateHz_, amDepth_, level_;
+    float durationSec_, respiration_, breathPhase_ = 0.0f;
+    float formant1Hz_, formant2Hz_, formantQ_, coupling_;
 
     std::uint8_t midiNote_ = 0;
     int sampleCount_   = 0;

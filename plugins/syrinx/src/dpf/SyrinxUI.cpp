@@ -27,6 +27,14 @@ using downspout::syrinx::kPresetParamBend;
 using downspout::syrinx::kPresetParamHarmonic;
 using downspout::syrinx::kPresetParamAMRate;
 using downspout::syrinx::kPresetParamMute;
+using downspout::syrinx::kPresetParamPitch;
+using downspout::syrinx::kPresetParamDuration;
+using downspout::syrinx::kPresetParamRespiration;
+using downspout::syrinx::kPresetParamAMDepth;
+using downspout::syrinx::kPresetParamFormant1;
+using downspout::syrinx::kPresetParamFormant2;
+using downspout::syrinx::kPresetParamFormantQ;
+using downspout::syrinx::kPresetParamCoupling;
 using downspout::syrinx::kParamDistance;
 using downspout::syrinx::kParamMasterGain;
 using downspout::syrinx::kParamSelectedPreset;
@@ -34,21 +42,24 @@ using downspout::syrinx::presetParam;
 using downspout::syrinx::getParameterSpec;
 using downspout::syrinx::kPresetNames;
 
-constexpr std::size_t kVoiceControlCount  = 9;
+constexpr std::size_t kVoiceControlCount  = 17;
+constexpr std::size_t kVoiceRow1Count     = 6;   // controls per row (rows 1 and 2)
 constexpr std::size_t kMasterControlCount = 2;
 
 // Layout constants
-constexpr float kPad        = 22.0f;
-constexpr float kHeaderH    = 62.0f;
-constexpr float kSliderGapY = 16.0f;  // gap between header and slider area
-constexpr float kLabelAreaH = 60.0f;  // below track: label + value
-constexpr float kSliderW    = 90.0f;
-constexpr float kSliderGap  = 8.0f;
-constexpr float kMasterGap  = 30.0f;  // extra gap before master sliders
+constexpr float kPad           = 22.0f;
+constexpr float kHeaderH       = 62.0f;
+constexpr float kSliderGapY    = 16.0f;  // gap between header and slider area
+constexpr float kLabelAreaH    = 50.0f;  // below track: label + value
+constexpr float kSliderW       = 120.0f;
+constexpr float kSliderGap     = 12.0f;
+constexpr float kMasterGap     = 30.0f;  // extra gap before master sliders
+constexpr float kRowGap        = 10.0f;  // gap between slider rows
 constexpr float kTrackW        = 14.0f;
 constexpr float kThumbW        = 46.0f;
 constexpr float kThumbH        = 14.0f;
 constexpr float kDropdownItemH = 30.0f;
+constexpr std::size_t kNumRows = 3;
 
 struct Rect {
     float x=0, y=0, w=0, h=0;
@@ -96,6 +107,14 @@ constexpr std::array<Color, kPresetCount> kPresetColors = {{
         std::snprintf(buf, sizeof(buf), "%.1fHz", value * 30.0f);
     } else if (pp == kPresetParamBend) {
         std::snprintf(buf, sizeof(buf), "%+.2f", value);
+    } else if (pp == kPresetParamPitch) {
+        std::snprintf(buf, sizeof(buf), "%+.1fst", value * 12.0f);
+    } else if (pp == kPresetParamDuration) {
+        std::snprintf(buf, sizeof(buf), "%.2fs", 0.05f + value * 1.95f);
+    } else if (pp == kPresetParamFormant1 || pp == kPresetParamFormant2) {
+        std::snprintf(buf, sizeof(buf), "%.0fHz", value);
+    } else if (pp == kPresetParamFormantQ) {
+        std::snprintf(buf, sizeof(buf), "Q%.1f", value);
     } else if (spec.maximum <= 1.0f && spec.minimum >= 0.0f) {
         std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::lround(value * 100.0f)));
     } else {
@@ -105,15 +124,26 @@ constexpr std::array<Color, kPresetCount> kPresetColors = {{
 }
 
 constexpr std::array<ControlDef, kVoiceControlCount> kVoiceControls = {{
-    { kPresetParamLevel,     "Level"    },
-    { kPresetParamNoise,     "Noise"    },
-    { kPresetParamRoughness, "Rough"    },
-    { kPresetParamTimbre,    "Timbre"   },
-    { kPresetParamVibRate,   "Vib Rate" },
-    { kPresetParamVibDepth,  "Vib Dep"  },
-    { kPresetParamBend,      "Bend"     },
-    { kPresetParamHarmonic,  "Harmonic" },
-    { kPresetParamAMRate,    "AM Rate"  },
+    // Row 1 — core tonal (6)
+    { kPresetParamLevel,        "Level"    },
+    { kPresetParamNoise,        "Noise"    },
+    { kPresetParamRoughness,    "Rough"    },
+    { kPresetParamTimbre,       "Timbre"   },
+    { kPresetParamBend,         "Bend"     },
+    { kPresetParamHarmonic,     "Harmonic" },
+    // Row 2 — modulation & shaping (6)
+    { kPresetParamVibRate,      "Vib Rate" },
+    { kPresetParamVibDepth,     "Vib Dep"  },
+    { kPresetParamAMRate,       "AM Rate"  },
+    { kPresetParamAMDepth,      "AM Depth" },
+    { kPresetParamPitch,        "Pitch"    },
+    { kPresetParamDuration,     "Duration" },
+    // Row 3 — formants, coupling, respiration (5)
+    { kPresetParamFormant1,     "Formant1" },
+    { kPresetParamFormant2,     "Formant2" },
+    { kPresetParamFormantQ,     "Form Q"   },
+    { kPresetParamCoupling,     "Coupling" },
+    { kPresetParamRespiration,  "Breath"   },
 }};
 
 constexpr std::array<ControlDef, kMasterControlCount> kMasterControls = {{
@@ -373,54 +403,79 @@ private:
 
     void drawSliders(float x, float y, float w, float h)
     {
-        // Total width of all sliders+gaps: 9*(sliderW+gap) + masterGap + 2*(sliderW+gap) - gap
-        // = 11*kSliderW + 10*kSliderGap + kMasterGap - kSliderGap
-        // = 11*90 + 9*8 + 30 = 990 + 72 + 30 = 1092
-        const float totalW = static_cast<float>(kVoiceControlCount + kMasterControlCount) * kSliderW
-                           + static_cast<float>(kVoiceControlCount + kMasterControlCount - 1) * kSliderGap
-                           + kMasterGap;
-        const float startX = x + (w - totalW) * 0.5f;
+        // 6 voice columns + masterGap + 2 master columns
+        const float voiceRowW  = static_cast<float>(kVoiceRow1Count) * kSliderW
+                               + static_cast<float>(kVoiceRow1Count - 1) * kSliderGap;
+        const float masterColW = static_cast<float>(kMasterControlCount) * kSliderW
+                               + static_cast<float>(kMasterControlCount - 1) * kSliderGap;
+        const float totalW  = voiceRowW + kMasterGap + masterColW;
+        const float startX  = x + (w - totalW) * 0.5f;
 
         const Color& col   = kPresetColors[static_cast<std::size_t>(selectedPreset_)];
         const bool   muted = values_[presetParam(static_cast<std::uint32_t>(selectedPreset_),
                                                   kPresetParamMute)] >= 0.5f;
-        const float  trackH = h - kLabelAreaH;
 
-        // Voice sliders
-        for (std::size_t i = 0; i < kVoiceControlCount; ++i) {
-            const float cx = startX + static_cast<float>(i) * (kSliderW + kSliderGap);
-            controlRects_[i] = { cx, y, kSliderW, h };
-            const std::uint32_t paramIdx = presetParam(static_cast<std::uint32_t>(selectedPreset_),
-                                                        kVoiceControls[i].parameter);
-            drawVerticalSlider(controlRects_[i], trackH, paramIdx, kVoiceControls[i].label, col, muted);
+        // Three equal rows
+        const float rowH      = (h - static_cast<float>(kNumRows - 1) * kRowGap) / static_cast<float>(kNumRows);
+        const float rowTrackH = rowH - kLabelAreaH;
+
+        auto rowStartY = [&](std::size_t row) { return y + static_cast<float>(row) * (rowH + kRowGap); };
+
+        // Row separators
+        for (std::size_t r = 0; r + 1 < kNumRows; ++r) {
+            const float sepY = rowStartY(r) + rowH + kRowGap * 0.5f;
+            beginPath();
+            moveTo(startX, sepY);
+            lineTo(startX + voiceRowW, sepY);
+            strokeColor(42, 52, 56, 160); strokeWidth(1.0f); stroke(); closePath();
         }
 
-        // Divider
-        const float divX = startX + static_cast<float>(kVoiceControlCount) * (kSliderW + kSliderGap)
-                         - kSliderGap + kMasterGap * 0.5f;
+        // Voice sliders — rows 1-3
+        for (std::size_t i = 0; i < kVoiceControlCount; ++i) {
+            const std::size_t row    = i / kVoiceRow1Count;
+            const std::size_t col_i  = i % kVoiceRow1Count;
+            // Row 3 has 5 controls: center them within the row width
+            const std::size_t row3Count = kVoiceControlCount - kVoiceRow1Count * (kNumRows - 1);
+            float cx;
+            if (row == kNumRows - 1 && row3Count < kVoiceRow1Count) {
+                const float rowUsedW = static_cast<float>(row3Count) * kSliderW
+                                     + static_cast<float>(row3Count - 1) * kSliderGap;
+                const float rowOffX  = (voiceRowW - rowUsedW) * 0.5f;
+                cx = startX + rowOffX + static_cast<float>(col_i) * (kSliderW + kSliderGap);
+            } else {
+                cx = startX + static_cast<float>(col_i) * (kSliderW + kSliderGap);
+            }
+            const float ry = rowStartY(row);
+            controlRects_[i] = { cx, ry, kSliderW, rowH };
+            const std::uint32_t param = presetParam(static_cast<std::uint32_t>(selectedPreset_),
+                                                     kVoiceControls[i].parameter);
+            drawVerticalSlider(controlRects_[i], rowTrackH, param, kVoiceControls[i].label, col, muted);
+        }
+
+        // Master divider
+        const float divX = startX + voiceRowW + kMasterGap * 0.5f;
         beginPath();
         moveTo(divX, y + 12.0f);
-        lineTo(divX, y + trackH - 12.0f);
+        lineTo(divX, y + h - 12.0f);
         strokeColor(52, 62, 66, 200); strokeWidth(1.0f); stroke(); closePath();
 
-        // "Master" label above divider area
-        const float masterStartX = startX + static_cast<float>(kVoiceControlCount) * (kSliderW + kSliderGap)
-                                 - kSliderGap + kMasterGap;
+        // Master sliders (span full height)
+        const float masterStartX = startX + voiceRowW + kMasterGap;
         constexpr Color masterCol{ 88, 165, 158 };
+        const float masterTrackH = h - kLabelAreaH;
 
         for (std::size_t i = 0; i < kMasterControlCount; ++i) {
             const float cx = masterStartX + static_cast<float>(i) * (kSliderW + kSliderGap);
             masterRects_[i] = { cx, y, kSliderW, h };
-            drawVerticalSlider(masterRects_[i], trackH, kMasterControls[i].parameter,
+            drawVerticalSlider(masterRects_[i], masterTrackH, kMasterControls[i].parameter,
                                kMasterControls[i].label, masterCol, false);
         }
 
-        // Section labels below sliders
-        const float labelBaseY = y + trackH + kLabelAreaH - 8.0f;
+        // Section labels
+        const float labelBaseY = y + h - 6.0f;
         fontSize(10.0f); textAlign(ALIGN_LEFT | ALIGN_BOTTOM);
         fillColor(col.r, col.g, col.b, muted ? 80 : 150);
         text(startX, labelBaseY, kPresetNames[static_cast<std::size_t>(selectedPreset_)], nullptr);
-
         fillColor(masterCol.r, masterCol.g, masterCol.b, 130);
         text(masterStartX, labelBaseY, "Master", nullptr);
     }
@@ -511,15 +566,23 @@ private:
         };
         auto rr = [&](float lo, float hi) { return lo + lcg() * (hi - lo); };
 
-        commitParameter(presetParam(p, kPresetParamLevel),     rr(0.5f,  1.2f));
-        commitParameter(presetParam(p, kPresetParamNoise),     rr(0.0f,  0.4f));
-        commitParameter(presetParam(p, kPresetParamRoughness), rr(0.0f,  0.3f));
-        commitParameter(presetParam(p, kPresetParamTimbre),    rr(0.0f,  0.8f));
-        commitParameter(presetParam(p, kPresetParamVibRate),   rr(0.1f,  0.8f));
-        commitParameter(presetParam(p, kPresetParamVibDepth),  rr(0.0f,  0.4f));
-        commitParameter(presetParam(p, kPresetParamBend),      rr(-0.7f, 0.7f));
-        commitParameter(presetParam(p, kPresetParamHarmonic),  rr(0.0f,  1.0f));
-        commitParameter(presetParam(p, kPresetParamAMRate),    rr(0.0f,  0.3f));
+        commitParameter(presetParam(p, kPresetParamLevel),        rr(0.5f,   1.2f));
+        commitParameter(presetParam(p, kPresetParamNoise),        rr(0.0f,   0.4f));
+        commitParameter(presetParam(p, kPresetParamRoughness),    rr(0.0f,   0.3f));
+        commitParameter(presetParam(p, kPresetParamTimbre),       rr(0.0f,   0.8f));
+        commitParameter(presetParam(p, kPresetParamVibRate),      rr(0.1f,   0.8f));
+        commitParameter(presetParam(p, kPresetParamVibDepth),     rr(0.0f,   0.4f));
+        commitParameter(presetParam(p, kPresetParamBend),         rr(-0.7f,  0.7f));
+        commitParameter(presetParam(p, kPresetParamHarmonic),     rr(0.0f,   1.0f));
+        commitParameter(presetParam(p, kPresetParamAMRate),       rr(0.0f,    0.3f));
+        commitParameter(presetParam(p, kPresetParamAMDepth),      rr(0.0f,    0.8f));
+        commitParameter(presetParam(p, kPresetParamPitch),        rr(-0.25f,  0.25f));
+        commitParameter(presetParam(p, kPresetParamDuration),     rr(0.04f,   0.55f));
+        commitParameter(presetParam(p, kPresetParamRespiration),  rr(0.0f,    0.3f));
+        commitParameter(presetParam(p, kPresetParamFormant1),     rr(400.0f,  4000.0f));
+        commitParameter(presetParam(p, kPresetParamFormant2),     rr(800.0f,  7000.0f));
+        commitParameter(presetParam(p, kPresetParamFormantQ),     rr(2.0f,    12.0f));
+        commitParameter(presetParam(p, kPresetParamCoupling),     rr(0.0f,    0.4f));
         // preserve mute
     }
 
