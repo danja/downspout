@@ -20,7 +20,7 @@ std::int64_t getUniqueId()const override{return d_cconst('C','n','d','c');}
 void initParameter(std::uint32_t i,Parameter& q)override{const auto&s=kParameterSpecs[i];q.name=s.name;q.symbol=s.symbol;
 q.hints=s.output?kParameterIsOutput:kParameterIsAutomatable;if(s.integer)q.hints|=kParameterIsInteger;q.ranges={s.defaultValue,s.minimum,s.maximum};}
 float getParameterValue(std::uint32_t i)const override{if(i==kStatusSection)return static_cast<float>(std::max(0,state_.section));
-if(i==kStatusBarsLeft)return static_cast<float>(std::max(0,state_.nextSectionBar-state_.sectionStartBar));return p_[i];}
+if(i==kStatusBarsLeft)return static_cast<float>(std::max(0,state_.nextSectionBar-state_.currentBar));return p_[i];}
 void setParameterValue(std::uint32_t i,float v)override{if(i<kParameterCount&&!kParameterSpecs[i].output)p_[i]=downspout::generative::clampParam(v,kParameterSpecs[i]);}
 void activate()override{reset(state_);}
 void run(const float**,float** out,std::uint32_t frames)override{std::fill_n(out[0],frames,0.0f);std::fill_n(out[1],frames,0.0f);

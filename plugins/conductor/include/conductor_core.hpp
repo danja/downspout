@@ -33,6 +33,7 @@ struct State {
     int section = -1;
     int sectionStartBar = 0;
     int nextSectionBar = 0;
+    int currentBar = 0;
     std::uint64_t sectionSerial = 0;
     int activeNote = -1;
 };

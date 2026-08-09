@@ -102,7 +102,7 @@ MidiBlock process(State& state, const std::array<float,kParameterCount>& p,
             emitSection(state,p,out,downspout::generative::frameAt(boundary,start,qpf,frames));
         } else break;
     }
-    state.wasPlaying=true; state.havePosition=true; state.previousEnd=end;
+    state.wasPlaying=true; state.havePosition=true; state.previousEnd=end; state.currentBar=startBar;
     return out;
 }
 } // namespace downspout::conductor
