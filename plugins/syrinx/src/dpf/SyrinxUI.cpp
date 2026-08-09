@@ -35,6 +35,7 @@ using downspout::syrinx::kPresetParamFormant1;
 using downspout::syrinx::kPresetParamFormant2;
 using downspout::syrinx::kPresetParamFormantQ;
 using downspout::syrinx::kPresetParamCoupling;
+using downspout::syrinx::kPresetParamVoiceOffset;
 using downspout::syrinx::kParamDistance;
 using downspout::syrinx::kParamMasterGain;
 using downspout::syrinx::kParamSelectedPreset;
@@ -42,7 +43,7 @@ using downspout::syrinx::presetParam;
 using downspout::syrinx::getParameterSpec;
 using downspout::syrinx::kPresetNames;
 
-constexpr std::size_t kVoiceControlCount  = 17;
+constexpr std::size_t kVoiceControlCount  = 18;
 constexpr std::size_t kVoiceRow1Count     = 6;   // controls per row (rows 1 and 2)
 constexpr std::size_t kMasterControlCount = 2;
 
@@ -138,10 +139,11 @@ constexpr std::array<ControlDef, kVoiceControlCount> kVoiceControls = {{
     { kPresetParamAMDepth,      "AM Depth" },
     { kPresetParamPitch,        "Pitch"    },
     { kPresetParamDuration,     "Duration" },
-    // Row 3 — formants, coupling, respiration (5)
+    // Row 3 — formants, voice offset, coupling, respiration (6)
     { kPresetParamFormant1,     "Formant1" },
     { kPresetParamFormant2,     "Formant2" },
     { kPresetParamFormantQ,     "Form Q"   },
+    { kPresetParamVoiceOffset,  "V.Offset" },
     { kPresetParamCoupling,     "Coupling" },
     { kPresetParamRespiration,  "Breath"   },
 }};
@@ -471,11 +473,9 @@ private:
                                kMasterControls[i].label, masterCol, false);
         }
 
-        // Section labels
+        // Master section label
         const float labelBaseY = y + h - 6.0f;
         fontSize(10.0f); textAlign(ALIGN_LEFT | ALIGN_BOTTOM);
-        fillColor(col.r, col.g, col.b, muted ? 80 : 150);
-        text(startX, labelBaseY, kPresetNames[static_cast<std::size_t>(selectedPreset_)], nullptr);
         fillColor(masterCol.r, masterCol.g, masterCol.b, 130);
         text(masterStartX, labelBaseY, "Master", nullptr);
     }
@@ -583,6 +583,7 @@ private:
         commitParameter(presetParam(p, kPresetParamFormant2),     rr(800.0f,  7000.0f));
         commitParameter(presetParam(p, kPresetParamFormantQ),     rr(2.0f,    12.0f));
         commitParameter(presetParam(p, kPresetParamCoupling),     rr(0.0f,    0.4f));
+        commitParameter(presetParam(p, kPresetParamVoiceOffset),  rr(0.0f,    0.5f));
         // preserve mute
     }
 

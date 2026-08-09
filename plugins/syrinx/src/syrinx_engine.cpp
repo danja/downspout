@@ -222,6 +222,7 @@ void Engine::randomizeSelectedPreset(std::uint32_t seed)
     setParameter(presetParam(preset, kPresetParamFormant2),     randRange(800.0f, 7000.0f));
     setParameter(presetParam(preset, kPresetParamFormantQ),     randRange(2.0f,   12.0f));
     setParameter(presetParam(preset, kPresetParamCoupling),     randRange(0.0f,   0.4f));
+    setParameter(presetParam(preset, kPresetParamVoiceOffset),  randRange(0.0f,   0.5f));
     // preserve mute
 }
 

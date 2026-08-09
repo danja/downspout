@@ -102,11 +102,18 @@ public:
         formant2Hz_  = std::clamp(p.formant2Hz, 200.0f, 8000.0f);
         formantQ_    = std::clamp(p.formantQ, 0.7f, 20.0f);
         coupling_    = std::clamp(p.coupling, 0.0f, 1.0f);
+        voiceOffset_ = std::clamp(p.voiceOffset, 0.0f, 1.0f);
 
         formant1_.setParameters(formant1Hz_, formantQ_);
         formant1_.reset();
         formant2_.setParameters(formant2Hz_, formantQ_);
         formant2_.reset();
+
+        // Second oscillator: compute its own oversample from the offset gamma
+        {
+            const float g2base = gamma_ * (1.0f + voiceOffset_);
+            oversample2_ = oversampleForGamma(g2base);
+        }
 
         // Coupling: second oscillator state (slightly offset initial conditions)
         x2_ = kOdeX0 * 1.5f;
@@ -239,12 +246,12 @@ public:
             source += noise_ * kNoiseGain * flow * noiseRng_->next();
         }
 
-        // Coupling: second ODE at slightly different frequency → beating/chorus
+        // Coupling: second ODE at voice-offset frequency + tiny coupling detune → beating/chorus
         if (coupling_ > 0.0f) {
-            const float g2  = gamma_ * (1.0f + coupling_ * 0.02f);
+            const float g2  = gamma_ * (1.0f + voiceOffset_) * (1.0f + coupling_ * 0.02f);
             const float g22 = g2 * g2;
             float xv = x2_, yv = y2_;
-            for (int s = 0; s < oversample_; ++s) {
+            for (int s = 0; s < oversample2_; ++s) {
                 const float dx = yv;
                 const float dy = -alpha*g22 - beta*g22*xv - g22*xv*xv*xv
                                  - g2*xv*xv*yv + g22*xv*xv - g2*xv*yv;
@@ -358,6 +365,7 @@ private:
     float gamma_, baseGamma_, gammaScale_;
     float dt_;
     int   oversample_;
+    int   oversample2_ = 16;
 
     // Envelope
     EnvState envState_ = EnvIdle;
@@ -382,7 +390,7 @@ private:
     float vibratoRateHz_, vibratoDepthCents_;
     float bend_, harmonic_, amRateHz_, amDepth_, level_;
     float durationSec_, respiration_, breathPhase_ = 0.0f;
-    float formant1Hz_, formant2Hz_, formantQ_, coupling_;
+    float formant1Hz_, formant2Hz_, formantQ_, coupling_, voiceOffset_;
 
     std::uint8_t midiNote_ = 0;
     int sampleCount_   = 0;

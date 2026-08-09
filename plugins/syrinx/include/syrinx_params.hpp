@@ -7,7 +7,7 @@
 namespace downspout::syrinx {
 
 static constexpr std::uint32_t kPresetCount = 10;
-static constexpr std::uint32_t kParamsPerPreset = 18;
+static constexpr std::uint32_t kParamsPerPreset = 19;
 
 // Within each preset block (offset from preset_index * kParamsPerPreset):
 static constexpr std::uint32_t kPresetParamLevel       = 0;
@@ -28,6 +28,7 @@ static constexpr std::uint32_t kPresetParamFormant1    = 14; // 200-8000 Hz fixe
 static constexpr std::uint32_t kPresetParamFormant2    = 15; // 200-8000 Hz fixed resonance 2
 static constexpr std::uint32_t kPresetParamFormantQ    = 16; // 0.7-20 shared formant Q
 static constexpr std::uint32_t kPresetParamCoupling    = 17; // 0-1 two-oscillator coupling
+static constexpr std::uint32_t kPresetParamVoiceOffset = 18; // 0-1 secondary voice freq offset (0=unison, 1=+octave)
 
 // Master parameters (after all preset blocks)
 static constexpr std::uint32_t kParamDistance         = kPresetCount * kParamsPerPreset + 0;
@@ -57,17 +58,17 @@ static const char* const kPresetNames[kPresetCount] = {
 
 // Default values per preset [preset][param_within_preset]
 static constexpr float kPresetDefaults[kPresetCount][kParamsPerPreset] = {
-    // Lv     Noise  Rough  Timb   VibR   VibD   Bend   Harm   AMR    Mute  Pitch  Dur    Resp   AMDep  F1      F2      FQ     Coup
-    {  0.80f, 0.05f, 0.00f, 0.15f, 0.60f, 0.20f, 0.30f, 0.70f, 0.00f, 0.00f, 0.00f, 0.10f, 0.00f, 0.00f, 1200.f, 2500.f, 6.0f, 0.00f }, // Wren
-    {  0.90f, 0.02f, 0.00f, 0.30f, 0.33f, 0.15f, 0.10f, 0.60f, 0.00f, 0.00f, 0.00f, 0.18f, 0.00f, 0.00f, 1400.f, 2800.f, 8.0f, 0.00f }, // Thrush
-    {  0.85f, 0.03f, 0.00f, 0.20f, 0.30f, 0.25f, 0.00f, 0.50f, 0.00f, 0.00f, 0.00f, 0.30f, 0.00f, 0.00f, 1300.f, 2600.f, 7.0f, 0.00f }, // Warbler
-    {  0.80f, 0.08f, 0.00f, 0.10f, 0.67f, 0.10f, 0.40f, 0.30f, 0.00f, 0.00f, 0.08f, 0.08f, 0.00f, 0.00f, 1000.f, 2200.f, 5.0f, 0.00f }, // Finch
-    {  0.85f, 0.02f, 0.00f, 0.25f, 0.40f, 0.15f, 0.05f, 0.50f, 0.00f, 0.00f, 0.00f, 0.20f, 0.00f, 0.00f, 1200.f, 2400.f, 6.0f, 0.00f }, // Robin
-    {  0.90f, 0.40f, 0.60f, 0.90f, 0.13f, 0.10f, 0.00f, 0.30f, 0.30f, 0.00f,-0.08f, 0.45f, 0.25f, 0.50f,  600.f, 1200.f, 3.0f, 0.30f }, // Nightjar
-    {  0.70f, 0.05f, 0.10f, 0.30f, 0.20f, 0.05f, 0.00f, 0.40f, 0.00f, 0.00f,-0.17f, 0.55f, 0.40f, 0.00f,  500.f, 1000.f, 4.0f, 0.20f }, // Pigeon
-    {  0.75f, 0.10f, 0.00f, 0.15f, 0.80f, 0.30f, 0.50f, 0.60f, 0.50f, 0.00f, 0.17f, 0.05f, 0.00f, 1.00f, 2000.f, 4000.f, 5.0f, 0.00f }, // Hummingbird
-    {  0.85f, 0.15f, 0.20f, 0.70f, 0.47f, 0.20f, 0.15f, 0.80f, 0.00f, 0.00f, 0.00f, 0.18f, 0.10f, 0.30f, 1000.f, 2000.f, 4.0f, 0.10f }, // Starling
-    {  0.80f, 0.10f, 0.00f, 0.30f, 0.33f, 0.20f, 0.00f, 0.50f, 0.00f, 0.00f, 0.00f, 0.15f, 0.00f, 0.00f, 1200.f, 2500.f, 5.0f, 0.00f }, // Custom
+    // Lv     Noise  Rough  Timb   VibR   VibD   Bend   Harm   AMR    Mute  Pitch  Dur    Resp   AMDep  F1      F2      FQ     Coup   VOffs
+    {  0.80f, 0.05f, 0.00f, 0.15f, 0.60f, 0.20f, 0.30f, 0.70f, 0.00f, 0.00f, 0.00f, 0.10f, 0.00f, 0.00f, 1200.f, 2500.f, 6.0f, 0.00f, 0.00f }, // Wren
+    {  0.90f, 0.02f, 0.00f, 0.30f, 0.33f, 0.15f, 0.10f, 0.60f, 0.00f, 0.00f, 0.00f, 0.18f, 0.00f, 0.00f, 1400.f, 2800.f, 8.0f, 0.00f, 0.00f }, // Thrush
+    {  0.85f, 0.03f, 0.00f, 0.20f, 0.30f, 0.25f, 0.00f, 0.50f, 0.00f, 0.00f, 0.00f, 0.30f, 0.00f, 0.00f, 1300.f, 2600.f, 7.0f, 0.00f, 0.00f }, // Warbler
+    {  0.80f, 0.08f, 0.00f, 0.10f, 0.67f, 0.10f, 0.40f, 0.30f, 0.00f, 0.00f, 0.08f, 0.08f, 0.00f, 0.00f, 1000.f, 2200.f, 5.0f, 0.00f, 0.00f }, // Finch
+    {  0.85f, 0.02f, 0.00f, 0.25f, 0.40f, 0.15f, 0.05f, 0.50f, 0.00f, 0.00f, 0.00f, 0.20f, 0.00f, 0.00f, 1200.f, 2400.f, 6.0f, 0.00f, 0.00f }, // Robin
+    {  0.90f, 0.40f, 0.60f, 0.90f, 0.13f, 0.10f, 0.00f, 0.30f, 0.30f, 0.00f,-0.08f, 0.45f, 0.25f, 0.50f,  600.f, 1200.f, 3.0f, 0.30f, 0.00f }, // Nightjar
+    {  0.70f, 0.05f, 0.10f, 0.30f, 0.20f, 0.05f, 0.00f, 0.40f, 0.00f, 0.00f,-0.17f, 0.55f, 0.40f, 0.00f,  500.f, 1000.f, 4.0f, 0.20f, 0.00f }, // Pigeon
+    {  0.75f, 0.10f, 0.00f, 0.15f, 0.80f, 0.30f, 0.50f, 0.60f, 0.50f, 0.00f, 0.17f, 0.05f, 0.00f, 1.00f, 2000.f, 4000.f, 5.0f, 0.00f, 0.00f }, // Hummingbird
+    {  0.85f, 0.15f, 0.20f, 0.70f, 0.47f, 0.20f, 0.15f, 0.80f, 0.00f, 0.00f, 0.00f, 0.18f, 0.10f, 0.30f, 1000.f, 2000.f, 4.0f, 0.10f, 0.00f }, // Starling
+    {  0.80f, 0.10f, 0.00f, 0.30f, 0.33f, 0.20f, 0.00f, 0.50f, 0.00f, 0.00f, 0.00f, 0.15f, 0.00f, 0.00f, 1200.f, 2500.f, 5.0f, 0.00f, 0.00f }, // Custom
 };
 
 // Build the flat parameter table at compile time via a helper
@@ -83,18 +84,20 @@ inline ParameterSpec makePresetSpec(std::uint32_t preset, std::uint32_t p, float
         " Vibrato Rate", " Vibrato Depth", " Bend", " Harmonic",
         " AM Rate", " Mute",
         " Pitch", " Duration", " Respiration",
-        " AM Depth", " Formant 1", " Formant 2", " Formant Q", " Coupling"
+        " AM Depth", " Formant 1", " Formant 2", " Formant Q", " Coupling",
+        " Voice Offset"
     };
     static const char* syms[kParamsPerPreset] = {
         "_level", "_noise", "_roughness", "_timbre",
         "_vib_rate", "_vib_depth", "_bend", "_harmonic",
         "_am_rate", "_mute",
         "_pitch", "_duration", "_respiration",
-        "_am_depth", "_formant1", "_formant2", "_formant_q", "_coupling"
+        "_am_depth", "_formant1", "_formant2", "_formant_q", "_coupling",
+        "_voice_offset"
     };
-    static const float mins[kParamsPerPreset]  = { 0,0,0,0, 0,0,-1,0, 0,0, -1,0,0, 0,200,200,0.7f,0 };
-    static const float maxs[kParamsPerPreset]  = { 1.4f,1,1,1, 1,1,1,1, 1,1, 1,1,1, 1,8000,8000,20,1 };
-    static const bool  bools[kParamsPerPreset] = { 0,0,0,0, 0,0,0,0, 0,1,  0,0,0,  0,0,0,0,0 };
+    static const float mins[kParamsPerPreset]  = { 0,0,0,0, 0,0,-1,0, 0,0, -1,0,0, 0,200,200,0.7f,0, 0 };
+    static const float maxs[kParamsPerPreset]  = { 1.4f,1,1,1, 1,1,1,1, 1,1, 1,1,1, 1,8000,8000,20,1, 1 };
+    static const bool  bools[kParamsPerPreset] = { 0,0,0,0, 0,0,0,0, 0,1,  0,0,0,  0,0,0,0,0, 0 };
     (void)preset;
     return { names[p], syms[p], mins[p], maxs[p], defVal, bools[p], false };
 }
@@ -142,6 +145,7 @@ struct PresetParams {
     float formant2Hz;         // 200-8000 Hz fixed resonance 2
     float formantQ;           // 0.7-20 shared formant Q
     float coupling;           // 0-1 two-oscillator coupling
+    float voiceOffset;        // 0-1 secondary voice frequency offset (0=unison, 1=+octave)
 };
 
 inline PresetParams decodePreset(const float* values, std::uint32_t preset)
@@ -165,6 +169,7 @@ inline PresetParams decodePreset(const float* values, std::uint32_t preset)
     p.formant2Hz        = values[base + kPresetParamFormant2];
     p.formantQ          = values[base + kPresetParamFormantQ];
     p.coupling          = values[base + kPresetParamCoupling];
+    p.voiceOffset       = values[base + kPresetParamVoiceOffset];
     return p;
 }
 
