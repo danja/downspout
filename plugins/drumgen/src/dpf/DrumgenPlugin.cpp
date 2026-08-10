@@ -32,6 +32,7 @@ enum ParameterIndex : uint32_t {
     kParamTomAmount,
     kParamMetalAmount,
     kParamVary,
+    kParamConductorChannel,
     kParameterCount
 };
 
@@ -301,6 +302,14 @@ protected:
             parameter.ranges.max = 100.0f;
             parameter.ranges.def = 0.0f;
             break;
+        case kParamConductorChannel:
+            parameter.name = "Conductor Ch";
+            parameter.symbol = "conductor_ch";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 16.0f;
+            parameter.ranges.def = 0.0f;
+            break;
         }
     }
 
@@ -347,6 +356,7 @@ protected:
         case kParamTomAmount: return controls_.tomAmt;
         case kParamMetalAmount: return controls_.metalAmt;
         case kParamVary: return controls_.vary * 100.0f;
+        case kParamConductorChannel: return static_cast<float>(conductorChannel_);
         case kParamActionNew:
         case kParamActionMutate:
         case kParamActionFill:
@@ -377,6 +387,7 @@ protected:
         case kParamTomAmount: controls_.tomAmt = value; break;
         case kParamMetalAmount: controls_.metalAmt = value; break;
         case kParamVary: controls_.vary = value / 100.0f; break;
+        case kParamConductorChannel: conductorChannel_ = static_cast<int>(value); break;
         case kParamActionNew: if (value > 0.5f) ++controls_.actionNew; break;
         case kParamActionMutate: if (value > 0.5f) ++controls_.actionMutate; break;
         case kParamActionFill: if (value > 0.5f) ++controls_.actionFill; break;
@@ -442,10 +453,33 @@ protected:
         downspout::drumgen::deactivate(engine_);
     }
 
-    void run(const float**, float** outputs, uint32_t frames) override
+    void run(const float**,
+             float** outputs,
+             uint32_t frames,
+             const MidiEvent* midiEvents,
+             uint32_t midiEventCount) override
     {
         std::fill_n(outputs[0], frames, 0.0f);
         std::fill_n(outputs[1], frames, 0.0f);
+
+        if (conductorChannel_ > 0 && midiEvents != nullptr) {
+            const int ch = conductorChannel_ - 1;
+            for (uint32_t i = 0; i < midiEventCount; ++i) {
+                const auto& ev = midiEvents[i];
+                if (ev.size >= 3 && (ev.data[0] & 0xf0) == 0xb0 && (ev.data[0] & 0x0f) == ch) {
+                    const uint8_t cc  = ev.data[1];
+                    const uint8_t val = ev.data[2];
+                    switch (cc) {
+                    case 21: controls_.density   = val / 127.0f; break;
+                    case 22: controls_.variation = val / 127.0f; break;
+                    case 23: controls_.vary      = val / 127.0f; break;
+                    case 24: if (val == 127) ++controls_.actionNew; break;
+                    default: break;
+                    }
+                }
+            }
+            controls_ = downspout::drumgen::clampControls(controls_);
+        }
 
         const downspout::drumgen::BlockResult result =
             downspout::drumgen::processBlock(engine_,
@@ -464,6 +498,7 @@ protected:
 private:
     CoreControls controls_ {};
     CoreEngineState engine_ {};
+    int conductorChannel_ = 0;
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumgenPlugin)
 };

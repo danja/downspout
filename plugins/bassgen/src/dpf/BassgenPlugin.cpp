@@ -36,6 +36,7 @@ enum ParameterIndex : uint32_t {
     kParamColor,
     kParamInputMatchMode,
     kParamInputSensitivity,
+    kParamConductorChannel,
     kParameterCount
 };
 
@@ -321,6 +322,14 @@ protected:
             parameter.ranges.max = 100.0f;
             parameter.ranges.def = 100.0f;
             break;
+        case kParamConductorChannel:
+            parameter.name = "Conductor Ch";
+            parameter.symbol = "conductor_ch";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 16.0f;
+            parameter.ranges.def = 0.0f;
+            break;
         case kParamActionNew:
             parameter.name = "New";
             parameter.symbol = "new";
@@ -391,6 +400,7 @@ protected:
         case kParamListenNote: return static_cast<float>(controls_.listenNote);
         case kParamInputMatchMode: return static_cast<float>(static_cast<int>(controls_.inputMatchMode));
         case kParamInputSensitivity: return controls_.inputSensitivity * 100.0f;
+        case kParamConductorChannel: return static_cast<float>(conductorChannel_);
         case kParamActionNew: return static_cast<float>(controls_.actionNew);
         case kParamActionNotes: return static_cast<float>(controls_.actionNotes);
         case kParamActionRhythm: return static_cast<float>(controls_.actionRhythm);
@@ -421,6 +431,7 @@ protected:
         case kParamListenNote: controls_.listenNote = static_cast<int>(value); break;
         case kParamInputMatchMode: controls_.inputMatchMode = static_cast<downspout::bassgen::InputMatchModeId>(static_cast<int>(value)); break;
         case kParamInputSensitivity: controls_.inputSensitivity = value / 100.0f; break;
+        case kParamConductorChannel: conductorChannel_ = static_cast<int>(value); break;
         case kParamActionNew: controls_.actionNew = static_cast<int>(value); break;
         case kParamActionNotes: controls_.actionNotes = static_cast<int>(value); break;
         case kParamActionRhythm: controls_.actionRhythm = static_cast<int>(value); break;
@@ -490,6 +501,25 @@ protected:
         std::fill_n(outputs[0], frames, 0.0f);
         std::fill_n(outputs[1], frames, 0.0f);
 
+        if (conductorChannel_ > 0 && midiEvents != nullptr) {
+            const int ch = conductorChannel_ - 1;
+            for (uint32_t i = 0; i < midiEventCount; ++i) {
+                const auto& ev = midiEvents[i];
+                if (ev.size >= 3 && (ev.data[0] & 0xf0) == 0xb0 && (ev.data[0] & 0x0f) == ch) {
+                    const uint8_t cc  = ev.data[1];
+                    const uint8_t val = ev.data[2];
+                    switch (cc) {
+                    case 21: controls_.density = val / 127.0f; break;
+                    case 22: controls_.accent  = val / 127.0f; break;
+                    case 23: controls_.vary    = val / 127.0f; break;
+                    case 24: if (val == 127) ++controls_.actionNew; break;
+                    default: break;
+                    }
+                }
+            }
+            controls_ = downspout::bassgen::clampControls(controls_);
+        }
+
         std::array<CoreInputMidiEvent, downspout::bassgen::kMaxInputMidiEvents> inputEvents {};
         const bool responseEnabled = std::fabs(controls_.followDodge) > 0.001f && controls_.inputSensitivity > 0.001f;
         const uint32_t inputCount = responseEnabled && midiEvents != nullptr
@@ -517,6 +547,7 @@ protected:
 private:
     CoreControls controls_ {};
     CoreEngineState engine_ {};
+    int conductorChannel_ = 0;
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BassgenPlugin)
 };

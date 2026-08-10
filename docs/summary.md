@@ -6,11 +6,11 @@ Downspout is a collection of mostly generative and algorithmic VST3 plugins. The
 
 ### BassGen (`bassgen.vst3`)
 
-Transport-aware bass MIDI generator with persistent patterns, meter-aware rhythm, loop-boundary variation, and Auto, Straight, Reel, Waltz, Jig, and Slip Jig styles. Incoming MIDI can guide or suppress generated notes through configurable Follow/Dodge, channel/note matching, and sensitivity controls. Best used before a bass instrument such as Basilico.
+Transport-aware bass MIDI generator with persistent patterns, meter-aware rhythm, loop-boundary variation, and Auto, Straight, Reel, Waltz, Jig, and Slip Jig styles. Incoming MIDI can guide or suppress generated notes through configurable Follow/Dodge, channel/note matching, and sensitivity controls. Set **Conductor Ch** to receive Conductor's section CCs, which then steer density, accent, variation rate, and pattern resets automatically. Best used before a bass instrument such as Basilico.
 
 ### DrumGen (`drumgen.vst3`)
 
-Transport- and meter-aware MIDI drum generator with pattern variation and fills. Its genre vocabulary includes Breakbeat, Amen, Jungle, and Hip Hop, making it useful for rapidly establishing rhythmic structure before DrumKit or another percussion instrument.
+Transport- and meter-aware MIDI drum generator with pattern variation and fills. Its genre vocabulary includes Breakbeat, Amen, Jungle, and Hip Hop, making it useful for rapidly establishing rhythmic structure before DrumKit or another percussion instrument. Set **Conductor Ch** to receive Conductor's section CCs, steering density, variation, mutation rate, and pattern resets without manual automation.
 
 ### MelGen (`melgen.vst3`)
 
@@ -155,6 +155,11 @@ Launchpad dub performance effect/instrument. Pads trigger echo throws, spring sp
 - Full producer bus: set Mixgen to Full bus and route one MIDI send to a chain
   of T-Mix, Loopdelay, and Lightverb. Match their Control channel and optionally
   require CC 19 ownership. See [Producer Control Bus v1](producer-control-bus.md).
+- Conductor-led arrangement: place Conductor on a control track and route its
+  MIDI output to both BassGen and DrumGen. Set **Conductor Ch** on each generator
+  to match Conductor's output channel (default 16). Conductor then reshapes
+  density, variation, and pattern resets on every section boundary automatically.
+  See [MIDI Mapping](midi-mapping.md).
 
 ## Host notes
 

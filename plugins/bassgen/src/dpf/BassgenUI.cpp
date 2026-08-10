@@ -33,6 +33,7 @@ enum ParameterIndex : uint32_t {
     kParamColor,
     kParamInputMatchMode,
     kParamInputSensitivity,
+    kParamConductorChannel,
     kParameterCount
 };
 
@@ -112,6 +113,12 @@ constexpr const char* kInputMatchNames[] = {
     "Exact", "Channel", "Any"
 };
 
+constexpr const char* kConductorChNames[] = {
+    "Off",
+    "1", "2", "3", "4", "5", "6", "7", "8",
+    "9", "10", "11", "12", "13", "14", "15", "16"
+};
+
 constexpr SelectorDef kSelectors[] = {
     {kParamScale, "Scale", kScaleNames, 20},
     {kParamGenre, "Genre", kGenreNames, 12},
@@ -119,6 +126,7 @@ constexpr SelectorDef kSelectors[] = {
     {kParamSubdivision, "Subdivision", kSubdivisionNames, 4},
     {kParamChannel, "Channel", kChannelNames, 16},
     {kParamInputMatchMode, "Input", kInputMatchNames, 3},
+    {kParamConductorChannel, "Conductor Ch", kConductorChNames, 17},
 };
 
 constexpr ButtonDef kButtons[] = {
@@ -232,7 +240,7 @@ protected:
         const float height = static_cast<float>(getHeight());
         const float pad = 20.0f;
         const float headerH = 72.0f;
-        const float selectorH = 50.0f;
+        const float selectorH = 42.0f;
         const float buttonH = 44.0f;
 
         drawBackground(width, height);
@@ -354,7 +362,7 @@ private:
     {
         const float pad = 20.0f;
         const float headerH = 72.0f;
-        const float selectorH = 50.0f;
+        const float selectorH = 42.0f;
         const float buttonH = 44.0f;
         const float contentY = pad + headerH + 18.0f;
         const float contentH = height - contentY - pad;

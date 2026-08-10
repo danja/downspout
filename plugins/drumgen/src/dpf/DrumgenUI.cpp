@@ -31,6 +31,7 @@ enum ParameterIndex : uint32_t {
     kParamTomAmount,
     kParamMetalAmount,
     kParamVary,
+    kParamConductorChannel,
     kParameterCount
 };
 
@@ -110,13 +111,20 @@ constexpr const char* kChannelNames[] = {
     "9", "10", "11", "12", "13", "14", "15", "16"
 };
 
-constexpr std::array<SelectorDef, 6> kSelectors = {{
+constexpr const char* kConductorChNames[] = {
+    "Off",
+    "1", "2", "3", "4", "5", "6", "7", "8",
+    "9", "10", "11", "12", "13", "14", "15", "16"
+};
+
+constexpr std::array<SelectorDef, 7> kSelectors = {{
     {kParamGenre, "Genre", kGenreNames, 14, 0},
     {kParamStyleMode, "Style", kStyleNames, 7, 0},
     {kParamKitMap, "Kit Map", kKitMapNames, 2, 0},
     {kParamResolution, "Resolution", kResolutionNames, 4, 0},
     {kParamBars, "Bars", kBarNames, 4, 1},
     {kParamChannel, "Channel", kChannelNames, 16, 1},
+    {kParamConductorChannel, "Conductor Ch", kConductorChNames, 17, 0},
 }};
 
 constexpr std::array<ButtonDef, 3> kButtons = {{
@@ -418,11 +426,11 @@ private:
         fillColor(227, 231, 234, 255);
         text(x + 20.0f, y + 18.0f, "Pattern", nullptr);
 
-        float cy = y + 54.0f;
+        float cy = y + 48.0f;
         for (std::size_t i = 0; i < kSelectors.size(); ++i) {
-            selectorRects_[i] = {x + 20.0f, cy, w - 40.0f, 54.0f};
+            selectorRects_[i] = {x + 20.0f, cy, w - 40.0f, 46.0f};
             drawSelector(static_cast<int>(i), kSelectors[i], selectorRects_[i]);
-            cy += 66.0f;
+            cy += 57.0f;
         }
 
         fontSize(15.0f);

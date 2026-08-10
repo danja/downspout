@@ -136,6 +136,17 @@ There are no runtime links or shared state between the binaries. Receivers own
 their smoothing and safety behavior, can filter by MIDI channel, optionally
 require CC 19 ownership, and forward MIDI to the next processor.
 
+### Conductor CC interop
+
+Conductor emits section-aware CCs (Scene CC20, Density CC21, Energy CC22,
+Mutation CC23, Reset CC24) on a configurable output channel (default 16).
+BassGen and DrumGen each have a **Conductor Ch** parameter (0 = off, 1–16)
+that enables CC reception on a matching channel. When active, the CCs drive
+density, accent/variation, vary, and new-pattern triggers directly in the
+DPF wrapper before `processBlock`, with no changes to the portable cores.
+This is a separate protocol from the Producer Control Bus and uses a different
+channel by default to avoid conflicts. See [MIDI Mapping](midi-mapping.md).
+
 ## State and serialization pattern
 
 For stateful plugins, `downspout` prefers explicit text serialization instead of
