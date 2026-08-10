@@ -80,9 +80,9 @@ constexpr SliderDef kSliders[] = {
     {kParamSeed, "Seed", 1.0f, 65535.0f, true},
     {kParamVary, "Vary", 0.0f, 100.0f, true},
     {kParamFollowDodge, "Follow/Dodge", -100.0f, 100.0f, true},
-    {kParamInputSensitivity, "Input Sens", 0.0f, 100.0f, true},
-    {kParamListenChannel, "Listen Ch", 1.0f, 16.0f, true},
-    {kParamListenNote, "Listen Note", 0.0f, 127.0f, true},
+    {kParamInputSensitivity, "Follow Sens", 0.0f, 100.0f, true},
+    {kParamListenChannel, "Follow Ch", 1.0f, 16.0f, true},
+    {kParamListenNote, "Follow Note", 0.0f, 127.0f, true},
 };
 
 constexpr const char* kScaleNames[] = {
@@ -125,7 +125,7 @@ constexpr SelectorDef kSelectors[] = {
     {kParamStyleMode, "Style", kStyleNames, 6},
     {kParamSubdivision, "Subdivision", kSubdivisionNames, 4},
     {kParamChannel, "Channel", kChannelNames, 16},
-    {kParamInputMatchMode, "Input", kInputMatchNames, 3},
+    {kParamInputMatchMode, "Follow Mode", kInputMatchNames, 3},
     {kParamConductorChannel, "Conductor Ch", kConductorChNames, 17},
 };
 
@@ -387,19 +387,30 @@ private:
         }
 
         const float panelBottom = contentY + contentH - 20.0f;
-        float cy = contentY + 54.0f;
-        for (std::size_t i = 0; i < std::size(kSelectors); ++i) {
-            selectorRects_[i] = {rightX + 20.0f, cy, rightW - 40.0f, selectorH};
-            cy += selectorH + 8.0f;
-        }
+        const float sx = rightX + 20.0f;
+        const float sw = rightW - 40.0f;
+        const float step = selectorH + 8.0f;
+        float cy = contentY + 16.0f;
 
-        cy += 28.0f;
+        cy += 16.0f;  // Pattern header
+        for (std::size_t i = 0; i < 5; ++i) {
+            selectorRects_[i] = {sx, cy, sw, selectorH};
+            cy += step;
+        }
+        cy += 4.0f + 14.0f;  // MIDI Follow header
+        selectorRects_[5] = {sx, cy, sw, selectorH};
+        cy += step;
+        cy += 4.0f + 14.0f;  // Conductor header
+        selectorRects_[6] = {sx, cy, sw, selectorH};
+        cy += step;
+        cy += 4.0f + 14.0f;  // Actions header
+
         const float buttonGap = 8.0f;
-        const float buttonW = (rightW - 40.0f - buttonGap * (static_cast<float>(std::size(kButtons)) - 1.0f))
+        const float buttonW = (sw - buttonGap * (static_cast<float>(std::size(kButtons)) - 1.0f))
             / static_cast<float>(std::size(kButtons));
         const float drawButtonH = std::min(buttonH, std::max(34.0f, panelBottom - cy));
         for (std::size_t i = 0; i < std::size(kButtons); ++i) {
-            buttonRects_[i] = {rightX + 20.0f + static_cast<float>(i) * (buttonW + buttonGap), cy, buttonW, drawButtonH};
+            buttonRects_[i] = {sx + static_cast<float>(i) * (buttonW + buttonGap), cy, buttonW, drawButtonH};
         }
     }
 
@@ -495,6 +506,14 @@ private:
         closePath();
     }
 
+    void drawSectionLabel(float x, float cy, const char* label)
+    {
+        fontSize(11.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(120, 135, 150, 255);
+        text(x, cy + 1.0f, label, nullptr);
+    }
+
     void drawRightPanel(float x, float y, float w, float h, float selectorH, float buttonH)
     {
         beginPath();
@@ -503,31 +522,48 @@ private:
         fill();
         closePath();
 
-        fontSize(15.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(224, 228, 232, 255);
-        text(x + 20.0f, y + 18.0f, "Routing", nullptr);
-
         const float panelBottom = y + h - 20.0f;
-        float cy = y + 54.0f;
-        for (std::size_t i = 0; i < std::size(kSelectors); ++i) {
-            selectorRects_[i] = {x + 20.0f, cy, w - 40.0f, selectorH};
+        const float sx = x + 20.0f;
+        const float sw = w - 40.0f;
+        const float step = selectorH + 8.0f;
+        float cy = y + 16.0f;
+
+        // Pattern group
+        drawSectionLabel(sx, cy, "Pattern");
+        cy += 16.0f;
+        for (std::size_t i = 0; i < 5; ++i) {
+            selectorRects_[i] = {sx, cy, sw, selectorH};
             drawSelector(kSelectors[i], selectorRects_[i], static_cast<int>(std::lround(values_[kSelectors[i].index])));
-            cy += selectorH + 8.0f;
+            cy += step;
         }
 
-        fontSize(15.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(224, 228, 232, 255);
-        text(x + 20.0f, cy + 4.0f, "Actions", nullptr);
-        cy += 28.0f;
+        // MIDI Follow group
+        cy += 4.0f;
+        drawSectionLabel(sx, cy, "MIDI Follow");
+        cy += 14.0f;
+        selectorRects_[5] = {sx, cy, sw, selectorH};
+        drawSelector(kSelectors[5], selectorRects_[5], static_cast<int>(std::lround(values_[kSelectors[5].index])));
+        cy += step;
+
+        // Conductor group
+        cy += 4.0f;
+        drawSectionLabel(sx, cy, "Conductor");
+        cy += 14.0f;
+        selectorRects_[6] = {sx, cy, sw, selectorH};
+        drawSelector(kSelectors[6], selectorRects_[6], static_cast<int>(std::lround(values_[kSelectors[6].index])));
+        cy += step;
+
+        // Actions group
+        cy += 4.0f;
+        drawSectionLabel(sx, cy, "Actions");
+        cy += 14.0f;
 
         const float buttonGap = 8.0f;
-        const float buttonW = (w - 40.0f - buttonGap * (static_cast<float>(std::size(kButtons)) - 1.0f))
+        const float buttonW = (sw - buttonGap * (static_cast<float>(std::size(kButtons)) - 1.0f))
             / static_cast<float>(std::size(kButtons));
         const float drawButtonH = std::min(buttonH, std::max(34.0f, panelBottom - cy));
         for (std::size_t i = 0; i < std::size(kButtons); ++i) {
-            buttonRects_[i] = {x + 20.0f + static_cast<float>(i) * (buttonW + buttonGap), cy, buttonW, drawButtonH};
+            buttonRects_[i] = {sx + static_cast<float>(i) * (buttonW + buttonGap), cy, buttonW, drawButtonH};
             drawButton(kButtons[i], buttonRects_[i]);
         }
     }
@@ -547,7 +583,7 @@ private:
 
         fontSize(19.0f);
         fillColor(235, 239, 242, 255);
-        text(rect.x + 16.0f, rect.y + 33.0f, def.items[clampi(value, 0, def.count - 1)], nullptr);
+        text(rect.x + 16.0f, rect.y + rect.h * 0.65f, def.items[clampi(value, 0, def.count - 1)], nullptr);
 
         fontSize(20.0f);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
