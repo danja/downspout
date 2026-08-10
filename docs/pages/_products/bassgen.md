@@ -22,6 +22,14 @@ episode, and tonic pedal/cadence shape for Bach-like continuo movement.
 Moroder mode makes short, bright, repetitive subdivision-pulse bass lines with
 slider-shaped holes and color turns.
 
+### Conductor integration
+
+Set **Conductor Ch** (0 = off, 1–16) to receive Conductor's section CCs on
+the matching channel. Conductor CC 21 drives density, CC 22 drives accent,
+CC 23 drives variation rate, and CC 24 (value 127) triggers a new pattern.
+Route Conductor's MIDI output to the BassGen track and match the channel
+(Conductor default output channel is 16). See [MIDI Mapping](../../midi-mapping.md).
+
 ### Status
 
 This works quite nicely for short, repetitive phrases. Its tracking of input midi still needs more work.
