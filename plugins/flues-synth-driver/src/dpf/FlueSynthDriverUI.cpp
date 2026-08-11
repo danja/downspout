@@ -124,6 +124,7 @@ protected:
         drawHeader(pad, headerY, W - pad*2.0f, 72.0f);
         drawRoutingBar(pad, routingY, W - pad*2.0f, 48.0f);
         drawMainArea(pad, mainY, W - pad*2.0f, H - mainY - pad);
+        drawDropdown();  // rendered last so it overlays everything
     }
 
     bool onMouse(const MouseEvent& ev) override
@@ -134,6 +135,25 @@ protected:
 
         if (!ev.press) { activeKnob_ = -1; return false; }
 
+        // Dropdown takes priority: handle item selection or dismiss
+        if (openDropdown_ >= 0) {
+            const Rect dr = dropRect();
+            if (dr.contains(x, y)) {
+                const int i = static_cast<int>((y - dr.y + dropScrollOff_) / kDropItemH);
+                if (i >= 0 && i < selectorCounts_[openDropdown_])
+                    setVal(selectorParams_[openDropdown_],
+                           static_cast<float>(selectorMinVals_[openDropdown_] + i));
+                openDropdown_  = -1;
+                dropScrollOff_ = 0.0f;
+                repaint();
+                return true;
+            }
+            openDropdown_  = -1;
+            dropScrollOff_ = 0.0f;
+            repaint();
+            // fall through so the underlying widget (if any) also processes the click
+        }
+
         for (std::size_t i = 0; i < toggleRects_.size(); ++i) {
             if (toggleRects_[i].contains(x, y)) {
                 const uint32_t p = toggleParams_[i];
@@ -143,7 +163,18 @@ protected:
         }
         for (std::size_t i = 0; i < selectorRects_.size(); ++i) {
             if (selectorRects_[i].contains(x, y)) {
-                cycleSelector(i, 1);
+                // Toggle dropdown open/closed
+                openDropdown_  = (openDropdown_ == static_cast<int>(i)) ? -1 : static_cast<int>(i);
+                dropScrollOff_ = 0.0f;
+                // Scroll current selection into view
+                if (openDropdown_ >= 0) {
+                    const int minV = selectorMinVals_[i];
+                    const int cur  = static_cast<int>(std::lround(values_[selectorParams_[i]])) - minV;
+                    const float idealOff = static_cast<float>(cur) * kDropItemH
+                                         - dropRect().h * 0.5f + kDropItemH * 0.5f;
+                    dropScrollOff_ = std::max(0.0f, idealOff);
+                }
+                repaint();
                 return true;
             }
         }
@@ -177,6 +208,19 @@ protected:
         const float y  = static_cast<float>(ev.pos.getY());
         const int delta = ev.delta.getY() > 0.0f ? 1 : -1;
 
+        // Scroll open dropdown
+        if (openDropdown_ >= 0) {
+            const Rect dr = dropRect();
+            if (dr.contains(x, y) || selectorRects_[openDropdown_].contains(x, y)) {
+                const float maxScroll = std::max(0.0f,
+                    static_cast<float>(selectorCounts_[openDropdown_]) * kDropItemH - dr.h);
+                dropScrollOff_ = std::max(0.0f,
+                    std::min(dropScrollOff_ - static_cast<float>(delta) * kDropItemH, maxScroll));
+                repaint();
+                return true;
+            }
+        }
+
         for (std::size_t i = 0; i < selectorRects_.size(); ++i) {
             if (selectorRects_[i].contains(x, y)) { cycleSelector(i, delta); return true; }
         }
@@ -201,18 +245,22 @@ private:
     std::vector<Rect>     selectorRects_ {};
     std::vector<uint32_t> selectorParams_ {};
     std::vector<int>      selectorCounts_ {};
+    std::vector<int>      selectorMinVals_ {};
 
     Rect  panicRect_      {};
     Rect  randomiseRect_  {};
-    int   activeKnob_   = -1;
-    float dragStartY_   = 0.0f;
-    float dragStartVal_ = 0.0f;
+    int   activeKnob_    = -1;
+    int   openDropdown_  = -1;
+    float dropScrollOff_ = 0.0f;
+    float dragStartY_    = 0.0f;
+    float dragStartVal_  = 0.0f;
 
     void clearWidgets()
     {
         knobRects_.clear(); knobs_.clear();
         toggleRects_.clear(); toggleParams_.clear();
-        selectorRects_.clear(); selectorParams_.clear(); selectorCounts_.clear();
+        selectorRects_.clear(); selectorParams_.clear();
+        selectorCounts_.clear(); selectorMinVals_.clear();
     }
 
     // ── Interaction ───────────────────────────────────────────────────────────
@@ -228,20 +276,111 @@ private:
 
     void trigVal(uint32_t param)
     {
+        // Only send 1.0f; the plugin resets to 0.0f from its run() callback
         editParameter(param, true);
         setParameterValue(param, 1.0f);
-        setParameterValue(param, 0.0f);
         editParameter(param, false);
+        values_[param] = 1.0f;
         repaint();
     }
 
     void cycleSelector(std::size_t i, int delta)
     {
-        const uint32_t p     = selectorParams_[i];
-        const int      count = selectorCounts_[i];
-        int cur = static_cast<int>(std::lround(values_[p]));
+        const uint32_t p    = selectorParams_[i];
+        const int minVal    = selectorMinVals_[i];
+        const int count     = selectorCounts_[i];
+        int cur = static_cast<int>(std::lround(values_[p])) - minVal;
         cur     = ((cur + delta) % count + count) % count;
-        setVal(p, static_cast<float>(cur));
+        setVal(p, static_cast<float>(minVal + cur));
+    }
+
+    // Returns the display label for dropdown item `idx` (0-based within the list)
+    std::string dropItemLabel(uint32_t param, int minVal, int idx) const
+    {
+        const int v = minVal + idx;
+        char buf[48];
+        switch (static_cast<Param>(param)) {
+        case kParamAlgorithm:
+            return kAlgorithmNames[std::clamp(v, 0, 17)];
+        case kParamInterfaceType:
+            return kInterfaceTypeNames[std::clamp(v, 0, 11)];
+        case kParamProgram:
+            std::snprintf(buf, sizeof(buf), "%d: %s", v, kProgramNames[std::clamp(v, 0, 30)]);
+            return buf;
+        case kParamOutputChannel:
+            std::snprintf(buf, sizeof(buf), "Ch %d", v);
+            return buf;
+        case kParamConductorCh:
+            if (v == 0) return "Off";
+            std::snprintf(buf, sizeof(buf), "Ch %d", v);
+            return buf;
+        default:
+            std::snprintf(buf, sizeof(buf), "%d", v);
+            return buf;
+        }
+    }
+
+    // Dropdown geometry helpers
+    static constexpr float kDropItemH   = 24.0f;
+    static constexpr float kDropMaxH    = 340.0f;
+    static constexpr float kDropMinW    = 190.0f;
+
+    Rect dropRect() const noexcept
+    {
+        if (openDropdown_ < 0) return {};
+        const Rect& sr = selectorRects_[openDropdown_];
+        const float dw = std::max(sr.w, kDropMinW);
+        const int   ct = selectorCounts_[openDropdown_];
+        const float th = std::min(static_cast<float>(ct) * kDropItemH, kDropMaxH);
+        return {sr.x, sr.y + sr.h + 2.0f, dw, th};
+    }
+
+    void drawDropdown()
+    {
+        if (openDropdown_ < 0) return;
+        const Rect dr        = dropRect();
+        const uint32_t param = selectorParams_[openDropdown_];
+        const int minVal     = selectorMinVals_[openDropdown_];
+        const int count      = selectorCounts_[openDropdown_];
+        const int curVal     = static_cast<int>(std::lround(values_[param]));
+
+        // Clip scroll
+        const float maxScroll = std::max(0.0f, static_cast<float>(count) * kDropItemH - dr.h);
+        if (dropScrollOff_ < 0.0f)        dropScrollOff_ = 0.0f;
+        if (dropScrollOff_ > maxScroll)    dropScrollOff_ = maxScroll;
+
+        // Panel
+        beginPath(); roundedRect(dr.x, dr.y, dr.w, dr.h, 10.0f);
+        fillColor(14, 18, 26, 252); fill();
+        strokeColor(80, 100, 130, 180); strokeWidth(1.2f); stroke(); closePath();
+
+        // Items (scissor to panel)
+        const int firstVis = static_cast<int>(dropScrollOff_ / kDropItemH);
+        const int lastVis  = std::min(count - 1,
+            static_cast<int>((dropScrollOff_ + dr.h) / kDropItemH));
+
+        for (int i = firstVis; i <= lastVis; ++i) {
+            const float iy = dr.y + static_cast<float>(i) * kDropItemH - dropScrollOff_;
+            if (iy + kDropItemH < dr.y || iy > dr.y + dr.h) continue;
+
+            const bool sel = (minVal + i) == curVal;
+            if (sel) {
+                beginPath(); roundedRect(dr.x + 3.0f, iy + 1.0f, dr.w - 6.0f, kDropItemH - 2.0f, 6.0f);
+                fillColor(60, 110, 180, 120); fill(); closePath();
+            }
+            fontSize(10.5f); textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+            fillColor(sel ? 230 : 200, sel ? 240 : 215, sel ? 255 : 230, 255);
+            text(dr.x + 10.0f, iy + kDropItemH * 0.5f,
+                 dropItemLabel(param, minVal, i).c_str(), nullptr);
+        }
+
+        // Scrollbar if needed
+        if (count * kDropItemH > dr.h) {
+            const float sbH = dr.h * dr.h / (static_cast<float>(count) * kDropItemH);
+            const float sbY = dr.y + dropScrollOff_ / (static_cast<float>(count) * kDropItemH) * dr.h;
+            beginPath(); roundedRect(dr.x + dr.w - 5.0f, sbY, 3.0f, sbH, 1.5f);
+            fillColor(90, 120, 160, 160); fill(); closePath();
+        }
     }
 
     bool avail(Param p) const noexcept
@@ -296,14 +435,14 @@ private:
 
         const int outCh = static_cast<int>(values_[kParamOutputChannel]);
         const std::string outLabel = "Out Ch " + std::to_string(outCh);
-        addSelector({cx, y + 8.0f, 120.0f, 32.0f}, kParamOutputChannel, 16,
+        addSelector({cx, y + 8.0f, 120.0f, 32.0f}, kParamOutputChannel, 16, 1,
                     outLabel.c_str(), 78, 155, 220);
         cx += 132.0f;
 
         const int condCh = static_cast<int>(values_[kParamConductorCh]);
         const std::string condLabel = condCh == 0
             ? "Cond: Off" : ("Cond Ch " + std::to_string(condCh));
-        addSelector({cx, y + 8.0f, 120.0f, 32.0f}, kParamConductorCh, 17,
+        addSelector({cx, y + 8.0f, 120.0f, 32.0f}, kParamConductorCh, 17, 0,
                     condLabel.c_str(), 185, 140, 220);
         cx += 132.0f;
 
@@ -311,7 +450,7 @@ private:
         const int prog = std::clamp(static_cast<int>(values_[kParamProgram]), 0, 30);
         char progLabel[40];
         std::snprintf(progLabel, sizeof(progLabel), "%d: %s", prog, kProgramNames[prog]);
-        addSelector({cx, y + 8.0f, 210.0f, 32.0f}, kParamProgram, 31,
+        addSelector({cx, y + 8.0f, 210.0f, 32.0f}, kParamProgram, 31, 0,
                     progLabel, 220, 170, 80);
         cx += 222.0f;
 
@@ -378,7 +517,7 @@ private:
 
         const int alg = std::clamp(static_cast<int>(values_[kParamAlgorithm]), 0, 17);
         addSelector({x + 8.0f, ky, w - 16.0f, 28.0f},
-                    kParamAlgorithm, 18, kAlgorithmNames[alg], 78, 140, 200);
+                    kParamAlgorithm, 18, 0, kAlgorithmNames[alg], 78, 140, 200);
 
         // P1 P2 P3 Gain — four equal knobs
         const float kh = h - 80.0f;
@@ -397,7 +536,7 @@ private:
 
         const int it = std::clamp(static_cast<int>(values_[kParamInterfaceType]), 0, 11);
         addSelector({x + 8.0f, ky, w - 16.0f, 28.0f},
-                    kParamInterfaceType, 12, kInterfaceTypeNames[it], 140, 100, 200,
+                    kParamInterfaceType, 12, 0, kInterfaceTypeNames[it], 140, 100, 200,
                     avail(kParamInterfaceType));
 
         const float kh = h - 80.0f;
@@ -595,12 +734,13 @@ private:
         if (!available) globalAlpha(1.0f);
     }
 
-    void addSelector(Rect rect, uint32_t param, int count,
+    void addSelector(Rect rect, uint32_t param, int count, int minVal,
                      const char* currentLabel, int r, int g, int b, bool available = true)
     {
         selectorRects_.push_back(rect);
         selectorParams_.push_back(param);
         selectorCounts_.push_back(count);
+        selectorMinVals_.push_back(minVal);
 
         if (!available) globalAlpha(0.32f);
 

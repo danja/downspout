@@ -234,14 +234,15 @@ ProcessResult Processor::processBlock(const std::uint32_t frameCount,
 
     // Panic
     if (panicPending_) {
-        panicPending_ = false;
+        panicPending_      = false;
+        result.wasPanicked = true;
         emitAllNotesOff(result, 0);
         emitDefaultCCs(result, 0);
         dirty_.fill(false);
         lastCC_.fill(-1);
     }
 
-    // Program Change
+    // Program Change: emit PC then resend all CCs so flues-synth is in sync
     if (programPending_) {
         programPending_ = false;
         if (result.eventCount < kMaxOutputEvents) {
@@ -251,11 +252,17 @@ ProcessResult Processor::processBlock(const std::uint32_t frameCount,
             m.data[0] = static_cast<std::uint8_t>(0xC0 | (outputChannel_ - 1));
             m.data[1] = static_cast<std::uint8_t>(program_);
         }
+        // Resend all non-trajectory params so the new program gets current state
+        const std::size_t trajStart = kParamTrajSides - kParamAlgorithm;
+        for (std::size_t i = 0; i < trajStart; ++i)
+            dirty_[i] = true;
+        lastCC_.fill(-1);
     }
 
     // Randomize: set all non-boolean synth params to random values in range
     if (randomizePending_) {
-        randomizePending_ = false;
+        randomizePending_   = false;
+        result.wasRandomized = true;
         const std::size_t trajStart = kParamTrajSides - kParamAlgorithm;
         for (std::size_t i = 0; i < trajStart; ++i) {
             const SynthCC& spec = kSynthCCs[i];

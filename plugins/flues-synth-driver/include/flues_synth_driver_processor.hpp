@@ -18,7 +18,9 @@ inline constexpr std::size_t kMaxOutputEvents = 512;
 struct ProcessResult {
     std::array<MidiMessage, kMaxOutputEvents> events {};
     std::uint32_t eventCount  = 0;
-    float midiActivity = 0.0f;
+    float midiActivity  = 0.0f;
+    bool  wasRandomized = false;
+    bool  wasPanicked   = false;
 };
 
 class Processor {
