@@ -1,0 +1,17 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:resonance-garden a trn:PluginProfile ;
+    rdfs:label "Resonance Garden" ;
+    rdfs:comment "Eight-voice damped resonator bank that turns stereo input into pitched material using MIDI tuning or an internal scale." ;
+    trn:bundleName "resonance_garden.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/resonance_garden/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio, trn:Midi, trn:HarmonyMidi ;
+    trn:produces trn:Audio ;
+    trn:recommendedAfter dsp:oracle ;
+    trn:caution "High decay, excitation, and wet settings can accumulate energy; place Guardian downstream in autonomous patches." .

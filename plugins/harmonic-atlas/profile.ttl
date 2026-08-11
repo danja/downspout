@@ -1,0 +1,17 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:harmonic-atlas a trn:PluginProfile ;
+    rdfs:label "Harmonic Atlas" ;
+    rdfs:comment "Autonomous voice-led harmony generator with tonal, modal, chromatic-mediant, and neo-Riemannian-inspired movement." ;
+    trn:bundleName "harmonic_atlas.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/harmonic_atlas/> ;
+    trn:role trn:MidiGenerator ;
+    trn:accepts trn:Midi, trn:ControlMidi ;
+    trn:produces trn:Midi, trn:HarmonyMidi ;
+    trn:requires trn:HostTransport ;
+    trn:recommendedBefore dsp:canticle .

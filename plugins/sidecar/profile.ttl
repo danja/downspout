@@ -1,0 +1,17 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:sidecar a trn:PluginProfile ;
+    rdfs:label "Sidecar" ;
+    rdfs:comment "MIDI phrase player with deterministic local generation and optional localhost coordinator mode." ;
+    trn:bundleName "sidecar.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/sidecar/> ;
+    trn:role trn:MidiGenerator ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Midi, trn:MelodyMidi ;
+    trn:requires trn:HostTransport ;
+    trn:caution "Coordinator mode depends on a separate localhost service." .

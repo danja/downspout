@@ -1,0 +1,50 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:drumgen a trn:PluginProfile ;
+    rdfs:label "DrumGen" ;
+    rdfs:comment """Transport- and meter-aware MIDI drum generator with fills, style modes,
+Breakbeat/Jazz/Fugue genres, sparse pulse options, and Conductor CC control.
+Its stereo audio output is a silent compatibility stub; route MIDI output to DrumKit
+or another drum instrument.""" ;
+    trn:bundleName "drumgen.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/drumgen/> ;
+    trn:role trn:MidiGenerator ;
+    trn:produces trn:Midi, trn:DrumMidi ;
+    trn:accepts trn:ControlMidi ;
+    trn:requires trn:HostTransport ;
+    trn:genre "Breakbeat", "Amen", "Jungle", "Hip Hop", "Jazz", "Rock", "Dub", "Fugue" ;
+    trn:conductorChannelParam "conductor_ch" ;
+    trn:recommendedBefore dsp:drumkit ;
+    trn:caution "The stereo audio output is intentionally silent; connect MIDI output to an instrument." ;
+
+    ## Conductor CC input — enable by setting conductor_ch (1–16) to match Conductor's output channel
+    trn:ccMapping [
+        trn:ccNumber 21 ;
+        trn:ccRole "Density" ;
+        trn:targetParameter "density" ;
+        rdfs:comment "0–127 → 0.0–1.0 overall hit density."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 22 ;
+        trn:ccRole "Energy" ;
+        trn:targetParameter "variation" ;
+        rdfs:comment "0–127 → 0.0–1.0 pattern busyness/variation."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 23 ;
+        trn:ccRole "Mutation" ;
+        trn:targetParameter "vary" ;
+        rdfs:comment "0–127 → 0.0–1.0 auto-mutation rate."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 24 ;
+        trn:ccRole "Reset" ;
+        trn:targetParameter "actionNew" ;
+        trn:ccTriggerValue 127 ;
+        rdfs:comment "Value 127 generates a fresh drum pattern."
+    ] .

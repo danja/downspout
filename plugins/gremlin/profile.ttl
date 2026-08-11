@@ -1,0 +1,17 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:gremlin a trn:PluginProfile ;
+    rdfs:label "Gremlin" ;
+    rdfs:comment "Chaotic glitch instrument with scenes, macros, actions, randomisation, and performance controls." ;
+    trn:bundleName "gremlin.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/gremlin/> ;
+    trn:role trn:Instrument ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Audio ;
+    trn:companion dsp:gremlin-driver ;
+    trn:caution "Randomisation and delay-oriented behaviours can produce large level or density changes." .

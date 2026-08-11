@@ -1,0 +1,38 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:loopdelay a trn:PluginProfile ;
+    rdfs:label "Loopdelay" ;
+    rdfs:comment "Stereo delay and capture looper. Time is freely settable (20–4000 ms) or host BBT-synced from a quarter beat to four bars. Delay mode provides filtered feedback and ping-pong crossfeed; Loop mode captures one length and applies feedback-controlled memory with live overdubbing." ;
+    trn:bundleName "loopdelay.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/loopdelay/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio, trn:ControlMidi ;
+    trn:produces trn:Audio ;
+    trn:requires trn:HostTransport ;
+    trn:recommendedAfter dsp:t-mix ;
+    trn:recommendedBefore dsp:lightverb ;
+
+    ## Producer Control Bus CC input (any MIDI channel)
+    trn:ccMapping [
+        trn:ccNumber 30 ;
+        trn:ccRole "Time" ;
+        trn:targetParameter "time" ;
+        rdfs:comment "Temporarily overrides delay/loop time; Release MIDI restores the saved panel value."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 31 ;
+        trn:ccRole "Feedback" ;
+        trn:targetParameter "feedback" ;
+        rdfs:comment "Temporarily overrides feedback amount; Release MIDI restores the saved panel value."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 19 ;
+        trn:ccRole "Gate" ;
+        rdfs:comment "Optional ownership gate: acquires/releases control of CC 30 and CC 31."
+    ] ;
+    rdfs:comment "MIDI-through is transparent so downstream Lightverb or other processors remain reachable from the same producer send. See docs/producer-control-bus.md." .

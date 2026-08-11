@@ -1,0 +1,16 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:melgen a trn:PluginProfile ;
+    rdfs:label "MelGen" ;
+    rdfs:comment "Phrase-aware melody generator with contour, question/answer structure, and reactions to incoming context." ;
+    trn:bundleName "melgen.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/melgen/> ;
+    trn:role trn:MidiGenerator ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Midi, trn:MelodyMidi ;
+    trn:requires trn:HostTransport .

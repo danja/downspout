@@ -1,0 +1,15 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:canticle a trn:PluginProfile ;
+    rdfs:label "Canticle" ;
+    rdfs:comment "Twelve-voice keys, reed, pad, pluck, and glass instrument for melody, counterpoint, and chords." ;
+    trn:bundleName "canticle.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/canticle/> ;
+    trn:role trn:Instrument ;
+    trn:accepts trn:Midi, trn:MelodyMidi, trn:HarmonyMidi ;
+    trn:produces trn:Audio .

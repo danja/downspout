@@ -1,0 +1,15 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:drumkit a trn:PluginProfile ;
+    rdfs:label "DrumKit" ;
+    rdfs:comment "Stereo synthesised drum instrument and natural sound source for DrumGen and Xoxolo." ;
+    trn:bundleName "drumkit.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/drumkit/> ;
+    trn:role trn:Instrument, trn:DrumInstrument ;
+    trn:accepts trn:Midi, trn:DrumMidi ;
+    trn:produces trn:Audio .

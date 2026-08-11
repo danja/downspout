@@ -1,0 +1,37 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:lightverb a trn:PluginProfile ;
+    rdfs:label "Lightverb" ;
+    rdfs:comment "Minimal stereo reverb using a fixed four-line feedback-delay network. No convolution, FFT, or modulation bank; favours predictable DSP workload over natural room simulation. Suitable as a mix insert (default 20% wet) or aux return (100% wet)." ;
+    trn:bundleName "lightverb.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/lightverb/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio, trn:ControlMidi ;
+    trn:produces trn:Audio ;
+    trn:recommendedAfter dsp:loopdelay ;
+    trn:recommendedBefore dsp:guardian ;
+
+    ## Producer Control Bus CC input (any MIDI channel)
+    trn:ccMapping [
+        trn:ccNumber 32 ;
+        trn:ccRole "Wet" ;
+        trn:targetParameter "wet" ;
+        rdfs:comment "Temporarily overrides wet mix; Release MIDI restores the saved panel value."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 33 ;
+        trn:ccRole "Space" ;
+        trn:targetParameter "space" ;
+        rdfs:comment "Temporarily overrides reverb size/decay; Release MIDI restores the saved panel value."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 19 ;
+        trn:ccRole "Gate" ;
+        rdfs:comment "Optional ownership gate: acquires/releases control of CC 32 and CC 33."
+    ] ;
+    rdfs:comment "MIDI-through is transparent so downstream processors remain reachable from the same producer send. See docs/producer-control-bus.md." .

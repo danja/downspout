@@ -1,0 +1,18 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:gremlin-driver a trn:PluginProfile ;
+    rdfs:label "GremlinDriver" ;
+    rdfs:comment "Transport-aware MIDI modulation and action sequencer designed to control Gremlin." ;
+    trn:bundleName "gremlin_driver.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/gremlin_driver/> ;
+    trn:role trn:MidiProcessor, trn:Controller ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Midi ;
+    trn:requires trn:HostTransport ;
+    trn:recommendedBefore dsp:gremlin ;
+    trn:companion dsp:gremlin .

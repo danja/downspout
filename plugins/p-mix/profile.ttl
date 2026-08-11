@@ -1,0 +1,16 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:p-mix a trn:PluginProfile ;
+    rdfs:label "P-Mix" ;
+    rdfs:comment "Transport-aware probabilistic stereo gate that creates evolving switching and rhythmic dropouts." ;
+    trn:bundleName "p_mix.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/p_mix/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio ;
+    trn:requires trn:HostTransport .

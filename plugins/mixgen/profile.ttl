@@ -1,0 +1,55 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:mixgen a trn:PluginProfile ;
+    rdfs:label "Mixgen" ;
+    rdfs:comment "Transport-synchronized automatic producer for the Transmission Producer Control Bus. Generates eight repeatable gain lanes (random, quasi-random, or Euclidean) and emits them as MIDI CC 20–27, one CC per channel (ch 1 → T-Mix strip 1 … ch 8 → strip 8). Four effect macros drive Loopdelay time/feedback (CC 30/31) and Lightverb wet/space (CC 32/33). Stereo audio passes through unchanged." ;
+    trn:bundleName "mixgen.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/mixgen/> ;
+    trn:role trn:MidiGenerator, trn:Controller, trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio, trn:ControlMidi ;
+    trn:requires trn:HostTransport ;
+    trn:feedsControls dsp:t-mix, dsp:loopdelay, dsp:lightverb ;
+
+    ## CC output — gain lanes (one per MIDI channel)
+    trn:ccMapping [
+        trn:ccNumber 20 ;
+        trn:ccRole "Strip gain" ;
+        rdfs:comment "CC 20 on channels 1–8 carries the generated gain value for T-Mix strips 1–8 respectively."
+    ] ;
+    ## CC output — effect macros
+    trn:ccMapping [
+        trn:ccNumber 30 ;
+        trn:ccRole "Loopdelay Time" ;
+        trn:targetParameter "time" ;
+        rdfs:comment "Effect macro 1 default: drives Loopdelay time."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 31 ;
+        trn:ccRole "Loopdelay Feedback" ;
+        trn:targetParameter "feedback" ;
+        rdfs:comment "Effect macro 2 default: drives Loopdelay feedback."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 32 ;
+        trn:ccRole "Lightverb Wet" ;
+        trn:targetParameter "wet" ;
+        rdfs:comment "Effect macro 3 default: drives Lightverb wet mix."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 33 ;
+        trn:ccRole "Lightverb Space" ;
+        trn:targetParameter "space" ;
+        rdfs:comment "Effect macro 4 default: drives Lightverb space/decay."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 19 ;
+        trn:ccRole "Gate" ;
+        rdfs:comment "Acquires producer ownership of the control bus; stopping or disabling Mixgen releases it."
+    ] ;
+    rdfs:comment "Routing profiles select T-Mix only, effects only, or the full bus. Each effect macro source lane, destination CC, output range, and inversion are configurable. See docs/producer-control-bus.md." .

@@ -1,0 +1,17 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:guardian a trn:PluginProfile ;
+    rdfs:label "Guardian" ;
+    rdfs:comment "Output-safety processor with DC removal, look-ahead limiting, true-peak protection, soft clipping, and latched diagnostics." ;
+    trn:bundleName "guardian.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/guardian/> ;
+    trn:role trn:AudioEffect, trn:Utility ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio ;
+    trn:recommendedAfter dsp:orbit ;
+    trn:caution "Guardian is intended for the end of autonomous audio chains and reports processing latency to the host." .

@@ -1,0 +1,71 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:ground a trn:PluginProfile ;
+    rdfs:label "Ground" ;
+    rdfs:comment """Long-form transport-synced MIDI bass generator that plans across 8–64 bar forms,
+phrase roles (Statement, Climb, Breakdown, Answer, Cadence, Release), and arc tension.
+Styles include Dub (sparse, heavy, off-beat) and Jazz (walking quarter motion).
+All generated notes are folded into a guarded bass register lane.
+Accepts Conductor CC control for density, motion, mutation, form reset, and — uniquely
+among Downspout generators — arc tension and phrase role overrides driven by CC20 (Scene).""" ;
+    trn:bundleName "ground.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/ground/> ;
+    trn:role trn:MidiGenerator ;
+    trn:produces trn:Midi, trn:BassMidi ;
+    trn:accepts trn:ControlMidi ;
+    trn:requires trn:HostTransport ;
+    trn:genre "Dub", "Jazz", "Fugue", "Classical", "Blues" ;
+    trn:conductorChannelParam "conductor_ch" ;
+    trn:recommendedBefore dsp:basilico ;
+
+    ## Conductor CC input — Tier 1 (density/motion/vary/reset)
+    trn:ccMapping [
+        trn:ccNumber 21 ;
+        trn:ccRole "Density" ;
+        trn:targetParameter "density" ;
+        rdfs:comment "0–127 → 0.0–1.0 note fill density."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 22 ;
+        trn:ccRole "Energy" ;
+        trn:targetParameter "motion" ;
+        rdfs:comment "0–127 → 0.0–1.0 melodic movement (higher = faster-moving bassline)."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 23 ;
+        trn:ccRole "Mutation" ;
+        trn:targetParameter "vary" ;
+        rdfs:comment "0–127 → 0.0–1.0 auto-mutation rate."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 24 ;
+        trn:ccRole "Reset" ;
+        trn:targetParameter "actionNewForm" ;
+        trn:ccTriggerValue 127 ;
+        rdfs:comment "Value 127 regenerates the entire long-form arc."
+    ] ;
+
+    ## Tier 2 — CC20 Scene → arc tension
+    trn:ccMapping [
+        trn:ccNumber 20 ;
+        trn:ccRole "Scene" ;
+        trn:targetParameter "tension" ;
+        rdfs:comment """0–127 → 0.0–1.0 arc tension, shifting where the form's dynamic peak sits.
+Mapping Conductor's section position to tension aligns Ground's internal phrase arc
+with the arrangement's energy peak automatically."""
+    ] ;
+
+    ## Tier 3 — CC20 Scene → phrase role override for current phrase
+    rdfs:comment """CC20 also writes a phrase role override for the currently-playing phrase:
+  0–16   (Intro)   → Statement
+  17–48  (Develop) → Climb
+  49–80  (Break)   → Breakdown
+  81–112 (Reprise) → Answer
+  113–127 (Coda)   → Cadence
+This is the only Downspout generator that maps Conductor section vocabulary
+directly to its internal phrase role system.""" .

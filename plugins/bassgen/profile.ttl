@@ -1,0 +1,52 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:bassgen a trn:PluginProfile ;
+    rdfs:label "BassGen" ;
+    rdfs:comment """Transport-synced monophonic bass generator with persistent patterns, meter-aware
+rhythm, scale/style/genre selection, Follow/Dodge MIDI input, and Conductor CC control.
+Jazz mode outlines ii-V-I movement; Fugue mode uses subject/answer/episode shapes;
+Moroder mode produces short, bright, subdivided pulse lines.""" ;
+    trn:bundleName "bassgen.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/bassgen/> ;
+    trn:role trn:MidiGenerator ;
+    trn:produces trn:Midi, trn:BassMidi ;
+    trn:accepts trn:Midi, trn:ControlMidi ;
+    trn:requires trn:HostTransport ;
+    trn:genre "Straight", "Reel", "Waltz", "Jig", "Slip Jig", "Jazz", "Fugue", "Moroder" ;
+    trn:recommendedBefore dsp:basilico ;
+
+    ## Conductor CC input — enable by setting conductor_ch (1–16) to match Conductor's output channel
+    trn:conductorChannelParam "conductor_ch" ;
+    trn:ccMapping [
+        trn:ccNumber 21 ;
+        trn:ccRole "Density" ;
+        trn:targetParameter "density" ;
+        rdfs:comment "0–127 → 0.0–1.0 density (note fill fraction)."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 22 ;
+        trn:ccRole "Energy" ;
+        trn:targetParameter "accent" ;
+        rdfs:comment "0–127 → 0.0–1.0 accent strength."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 23 ;
+        trn:ccRole "Mutation" ;
+        trn:targetParameter "vary" ;
+        rdfs:comment "0–127 → 0.0–1.0 auto-variation rate."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 24 ;
+        trn:ccRole "Reset" ;
+        trn:targetParameter "actionNew" ;
+        trn:ccTriggerValue 127 ;
+        rdfs:comment "Value 127 generates a fresh pattern."
+    ] ;
+
+    ## Follow/Dodge MIDI input — separate from Conductor; driven by Note On messages
+    rdfs:comment "Follow Ch and Follow Mode (Note On channel/note matching) coexist with Conductor Ch (CC channel) because they respond to different MIDI message types." .

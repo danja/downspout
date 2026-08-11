@@ -1,0 +1,16 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:basilico a trn:PluginProfile ;
+    rdfs:label "Basilico" ;
+    rdfs:comment "Monophonic bass instrument with upright, electric, dub, acid, and industrial models." ;
+    trn:bundleName "basilico.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/basilico/> ;
+    trn:role trn:Instrument, trn:BassInstrument ;
+    trn:accepts trn:Midi, trn:BassMidi ;
+    trn:produces trn:Audio ;
+    trn:genre "Dub", "Acid" .

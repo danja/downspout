@@ -1,0 +1,16 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:oracle a trn:PluginProfile ;
+    rdfs:label "Oracle" ;
+    rdfs:comment "Audio and MIDI listener that extracts bounded musical features and emits mapped CC values plus optional guarded response notes." ;
+    trn:bundleName "oracle.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/oracle/> ;
+    trn:role trn:AudioEffect, trn:MidiProcessor, trn:Controller ;
+    trn:accepts trn:Audio, trn:Midi ;
+    trn:produces trn:Audio, trn:Midi, trn:ControlMidi, trn:MelodyMidi ;
+    trn:caution "Response notes can form a feedback system when routed back toward the analysed source; keep the response guard enabled." .

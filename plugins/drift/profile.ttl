@@ -1,0 +1,17 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:drift a trn:PluginProfile ;
+    rdfs:label "Drift" ;
+    rdfs:comment "Four-lane transport-synchronised MIDI CC modulator with LFO, sample-and-hold, random-walk, chaos, and envelope-follower modes." ;
+    trn:bundleName "drift.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/drift/> ;
+    trn:role trn:MidiGenerator, trn:Controller, trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio, trn:Midi, trn:ControlMidi ;
+    trn:requires trn:HostTransport ;
+    trn:caution "Its audio path is transparent; its musical contribution is primarily MIDI CC modulation." .

@@ -1,0 +1,17 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:mosaic a trn:PluginProfile ;
+    rdfs:label "Mosaic" ;
+    rdfs:comment "Four-slot WAV sampler with deterministic slicing, pitch variation, reverse probability, stereo spread, and autonomous triggering." ;
+    trn:bundleName "mosaic.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/mosaic/> ;
+    trn:role trn:Instrument, trn:MidiGenerator ;
+    trn:accepts trn:Midi, trn:ControlMidi ;
+    trn:produces trn:Audio ;
+    trn:requires trn:HostTransport ;
+    trn:caution "Load at least one WAV sample through the native editor before expecting audio; sample paths persist in plugin state." .

@@ -1,0 +1,47 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:conductor a trn:PluginProfile ;
+    rdfs:label "Conductor" ;
+    rdfs:comment """Bar-aligned intro/development/break/reprise/coda section generator.
+On each section boundary it emits one batch of MIDI CCs (scene, density, energy,
+mutation, reset) plus an optional section note.  Route its MIDI output to BassGen,
+DrumGen, Ground, or Harmonic Atlas and set their Conductor Ch parameter to match.""" ;
+    trn:bundleName "conductor.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/conductor/> ;
+    trn:role trn:MidiGenerator, trn:Controller ;
+    trn:produces trn:Midi, trn:ControlMidi ;
+    trn:requires trn:HostTransport ;
+    trn:feedsControls dsp:bassgen, dsp:drumgen, dsp:ground, dsp:harmonic-atlas ;
+
+    ## CC output protocol — default channel 16
+    trn:ccMapping [
+        trn:ccNumber 20 ;
+        trn:ccRole "Scene" ;
+        rdfs:comment "Arrangement position: Intro=0, Develop=32, Break=64, Reprise=96, Coda=127."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 21 ;
+        trn:ccRole "Density" ;
+        rdfs:comment "Suggested note density for the incoming section (0–127)."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 22 ;
+        trn:ccRole "Energy" ;
+        rdfs:comment "Suggested energy/intensity for the incoming section (0–127)."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 23 ;
+        trn:ccRole "Mutation" ;
+        rdfs:comment "Suggested pattern mutation rate for the incoming section (0–127)."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 24 ;
+        trn:ccRole "Reset" ;
+        trn:ccTriggerValue 127 ;
+        rdfs:comment "Value 127 signals a hard pattern reset (fired on Intro and Coda boundaries)."
+    ] .

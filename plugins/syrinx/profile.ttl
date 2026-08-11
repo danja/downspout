@@ -1,0 +1,18 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:syrinx a trn:PluginProfile ;
+    rdfs:label "Syrinx" ;
+    rdfs:comment "Polyphonic avian vocal synthesizer using Mindlin-Laje ODE models with ten bird presets: Wren, Thrush, Warbler, Finch, Robin, Nightjar, Pigeon, Hummingbird, Starling, and Custom." ;
+    trn:bundleName "syrinx.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/syrinx/> ;
+    trn:role trn:Instrument ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Audio ;
+    trn:genre "Ambient", "Electronic", "Nature", "Dance" ;
+    trn:recommendedAfter dsp:melgen ;
+    trn:caution "Ten presets share one MIDI channel; select a preset via the Selected Preset master parameter before connecting multiple Syrinx instances." .

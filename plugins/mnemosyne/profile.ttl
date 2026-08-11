@@ -1,0 +1,17 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:mnemosyne a trn:PluginProfile ;
+    rdfs:label "Mnemosyne" ;
+    rdfs:comment "Fixed-capacity MIDI phrase memory that captures, recalls, transforms, and recombines motifs in listen, accompany, or autonomous modes." ;
+    trn:bundleName "mnemosyne.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/mnemosyne/> ;
+    trn:role trn:MidiProcessor ;
+    trn:accepts trn:Midi, trn:MelodyMidi ;
+    trn:produces trn:Midi, trn:MelodyMidi ;
+    trn:requires trn:HostTransport ;
+    trn:recommendedBefore dsp:canticle .

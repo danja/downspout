@@ -1,0 +1,15 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:gater a trn:PluginProfile ;
+    rdfs:label "Gater" ;
+    rdfs:comment "MIDI-controlled stereo audio switcher that routes input to one of two stereo outputs based on note number parity." ;
+    trn:bundleName "gater.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/gater/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio, trn:Midi ;
+    trn:produces trn:Audio .

@@ -1,0 +1,17 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:luma a trn:PluginProfile ;
+    rdfs:label "Luma" ;
+    rdfs:comment "Launchpad-oriented performance generator whose lit cells become bass, chord, melody, and drum agents." ;
+    trn:bundleName "luma.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/luma/> ;
+    trn:role trn:MidiGenerator, trn:Controller ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Midi, trn:MultiPartMidi ;
+    trn:requires trn:HostTransport, trn:Launchpad ;
+    trn:caution "The UI remains usable without hardware, but intended LED feedback requires a Launchpad MIDI connection." .

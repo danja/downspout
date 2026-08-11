@@ -1,0 +1,16 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:xoxolo a trn:PluginProfile ;
+    rdfs:label "Xoxolo" ;
+    rdfs:comment "Explicit x0x-style drum sequencer with 11 DrumKit-oriented lanes and patterns up to 32 steps." ;
+    trn:bundleName "xoxolo.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/xoxolo/> ;
+    trn:role trn:MidiGenerator ;
+    trn:produces trn:Midi, trn:DrumMidi ;
+    trn:requires trn:HostTransport ;
+    trn:recommendedBefore dsp:drumkit .
