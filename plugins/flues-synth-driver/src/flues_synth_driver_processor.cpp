@@ -252,11 +252,9 @@ ProcessResult Processor::processBlock(const std::uint32_t frameCount,
             m.data[0] = static_cast<std::uint8_t>(0xC0 | (outputChannel_ - 1));
             m.data[1] = static_cast<std::uint8_t>(program_);
         }
-        // Resend all non-trajectory params so the new program gets current state
-        const std::size_t trajStart = kParamTrajSides - kParamAlgorithm;
-        for (std::size_t i = 0; i < trajStart; ++i)
-            dirty_[i] = true;
-        lastCC_.fill(-1);
+        // Do not resend CCs here: the CC→param mapping changes per program,
+        // so resending with current values would write to the wrong parameters.
+        // The host will send updated CCs as the user adjusts controls.
     }
 
     // Randomize: set all non-boolean synth params to random values in range

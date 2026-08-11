@@ -1,43 +1,10 @@
 # Downspout TODO
 
-## Conductor → generator integration
+## Orchid extension
 
-### Done
+When a voiced chunk has been detected, a pitch shift is determined by any incoming midi note on. The extent of the shift will be taken relative to the sampled pitch, that frequency will be considered the root note. The note selection may  be quantized to a scale, selected from a drop down list as found in eg. plugins/bassgen
 
-- **BassGen**: MIDI input port already present. Added `Conductor Ch` parameter (0=off,
-  1–16). When active, Conductor CCs on that channel map to:
-  - CC21 Density → `density`
-  - CC22 Energy → `accent`
-  - CC23 Mutation → `vary`
-  - CC24 Reset=127 → `actionNew`
-- **DrumGen**: Added MIDI input port and `Conductor Ch` parameter. CC mapping:
-  - CC21 Density → `density`
-  - CC22 Energy → `variation`
-  - CC23 Mutation → `vary`
-  - CC24 Reset=127 → `actionNew`
-- Both plugins have a **Conductor Ch** dropdown in the UI (right panel, grouped under
-  "Conductor" section in BassGen). See `docs/midi-mapping.md` for full protocol.
-
-### Done — Ground integration
-
-Ground gained a MIDI input port and `Conductor Ch` parameter (0=off, 1–16).
-When active, Conductor CCs on that channel map to:
-
-**Tier 1** — same CC pattern as BassGen/DrumGen:
-- CC21 Density → `density`
-- CC22 Energy → `motion`
-- CC23 Mutation → `vary`
-- CC24 Reset=127 → `actionNewForm`
-
-**Tier 2** — section → arc shape (unique to Ground):
-- CC20 Scene (0–127) → `tension` (scaled 0.0–1.0)
-
-**Tier 3** — section vocabulary → phrase role override for current phrase:
-- CC20 0–16 → Statement, 17–48 → Climb, 49–80 → Breakdown, 81–112 → Answer, 113–127 → Cadence
-- Writes the override immediately for the phrase currently playing (statusPhrase_)
-- Future work: override ahead by 1–2 phrases, or wait for phrase boundary
-
-See `docs/midi-mapping.md` for the full protocol and mapping tables.
+---
 
 ### Pending — configurable CC numbers
 
