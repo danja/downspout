@@ -10,6 +10,74 @@ constexpr double kPi = 3.14159265358979323846;
 constexpr double kHalfPi = 1.5707963267948966;
 constexpr double kTargetAnalysisRate = 12000.0;
 
+// ── Scale interval tables (chromatic semitone offsets from root) ───────────────
+
+constexpr int kScaleIntervals[20][12] = {
+    {0, 2, 3, 5, 7, 8, 10, -1, -1, -1, -1, -1},   // Minor (7)
+    {0, 2, 4, 5, 7, 9, 11, -1, -1, -1, -1, -1},   // Major (7)
+    {0, 2, 3, 5, 7, 9, 10, -1, -1, -1, -1, -1},   // Dorian (7)
+    {0, 1, 3, 5, 7, 8, 10, -1, -1, -1, -1, -1},   // Phrygian (7)
+    {0, 3, 5, 7, 10, -1, -1, -1, -1, -1, -1, -1}, // Pent Minor (5)
+    {0, 3, 5, 6, 7, 10, -1, -1, -1, -1, -1, -1},  // Blues (6)
+    {0, 2, 4, 5, 7, 9, 10, -1, -1, -1, -1, -1},   // Mixolydian (7)
+    {0, 2, 3, 5, 7, 8, 11, -1, -1, -1, -1, -1},   // Harmonic Minor (7)
+    {0, 2, 4, 7, 9, -1, -1, -1, -1, -1, -1, -1},  // Pent Major (5)
+    {0, 1, 3, 5, 6, 8, 10, -1, -1, -1, -1, -1},   // Locrian (7)
+    {0, 1, 4, 5, 7, 8, 10, -1, -1, -1, -1, -1},   // Phrygian Dominant (7)
+    {0, 2, 4, 6, 7, 9, 11, -1, -1, -1, -1, -1},   // Lydian (7)
+    {0, 2, 3, 5, 7, 9, 11, -1, -1, -1, -1, -1},   // Melodic Minor (7)
+    {0, 2, 4, 6, 8, 10, -1, -1, -1, -1, -1, -1},  // Whole Tone (6)
+    {0, 1, 3, 4, 6, 8, 10, -1, -1, -1, -1, -1},   // Altered (7)
+    {0, 1, 3, 4, 6, 7, 9, 10, -1, -1, -1, -1},    // Half-Whole Diminished (8)
+    {0, 2, 3, 5, 6, 8, 9, 11, -1, -1, -1, -1},    // Whole-Half Diminished (8)
+    {0, 2, 4, 5, 7, 9, 10, 11, -1, -1, -1, -1},   // Bebop Dominant (8)
+    {0, 2, 4, 5, 7, 8, 9, 11, -1, -1, -1, -1},    // Bebop Major (8)
+    {0, 2, 3, 4, 5, 7, 9, 10, -1, -1, -1, -1},    // Bebop Minor (8)
+};
+
+constexpr int kScaleIntervalCounts[20] = {
+    7, 7, 7, 7, 5, 6, 7, 7, 5, 7, 7, 7, 7, 6, 7, 8, 8, 8, 8, 8
+};
+
+// Quantize a semitone offset to the nearest in-scale pitch.
+// scaleIndex is 0-19 (already offset by -1 from the parameter value 1-20).
+[[nodiscard]] int quantizeSemitone(const int semitone, const int scaleIndex) {
+    if (scaleIndex < 0 || scaleIndex >= 20) return semitone;
+    const int count = kScaleIntervalCounts[scaleIndex];
+    int best = semitone;
+    int bestDist = 1000;
+    for (int oct = -4; oct <= 4; ++oct) {
+        for (int i = 0; i < count; ++i) {
+            const int candidate = oct * 12 + kScaleIntervals[scaleIndex][i];
+            const int dist = std::abs(candidate - semitone);
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = candidate;
+            }
+        }
+    }
+    return best;
+}
+
+[[nodiscard]] double freqToMidi(const double freqHz) {
+    if (freqHz <= 0.0) return 69.0;
+    return 69.0 + 12.0 * std::log2(freqHz / 440.0);
+}
+
+[[nodiscard]] double computePlaybackRate(const EngineState& state, const Parameters& parameters) {
+    if (state.activeMidiNote < 0 || !state.loop.valid || state.loop.frequencyHz <= 0.0f)
+        return 1.0;
+
+    const double rootMidi = freqToMidi(static_cast<double>(state.loop.frequencyHz));
+    int semitoneShift = state.activeMidiNote - static_cast<int>(std::lround(rootMidi));
+
+    const int scaleParam = static_cast<int>(std::lround(parameters.scale));
+    if (scaleParam >= 1 && scaleParam <= 20)
+        semitoneShift = quantizeSemitone(semitoneShift, scaleParam - 1);
+
+    return std::pow(2.0, static_cast<double>(semitoneShift) / 12.0);
+}
+
 [[nodiscard]] float clampf(float value, const float minValue, const float maxValue) {
     if (value < minValue) {
         return minValue;
@@ -504,9 +572,11 @@ void armOrCaptureLoop(EngineState& state,
 
 void advanceLoop(EngineState& state) {
     if (state.processorState == ProcessorState::Held || state.processorState == ProcessorState::Release) {
-        state.loopReadPosition += 1.0;
-        if (state.loop.valid && state.loop.lengthFrames > 0u && state.loopReadPosition >= static_cast<double>(state.loop.lengthFrames)) {
-            state.loopReadPosition -= static_cast<double>(state.loop.lengthFrames);
+        state.loopReadPosition += state.playbackRate;
+        if (state.loop.valid && state.loop.lengthFrames > 0u) {
+            const double len = static_cast<double>(state.loop.lengthFrames);
+            while (state.loopReadPosition >= len) state.loopReadPosition -= len;
+            while (state.loopReadPosition < 0.0)  state.loopReadPosition += len;
         }
     }
 }
@@ -655,6 +725,7 @@ Parameters clampParameters(const Parameters& raw) {
     parameters.liveUnder = clampf(parameters.liveUnder, 0.0f, 100.0f);
     parameters.captureTiming = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.captureTiming)), 0, 1));
     parameters.retrigger = clampf(parameters.retrigger, 0.0f, 100.0f);
+    parameters.scale = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.scale)), 0, kOrchidScaleCount - 1));
     return parameters;
 }
 
@@ -668,7 +739,9 @@ OutputStatus processBlock(EngineState& state,
                           const TransportSnapshot& transport,
                           const std::uint32_t nframes,
                           const double sampleRate,
-                          const AudioBlock& audio) {
+                          const AudioBlock& audio,
+                          const MidiInputEvent* midiEvents,
+                          const std::uint32_t midiEventCount) {
     const Parameters parameters = clampParameters(rawParameters);
     const std::uint32_t channelCount = std::max<std::uint32_t>(1u, std::min(audio.channelCount, kMaxChannels));
     ensureBuffer(state, parameters, sampleRate, channelCount);
@@ -687,6 +760,28 @@ OutputStatus processBlock(EngineState& state,
     if (nframes == 0) {
         return makeStatus(state, usableTransport);
     }
+
+    // Process MIDI note-on/off for pitch shift
+    for (std::uint32_t e = 0; e < midiEventCount; ++e) {
+        const MidiInputEvent& msg = midiEvents[e];
+        if (msg.size < 2) continue;
+        const std::uint8_t status = msg.data[0] & 0xF0;
+        const std::uint8_t note   = msg.data[1];
+        const std::uint8_t vel    = msg.size >= 3 ? msg.data[2] : 0;
+        if (status == 0x90 && vel > 0) {
+            state.activeMidiNote = note;
+            state.playbackRate = computePlaybackRate(state, parameters);
+        } else if (status == 0x80 || (status == 0x90 && vel == 0)) {
+            if (state.activeMidiNote == static_cast<int>(note)) {
+                state.activeMidiNote = -1;
+                state.playbackRate = 1.0;
+            }
+        }
+    }
+
+    // Recompute playback rate when loop changes (loop.frequencyHz may have been updated)
+    if (state.activeMidiNote >= 0)
+        state.playbackRate = computePlaybackRate(state, parameters);
 
     for (std::uint32_t frame = 0; frame < nframes; ++frame) {
         writeInputFrame(state, audio, frame);

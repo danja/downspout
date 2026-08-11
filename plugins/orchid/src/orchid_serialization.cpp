@@ -49,7 +49,8 @@ std::string serializeParameters(const Parameters& parameters) {
            "mix=" + std::to_string(parameters.mix) + "\n"
            "liveUnder=" + std::to_string(parameters.liveUnder) + "\n"
            "captureTiming=" + std::to_string(parameters.captureTiming) + "\n"
-           "retrigger=" + std::to_string(parameters.retrigger) + "\n";
+           "retrigger=" + std::to_string(parameters.retrigger) + "\n"
+           "scale=" + std::to_string(parameters.scale) + "\n";
 }
 
 std::optional<Parameters> deserializeParameters(const std::string& text) {
@@ -99,8 +100,10 @@ std::optional<Parameters> deserializeParameters(const std::string& text) {
             parameters.captureTiming = parsed;
         } else if (key == "retrigger" && parseFloat(value, parsed)) {
             parameters.retrigger = parsed;
-        } else {
-            return std::nullopt;
+        } else if (key == "scale" && parseFloat(value, parsed)) {
+            parameters.scale = parsed;
+        } else if (key != "version") {
+            // Skip unknown keys for forward compatibility
         }
     }
 

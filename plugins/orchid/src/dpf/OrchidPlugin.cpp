@@ -29,6 +29,7 @@ using downspout::orchid::kParamPitchHigh;
 using downspout::orchid::kParamPitchLow;
 using downspout::orchid::kParamReleaseMs;
 using downspout::orchid::kParamRetrigger;
+using downspout::orchid::kParamScale;
 using downspout::orchid::kParamSensitivity;
 using downspout::orchid::kParamStabilityMs;
 using downspout::orchid::kParamStatusConfidence;
@@ -38,10 +39,20 @@ using downspout::orchid::kParamStatusRms;
 using downspout::orchid::kParamStatusState;
 using downspout::orchid::kParamStatusTransport;
 using downspout::orchid::kParameterCount;
+using downspout::orchid::kOrchidScaleCount;
+using downspout::orchid::kOrchidScaleNames;
 using downspout::orchid::kProcessorStateNames;
 using downspout::orchid::kStateCount;
 using downspout::orchid::kStateKeyParameters;
 using downspout::orchid::kStateParameters;
+
+ParameterEnumerationValue kScaleEnumValues[kOrchidScaleCount] = {
+    {0.0f, "None"},
+    {1.0f, "Minor"}, {2.0f, "Major"}, {3.0f, "Dorian"}, {4.0f, "Phrygian"}, {5.0f, "Pent Minor"},
+    {6.0f, "Blues"}, {7.0f, "Mixolydian"}, {8.0f, "Harm Minor"}, {9.0f, "Pent Major"}, {10.0f, "Locrian"},
+    {11.0f, "Phryg Dom"}, {12.0f, "Lydian"}, {13.0f, "Melodic Min"}, {14.0f, "Whole Tone"}, {15.0f, "Altered"},
+    {16.0f, "Half-Whole"}, {17.0f, "Whole-Half"}, {18.0f, "Bebop Dom"}, {19.0f, "Bebop Major"}, {20.0f, "Bebop Minor"},
+};
 
 ParameterEnumerationValue kStateEnumValues[] = {
     {0.0f, "Pass"},
@@ -248,6 +259,18 @@ protected:
             parameter.ranges.max = 100.0f;
             parameter.ranges.def = 20.0f;
             break;
+        case kParamScale:
+            parameter.name = "MIDI Scale";
+            parameter.symbol = "midi_scale";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = static_cast<float>(kOrchidScaleCount - 1);
+            parameter.ranges.def = 0.0f;
+            parameter.enumValues.count = static_cast<uint8_t>(kOrchidScaleCount);
+            parameter.enumValues.restrictedMode = true;
+            parameter.enumValues.values = kScaleEnumValues;
+            parameter.enumValues.deleteLater = false;
+            break;
         case kParamStatusState:
             parameter.name = "State";
             parameter.symbol = "status_state";
@@ -332,6 +355,7 @@ protected:
         case kParamLiveUnder: return parameters_.liveUnder;
         case kParamCaptureTiming: return parameters_.captureTiming;
         case kParamRetrigger: return parameters_.retrigger;
+        case kParamScale: return parameters_.scale;
         case kParamStatusState: return static_cast<float>(status_.state);
         case kParamStatusConfidence: return status_.detectorConfidence;
         case kParamStatusPitch: return status_.detectedPitchHz;
@@ -360,6 +384,7 @@ protected:
         case kParamLiveUnder: parameters_.liveUnder = value; break;
         case kParamCaptureTiming: parameters_.captureTiming = value; break;
         case kParamRetrigger: parameters_.retrigger = value; break;
+        case kParamScale: parameters_.scale = value; break;
         default: break;
         }
 
@@ -391,7 +416,8 @@ protected:
         status_ = {};
     }
 
-    void run(const float** inputs, float** outputs, uint32_t frames) override
+    void run(const float** inputs, float** outputs, uint32_t frames,
+             const MidiEvent* midiEvents, uint32_t midiEventCount) override
     {
         std::array<const float*, downspout::orchid::kMaxChannels> safeInputs {};
         std::array<float*, downspout::orchid::kMaxChannels> safeOutputs {};
@@ -407,12 +433,25 @@ protected:
         audio.outputs = safeOutputs;
         audio.channelCount = kWrapperChannelCount;
 
+        // Convert DPF MidiEvent to core MidiInputEvent
+        std::array<downspout::orchid::MidiInputEvent, 512> coreMidi {};
+        const uint32_t midiCount = midiEventCount < 512u ? midiEventCount : 512u;
+        for (uint32_t i = 0; i < midiCount; ++i)
+        {
+            coreMidi[i].frame = midiEvents[i].frame;
+            coreMidi[i].size  = static_cast<std::uint8_t>(midiEvents[i].size < 4u ? midiEvents[i].size : 4u);
+            for (uint32_t b = 0; b < coreMidi[i].size; ++b)
+                coreMidi[i].data[b] = midiEvents[i].data[b];
+        }
+
         status_ = downspout::orchid::processBlock(engineState_,
                                                   parameters_,
                                                   toCoreTransport(getTimePosition()),
                                                   frames,
                                                   getSampleRate(),
-                                                  audio);
+                                                  audio,
+                                                  coreMidi.data(),
+                                                  midiCount);
     }
 
 private:

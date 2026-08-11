@@ -10,6 +10,26 @@ namespace downspout::orchid {
 
 inline constexpr std::uint32_t kMaxChannels = 8;
 
+// ── MIDI input ────────────────────────────────────────────────────────────────
+
+struct MidiInputEvent {
+    std::uint32_t frame = 0;
+    std::uint8_t size = 0;
+    std::uint8_t data[4] {};
+};
+
+// ── Scale names (index 0 = None, 1-20 match bassgen ScaleId 0-19) ─────────────
+
+inline constexpr int kOrchidScaleCount = 21;
+
+inline constexpr const char* kOrchidScaleNames[kOrchidScaleCount] = {
+    "None",
+    "Minor", "Major", "Dorian", "Phrygian", "Pent Minor",
+    "Blues", "Mixolydian", "Harm Minor", "Pent Major", "Locrian",
+    "Phryg Dom", "Lydian", "Melodic Min", "Whole Tone", "Altered",
+    "Half-Whole", "Whole-Half", "Bebop Dom", "Bebop Major", "Bebop Minor",
+};
+
 enum class ProcessorState : std::uint8_t {
     Pass = 0,
     Armed,
@@ -41,6 +61,7 @@ struct Parameters {
     float liveUnder = 18.0f;
     float captureTiming = 0.0f;
     float retrigger = 20.0f;
+    float scale = 0.0f;  // 0=None, 1-20 = scale (matching bassgen ScaleId 0-19)
 };
 
 struct TransportSnapshot {
@@ -103,6 +124,8 @@ struct EngineState {
     std::uint32_t cooldownFramesRemaining = 0;
     double loopReadPosition = 0.0;
     double armedGridSerial = -1.0;
+    int activeMidiNote = -1;
+    double playbackRate = 1.0;
 
     bool transportWasUsable = false;
     double lastAbsoluteBeat = 0.0;
