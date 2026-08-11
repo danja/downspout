@@ -265,3 +265,8 @@ endif()
 if(DOWNSPOUT_BUILD_GUARDIAN)
     add_subdirectory(plugins/guardian)
 endif()
+
+option(DOWNSPOUT_BUILD_FLUES_SYNTH_DRIVER "Configure the flues-synth-driver MIDI controller target" ON)
+if(DOWNSPOUT_BUILD_FLUES_SYNTH_DRIVER)
+    add_subdirectory(plugins/flues-synth-driver)
+endif()
