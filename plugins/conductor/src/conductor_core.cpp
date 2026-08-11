@@ -72,7 +72,7 @@ void emitSection(State& state, const std::array<float,kParameterCount>& p,
                     [static_cast<std::size_t>(i)]));
 }
 }
-void reset(State& state) noexcept { state={}; state.section=-1; state.activeNote=-1; }
+void reset(State& state) noexcept { state={}; state.section=-1; state.activeNote=-1; state.pendingSection=-1; }
 MidiBlock process(State& state, const std::array<float,kParameterCount>& p,
                   const Transport& t, const std::uint32_t frames, const double sampleRate) noexcept {
     MidiBlock out;
@@ -96,7 +96,12 @@ MidiBlock process(State& state, const std::array<float,kParameterCount>& p,
         const double boundary=static_cast<double>(state.nextSectionBar)*barLength;
         if (boundary >= start-1e-8) {
             state.sectionStartBar=state.nextSectionBar;
-            state.section=chooseSection(p,state.section,state.sectionSerial);
+            if (state.pendingSection >= 0) {
+                state.section=state.pendingSection;
+                state.pendingSection=-1;
+            } else {
+                state.section=chooseSection(p,state.section,state.sectionSerial);
+            }
             state.nextSectionBar += duration(p,state.sectionSerial);
             ++state.sectionSerial;
             emitSection(state,p,out,downspout::generative::frameAt(boundary,start,qpf,frames));

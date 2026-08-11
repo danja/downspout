@@ -15,6 +15,39 @@ public:
             downspout::conductor::kParameterCount, 220, 154, 78) {}
 
 private:
+    int pendingSection_ = -1;
+
+    void parameterChanged(uint32_t index, float v) override
+    {
+        GenerativePanelUI::parameterChanged(index, v);
+        using namespace downspout::conductor;
+        if (index == kStatusSection && pendingSection_ >= 0 &&
+            static_cast<int>(std::lround(v)) == pendingSection_)
+            pendingSection_ = -1;
+    }
+
+    bool onMouse(const MouseEvent& ev) override
+    {
+        if (ev.button == 1 && ev.press) {
+            const float x = static_cast<float>(ev.pos.getX());
+            const float y = static_cast<float>(ev.pos.getY());
+            using namespace downspout::conductor;
+            const int current = std::clamp(static_cast<int>(std::lround(value(kStatusSection))), 0, 4);
+            for (int i = 0; i < 5; ++i) {
+                const float sx = 38.0f + i * 174.0f;
+                if (x >= sx && x <= sx + 162.0f && y >= 140.0f && y <= 182.0f) {
+                    if (i != current) {
+                        pendingSection_ = i;
+                        commitParameter(kPendingSection, static_cast<float>(i + 1));
+                        repaint();
+                    }
+                    return true;
+                }
+            }
+        }
+        return handleMouse(ev);
+    }
+
     void onNanoDisplay() override
     {
         using namespace downspout::conductor;
@@ -22,24 +55,31 @@ private:
         static constexpr const char* sections[] {"Intro", "Development", "Break", "Reprise", "Coda"};
 
         beginPanel();
-        drawSection(24, 104, 912, 112, "FORM POSITION", "current section and remaining duration");
+        drawSection(24, 104, 912, 112, "FORM POSITION", "click a section to jump at the next bar");
         const int current = std::clamp(static_cast<int>(std::lround(value(kStatusSection))), 0, 4);
         const int barsLeft = std::max(0, static_cast<int>(std::lround(value(kStatusBarsLeft))));
         for (int i = 0; i < 5; ++i) {
             const float sx = 38.0f + i * 174.0f;
+            const bool isCurrent = (i == current);
+            const bool isPending = (i == pendingSection_);
             beginPath();
-            fillColor(i == current ? accentR() : 42, i == current ? accentG() : 49,
-                      i == current ? accentB() : 56, 255);
+            fillColor(isCurrent ? accentR() : isPending ? 200 : 42,
+                      isCurrent ? accentG() : isPending ? 148 : 49,
+                      isCurrent ? accentB() : isPending ? 36  : 56, 255);
             roundedRect(sx, 140, 162, 42, 5);
             fill();
-            fillColor(i == current ? 20 : 170, i == current ? 23 : 180,
-                      i == current ? 25 : 184, 255);
+            fillColor(isCurrent ? 20 : isPending ? 28 : 170,
+                      isCurrent ? 23 : isPending ? 21 : 180,
+                      isCurrent ? 25 : isPending ? 12 : 184, 255);
             fontSize(11);
             textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
             text(sx + 81, 161, sections[i], nullptr);
         }
-        char remaining[48] {};
-        std::snprintf(remaining, sizeof(remaining), "%s · %d bars remaining", sections[current], barsLeft);
+        char remaining[64] {};
+        if (pendingSection_ >= 0)
+            std::snprintf(remaining, sizeof(remaining), "→ jumping to %s at next bar", sections[pendingSection_]);
+        else
+            std::snprintf(remaining, sizeof(remaining), "%s · %d bars remaining", sections[current], barsLeft);
         fillColor(205, 212, 208, 255);
         fontSize(11);
         textAlign(ALIGN_LEFT | ALIGN_TOP);

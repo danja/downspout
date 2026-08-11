@@ -24,6 +24,7 @@ if(i==kStatusBarsLeft)return static_cast<float>(std::max(0,state_.nextSectionBar
 void setParameterValue(std::uint32_t i,float v)override{if(i<kParameterCount&&!kParameterSpecs[i].output)p_[i]=downspout::generative::clampParam(v,kParameterSpecs[i]);}
 void activate()override{reset(state_);}
 void run(const float**,float** out,std::uint32_t frames)override{std::fill_n(out[0],frames,0.0f);std::fill_n(out[1],frames,0.0f);
+if(p_[kPendingSection]>=0.5f){state_.pendingSection=static_cast<int>(std::lround(p_[kPendingSection]))-1;p_[kPendingSection]=0.0f;}
 auto block=process(state_,p_,coreTransport(getTimePosition()),frames,getSampleRate());for(std::uint32_t i=0;i<block.count;++i){MidiEvent e{};
 e.frame=block.events[i].frame;e.size=3;e.data[0]=block.events[i].data[0];e.data[1]=block.events[i].data[1];e.data[2]=block.events[i].data[2];writeMidiEvent(e);}}
 private:std::array<float,kParameterCount>p_{};downspout::conductor::State state_{};DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ConductorPlugin)};

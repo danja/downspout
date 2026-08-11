@@ -11,6 +11,7 @@ enum Param : std::uint32_t {
     kMode, kMinBars, kMaxBars, kIntroWeight, kDevelopWeight, kBreakWeight,
     kRepriseWeight, kCodaWeight, kBaseNote, kChannel, kSceneCc, kDensityCc,
     kEnergyCc, kMutationCc, kResetCc, kSeed, kStatusSection, kStatusBarsLeft,
+    kPendingSection,
     kParameterCount
 };
 inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs {{
@@ -24,6 +25,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs {{
     {"reset_cc","Reset CC",0,127,24,true}, {"seed","Seed",1,65535,2909,true},
     {"status_section","Current section",0,4,0,true,true},
     {"status_bars_left","Bars remaining",0,64,0,true,true},
+    {"pending_section","Pending section jump",0,5,0,true},
 }};
 
 struct State {
@@ -36,6 +38,7 @@ struct State {
     int currentBar = 0;
     std::uint64_t sectionSerial = 0;
     int activeNote = -1;
+    int pendingSection = -1;
 };
 void reset(State&) noexcept;
 MidiBlock process(State&, const std::array<float,kParameterCount>&, const Transport&,

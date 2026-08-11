@@ -448,40 +448,7 @@ protected:
 
     virtual void actionTriggered(const int) {}
 
-    static const char* pitchClassName(const int pitch) noexcept
-    {
-        static constexpr const char* names[] {
-            "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"
-        };
-        return names[(pitch % 12 + 12) % 12];
-    }
-
-    static void formatMidiNote(const int note, char* target, const std::size_t size) noexcept
-    {
-        std::snprintf(target, size, "%s%d", pitchClassName(note), note / 12 - 1);
-    }
-
-    int accentR() const noexcept { return accentR_; }
-    int accentG() const noexcept { return accentG_; }
-    int accentB() const noexcept { return accentB_; }
-    void commitParameter(const std::uint32_t index, const float next) { commit(index, next); }
-
-private:
-    struct Hit {
-        Box box {};
-        std::uint32_t parameter = 0;
-        HitKind kind = HitKind::Slider;
-        int detail = 0;
-        const char* help = nullptr;
-    };
-
-    void onNanoDisplay() override
-    {
-        beginPanel();
-        endPanel();
-    }
-
-    bool onMouse(const MouseEvent& event) override
+    bool handleMouse(const MouseEvent& event)
     {
         const float x = static_cast<float>(event.pos.getX());
         const float y = static_cast<float>(event.pos.getY());
@@ -520,6 +487,44 @@ private:
             return true;
         }
         return false;
+    }
+
+    static const char* pitchClassName(const int pitch) noexcept
+    {
+        static constexpr const char* names[] {
+            "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"
+        };
+        return names[(pitch % 12 + 12) % 12];
+    }
+
+    static void formatMidiNote(const int note, char* target, const std::size_t size) noexcept
+    {
+        std::snprintf(target, size, "%s%d", pitchClassName(note), note / 12 - 1);
+    }
+
+    int accentR() const noexcept { return accentR_; }
+    int accentG() const noexcept { return accentG_; }
+    int accentB() const noexcept { return accentB_; }
+    void commitParameter(const std::uint32_t index, const float next) { commit(index, next); }
+
+private:
+    struct Hit {
+        Box box {};
+        std::uint32_t parameter = 0;
+        HitKind kind = HitKind::Slider;
+        int detail = 0;
+        const char* help = nullptr;
+    };
+
+    void onNanoDisplay() override
+    {
+        beginPanel();
+        endPanel();
+    }
+
+    bool onMouse(const MouseEvent& event) override
+    {
+        return handleMouse(event);
     }
 
     bool onMotion(const MotionEvent& event) override
