@@ -31,6 +31,7 @@ enum ParameterIndex : std::uint32_t {
     kParamFormShape,
     kParamPhraseRole0,
     kParamClamp = kParamPhraseRole0 + 32,
+    kParamConductorChannel,
     kParameterCount
 };
 

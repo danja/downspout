@@ -39,6 +39,7 @@ using downspout::ground::kParamSequence;
 using downspout::ground::kParamStatusPhrase;
 using downspout::ground::kParamStatusRole;
 using downspout::ground::kParamStyle;
+using downspout::ground::kParamConductorChannel;
 using downspout::ground::kParamTension;
 using downspout::ground::kParamVary;
 
@@ -157,6 +158,11 @@ constexpr std::array<float, 16> kChannelValues = {
     9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f
 };
 
+constexpr const char* kConductorChNames[] = {
+    "Off", "1", "2", "3", "4", "5", "6", "7", "8",
+    "9", "10", "11", "12", "13", "14", "15", "16"
+};
+
 constexpr SelectorDef kSelectors[] = {
     {kParamScale, "Scale", kScaleNames, 20, nullptr},
     {kParamStyle, "Style", kStyleNames, static_cast<int>(std::size(kStyleNames)), nullptr},
@@ -165,6 +171,7 @@ constexpr SelectorDef kSelectors[] = {
     {kParamPhraseBars, "Phrase", kPhraseNames, static_cast<int>(std::size(kPhraseNames)), kPhraseValues},
     {kParamRegister, "Register", kRegisterNames, 4, kRegisterValues},
     {kParamChannel, "Channel", kChannelNames.data(), 16, kChannelValues.data()},
+    {kParamConductorChannel, "Conductor Ch", kConductorChNames, 17, nullptr},
 };
 
 constexpr ButtonDef kButtons[] = {
@@ -443,6 +450,7 @@ public:
         values_[kParamNoteLengthVariation] = 0.35f;
         values_[kParamSeed] = 1.0f;
         values_[kParamVary] = 0.0f;
+        values_[kParamConductorChannel] = 0.0f;
         values_[kParamStatusPhrase] = 1.0f;
         values_[kParamStatusRole] = 0.0f;
         for (std::size_t i = 0; i < kParamPhraseRoleCount; ++i) {

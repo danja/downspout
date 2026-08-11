@@ -27,6 +27,17 @@ notes are folded back into a bass register lane after form generation, phrase
 refresh, cell mutation, and loop variation. That keeps long-form motion from
 turning into large octave jumps when the part is used as the low anchor.
 
+### Conductor integration
+
+Ground accepts MIDI input for Conductor CC control. Set **Conductor Ch**
+(0 = off, 1–16) to the channel Conductor uses for its output (default 16).
+Conductor CC 21 drives density, CC 22 drives motion, CC 23 drives mutation rate,
+and CC 24 (value 127) triggers a new form. CC 20 (Scene) additionally maps the
+arrangement position to arc tension and writes a phrase role override for the
+current phrase, so Ground's peak aligns with the arrangement's energy peak and
+phrase roles track the song's section vocabulary.
+See [MIDI Mapping](../../midi-mapping.md).
+
 ### Status
 
 Under evaluation. It can generate useful long-form patterns but the user interface isn't very intuitive.

@@ -1,10 +1,11 @@
-# Conductor → BassGen / DrumGen MIDI Mapping
+# Conductor → Generator MIDI Mapping
 
 ## Overview
 
 Conductor emits MIDI CCs on each section transition to communicate song structure.
-BassGen and DrumGen can listen on a configurable channel and apply those CCs to live
-controls, so the generator behaviour changes automatically as the arrangement progresses.
+BassGen, DrumGen, and Ground can listen on a configurable channel and apply those CCs
+to live controls, so generator behaviour changes automatically as the arrangement
+progresses.
 
 ## Conductor output protocol
 
@@ -60,11 +61,42 @@ CC→control mapping:
 
 CC 20 (Scene) is not mapped — genre selection remains a manual choice.
 
+## Ground mapping
+
+Ground gains a MIDI input port and one new parameter:
+
+| Parameter | Symbol | Range | Default | Purpose |
+|-----------|--------|-------|---------|---------|
+| Conductor Ch | `conductor_ch` | 0–16 | 0 (off) | MIDI channel to receive Conductor CCs; 0 = disabled |
+
+CC→control mapping:
+
+| CC | Conductor name | Ground control | Notes |
+|----|---------------|----------------|-------|
+| 20 | Scene | `tension` + phrase role override | Tier 2: Scene 0–127 → tension 0.0–1.0. Tier 3: also writes a phrase role override for the current phrase (see table below) |
+| 21 | Density | `density` | Overall note density |
+| 22 | Energy | `motion` | Higher energy → more melodic movement |
+| 23 | Mutation | `vary` | Auto-mutation rate |
+| 24 | Reset | `actionNewForm` (trigger) | Fires when CC value = 127; regenerates the whole arc |
+
+### CC 20 scene → phrase role mapping (Tier 3)
+
+| CC 20 value | Conductor section | Ground phrase role |
+|:-----------:|-------------------|-------------------|
+| 0–16 | Intro | Statement |
+| 17–48 | Develop | Climb |
+| 49–80 | Break | Breakdown |
+| 81–112 | Reprise | Answer |
+| 113–127 | Coda | Cadence |
+
+The role is written as an override for the phrase currently playing.  Only the active
+phrase is overridden; earlier phrases retain their assigned roles.
+
 ## DAW routing
 
-1. Route Conductor MIDI output into BassGen/DrumGen MIDI input.
+1. Route Conductor MIDI output into BassGen, DrumGen, and/or Ground MIDI input.
 2. Set **Conductor Ch** on each generator to match Conductor's output channel (default 16).
-3. Leave generator Ch at its output channel (BassGen default 1, DrumGen default 10).
+3. Leave generator Ch at its output channel (BassGen default 1, DrumGen default 10, Ground default 1).
 
 The CC channel matching is done in the DPF wrapper before `processBlock`, so it is
 RT-safe and requires no changes to the portable cores.

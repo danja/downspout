@@ -18,51 +18,26 @@
 - Both plugins have a **Conductor Ch** dropdown in the UI (right panel, grouped under
   "Conductor" section in BassGen). See `docs/midi-mapping.md` for full protocol.
 
-### Pending — Ground integration
+### Done — Ground integration
 
-Ground has no MIDI input and is a long-form structural generator (8–64 bar forms,
-phrase roles, arc tension). Three tiers of Conductor integration are possible:
+Ground gained a MIDI input port and `Conductor Ch` parameter (0=off, 1–16).
+When active, Conductor CCs on that channel map to:
 
-**Tier 1 — same pattern as BassGen/DrumGen** (easy, follow existing code)
-
-Add MIDI input port and `Conductor Ch` parameter to Ground. Map:
+**Tier 1** — same CC pattern as BassGen/DrumGen:
 - CC21 Density → `density`
-- CC22 Energy → `motion` (more energy = more melodic movement)
+- CC22 Energy → `motion`
 - CC23 Mutation → `vary`
-- CC24 Reset=127 → `actionNewForm` (restart whole arc at Intro/Coda boundaries)
+- CC24 Reset=127 → `actionNewForm`
 
-**Tier 2 — section → arc shape** (one extra CC, unique to Ground)
-
+**Tier 2** — section → arc shape (unique to Ground):
 - CC20 Scene (0–127) → `tension` (scaled 0.0–1.0)
 
-Ground's `tension` controls where the form's dynamic peak sits. Mapping Conductor's
-scene position (Intro=0 … Coda=127) to tension means the arrangement position
-directly reshapes Ground's internal arc, so the form peaks align with the
-arrangement's energy peak. BassGen and DrumGen have no equivalent.
+**Tier 3** — section vocabulary → phrase role override for current phrase:
+- CC20 0–16 → Statement, 17–48 → Climb, 49–80 → Breakdown, 81–112 → Answer, 113–127 → Cadence
+- Writes the override immediately for the phrase currently playing (statusPhrase_)
+- Future work: override ahead by 1–2 phrases, or wait for phrase boundary
 
-**Tier 3 — section vocabulary → phrase role overrides** (most musically meaningful,
-more design work)
-
-Ground has a 32-slot phrase role override array and a `kParamStatusPhrase` output
-parameter. Conductor's section vocabulary maps naturally to Ground's phrase roles:
-
-| Conductor section | Scene CC | Ground phrase role |
-|---|---|---|
-| Intro | 0 | Statement |
-| Develop | 32 | Climb |
-| Break | 64 | Breakdown or Pedal |
-| Reprise | 96 | Answer |
-| Coda | 127 | Cadence → Release |
-
-On each section boundary (CC20 arrives), write the role override for the current
-phrase (read from `kParamStatusPhrase`) and optionally the next few phrases.
-
-Design questions to resolve before implementing Tier 3:
-- How many phrases ahead to override (1? 2? all remaining in the form?).
-- What happens when Conductor changes section mid-phrase — apply immediately or
-  wait for the next phrase boundary?
-- Whether the DPF wrapper should track `kParamStatusPhrase` internally or rely on
-  `parameterChanged` updates from the host.
+See `docs/midi-mapping.md` for the full protocol and mapping tables.
 
 ### Pending — configurable CC numbers
 

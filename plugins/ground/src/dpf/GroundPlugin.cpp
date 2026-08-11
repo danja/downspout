@@ -51,6 +51,7 @@ using downspout::ground::kParamSequence;
 using downspout::ground::kParamStatusPhrase;
 using downspout::ground::kParamStatusRole;
 using downspout::ground::kParamStyle;
+using downspout::ground::kParamConductorChannel;
 using downspout::ground::kParamTension;
 using downspout::ground::kParamVary;
 using downspout::ground::kStateCount;
@@ -473,6 +474,14 @@ protected:
             parameter.ranges.max = 1048576.0f;
             parameter.ranges.def = 0.0f;
             break;
+        case kParamConductorChannel:
+            parameter.name = "Conductor Ch";
+            parameter.symbol = "conductor_ch";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 16.0f;
+            parameter.ranges.def = 0.0f;
+            break;
         case kParamStatusPhrase:
             parameter.name = "Current Phrase";
             parameter.symbol = "status_phrase";
@@ -547,6 +556,7 @@ protected:
         case kParamActionNewForm: return static_cast<float>(controls_.actionNewForm);
         case kParamActionNewPhrase: return static_cast<float>(controls_.actionNewPhrase);
         case kParamActionMutateCell: return static_cast<float>(controls_.actionMutateCell);
+        case kParamConductorChannel: return static_cast<float>(conductorChannel_);
         case kParamStatusPhrase:
             return static_cast<float>(statusPhrase_);
         case kParamStatusRole:
@@ -594,6 +604,7 @@ protected:
         case kParamActionNewForm: controls_.actionNewForm = static_cast<int>(value); break;
         case kParamActionNewPhrase: controls_.actionNewPhrase = static_cast<int>(value); break;
         case kParamActionMutateCell: controls_.actionMutateCell = static_cast<int>(value); break;
+        case kParamConductorChannel: conductorChannel_ = static_cast<int>(value); break;
         case kParamStatusPhrase:
         case kParamStatusRole:
             break;
@@ -668,10 +679,43 @@ protected:
         syncStatusFromEngine();
     }
 
-    void run(const float**, float** outputs, uint32_t frames) override
+    void run(const float**, float** outputs, uint32_t frames, const MidiEvent* midiEvents, uint32_t midiEventCount) override
     {
         std::fill_n(outputs[0], frames, 0.0f);
         std::fill_n(outputs[1], frames, 0.0f);
+
+        if (conductorChannel_ > 0 && midiEvents != nullptr) {
+            const int ch = conductorChannel_ - 1;
+            for (uint32_t i = 0; i < midiEventCount; ++i) {
+                const auto& ev = midiEvents[i];
+                if (ev.size >= 3 && (ev.data[0] & 0xf0) == 0xb0 && (ev.data[0] & 0x0f) == ch) {
+                    const uint8_t cc  = ev.data[1];
+                    const uint8_t val = ev.data[2];
+                    switch (cc) {
+                    case 20: {
+                        controls_.tension = val / 127.0f;
+                        const int phraseIndex = std::max(0, statusPhrase_ - 1);
+                        if (phraseIndex < static_cast<int>(kParamPhraseRoleCount)) {
+                            int roleOverride;
+                            if (val <= 16)       roleOverride = 1;
+                            else if (val <= 48)  roleOverride = 3;
+                            else if (val <= 80)  roleOverride = 5;
+                            else if (val <= 112) roleOverride = 2;
+                            else                 roleOverride = 6;
+                            controls_.phraseRoleOverrides[static_cast<std::size_t>(phraseIndex)] = roleOverride;
+                        }
+                        break;
+                    }
+                    case 21: controls_.density = val / 127.0f; break;
+                    case 22: controls_.motion  = val / 127.0f; break;
+                    case 23: controls_.vary    = val / 127.0f; break;
+                    case 24: if (val == 127) ++controls_.actionNewForm; break;
+                    default: break;
+                    }
+                }
+            }
+            controls_ = downspout::ground::clampControls(controls_);
+        }
 
         const BlockResult result = downspout::ground::processBlock(engine_,
                                                                    controls_,
@@ -773,6 +817,7 @@ private:
     EngineState engine_ {};
     int statusPhrase_ = 1;
     int statusRole_ = 0;
+    int conductorChannel_ = 0;
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GroundPlugin)
 };
