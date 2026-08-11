@@ -193,6 +193,10 @@ protected:
             p.name = "Traj Mix Y"; p.symbol = "traj_mix_y"; p.ranges = {0.5f, 0.0f, 1.0f}; return;
 
         // ── Driver routing ─────────────────────────────────────────────────────
+        case kParamProgram:
+            p.name = "Program"; p.symbol = "program";
+            p.hints |= kParameterIsInteger;
+            p.ranges = {0.0f, 0.0f, 30.0f}; return;
         case kParamOutputChannel:
             p.name = "Output Channel"; p.symbol = "output_ch";
             p.hints |= kParameterIsInteger;
@@ -207,6 +211,11 @@ protected:
             p.ranges = {1.0f, 0.0f, 1.0f}; return;
         case kParamPanic:
             p.name = "Panic"; p.symbol = "panic";
+            p.hints = kParameterIsAutomatable | kParameterIsBoolean
+                    | kParameterIsInteger | kParameterIsTrigger;
+            p.ranges = {0.0f, 0.0f, 1.0f}; return;
+        case kParamRandomize:
+            p.name = "Randomise"; p.symbol = "randomize";
             p.hints = kParameterIsAutomatable | kParameterIsBoolean
                     | kParameterIsInteger | kParameterIsTrigger;
             p.ranges = {0.0f, 0.0f, 1.0f}; return;
@@ -231,10 +240,12 @@ protected:
             return processor_.getSynthParam(static_cast<std::size_t>(param - kParamAlgorithm));
 
         switch (param) {
+        case kParamProgram:        return static_cast<float>(program_);
         case kParamOutputChannel:  return static_cast<float>(outputChannel_);
         case kParamConductorCh:    return static_cast<float>(conductorCh_);
         case kParamPassInput:      return passInput_ ? 1.0f : 0.0f;
         case kParamPanic:          return 0.0f;
+        case kParamRandomize:      return 0.0f;
         case kParamMidiActivity:   return midiActivity_;
         default:                   return 0.0f;
         }
@@ -280,6 +291,10 @@ protected:
         case kParamTrajClip:       processor_.setTrajClip(value); break;
         case kParamTrajMixX:       processor_.setTrajMixX(value); break;
         case kParamTrajMixY:       processor_.setTrajMixY(value); break;
+        case kParamProgram:
+            program_ = std::max(0, std::min(30, static_cast<int>(std::lround(value))));
+            processor_.setProgram(program_);
+            break;
         case kParamOutputChannel:
             outputChannel_ = std::max(1, std::min(16, static_cast<int>(std::lround(value))));
             processor_.setOutputChannel(outputChannel_);
@@ -295,6 +310,10 @@ protected:
         case kParamPanic:
             if (value >= 0.5f)
                 processor_.triggerPanic();
+            break;
+        case kParamRandomize:
+            if (value >= 0.5f)
+                processor_.triggerRandomize();
             break;
         default: break;
         }
@@ -342,6 +361,7 @@ private:
     Processor processor_ {};
     int outputChannel_ = 1;
     int conductorCh_   = 0;
+    int program_       = 0;
     bool passInput_    = true;
     float midiActivity_ = 0.0f;
 

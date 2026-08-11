@@ -63,10 +63,12 @@ public:
     void setTrajClip(float v);
     void setTrajMixX(float v);
     void setTrajMixY(float v);
+    void setProgram(int prog);        // 0-30
     void setOutputChannel(int ch);   // 1-16
     void setConductorCh(int ch);     // 0=off, 1-16
     void setPassInput(bool v);
     void triggerPanic();
+    void triggerRandomize();
 
     // Getters
     [[nodiscard]] float getSynthParam(std::size_t paramIndex) const noexcept;
@@ -94,12 +96,16 @@ private:
     // Last CC values sent (to suppress redundant CCs)
     std::array<int, kSynthParamCount> lastCC_ {};
 
-    int outputChannel_   = 1;   // 1-16
-    int conductorCh_     = 0;   // 0=off
-    bool passInput_      = true;
-    bool panicPending_   = false;
-    float midiActivity_  = 0.0f;
-    double sampleRate_   = 44100.0;
+    int outputChannel_     = 1;     // 1-16
+    int conductorCh_       = 0;     // 0=off
+    int program_           = 0;     // 0-30
+    bool passInput_        = true;
+    bool panicPending_     = false;
+    bool programPending_   = false;
+    bool randomizePending_ = false;
+    float midiActivity_    = 0.0f;
+    double sampleRate_     = 44100.0;
+    std::uint32_t randomState_ = 0x3c6ef372u;
 };
 
 }  // namespace downspout::flues_synth_driver

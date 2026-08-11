@@ -69,10 +69,12 @@ enum Param : std::uint32_t {
     kParamTrajMixY,        // CC1   0-1   (shares CC with Intensity)
 
     // Driver routing
+    kParamProgram,         // MIDI Program Change 0-30
     kParamOutputChannel,   // 1-16
     kParamConductorCh,     // 0=off, 1-16
     kParamPassInput,       // boolean
     kParamPanic,           // trigger
+    kParamRandomize,       // trigger
 
     // Status output
     kParamMidiActivity,    // output: 0-1 flash
@@ -154,6 +156,166 @@ inline constexpr std::uint8_t kConductorCcDensity  = 21;
 inline constexpr std::uint8_t kConductorCcEnergy   = 22;
 inline constexpr std::uint8_t kConductorCcMutation = 23;
 inline constexpr std::uint8_t kConductorCcReset    = 24;
+
+// ── Program names ────────────────────────────────────────────────────────────
+
+inline constexpr std::array<const char*, 31> kProgramNames {{
+    "Disyn Echo",       "Disyn+Filter",      "Traj Polygon",
+    "Formant Voice",    "Hybrid Speech",     "Physical Model",
+    "Full Hybrid",      "Disyn Direct",      "ModFM Formant",
+    "DSF Inharmonic",   "PAF Direct",        "Cascaded DSF+PAF",
+    "Tanh Spectral",    "Hybrid DSF>Fmnt",   "Feedback ModFM",
+    "Dirichlet",        "Multi-Algo Demo",   "Spectral Sculptor",
+    "Hybrid Fmnt Eng",  "Cascaded Spectral", "Parallel Dist",
+    "Feedback Dist Net","Morph Spectral",    "Inharmonic Res",
+    "Adaptive Filter",  "Multi-Stage Wave",  "Freq-Dep Asym",
+    "Cross-Algo Mod",   "Vocal Morph",       "Taylor Series",
+    "Disyn+Delays"
+}};
+
+// ── Per-program slider availability ──────────────────────────────────────────
+
+// Mirrors flues-synth SynthParameter enum (midi_mapping.h)
+enum FlueSynthParam : std::uint8_t {
+    FSP_ALGORITHM = 0, FSP_P1, FSP_P2, FSP_P3, FSP_LEVEL,
+    FSP_NOISE, FSP_DC,
+    FSP_TSIDES, FSP_TPOS, FSP_TANGLE, FSP_TCLIP, FSP_TMIXX, FSP_TMIXY,
+    FSP_INTENSITY, FSP_TUNING, FSP_RATIO,
+    FSP_D1FB, FSP_D2FB, FSP_FFB,
+    FSP_FFREQ, FSP_FQ, FSP_FSHAPE,
+    FSP_F1, FSP_F2, FSP_F3, FSP_F4,
+    FSP_NASAL, FSP_SING, FSP_SHOUT, FSP_FRY,
+    FSP_ATTACK, FSP_RELEASE,
+    FSP_LFREQ, FSP_AMDEPTH, FSP_ITYPE, FSP_TJITTER,
+    FSP_NONE = 255
+};
+
+// 31 programs × 9 sliders (sourced from flues-synth midi_mapping.c)
+inline constexpr FlueSynthParam kProgramMap[31][9] = {
+    // 0: Disyn Echo
+    {FSP_ALGORITHM,FSP_P1,    FSP_P2,     FSP_ITYPE,    FSP_INTENSITY,FSP_TUNING,FSP_D1FB,  FSP_ATTACK,FSP_RELEASE},
+    // 1: Disyn+Filter
+    {FSP_FFREQ,   FSP_FQ,    FSP_FSHAPE,  FSP_LEVEL,    FSP_INTENSITY,FSP_TUNING,FSP_RATIO, FSP_ATTACK,FSP_RELEASE},
+    // 2: Trajectory Polygon
+    {FSP_TSIDES,  FSP_TPOS,  FSP_TANGLE,  FSP_TJITTER,  FSP_TCLIP,   FSP_TMIXX, FSP_TMIXY, FSP_ATTACK,FSP_RELEASE},
+    // 3: Formant Voice
+    {FSP_F1,      FSP_F2,    FSP_F3,      FSP_F4,       FSP_NOISE,   FSP_NASAL, FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 4: Hybrid Speech
+    {FSP_F1,      FSP_F2,    FSP_F3,      FSP_F4,       FSP_LEVEL,   FSP_NOISE, FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 5: Physical Model
+    {FSP_D1FB,    FSP_D2FB,  FSP_FFB,     FSP_ITYPE,    FSP_INTENSITY,FSP_TUNING,FSP_RATIO, FSP_ATTACK,FSP_RELEASE},
+    // 6: Full Hybrid
+    {FSP_D1FB,    FSP_D2FB,  FSP_FFB,     FSP_ITYPE,    FSP_INTENSITY,FSP_TUNING,FSP_RATIO, FSP_ATTACK,FSP_RELEASE},
+    // 7: Disyn Direct
+    {FSP_ALGORITHM,FSP_P1,   FSP_P2,      FSP_LEVEL,    FSP_INTENSITY,FSP_TUNING,FSP_RATIO, FSP_ATTACK,FSP_RELEASE},
+    // 8: ModFM Formant
+    {FSP_P1,      FSP_P2,    FSP_F1,      FSP_F2,       FSP_F3,      FSP_F4,    FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 9: DSF Inharmonic
+    {FSP_P1,      FSP_P2,    FSP_D1FB,    FSP_D2FB,     FSP_INTENSITY,FSP_TUNING,FSP_RATIO, FSP_ATTACK,FSP_RELEASE},
+    // 10: PAF Direct
+    {FSP_P1,      FSP_P2,    FSP_FFREQ,   FSP_FQ,       FSP_FSHAPE,  FSP_TUNING,FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 11: Cascaded DSF+PAF
+    {FSP_P1,      FSP_P2,    FSP_F1,      FSP_F2,       FSP_F3,      FSP_TUNING,FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 12: Tanh Spectral
+    {FSP_P1,      FSP_P2,    FSP_FFREQ,   FSP_FQ,       FSP_FSHAPE,  FSP_FFB,   FSP_INTENSITY,FSP_ATTACK,FSP_RELEASE},
+    // 13: Hybrid DSF>Fmnt
+    {FSP_P1,      FSP_P2,    FSP_F1,      FSP_F2,       FSP_F3,      FSP_F4,    FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 14: Feedback ModFM
+    {FSP_P1,      FSP_P2,    FSP_D1FB,    FSP_D2FB,     FSP_FFB,     FSP_TUNING,FSP_RATIO,  FSP_ATTACK,FSP_RELEASE},
+    // 15: Dirichlet
+    {FSP_P1,      FSP_P2,    FSP_FFREQ,   FSP_FQ,       FSP_FSHAPE,  FSP_TUNING,FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 16: Multi-Algo Demo
+    {FSP_ALGORITHM,FSP_P1,   FSP_P2,      FSP_LEVEL,    FSP_INTENSITY,FSP_TUNING,FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 17: Spectral Sculptor
+    {FSP_P1,      FSP_P2,    FSP_FFREQ,   FSP_FQ,       FSP_FSHAPE,  FSP_D1FB,  FSP_FFB,   FSP_ATTACK,FSP_RELEASE},
+    // 18: Hybrid Fmnt Eng
+    {FSP_P1,      FSP_P2,    FSP_P3,      FSP_LEVEL,    FSP_INTENSITY,FSP_TUNING,FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 19: Cascaded Spectral
+    {FSP_P1,      FSP_P2,    FSP_P3,      FSP_FFREQ,    FSP_FQ,      FSP_INTENSITY,FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 20: Parallel Dist
+    {FSP_P1,      FSP_P2,    FSP_P3,      FSP_INTENSITY,FSP_TUNING,  FSP_FFREQ, FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 21: Feedback Dist Net
+    {FSP_P1,      FSP_P2,    FSP_P3,      FSP_INTENSITY,FSP_TUNING,  FSP_FFREQ, FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 22: Morph Spectral
+    {FSP_P1,      FSP_P2,    FSP_P3,      FSP_INTENSITY,FSP_TUNING,  FSP_FFREQ, FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 23: Inharmonic Res
+    {FSP_P1,      FSP_P2,    FSP_P3,      FSP_TUNING,   FSP_INTENSITY,FSP_D1FB, FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 24: Adaptive Filter
+    {FSP_P1,      FSP_P2,    FSP_P3,      FSP_FFREQ,    FSP_FQ,      FSP_LFREQ, FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 25: Multi-Stage Wave
+    {FSP_P1,      FSP_P2,    FSP_P3,      FSP_FFREQ,    FSP_FQ,      FSP_INTENSITY,FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 26: Freq-Dep Asym
+    {FSP_P1,      FSP_P2,    FSP_P3,      FSP_FFREQ,    FSP_FQ,      FSP_LFREQ, FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 27: Cross-Algo Mod
+    {FSP_P1,      FSP_P2,    FSP_P3,      FSP_INTENSITY,FSP_TUNING,  FSP_FFREQ, FSP_TJITTER,FSP_ATTACK,FSP_RELEASE},
+    // 28: Vocal Morph
+    {FSP_P1,      FSP_P2,    FSP_F1,      FSP_F2,       FSP_NASAL,   FSP_SING,  FSP_SHOUT,  FSP_ATTACK,FSP_RELEASE},
+    // 29: Taylor Series
+    {FSP_P1,      FSP_P2,    FSP_P3,      FSP_TJITTER,  FSP_NONE,    FSP_NONE,  FSP_NONE,   FSP_ATTACK,FSP_RELEASE},
+    // 30: Disyn+Delays
+    {FSP_D1FB,    FSP_D2FB,  FSP_FFB,     FSP_LEVEL,    FSP_INTENSITY,FSP_TUNING,FSP_RATIO, FSP_ATTACK,FSP_RELEASE},
+};
+
+inline FlueSynthParam paramToFlueSynthParam(Param p) noexcept
+{
+    switch (p) {
+    case kParamAlgorithm:      return FSP_ALGORITHM;
+    case kParamDisynP1:        return FSP_P1;
+    case kParamDisynP2:        return FSP_P2;
+    case kParamDisynP3:        return FSP_P3;
+    case kParamNoiseLevel:     return FSP_NOISE;
+    case kParamDcLevel:        return FSP_DC;
+    case kParamInterfaceType:  return FSP_ITYPE;
+    case kParamIntensity:      return FSP_INTENSITY;
+    case kParamF1:             return FSP_F1;
+    case kParamF2:             return FSP_F2;
+    case kParamF3:             return FSP_F3;
+    case kParamF4:             return FSP_F4;
+    case kParamNasal:          return FSP_NASAL;
+    case kParamSing:           return FSP_SING;
+    case kParamShout:          return FSP_SHOUT;
+    case kParamFry:            return FSP_FRY;
+    case kParamAttack:         return FSP_ATTACK;
+    case kParamRelease:        return FSP_RELEASE;
+    case kParamTuning:         return FSP_TUNING;
+    case kParamDelay1Fb:       return FSP_D1FB;
+    case kParamDelay2Fb:       return FSP_D2FB;
+    case kParamDelayRatio:     return FSP_RATIO;
+    case kParamFilterFb:       return FSP_FFB;
+    case kParamFilterFreq:     return FSP_FFREQ;
+    case kParamFilterQ:        return FSP_FQ;
+    case kParamFilterShape:    return FSP_FSHAPE;
+    case kParamLfoFreq:        return FSP_LFREQ;
+    case kParamAmFmDepth:      return FSP_AMDEPTH;
+    case kParamTrajSides:      return FSP_TSIDES;
+    case kParamTrajStartPos:   return FSP_TPOS;
+    case kParamTrajStartAngle: return FSP_TANGLE;
+    case kParamTrajJitter:     return FSP_TJITTER;
+    case kParamTrajClip:       return FSP_TCLIP;
+    case kParamTrajMixX:       return FSP_TMIXX;
+    case kParamTrajMixY:       return FSP_TMIXY;
+    default:                   return FSP_NONE;
+    }
+}
+
+// Returns true if param p is active for the given program (0-30).
+// Params with dedicated fixed CCs always return true.
+inline bool isParamAvailableForProgram(Param p, int prog) noexcept
+{
+    const FlueSynthParam fsp = paramToFlueSynthParam(p);
+    if (fsp == FSP_NONE) return true;  // Gain, driver params — always on
+    // Always-on: fixed dedicated CCs, plus Attack/Release in every program
+    if (fsp == FSP_ATTACK   || fsp == FSP_RELEASE) return true;
+    if (fsp == FSP_NASAL    || fsp == FSP_SING  ||
+        fsp == FSP_SHOUT    || fsp == FSP_FRY)   return true;
+    if (fsp == FSP_LFREQ    || fsp == FSP_AMDEPTH) return true;
+    if (fsp == FSP_DC       || fsp == FSP_NOISE)   return true;
+    if (fsp == FSP_ALGORITHM) return true;
+    const int pg = prog < 0 ? 0 : (prog > 30 ? 30 : prog);
+    for (int s = 0; s < 9; ++s)
+        if (kProgramMap[pg][s] == fsp) return true;
+    return false;
+}
 
 // Interface type names (CC24, 0-11)
 inline constexpr std::array<const char*, 12> kInterfaceTypeNames {{

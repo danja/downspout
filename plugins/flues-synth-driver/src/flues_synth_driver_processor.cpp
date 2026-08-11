@@ -105,6 +105,12 @@ void Processor::setTrajMixY(float v)      { SETF(kParamTrajMixY,      0.0f, 1.0f
 #undef SETF
 #undef SETB
 
+void Processor::setProgram(const int prog)
+{
+    program_        = std::clamp(prog, 0, 30);
+    programPending_ = true;
+}
+
 void Processor::setOutputChannel(const int ch)
 {
     outputChannel_ = std::clamp(ch, 1, 16);
@@ -123,6 +129,11 @@ void Processor::setPassInput(const bool v)
 void Processor::triggerPanic()
 {
     panicPending_ = true;
+}
+
+void Processor::triggerRandomize()
+{
+    randomizePending_ = true;
 }
 
 float Processor::getSynthParam(const std::size_t paramIndex) const noexcept
@@ -203,6 +214,16 @@ void Processor::handleConductorCC(ProcessResult& result, const std::uint32_t fra
     }
 }
 
+// ── LCG random helper ─────────────────────────────────────────────────────────
+
+namespace {
+float randomFloat(std::uint32_t& state) noexcept
+{
+    state = state * 1664525u + 1013904223u;
+    return static_cast<float>(state >> 16) / 65535.0f;
+}
+}  // namespace
+
 // ── Main process block ────────────────────────────────────────────────────────
 
 ProcessResult Processor::processBlock(const std::uint32_t frameCount,
@@ -218,6 +239,31 @@ ProcessResult Processor::processBlock(const std::uint32_t frameCount,
         emitDefaultCCs(result, 0);
         dirty_.fill(false);
         lastCC_.fill(-1);
+    }
+
+    // Program Change
+    if (programPending_) {
+        programPending_ = false;
+        if (result.eventCount < kMaxOutputEvents) {
+            MidiMessage& m = result.events[result.eventCount++];
+            m.frame   = 0;
+            m.size    = 2;
+            m.data[0] = static_cast<std::uint8_t>(0xC0 | (outputChannel_ - 1));
+            m.data[1] = static_cast<std::uint8_t>(program_);
+        }
+    }
+
+    // Randomize: set all non-boolean synth params to random values in range
+    if (randomizePending_) {
+        randomizePending_ = false;
+        const std::size_t trajStart = kParamTrajSides - kParamAlgorithm;
+        for (std::size_t i = 0; i < trajStart; ++i) {
+            const SynthCC& spec = kSynthCCs[i];
+            if (spec.boolean) continue;
+            const float r = randomFloat(randomState_);
+            params_[i] = spec.minimum + r * (spec.maximum - spec.minimum);
+            dirty_[i]  = true;
+        }
     }
 
     // Emit dirty params at frame 0

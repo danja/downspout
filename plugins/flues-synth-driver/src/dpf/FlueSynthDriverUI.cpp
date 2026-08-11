@@ -6,6 +6,7 @@
 #include <array>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -154,7 +155,8 @@ protected:
                 return true;
             }
         }
-        if (panicRect_.contains(x, y)) { trigVal(kParamPanic); return true; }
+        if (panicRect_.contains(x, y))    { trigVal(kParamPanic);     return true; }
+        if (randomiseRect_.contains(x, y)) { trigVal(kParamRandomize); return true; }
         return false;
     }
 
@@ -200,7 +202,8 @@ private:
     std::vector<uint32_t> selectorParams_ {};
     std::vector<int>      selectorCounts_ {};
 
-    Rect  panicRect_    {};
+    Rect  panicRect_      {};
+    Rect  randomiseRect_  {};
     int   activeKnob_   = -1;
     float dragStartY_   = 0.0f;
     float dragStartVal_ = 0.0f;
@@ -239,6 +242,12 @@ private:
         int cur = static_cast<int>(std::lround(values_[p]));
         cur     = ((cur + delta) % count + count) % count;
         setVal(p, static_cast<float>(cur));
+    }
+
+    bool avail(Param p) const noexcept
+    {
+        const int prog = std::clamp(static_cast<int>(values_[kParamProgram]), 0, 30);
+        return isParamAvailableForProgram(p, prog);
     }
 
     // ── Draw primitives ───────────────────────────────────────────────────────
@@ -298,9 +307,29 @@ private:
                     condLabel.c_str(), 185, 140, 220);
         cx += 132.0f;
 
+        // Program selector (31 programs)
+        const int prog = std::clamp(static_cast<int>(values_[kParamProgram]), 0, 30);
+        char progLabel[40];
+        std::snprintf(progLabel, sizeof(progLabel), "%d: %s", prog, kProgramNames[prog]);
+        addSelector({cx, y + 8.0f, 210.0f, 32.0f}, kParamProgram, 31,
+                    progLabel, 220, 170, 80);
+        cx += 222.0f;
+
         const bool pass = values_[kParamPassInput] >= 0.5f;
         addToggle({cx, y + 8.0f, 106.0f, 32.0f}, kParamPassInput,
                   pass ? "Pass In" : "Block In", pass, 110, 185, 140);
+        cx += 118.0f;
+
+        // Randomise button
+        randomiseRect_ = {cx, y + 8.0f, 100.0f, 32.0f};
+        beginPath(); roundedRect(randomiseRect_.x, randomiseRect_.y,
+                                 randomiseRect_.w, randomiseRect_.h, 10.0f);
+        fillColor(90, 160, 200, 38); fill();
+        strokeColor(100, 170, 210, 160); strokeWidth(1.2f); stroke(); closePath();
+        fontSize(11.0f); textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+        fillColor(180, 220, 240, 255);
+        text(randomiseRect_.x + randomiseRect_.w * 0.5f,
+             randomiseRect_.y + randomiseRect_.h * 0.5f + 1.0f, "Randomise", nullptr);
 
         panicRect_ = {x + w - 104.0f, y + 8.0f, 92.0f, 32.0f};
         beginPath(); roundedRect(panicRect_.x, panicRect_.y, panicRect_.w, panicRect_.h, 10.0f);
@@ -355,9 +384,9 @@ private:
         const float kh = h - 80.0f;
         const float kw = (w - 38.0f) / 4.0f;
         const float py = ky + 36.0f;
-        addKnob({x + 8.0f,               py, kw, kh}, {kParamDisynP1,"P1",  0.0f,1.0f,false}, 78,155,220);
-        addKnob({x + 8.0f + (kw+6.0f),   py, kw, kh}, {kParamDisynP2,"P2",  0.0f,1.0f,false}, 78,155,220);
-        addKnob({x + 8.0f + (kw+6.0f)*2, py, kw, kh}, {kParamDisynP3,"P3",  0.0f,1.0f,false}, 78,155,220);
+        addKnob({x + 8.0f,               py, kw, kh}, {kParamDisynP1,"P1",  0.0f,1.0f,false}, 78,155,220, avail(kParamDisynP1));
+        addKnob({x + 8.0f + (kw+6.0f),   py, kw, kh}, {kParamDisynP2,"P2",  0.0f,1.0f,false}, 78,155,220, avail(kParamDisynP2));
+        addKnob({x + 8.0f + (kw+6.0f)*2, py, kw, kh}, {kParamDisynP3,"P3",  0.0f,1.0f,false}, 78,155,220, avail(kParamDisynP3));
         addKnob({x + 8.0f + (kw+6.0f)*3, py, kw, kh}, {kParamGain,  "Gain",0.0f,1.0f,false}, 210,170,90);
     }
 
@@ -368,13 +397,14 @@ private:
 
         const int it = std::clamp(static_cast<int>(values_[kParamInterfaceType]), 0, 11);
         addSelector({x + 8.0f, ky, w - 16.0f, 28.0f},
-                    kParamInterfaceType, 12, kInterfaceTypeNames[it], 140, 100, 200);
+                    kParamInterfaceType, 12, kInterfaceTypeNames[it], 140, 100, 200,
+                    avail(kParamInterfaceType));
 
         const float kh = h - 80.0f;
         const float kw = (w - 22.0f) * 0.5f;
         const float py = ky + 36.0f;
-        addKnob({x + 6.0f,       py, kw, kh}, {kParamIntensity,"Intensity",0.0f,1.0f,false}, 155,120,210);
-        addKnob({x + 6.0f+kw+10.f,py, kw, kh}, {kParamTuning,  "Tuning", -12.0f,12.0f,true},  180,160,100);
+        addKnob({x + 6.0f,       py, kw, kh}, {kParamIntensity,"Intensity",0.0f,1.0f,false}, 155,120,210, avail(kParamIntensity));
+        addKnob({x + 6.0f+kw+10.f,py, kw, kh}, {kParamTuning,  "Tuning", -12.0f,12.0f,true},  180,160,100, avail(kParamTuning));
     }
 
     void drawGroupFormants(float x, float y, float w, float h)
@@ -389,8 +419,9 @@ private:
             {kParamF3,"F3 Lips",1500.0f,4000.0f,false},
             {kParamF4,"F4 Qual",2500.0f,4500.0f,false},
         };
+        const Param fparams[] = {kParamF1, kParamF2, kParamF3, kParamF4};
         for (int i = 0; i < 4; ++i)
-            addKnob({x + 8.0f + i*(kw+6.0f), ky, kw, kh}, ks[i], 80,190,150);
+            addKnob({x + 8.0f + i*(kw+6.0f), ky, kw, kh}, ks[i], 80,190,150, avail(fparams[i]));
     }
 
     void drawGroupVocalEnv(float x, float y, float w, float h)
@@ -411,8 +442,8 @@ private:
         const float envY = ky + 86.0f;
         const float kw   = (w - 24.0f) * 0.5f;
         const float kh   = h - (envY - y) - 10.0f;
-        addKnob({x + 8.0f,        envY, kw, kh}, {kParamAttack, "Attack", 0.001f,1.0f,false}, 210,155,80);
-        addKnob({x + 8.0f+kw+8.0f,envY, kw, kh}, {kParamRelease,"Release",0.01f, 3.0f,false}, 210,155,80);
+        addKnob({x + 8.0f,        envY, kw, kh}, {kParamAttack, "Attack", 0.001f,1.0f,false}, 210,155,80, avail(kParamAttack));
+        addKnob({x + 8.0f+kw+8.0f,envY, kw, kh}, {kParamRelease,"Release",0.01f, 3.0f,false}, 210,155,80, avail(kParamRelease));
     }
 
     void drawGroupFX(float x, float y, float w, float h)
@@ -433,9 +464,11 @@ private:
             {kParamNoiseLevel,"Noise",  0.0f, 1.0f, false},
             {kParamDcLevel,   "DC",     0.0f, 1.0f, false},
         };
+        const Param topParams[] = {kParamDelayRatio, kParamDelay2Fb, kParamFilterFreq, kParamFilterQ};
+        const Param botParams[] = {kParamDelay1Fb, kParamFilterFb, kParamNoiseLevel, kParamDcLevel};
         for (int i = 0; i < 4; ++i) {
-            addKnob({x + 8.0f + i*(kw+6.0f), ky,          kw, kh}, top[i], 100,175,200);
-            addKnob({x + 8.0f + i*(kw+6.0f), ky+kh+12.0f, kw, kh}, bot[i], 100,175,200);
+            addKnob({x + 8.0f + i*(kw+6.0f), ky,          kw, kh}, top[i], 100,175,200, avail(topParams[i]));
+            addKnob({x + 8.0f + i*(kw+6.0f), ky+kh+12.0f, kw, kh}, bot[i], 100,175,200, avail(botParams[i]));
         }
     }
 
@@ -450,8 +483,9 @@ private:
             {kParamFilterFreq, "Freq",   20.0f,20000.0f,false},
             {kParamFilterQ,    "Q",      0.1f, 10.0f,   false},
         };
+        const Param fks[] = {kParamFilterShape, kParamFilterFreq, kParamFilterQ};
         for (int i = 0; i < 3; ++i)
-            addKnob({x + 8.0f, ky + i*(kh+8.0f), kw, kh-4.0f}, ks[i], 150,205,120);
+            addKnob({x + 8.0f, ky + i*(kh+8.0f), kw, kh-4.0f}, ks[i], 150,205,120, avail(fks[i]));
     }
 
     void drawGroupLFO(float x, float y, float w, float h)
@@ -460,19 +494,13 @@ private:
         const float ky = y + 32.0f;
         const float kw = w - 16.0f;
         const float kh = (h - 44.0f - 8.0f) * 0.5f;
-        addKnob({x + 8.0f, ky,          kw, kh}, {kParamLfoFreq,  "Rate", 0.1f, 20.0f,false}, 200,130,185);
-        addKnob({x + 8.0f, ky+kh+8.0f,  kw, kh}, {kParamAmFmDepth,"AM/FM",-1.0f,1.0f, false}, 200,130,185);
+        addKnob({x + 8.0f, ky,          kw, kh}, {kParamLfoFreq,  "Rate", 0.1f, 20.0f,false}, 200,130,185, avail(kParamLfoFreq));
+        addKnob({x + 8.0f, ky+kh+8.0f,  kw, kh}, {kParamAmFmDepth,"AM/FM",-1.0f,1.0f, false}, 200,130,185, avail(kParamAmFmDepth));
     }
 
     void drawGroupTrajectory(float x, float y, float w, float h)
     {
         drawPanel(x, y, w, h, "Trajectory", 185, 180, 80);
-
-        fontSize(9.0f); textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(150, 140, 80, 200);
-        text(x + 8.0f, y + 20.0f,
-             "Prog 2 only — shares CC with Env/F1/F3/Intensity", nullptr);
-
         const float ky = y + 36.0f;
         const float kh = (h - 48.0f) * 0.5f - 6.0f;
         const float kw = (w - 8.0f * 5.0f) / 4.0f;
@@ -488,10 +516,12 @@ private:
             {kParamTrajMixX, "Mix X", 0.0f,1.0f,false},
             {kParamTrajMixY, "Mix Y", 0.0f,1.0f,false},
         };
+        const Param topTP[] = {kParamTrajSides, kParamTrajStartPos, kParamTrajStartAngle, kParamTrajJitter};
+        const Param botTP[] = {kParamTrajClip, kParamTrajMixX, kParamTrajMixY};
         for (int i = 0; i < 4; ++i)
-            addKnob({x + 8.0f + i*(kw+8.0f), ky,           kw, kh}, top[i], 185,180,80);
+            addKnob({x + 8.0f + i*(kw+8.0f), ky,           kw, kh}, top[i], 185,180,80, avail(topTP[i]));
         for (int i = 0; i < 3; ++i)
-            addKnob({x + 8.0f + i*(kw+8.0f), ky+kh+10.0f,  kw, kh}, bot[i], 185,180,80);
+            addKnob({x + 8.0f + i*(kw+8.0f), ky+kh+10.0f,  kw, kh}, bot[i], 185,180,80, avail(botTP[i]));
     }
 
     // ── Widget factories ──────────────────────────────────────────────────────
@@ -509,10 +539,12 @@ private:
         text(x + 8.0f, y + 7.0f, title, nullptr);
     }
 
-    void addKnob(Rect rect, Knob k, int r, int g, int b)
+    void addKnob(Rect rect, Knob k, int r, int g, int b, bool available = true)
     {
         knobRects_.push_back(rect);
         knobs_.push_back(k);
+
+        if (!available) globalAlpha(0.32f);
 
         const float val  = values_[k.param];
         const float norm = clampf((val - k.min) / (k.max - k.min + 1e-6f), 0.0f, 1.0f);
@@ -520,7 +552,6 @@ private:
         beginPath(); roundedRect(rect.x, rect.y, rect.w, rect.h, 9.0f);
         fillColor(22, 28, 38, 255); fill(); closePath();
 
-        // Track
         const float tx = rect.x + rect.w * 0.35f;
         const float tw = rect.w * 0.30f;
         const float ty = rect.y + 18.0f;
@@ -528,7 +559,6 @@ private:
         beginPath(); roundedRect(tx, ty, tw, th, 3.0f);
         fillColor(r, g, b, 40); fill(); closePath();
 
-        // Fill
         const float fh = th * norm;
         beginPath(); roundedRect(tx, ty + th - fh, tw, fh, 3.0f);
         fillColor(r, g, b, 200); fill(); closePath();
@@ -539,15 +569,19 @@ private:
 
         fontSize(9.0f); textAlign(ALIGN_CENTER | ALIGN_BOTTOM);
         fillColor(155, 168, 182, 255);
-        text(rect.x + rect.w * 0.5f, rect.y + rect.h - 2.0f,
+        text(rect.x + rect.w * 0.5f, rect.y + rect.h - 4.0f,
              fmtValue(k.param, val).c_str(), nullptr);
+
+        if (!available) globalAlpha(1.0f);
     }
 
     void addToggle(Rect rect, uint32_t param, const char* label,
-                   bool active, int r, int g, int b)
+                   bool active, int r, int g, int b, bool available = true)
     {
         toggleRects_.push_back(rect);
         toggleParams_.push_back(param);
+
+        if (!available) globalAlpha(0.32f);
 
         beginPath(); roundedRect(rect.x, rect.y, rect.w, rect.h, 9.0f);
         fillColor(r, g, b, active ? 55 : 18); fill();
@@ -557,14 +591,18 @@ private:
         fontSize(11.0f); textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
         fillColor(active ? 248 : 185, active ? 248 : 192, active ? 248 : 200, 255);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 1.0f, label, nullptr);
+
+        if (!available) globalAlpha(1.0f);
     }
 
     void addSelector(Rect rect, uint32_t param, int count,
-                     const char* currentLabel, int r, int g, int b)
+                     const char* currentLabel, int r, int g, int b, bool available = true)
     {
         selectorRects_.push_back(rect);
         selectorParams_.push_back(param);
         selectorCounts_.push_back(count);
+
+        if (!available) globalAlpha(0.32f);
 
         beginPath(); roundedRect(rect.x, rect.y, rect.w, rect.h, 9.0f);
         fillColor(r, g, b, 26); fill();
@@ -580,6 +618,8 @@ private:
         text(rect.x + 6.0f, rect.y + rect.h * 0.5f + 1.0f, "<", nullptr);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
         text(rect.x + rect.w - 6.0f, rect.y + rect.h * 0.5f + 1.0f, ">", nullptr);
+
+        if (!available) globalAlpha(1.0f);
     }
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FlueSynthDriverUI)
