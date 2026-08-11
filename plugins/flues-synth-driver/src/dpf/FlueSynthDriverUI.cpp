@@ -156,6 +156,7 @@ protected:
 
         for (std::size_t i = 0; i < toggleRects_.size(); ++i) {
             if (toggleRects_[i].contains(x, y)) {
+                if (!toggleAvail_[i]) return true;
                 const uint32_t p = toggleParams_[i];
                 setVal(p, values_[p] >= 0.5f ? 0.0f : 1.0f);
                 return true;
@@ -163,6 +164,7 @@ protected:
         }
         for (std::size_t i = 0; i < selectorRects_.size(); ++i) {
             if (selectorRects_[i].contains(x, y)) {
+                if (!selectorAvail_[i]) return true;
                 // Toggle dropdown open/closed
                 openDropdown_  = (openDropdown_ == static_cast<int>(i)) ? -1 : static_cast<int>(i);
                 dropScrollOff_ = 0.0f;
@@ -180,6 +182,7 @@ protected:
         }
         for (std::size_t i = 0; i < knobRects_.size(); ++i) {
             if (knobRects_[i].contains(x, y)) {
+                if (!knobAvail_[i]) return true;
                 activeKnob_   = static_cast<int>(i);
                 dragStartY_   = y;
                 dragStartVal_ = values_[knobs_[i].param];
@@ -222,10 +225,14 @@ protected:
         }
 
         for (std::size_t i = 0; i < selectorRects_.size(); ++i) {
-            if (selectorRects_[i].contains(x, y)) { cycleSelector(i, delta); return true; }
+            if (selectorRects_[i].contains(x, y)) {
+                if (!selectorAvail_[i]) return true;
+                cycleSelector(i, delta); return true;
+            }
         }
         for (std::size_t i = 0; i < knobRects_.size(); ++i) {
             if (knobRects_[i].contains(x, y)) {
+                if (!knobAvail_[i]) return true;
                 const Knob& k  = knobs_[i];
                 const float step = k.integer ? 1.0f : (k.max - k.min) * 0.01f;
                 setVal(k.param, clampf(values_[k.param] + delta * step, k.min, k.max));
@@ -240,12 +247,15 @@ private:
 
     std::vector<Rect>     knobRects_ {};
     std::vector<Knob>     knobs_ {};
+    std::vector<bool>     knobAvail_ {};
     std::vector<Rect>     toggleRects_ {};
     std::vector<uint32_t> toggleParams_ {};
+    std::vector<bool>     toggleAvail_ {};
     std::vector<Rect>     selectorRects_ {};
     std::vector<uint32_t> selectorParams_ {};
     std::vector<int>      selectorCounts_ {};
     std::vector<int>      selectorMinVals_ {};
+    std::vector<bool>     selectorAvail_ {};
 
     Rect  panicRect_      {};
     Rect  randomiseRect_  {};
@@ -257,10 +267,10 @@ private:
 
     void clearWidgets()
     {
-        knobRects_.clear(); knobs_.clear();
-        toggleRects_.clear(); toggleParams_.clear();
+        knobRects_.clear(); knobs_.clear(); knobAvail_.clear();
+        toggleRects_.clear(); toggleParams_.clear(); toggleAvail_.clear();
         selectorRects_.clear(); selectorParams_.clear();
-        selectorCounts_.clear(); selectorMinVals_.clear();
+        selectorCounts_.clear(); selectorMinVals_.clear(); selectorAvail_.clear();
     }
 
     // ── Interaction ───────────────────────────────────────────────────────────
@@ -640,9 +650,9 @@ private:
     void drawGroupTrajectory(float x, float y, float w, float h)
     {
         drawPanel(x, y, w, h, "Trajectory", 185, 180, 80);
-        const float ky = y + 36.0f;
-        const float kh = (h - 48.0f) * 0.5f - 6.0f;
-        const float kw = (w - 8.0f * 5.0f) / 4.0f;
+        const float ky = y + 26.0f;
+        const float kh = std::min((h - 38.0f) * 0.5f - 4.0f, 110.0f);
+        const float kw = (w - 6.0f * 5.0f) / 4.0f;
 
         const Knob top[] = {
             {kParamTrajSides,      "Sides",  3.0f, 24.0f,true},
@@ -658,9 +668,9 @@ private:
         const Param topTP[] = {kParamTrajSides, kParamTrajStartPos, kParamTrajStartAngle, kParamTrajJitter};
         const Param botTP[] = {kParamTrajClip, kParamTrajMixX, kParamTrajMixY};
         for (int i = 0; i < 4; ++i)
-            addKnob({x + 8.0f + i*(kw+8.0f), ky,           kw, kh}, top[i], 185,180,80, avail(topTP[i]));
+            addKnob({x + 6.0f + i*(kw+6.0f), ky,          kw, kh}, top[i], 185,180,80, avail(topTP[i]));
         for (int i = 0; i < 3; ++i)
-            addKnob({x + 8.0f + i*(kw+8.0f), ky+kh+10.0f,  kw, kh}, bot[i], 185,180,80, avail(botTP[i]));
+            addKnob({x + 6.0f + i*(kw+6.0f), ky+kh+6.0f,  kw, kh}, bot[i], 185,180,80, avail(botTP[i]));
     }
 
     // ── Widget factories ──────────────────────────────────────────────────────
@@ -682,8 +692,9 @@ private:
     {
         knobRects_.push_back(rect);
         knobs_.push_back(k);
+        knobAvail_.push_back(available);
 
-        if (!available) globalAlpha(0.32f);
+        if (!available) globalAlpha(0.20f);
 
         const float val  = values_[k.param];
         const float norm = clampf((val - k.min) / (k.max - k.min + 1e-6f), 0.0f, 1.0f);
@@ -719,8 +730,9 @@ private:
     {
         toggleRects_.push_back(rect);
         toggleParams_.push_back(param);
+        toggleAvail_.push_back(available);
 
-        if (!available) globalAlpha(0.32f);
+        if (!available) globalAlpha(0.20f);
 
         beginPath(); roundedRect(rect.x, rect.y, rect.w, rect.h, 9.0f);
         fillColor(r, g, b, active ? 55 : 18); fill();
@@ -741,8 +753,9 @@ private:
         selectorParams_.push_back(param);
         selectorCounts_.push_back(count);
         selectorMinVals_.push_back(minVal);
+        selectorAvail_.push_back(available);
 
-        if (!available) globalAlpha(0.32f);
+        if (!available) globalAlpha(0.20f);
 
         beginPath(); roundedRect(rect.x, rect.y, rect.w, rect.h, 9.0f);
         fillColor(r, g, b, 26); fill();

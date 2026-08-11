@@ -17,6 +17,18 @@ static ProcessResult runBlock(Processor& proc, const MidiMessage* in = nullptr, 
     return proc.processBlock(512, in, inCount);
 }
 
+static bool hasCC(const ProcessResult& r, uint8_t cc, int value = -1)
+{
+    for (uint32_t i = 0; i < r.eventCount; ++i) {
+        if (r.events[i].size == 3 && (r.events[i].data[0] & 0xF0) == 0xB0
+            && r.events[i].data[1] == cc) {
+            if (value < 0 || r.events[i].data[2] == static_cast<uint8_t>(value))
+                return true;
+        }
+    }
+    return false;
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 static void testInit()
@@ -36,11 +48,9 @@ static void testDirtyEmitsCCs()
     Processor p;
     p.init(44100.0);
 
-    // First block should emit all default CCs (all dirty after activate)
+    // First block emits the 9 slider CCs for program 0
     const auto r = runBlock(p);
-    // Must have emitted exactly the non-trajectory synth params (trajectory skipped on init)
-    const std::size_t trajStart = kParamTrajSides - kParamAlgorithm;
-    CHECK(r.eventCount >= trajStart, "first block emits non-trajectory default CCs");
+    CHECK(r.eventCount == 9, "first block emits exactly 9 slider CCs");
 
     // All events should be CC messages on channel 1
     bool allCC = true;
@@ -49,6 +59,13 @@ static void testDirtyEmitsCCs()
             allCC = false;
     }
     CHECK(allCC, "all emitted events are CCs");
+
+    // Program 0 slider 6 (CC1) = Delay1 FB should be present
+    CHECK(hasCC(r, 1), "prog0 slider CC1 (Delay1 FB) in first block");
+    // Program 0 slider 7 (CC27) = Attack should be present
+    CHECK(hasCC(r, 27), "prog0 slider CC27 (Attack) in first block");
+    // Program 0 slider 8 (CC7) = Release should be present
+    CHECK(hasCC(r, 7), "prog0 slider CC7 (Release) in first block");
 }
 
 static void testParamChangeEmitsCC()
@@ -57,24 +74,14 @@ static void testParamChangeEmitsCC()
     p.init(44100.0);
     runBlock(p);  // consume initial dirty burst
 
-    p.setGain(0.0f);
+    // Delay1 FB is slider 6 in program 0 → CC1
+    p.setDelay1Fb(0.0f);
     const auto r = runBlock(p);
+    CHECK(hasCC(r, 1, 0), "delay1_fb=0 emits CC1=0 in prog0");
 
-    bool foundGainCC = false;
-    for (uint32_t i = 0; i < r.eventCount; ++i) {
-        if (r.events[i].data[1] == 7 && r.events[i].data[2] == 0)
-            foundGainCC = true;
-    }
-    CHECK(foundGainCC, "gain=0 emits CC7=0");
-
-    // Second block with no change: no CC for gain
+    // Second block with no change: no CC1
     const auto r2 = runBlock(p);
-    bool foundAgain = false;
-    for (uint32_t i = 0; i < r2.eventCount; ++i) {
-        if (r2.events[i].data[1] == 7)
-            foundAgain = true;
-    }
-    CHECK(!foundAgain, "no redundant CC on unchanged param");
+    CHECK(!hasCC(r2, 1), "no redundant CC on unchanged param");
 }
 
 static void testPassInput()
@@ -164,6 +171,9 @@ static void testPanic()
             ++allNotesOffCount;
     }
     CHECK(allNotesOffCount == 16, "panic sends all-notes-off on all 16 channels");
+
+    // Panic should also emit slider CCs to re-sync flues-synth
+    CHECK(r.eventCount > 16, "panic emits slider CCs after all-notes-off");
 }
 
 static void testOutputChannel()
@@ -171,36 +181,67 @@ static void testOutputChannel()
     Processor p;
     p.init(44100.0);
     p.setOutputChannel(5);
-    p.setGain(1.0f);
 
+    // First block emits program-0 slider CCs on channel 5
     const auto r = runBlock(p);
-    bool onCh5 = false;
+    bool anyCCOnCh5 = false;
     for (uint32_t i = 0; i < r.eventCount; ++i) {
-        if (r.events[i].data[1] == 7 && (r.events[i].data[0] & 0x0F) == 4)
-            onCh5 = true;
+        if (r.events[i].size == 3 && (r.events[i].data[0] & 0xF0) == 0xB0
+            && (r.events[i].data[0] & 0x0F) == 4)   // ch5 = index 4
+            anyCCOnCh5 = true;
     }
-    CHECK(onCh5, "CCs emitted on configured output channel");
+    CHECK(anyCCOnCh5, "slider CCs emitted on configured output channel");
 }
 
 static void testCCConversionLinear()
 {
     Processor p;
     p.init(44100.0);
-    runBlock(p);
+    runBlock(p);  // consume initial dirty burst
 
-    p.setGain(0.0f);
+    // Intensity is slider 4 in prog0 (CC74), range 0-1 linear
+    p.setIntensity(0.0f);
     const auto r0 = runBlock(p);
-    bool cc7_0 = false;
-    for (uint32_t i = 0; i < r0.eventCount; ++i)
-        if (r0.events[i].data[1] == 7 && r0.events[i].data[2] == 0) cc7_0 = true;
-    CHECK(cc7_0, "gain=0.0 → CC7=0");
+    CHECK(hasCC(r0, 74, 0), "intensity=0.0 → CC74=0");
 
-    p.setGain(1.0f);
+    p.setIntensity(1.0f);
     const auto r1 = runBlock(p);
-    bool cc7_127 = false;
-    for (uint32_t i = 0; i < r1.eventCount; ++i)
-        if (r1.events[i].data[1] == 7 && r1.events[i].data[2] == 127) cc7_127 = true;
-    CHECK(cc7_127, "gain=1.0 → CC7=127");
+    CHECK(hasCC(r1, 74, 127), "intensity=1.0 → CC74=127");
+}
+
+static void testProgramChange()
+{
+    Processor p;
+    p.init(44100.0);
+    runBlock(p);  // consume initial dirty burst
+
+    p.setProgram(3);  // Formant Voice
+    const auto r = runBlock(p);
+
+    // Should have emitted a Program Change message on ch1
+    bool foundPC = false;
+    for (uint32_t i = 0; i < r.eventCount; ++i) {
+        if (r.events[i].size == 2 && r.events[i].data[0] == 0xC0
+            && r.events[i].data[1] == 3)
+            foundPC = true;
+    }
+    CHECK(foundPC, "setProgram emits PC message");
+
+    // Should have emitted all 9 slider CCs for program 3
+    // Program 3: CC73=F1, CC72=F2, CC28=F3, CC30=F4, CC74=Noise,
+    //            CC71=Nasal, CC1=TrajJitter, CC27=Attack, CC7=Release
+    const uint8_t expected[] = {73, 72, 28, 30, 74, 71, 1, 27, 7};
+    for (int s = 0; s < 9; ++s) {
+        char msg[64];
+        std::snprintf(msg, sizeof(msg), "prog3 slider CC%u emitted", expected[s]);
+        CHECK(hasCC(r, expected[s]), msg);
+    }
+
+    // Program 3's F1 is slider 0 (CC73) — moving it should emit CC73
+    runBlock(p);  // flush
+    p.setF1(200.0f);  // minimum
+    const auto r2 = runBlock(p);
+    CHECK(hasCC(r2, 73, 0), "F1=min → CC73=0 in prog3");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -216,6 +257,7 @@ int main()
     testPanic();
     testOutputChannel();
     testCCConversionLinear();
+    testProgramChange();
 
     std::printf("flues-synth-driver core: %d passed, %d failed\n", passed, failed);
     return failed == 0 ? 0 : 1;

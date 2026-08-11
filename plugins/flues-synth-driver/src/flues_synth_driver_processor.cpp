@@ -170,17 +170,24 @@ void Processor::emitAllNotesOff(ProcessResult& result, const std::uint32_t frame
         emitCC(result, frame, static_cast<std::uint8_t>(ch), 123, 0);
 }
 
+void Processor::emitSliderCCs(ProcessResult& result, const std::uint32_t frame)
+{
+    // Send the 9 slider CCs with current param values for the current program
+    for (int s = 0; s < 9; ++s) {
+        const FlueSynthParam fsp = kProgramMap[program_][s];
+        const Param p = flueSynthParamToParam(fsp);
+        if (p >= kParamCount) continue;
+        const std::size_t idx = static_cast<std::size_t>(p - kParamAlgorithm);
+        if (idx >= kSynthParamCount) continue;
+        const std::uint8_t ccVal = toCC(kSynthCCs[idx], params_[idx]);
+        emitCC(result, frame, static_cast<std::uint8_t>(outputChannel_),
+               kSliderCCs[static_cast<std::size_t>(s)], ccVal);
+    }
+}
+
 void Processor::emitDefaultCCs(ProcessResult& result, const std::uint32_t frame)
 {
-    // Send defaults for all non-trajectory synth params
-    for (std::size_t i = 0; i < kSynthParamCount; ++i) {
-        // Skip trajectory params (they share CCs; defaults come from normal params)
-        if (i >= static_cast<std::size_t>(kParamTrajSides - kParamAlgorithm))
-            break;
-        const auto ccVal = toCC(kSynthCCs[i], kSynthCCs[i].defaultValue);
-        emitCC(result, frame, static_cast<std::uint8_t>(outputChannel_),
-               kSynthCCs[i].cc, ccVal);
-    }
+    emitSliderCCs(result, frame);
 }
 
 // ── Conductor CC handling ─────────────────────────────────────────────────────
@@ -242,9 +249,10 @@ ProcessResult Processor::processBlock(const std::uint32_t frameCount,
         lastCC_.fill(-1);
     }
 
-    // Program Change: emit PC then resend all CCs so flues-synth is in sync
+    // Program Change: emit PC then resend all 9 slider CCs for the new program
     if (programPending_) {
         programPending_ = false;
+        lastCC_.fill(-1);
         if (result.eventCount < kMaxOutputEvents) {
             MidiMessage& m = result.events[result.eventCount++];
             m.frame   = 0;
@@ -252,9 +260,7 @@ ProcessResult Processor::processBlock(const std::uint32_t frameCount,
             m.data[0] = static_cast<std::uint8_t>(0xC0 | (outputChannel_ - 1));
             m.data[1] = static_cast<std::uint8_t>(program_);
         }
-        // Do not resend CCs here: the CC→param mapping changes per program,
-        // so resending with current values would write to the wrong parameters.
-        // The host will send updated CCs as the user adjusts controls.
+        emitSliderCCs(result, 0);
     }
 
     // Randomize: set all non-boolean synth params to random values in range
@@ -271,18 +277,22 @@ ProcessResult Processor::processBlock(const std::uint32_t frameCount,
         }
     }
 
-    // Emit dirty params at frame 0
+    // Emit dirty params on their slider CC for the current program
     for (std::size_t i = 0; i < kSynthParamCount; ++i) {
         if (!dirty_[i])
             continue;
         dirty_[i] = false;
+        const Param p = static_cast<Param>(kParamAlgorithm + i);
+        const int sliderIdx = getSliderIndex(program_, paramToFlueSynthParam(p));
+        if (sliderIdx < 0)
+            continue; // not controllable in current program
         const int ccVal = static_cast<int>(computeCC(i));
         if (ccVal == lastCC_[i])
             continue;
         lastCC_[i] = ccVal;
         emitCC(result, 0,
                static_cast<std::uint8_t>(outputChannel_),
-               kSynthCCs[i].cc,
+               kSliderCCs[static_cast<std::size_t>(sliderIdx)],
                static_cast<std::uint8_t>(ccVal));
     }
 

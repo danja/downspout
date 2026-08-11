@@ -84,6 +84,7 @@ private:
     void emitCC(ProcessResult& result, std::uint32_t frame,
                 std::uint8_t ch, std::uint8_t cc, std::uint8_t value);
     void emitAllNotesOff(ProcessResult& result, std::uint32_t frame);
+    void emitSliderCCs(ProcessResult& result, std::uint32_t frame);
     void emitDefaultCCs(ProcessResult& result, std::uint32_t frame);
     [[nodiscard]] std::uint8_t computeCC(std::size_t paramIndex) const noexcept;
     void handleConductorCC(ProcessResult& result, std::uint32_t frame,

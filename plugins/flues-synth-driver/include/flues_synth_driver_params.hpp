@@ -256,6 +256,62 @@ inline constexpr FlueSynthParam kProgramMap[31][9] = {
     {FSP_D1FB,    FSP_D2FB,  FSP_FFB,     FSP_LEVEL,    FSP_INTENSITY,FSP_TUNING,FSP_RATIO, FSP_ATTACK,FSP_RELEASE},
 };
 
+// The 9 hardware slider CCs — the only CCs flues-synth accepts
+inline constexpr std::array<std::uint8_t, 9> kSliderCCs {{73, 72, 28, 30, 74, 71, 1, 27, 7}};
+
+// Returns slider index (0-8) for fsp in program prog, or -1 if not mapped
+inline int getSliderIndex(int prog, FlueSynthParam fsp) noexcept
+{
+    if (fsp == FSP_NONE) return -1;
+    const int pg = prog < 0 ? 0 : (prog > 30 ? 30 : prog);
+    for (int s = 0; s < 9; ++s)
+        if (kProgramMap[pg][s] == fsp) return s;
+    return -1;
+}
+
+// Reverse mapping: FlueSynthParam → our Param (kParamCount if unmapped)
+inline Param flueSynthParamToParam(FlueSynthParam fsp) noexcept
+{
+    switch (fsp) {
+    case FSP_ALGORITHM: return kParamAlgorithm;
+    case FSP_P1:        return kParamDisynP1;
+    case FSP_P2:        return kParamDisynP2;
+    case FSP_P3:        return kParamDisynP3;
+    case FSP_NOISE:     return kParamNoiseLevel;
+    case FSP_DC:        return kParamDcLevel;
+    case FSP_ITYPE:     return kParamInterfaceType;
+    case FSP_INTENSITY: return kParamIntensity;
+    case FSP_F1:        return kParamF1;
+    case FSP_F2:        return kParamF2;
+    case FSP_F3:        return kParamF3;
+    case FSP_F4:        return kParamF4;
+    case FSP_NASAL:     return kParamNasal;
+    case FSP_SING:      return kParamSing;
+    case FSP_SHOUT:     return kParamShout;
+    case FSP_FRY:       return kParamFry;
+    case FSP_ATTACK:    return kParamAttack;
+    case FSP_RELEASE:   return kParamRelease;
+    case FSP_TUNING:    return kParamTuning;
+    case FSP_D1FB:      return kParamDelay1Fb;
+    case FSP_D2FB:      return kParamDelay2Fb;
+    case FSP_RATIO:     return kParamDelayRatio;
+    case FSP_FFB:       return kParamFilterFb;
+    case FSP_FFREQ:     return kParamFilterFreq;
+    case FSP_FQ:        return kParamFilterQ;
+    case FSP_FSHAPE:    return kParamFilterShape;
+    case FSP_LFREQ:     return kParamLfoFreq;
+    case FSP_AMDEPTH:   return kParamAmFmDepth;
+    case FSP_TSIDES:    return kParamTrajSides;
+    case FSP_TPOS:      return kParamTrajStartPos;
+    case FSP_TANGLE:    return kParamTrajStartAngle;
+    case FSP_TJITTER:   return kParamTrajJitter;
+    case FSP_TCLIP:     return kParamTrajClip;
+    case FSP_TMIXX:     return kParamTrajMixX;
+    case FSP_TMIXY:     return kParamTrajMixY;
+    default:            return kParamCount; // FSP_LEVEL, FSP_NONE → not in our Param set
+    }
+}
+
 inline FlueSynthParam paramToFlueSynthParam(Param p) noexcept
 {
     switch (p) {

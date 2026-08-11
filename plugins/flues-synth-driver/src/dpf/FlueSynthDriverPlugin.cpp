@@ -355,15 +355,15 @@ protected:
             writeMidiEvent(toDpf(result.events[i]));
 
         midiActivity_ = result.midiActivity;
-        setParameterValue(kParamMidiActivity, midiActivity_);
+        requestParameterValueChange(kParamMidiActivity, midiActivity_);
 
         if (result.wasRandomized) {
             for (std::uint32_t i = 0; i < static_cast<std::uint32_t>(kSynthParamCount); ++i)
-                setParameterValue(i, processor_.getSynthParam(static_cast<std::size_t>(i)));
-            setParameterValue(kParamRandomize, 0.0f);
+                requestParameterValueChange(i, processor_.getSynthParam(static_cast<std::size_t>(i)));
+            requestParameterValueChange(kParamRandomize, 0.0f);
         }
         if (result.wasPanicked)
-            setParameterValue(kParamPanic, 0.0f);
+            requestParameterValueChange(kParamPanic, 0.0f);
     }
 
 private:
