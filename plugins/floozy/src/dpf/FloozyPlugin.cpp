@@ -73,7 +73,7 @@ protected:
 
     const char* getDescription() const override
     {
-        return "Corrected 8-voice hybrid physical/modulation synthesizer derived from floozy-poly.";
+        return "Hybrid physical/modulation synthesizer with selectable 1-8 voices (default 4), derived from floozy-poly.";
     }
 
     const char* getMaker() const override

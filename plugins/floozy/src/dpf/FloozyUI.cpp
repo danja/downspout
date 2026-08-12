@@ -54,7 +54,7 @@ constexpr std::array<SectionDef, 5> kSections = {{
     {"Shape", {92, 178, 164}, {{{6, "Attack"}, {7, "Release"}, {8, "Interface"}, {9, "Intensity"}, {22, "Gain"}, {0, ""}}}, 5},
     {"Body", {126, 153, 221}, {{{10, "Tuning"}, {11, "Ratio"}, {12, "D1 FB"}, {13, "D2 FB"}, {14, "Cross FB"}, {0, ""}}}, 5},
     {"Filter/Mod", {181, 137, 216}, {{{15, "Cutoff"}, {16, "Q"}, {17, "Shape"}, {18, "LFO"}, {19, "Mod Mix"}, {0, ""}}}, 5},
-    {"Space", {211, 165, 82}, {{{20, "Size"}, {21, "Level"}, {0, ""}, {0, ""}, {0, ""}, {0, ""}}}, 2},
+    {"Space", {211, 165, 82}, {{{20, "Size"}, {21, "Level"}, {23, "Voices"}, {0, ""}, {0, ""}, {0, ""}}}, 3},
 }};
 
 float clampf(const float value, const float minimum, const float maximum)
@@ -87,6 +87,10 @@ std::string formatValue(const std::uint32_t parameter, const float value)
     {
         const int semitone = static_cast<int>(std::lround((clampf(value, 0.0f, 1.0f) - 0.5f) * 48.0f));
         std::snprintf(buffer, sizeof(buffer), "%+d st", semitone);
+    }
+    else if (parameter == static_cast<std::uint32_t>(ParamId::numVoices))
+    {
+        std::snprintf(buffer, sizeof(buffer), "%d", static_cast<int>(std::lround(value)));
     }
     else
     {
@@ -300,9 +304,14 @@ private:
         fillColor(238, 241, 237, 255);
         text(x + 22.0f, y + 14.0f, "Floozy", nullptr);
 
+        const int numVoices = static_cast<int>(
+            std::lround(values_[static_cast<std::size_t>(ParamId::numVoices)]));
+        char subtitle[64];
+        std::snprintf(subtitle, sizeof(subtitle),
+                      "%d voice hybrid physical/modulation synth", numVoices);
         fontSize(13.0f);
         fillColor(155, 166, 164, 255);
-        text(x + 170.0f, y + 27.0f, "8 voice hybrid physical/modulation synth", nullptr);
+        text(x + 170.0f, y + 27.0f, subtitle, nullptr);
 
         fontSize(12.0f);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);

@@ -404,9 +404,19 @@ void noteOffEventuallyStopsAllInterfaces()
 void polyphonyIsCapped()
 {
     FloozyEngine engine {48000.0f};
+    // Default is 4 voices; send 9 notes to verify cap at active count
     for (int note = 48; note < 57; ++note)
         engine.noteOn(note, 100);
-    require(engine.activeVoiceCount() == FloozyEngine::kMaxVoices, "floozy polyphony cap mismatch");
+    const auto numVoicesParam = static_cast<std::uint32_t>(downspout::floozy::ParamId::numVoices);
+    const auto defaultVoices = static_cast<std::size_t>(
+        std::round(downspout::floozy::kParameterSpecs[numVoicesParam].defaultValue));
+    require(engine.activeVoiceCount() == defaultVoices, "floozy polyphony cap mismatch");
+
+    // Verify cap still works at max voices
+    engine.setParameter(numVoicesParam, static_cast<float>(FloozyEngine::kMaxVoices));
+    for (int note = 48; note < 57; ++note)
+        engine.noteOn(note, 100);
+    require(engine.activeVoiceCount() == FloozyEngine::kMaxVoices, "floozy polyphony cap at max voices mismatch");
 }
 
 void processBlockSchedulesMidi()

@@ -18,12 +18,20 @@ public:
 
     void setFrequency(float value) {
         const float clamped = std::clamp(value, 0.0f, 1.0f);
-        frequency = 20.0f * std::pow(1000.0f, clamped);
+        const float newFreq = 20.0f * std::pow(1000.0f, clamped);
+        if (newFreq != frequency) {
+            frequency = newFreq;
+            coeffDirty = true;
+        }
     }
 
     void setQ(float value) {
         const float clamped = std::clamp(value, 0.0f, 1.0f);
-        q = 0.5f * std::pow(40.0f, clamped);
+        const float newQ = 0.5f * std::pow(40.0f, clamped);
+        if (newQ != q) {
+            q = newQ;
+            coeffDirty = true;
+        }
     }
 
     void setShape(float value) {
@@ -35,8 +43,13 @@ public:
             input = 0.0f;
         }
 
-        const float f = 2.0f * std::sin(static_cast<float>(M_PI) * frequency / sampleRate);
-        const float qInv = 1.0f / std::max(0.5f, q);
+        if (coeffDirty) {
+            cachedF = 2.0f * std::sin(static_cast<float>(M_PI) * frequency / sampleRate);
+            cachedQInv = 1.0f / std::max(0.5f, q);
+            coeffDirty = false;
+        }
+        const float f = cachedF;
+        const float qInv = cachedQInv;
 
         low += f * band;
         high = input - low - qInv * band;
@@ -75,6 +88,9 @@ private:
     float low;
     float band;
     float high;
+    float cachedF = 0.0f;
+    float cachedQInv = 2.0f;
+    bool coeffDirty = true;
 };
 
 } // namespace flues::pm

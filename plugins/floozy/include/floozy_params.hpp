@@ -30,9 +30,10 @@ enum class ParamId : std::uint32_t {
     reverbSize,
     reverbLevel,
     masterGain,
+    numVoices,
 };
 
-inline constexpr std::size_t kParameterCount = 23;
+inline constexpr std::size_t kParameterCount = 24;
 
 struct ParamSpec {
     const char* symbol;
@@ -67,6 +68,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"reverb_size", "Reverb Size", 0.0f, 1.0f, 0.50f, false},
     {"reverb_level", "Reverb Level", 0.0f, 1.0f, 0.30f, false},
     {"master_gain", "Master Gain", 0.0f, 1.0f, 0.80f, false},
+    {"num_voices", "Num Voices", 1.0f, 8.0f, 4.0f, true},
 }};
 
 inline constexpr std::array<const char*, 7> kSourceAlgorithmNames = {{

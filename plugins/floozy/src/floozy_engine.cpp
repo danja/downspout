@@ -660,6 +660,14 @@ public:
         if (index == static_cast<std::uint32_t>(ParamId::reverbSize) ||
             index == static_cast<std::uint32_t>(ParamId::reverbLevel))
             syncReverb();
+
+        if (index == static_cast<std::uint32_t>(ParamId::numVoices))
+        {
+            const auto n = static_cast<std::size_t>(clamped);
+            activeNumVoices_ = std::clamp(n, std::size_t(1), kMaxVoices);
+            for (std::size_t i = activeNumVoices_; i < voices_.size(); ++i)
+                voices_[i]->forceStop();
+        }
     }
 
     void noteOn(const int midiNote, const std::uint8_t velocity)
@@ -728,9 +736,9 @@ public:
     StereoFrame processStereo()
     {
         StereoFrame dry {};
-        for (auto& voice : voices_)
+        for (std::size_t i = 0; i < activeNumVoices_; ++i)
         {
-            const StereoFrame frame = voice->process(params_);
+            const StereoFrame frame = voices_[i]->process(params_);
             dry.left += frame.left;
             dry.right += frame.right;
         }
@@ -772,8 +780,8 @@ public:
     std::size_t activeVoiceCount() const
     {
         std::size_t count = 0;
-        for (const auto& voice : voices_)
-            if (voice->active())
+        for (std::size_t i = 0; i < activeNumVoices_; ++i)
+            if (voices_[i]->active())
                 ++count;
         return count;
     }
@@ -804,17 +812,17 @@ private:
 
     FloozyVoice* findVoiceByNote(const int midiNote)
     {
-        for (auto& voice : voices_)
-            if (voice->active() && voice->note() == midiNote)
-                return voice.get();
+        for (std::size_t i = 0; i < activeNumVoices_; ++i)
+            if (voices_[i]->active() && voices_[i]->note() == midiNote)
+                return voices_[i].get();
         return nullptr;
     }
 
     FloozyVoice* findIdleVoice()
     {
-        for (auto& voice : voices_)
-            if (!voice->active())
-                return voice.get();
+        for (std::size_t i = 0; i < activeNumVoices_; ++i)
+            if (!voices_[i]->active())
+                return voices_[i].get();
         return nullptr;
     }
 
@@ -822,12 +830,12 @@ private:
     {
         FloozyVoice* candidate = nullptr;
         std::uint64_t oldest = std::numeric_limits<std::uint64_t>::max();
-        for (auto& voice : voices_)
+        for (std::size_t i = 0; i < activeNumVoices_; ++i)
         {
-            if (voice->releasing() && voice->age() < oldest)
+            if (voices_[i]->releasing() && voices_[i]->age() < oldest)
             {
-                oldest = voice->age();
-                candidate = voice.get();
+                oldest = voices_[i]->age();
+                candidate = voices_[i].get();
             }
         }
 
@@ -835,12 +843,12 @@ private:
             return candidate;
 
         float lowestLevel = std::numeric_limits<float>::max();
-        for (auto& voice : voices_)
+        for (std::size_t i = 0; i < activeNumVoices_; ++i)
         {
-            if (voice->level() < lowestLevel)
+            if (voices_[i]->level() < lowestLevel)
             {
-                lowestLevel = voice->level();
-                candidate = voice.get();
+                lowestLevel = voices_[i]->level();
+                candidate = voices_[i].get();
             }
         }
         return candidate;
@@ -852,6 +860,7 @@ private:
     flues::pm::ReverbModule reverbLeft_;
     flues::pm::ReverbModule reverbRight_;
     std::uint64_t ageCounter_ = 0;
+    std::size_t activeNumVoices_ = 4;
 };
 
 FloozyEngine::FloozyEngine(const float sampleRate)
