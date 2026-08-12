@@ -82,6 +82,35 @@ void beginLoopCapture(State& state, const std::uint32_t length) noexcept
     state.loopCaptureRequested = false;
 }
 
+// Trim loopLength so the loop ends at the nearest zero-crossing within
+// windowFrames of the original end.  Uses the left channel as the reference.
+// Returns the original length if no crossing is found in the window.
+std::uint32_t snapLoopEnd(const std::vector<float>& buffer,
+                           const std::uint32_t loopLength,
+                           const std::uint32_t windowFrames) noexcept
+{
+    if (loopLength < 4u || buffer.size() < loopLength)
+        return loopLength;
+    const std::uint32_t hi = loopLength - 1u;
+    const std::uint32_t lo = windowFrames < hi ? hi - windowFrames : 1u;
+
+    std::uint32_t best = loopLength;
+    std::uint32_t bestDist = windowFrames + 1u;
+
+    for (std::uint32_t f = lo; f < hi; ++f) {
+        const bool crossing = (buffer[f] <= 0.0f && buffer[f + 1u] > 0.0f)
+                           || (buffer[f] >= 0.0f && buffer[f + 1u] < 0.0f);
+        if (crossing) {
+            const std::uint32_t dist = hi - f;
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = f + 1u;
+            }
+        }
+    }
+    return best;
+}
+
 } // namespace
 
 Parameters::Parameters()
@@ -301,6 +330,9 @@ OutputStatus process(State& state,
                 wetRight = inputRight;
                 ++state.loopPosition;
                 if (state.loopPosition >= state.loopLength) {
+                    const std::uint32_t zcWindow =
+                        static_cast<std::uint32_t>(state.sampleRate * 0.003);
+                    state.loopLength = snapLoopEnd(state.leftBuffer, state.loopLength, zcWindow);
                     state.loopPosition = 0;
                     state.loopCapturing = false;
                 }

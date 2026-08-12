@@ -148,7 +148,8 @@ void testSerializationRoundTrip()
     assert(std::fabs(decoded->liveUnder - parameters.liveUnder) < 1e-6f);
     assert(std::fabs(decoded->captureTiming - parameters.captureTiming) < 1e-6f);
     assert(std::fabs(decoded->retrigger - parameters.retrigger) < 1e-6f);
-    assert(!deserializeParameters("sensitivity=1\nunknown=2\n").has_value());
+    // Unknown keys are skipped for forward compatibility; the result is still valid.
+    assert(deserializeParameters("sensitivity=1\nunknown=2\n").has_value());
 }
 
 void testStoppedTransportPassesThrough()

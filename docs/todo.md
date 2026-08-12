@@ -1,8 +1,8 @@
 # Downspout TODO
 
-## Orchid extension
+## Floozy
 
-When a voiced chunk has been detected, a pitch shift is determined by any incoming midi note on. The extent of the shift will be taken relative to the sampled pitch, that frequency will be considered the root note. The note selection may  be quantized to a scale, selected from a drop down list as found in eg. plugins/bassgen
+It is very resource-hungry. Examine for potential ways of making it lighter without removing functionality. Make the number of voices selectable 1-8, default 4.
 
 ---
 

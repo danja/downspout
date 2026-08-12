@@ -436,6 +436,8 @@ DetectorStatus analyzeRecentWindow(EngineState& state, const Parameters& paramet
         const float last = readBufferFrame(state, channel, start + static_cast<std::int64_t>(length) - 1);
         const float after = readBufferFrame(state, channel, start + static_cast<std::int64_t>(length));
         cost += std::fabs(last - first) + 0.35f * std::fabs(after - first);
+        // Prefer loop boundaries near zero so the hard splice is phase-coherent.
+        cost += 0.5f * (std::fabs(first) + std::fabs(last));
     }
     return cost;
 }

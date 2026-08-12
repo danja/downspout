@@ -238,6 +238,43 @@ void testLoopCapturesAndPlays()
     assert(state.loopCapturing);
 }
 
+// Feed a sine wave into loop mode and verify the captured loop end is at or near
+// a zero-crossing, confirming snapLoopEnd() trimmed it correctly.
+void testLoopEndSnappedToZeroCrossing()
+{
+    // Use a low sample rate so one period fits comfortably in the loop buffer.
+    // freq = 50 Hz, sr = 1000 → period = 20 samples.  20 ms loop at 1000 Hz sr
+    // captures exactly one period plus a tiny tail — snap should trim to the crossing.
+    constexpr double sr = 1000.0;
+    constexpr double freq = 50.0;
+    State state;
+    prepare(state, sr);
+    Parameters parameters;
+    parameters.values[kMode] = 1.0f;
+    parameters.values[kTimeMode] = 0.0f;
+    parameters.values[kFreeTimeMs] = 21.0f;   // slightly over one period
+    parameters.values[kFeedback] = 1.0f;
+    parameters.values[kMix] = 1.0f;
+    parameters.values[kTone] = 1.0f;
+    parameters.values[kOverdub] = 0.0f;
+
+    constexpr std::uint32_t kFrames = 64;
+    std::array<float, kFrames> sineIn {};
+    std::array<float, kFrames> output {};
+    for (std::uint32_t i = 0; i < kFrames; ++i)
+        sineIn[i] = 0.5f * std::sin(2.0 * 3.14159265358979323846 * freq * i / sr);
+    const AudioBlock audio {sineIn.data(), sineIn.data(), output.data(), output.data()};
+    (void)process(state, parameters, transportAt(), kFrames, audio);
+
+    // After capture, loop must not still be capturing.
+    assert(!state.loopCapturing);
+    assert(state.loopLength >= 4u);
+
+    // The last sample of the captured loop (index loopLength-1) should be near zero.
+    const float lastSample = state.leftBuffer[state.loopLength - 1u];
+    assert(std::fabs(lastSample) < 0.2f);  // within ~sin(~1-sample step at 50 Hz / 1 kHz)
+}
+
 void testDenseFeedbackRemainsFiniteAndBounded()
 {
     State state;
@@ -272,6 +309,7 @@ int main()
     testTransportChangesAndRewindRemainStable();
     testDryPathIsTransparent();
     testLoopCapturesAndPlays();
+    testLoopEndSnappedToZeroCrossing();
     testDenseFeedbackRemainsFiniteAndBounded();
     return 0;
 }

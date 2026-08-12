@@ -4,9 +4,48 @@
 #include <cstring>
 #include <fstream>
 namespace downspout::mosaic {
-namespace{float pv(const std::array<float,kParameterCount>&p,Param id){return downspout::generative::clampParam(p[id],kParameterSpecs[id]);}int iv(const std::array<float,kParameterCount>&p,Param id){return static_cast<int>(std::lround(pv(p,id)));}
+namespace {
+
+// Snap a frame index to the nearest zero-crossing within a search window.
+// For forward playback, rising crossings (negative→positive) are preferred.
+// For reverse playback, pass wantRising=false to prefer falling crossings.
+// Falls back to any crossing direction if preferred type not found.
+// Returns the original frame if no crossing is found in the window.
+std::uint32_t snapToZeroCrossing(const float* data, std::uint32_t channels,
+                                  std::uint32_t frames, std::uint32_t target,
+                                  std::uint32_t window, bool wantRising) noexcept {
+    if (frames < 2 || channels == 0 || data == nullptr) return target;
+    const std::uint32_t lo = target > window ? target - window : 0u;
+    const std::uint32_t hi = frames >= 1 ? std::min(target + window, frames - 1u) : 0u;
+
+    std::uint32_t best = target;
+    std::uint32_t bestDist = window + 1u;
+
+    auto check = [&](std::uint32_t f, bool rising) {
+        if ((rising == wantRising) || bestDist > window) {
+            const std::uint32_t dist = f > target ? f - target : target - f;
+            if (dist < bestDist || (dist == bestDist && rising == wantRising)) {
+                bestDist = dist;
+                best = f;
+            }
+        }
+    };
+
+    for (std::uint32_t f = lo; f < hi; ++f) {
+        const float v0 = data[f * channels];
+        const float v1 = data[(f + 1u) * channels];
+        if (v0 <= 0.0f && v1 > 0.0f) check(f, true);
+        else if (v0 >= 0.0f && v1 < 0.0f) check(f, false);
+    }
+    return best;
+}
+
+float pv(const std::array<float,kParameterCount>&p,Param id){return downspout::generative::clampParam(p[id],kParameterSpecs[id]);}int iv(const std::array<float,kParameterCount>&p,Param id){return static_cast<int>(std::lround(pv(p,id)));}
 std::uint32_t u32(const unsigned char*p){return p[0]|p[1]<<8|p[2]<<16|p[3]<<24;}std::uint16_t u16(const unsigned char*p){return static_cast<std::uint16_t>(p[0]|p[1]<<8);}
-void trigger(State&s,const std::array<float,kParameterCount>&p,const Pool*pool,int note,int velocity,double sr){if(!pool)return;std::array<int,kPoolSize>loaded{};int count=0;for(int i=0;i<kPoolSize;++i)if(!pool->samples[i].data.empty())loaded[count++]=i;if(count==0)return;const std::uint64_t serial=s.triggerSerial++;const int slot=loaded[downspout::generative::randomInt(iv(p,kSeed),serial,0,count-1)];const Sample&sample=pool->samples[slot];Voice*voice=nullptr;for(auto&v:s.voices)if(!v.active){voice=&v;break;}if(!voice)voice=&s.voices[serial%s.voices.size()];const std::uint32_t frames=static_cast<std::uint32_t>(sample.data.size()/std::max(1u,sample.channels));const std::uint32_t slice=std::max(1u,static_cast<std::uint32_t>(frames*pv(p,kSliceSize)));const std::uint32_t start=frames>slice?static_cast<std::uint32_t>(downspout::generative::randomUnit(iv(p,kSeed),serial+33)*(frames-slice)):0;const int range=iv(p,kPitchRange);const int transpose=range>0?downspout::generative::randomInt(iv(p,kSeed),serial+49,-range,range):note-60;voice->sample=&sample;voice->start=start;voice->end=std::min(frames,start+slice);voice->reverse=downspout::generative::randomUnit(iv(p,kSeed),serial+77)<pv(p,kReverseChance);voice->position=voice->reverse?voice->end-1:start;voice->increment=std::pow(2.0,transpose/12.0)*sample.sampleRate/std::max(1.0,sr);voice->envelope=0;voice->pan=(downspout::generative::randomUnit(iv(p,kSeed),serial+91)*2-1)*pv(p,kStereoSpread);voice->active=true;voice->releasing=false;(void)velocity;}
+void trigger(State&s,const std::array<float,kParameterCount>&p,const Pool*pool,int note,int velocity,double sr){if(!pool)return;std::array<int,kPoolSize>loaded{};int count=0;for(int i=0;i<kPoolSize;++i)if(!pool->samples[i].data.empty())loaded[count++]=i;if(count==0)return;const std::uint64_t serial=s.triggerSerial++;const int slot=loaded[downspout::generative::randomInt(iv(p,kSeed),serial,0,count-1)];const Sample&sample=pool->samples[slot];Voice*voice=nullptr;for(auto&v:s.voices)if(!v.active){voice=&v;break;}if(!voice)voice=&s.voices[serial%s.voices.size()];const std::uint32_t frames=static_cast<std::uint32_t>(sample.data.size()/std::max(1u,sample.channels));const std::uint32_t slice=std::max(1u,static_cast<std::uint32_t>(frames*pv(p,kSliceSize)));const std::uint32_t start=frames>slice?static_cast<std::uint32_t>(downspout::generative::randomUnit(iv(p,kSeed),serial+33)*(frames-slice)):0;const int range=iv(p,kPitchRange);const int transpose=range>0?downspout::generative::randomInt(iv(p,kSeed),serial+49,-range,range):note-60;voice->sample=&sample;voice->reverse=downspout::generative::randomUnit(iv(p,kSeed),serial+77)<pv(p,kReverseChance);
+const std::uint32_t zcWindow=static_cast<std::uint32_t>(sample.sampleRate*0.003);
+const std::uint32_t snappedStart=snapToZeroCrossing(sample.data.data(),sample.channels,frames,start,zcWindow,!voice->reverse);
+voice->start=snappedStart;voice->end=std::min(frames,snappedStart+slice);voice->position=voice->reverse?voice->end-1:snappedStart;voice->increment=std::pow(2.0,transpose/12.0)*sample.sampleRate/std::max(1.0,sr);voice->envelope=0;voice->pan=(downspout::generative::randomUnit(iv(p,kSeed),serial+91)*2-1)*pv(p,kStereoSpread);voice->active=true;voice->releasing=false;(void)velocity;}
 }
 LoadResult loadWav(const std::string&path){LoadResult out;std::ifstream f(path,std::ios::binary);if(!f){out.error="open failed";return out;}std::array<unsigned char,12>h{};f.read(reinterpret_cast<char*>(h.data()),h.size());if(f.gcount()!=12||std::memcmp(h.data(),"RIFF",4)||std::memcmp(h.data()+8,"WAVE",4)){out.error="not RIFF/WAVE";return out;}std::uint16_t format=0,channels=0,bits=0;std::uint32_t rate=0;std::vector<unsigned char>bytes;while(f){std::array<unsigned char,8>ch{};f.read(reinterpret_cast<char*>(ch.data()),8);if(f.gcount()!=8)break;const std::uint32_t size=u32(ch.data()+4);std::vector<unsigned char>data(size);f.read(reinterpret_cast<char*>(data.data()),size);if(std::memcmp(ch.data(),"fmt ",4)==0&&size>=16){format=u16(data.data());channels=u16(data.data()+2);rate=u32(data.data()+4);bits=u16(data.data()+14);}else if(std::memcmp(ch.data(),"data",4)==0)bytes=std::move(data);if(size&1)f.get();}
 if((format!=1&&format!=3)||channels<1||channels>2||rate<8000||rate>384000||(bits!=16&&!(format==3&&bits==32))||bytes.empty()){out.error="unsupported WAV";return out;}const std::uint32_t bps=bits/8,frames=bytes.size()/(bps*channels);if(frames>rate*60u){out.error="sample exceeds 60 seconds";return out;}out.sample.channels=channels;out.sample.sampleRate=rate;out.sample.data.resize(static_cast<std::size_t>(frames)*channels);for(std::uint32_t i=0;i<frames*channels;++i){if(format==1){const auto raw=static_cast<std::int16_t>(u16(bytes.data()+i*2));out.sample.data[i]=raw/32768.0f;}else{float v;std::memcpy(&v,bytes.data()+i*4,4);out.sample.data[i]=std::isfinite(v)?std::clamp(v,-1.0f,1.0f):0;}}return out;}
