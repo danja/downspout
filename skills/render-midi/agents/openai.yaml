@@ -1,0 +1,4 @@
+interface:
+  display_name: "Render Transmission project to MIDI"
+  short_description: "Insert Midiscribe capture nodes, run the project, and collect .mid files for each generator chain."
+  default_prompt: "Use $render-midi to capture MIDI output from the current Transmission project."
