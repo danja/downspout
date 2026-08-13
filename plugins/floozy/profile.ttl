@@ -6,7 +6,7 @@
 
 dsp:floozy a trn:PluginProfile ;
     rdfs:label "Floozy" ;
-    rdfs:comment "Eight-voice hybrid physical/modulation synthesizer for expressive leads, plucks, and synthetic textures." ;
+    rdfs:comment "Selectable 1-8 voice (default 4) hybrid physical/modulation synthesizer for expressive leads, plucks, and synthetic textures. Voice count is a host-automatable parameter; reducing it cuts CPU proportionally." ;
     trn:bundleName "floozy.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/floozy/> ;

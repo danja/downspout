@@ -1,0 +1,4 @@
+interface:
+  display_name: "Downspout Publish Precursors"
+  short_description: "Check and update profile.ttl, screenshot registration, captured PNG, and GitHub Pages product front matter for one or more plugins."
+  default_prompt: "Use $publish-precursors to run all web-publishing precursors for the plugins I have just changed."

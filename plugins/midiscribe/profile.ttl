@@ -1,0 +1,53 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:midiscribe a trn:PluginProfile ;
+    rdfs:label "Midiscribe" ;
+    rdfs:comment "Non-destructive MIDI capture utility. Passes all received MIDI events through unchanged while optionally recording them with beat-position timestamps into a rolling ring buffer. When the write trigger fires, captured events are serialised as a Type-0 Standard MIDI File (.mid) at the configured export path and the buffer is reset." ;
+    trn:bundleName "midiscribe.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/midiscribe/> ;
+    trn:role trn:Utility ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Midi ;
+
+    trn:parameter [
+        trn:paramId 0 ;
+        rdfs:label "Armed" ;
+        trn:symbol "armed" ;
+        trn:datatype xsd:boolean ;
+        trn:default "false" ;
+        rdfs:comment "When true, incoming MIDI events are captured into the ring buffer."
+    ] ;
+
+    trn:parameter [
+        trn:paramId 1 ;
+        rdfs:label "Write" ;
+        trn:symbol "write" ;
+        trn:datatype xsd:float ;
+        trn:minimum "0" ;
+        trn:maximum "1" ;
+        trn:default "0" ;
+        rdfs:comment "Momentary trigger (0→1): writes the capture buffer to the export path as a Standard MIDI File and resets the buffer."
+    ] ;
+
+    trn:parameter [
+        trn:paramId 2 ;
+        rdfs:label "Capture Beats" ;
+        trn:symbol "capture_beats" ;
+        trn:datatype xsd:integer ;
+        trn:minimum "0" ;
+        trn:maximum "3" ;
+        trn:default "1" ;
+        rdfs:comment "Rolling capture window length: 0=8, 1=16 (default), 2=32, 3=64 beats."
+    ] ;
+
+    trn:state [
+        trn:stateKey "exportPath" ;
+        rdfs:label "Export Path" ;
+        trn:default "/tmp/midiscribe.mid" ;
+        rdfs:comment "Filesystem path for the output .mid file."
+    ] .

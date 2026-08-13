@@ -58,6 +58,7 @@ plugins=(
   "orbit:orbit"
   "guardian:guardian"
   "gater:gater"
+  "midiscribe:midiscribe"
   )
 
 

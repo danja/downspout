@@ -6,7 +6,7 @@
 
 dsp:orchid a trn:PluginProfile ;
     rdfs:label "Orchid" ;
-    rdfs:comment "Transport-aware voiced freeze effect using autocorrelation capture and grid-synchronised loop holds." ;
+    rdfs:comment "Transport-aware voiced freeze effect using autocorrelation capture and grid-synchronised loop holds. Captured pitch is optionally quantised to one of 20 built-in scales. A retrigger threshold re-arms capture when input energy recovers." ;
     trn:bundleName "orchid.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/orchid/> ;

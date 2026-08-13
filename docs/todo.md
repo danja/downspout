@@ -1,14 +1,17 @@
 # Downspout TODO
 
+## Screenshots
+
+Floozy UI changed (Voices slider added, dynamic header). Refresh screenshot:
+
+```
+scripts/capture-plugin-screenshots.sh floozy
+```
+
 ## Floozy
 
-It is very resource-hungry. Examine for potential ways of making it lighter without removing functionality. Make the number of voices selectable 1-8, default 4.
-
----
-
-### Pending — configurable CC numbers
-
-All three generators (BassGen, DrumGen, and the planned Ground integration) currently
+~~It is very resource-hungry. Examine for potential ways of making it lighter without removing functionality. Make the number of voices selectable 1-8, default 4.~~ Done.
+the planned Ground integration) currently
 hardcode Conductor's default CC numbers (20–24). If the user changes Conductor's CC
 assignments, the generators will not follow. Consider exposing CC number parameters
 on the receiver side, or adding a note to the UI that CC numbers must match

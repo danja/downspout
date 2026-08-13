@@ -6,7 +6,7 @@
 
 dsp:mosaic a trn:PluginProfile ;
     rdfs:label "Mosaic" ;
-    rdfs:comment "Four-slot WAV sampler with deterministic slicing, pitch variation, reverse probability, stereo spread, and autonomous triggering." ;
+    rdfs:comment "Four-slot WAV sampler with deterministic slicing, zero-crossing boundary snapping, pitch variation, reverse probability, stereo spread, and autonomous triggering." ;
     trn:bundleName "mosaic.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/mosaic/> ;

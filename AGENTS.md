@@ -79,6 +79,8 @@ Initial plugin targets:
 - Keep docs concise, technical, and current.
 - Update `docs/plan.md` when project direction changes materially.
 - Record per-plugin migration decisions in that plugin’s `docs/` directory rather than bloating the root plan.
+- On any structural change to a plugin (new or removed parameter, changed range or default, changed MIDI/audio routing, added CC mapping): update that plugin’s `profile.ttl` to reflect the change in the same commit.
+- On any UI change to a plugin: ensure that plugin appears in `scripts/capture-plugin-screenshots.sh` and note that a fresh screenshot is needed.
 
 ## UI screenshot review
 

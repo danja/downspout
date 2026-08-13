@@ -6,7 +6,7 @@
 
 dsp:loopdelay a trn:PluginProfile ;
     rdfs:label "Loopdelay" ;
-    rdfs:comment "Stereo delay and capture looper. Time is freely settable (20–4000 ms) or host BBT-synced from a quarter beat to four bars. Delay mode provides filtered feedback and ping-pong crossfeed; Loop mode captures one length and applies feedback-controlled memory with live overdubbing." ;
+    rdfs:comment "Stereo delay and capture looper. Time is freely settable (20–4000 ms) or host BBT-synced from a quarter beat to four bars. Delay mode provides filtered feedback and ping-pong crossfeed; Loop mode captures one length, snaps the loop boundary to the nearest zero-crossing (within 3 ms), and applies feedback-controlled memory with live overdubbing." ;
     trn:bundleName "loopdelay.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/loopdelay/> ;
