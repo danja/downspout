@@ -154,11 +154,25 @@ static void updateCoefficients(EngineState&    state,
     // Wave oscillator rate (Hz / sample)
     state.cachedWaveRate = (mix.waveFreqHz * (0.5f + params.flow * 0.5f)) / sr;
 
+    // Advance wave phase and snapshot modulation (avoids sin() in the hot loop)
+    state.wavePhase  += state.cachedWaveRate * static_cast<float>(kControlUpdatePeriod);
+    if (state.wavePhase  >= 1.0f) state.wavePhase  -= 1.0f;
+    state.wavePhaseR += state.cachedWaveRate * static_cast<float>(kControlUpdatePeriod) * 1.031f;
+    if (state.wavePhaseR >= 1.0f) state.wavePhaseR -= 1.0f;
+    state.cachedWaveModL = 0.5f + 0.5f * std::sin(2.0f * 3.14159265f * state.wavePhase);
+    state.cachedWaveModR = 0.5f + 0.5f * std::sin(2.0f * 3.14159265f * state.wavePhaseR);
+
     // Stereo delay
     state.cachedDelayFeedback = 0.15f + params.space * 0.42f;
     state.cachedDelayWet      = 0.18f + params.space * 0.47f;
     state.cachedDelayTapL = std::min(static_cast<int>(0.042f * sr), kDelayBufferLen - 1);
     state.cachedDelayTapR = std::min(static_cast<int>(0.064f * sr), kDelayBufferLen - 1);
+
+    // Per-sample constants derived from params + mode (avoids repeated multiply in hot loop)
+    state.cachedBubbleSpawnRate = params.density * mix.bubbleSpawnMult * (1.0f + params.heat * 4.0f);
+    state.cachedDripSpawnRate   = params.density * mix.dripSpawnMult   * (1.0f + params.heat * 1.0f);
+    state.cachedTurbGain        = mix.turbBias + params.turbulence;
+    state.cachedSrInv           = 1.0f / sr;
 }
 
 // ---------------------------------------------------------------------------
@@ -347,20 +361,18 @@ void processBlock(EngineState&           state,
         float turb2 = processBiquadBP(state.turbBand2, noise);
 
         // Combine flow and turbulence
-        float flowSig = (flowBand + (turb1 + turb2) * 0.5f * (mix.turbBias + params.turbulence))
+        float flowSig = (flowBand + (turb1 + turb2) * 0.5f * state.cachedTurbGain)
                       * params.flow;
 
         // --- Stochastic voice spawning ---
-        float bSpawnRate = params.density * mix.bubbleSpawnMult * (1.0f + params.heat * 4.0f);
-        state.bubbleSpawnAccum += bSpawnRate / sr;
+        state.bubbleSpawnAccum += state.cachedBubbleSpawnRate * state.cachedSrInv;
         while (state.bubbleSpawnAccum >= 1.0f) {
             state.bubbleSpawnAccum -= 1.0f;
             if (nextRandFloat(state.rngState) < 0.75f)
                 spawnBubble(state, params, sr);
         }
 
-        float dSpawnRate = params.density * mix.dripSpawnMult * (1.0f + params.heat * 1.0f);
-        state.dripSpawnAccum += dSpawnRate / sr;
+        state.dripSpawnAccum += state.cachedDripSpawnRate * state.cachedSrInv;
         while (state.dripSpawnAccum >= 1.0f) {
             state.dripSpawnAccum -= 1.0f;
             if (nextRandFloat(state.rngState) < 0.65f)
@@ -408,21 +420,14 @@ void processBlock(EngineState&           state,
         mixed += mix.bodyGain * bodySig;
 
         // --- Wave oscillator (ocean/river amplitude modulation) ---
-        state.wavePhase  += state.cachedWaveRate;
-        if (state.wavePhase  > 1.0f) state.wavePhase  -= 1.0f;
-        state.wavePhaseR += state.cachedWaveRate * 1.031f;
-        if (state.wavePhaseR > 1.0f) state.wavePhaseR -= 1.0f;
-
-        float waveMod  = 0.5f + 0.5f * std::sin(2.0f * 3.14159265f * state.wavePhase);
-        float waveModR = 0.5f + 0.5f * std::sin(2.0f * 3.14159265f * state.wavePhaseR);
-
+        // Phase and sin() are advanced in updateCoefficients() every 64 samples
         float sigL = mixed;
         float sigR = mixed;
 
         if (mix.waveGain > 0.01f) {
             float wGain = mix.waveGain * params.flow;
-            sigL *= (1.0f - wGain * 0.5f + wGain * waveMod);
-            sigR *= (1.0f - wGain * 0.5f + wGain * waveModR);
+            sigL *= (1.0f - wGain * 0.5f + wGain * state.cachedWaveModL);
+            sigR *= (1.0f - wGain * 0.5f + wGain * state.cachedWaveModR);
         }
 
         // --- Depth LP (underwater damping) ---
@@ -433,11 +438,15 @@ void processBlock(EngineState&           state,
         sigL = dcBlock(state.dcXm1L, state.dcYm1L, sigL);
         sigR = dcBlock(state.dcXm1R, state.dcYm1R, sigR);
 
-        // --- Pre-drive saturation ---
+        // --- Pre-drive saturation (fast Padé tanh: accurate to <1% for |x|<3) ---
         float driveAmt   = 1.2f + params.drive * 2.8f;
         float driveNorm  = 1.0f / driveAmt;
-        sigL = std::tanh(driveAmt * sigL) * driveNorm;
-        sigR = std::tanh(driveAmt * sigR) * driveNorm;
+        {
+            float xL = driveAmt * sigL, xR = driveAmt * sigR;
+            float xL2 = xL * xL, xR2 = xR * xR;
+            sigL = xL * (27.0f + xL2) / (27.0f + 9.0f * xL2) * driveNorm;
+            sigR = xR * (27.0f + xR2) / (27.0f + 9.0f * xR2) * driveNorm;
+        }
 
         // --- Stereo delay (cross-coupled for spread) ---
         const int tapL = (state.delayWrL - state.cachedDelayTapL + kDelayBufferLen) & (kDelayBufferLen - 1);

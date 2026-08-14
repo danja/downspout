@@ -119,12 +119,18 @@ struct EngineState {
     // Coefficient update scheduling
     int controlCounter = 0;
     // Cached computed values (updated every kControlUpdatePeriod samples)
-    float cachedWaveRate      = 0.001f;
-    float cachedDelayFeedback = 0.30f;
-    float cachedDelayWet      = 0.30f;
-    int   cachedDelayTapL     = 2048;
-    int   cachedDelayTapR     = 3072;
-    double sampleRate         = 48000.0;
+    float cachedWaveRate        = 0.001f;
+    float cachedDelayFeedback   = 0.30f;
+    float cachedDelayWet        = 0.30f;
+    int   cachedDelayTapL       = 2048;
+    int   cachedDelayTapR       = 3072;
+    float cachedWaveModL        = 0.5f;
+    float cachedWaveModR        = 0.5f;
+    float cachedBubbleSpawnRate = 0.0f;
+    float cachedDripSpawnRate   = 0.0f;
+    float cachedTurbGain        = 0.5f;
+    float cachedSrInv           = 1.0f / 48000.0f;
+    double sampleRate           = 48000.0;
 };
 
 // Minimal MIDI event passed from the DPF wrapper to processBlock
