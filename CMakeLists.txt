@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+option(DOWNSPOUT_BUILD_BUBBLES "Configure the Bubbles water sound generator target" ON)
 option(DOWNSPOUT_BUILD_GATER "Configure the Gater MIDI-controlled switcher target" ON)
 option(DOWNSPOUT_BUILD_BASSGEN "Configure the bassgen port target" ON)
 option(DOWNSPOUT_BUILD_PMIX "Configure the p-mix port target" ON)
@@ -86,6 +87,10 @@ endif()
 
 if(DOWNSPOUT_BUILD_BASSGEN)
     add_subdirectory(plugins/bassgen)
+endif()
+
+if(DOWNSPOUT_BUILD_BUBBLES)
+    add_subdirectory(plugins/bubbles)
 endif()
 
 if(DOWNSPOUT_BUILD_GATER)

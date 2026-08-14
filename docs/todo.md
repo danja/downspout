@@ -1,9 +1,7 @@
 # Downspout TODO
 
-## Bubbles
 
-
-What can Drift control?
+set things up so that the drift plugin can modulate both bubbles and syrinx
 
 ## Screenshots
 
