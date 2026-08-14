@@ -163,7 +163,7 @@ public:
         values_[kParamConnectionStatus] = 0.0f;
 
        #ifdef DGL_NO_SHARED_RESOURCES
-        createFontFromFile("sans", "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf");
+        createFontFromFile("sans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
        #else
         loadSharedResources();
        #endif

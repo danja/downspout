@@ -78,7 +78,7 @@ public:
             std::chrono::high_resolution_clock::now().time_since_epoch().count());
 
        #ifdef DGL_NO_SHARED_RESOURCES
-        createFontFromFile("sans", "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf");
+        createFontFromFile("sans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
        #else
         loadSharedResources();
        #endif

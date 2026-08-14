@@ -32,7 +32,7 @@ public:
         for (std::uint32_t i = 0; i < count_; ++i)
             values_[i] = specs_[i].defaultValue;
 #ifdef DGL_NO_SHARED_RESOURCES
-        createFontFromFile("sans", "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf");
+        createFontFromFile("sans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
 #else
         loadSharedResources();
 #endif
