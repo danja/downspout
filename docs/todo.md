@@ -1,5 +1,10 @@
 # Downspout TODO
 
+## Bubbles
+
+
+What can Drift control?
+
 ## Screenshots
 
 Floozy UI changed (Voices slider added, dynamic header). Refresh screenshot:

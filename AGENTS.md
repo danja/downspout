@@ -22,6 +22,7 @@ Initial plugin targets:
 - Do not modify shared/framework code that existing plugins rely on without explicit user approval first. This includes `third_party/`, `src/common/`, `include/downspout/`, shared scripts, and root build/install/release glue.
 - Document assumptions when mapping LV2 concepts to DPF/VST3, especially transport, state, and UI behavior.
 - On a fresh CMake build directory, do not launch the build command until configure has finished. In this repo, starting `cmake --build` too early regularly races cache generation and fails with `Error: could not load cache`.
+- Log mistakes in MISTAKES.md (what happened, root cause, prevention).
 
 ## Repository shape
 
