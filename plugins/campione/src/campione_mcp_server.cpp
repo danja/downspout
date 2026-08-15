@@ -187,6 +187,15 @@ void CampioneMcpServer::stop()
 
 void CampioneMcpServer::serve()
 {
+    // Override httplib's default SO_REUSEPORT with SO_REUSEADDR only, so that
+    // a second Campione instance correctly fails to bind port N and increments
+    // to N+1 rather than sharing the same port via kernel load-balancing.
+    svr_->set_socket_options([](socket_t sock) {
+        int yes = 1;
+        setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
+                   reinterpret_cast<const char*>(&yes), sizeof(yes));
+    });
+
     // Find an available port
     for (int port = preferredPort_; port < preferredPort_ + 10; ++port) {
         if (svr_->bind_to_port("127.0.0.1", port)) {

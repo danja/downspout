@@ -262,6 +262,7 @@ The release script currently expects these bundles:
 - `resonance_garden.vst3`
 - `orbit.vst3`
 - `guardian.vst3`
+- `campione.vst3`
 
 This list should match the bundles installed by `install.sh`; if a plugin is
 added to the local install path, release packaging should be updated in the same

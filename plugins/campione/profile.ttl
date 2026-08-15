@@ -47,4 +47,11 @@ dsp:campione a trn:PluginProfile ;
         trn:default "0.0"^^xsd:float ;
         trn:min "0.0"^^xsd:float ;
         trn:max "1.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "MCP Enabled" ;
+        trn:symbol "mcp_enabled" ;
+        trn:default "1.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "1.0"^^xsd:float
     ] .

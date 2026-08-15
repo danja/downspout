@@ -263,7 +263,7 @@ protected:
         case kStateParameters:
             state.key          = kStateKeyParameters;
             state.label        = "Parameters";
-            state.hints        = kStateIsOnlyForDSP;
+            state.hints        = 0;
             state.defaultValue = "";
             break;
         case kStateZones:
@@ -500,6 +500,11 @@ protected:
             updateStateValue(kStateKeyZones, serialized.c_str());
         }
 
+        if (pendingParamNotify_.exchange(false, std::memory_order_acq_rel)) {
+            const std::string serialized = downspout::campione::serializeParameters(parameters_);
+            updateStateValue(kStateKeyParameters, serialized.c_str());
+        }
+
         if (recording_.load(std::memory_order_acquire)) {
             std::size_t pos      = recordWritePos_.load(std::memory_order_relaxed);
             const std::size_t ch = static_cast<std::size_t>(recordChannels_);
@@ -624,15 +629,11 @@ private:
         notifyZonesChanged();
     }
 
-    // Notify host+UI of zone list change — safe to call from any thread.
-    // updateStateValue is intended for the audio thread but works from the MCP
-    // thread in REAPER; pendingZoneUpdate_ handles the audio-thread path as backup.
+    // Signal that zones changed — safe to call from any thread.
+    // run() picks up the flag and sends updateStateValue from the audio thread.
     void notifyZonesChanged()
     {
-        const auto zp = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
-        const std::string s = zp ? downspout::campione::serializeZones(*zp) : std::string{};
-        updateStateValue(kStateKeyZones, s.c_str());
-        pendingZoneUpdate_.store(false, std::memory_order_release); // already sent above
+        pendingZoneUpdate_.store(true, std::memory_order_release);
     }
 
     // ── MCP-sourced parameter update (called from MCP thread) ─────────────────
@@ -643,6 +644,7 @@ private:
         if (!hasMcpParams_) mcpPendingParams_ = parameters_;
         mcpPendingParams_.*field = value;
         hasMcpParams_ = true;
+        pendingParamNotify_.store(true, std::memory_order_release);
     }
 
     // ── Wave editing (called from MCP thread, safe via atomic zone swap) ──────
@@ -820,6 +822,7 @@ private:
     const ZoneVec                  emptyZones_ {};
 
     std::atomic<bool>        pendingZoneUpdate_  {false};
+    std::atomic<bool>        pendingParamNotify_ {false};
     std::mutex               zoneMtx_;           // guards zonesInitialized_ + zone writes
     bool                     zonesInitialized_  {false};
     std::atomic<bool>        recording_         {false};

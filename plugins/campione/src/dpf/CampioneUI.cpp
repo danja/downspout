@@ -31,6 +31,7 @@ using downspout::campione::kStateKeyZoneRemove;
 using downspout::campione::kStateKeyZoneReverse;
 using downspout::campione::kStateKeyZoneTrim;
 using downspout::campione::kStateKeyZoneUpdate;
+using downspout::campione::kStateKeyParameters;
 using downspout::campione::kStateKeyZones;
 
 struct Rect {
@@ -118,6 +119,17 @@ protected:
 
     void stateChanged(const char* key, const char* value) override
     {
+        if (std::strcmp(key, kStateKeyParameters) == 0) {
+            const auto p = downspout::campione::deserializeParameters(value ? value : "");
+            if (p.has_value()) {
+                values_[kParamMasterVolume]      = p->masterVolume;
+                values_[kParamMidiChannel]       = p->midiChannel;
+                values_[kParamCrossfadeDuration] = p->crossfadeDurationMs;
+                values_[kParamPitchBendRange]    = p->pitchBendRange;
+                repaint();
+            }
+            return;
+        }
         if (std::strcmp(key, kStateKeyZoneLoad) == 0 && value && value[0] != '\0') {
             ZoneEntry e;
             e.path = value;
@@ -897,14 +909,6 @@ private:
             text(kPad + 232.0f, fy + 30.0f, buf, nullptr);
         }
 
-        char buf[32];
-        std::snprintf(buf, sizeof(buf), "%d zone%s",
-                      static_cast<int>(zones_.size()),
-                      zones_.size() == 1 ? "" : "s");
-        fontSize(12.0f);
-        textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
-        fillColor(108, 125, 137, 255);
-        text(W - kPad, fy + 30.0f, buf, nullptr);
     }
 
     void drawButton(const Rect& r, const char* label, uint8_t cr, uint8_t cg, uint8_t cb)

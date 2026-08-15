@@ -33,9 +33,18 @@ can be reloaded, replaced, or cleared without restarting the host.
 - **Crossfade ms** — crossfade length at loop boundaries in milliseconds.
 - **Pitch Bend Range** — pitch-bend wheel range in semitones.
 - **Recording** — boolean flag; non-zero arms the audio input for capture into a new sample zone.
+- **MCP Enabled** — boolean flag; enables the embedded MCP HTTP server (default on).
+
+### MCP server
+
+Campione embeds an HTTP MCP server (default port 7220) that exposes all plugin
+controls as MCP tools. This allows Claude Code or any MCP client to load zones,
+edit wave data, adjust parameters, and inspect state without touching the DAW
+UI. Register once with `claude mcp add campione /path/to/campione_mcp_proxy.sh`.
 
 ### Status
 
-Phase 1 implementation with core sampler engine, per-note MIDI mapping,
-crossfade looping, zero-crossing snap, pitch-shift gap fill, WAV loading, and
-audio recording with auto-pitch detection.
+Full implementation with core sampler engine, per-note MIDI mapping,
+crossfade looping, zero-crossing snap, pitch-shift gap fill, WAV loading,
+audio recording with auto-pitch detection, wave editing (normalize, trim, fade,
+reverse), and embedded MCP server.
