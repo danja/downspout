@@ -21,6 +21,7 @@ using downspout::campione::kParamCrossfadeDuration;
 using downspout::campione::kParamMasterVolume;
 using downspout::campione::kParamMidiChannel;
 using downspout::campione::kParamPitchBendRange;
+using downspout::campione::kParamMcpEnabled;
 using downspout::campione::kParamRecording;
 using downspout::campione::kParameterCount;
 using downspout::campione::kStateKeyZoneFade;
@@ -194,6 +195,16 @@ protected:
         // Load WAV
         if (loadBtn_.contains(px, py)) {
             requestStateFile(kStateKeyZoneLoad);
+            return true;
+        }
+
+        // MCP toggle
+        if (mcpBtn_.contains(px, py)) {
+            const float newVal = values_[kParamMcpEnabled] >= 0.5f ? 0.0f : 1.0f;
+            editParameter(kParamMcpEnabled, true);
+            setParameterValue(kParamMcpEnabled, newVal);
+            editParameter(kParamMcpEnabled, false);
+            repaint();
             return true;
         }
 
@@ -857,6 +868,12 @@ private:
         loadBtn_ = { kPad, fy + 16.0f, 110.0f, 28.0f };
         drawButton(loadBtn_, "Load WAV", 51, 64, 74);
 
+        // MCP toggle button
+        mcpBtn_ = { W - kPad - 72.0f, fy + 16.0f, 72.0f, 28.0f };
+        const bool mcpOn = values_[kParamMcpEnabled] >= 0.5f;
+        drawButton(mcpBtn_, mcpOn ? "MCP ON" : "MCP OFF",
+                   mcpOn ? 30 : 51, mcpOn ? 100 : 64, mcpOn ? 30 : 74);
+
         recBtn_ = { kPad + 120.0f, fy + 16.0f, 100.0f, 28.0f };
         if (recording_) {
             drawButton(recBtn_, "\xe2\x97\x8f  Stop", 140, 40, 40);
@@ -936,6 +953,7 @@ private:
 
     Rect loadBtn_   {};
     Rect recBtn_    {};
+    Rect mcpBtn_    {};
     Rect chBtn_     {};
     Rect volSlider_ {};
     Rect waveRect_       {};

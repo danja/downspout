@@ -37,6 +37,7 @@ using downspout::campione::kParamCrossfadeDuration;
 using downspout::campione::kParamMasterVolume;
 using downspout::campione::kParamMidiChannel;
 using downspout::campione::kParamPitchBendRange;
+using downspout::campione::kParamMcpEnabled;
 using downspout::campione::kParamRecording;
 using downspout::campione::kParameterCount;
 using downspout::campione::kStateCount;
@@ -112,9 +113,11 @@ public:
         : Plugin(kParameterCount, 0, kStateCount)
     {
         parameters_ = downspout::campione::clampParameters(parameters_);
+        // MCP server starts by default; setParameterValue(kParamMcpEnabled,0) disables it.
         mcp_ = std::make_unique<downspout::campione::CampioneMcpServer>(
             kMcpDefaultPort, buildMcpApi());
         mcp_->start();
+        mcpEnabled_ = true;
     }
 
 protected:
@@ -186,6 +189,14 @@ protected:
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = 0.0f;
             break;
+        case kParamMcpEnabled:
+            parameter.name   = "MCP Server";
+            parameter.symbol = "mcp_enabled";
+            parameter.hints  = kParameterIsBoolean | kParameterIsAutomatable;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 1.0f;
+            break;
         }
     }
 
@@ -198,6 +209,7 @@ protected:
         case kParamCrossfadeDuration: return parameters_.crossfadeDurationMs;
         case kParamPitchBendRange:    return parameters_.pitchBendRange;
         case kParamRecording:         return recording_.load(std::memory_order_relaxed) ? 1.0f : 0.0f;
+        case kParamMcpEnabled:        return mcpEnabled_ ? 1.0f : 0.0f;
         default: return 0.0f;
         }
     }
@@ -210,6 +222,21 @@ protected:
         case kParamMidiChannel:       parameters_.midiChannel         = value; break;
         case kParamCrossfadeDuration: parameters_.crossfadeDurationMs = value; break;
         case kParamPitchBendRange:    parameters_.pitchBendRange      = value; break;
+        case kParamMcpEnabled:
+        {
+            const bool enable = value >= 0.5f;
+            if (enable && !mcpEnabled_) {
+                mcp_ = std::make_unique<downspout::campione::CampioneMcpServer>(
+                    kMcpDefaultPort, buildMcpApi());
+                mcp_->start();
+                mcpEnabled_ = true;
+            } else if (!enable && mcpEnabled_) {
+                mcp_->stop();
+                mcp_.reset();
+                mcpEnabled_ = false;
+            }
+            return;
+        }
         case kParamRecording:
         {
             const bool arm = value >= 0.5f;
@@ -491,10 +518,12 @@ protected:
 private:
     // ── Zone helpers ──────────────────────────────────────────────────────────
 
-    void appendZone(const std::string& path)
+    // Returns empty string on success, error message on failure.
+    std::string appendZone(const std::string& path)
     {
+        // Load WAV outside the lock (slow I/O).
         auto result = downspout::campione::loadWavZone(path);
-        if (!result.error.empty()) return;
+        if (!result.error.empty()) return result.error;
 
         result.zone.sourcePath = path;
         result.zone.rootNote   = 60;
@@ -507,18 +536,27 @@ private:
 
         downspout::campione::applyLoopPoints(result.zone, parameters_.crossfadeDurationMs);
 
+        // Lock out restoreZones, then atomically claim ownership and append.
+        std::lock_guard<std::mutex> lk(zoneMtx_);
+        zonesInitialized_ = true;
         const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
         auto newZones = std::make_shared<ZoneVec>(existing ? *existing : ZoneVec{});
         newZones->push_back(std::move(result.zone));
         std::atomic_store_explicit(&zones_,
                                    std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                    std::memory_order_release);
+        return {};
     }
 
     void restoreZones(const std::string& text)
     {
+        // Deserialize metadata before acquiring the lock (involves no zone writes).
         const auto metas = downspout::campione::deserializeZones(text);
         if (!metas.has_value()) return;
+
+        // Under the lock: bail out if MCP has already claimed zone ownership.
+        std::lock_guard<std::mutex> lk(zoneMtx_);
+        if (zonesInitialized_) return;
 
         auto newZones = std::make_shared<ZoneVec>();
         newZones->reserve(metas->size());
@@ -583,7 +621,18 @@ private:
         std::atomic_store_explicit(&zones_,
                                    std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                    std::memory_order_release);
-        pendingZoneUpdate_.store(true, std::memory_order_release);
+        notifyZonesChanged();
+    }
+
+    // Notify host+UI of zone list change — safe to call from any thread.
+    // updateStateValue is intended for the audio thread but works from the MCP
+    // thread in REAPER; pendingZoneUpdate_ handles the audio-thread path as backup.
+    void notifyZonesChanged()
+    {
+        const auto zp = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+        const std::string s = zp ? downspout::campione::serializeZones(*zp) : std::string{};
+        updateStateValue(kStateKeyZones, s.c_str());
+        pendingZoneUpdate_.store(false, std::memory_order_release); // already sent above
     }
 
     // ── MCP-sourced parameter update (called from MCP thread) ─────────────────
@@ -601,6 +650,8 @@ private:
     std::string mcpEditZone(int idx,
         const std::function<std::string(CoreSampleZone&)>& edit)
     {
+        std::lock_guard<std::mutex> lk(zoneMtx_);
+        zonesInitialized_ = true;
         const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
         if (!existing || idx < 0 || idx >= static_cast<int>(existing->size()))
             return "zone index out of range";
@@ -619,7 +670,7 @@ private:
         std::atomic_store_explicit(&zones_,
                                    std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                    std::memory_order_release);
-        pendingZoneUpdate_.store(true, std::memory_order_release);
+        notifyZonesChanged();
         return {};
     }
 
@@ -631,6 +682,8 @@ private:
         CampioneMcpServer::Api api;
 
         api.getZonesJson = [this]() -> std::string {
+            // Querying zones means MCP is active — lock out host setState from this point.
+            { std::lock_guard<std::mutex> lk(zoneMtx_); zonesInitialized_ = true; }
             const auto z = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
             return z ? zonesAsJson(*z) : "{\"zones\":[]}";
         };
@@ -673,14 +726,15 @@ private:
         };
 
         api.loadZone = [this](const std::string& path) -> std::string {
-            auto result = loadWavZone(path);
-            if (!result.error.empty()) return result.error;
-            appendZone(path);
-            pendingZoneUpdate_.store(true, std::memory_order_release);
+            const std::string err = appendZone(path);  // single load, errors propagated
+            if (!err.empty()) return err;
+            notifyZonesChanged();
             return {};
         };
 
         api.removeZone = [this](int idx) -> std::string {
+            std::lock_guard<std::mutex> lk(zoneMtx_);
+            zonesInitialized_ = true;
             const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
             if (!existing || idx < 0 || idx >= static_cast<int>(existing->size()))
                 return "zone index out of range";
@@ -689,12 +743,14 @@ private:
             std::atomic_store_explicit(&zones_,
                                        std::shared_ptr<const ZoneVec>(std::move(nz)),
                                        std::memory_order_release);
-            pendingZoneUpdate_.store(true, std::memory_order_release);
+            notifyZonesChanged();
             return {};
         };
 
         api.updateZone = [this](int idx, int root, int lo, int hi, bool loop,
                                  uint32_t lStart, uint32_t lEnd) -> std::string {
+            std::lock_guard<std::mutex> lk(zoneMtx_);
+            zonesInitialized_ = true;
             const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
             if (!existing || idx < 0 || idx >= static_cast<int>(existing->size()))
                 return "zone index out of range";
@@ -717,7 +773,7 @@ private:
             std::atomic_store_explicit(&zones_,
                                        std::shared_ptr<const ZoneVec>(std::move(nz)),
                                        std::memory_order_release);
-            pendingZoneUpdate_.store(true, std::memory_order_release);
+            notifyZonesChanged();
             return {};
         };
 
@@ -763,7 +819,9 @@ private:
     std::shared_ptr<const ZoneVec> zones_ {};
     const ZoneVec                  emptyZones_ {};
 
-    std::atomic<bool>        pendingZoneUpdate_ {false};
+    std::atomic<bool>        pendingZoneUpdate_  {false};
+    std::mutex               zoneMtx_;           // guards zonesInitialized_ + zone writes
+    bool                     zonesInitialized_  {false};
     std::atomic<bool>        recording_         {false};
     std::atomic<std::size_t> recordWritePos_    {0};
     std::vector<float>       recordBuffer_;
@@ -775,6 +833,7 @@ private:
     bool             hasMcpParams_ = false;
 
     std::unique_ptr<downspout::campione::CampioneMcpServer> mcp_;
+    bool                     mcpEnabled_ {false};
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CampionePlugin)
 };
