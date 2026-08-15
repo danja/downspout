@@ -1,0 +1,26 @@
+#ifndef DOWNSPOUT_CAMPIONE_DISTRHO_PLUGIN_INFO_H_INCLUDED
+#define DOWNSPOUT_CAMPIONE_DISTRHO_PLUGIN_INFO_H_INCLUDED
+
+#define DISTRHO_PLUGIN_BRAND   "Downspout"
+#define DISTRHO_PLUGIN_NAME    "Campione"
+#define DISTRHO_PLUGIN_URI     "https://danja.github.io/downspout/plugins/campione"
+#define DISTRHO_PLUGIN_CLAP_ID "it.hyperdata.downspout.campione"
+
+#define DISTRHO_PLUGIN_BRAND_ID DnSp
+#define DISTRHO_PLUGIN_UNIQUE_ID Cmpn
+
+#define DISTRHO_PLUGIN_HAS_UI           1
+#define DISTRHO_PLUGIN_IS_RT_SAFE       1
+#define DISTRHO_PLUGIN_IS_SYNTH         1
+#define DISTRHO_PLUGIN_NUM_INPUTS       2
+#define DISTRHO_PLUGIN_NUM_OUTPUTS      2
+#define DISTRHO_PLUGIN_WANT_MIDI_INPUT  1
+#define DISTRHO_PLUGIN_WANT_STATE       1
+#define DISTRHO_PLUGIN_WANT_FULL_STATE  1
+#define DISTRHO_PLUGIN_VST3_CATEGORIES  "Instrument|Sampler|Synth"
+#define DISTRHO_UI_DEFAULT_WIDTH        760
+#define DISTRHO_UI_DEFAULT_HEIGHT       480
+#define DISTRHO_UI_USE_NANOVG           1
+#define DISTRHO_UI_FILE_BROWSER         1
+
+#endif

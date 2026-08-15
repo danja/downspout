@@ -1,0 +1,43 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:campione a trn:PluginProfile ;
+    rdfs:label "Campione" ;
+    rdfs:comment "Multi-zone sampler with per-note MIDI mapping, pitch-shift gap fill, zero-crossing loop snap, and crossfade looping." ;
+    trn:bundleName "campione.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/campione/> ;
+    trn:role trn:Instrument ;
+    trn:accepts trn:MIDI, trn:Audio ;
+    trn:produces trn:Audio ;
+    trn:parameter [
+        rdfs:label "Volume" ;
+        trn:symbol "volume" ;
+        trn:default "0.8"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "1.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "MIDI Channel" ;
+        trn:symbol "midi_channel" ;
+        trn:default "0.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "16.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "Crossfade ms" ;
+        trn:symbol "crossfade_ms" ;
+        trn:default "20.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "500.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "Pitch Bend Range" ;
+        trn:symbol "pitch_bend_range" ;
+        trn:default "2.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "24.0"^^xsd:float
+    ] .

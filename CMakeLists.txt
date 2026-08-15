@@ -55,6 +55,7 @@ option(DOWNSPOUT_BUILD_RESONANCE_GARDEN "Configure the Resonance Garden effect t
 option(DOWNSPOUT_BUILD_ORBIT "Configure the Orbit spatial effect target" ON)
 option(DOWNSPOUT_BUILD_GUARDIAN "Configure the Guardian safety effect target" ON)
 option(DOWNSPOUT_BUILD_MIDISCRIBE "Configure the Midiscribe MIDI capture target" ON)
+option(DOWNSPOUT_BUILD_CAMPIONE "Configure the Campione sampler target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 option(DOWNSPOUT_BUILD_SCREENSHOT_APPS "Build DPF standalone apps for documentation screenshots" OFF)
 
@@ -279,4 +280,8 @@ endif()
 option(DOWNSPOUT_BUILD_FLUES_SYNTH_DRIVER "Configure the flues-synth-driver MIDI controller target" ON)
 if(DOWNSPOUT_BUILD_FLUES_SYNTH_DRIVER)
     add_subdirectory(plugins/flues-synth-driver)
+endif()
+
+if(DOWNSPOUT_BUILD_CAMPIONE)
+    add_subdirectory(plugins/campione)
 endif()
