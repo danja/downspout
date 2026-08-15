@@ -90,6 +90,7 @@ installed bundle.
 | [ground](plugins/ground/README.md) | `ground.vst3` | MIDI generator | Long-form bass generator with Dub/Jazz styles, phrase planning, and guarded bass-register output. |
 | [floozy](plugins/floozy/README.md) | `floozy.vst3` | Instrument | Corrected 8-voice hybrid physical/modulation synth derived from `floozy-poly`. |
 | [basilico](plugins/basilico/README.md) | `basilico.vst3` | Instrument | Monophonic bass synth with Dub/Acid wobble, tempo sync, squelch, and upright/electric/industrial models. |
+| [campione](plugins/campione/README.md) | `campione.vst3` | Instrument | Campione — multi-zone sampler with WAV loading, recording, gap-fill pitch shift, and crossfade looping. |
 | [canticle](plugins/canticle/README.md) | `canticle.vst3` | Instrument | 12-voice keys, reed, pad, pluck, and glass synth for melody, counterpoint, and chords. |
 | [tuney-vst](plugins/tuney-vst/README.md) | `tuney_vst.vst3` | Instrument/MIDI generator | Turns focused typing or stored text into microtonal synthesized audio and ordinary MIDI notes. |
 | [luma](plugins/luma/README.md) | `luma.vst3` | MIDI generator | Launchpad-oriented performance generator where lit pads become bass, chord, melody, and drum agents. |

@@ -1,6 +1,7 @@
 #include "DistrhoUI.hpp"
 
 #include "campione_params.hpp"
+#include "campione_sample_loader.hpp"
 #include "campione_serialization.hpp"
 
 #include <algorithm>
@@ -35,14 +36,25 @@ struct Rect {
 };
 
 struct ZoneEntry {
-    std::string path;
-    int  rootNote    = 60;
-    int  rangeLow    = 0;
-    int  rangeHigh   = 127;
-    bool loopEnabled = false;
+    std::string  path;
+    int          rootNote    = 60;
+    int          rangeLow    = 0;
+    int          rangeHigh   = 127;
+    bool         loopEnabled = false;
+    uint32_t     loopStart   = 0;
+    uint32_t     loopEnd     = 0;
+    uint32_t     totalFrames = 0;  // populated when waveform is loaded
 };
 
-enum DragField { kDragNone, kDragVol, kDragRoot, kDragRangeLow, kDragRangeHigh };
+enum DragField {
+    kDragNone,
+    kDragVol,
+    kDragRoot,
+    kDragRangeLow,
+    kDragRangeHigh,
+    kDragLoopStart,
+    kDragLoopEnd
+};
 
 [[nodiscard]] std::string basename(const std::string& path) {
     const std::size_t slash = path.rfind('/');
@@ -61,6 +73,7 @@ constexpr float kPad     = 20.0f;
 constexpr float kHeaderH = 56.0f;
 constexpr float kRowH    = 26.0f;
 constexpr float kFooterH = 60.0f;
+constexpr float kWaveH   = 100.0f;
 
 // Column x positions (left edge relative to kPad)
 constexpr float kColNum    =  8.0f;
@@ -109,6 +122,9 @@ protected:
         }
         if (std::strcmp(key, kStateKeyZones) == 0) {
             rebuildFromZonesState(value ? value : "");
+            // Invalidate waveform if selected zone was removed
+            if (selectedZone_ >= static_cast<int>(zones_.size()))
+                selectedZone_ = -1;
             repaint();
             return;
         }
@@ -139,6 +155,7 @@ protected:
 
         drawHeader(W);
         drawZoneList(W, H);
+        drawWaveform(W, H);
         drawFooter(W, H);
     }
 
@@ -150,6 +167,13 @@ protected:
         const float py = static_cast<float>(ev.pos.getY());
 
         if (!ev.press) {
+            // Commit loop handle drag
+            if (dragField_ == kDragLoopStart || dragField_ == kDragLoopEnd) {
+                if (selectedZone_ >= 0 && selectedZone_ < static_cast<int>(zones_.size()))
+                    pushZoneUpdate(static_cast<std::size_t>(selectedZone_));
+                dragField_ = kDragNone;
+                return false;
+            }
             // Commit zone field drag
             if (dragField_ != kDragNone && dragField_ != kDragVol && dragZoneIdx_ >= 0
                 && dragZoneIdx_ < static_cast<int>(zones_.size()))
@@ -198,11 +222,29 @@ protected:
             return true;
         }
 
+        // Loop handle drags (only meaningful when waveform is drawn)
+        if (selectedZone_ >= 0 && selectedZone_ < static_cast<int>(zones_.size())
+            && zones_[static_cast<std::size_t>(selectedZone_)].loopEnabled)
+        {
+            if (loopStartHandle_.contains(px, py)) {
+                dragField_    = kDragLoopStart;
+                dragStartX_   = px;
+                dragStartFrame_ = zones_[static_cast<std::size_t>(selectedZone_)].loopStart;
+                return true;
+            }
+            if (loopEndHandle_.contains(px, py)) {
+                dragField_    = kDragLoopEnd;
+                dragStartX_   = px;
+                dragStartFrame_ = zones_[static_cast<std::size_t>(selectedZone_)].loopEnd;
+                return true;
+            }
+        }
+
         // Zone row interactions
         const float W     = static_cast<float>(getWidth());
         const float H     = static_cast<float>(getHeight());
         const float listY = kHeaderH + kPad * 2.0f;
-        const float listH = H - listY - kFooterH - kPad;
+        const float listH = H - listY - kFooterH - kPad * 1.5f - kWaveH;
         const float rowsY = listY + 23.0f;
 
         for (std::size_t i = 0; i < zones_.size(); ++i) {
@@ -216,6 +258,10 @@ protected:
                 std::snprintf(buf, sizeof(buf), "%d", static_cast<int>(i));
                 setState(kStateKeyZoneRemove, buf);
                 zones_.erase(zones_.begin() + static_cast<std::ptrdiff_t>(i));
+                if (selectedZone_ == static_cast<int>(i))
+                    selectedZone_ = -1;
+                else if (selectedZone_ > static_cast<int>(i))
+                    --selectedZone_;
                 repaint();
                 return true;
             }
@@ -239,7 +285,7 @@ protected:
                 return true;
             }
 
-            // Range low — left half of range cell
+            // Range low/high — drag start
             const Rect rangeCell { kPad + kColRange, ry, 100.0f, kRowH };
             if (rangeCell.contains(px, py)) {
                 if (px < rangeCell.x + rangeCell.w * 0.5f) {
@@ -251,6 +297,17 @@ protected:
                 }
                 dragZoneIdx_ = static_cast<int>(i);
                 dragStartY_  = py;
+                return true;
+            }
+
+            // Row click (any unhandled area) → select zone and load waveform
+            const Rect rowR { kPad, ry, W - kPad * 2.0f, kRowH };
+            if (rowR.contains(px, py)) {
+                if (selectedZone_ != static_cast<int>(i)) {
+                    selectedZone_ = static_cast<int>(i);
+                    loadPeaks(selectedZone_);
+                    repaint();
+                }
                 return true;
             }
         }
@@ -265,6 +322,28 @@ protected:
 
         if (dragField_ == kDragVol) {
             updateVolFromX(px);
+            return true;
+        }
+
+        if (dragField_ == kDragLoopStart || dragField_ == kDragLoopEnd) {
+            if (selectedZone_ >= 0 && selectedZone_ < static_cast<int>(zones_.size())
+                && waveRect_.w > 0.0f)
+            {
+                ZoneEntry& z = zones_[static_cast<std::size_t>(selectedZone_)];
+                if (z.totalFrames > 0) {
+                    const float dx    = px - dragStartX_;
+                    const int delta   = static_cast<int>(dx / waveRect_.w
+                                                         * static_cast<float>(z.totalFrames));
+                    const int newF    = std::clamp(static_cast<int>(dragStartFrame_) + delta,
+                                                   0, static_cast<int>(z.totalFrames) - 1);
+                    if (dragField_ == kDragLoopStart)
+                        z.loopStart = static_cast<uint32_t>(std::min(newF, static_cast<int>(z.loopEnd)));
+                    else
+                        z.loopEnd = static_cast<uint32_t>(std::max(newF, static_cast<int>(z.loopStart)));
+                    repaint();
+                    return true;
+                }
+            }
             return true;
         }
 
@@ -297,12 +376,52 @@ private:
     {
         if (idx >= zones_.size()) return;
         const ZoneEntry& z = zones_[idx];
-        char buf[64];
-        std::snprintf(buf, sizeof(buf), "%d|%d|%d|%d|%d",
+        char buf[96];
+        std::snprintf(buf, sizeof(buf), "%d|%d|%d|%d|%d|%u|%u",
                       static_cast<int>(idx),
                       z.rootNote, z.rangeLow, z.rangeHigh,
-                      z.loopEnabled ? 1 : 0);
+                      z.loopEnabled ? 1 : 0,
+                      z.loopStart, z.loopEnd);
         setState(kStateKeyZoneUpdate, buf);
+    }
+
+    void loadPeaks(int idx)
+    {
+        peaks_.clear();
+        peakZoneIdx_ = -1;
+        if (idx < 0 || idx >= static_cast<int>(zones_.size())) return;
+
+        ZoneEntry& z = zones_[static_cast<std::size_t>(idx)];
+        if (z.path.empty()) return;
+
+        auto result = downspout::campione::loadWavZone(z.path);
+        if (!result.error.empty() || result.zone.data.empty()) return;
+
+        const auto& data   = result.zone.data;
+        const int chCount  = result.zone.channelCount;
+        const int totalF   = static_cast<int>(data.size()) / std::max(1, chCount);
+
+        z.totalFrames = static_cast<uint32_t>(totalF);
+
+        constexpr int kPeakBins = 400;
+        peaks_.resize(kPeakBins * 2, 0.0f);
+
+        for (int bin = 0; bin < kPeakBins; ++bin) {
+            const int f0 = static_cast<int>(static_cast<int64_t>(bin)     * totalF / kPeakBins);
+            const int f1 = static_cast<int>(static_cast<int64_t>(bin + 1) * totalF / kPeakBins);
+            float mn = 0.0f, mx = 0.0f;
+            for (int f = f0; f < f1; ++f) {
+                float s = 0.0f;
+                for (int c = 0; c < chCount; ++c)
+                    s += data[static_cast<std::size_t>(f * chCount + c)];
+                s /= static_cast<float>(std::max(1, chCount));
+                mn = std::min(mn, s);
+                mx = std::max(mx, s);
+            }
+            peaks_[bin * 2 + 0] = mn;
+            peaks_[bin * 2 + 1] = mx;
+        }
+        peakZoneIdx_ = idx;
     }
 
     void drawHeader(float W)
@@ -377,7 +496,7 @@ private:
     void drawZoneList(float W, float H)
     {
         const float listY = kHeaderH + kPad * 2.0f;
-        const float listH = H - listY - kFooterH - kPad;
+        const float listH = H - listY - kFooterH - kPad * 1.5f - kWaveH;
 
         fontSize(14.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
@@ -386,7 +505,7 @@ private:
 
         fontSize(11.0f);
         fillColor(108, 125, 137, 255);
-        text(kPad + 56.0f, listY - 15.0f, "drag Root/Range to edit", nullptr);
+        text(kPad + 56.0f, listY - 15.0f, "drag Root/Range to edit  \xe2\x80\xa2  click row to view waveform", nullptr);
 
         beginPath();
         fillColor(15, 23, 31, 212);
@@ -416,16 +535,29 @@ private:
             const float ry  = rowsY + static_cast<float>(i) * kRowH;
             if (ry + kRowH > listY + listH) break;
 
-            const ZoneEntry& z   = zones_[i];
-            const bool even      = (i % 2) == 0;
-            const bool isDragged = dragZoneIdx_ == static_cast<int>(i) && dragField_ != kDragNone;
+            const ZoneEntry& z      = zones_[i];
+            const bool even         = (i % 2) == 0;
+            const bool isDragged    = dragZoneIdx_ == static_cast<int>(i) && dragField_ != kDragNone;
+            const bool isSelected   = selectedZone_ == static_cast<int>(i);
 
             beginPath();
-            fillColor(even ? 22 : 18, even ? 31 : 26,
-                      isDragged ? 50 : (even ? 41 : 34), 255);
+            if (isSelected)
+                fillColor(28, 42, 60, 255);
+            else
+                fillColor(even ? 22 : 18, even ? 31 : 26,
+                          isDragged ? 50 : (even ? 41 : 34), 255);
             rect(kPad + 1.0f, ry, W - kPad * 2.0f - 2.0f, kRowH - 1.0f);
             fill();
             closePath();
+
+            // Selection accent bar
+            if (isSelected) {
+                beginPath();
+                fillColor(82, 142, 200, 255);
+                rect(kPad + 1.0f, ry, 3.0f, kRowH - 1.0f);
+                fill();
+                closePath();
+            }
 
             const float mid = ry + kRowH * 0.5f;
             char buf[64];
@@ -444,7 +576,7 @@ private:
                 fillColor(200, 205, 215, 255);
             text(kPad + kColRoot, mid, midiNoteName(z.rootNote).c_str(), nullptr);
 
-            // Range (highlight low or high half based on drag)
+            // Range
             const std::string lo = midiNoteName(z.rangeLow);
             const std::string hi = midiNoteName(z.rangeHigh);
             if (isDragged && dragField_ == kDragRangeLow)
@@ -515,6 +647,135 @@ private:
             text(W * 0.5f, listY + listH * 0.5f,
                  "No zones loaded \xe2\x80\x94 click Load WAV or Record", nullptr);
         }
+    }
+
+    void drawWaveform(float W, float H)
+    {
+        const float listY  = kHeaderH + kPad * 2.0f;
+        const float listH  = H - listY - kFooterH - kPad * 1.5f - kWaveH;
+        const float waveY  = listY + listH + kPad * 0.5f;
+        const float waveW  = W - kPad * 2.0f;
+
+        waveRect_ = { kPad, waveY, waveW, kWaveH };
+
+        // Background
+        beginPath();
+        fillColor(10, 18, 26, 255);
+        roundedRect(waveRect_.x, waveRect_.y, waveRect_.w, waveRect_.h, 6.0f);
+        fill();
+        closePath();
+
+        if (selectedZone_ < 0 || selectedZone_ >= static_cast<int>(zones_.size())) {
+            // No zone selected
+            fontSize(11.0f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            fillColor(55, 75, 90, 255);
+            text(waveRect_.x + waveRect_.w * 0.5f, waveRect_.y + waveRect_.h * 0.5f,
+                 "click a zone row to view its waveform", nullptr);
+
+            beginPath();
+            strokeColor(30, 44, 56, 255);
+            strokeWidth(1.0f);
+            roundedRect(waveRect_.x, waveRect_.y, waveRect_.w, waveRect_.h, 6.0f);
+            stroke();
+            closePath();
+            loopStartHandle_ = {};
+            loopEndHandle_   = {};
+            return;
+        }
+
+        const ZoneEntry& z = zones_[static_cast<std::size_t>(selectedZone_)];
+        const uint32_t totalF = z.totalFrames > 0 ? z.totalFrames : 1;
+
+        // Loop region highlight
+        if (z.loopEnabled && z.loopEnd > z.loopStart) {
+            const float lx0 = waveRect_.x + static_cast<float>(z.loopStart) / static_cast<float>(totalF) * waveRect_.w;
+            const float lx1 = waveRect_.x + static_cast<float>(z.loopEnd)   / static_cast<float>(totalF) * waveRect_.w;
+            beginPath();
+            fillColor(36, 68, 88, 100);
+            rect(lx0, waveRect_.y, lx1 - lx0, waveRect_.h);
+            fill();
+            closePath();
+        }
+
+        // Waveform peaks
+        if (!peaks_.empty() && peakZoneIdx_ == selectedZone_) {
+            const int kPeakBins = static_cast<int>(peaks_.size()) / 2;
+            const float midY = waveRect_.y + waveRect_.h * 0.5f;
+            const float ampH = waveRect_.h * 0.44f;
+
+            for (int bin = 0; bin < kPeakBins; ++bin) {
+                const float fx  = waveRect_.x + static_cast<float>(bin)     / static_cast<float>(kPeakBins) * waveRect_.w;
+                const float fw  = waveRect_.w / static_cast<float>(kPeakBins);
+                const float mn  = peaks_[bin * 2 + 0];
+                const float mx  = peaks_[bin * 2 + 1];
+                const float top = midY + mn * ampH;
+                const float ht  = std::max(1.0f, (mx - mn) * ampH);
+
+                beginPath();
+                fillColor(72, 140, 180, 200);
+                rect(fx, top, std::max(1.0f, fw - 0.5f), ht);
+                fill();
+                closePath();
+            }
+        } else if (z.totalFrames == 0 && !z.path.empty()) {
+            fontSize(11.0f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            fillColor(72, 95, 112, 255);
+            text(waveRect_.x + waveRect_.w * 0.5f, waveRect_.y + waveRect_.h * 0.5f,
+                 "loading\xe2\x80\xa6", nullptr);
+        }
+
+        // Loop handles (only when loop enabled and waveform loaded)
+        if (z.loopEnabled && z.totalFrames > 0) {
+            const float lx0 = waveRect_.x + static_cast<float>(z.loopStart) / static_cast<float>(totalF) * waveRect_.w;
+            const float lx1 = waveRect_.x + static_cast<float>(z.loopEnd)   / static_cast<float>(totalF) * waveRect_.w;
+
+            // Loop start — green line + tab
+            beginPath();
+            fillColor(60, 190, 110, 200);
+            rect(lx0, waveRect_.y, 2.0f, waveRect_.h);
+            fill();
+            closePath();
+            beginPath();
+            fillColor(60, 200, 110, 255);
+            roundedRect(lx0 - 5.0f, waveRect_.y, 12.0f, 12.0f, 3.0f);
+            fill();
+            closePath();
+            loopStartHandle_ = { lx0 - 6.0f, waveRect_.y, 14.0f, waveRect_.h };
+
+            // Loop end — orange line + tab
+            beginPath();
+            fillColor(210, 130, 50, 200);
+            rect(lx1 - 2.0f, waveRect_.y, 2.0f, waveRect_.h);
+            fill();
+            closePath();
+            beginPath();
+            fillColor(220, 140, 55, 255);
+            roundedRect(lx1 - 7.0f, waveRect_.y, 12.0f, 12.0f, 3.0f);
+            fill();
+            closePath();
+            loopEndHandle_ = { lx1 - 8.0f, waveRect_.y, 14.0f, waveRect_.h };
+        } else {
+            loopStartHandle_ = {};
+            loopEndHandle_   = {};
+        }
+
+        // Filename label top-left
+        if (!z.path.empty()) {
+            fontSize(10.0f);
+            textAlign(ALIGN_LEFT | ALIGN_TOP);
+            fillColor(72, 95, 110, 220);
+            text(waveRect_.x + 6.0f, waveRect_.y + 4.0f, basename(z.path).c_str(), nullptr);
+        }
+
+        // Border
+        beginPath();
+        strokeColor(32, 48, 62, 255);
+        strokeWidth(1.0f);
+        roundedRect(waveRect_.x, waveRect_.y, waveRect_.w, waveRect_.h, 6.0f);
+        stroke();
+        closePath();
     }
 
     void drawFooter(float W, float H)
@@ -595,22 +856,36 @@ private:
             e.rangeLow    = z.rangeLow;
             e.rangeHigh   = z.rangeHigh;
             e.loopEnabled = z.loopEnabled;
+            e.loopStart   = z.loopStart;
+            e.loopEnd     = z.loopEnd;
             zones_.push_back(std::move(e));
         }
+        // Reload waveform peaks if selected zone is still valid
+        if (selectedZone_ >= 0 && selectedZone_ < static_cast<int>(zones_.size()))
+            loadPeaks(selectedZone_);
     }
 
     std::array<float, kParameterCount> values_ {};
     std::vector<ZoneEntry>             zones_;
 
-    Rect loadBtn_  {};
-    Rect recBtn_   {};
-    Rect chBtn_    {};
+    Rect loadBtn_   {};
+    Rect recBtn_    {};
+    Rect chBtn_     {};
     Rect volSlider_ {};
+    Rect waveRect_       {};
+    Rect loopStartHandle_{};
+    Rect loopEndHandle_  {};
 
     DragField dragField_     = kDragNone;
     int       dragZoneIdx_   = -1;
     float     dragStartY_    = 0.0f;
+    float     dragStartX_    = 0.0f;
     int       dragStartNote_ = 0;
+    uint32_t  dragStartFrame_= 0;
+
+    int              selectedZone_ = -1;
+    std::vector<float> peaks_;
+    int              peakZoneIdx_  = -1;
 
     bool recording_ = false;
     std::chrono::steady_clock::time_point recordStart_;

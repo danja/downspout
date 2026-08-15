@@ -50,8 +50,9 @@ Public release packaging is handled separately by
 
 ## Current outputs
 
-The repository currently installs thirty-nine real wrapper targets:
+The repository currently installs forty real wrapper targets:
 
+- `campione.vst3` with UI
 - `bassgen.vst3` with UI
 - `p_mix.vst3` with UI
 - `e_mix.vst3` with UI

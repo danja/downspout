@@ -256,8 +256,11 @@ protected:
         if (std::strcmp(key, kStateKeyZoneUpdate) == 0 && value && value[0] != '\0')
         {
             int idx = 0, rootNote = 60, rangeLow = 0, rangeHigh = 127, loopEn = 0;
-            if (std::sscanf(value, "%d|%d|%d|%d|%d",
-                            &idx, &rootNote, &rangeLow, &rangeHigh, &loopEn) == 5)
+            unsigned int loopStart = 0, loopEnd = 0;
+            const int parsed = std::sscanf(value, "%d|%d|%d|%d|%d|%u|%u",
+                                           &idx, &rootNote, &rangeLow, &rangeHigh, &loopEn,
+                                           &loopStart, &loopEnd);
+            if (parsed >= 5)
             {
                 const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
                 if (existing && idx >= 0 && idx < static_cast<int>(existing->size())) {
@@ -267,7 +270,18 @@ protected:
                     z.rangeLow    = rangeLow;
                     z.rangeHigh   = rangeHigh;
                     z.loopEnabled = loopEn != 0;
-                    downspout::campione::applyLoopPoints(z, parameters_.crossfadeDurationMs);
+                    if (parsed >= 7) {
+                        // UI-supplied loop points: apply directly and recompute crossfadeFrames
+                        z.loopStart = static_cast<std::uint32_t>(loopStart);
+                        z.loopEnd   = static_cast<std::uint32_t>(loopEnd);
+                        const std::uint32_t loopLen = z.loopEnd > z.loopStart
+                                                      ? z.loopEnd - z.loopStart : 1;
+                        z.crossfadeFrames = static_cast<std::uint32_t>(
+                            (parameters_.crossfadeDurationMs / 1000.0f) * z.sampleRate);
+                        if (z.crossfadeFrames > loopLen / 2) z.crossfadeFrames = loopLen / 2;
+                    } else {
+                        downspout::campione::applyLoopPoints(z, parameters_.crossfadeDurationMs);
+                    }
                     std::atomic_store_explicit(&zones_,
                                                std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                                std::memory_order_release);

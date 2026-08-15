@@ -176,6 +176,7 @@ jobs:
             done
             echo
             echo "Included plugin bundles:"
+            echo "- campione.vst3"
             echo "- bassgen.vst3"
             echo "- p_mix.vst3"
             echo "- e_mix.vst3"

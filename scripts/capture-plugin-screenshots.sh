@@ -17,6 +17,7 @@ if [[ -n "${DOWNSPOUT_SCREENSHOT_APP_ARGS:-}" ]]; then
 fi
 
 plugins=(
+  "campione:campione"
   "bassgen:bassgen"
   "p-mix:p_mix"
   "e-mix:e_mix"

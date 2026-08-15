@@ -27,7 +27,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
             src/dpf/CampioneUI.cpp
     )
     target_link_libraries(campione-dsp PUBLIC downspout_campione_core)
-    target_link_libraries(campione-ui PUBLIC downspout-project-options)
+    target_link_libraries(campione-ui PUBLIC downspout-project-options downspout_campione_core)
     target_include_directories(campione PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
