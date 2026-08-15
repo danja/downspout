@@ -5,8 +5,10 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -18,8 +20,11 @@ using downspout::campione::kParamCrossfadeDuration;
 using downspout::campione::kParamMasterVolume;
 using downspout::campione::kParamMidiChannel;
 using downspout::campione::kParamPitchBendRange;
+using downspout::campione::kParamRecording;
 using downspout::campione::kParameterCount;
 using downspout::campione::kStateKeyZoneLoad;
+using downspout::campione::kStateKeyZoneRemove;
+using downspout::campione::kStateKeyZoneUpdate;
 using downspout::campione::kStateKeyZones;
 
 struct Rect {
@@ -29,14 +34,15 @@ struct Rect {
     }
 };
 
-// Lightweight zone display info tracked on the UI side
 struct ZoneEntry {
     std::string path;
-    int rootNote = 60;
-    int rangeLow = 0;
-    int rangeHigh = 127;
+    int  rootNote    = 60;
+    int  rangeLow    = 0;
+    int  rangeHigh   = 127;
     bool loopEnabled = false;
 };
+
+enum DragField { kDragNone, kDragVol, kDragRoot, kDragRangeLow, kDragRangeHigh };
 
 [[nodiscard]] std::string basename(const std::string& path) {
     const std::size_t slash = path.rfind('/');
@@ -51,11 +57,16 @@ struct ZoneEntry {
     return buf;
 }
 
-constexpr float kMargin = 12.0f;
-constexpr float kHeaderH = 44.0f;
-constexpr float kRowH = 28.0f;
-constexpr float kFooterH = 52.0f;
-constexpr float kScrollW = 0.0f;  // no scroll bar for now
+constexpr float kPad     = 20.0f;
+constexpr float kHeaderH = 56.0f;
+constexpr float kRowH    = 26.0f;
+constexpr float kFooterH = 60.0f;
+
+// Column x positions (left edge relative to kPad)
+constexpr float kColNum    =  8.0f;
+constexpr float kColRoot   = 28.0f;
+constexpr float kColRange  = 80.0f;
+constexpr float kColFile   = 192.0f;
 
 }  // namespace
 
@@ -89,24 +100,24 @@ protected:
 
     void stateChanged(const char* key, const char* value) override
     {
-        if (std::strcmp(key, kStateKeyZoneLoad) == 0 && value && value[0] != '\0')
-        {
-            // A zone was loaded; add it to our local display list.
-            // Root note will be confirmed once zones state is synced from host.
+        if (std::strcmp(key, kStateKeyZoneLoad) == 0 && value && value[0] != '\0') {
             ZoneEntry e;
             e.path = value;
             zones_.push_back(e);
             repaint();
             return;
         }
-
-        if (std::strcmp(key, kStateKeyZones) == 0)
-        {
-            // Full zone list from project load — rebuild display list.
+        if (std::strcmp(key, kStateKeyZones) == 0) {
             rebuildFromZonesState(value ? value : "");
             repaint();
             return;
         }
+    }
+
+    void uiIdle() override
+    {
+        if (recording_)
+            repaint();
     }
 
     void onNanoDisplay() override
@@ -114,10 +125,15 @@ protected:
         const float W = static_cast<float>(getWidth());
         const float H = static_cast<float>(getHeight());
 
-        // Background
         beginPath();
-        rect(0, 0, W, H);
-        fillColor(28, 28, 32);
+        fillColor(11, 16, 24, 255);
+        rect(0.0f, 0.0f, W, H);
+        fill();
+        closePath();
+
+        beginPath();
+        fillColor(20, 29, 38, 255);
+        rect(0.0f, 0.0f, W, kHeaderH + kPad);
         fill();
         closePath();
 
@@ -128,40 +144,115 @@ protected:
 
     bool onMouse(const MouseEvent& ev) override
     {
-        if (!ev.press) return false;
+        if (ev.button != 1) return false;
+
         const float px = static_cast<float>(ev.pos.getX());
         const float py = static_cast<float>(ev.pos.getY());
 
-        // Load WAV button
+        if (!ev.press) {
+            // Commit zone field drag
+            if (dragField_ != kDragNone && dragField_ != kDragVol && dragZoneIdx_ >= 0
+                && dragZoneIdx_ < static_cast<int>(zones_.size()))
+            {
+                pushZoneUpdate(static_cast<std::size_t>(dragZoneIdx_));
+            }
+            dragField_    = kDragNone;
+            dragZoneIdx_  = -1;
+            return false;
+        }
+
+        // Load WAV
         if (loadBtn_.contains(px, py)) {
             requestStateFile(kStateKeyZoneLoad);
             return true;
         }
 
-        // Loop toggles in zone rows
-        const float W = static_cast<float>(getWidth());
-        const float H = static_cast<float>(getHeight());
-        const float listY = kHeaderH + kMargin;
-        const float listH = H - kHeaderH - kFooterH - kMargin * 2;
+        // Record toggle
+        if (recBtn_.contains(px, py)) {
+            recording_ = !recording_;
+            if (recording_)
+                recordStart_ = std::chrono::steady_clock::now();
+            editParameter(kParamRecording, true);
+            setParameterValue(kParamRecording, recording_ ? 1.0f : 0.0f);
+            editParameter(kParamRecording, false);
+            repaint();
+            return true;
+        }
+
+        // MIDI channel — click to cycle (0=All, 1–16)
+        if (chBtn_.contains(px, py)) {
+            const int ch = static_cast<int>(std::lround(values_[kParamMidiChannel]));
+            const float next = static_cast<float>((ch + 1) % 17);
+            editParameter(kParamMidiChannel, true);
+            setParameterValue(kParamMidiChannel, next);
+            editParameter(kParamMidiChannel, false);
+            values_[kParamMidiChannel] = next;
+            repaint();
+            return true;
+        }
+
+        // Volume slider
+        if (volSlider_.contains(px, py)) {
+            dragField_ = kDragVol;
+            updateVolFromX(px);
+            return true;
+        }
+
+        // Zone row interactions
+        const float W     = static_cast<float>(getWidth());
+        const float H     = static_cast<float>(getHeight());
+        const float listY = kHeaderH + kPad * 2.0f;
+        const float listH = H - listY - kFooterH - kPad;
+        const float rowsY = listY + 23.0f;
 
         for (std::size_t i = 0; i < zones_.size(); ++i) {
-            const float ry = listY + static_cast<float>(i) * kRowH;
-            if (ry + kRowH < listY || ry > listY + listH) continue;
+            const float ry = rowsY + static_cast<float>(i) * kRowH;
+            if (ry > listY + listH) break;
 
-            const Rect loopR { W - 120.0f, ry + 4.0f, 44.0f, 20.0f };
-            if (loopR.contains(px, py)) {
-                zones_[i].loopEnabled = !zones_[i].loopEnabled;
+            // Remove button
+            const Rect removeR { W - kPad - 22.0f, ry + 4.0f, 18.0f, 18.0f };
+            if (removeR.contains(px, py)) {
+                char buf[16];
+                std::snprintf(buf, sizeof(buf), "%d", static_cast<int>(i));
+                setState(kStateKeyZoneRemove, buf);
+                zones_.erase(zones_.begin() + static_cast<std::ptrdiff_t>(i));
                 repaint();
                 return true;
             }
-        }
 
-        // Volume knob drag (simplified: click sets value from click position)
-        if (volKnob_.contains(px, py)) {
-            draggingParam_ = kParamMasterVolume;
-            dragStartY_    = py;
-            dragStartVal_  = values_[kParamMasterVolume];
-            return true;
+            // Loop toggle
+            const Rect loopR { W - kPad - 76.0f, ry + 3.0f, 46.0f, 20.0f };
+            if (loopR.contains(px, py)) {
+                zones_[i].loopEnabled = !zones_[i].loopEnabled;
+                pushZoneUpdate(i);
+                repaint();
+                return true;
+            }
+
+            // Root note — drag start
+            const Rect rootR { kPad + kColRoot, ry, 46.0f, kRowH };
+            if (rootR.contains(px, py)) {
+                dragField_    = kDragRoot;
+                dragZoneIdx_  = static_cast<int>(i);
+                dragStartY_   = py;
+                dragStartNote_ = zones_[i].rootNote;
+                return true;
+            }
+
+            // Range low — left half of range cell
+            const Rect rangeCell { kPad + kColRange, ry, 100.0f, kRowH };
+            if (rangeCell.contains(px, py)) {
+                if (px < rangeCell.x + rangeCell.w * 0.5f) {
+                    dragField_     = kDragRangeLow;
+                    dragStartNote_ = zones_[i].rangeLow;
+                } else {
+                    dragField_     = kDragRangeHigh;
+                    dragStartNote_ = zones_[i].rangeHigh;
+                }
+                dragZoneIdx_ = static_cast<int>(i);
+                dragStartY_  = py;
+                return true;
+            }
         }
 
         return false;
@@ -169,182 +260,260 @@ protected:
 
     bool onMotion(const MotionEvent& ev) override
     {
-        if (draggingParam_ < 0) return false;
-        const float dy = dragStartY_ - static_cast<float>(ev.pos.getY());
-        float newVal = dragStartVal_ + dy / 100.0f;
-        newVal = std::clamp(newVal, 0.0f, 1.0f);
-        values_[draggingParam_] = newVal;
-        setParameterValue(static_cast<uint32_t>(draggingParam_), newVal);
-        repaint();
-        return true;
-    }
+        const float py = static_cast<float>(ev.pos.getY());
+        const float px = static_cast<float>(ev.pos.getX());
 
-    bool onMouse(const MouseEvent& ev, bool released)
-    {
-        if (released) { draggingParam_ = -1; return false; }
-        return onMouse(ev);
-    }
+        if (dragField_ == kDragVol) {
+            updateVolFromX(px);
+            return true;
+        }
 
-    void onNanoDisplayEnd()
-    {
-        (void)0; // no-op
+        if (dragField_ != kDragNone && dragZoneIdx_ >= 0
+            && dragZoneIdx_ < static_cast<int>(zones_.size()))
+        {
+            const int delta = static_cast<int>((dragStartY_ - py) / 3.0f);
+            const int note  = std::clamp(dragStartNote_ + delta, 0, 127);
+            ZoneEntry& z    = zones_[static_cast<std::size_t>(dragZoneIdx_)];
+            if (dragField_ == kDragRoot)      z.rootNote  = note;
+            if (dragField_ == kDragRangeLow)  z.rangeLow  = std::min(note, z.rangeHigh);
+            if (dragField_ == kDragRangeHigh) z.rangeHigh = std::max(note, z.rangeLow);
+            repaint();
+            return true;
+        }
+
+        return false;
     }
 
 private:
-    void drawHeader(float W)
+    void updateVolFromX(float px)
     {
-        // Title
-        fontSize(18.0f);
-        fontFace("sans");
-        fillColor(220, 200, 160);
-        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        text(kMargin, kHeaderH / 2.0f, "CAMPIONE", nullptr);
-
-        // Volume knob
-        const float kx = W - 120.0f;
-        const float ky = kHeaderH / 2.0f;
-        volKnob_ = { kx - 16.0f, ky - 16.0f, 32.0f, 32.0f };
-        drawKnob(kx, ky, 14.0f, values_[kParamMasterVolume], 0.0f, 1.0f, "VOL");
-
-        // MIDI channel label
-        const int ch = static_cast<int>(std::lround(values_[kParamMidiChannel]));
-        char buf[32];
-        std::snprintf(buf, sizeof(buf), "CH: %s", ch == 0 ? "All" : std::to_string(ch).c_str());
-        fontSize(11.0f);
-        fillColor(160, 160, 180);
-        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        text(kx + 24.0f, ky, buf, nullptr);
+        const float t = std::clamp((px - volSlider_.x) / volSlider_.w, 0.0f, 1.0f);
+        values_[kParamMasterVolume] = t;
+        setParameterValue(kParamMasterVolume, t);
+        repaint();
     }
 
-    void drawKnob(float cx, float cy, float r, float value, float minVal, float maxVal,
-                  const char* label)
+    void pushZoneUpdate(std::size_t idx)
     {
-        const float norm = maxVal > minVal ? (value - minVal) / (maxVal - minVal) : 0.0f;
-        const float startAngle = static_cast<float>(3.14159265f * 0.75f);
-        const float range      = static_cast<float>(3.14159265f * 1.5f);
-        const float angle      = startAngle + norm * range;
+        if (idx >= zones_.size()) return;
+        const ZoneEntry& z = zones_[idx];
+        char buf[64];
+        std::snprintf(buf, sizeof(buf), "%d|%d|%d|%d|%d",
+                      static_cast<int>(idx),
+                      z.rootNote, z.rangeLow, z.rangeHigh,
+                      z.loopEnabled ? 1 : 0);
+        setState(kStateKeyZoneUpdate, buf);
+    }
 
-        // Track
+    void drawHeader(float W)
+    {
+        fontSize(28.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(240, 242, 246, 255);
+        text(kPad, kPad, "Campione", nullptr);
+
+        fontSize(12.0f);
+        fillColor(140, 156, 168, 255);
+        text(kPad, kPad + 32.0f, "Multi-zone sampler", nullptr);
+
+        // Volume slider
+        const float volX = W * 0.42f;
+        const float volY = kPad + 8.0f;
+        const float volW = W * 0.22f;
+
+        fontSize(12.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(228, 232, 236, 255);
+        text(volX, volY, "Volume", nullptr);
+
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "%.0f%%", values_[kParamMasterVolume] * 100.0f);
+        textAlign(ALIGN_RIGHT | ALIGN_TOP);
+        fillColor(240, 205, 170, 255);
+        text(volX + volW, volY, buf, nullptr);
+
+        volSlider_ = { volX, volY + 20.0f, volW, 8.0f };
+
         beginPath();
-        arc(cx, cy, r, startAngle, startAngle + range, CW);
-        strokeColor(60, 60, 70);
-        strokeWidth(3.0f);
-        stroke();
+        fillColor(37, 48, 58, 255);
+        roundedRect(volSlider_.x, volSlider_.y, volSlider_.w, volSlider_.h, 4.0f);
+        fill();
         closePath();
 
-        // Value arc
+        const float t = values_[kParamMasterVolume];
         beginPath();
-        arc(cx, cy, r, startAngle, angle, CW);
-        strokeColor(200, 160, 80);
-        strokeWidth(3.0f);
-        stroke();
+        fillColor(201, 118, 73, 255);
+        roundedRect(volSlider_.x, volSlider_.y, std::max(8.0f, volSlider_.w * t), volSlider_.h, 4.0f);
+        fill();
         closePath();
 
-        // Indicator line
         beginPath();
-        moveTo(cx, cy);
-        lineTo(cx + std::cos(angle) * r, cy + std::sin(angle) * r);
-        strokeColor(240, 200, 100);
-        strokeWidth(2.0f);
-        stroke();
+        fillColor(248, 239, 229, 255);
+        circle(volSlider_.x + volSlider_.w * t, volSlider_.y + volSlider_.h * 0.5f, 7.0f);
+        fill();
         closePath();
 
-        // Label
-        fontSize(9.0f);
-        fillColor(160, 160, 180);
-        textAlign(ALIGN_CENTER | ALIGN_TOP);
-        text(cx, cy + r + 3.0f, label, nullptr);
+        // MIDI channel button (click to cycle)
+        const int ch = static_cast<int>(std::lround(values_[kParamMidiChannel]));
+        std::snprintf(buf, sizeof(buf), "CH: %s", ch == 0 ? "All" : std::to_string(ch).c_str());
+        chBtn_ = { W * 0.72f, kPad + 10.0f, 90.0f, 24.0f };
+        beginPath();
+        fillColor(37, 48, 58, 255);
+        roundedRect(chBtn_.x, chBtn_.y, chBtn_.w, chBtn_.h, 6.0f);
+        fill();
+        closePath();
+        beginPath();
+        strokeColor(82, 112, 126, 180);
+        strokeWidth(1.0f);
+        roundedRect(chBtn_.x, chBtn_.y, chBtn_.w, chBtn_.h, 6.0f);
+        stroke();
+        closePath();
+        fontSize(12.0f);
+        textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+        fillColor(200, 215, 225, 255);
+        text(chBtn_.x + chBtn_.w * 0.5f, chBtn_.y + chBtn_.h * 0.5f, buf, nullptr);
     }
 
     void drawZoneList(float W, float H)
     {
-        const float listY = kHeaderH + kMargin;
-        const float listH = H - kHeaderH - kFooterH - kMargin * 2.0f;
+        const float listY = kHeaderH + kPad * 2.0f;
+        const float listH = H - listY - kFooterH - kPad;
 
-        // List border
+        fontSize(14.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(228, 232, 236, 255);
+        text(kPad, listY - 18.0f, "Zones", nullptr);
+
+        fontSize(11.0f);
+        fillColor(108, 125, 137, 255);
+        text(kPad + 56.0f, listY - 15.0f, "drag Root/Range to edit", nullptr);
+
         beginPath();
-        rect(kMargin, listY, W - kMargin * 2.0f, listH);
-        strokeColor(60, 60, 72);
-        strokeWidth(1.0f);
-        stroke();
+        fillColor(15, 23, 31, 212);
+        roundedRect(kPad, listY, W - kPad * 2.0f, listH, 8.0f);
+        fill();
         closePath();
 
         // Column headers
+        const float hy = listY + 8.0f;
         fontSize(10.0f);
-        fillColor(120, 120, 140);
-        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        text(kMargin + 6.0f,       listY + 10.0f, "#",      nullptr);
-        text(kMargin + 26.0f,      listY + 10.0f, "Root",   nullptr);
-        text(kMargin + 80.0f,      listY + 10.0f, "Range",  nullptr);
-        text(W - 120.0f,           listY + 10.0f, "Loop",   nullptr);
-        text(kMargin + 180.0f,     listY + 10.0f, "File",   nullptr);
+        fillColor(108, 125, 137, 255);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        text(kPad + kColNum,   hy, "#",     nullptr);
+        text(kPad + kColRoot,  hy, "Root",  nullptr);
+        text(kPad + kColRange, hy, "Range", nullptr);
+        text(W - kPad - 116.0f, hy, "Loop", nullptr);
+        text(kPad + kColFile,  hy, "File",  nullptr);
 
-        // Separator
         beginPath();
-        moveTo(kMargin, listY + 20.0f);
-        lineTo(W - kMargin, listY + 20.0f);
-        strokeColor(50, 50, 62);
-        stroke();
+        fillColor(50, 62, 72, 255);
+        rect(kPad + 1.0f, listY + 22.0f, W - kPad * 2.0f - 2.0f, 1.0f);
+        fill();
         closePath();
 
-        // Zone rows
-        const float rowArea = listH - 20.0f;
+        const float rowsY = listY + 23.0f;
         for (std::size_t i = 0; i < zones_.size(); ++i) {
-            const float ry = listY + 20.0f + static_cast<float>(i) * kRowH;
-            if (ry + kRowH < listY || ry > listY + listH) break;
+            const float ry  = rowsY + static_cast<float>(i) * kRowH;
+            if (ry + kRowH > listY + listH) break;
 
-            const ZoneEntry& z = zones_[i];
-            const bool even = (i % 2) == 0;
+            const ZoneEntry& z   = zones_[i];
+            const bool even      = (i % 2) == 0;
+            const bool isDragged = dragZoneIdx_ == static_cast<int>(i) && dragField_ != kDragNone;
+
             beginPath();
-            rect(kMargin + 1.0f, ry, W - kMargin * 2.0f - 1.0f, kRowH - 1.0f);
-            fillColor(even ? 34 : 30, even ? 34 : 30, even ? 40 : 36);
+            fillColor(even ? 22 : 18, even ? 31 : 26,
+                      isDragged ? 50 : (even ? 41 : 34), 255);
+            rect(kPad + 1.0f, ry, W - kPad * 2.0f - 2.0f, kRowH - 1.0f);
             fill();
             closePath();
+
+            const float mid = ry + kRowH * 0.5f;
+            char buf[64];
 
             fontSize(11.0f);
-            fillColor(200, 200, 215);
+            fillColor(200, 205, 215, 255);
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-            const float mid = ry + kRowH / 2.0f;
 
-            char buf[64];
             std::snprintf(buf, sizeof(buf), "%d", static_cast<int>(i + 1));
-            text(kMargin + 6.0f, mid, buf, nullptr);
+            text(kPad + kColNum, mid, buf, nullptr);
 
-            text(kMargin + 26.0f, mid, midiNoteName(z.rootNote).c_str(), nullptr);
+            // Root note (highlighted if being dragged)
+            if (isDragged && dragField_ == kDragRoot)
+                fillColor(240, 205, 170, 255);
+            else
+                fillColor(200, 205, 215, 255);
+            text(kPad + kColRoot, mid, midiNoteName(z.rootNote).c_str(), nullptr);
 
-            std::snprintf(buf, sizeof(buf), "%s\xe2\x80\x93%s",
-                          midiNoteName(z.rangeLow).c_str(),
-                          midiNoteName(z.rangeHigh).c_str());
-            text(kMargin + 80.0f, mid, buf, nullptr);
+            // Range (highlight low or high half based on drag)
+            const std::string lo = midiNoteName(z.rangeLow);
+            const std::string hi = midiNoteName(z.rangeHigh);
+            if (isDragged && dragField_ == kDragRangeLow)
+                fillColor(240, 205, 170, 255);
+            else
+                fillColor(200, 205, 215, 255);
+            text(kPad + kColRange, mid, lo.c_str(), nullptr);
 
-            // Loop toggle button
-            const Rect loopBtn { W - 120.0f, ry + 4.0f, 44.0f, 20.0f };
+            fillColor(143, 158, 169, 255);
+            text(kPad + kColRange + 36.0f, mid, "\xe2\x80\x93", nullptr);
+
+            if (isDragged && dragField_ == kDragRangeHigh)
+                fillColor(240, 205, 170, 255);
+            else
+                fillColor(200, 205, 215, 255);
+            text(kPad + kColRange + 52.0f, mid, hi.c_str(), nullptr);
+
+            // Loop button
+            const Rect loopR { W - kPad - 76.0f, ry + 3.0f, 46.0f, 20.0f };
             beginPath();
-            rect(loopBtn.x, loopBtn.y, loopBtn.w, loopBtn.h);
-            fillColor(z.loopEnabled ? 60 : 40, z.loopEnabled ? 100 : 40, z.loopEnabled ? 60 : 40);
+            fillColor(z.loopEnabled ? 72 : 36,
+                      z.loopEnabled ? 103 : 48,
+                      z.loopEnabled ? 118 : 48, 255);
+            roundedRect(loopR.x, loopR.y, loopR.w, loopR.h, 5.0f);
             fill();
             closePath();
+            beginPath();
+            strokeColor(z.loopEnabled ? 146 : 82,
+                        z.loopEnabled ? 205 : 112,
+                        z.loopEnabled ? 222 : 126,
+                        z.loopEnabled ? 220 : 110);
+            strokeWidth(1.0f);
+            roundedRect(loopR.x, loopR.y, loopR.w, loopR.h, 5.0f);
+            stroke();
+            closePath();
             fontSize(10.0f);
-            fillColor(z.loopEnabled ? 160 : 120, z.loopEnabled ? 220 : 120, z.loopEnabled ? 160 : 120);
             textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-            text(loopBtn.x + loopBtn.w / 2.0f, loopBtn.y + loopBtn.h / 2.0f,
+            fillColor(z.loopEnabled ? 246 : 178,
+                      z.loopEnabled ? 250 : 191,
+                      z.loopEnabled ? 252 : 200, 255);
+            text(loopR.x + loopR.w * 0.5f, loopR.y + loopR.h * 0.5f,
                  z.loopEnabled ? "LOOP" : "OFF", nullptr);
 
-            // Filename (truncated)
-            fontSize(10.0f);
-            fillColor(160, 160, 180);
-            textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-            const std::string fname = basename(z.path);
-            text(kMargin + 180.0f, mid, fname.c_str(), nullptr);
+            // Remove button
+            const Rect removeR { W - kPad - 22.0f, ry + 4.0f, 18.0f, 18.0f };
+            beginPath();
+            fillColor(80, 36, 36, 255);
+            roundedRect(removeR.x, removeR.y, removeR.w, removeR.h, 4.0f);
+            fill();
+            closePath();
+            fontSize(11.0f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            fillColor(200, 120, 120, 255);
+            text(removeR.x + removeR.w * 0.5f, removeR.y + removeR.h * 0.5f,
+                 "\xc3\x97", nullptr);
 
-            (void)rowArea;
+            // Filename
+            fontSize(10.0f);
+            textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+            fillColor(143, 158, 169, 255);
+            text(kPad + kColFile, mid, basename(z.path).c_str(), nullptr);
         }
 
         if (zones_.empty()) {
             fontSize(13.0f);
-            fillColor(80, 80, 100);
             textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-            text(W / 2.0f, listY + listH / 2.0f, "No zones loaded — click Load WAV", nullptr);
+            fillColor(80, 95, 108, 255);
+            text(W * 0.5f, listY + listH * 0.5f,
+                 "No zones loaded \xe2\x80\x94 click Load WAV or Record", nullptr);
         }
     }
 
@@ -352,53 +521,71 @@ private:
     {
         const float fy = H - kFooterH;
 
-        // Separator
         beginPath();
-        moveTo(kMargin, fy);
-        lineTo(W - kMargin, fy);
-        strokeColor(50, 50, 62);
-        stroke();
+        fillColor(50, 62, 72, 255);
+        rect(kPad, fy, W - kPad * 2.0f, 1.0f);
+        fill();
         closePath();
 
-        // Load WAV button
-        loadBtn_ = { kMargin, fy + 12.0f, 100.0f, 28.0f };
-        drawButton(loadBtn_, "Load WAV", 50, 80, 120);
+        loadBtn_ = { kPad, fy + 16.0f, 110.0f, 28.0f };
+        drawButton(loadBtn_, "Load WAV", 51, 64, 74);
 
-        // Crossfade label + value
-        char buf[48];
-        std::snprintf(buf, sizeof(buf), "XFade: %.0f ms", values_[kParamCrossfadeDuration]);
-        fontSize(11.0f);
-        fillColor(160, 160, 180);
-        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        text(kMargin + 116.0f, fy + 26.0f, buf, nullptr);
+        recBtn_ = { kPad + 120.0f, fy + 16.0f, 100.0f, 28.0f };
+        if (recording_) {
+            drawButton(recBtn_, "\xe2\x97\x8f  Stop", 140, 40, 40);
+            const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+                std::chrono::steady_clock::now() - recordStart_).count();
+            char buf[16];
+            std::snprintf(buf, sizeof(buf), "%lld:%02lld",
+                          static_cast<long long>(elapsed / 60),
+                          static_cast<long long>(elapsed % 60));
+            fontSize(12.0f);
+            textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+            fillColor(220, 100, 100, 255);
+            text(kPad + 232.0f, fy + 30.0f, buf, nullptr);
+        } else {
+            drawButton(recBtn_, "\xe2\x97\x8f  Record", 80, 36, 36);
+            char buf[48];
+            std::snprintf(buf, sizeof(buf), "XFade: %.0f ms", values_[kParamCrossfadeDuration]);
+            fontSize(12.0f);
+            textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+            fillColor(143, 158, 169, 255);
+            text(kPad + 232.0f, fy + 30.0f, buf, nullptr);
+        }
 
-        // Zone count
+        char buf[32];
         std::snprintf(buf, sizeof(buf), "%d zone%s",
                       static_cast<int>(zones_.size()),
                       zones_.size() == 1 ? "" : "s");
-        fillColor(100, 100, 120);
+        fontSize(12.0f);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
-        text(W - kMargin, fy + 26.0f, buf, nullptr);
+        fillColor(108, 125, 137, 255);
+        text(W - kPad, fy + 30.0f, buf, nullptr);
     }
 
-    void drawButton(const Rect& r, const char* label, int cr, int cg, int cb)
+    void drawButton(const Rect& r, const char* label, uint8_t cr, uint8_t cg, uint8_t cb)
     {
         beginPath();
-        rect(r.x, r.y, r.w, r.h);
-        fillColor(static_cast<uint8_t>(cr), static_cast<uint8_t>(cg), static_cast<uint8_t>(cb));
+        fillColor(cr, cg, cb, 255);
+        roundedRect(r.x, r.y, r.w, r.h, 8.0f);
         fill();
         closePath();
-        fontSize(11.0f);
-        fillColor(220, 220, 235);
+        beginPath();
+        strokeColor(142, 158, 168, 160);
+        strokeWidth(1.0f);
+        roundedRect(r.x, r.y, r.w, r.h, 8.0f);
+        stroke();
+        closePath();
+        fontSize(12.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        text(r.x + r.w / 2.0f, r.y + r.h / 2.0f, label, nullptr);
+        fillColor(239, 243, 246, 255);
+        text(r.x + r.w * 0.5f, r.y + r.h * 0.5f + 1.0f, label, nullptr);
     }
 
-    void rebuildFromZonesState(const std::string& text)
+    void rebuildFromZonesState(const std::string& s)
     {
-        const auto metas = downspout::campione::deserializeZones(text);
+        const auto metas = downspout::campione::deserializeZones(s);
         if (!metas.has_value()) return;
-
         zones_.clear();
         zones_.reserve(metas->size());
         for (const auto& z : *metas) {
@@ -413,14 +600,20 @@ private:
     }
 
     std::array<float, kParameterCount> values_ {};
-    std::vector<ZoneEntry> zones_;
+    std::vector<ZoneEntry>             zones_;
 
-    Rect loadBtn_ {};
-    Rect volKnob_ {};
+    Rect loadBtn_  {};
+    Rect recBtn_   {};
+    Rect chBtn_    {};
+    Rect volSlider_ {};
 
-    int   draggingParam_ = -1;
-    float dragStartY_    = 0.0f;
-    float dragStartVal_  = 0.0f;
+    DragField dragField_     = kDragNone;
+    int       dragZoneIdx_   = -1;
+    float     dragStartY_    = 0.0f;
+    int       dragStartNote_ = 0;
+
+    bool recording_ = false;
+    std::chrono::steady_clock::time_point recordStart_;
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CampioneUI)
 };

@@ -1,7 +1,6 @@
 # Downspout TODO
 
-
-let Floozy process incoming audio
+Add MCP to campione
 
 ## Screenshots
 
