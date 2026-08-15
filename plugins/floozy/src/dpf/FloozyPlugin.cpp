@@ -162,7 +162,7 @@ protected:
         engine_.setSampleRate(static_cast<float>(newSampleRate));
     }
 
-    void run(const float**,
+    void run(const float** inputs,
              float** outputs,
              const uint32_t frames,
              const MidiEvent* midiEvents,
@@ -173,7 +173,8 @@ protected:
         for (std::uint32_t i = 0; i < midiEventCount && messageCount < stackMessages.size(); ++i)
             stackMessages[messageCount++] = toCoreMidiMessage(midiEvents[i]);
 
-        engine_.processBlock(outputs[0], outputs[1], frames, stackMessages.data(), messageCount);
+        engine_.processBlock(outputs[0], outputs[1], frames, stackMessages.data(), messageCount,
+                             inputs[0], inputs[1]);
     }
 
 private:

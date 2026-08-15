@@ -40,8 +40,9 @@ public:
     void handleMidi(const std::uint8_t* data, std::uint32_t size);
     void handleMidi(const MidiMessage& message);
 
-    StereoFrame processStereo();
-    void processBlock(float* left, float* right, std::uint32_t frames, const MidiMessage* midi, std::uint32_t midiCount);
+    StereoFrame processStereo(float extLeft = 0.0f, float extRight = 0.0f);
+    void processBlock(float* left, float* right, std::uint32_t frames, const MidiMessage* midi, std::uint32_t midiCount,
+                      const float* extLeft = nullptr, const float* extRight = nullptr);
 
     std::size_t activeVoiceCount() const;
     bool hasActiveVoices() const;

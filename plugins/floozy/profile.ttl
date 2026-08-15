@@ -11,5 +11,5 @@ dsp:floozy a trn:PluginProfile ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/floozy/> ;
     trn:role trn:Instrument ;
-    trn:accepts trn:Midi ;
+    trn:accepts trn:Midi, trn:Audio ;
     trn:produces trn:Audio .

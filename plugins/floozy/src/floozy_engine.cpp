@@ -511,7 +511,7 @@ public:
         envelope_.setGate(false);
     }
 
-    StereoFrame process(const FloozyParams& params)
+    StereoFrame process(const FloozyParams& params, const float extSource = 0.0f)
     {
         if (!active_)
             return {};
@@ -519,7 +519,7 @@ public:
         sync(params);
 
         const auto mod = modulation_.process();
-        const float source = source_.process(frequency_ * mod.fm) * velocityGain_;
+        const float source = source_.process(frequency_ * mod.fm) * velocityGain_ + extSource;
         const float env = envelope_.process();
         const bool envActive = envelope_.isPlaying();
 
@@ -733,12 +733,15 @@ public:
         }
     }
 
-    StereoFrame processStereo()
+    StereoFrame processStereo(const float extLeft = 0.0f, const float extRight = 0.0f)
     {
+        const float extLevel = params_.values[static_cast<std::size_t>(ParamId::externalLevel)];
+        const float extSource = (extLeft + extRight) * 0.5f * extLevel;
+
         StereoFrame dry {};
         for (std::size_t i = 0; i < activeNumVoices_; ++i)
         {
-            const StereoFrame frame = voices_[i]->process(params_);
+            const StereoFrame frame = voices_[i]->process(params_, extSource);
             dry.left += frame.left;
             dry.right += frame.right;
         }
@@ -752,7 +755,9 @@ public:
                       float* const right,
                       const std::uint32_t frames,
                       const MidiMessage* const midi,
-                      const std::uint32_t midiCount)
+                      const std::uint32_t midiCount,
+                      const float* const extLeft = nullptr,
+                      const float* const extRight = nullptr)
     {
         std::uint32_t eventIndex = 0;
         for (std::uint32_t frame = 0; frame < frames; ++frame)
@@ -763,7 +768,9 @@ public:
                 ++eventIndex;
             }
 
-            const StereoFrame out = processStereo();
+            const float el = extLeft ? extLeft[frame] : 0.0f;
+            const float er = extRight ? extRight[frame] : 0.0f;
+            const StereoFrame out = processStereo(el, er);
             if (left)
                 left[frame] = out.left;
             if (right)
@@ -927,18 +934,20 @@ void FloozyEngine::handleMidi(const MidiMessage& message)
     impl_->handleMidi(message.data.data(), message.size);
 }
 
-StereoFrame FloozyEngine::processStereo()
+StereoFrame FloozyEngine::processStereo(const float extLeft, const float extRight)
 {
-    return impl_->processStereo();
+    return impl_->processStereo(extLeft, extRight);
 }
 
 void FloozyEngine::processBlock(float* const left,
                                 float* const right,
                                 const std::uint32_t frames,
                                 const MidiMessage* const midi,
-                                const std::uint32_t midiCount)
+                                const std::uint32_t midiCount,
+                                const float* const extLeft,
+                                const float* const extRight)
 {
-    impl_->processBlock(left, right, frames, midi, midiCount);
+    impl_->processBlock(left, right, frames, midi, midiCount, extLeft, extRight);
 }
 
 std::size_t FloozyEngine::activeVoiceCount() const

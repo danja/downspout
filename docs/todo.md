@@ -1,7 +1,7 @@
 # Downspout TODO
 
 
-set things up so that the drift plugin can modulate both bubbles and syrinx
+let Floozy process incoming audio
 
 ## Screenshots
 
