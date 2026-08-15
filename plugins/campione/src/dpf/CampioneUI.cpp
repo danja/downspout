@@ -23,8 +23,12 @@ using downspout::campione::kParamMidiChannel;
 using downspout::campione::kParamPitchBendRange;
 using downspout::campione::kParamRecording;
 using downspout::campione::kParameterCount;
+using downspout::campione::kStateKeyZoneFade;
 using downspout::campione::kStateKeyZoneLoad;
+using downspout::campione::kStateKeyZoneNormalize;
 using downspout::campione::kStateKeyZoneRemove;
+using downspout::campione::kStateKeyZoneReverse;
+using downspout::campione::kStateKeyZoneTrim;
 using downspout::campione::kStateKeyZoneUpdate;
 using downspout::campione::kStateKeyZones;
 
@@ -73,7 +77,7 @@ constexpr float kPad     = 20.0f;
 constexpr float kHeaderH = 56.0f;
 constexpr float kRowH    = 26.0f;
 constexpr float kFooterH = 60.0f;
-constexpr float kWaveH   = 100.0f;
+constexpr float kWaveH   = 118.0f;  // waveform 100px + 18px action bar
 
 // Column x positions (left edge relative to kPad)
 constexpr float kColNum    =  8.0f;
@@ -122,12 +126,14 @@ protected:
         }
         if (std::strcmp(key, kStateKeyZones) == 0) {
             rebuildFromZonesState(value ? value : "");
-            // Invalidate waveform if selected zone was removed
             if (selectedZone_ >= static_cast<int>(zones_.size()))
                 selectedZone_ = -1;
             repaint();
             return;
         }
+        // Wave edit state keys are DSP-only commands; UI ignores them.
+        // The DSP replies by updating kStateKeyZones which triggers rebuildFromZonesState.
+        (void)value;
     }
 
     void uiIdle() override
@@ -236,6 +242,32 @@ protected:
                 dragField_    = kDragLoopEnd;
                 dragStartX_   = px;
                 dragStartFrame_ = zones_[static_cast<std::size_t>(selectedZone_)].loopEnd;
+                return true;
+            }
+        }
+
+        // Wave edit action buttons
+        if (selectedZone_ >= 0 && selectedZone_ < static_cast<int>(zones_.size())) {
+            const int si = selectedZone_;
+            char buf[64];
+            if (waveNormBtn_.contains(px, py)) {
+                std::snprintf(buf, sizeof(buf), "%d", si);
+                setState(kStateKeyZoneNormalize, buf);
+                return true;
+            }
+            if (waveTrimBtn_.contains(px, py)) {
+                std::snprintf(buf, sizeof(buf), "%d|-60", si);
+                setState(kStateKeyZoneTrim, buf);
+                return true;
+            }
+            if (waveFadeBtn_.contains(px, py)) {
+                std::snprintf(buf, sizeof(buf), "%d|10|10", si);
+                setState(kStateKeyZoneFade, buf);
+                return true;
+            }
+            if (waveRevBtn_.contains(px, py)) {
+                std::snprintf(buf, sizeof(buf), "%d", si);
+                setState(kStateKeyZoneReverse, buf);
                 return true;
             }
         }
@@ -769,6 +801,40 @@ private:
             text(waveRect_.x + 6.0f, waveRect_.y + 4.0f, basename(z.path).c_str(), nullptr);
         }
 
+        // Action bar (Normalize / Trim / Fade / Reverse)
+        {
+            constexpr float kActionH = 16.0f;
+            const float ay = waveRect_.y + waveRect_.h - kActionH - 1.0f;
+            const float btnW = 66.0f;
+            const float gap  = 6.0f;
+            float bx = waveRect_.x + 6.0f;
+
+            auto drawActionBtn = [&](Rect& out, const char* label) {
+                out = { bx, ay, btnW, kActionH };
+                beginPath();
+                fillColor(28, 44, 56, 240);
+                roundedRect(out.x, out.y, out.w, out.h, 4.0f);
+                fill();
+                closePath();
+                beginPath();
+                strokeColor(60, 88, 108, 180);
+                strokeWidth(1.0f);
+                roundedRect(out.x, out.y, out.w, out.h, 4.0f);
+                stroke();
+                closePath();
+                fontSize(9.0f);
+                textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+                fillColor(180, 200, 215, 255);
+                text(out.x + out.w * 0.5f, out.y + out.h * 0.5f, label, nullptr);
+                bx += btnW + gap;
+            };
+
+            drawActionBtn(waveNormBtn_, "Normalize");
+            drawActionBtn(waveTrimBtn_, "Trim");
+            drawActionBtn(waveFadeBtn_, "Fade");
+            drawActionBtn(waveRevBtn_,  "Reverse");
+        }
+
         // Border
         beginPath();
         strokeColor(32, 48, 62, 255);
@@ -875,6 +941,11 @@ private:
     Rect waveRect_       {};
     Rect loopStartHandle_{};
     Rect loopEndHandle_  {};
+    // Wave edit action buttons (built during draw, hit-tested in onMouse)
+    Rect waveNormBtn_  {};
+    Rect waveTrimBtn_  {};
+    Rect waveFadeBtn_  {};
+    Rect waveRevBtn_   {};
 
     DragField dragField_     = kDragNone;
     int       dragZoneIdx_   = -1;

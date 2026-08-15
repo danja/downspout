@@ -3,11 +3,22 @@ add_library(downspout_campione_core STATIC
     src/campione_serialization.cpp
     src/campione_sample_loader.cpp
     src/campione_pitch_utils.cpp
+    src/campione_wave_edit.cpp
+    src/campione_mcp_server.cpp
 )
 target_link_libraries(downspout_campione_core PUBLIC downspout-project-options)
 target_include_directories(downspout_campione_core PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
     "${PROJECT_SOURCE_DIR}/include"
+    "${PROJECT_SOURCE_DIR}/third_party/cpp-httplib"
+    "${PROJECT_SOURCE_DIR}/third_party/nlohmann"
+)
+target_link_libraries(downspout_campione_core PUBLIC pthread)
+# Force SSL out of cpp-httplib: -U beats any earlier define (incl. PCH)
+target_compile_options(downspout_campione_core PRIVATE
+    -UCPPHTTPLIB_OPENSSL_SUPPORT
+    -UCPPHTTPLIB_WOLFSSL_SUPPORT
+    -UCPPHTTPLIB_MBEDTLS_SUPPORT
 )
 
 add_library(downspout_campione_port INTERFACE)

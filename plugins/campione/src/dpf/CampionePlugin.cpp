@@ -1,10 +1,12 @@
 #include "DistrhoPlugin.hpp"
 
 #include "campione_engine.hpp"
+#include "campione_mcp_server.hpp"
 #include "campione_params.hpp"
 #include "campione_pitch_utils.hpp"
 #include "campione_sample_loader.hpp"
 #include "campione_serialization.hpp"
+#include "campione_wave_edit.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -14,6 +16,7 @@
 #include <cstring>
 #include <ctime>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <sys/stat.h>
 #include <utility>
@@ -39,14 +42,25 @@ using downspout::campione::kParameterCount;
 using downspout::campione::kStateCount;
 using downspout::campione::kStateKeyParameters;
 using downspout::campione::kStateKeyZoneLoad;
+using downspout::campione::kStateKeyZoneFade;
+using downspout::campione::kStateKeyZoneNormalize;
 using downspout::campione::kStateKeyZoneRemove;
+using downspout::campione::kStateKeyZoneReverse;
+using downspout::campione::kStateKeyZoneTrim;
 using downspout::campione::kStateKeyZoneUpdate;
 using downspout::campione::kStateKeyZones;
 using downspout::campione::kStateParameters;
+using downspout::campione::kStateZoneFade;
 using downspout::campione::kStateZoneLoad;
+using downspout::campione::kStateZoneNormalize;
 using downspout::campione::kStateZoneRemove;
+using downspout::campione::kStateZoneReverse;
+using downspout::campione::kStateZoneTrim;
 using downspout::campione::kStateZoneUpdate;
 using downspout::campione::kStateZones;
+
+// Default MCP port; increments up to +9 on conflict.
+constexpr int kMcpDefaultPort = 7220;
 
 ParameterEnumerationValue kMidiChannelEnumValues[] = {
     { 0.0f, "All" },
@@ -55,6 +69,39 @@ ParameterEnumerationValue kMidiChannelEnumValues[] = {
     { 9.0f, "9" },  {10.0f, "10"}, {11.0f, "11"}, {12.0f, "12"},
     {13.0f, "13"}, {14.0f, "14"}, {15.0f, "15"}, {16.0f, "16"},
 };
+
+// Build a minimal JSON object string for zone inspection.
+std::string zonesAsJson(const ZoneVec& zones)
+{
+    std::string s = "{\"zones\":[";
+    for (std::size_t i = 0; i < zones.size(); ++i) {
+        const auto& z = zones[i];
+        char buf[512];
+        std::snprintf(buf, sizeof(buf),
+            "{\"index\":%zu,\"root_note\":%d,\"range_low\":%d,\"range_high\":%d,"
+            "\"loop_enabled\":%s,\"loop_start\":%u,\"loop_end\":%u,"
+            "\"total_frames\":%zu,\"source_path\":\"%s\"}",
+            i, z.rootNote, z.rangeLow, z.rangeHigh,
+            z.loopEnabled ? "true" : "false",
+            z.loopStart, z.loopEnd,
+            z.data.size() / std::max(1, z.channelCount),
+            z.sourcePath.c_str());
+        if (i > 0) s += ',';
+        s += buf;
+    }
+    s += "]}";
+    return s;
+}
+
+std::string paramsAsJson(const CoreParameters& p)
+{
+    char buf[256];
+    std::snprintf(buf, sizeof(buf),
+        "{\"master_volume\":%.4f,\"midi_channel\":%.0f,"
+        "\"crossfade_ms\":%.2f,\"pitch_bend_range\":%.2f}",
+        p.masterVolume, p.midiChannel, p.crossfadeDurationMs, p.pitchBendRange);
+    return buf;
+}
 
 }  // namespace
 
@@ -65,6 +112,9 @@ public:
         : Plugin(kParameterCount, 0, kStateCount)
     {
         parameters_ = downspout::campione::clampParameters(parameters_);
+        mcp_ = std::make_unique<downspout::campione::CampioneMcpServer>(
+            kMcpDefaultPort, buildMcpApi());
+        mcp_->start();
     }
 
 protected:
@@ -78,7 +128,8 @@ protected:
     const char* getDescription() const override
     {
         return "Multi-zone sampler with per-note mapping, pitch-shift gap fill, "
-               "zero-crossing loop snap, and crossfade looping.";
+               "zero-crossing loop snap, and crossfade looping. "
+               "MCP server on port 7220 (see get_port tool).";
     }
 
     void initAudioPort(const bool input, const uint32_t index, AudioPort& port) override
@@ -142,11 +193,11 @@ protected:
     {
         switch (index)
         {
-        case kParamMasterVolume:    return parameters_.masterVolume;
-        case kParamMidiChannel:     return parameters_.midiChannel;
+        case kParamMasterVolume:      return parameters_.masterVolume;
+        case kParamMidiChannel:       return parameters_.midiChannel;
         case kParamCrossfadeDuration: return parameters_.crossfadeDurationMs;
-        case kParamPitchBendRange:  return parameters_.pitchBendRange;
-        case kParamRecording:       return recording_.load(std::memory_order_relaxed) ? 1.0f : 0.0f;
+        case kParamPitchBendRange:    return parameters_.pitchBendRange;
+        case kParamRecording:         return recording_.load(std::memory_order_relaxed) ? 1.0f : 0.0f;
         default: return 0.0f;
         }
     }
@@ -155,10 +206,10 @@ protected:
     {
         switch (index)
         {
-        case kParamMasterVolume:      parameters_.masterVolume       = value; break;
-        case kParamMidiChannel:       parameters_.midiChannel        = value; break;
+        case kParamMasterVolume:      parameters_.masterVolume        = value; break;
+        case kParamMidiChannel:       parameters_.midiChannel         = value; break;
         case kParamCrossfadeDuration: parameters_.crossfadeDurationMs = value; break;
-        case kParamPitchBendRange:    parameters_.pitchBendRange     = value; break;
+        case kParamPitchBendRange:    parameters_.pitchBendRange      = value; break;
         case kParamRecording:
         {
             const bool arm = value >= 0.5f;
@@ -171,7 +222,7 @@ protected:
                 recording_.store(false, std::memory_order_release);
                 finalizeRecording();
             }
-            return; // don't fall through to clampParameters
+            return;
         }
         default: break;
         }
@@ -212,6 +263,30 @@ protected:
             state.hints        = 0;
             state.defaultValue = "";
             break;
+        case kStateZoneNormalize:
+            state.key          = kStateKeyZoneNormalize;
+            state.label        = "Normalize Zone";
+            state.hints        = 0;
+            state.defaultValue = "";
+            break;
+        case kStateZoneTrim:
+            state.key          = kStateKeyZoneTrim;
+            state.label        = "Trim Zone";
+            state.hints        = 0;
+            state.defaultValue = "";
+            break;
+        case kStateZoneFade:
+            state.key          = kStateKeyZoneFade;
+            state.label        = "Fade Zone";
+            state.hints        = 0;
+            state.defaultValue = "";
+            break;
+        case kStateZoneReverse:
+            state.key          = kStateKeyZoneReverse;
+            state.label        = "Reverse Zone";
+            state.hints        = 0;
+            state.defaultValue = "";
+            break;
         }
     }
 
@@ -227,7 +302,6 @@ protected:
             return String(downspout::campione::serializeZones(*zones).c_str());
         }
 
-        // zone_load is transient — never persisted
         return String();
     }
 
@@ -235,8 +309,7 @@ protected:
     {
         if (std::strcmp(key, kStateKeyParameters) == 0)
         {
-            const std::string text = value ? value : "";
-            const auto p = downspout::campione::deserializeParameters(text);
+            const auto p = downspout::campione::deserializeParameters(value ? value : "");
             if (p.has_value()) parameters_ = *p;
             return;
         }
@@ -271,7 +344,6 @@ protected:
                     z.rangeHigh   = rangeHigh;
                     z.loopEnabled = loopEn != 0;
                     if (parsed >= 7) {
-                        // UI-supplied loop points: apply directly and recompute crossfadeFrames
                         z.loopStart = static_cast<std::uint32_t>(loopStart);
                         z.loopEnd   = static_cast<std::uint32_t>(loopEnd);
                         const std::uint32_t loopLen = z.loopEnd > z.loopStart
@@ -304,6 +376,48 @@ protected:
             }
             return;
         }
+
+        if (std::strcmp(key, kStateKeyZoneNormalize) == 0 && value && value[0] != '\0')
+        {
+            mcpEditZone(std::atoi(value), [](CoreSampleZone& z) {
+                return downspout::campione::normalizeZone(z);
+            });
+            return;
+        }
+
+        if (std::strcmp(key, kStateKeyZoneTrim) == 0 && value && value[0] != '\0')
+        {
+            int idx = 0; float thr = -60.0f;
+            std::sscanf(value, "%d|%f", &idx, &thr);
+            const float lin = std::pow(10.0f, thr / 20.0f);
+            mcpEditZone(idx, [lin](CoreSampleZone& z) -> std::string {
+                downspout::campione::trimZone(z, lin);
+                return {};
+            });
+            return;
+        }
+
+        if (std::strcmp(key, kStateKeyZoneFade) == 0 && value && value[0] != '\0')
+        {
+            int idx = 0; float inMs = 10.0f, outMs = 10.0f;
+            std::sscanf(value, "%d|%f|%f", &idx, &inMs, &outMs);
+            mcpEditZone(idx, [inMs, outMs](CoreSampleZone& z) -> std::string {
+                const auto inF  = static_cast<uint32_t>((inMs  / 1000.0f) * z.sampleRate);
+                const auto outF = static_cast<uint32_t>((outMs / 1000.0f) * z.sampleRate);
+                downspout::campione::fadeZone(z, inF, outF);
+                return {};
+            });
+            return;
+        }
+
+        if (std::strcmp(key, kStateKeyZoneReverse) == 0 && value && value[0] != '\0')
+        {
+            mcpEditZone(std::atoi(value), [](CoreSampleZone& z) -> std::string {
+                downspout::campione::reverseZone(z);
+                return {};
+            });
+            return;
+        }
     }
 
     void activate() override
@@ -314,6 +428,15 @@ protected:
     void run(const float** inputs, float** outputs, uint32_t frames,
              const MidiEvent* midiEvents, uint32_t midiEventCount) override
     {
+        // Apply MCP-sourced parameter updates (non-blocking try_lock)
+        if (mcpParamsMtx_.try_lock()) {
+            if (hasMcpParams_) {
+                parameters_ = mcpPendingParams_;
+                hasMcpParams_ = false;
+            }
+            mcpParamsMtx_.unlock();
+        }
+
         // Clear outputs
         for (uint32_t ch = 0; ch < DISTRHO_PLUGIN_NUM_OUTPUTS; ++ch)
             if (outputs[ch]) std::fill(outputs[ch], outputs[ch] + frames, 0.0f);
@@ -321,7 +444,6 @@ protected:
         const auto zonesPtr = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
         const ZoneVec& zones = zonesPtr ? *zonesPtr : emptyZones_;
 
-        // Convert DPF MIDI events to core format (stack-allocated for RT safety)
         constexpr uint32_t kMaxMidi = 512;
         CoreMidiEvent coreMidi[kMaxMidi];
         const uint32_t midiCount = midiEventCount < kMaxMidi ? midiEventCount : kMaxMidi;
@@ -345,9 +467,9 @@ protected:
                                           getSampleRate(), audio);
 
         if (pendingZoneUpdate_.exchange(false, std::memory_order_acq_rel)) {
-            const auto zonesPtr = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
-            const std::string serialized = zonesPtr
-                ? downspout::campione::serializeZones(*zonesPtr) : std::string{};
+            const auto zp = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+            const std::string serialized = zp
+                ? downspout::campione::serializeZones(*zp) : std::string{};
             updateStateValue(kStateKeyZones, serialized.c_str());
         }
 
@@ -367,24 +489,22 @@ protected:
     }
 
 private:
-    // Load a single WAV zone and append it to the zone list.
+    // ── Zone helpers ──────────────────────────────────────────────────────────
+
     void appendZone(const std::string& path)
     {
         auto result = downspout::campione::loadWavZone(path);
         if (!result.error.empty()) return;
 
         result.zone.sourcePath = path;
-        result.zone.rootNote   = 60; // default; detect below
+        result.zone.rootNote   = 60;
 
-        // Auto-detect root note from pitch
         const double hz = downspout::campione::detectFundamentalHz(
             result.zone.data, result.zone.channelCount, result.zone.sampleRate);
-        const double midiNote = downspout::campione::freqToMidi(hz);
-        const int detected = static_cast<int>(std::lround(midiNote));
+        const int detected = static_cast<int>(std::lround(downspout::campione::freqToMidi(hz)));
         if (detected >= 0 && detected <= 127)
             result.zone.rootNote = detected;
 
-        // Set loop range to full sample, snap to zero crossings
         downspout::campione::applyLoopPoints(result.zone, parameters_.crossfadeDurationMs);
 
         const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
@@ -395,7 +515,6 @@ private:
                                    std::memory_order_release);
     }
 
-    // Deserialize zone metadata and reload each WAV from its stored path.
     void restoreZones(const std::string& text)
     {
         const auto metas = downspout::campione::deserializeZones(text);
@@ -410,7 +529,6 @@ private:
             auto result = downspout::campione::loadWavZone(meta.sourcePath);
             if (!result.error.empty()) continue;
 
-            // Restore user-edited metadata over freshly loaded WAV
             result.zone.rootNote        = meta.rootNote;
             result.zone.rangeLow        = meta.rangeLow;
             result.zone.rangeHigh       = meta.rangeHigh;
@@ -420,7 +538,6 @@ private:
             result.zone.loopEnd         = meta.loopEnd;
             result.zone.crossfadeFrames = meta.crossfadeFrames;
             result.zone.sourcePath      = meta.sourcePath;
-
             newZones->push_back(std::move(result.zone));
         }
 
@@ -440,28 +557,23 @@ private:
         zone.channelCount = recordChannels_;
         zone.sampleRate   = getSampleRate();
 
-        // Auto-detect pitch
         const double hz = downspout::campione::detectFundamentalHz(
             zone.data, zone.channelCount, zone.sampleRate);
-        const double midiF   = downspout::campione::freqToMidi(hz);
-        const int detected   = static_cast<int>(std::lround(midiF));
-        zone.rootNote        = (detected >= 0 && detected <= 127) ? detected : 60;
-        zone.rangeLow        = zone.rootNote;
-        zone.rangeHigh       = zone.rootNote;
+        const int detected = static_cast<int>(std::lround(downspout::campione::freqToMidi(hz)));
+        zone.rootNote  = (detected >= 0 && detected <= 127) ? detected : 60;
+        zone.rangeLow  = zone.rootNote;
+        zone.rangeHigh = zone.rootNote;
 
-        // Build output path in $HOME/campione_recordings/
         const char* home = std::getenv("HOME");
-        std::string dir = std::string(home ? home : "/tmp") + "/campione_recordings";
+        std::string dir  = std::string(home ? home : "/tmp") + "/campione_recordings";
         ::mkdir(dir.c_str(), 0755);
 
         char fname[256];
         std::snprintf(fname, sizeof(fname), "%s/rec_%lld.wav",
-                      dir.c_str(),
-                      static_cast<long long>(std::time(nullptr)));
+                      dir.c_str(), static_cast<long long>(std::time(nullptr)));
         zone.sourcePath = fname;
 
-        const std::string err = downspout::campione::saveWavZone(zone, fname);
-        if (!err.empty()) return;
+        if (!downspout::campione::saveWavZone(zone, fname).empty()) return;
 
         downspout::campione::applyLoopPoints(zone, parameters_.crossfadeDurationMs);
 
@@ -471,25 +583,198 @@ private:
         std::atomic_store_explicit(&zones_,
                                    std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                    std::memory_order_release);
-
-        // Defer updateStateValue to run() — calling it from setParameterValue
-        // can cause re-entrancy issues in some VST3 hosts.
         pendingZoneUpdate_.store(true, std::memory_order_release);
     }
 
-    static constexpr std::size_t kMaxRecordSamples = 48000u * 2u * 60u * 5u; // 5 min stereo
+    // ── MCP-sourced parameter update (called from MCP thread) ─────────────────
 
-    CoreParameters parameters_ {};
+    void mcpSetParam(float CoreParameters::* field, float value)
+    {
+        std::lock_guard<std::mutex> lk(mcpParamsMtx_);
+        if (!hasMcpParams_) mcpPendingParams_ = parameters_;
+        mcpPendingParams_.*field = value;
+        hasMcpParams_ = true;
+    }
+
+    // ── Wave editing (called from MCP thread, safe via atomic zone swap) ──────
+
+    std::string mcpEditZone(int idx,
+        const std::function<std::string(CoreSampleZone&)>& edit)
+    {
+        const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+        if (!existing || idx < 0 || idx >= static_cast<int>(existing->size()))
+            return "zone index out of range";
+
+        auto newZones = std::make_shared<ZoneVec>(*existing);
+        auto& z = (*newZones)[static_cast<std::size_t>(idx)];
+
+        const std::string err = edit(z);
+        if (!err.empty()) return err;
+
+        if (!z.sourcePath.empty()) {
+            const std::string saveErr = downspout::campione::saveWavZone(z, z.sourcePath);
+            if (!saveErr.empty()) return "save failed: " + saveErr;
+        }
+
+        std::atomic_store_explicit(&zones_,
+                                   std::shared_ptr<const ZoneVec>(std::move(newZones)),
+                                   std::memory_order_release);
+        pendingZoneUpdate_.store(true, std::memory_order_release);
+        return {};
+    }
+
+    // ── MCP API factory ───────────────────────────────────────────────────────
+
+    downspout::campione::CampioneMcpServer::Api buildMcpApi()
+    {
+        using namespace downspout::campione;
+        CampioneMcpServer::Api api;
+
+        api.getZonesJson = [this]() -> std::string {
+            const auto z = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+            return z ? zonesAsJson(*z) : "{\"zones\":[]}";
+        };
+
+        api.getParametersJson = [this]() -> std::string {
+            return paramsAsJson(parameters_);
+        };
+
+        api.getPort = [this]() -> int {
+            return mcp_ ? mcp_->port() : 0;
+        };
+
+        api.setMasterVolume = [this](float v) {
+            mcpSetParam(&CoreParameters::masterVolume, v);
+        };
+        api.setMidiChannel = [this](float ch) {
+            mcpSetParam(&CoreParameters::midiChannel, ch);
+        };
+        api.setCrossfadeMs = [this](float ms) {
+            mcpSetParam(&CoreParameters::crossfadeDurationMs, ms);
+        };
+        api.setPitchBendRange = [this](float sem) {
+            mcpSetParam(&CoreParameters::pitchBendRange, sem);
+        };
+
+        api.startRecording = [this]() {
+            if (!recording_.load(std::memory_order_acquire)) {
+                recordChannels_ = DISTRHO_PLUGIN_NUM_INPUTS;
+                recordBuffer_.assign(kMaxRecordSamples, 0.0f);
+                recordWritePos_.store(0, std::memory_order_release);
+                recording_.store(true, std::memory_order_release);
+            }
+        };
+
+        api.stopRecording = [this]() {
+            if (recording_.load(std::memory_order_acquire)) {
+                recording_.store(false, std::memory_order_release);
+                finalizeRecording();
+            }
+        };
+
+        api.loadZone = [this](const std::string& path) -> std::string {
+            auto result = loadWavZone(path);
+            if (!result.error.empty()) return result.error;
+            appendZone(path);
+            pendingZoneUpdate_.store(true, std::memory_order_release);
+            return {};
+        };
+
+        api.removeZone = [this](int idx) -> std::string {
+            const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+            if (!existing || idx < 0 || idx >= static_cast<int>(existing->size()))
+                return "zone index out of range";
+            auto nz = std::make_shared<ZoneVec>(*existing);
+            nz->erase(nz->begin() + idx);
+            std::atomic_store_explicit(&zones_,
+                                       std::shared_ptr<const ZoneVec>(std::move(nz)),
+                                       std::memory_order_release);
+            pendingZoneUpdate_.store(true, std::memory_order_release);
+            return {};
+        };
+
+        api.updateZone = [this](int idx, int root, int lo, int hi, bool loop,
+                                 uint32_t lStart, uint32_t lEnd) -> std::string {
+            const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+            if (!existing || idx < 0 || idx >= static_cast<int>(existing->size()))
+                return "zone index out of range";
+            auto nz = std::make_shared<ZoneVec>(*existing);
+            auto& z = (*nz)[static_cast<std::size_t>(idx)];
+            z.rootNote    = root;
+            z.rangeLow    = lo;
+            z.rangeHigh   = hi;
+            z.loopEnabled = loop;
+            if (lEnd > lStart) {
+                z.loopStart = lStart;
+                z.loopEnd   = lEnd;
+                const uint32_t loopLen = lEnd - lStart;
+                z.crossfadeFrames = static_cast<uint32_t>(
+                    (parameters_.crossfadeDurationMs / 1000.0f) * z.sampleRate);
+                if (z.crossfadeFrames > loopLen / 2) z.crossfadeFrames = loopLen / 2;
+            } else {
+                applyLoopPoints(z, parameters_.crossfadeDurationMs);
+            }
+            std::atomic_store_explicit(&zones_,
+                                       std::shared_ptr<const ZoneVec>(std::move(nz)),
+                                       std::memory_order_release);
+            pendingZoneUpdate_.store(true, std::memory_order_release);
+            return {};
+        };
+
+        api.normalizeZone = [this](int idx) -> std::string {
+            return mcpEditZone(idx, [](CoreSampleZone& z) {
+                return normalizeZone(z);
+            });
+        };
+
+        api.trimZone = [this](int idx, float thresholdDb) -> std::string {
+            return mcpEditZone(idx, [thresholdDb](CoreSampleZone& z) -> std::string {
+                const float lin = std::pow(10.0f, thresholdDb / 20.0f);
+                trimZone(z, lin);
+                return {};
+            });
+        };
+
+        api.fadeZone = [this](int idx, float inMs, float outMs) -> std::string {
+            return mcpEditZone(idx, [inMs, outMs](CoreSampleZone& z) -> std::string {
+                const auto inF  = static_cast<uint32_t>((inMs  / 1000.0f) * z.sampleRate);
+                const auto outF = static_cast<uint32_t>((outMs / 1000.0f) * z.sampleRate);
+                fadeZone(z, inF, outF);
+                return {};
+            });
+        };
+
+        api.reverseZone = [this](int idx) -> std::string {
+            return mcpEditZone(idx, [](CoreSampleZone& z) -> std::string {
+                reverseZone(z);
+                return {};
+            });
+        };
+
+        return api;
+    }
+
+    // ── State ─────────────────────────────────────────────────────────────────
+
+    static constexpr std::size_t kMaxRecordSamples = 48000u * 2u * 60u * 5u;
+
+    CoreParameters  parameters_ {};
     CoreEngineState engineState_ {};
-    // Atomic shared_ptr (C++11 free functions) — cross-thread zone handoff without locks.
     std::shared_ptr<const ZoneVec> zones_ {};
-    const ZoneVec emptyZones_ {};
+    const ZoneVec                  emptyZones_ {};
 
     std::atomic<bool>        pendingZoneUpdate_ {false};
     std::atomic<bool>        recording_         {false};
     std::atomic<std::size_t> recordWritePos_    {0};
     std::vector<float>       recordBuffer_;
     int                      recordChannels_ = 2;
+
+    // MCP-sourced parameter queue (mutex + pending struct; try_lock in run())
+    std::mutex       mcpParamsMtx_;
+    CoreParameters   mcpPendingParams_ {};
+    bool             hasMcpParams_ = false;
+
+    std::unique_ptr<downspout::campione::CampioneMcpServer> mcp_;
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CampionePlugin)
 };
