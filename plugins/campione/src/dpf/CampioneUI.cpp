@@ -24,6 +24,7 @@ using downspout::campione::kParamMidiChannel;
 using downspout::campione::kParamPitchBendRange;
 using downspout::campione::kParamMcpEnabled;
 using downspout::campione::kParamRecording;
+using downspout::campione::kParamZonesVersion;
 using downspout::campione::kParameterCount;
 using downspout::campione::kStateKeyZoneFade;
 using downspout::campione::kStateKeyZoneLoad;
@@ -113,6 +114,20 @@ public:
 protected:
     void parameterChanged(uint32_t index, float value) override
     {
+        if (index == kParamZonesVersion) {
+            // DSP bumped the zones version — pull latest data from the bridge.
+            std::string data;
+            {
+                std::lock_guard<std::mutex> lk(downspout::campione::uiBridge().zonesMtx);
+                data = downspout::campione::uiBridge().zonesData;
+            }
+            lastZonesSerial_ = downspout::campione::uiBridge().zonesSerial.load(std::memory_order_acquire);
+            rebuildFromZonesState(data);
+            if (selectedZone_ >= static_cast<int>(zones_.size()))
+                selectedZone_ = -1;
+            repaint();
+            return;
+        }
         if (index < values_.size()) {
             values_[index] = value;
             repaint();

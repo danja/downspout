@@ -40,6 +40,7 @@ using downspout::campione::kParamMidiChannel;
 using downspout::campione::kParamPitchBendRange;
 using downspout::campione::kParamMcpEnabled;
 using downspout::campione::kParamRecording;
+using downspout::campione::kParamZonesVersion;
 using downspout::campione::kParameterCount;
 using downspout::campione::kStateCount;
 using downspout::campione::kStateKeyParameters;
@@ -114,11 +115,9 @@ public:
         : Plugin(kParameterCount, 0, kStateCount)
     {
         parameters_ = downspout::campione::clampParameters(parameters_);
-        // MCP server starts by default; setParameterValue(kParamMcpEnabled,0) disables it.
-        mcp_ = std::make_unique<downspout::campione::CampioneMcpServer>(
-            kMcpDefaultPort, buildMcpApi());
-        mcp_->start();
-        mcpEnabled_ = true;
+        // MCP start is deferred to activate() so only the audio processor
+        // component starts a server — not the separate edit-controller instance
+        // or REAPER's scan instance, both of which never call activate().
     }
 
 protected:
@@ -198,6 +197,14 @@ protected:
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = 1.0f;
             break;
+        case kParamZonesVersion:
+            parameter.name   = "Zones Version";
+            parameter.symbol = "zones_version";
+            parameter.hints  = kParameterIsHidden;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1000000.0f;
+            parameter.ranges.def = 0.0f;
+            break;
         }
     }
 
@@ -211,6 +218,7 @@ protected:
         case kParamPitchBendRange:    return parameters_.pitchBendRange;
         case kParamRecording:         return recording_.load(std::memory_order_relaxed) ? 1.0f : 0.0f;
         case kParamMcpEnabled:        return mcpEnabled_ ? 1.0f : 0.0f;
+        case kParamZonesVersion:      return static_cast<float>(zonesVersion_.load(std::memory_order_relaxed));
         default: return 0.0f;
         }
     }
@@ -226,15 +234,14 @@ protected:
         case kParamMcpEnabled:
         {
             const bool enable = value >= 0.5f;
-            if (enable && !mcpEnabled_) {
+            mcpEnabled_ = enable;
+            if (enable && mcpStarted_ && !mcp_) {
                 mcp_ = std::make_unique<downspout::campione::CampioneMcpServer>(
                     kMcpDefaultPort, buildMcpApi());
                 mcp_->start();
-                mcpEnabled_ = true;
-            } else if (!enable && mcpEnabled_) {
+            } else if (!enable && mcp_) {
                 mcp_->stop();
                 mcp_.reset();
-                mcpEnabled_ = false;
             }
             return;
         }
@@ -451,6 +458,14 @@ protected:
     void activate() override
     {
         downspout::campione::activate(engineState_);
+        // Start MCP server on first activation — this only runs on the audio
+        // processor component, never on the controller or scan instances.
+        if (!mcpStarted_ && mcpEnabled_) {
+            mcp_ = std::make_unique<downspout::campione::CampioneMcpServer>(
+                kMcpDefaultPort, buildMcpApi());
+            mcp_->start();
+            mcpStarted_ = true;
+        }
     }
 
     void run(const float** inputs, float** outputs, uint32_t frames,
@@ -499,6 +514,10 @@ protected:
             const std::string serialized = zp
                 ? downspout::campione::serializeZones(*zp) : std::string{};
             updateStateValue(kStateKeyZones, serialized.c_str());
+            // Bump the hidden zones-version parameter so the host relays a
+            // parameterChanged() call to the UI — the only reliable DSP→UI push in VST3.
+            const float v = static_cast<float>(++zonesVersion_);
+            requestParameterValueChange(kParamZonesVersion, v);
         }
 
         if (pendingParamNotify_.exchange(false, std::memory_order_acq_rel)) {
@@ -657,7 +676,13 @@ private:
             std::lock_guard<std::mutex> lk(downspout::campione::uiBridge().zonesMtx);
             downspout::campione::uiBridge().zonesData = s;
         }
-        downspout::campione::uiBridge().zonesSerial.fetch_add(1, std::memory_order_release);
+        const uint32_t serial =
+            downspout::campione::uiBridge().zonesSerial.fetch_add(1, std::memory_order_release) + 1;
+        // Bump the zones-version parameter immediately so the host relays
+        // parameterChanged() to the UI without waiting for run().  run() also
+        // does this via pendingZoneUpdate_ as a belt-and-suspenders fallback.
+        zonesVersion_.store(static_cast<int>(serial), std::memory_order_release);
+        requestParameterValueChange(kParamZonesVersion, static_cast<float>(serial));
         // Also attempt the DPF path (no-op in VST3 but works in other formats).
         updateStateValue(kStateKeyZones, s.c_str());
         pendingZoneUpdate_.store(true, std::memory_order_release);
@@ -894,6 +919,7 @@ private:
 
     std::atomic<bool>        pendingZoneUpdate_  {false};
     std::atomic<bool>        pendingParamNotify_ {false};
+    std::atomic<int>         zonesVersion_       {0};
     std::mutex               zoneMtx_;           // guards zonesInitialized_ + zone writes
     bool                     zonesInitialized_  {false};
     std::atomic<bool>        recording_         {false};
@@ -909,7 +935,8 @@ private:
     std::string              recordingOutputDir_;
 
     std::unique_ptr<downspout::campione::CampioneMcpServer> mcp_;
-    bool                     mcpEnabled_ {false};
+    bool                     mcpEnabled_ {true};  // default on; server starts in activate()
+    bool                     mcpStarted_ {false}; // true after first activate()
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CampionePlugin)
 };

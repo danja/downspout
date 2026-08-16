@@ -204,35 +204,37 @@ void CampioneMcpServer::stop()
 
 void CampioneMcpServer::serve()
 {
-    // Override httplib's default SO_REUSEPORT with SO_REUSEADDR only, so that
-    // a second Campione instance correctly fails to bind port N and increments
-    // to N+1 rather than sharing the same port via kernel load-balancing.
-    svr_->set_socket_options([](socket_t sock) {
-        int yes = 1;
-        setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
-                   reinterpret_cast<const char*>(&yes), sizeof(yes));
-    });
+    // httplib's bind_to_port() permanently decommissions the Server object on
+    // failure, so we must create a fresh one for each port attempt.
+    auto makeServer = [this]() {
+        svr_ = std::make_unique<httplib::Server>();
+        // Use SO_REUSEADDR only (not SO_REUSEPORT) so a second instance on the
+        // same machine correctly fails to bind port N and increments to N+1.
+        svr_->set_socket_options([](socket_t sock) {
+            int yes = 1;
+            setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
+                       reinterpret_cast<const char*>(&yes), sizeof(yes));
+        });
+        svr_->Post("/",    [this](const httplib::Request& req, httplib::Response& res) {
+            std::string body = dispatch(req.body);
+            if (body.empty()) { res.status = 202; }
+            else { res.set_content(body, "application/json"); }
+        });
+        svr_->Post("/mcp", [this](const httplib::Request& req, httplib::Response& res) {
+            std::string body = dispatch(req.body);
+            if (body.empty()) { res.status = 202; }
+            else { res.set_content(body, "application/json"); }
+        });
+    };
 
-    // Find an available port
     for (int port = preferredPort_; port < preferredPort_ + 10; ++port) {
+        makeServer();
         if (svr_->bind_to_port("127.0.0.1", port)) {
             port_ = port;
             break;
         }
     }
-    if (port_ == 0) return; // could not bind
-
-    auto handler = [this](const httplib::Request& req, httplib::Response& res) {
-        std::string body = dispatch(req.body);
-        if (body.empty()) {
-            // JSON-RPC notification: no response expected
-            res.status = 202;
-        } else {
-            res.set_content(body, "application/json");
-        }
-    };
-    svr_->Post("/",    handler);
-    svr_->Post("/mcp", handler);
+    if (port_ == 0) return;
 
     svr_->listen_after_bind();
 }

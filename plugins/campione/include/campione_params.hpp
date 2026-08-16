@@ -11,6 +11,7 @@ enum ParameterIndex : std::uint32_t {
     kParamPitchBendRange,
     kParamRecording,   // boolean: 1=recording, 0=idle (UI→DSP via parameter channel)
     kParamMcpEnabled,  // boolean: 1=MCP server running (default on), 0=disabled
+    kParamZonesVersion, // hidden counter bumped on every zone list change; drives UI refresh
     kParameterCount
 };
 
