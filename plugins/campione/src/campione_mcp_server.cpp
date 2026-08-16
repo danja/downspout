@@ -156,7 +156,24 @@ static json buildToolsList()
 
         {{"name","get_port"},
          {"description","Return the port this MCP server is listening on."},
-         {"inputSchema", makeSchema(json::object())}}
+         {"inputSchema", makeSchema(json::object())}},
+
+        // Utility
+        {{"name","clear_zones"},
+         {"description","Remove all zones at once."},
+         {"inputSchema", makeSchema(json::object())}},
+
+        {{"name","refresh_ui"},
+         {"description","Force the UI to repaint with the current DSP state. Use when the zone list or parameters appear out of sync."},
+         {"inputSchema", makeSchema(json::object())}},
+
+        {{"name","get_recording_status"},
+         {"description","Return current recording state: whether recording is active, frames captured, and elapsed seconds."},
+         {"inputSchema", makeSchema(json::object())}},
+
+        {{"name","set_recording_dir"},
+         {"description","Set the directory where recorded WAV files are saved. Default is ~/campione_recordings."},
+         {"inputSchema", makeSchema({{"path", strProp("Absolute path to directory")}}, {"path"})}}
     });
 }
 
@@ -388,6 +405,27 @@ std::string CampioneMcpServer::dispatch(const std::string& body)
 
             if (name == "get_port") {
                 return makeResult(textContent(std::to_string(port_)), id).dump();
+            }
+
+            if (name == "clear_zones") {
+                api_.clearZones();
+                return makeResult(textContent("all zones cleared"), id).dump();
+            }
+
+            if (name == "refresh_ui") {
+                api_.refreshUi();
+                return makeResult(textContent("UI refreshed"), id).dump();
+            }
+
+            if (name == "get_recording_status") {
+                return makeResult(textContent(api_.getRecordingStatus()), id).dump();
+            }
+
+            if (name == "set_recording_dir") {
+                const std::string path = args.at("path").get<std::string>();
+                const std::string err  = api_.setRecordingDir(path);
+                if (!err.empty()) throw std::runtime_error(err);
+                return makeResult(textContent("recording dir set to: " + path), id).dump();
             }
 
             return makeError(-32601, "Unknown tool: " + name, id).dump();

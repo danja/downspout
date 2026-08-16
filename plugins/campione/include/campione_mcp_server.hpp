@@ -45,6 +45,12 @@ public:
         std::function<std::string(int, float)>  trimZone;      // index, threshold_db → "" or error
         std::function<std::string(int, float, float)> fadeZone; // index, in_ms, out_ms → "" or error
         std::function<std::string(int)>         reverseZone;   // index → "" or error
+
+        // ── Utility ───────────────────────────────────────────────────────────
+        std::function<void()>              clearZones;
+        std::function<void()>              refreshUi;
+        std::function<std::string()>       getRecordingStatus;
+        std::function<std::string(const std::string&)> setRecordingDir;
     };
 
     // preferredPort: first port to try; increments up to preferredPort+9 on EADDRINUSE.

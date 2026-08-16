@@ -3,6 +3,7 @@
 #include "campione_engine.hpp"
 #include "campione_mcp_server.hpp"
 #include "campione_params.hpp"
+#include "campione_ui_bridge.hpp"
 #include "campione_pitch_utils.hpp"
 #include "campione_sample_loader.hpp"
 #include "campione_serialization.hpp"
@@ -503,6 +504,16 @@ protected:
         if (pendingParamNotify_.exchange(false, std::memory_order_acq_rel)) {
             const std::string serialized = downspout::campione::serializeParameters(parameters_);
             updateStateValue(kStateKeyParameters, serialized.c_str());
+            // Push to in-process bridge for UI polling.
+            {
+                std::lock_guard<std::mutex> lk(downspout::campione::uiBridge().paramsMtx);
+                auto& b = downspout::campione::uiBridge();
+                b.masterVolume    = parameters_.masterVolume;
+                b.midiChannel     = parameters_.midiChannel;
+                b.crossfadeMs     = parameters_.crossfadeDurationMs;
+                b.pitchBendRange  = parameters_.pitchBendRange;
+            }
+            downspout::campione::uiBridge().paramsSerial.fetch_add(1, std::memory_order_release);
         }
 
         if (recording_.load(std::memory_order_acquire)) {
@@ -587,6 +598,9 @@ private:
         std::atomic_store_explicit(&zones_,
                                    std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                    std::memory_order_release);
+        // Seed the UI bridge so uiIdle() sees the correct state on first poll,
+        // even before any MCP call triggers notifyZonesChanged().
+        notifyZonesChanged();
     }
 
     void finalizeRecording()
@@ -607,8 +621,9 @@ private:
         zone.rangeLow  = zone.rootNote;
         zone.rangeHigh = zone.rootNote;
 
-        const char* home = std::getenv("HOME");
-        std::string dir  = std::string(home ? home : "/tmp") + "/campione_recordings";
+        std::string dir = recordingOutputDir_.empty()
+                          ? ([]{ const char* h = std::getenv("HOME"); return std::string(h ? h : "/tmp"); }() + "/campione_recordings")
+                          : recordingOutputDir_;
         ::mkdir(dir.c_str(), 0755);
 
         char fname[256];
@@ -629,10 +644,22 @@ private:
         notifyZonesChanged();
     }
 
-    // Signal that zones changed — safe to call from any thread.
-    // run() picks up the flag and sends updateStateValue from the audio thread.
+    // Notify host+UI of zone list change. Called directly from the MCP thread;
+    // also sets pendingZoneUpdate_ so run() re-sends if the host drops the
+    // off-thread call (e.g. some hosts only accept updateStateValue from the
+    // audio thread). Both paths are harmlessly idempotent.
     void notifyZonesChanged()
     {
+        const auto zp = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+        const std::string s = zp ? downspout::campione::serializeZones(*zp) : std::string{};
+        // Write to in-process bridge — UI polls this in uiIdle().
+        {
+            std::lock_guard<std::mutex> lk(downspout::campione::uiBridge().zonesMtx);
+            downspout::campione::uiBridge().zonesData = s;
+        }
+        downspout::campione::uiBridge().zonesSerial.fetch_add(1, std::memory_order_release);
+        // Also attempt the DPF path (no-op in VST3 but works in other formats).
+        updateStateValue(kStateKeyZones, s.c_str());
         pendingZoneUpdate_.store(true, std::memory_order_release);
     }
 
@@ -809,6 +836,50 @@ private:
             });
         };
 
+        api.clearZones = [this]() {
+            std::lock_guard<std::mutex> lk(zoneMtx_);
+            zonesInitialized_ = true;
+            std::atomic_store_explicit(&zones_,
+                                       std::shared_ptr<const ZoneVec>(std::make_shared<ZoneVec>()),
+                                       std::memory_order_release);
+            notifyZonesChanged();
+        };
+
+        api.refreshUi = [this]() {
+            notifyZonesChanged();
+            // Also push current params to bridge.
+            {
+                std::lock_guard<std::mutex> lk(downspout::campione::uiBridge().paramsMtx);
+                auto& b = downspout::campione::uiBridge();
+                b.masterVolume   = parameters_.masterVolume;
+                b.midiChannel    = parameters_.midiChannel;
+                b.crossfadeMs    = parameters_.crossfadeDurationMs;
+                b.pitchBendRange = parameters_.pitchBendRange;
+            }
+            downspout::campione::uiBridge().paramsSerial.fetch_add(1, std::memory_order_release);
+        };
+
+        api.getRecordingStatus = [this]() -> std::string {
+            const bool rec    = recording_.load(std::memory_order_acquire);
+            const std::size_t frames = recordWritePos_.load(std::memory_order_acquire)
+                                       / std::max(1, recordChannels_);
+            const double secs = getSampleRate() > 0
+                                 ? static_cast<double>(frames) / getSampleRate() : 0.0;
+            char buf[128];
+            std::snprintf(buf, sizeof(buf),
+                          "{\"recording\":%s,\"frames_captured\":%zu,\"seconds_captured\":%.3f}",
+                          rec ? "true" : "false", frames, secs);
+            return buf;
+        };
+
+        api.setRecordingDir = [this](const std::string& path) -> std::string {
+            struct stat st{};
+            if (::stat(path.c_str(), &st) != 0 || !S_ISDIR(st.st_mode))
+                return "directory does not exist: " + path;
+            recordingOutputDir_ = path;
+            return {};
+        };
+
         return api;
     }
 
@@ -834,6 +905,8 @@ private:
     std::mutex       mcpParamsMtx_;
     CoreParameters   mcpPendingParams_ {};
     bool             hasMcpParams_ = false;
+
+    std::string              recordingOutputDir_;
 
     std::unique_ptr<downspout::campione::CampioneMcpServer> mcp_;
     bool                     mcpEnabled_ {false};

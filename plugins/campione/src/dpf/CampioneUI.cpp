@@ -3,6 +3,7 @@
 #include "campione_params.hpp"
 #include "campione_sample_loader.hpp"
 #include "campione_serialization.hpp"
+#include "campione_ui_bridge.hpp"
 
 #include <algorithm>
 #include <array>
@@ -100,6 +101,7 @@ public:
         values_[kParamMidiChannel]       = 0.0f;
         values_[kParamCrossfadeDuration] = 20.0f;
         values_[kParamPitchBendRange]    = 2.0f;
+        values_[kParamMcpEnabled]        = 1.0f;
 
        #ifdef DGL_NO_SHARED_RESOURCES
         createFontFromFile("sans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
@@ -151,6 +153,34 @@ protected:
 
     void uiIdle() override
     {
+        // Poll the in-process bridge for MCP-driven zone changes.
+        const uint32_t zSerial = downspout::campione::uiBridge().zonesSerial.load(std::memory_order_acquire);
+        if (zSerial != lastZonesSerial_) {
+            lastZonesSerial_ = zSerial;
+            std::string data;
+            {
+                std::lock_guard<std::mutex> lk(downspout::campione::uiBridge().zonesMtx);
+                data = downspout::campione::uiBridge().zonesData;
+            }
+            rebuildFromZonesState(data);
+            if (selectedZone_ >= static_cast<int>(zones_.size()))
+                selectedZone_ = -1;
+            repaint();
+        }
+
+        // Poll for MCP-driven parameter changes.
+        const uint32_t pSerial = downspout::campione::uiBridge().paramsSerial.load(std::memory_order_acquire);
+        if (pSerial != lastParamsSerial_) {
+            lastParamsSerial_ = pSerial;
+            std::lock_guard<std::mutex> lk(downspout::campione::uiBridge().paramsMtx);
+            auto& b = downspout::campione::uiBridge();
+            values_[kParamMasterVolume]      = b.masterVolume;
+            values_[kParamMidiChannel]       = b.midiChannel;
+            values_[kParamCrossfadeDuration] = b.crossfadeMs;
+            values_[kParamPitchBendRange]    = b.pitchBendRange;
+            repaint();
+        }
+
         if (recording_)
             repaint();
     }
@@ -213,6 +243,7 @@ protected:
         // MCP toggle
         if (mcpBtn_.contains(px, py)) {
             const float newVal = values_[kParamMcpEnabled] >= 0.5f ? 0.0f : 1.0f;
+            values_[kParamMcpEnabled] = newVal;
             editParameter(kParamMcpEnabled, true);
             setParameterValue(kParamMcpEnabled, newVal);
             editParameter(kParamMcpEnabled, false);
@@ -302,8 +333,8 @@ protected:
         const float listH = H - listY - kFooterH - kPad * 1.5f - kWaveH;
         const float rowsY = listY + 23.0f;
 
-        for (std::size_t i = 0; i < zones_.size(); ++i) {
-            const float ry = rowsY + static_cast<float>(i) * kRowH;
+        for (std::size_t i = static_cast<std::size_t>(zoneScrollOffset_); i < zones_.size(); ++i) {
+            const float ry = rowsY + static_cast<float>(i - static_cast<std::size_t>(zoneScrollOffset_)) * kRowH;
             if (ry > listY + listH) break;
 
             // Remove button
@@ -416,6 +447,20 @@ protected:
         }
 
         return false;
+    }
+
+    bool onScroll(const ScrollEvent& ev) override
+    {
+        const float H     = static_cast<float>(getHeight());
+        const float listY = kHeaderH + kPad * 2.0f;
+        const float listH = H - listY - kFooterH - kPad * 1.5f - kWaveH;
+        const float py    = static_cast<float>(ev.pos.getY());
+        if (py < listY || py > listY + listH) return false;
+
+        const int maxScroll = std::max(0, static_cast<int>(zones_.size()) - static_cast<int>(listH / kRowH));
+        zoneScrollOffset_ = std::clamp(zoneScrollOffset_ - static_cast<int>(ev.delta.getY()), 0, maxScroll);
+        repaint();
+        return true;
     }
 
 private:
@@ -586,8 +631,8 @@ private:
         closePath();
 
         const float rowsY = listY + 23.0f;
-        for (std::size_t i = 0; i < zones_.size(); ++i) {
-            const float ry  = rowsY + static_cast<float>(i) * kRowH;
+        for (std::size_t i = static_cast<std::size_t>(zoneScrollOffset_); i < zones_.size(); ++i) {
+            const float ry  = rowsY + static_cast<float>(i - static_cast<std::size_t>(zoneScrollOffset_)) * kRowH;
             if (ry + kRowH > listY + listH) break;
 
             const ZoneEntry& z      = zones_[i];
@@ -935,6 +980,7 @@ private:
         const auto metas = downspout::campione::deserializeZones(s);
         if (!metas.has_value()) return;
         zones_.clear();
+        zoneScrollOffset_ = 0;
         zones_.reserve(metas->size());
         for (const auto& z : *metas) {
             ZoneEntry e;
@@ -982,6 +1028,10 @@ private:
 
     bool recording_ = false;
     std::chrono::steady_clock::time_point recordStart_;
+
+    uint32_t lastZonesSerial_  = 0;
+    uint32_t lastParamsSerial_ = 0;
+    int      zoneScrollOffset_ = 0;
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CampioneUI)
 };
