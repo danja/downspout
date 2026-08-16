@@ -23,6 +23,16 @@ struct SampleZone {
     std::uint32_t loopEnd = 0;
     std::uint32_t crossfadeFrames = 0;
     std::string sourcePath;
+    // ADSR
+    float attackMs     = 5.0f;
+    float decayMs      = 100.0f;
+    float sustainLevel = 1.0f;
+    float releaseMs    = 200.0f;
+    // Filter
+    int   filterType     = 0;       // 0=LP 1=BP 2=HP 3=Notch
+    float filterCutoffHz = 20000.0f;
+    float filterQ        = 0.707f;
+    bool  filterEnabled  = false;
 };
 
 struct Voice {
@@ -36,6 +46,16 @@ struct Voice {
     bool inCrossfade = false;
     double crossfadePosition = 0.0;
     std::uint64_t ageFrames = 0;
+    // ADSR
+    enum class AdsrPhase : int { Idle=0, Attack, Decay, Sustain, Release };
+    AdsrPhase adsrPhase = AdsrPhase::Idle;
+    float     adsrValue = 0.0f;
+    // Biquad filter state (one per output channel)
+    float bqZ1[2] = {};
+    float bqZ2[2] = {};
+    // Biquad coefficients (set at note-on from zone params)
+    float bqB0 = 1.0f, bqB1 = 0.0f, bqB2 = 0.0f;
+    float bqA1 = 0.0f, bqA2 = 0.0f;
 };
 
 struct Parameters {

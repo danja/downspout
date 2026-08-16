@@ -35,4 +35,11 @@ void applyLoopPoints(SampleZone& zone, float crossfadeDurationMs);
                                           int channelCount,
                                           double sampleRate);
 
+// Energy-based onset detection. Returns sorted frame indices where transients occur.
+[[nodiscard]] std::vector<std::uint32_t> detectTransients(const std::vector<float>& data,
+                                                          int channelCount,
+                                                          double sampleRate,
+                                                          float threshold = 0.1f,
+                                                          std::uint32_t minGapFrames = 1000);
+
 }  // namespace downspout::campione

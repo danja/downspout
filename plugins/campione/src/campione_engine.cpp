@@ -9,6 +9,45 @@
 namespace downspout::campione {
 namespace {
 
+static void computeBiquad(Voice& v, const SampleZone& zone, double sr) noexcept
+{
+    // RBJ Audio EQ Cookbook
+    const double f0    = std::clamp(static_cast<double>(zone.filterCutoffHz), 20.0, sr * 0.499);
+    const double Q     = std::max(static_cast<double>(zone.filterQ), 0.01);
+    const double w0    = 2.0 * M_PI * f0 / sr;
+    const double cosw0 = std::cos(w0);
+    const double sinw0 = std::sin(w0);
+    const double alpha = sinw0 / (2.0 * Q);
+    double b0, b1, b2, a0, a1, a2;
+    switch (zone.filterType) {
+    case 1: // Band-pass
+        b0 =  sinw0 / 2.0; b1 = 0.0;       b2 = -sinw0 / 2.0;
+        a0 =  1.0 + alpha;  a1 = -2.0*cosw0; a2 =  1.0 - alpha; break;
+    case 2: // High-pass
+        b0 =  (1.0 + cosw0) / 2.0; b1 = -(1.0 + cosw0); b2 = (1.0 + cosw0) / 2.0;
+        a0 =  1.0 + alpha;          a1 = -2.0 * cosw0;   a2 = 1.0 - alpha; break;
+    case 3: // Notch
+        b0 = 1.0; b1 = -2.0*cosw0; b2 = 1.0;
+        a0 = 1.0 + alpha; a1 = -2.0*cosw0; a2 = 1.0 - alpha; break;
+    default: // Low-pass (0)
+        b0 = (1.0 - cosw0) / 2.0; b1 = 1.0 - cosw0; b2 = (1.0 - cosw0) / 2.0;
+        a0 = 1.0 + alpha;          a1 = -2.0 * cosw0; a2 = 1.0 - alpha; break;
+    }
+    v.bqB0 = static_cast<float>(b0 / a0);
+    v.bqB1 = static_cast<float>(b1 / a0);
+    v.bqB2 = static_cast<float>(b2 / a0);
+    v.bqA1 = static_cast<float>(a1 / a0);
+    v.bqA2 = static_cast<float>(a2 / a0);
+}
+
+static float applyBiquad(Voice& v, float x, int ch) noexcept
+{
+    const float y = v.bqB0 * x + v.bqZ1[ch];
+    v.bqZ1[ch]   = v.bqB1 * x - v.bqA1 * y + v.bqZ2[ch];
+    v.bqZ2[ch]   = v.bqB2 * x - v.bqA2 * y;
+    return y;
+}
+
 inline float readSample(const SampleZone& zone, std::uint32_t frame, std::uint32_t channel) noexcept
 {
     if (zone.data.empty()) return 0.0f;
@@ -131,11 +170,16 @@ void processBlock(EngineState& state,
                     v.inCrossfade       = false;
                     v.crossfadePosition = 0.0;
                     v.ageFrames         = now;
+                    v.adsrPhase = Voice::AdsrPhase::Attack;
+                    v.adsrValue = 0.0f;
+                    v.bqZ1[0] = v.bqZ1[1] = 0.0f;
+                    v.bqZ2[0] = v.bqZ2[1] = 0.0f;
+                    if (zone.filterEnabled) computeBiquad(v, zone, hostSampleRate);
                 }
             } else if (status == 0x80u || (status == 0x90u && vel == 0u)) {  // note-off
                 for (Voice& v : state.voices)
                     if (v.active && v.midiNote == note && v.midiChannel == channel)
-                        v.active = false;
+                        v.adsrPhase = Voice::AdsrPhase::Release;
             }
         }
 
@@ -189,7 +233,43 @@ void processBlock(EngineState& state,
                 outR = wTail * tailR + wHead * headR;
             }
 
-            const float gain = v.velocity * params.masterVolume;
+            // Advance ADSR
+            switch (v.adsrPhase) {
+            case Voice::AdsrPhase::Attack: {
+                const float inc = (zone.attackMs > 0.0f)
+                    ? (1.0f / static_cast<float>(zone.attackMs * 0.001 * hostSampleRate))
+                    : 1.0f;
+                v.adsrValue += inc;
+                if (v.adsrValue >= 1.0f) { v.adsrValue = 1.0f; v.adsrPhase = Voice::AdsrPhase::Decay; }
+                break; }
+            case Voice::AdsrPhase::Decay: {
+                const float tgt = zone.sustainLevel;
+                const float inc = (zone.decayMs > 0.0f)
+                    ? ((1.0f - tgt) / static_cast<float>(zone.decayMs * 0.001 * hostSampleRate))
+                    : (1.0f - tgt);
+                v.adsrValue -= inc;
+                if (v.adsrValue <= tgt) { v.adsrValue = tgt; v.adsrPhase = Voice::AdsrPhase::Sustain; }
+                break; }
+            case Voice::AdsrPhase::Sustain:
+                v.adsrValue = zone.sustainLevel;
+                break;
+            case Voice::AdsrPhase::Release: {
+                // Linear rate: 1.0 → 0 in releaseMs (constant per frame)
+                const float releaseFrames = zone.releaseMs > 0.0f
+                    ? static_cast<float>(zone.releaseMs * 0.001 * hostSampleRate) : 1.0f;
+                v.adsrValue -= 1.0f / releaseFrames;
+                if (v.adsrValue <= 0.0f) { v.active = false; v.adsrPhase = Voice::AdsrPhase::Idle; continue; }
+                break; }
+            default:
+                break;
+            }
+
+            if (zone.filterEnabled) {
+                outL = applyBiquad(v, outL, 0);
+                outR = applyBiquad(v, outR, zone.channelCount > 1 ? 1 : 0);
+            }
+
+            const float gain = v.velocity * params.masterVolume * v.adsrValue;
             if (audio.outputs[0]) audio.outputs[0][f] += outL * gain;
             if (hasStereo && audio.outputs[1]) audio.outputs[1][f] += outR * gain;
 

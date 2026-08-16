@@ -85,7 +85,7 @@ std::optional<Parameters> deserializeParameters(const std::string& text) {
         else if (key == "midi_channel"          && parseFloat(val, fv)) p.midiChannel        = fv;
         else if (key == "crossfade_duration_ms" && parseFloat(val, fv)) p.crossfadeDurationMs = fv;
         else if (key == "pitch_bend_range"      && parseFloat(val, fv)) p.pitchBendRange     = fv;
-        else return std::nullopt;
+        // ignore unknown keys for forward compatibility
     }
     return clampParameters(p);
 }
@@ -103,6 +103,14 @@ std::string serializeZones(const std::vector<SampleZone>& zones) {
         out += "loop_end="        + std::to_string(z.loopEnd)        + "\n";
         out += "crossfade_frames=" + std::to_string(z.crossfadeFrames) + "\n";
         out += "source_path="     + z.sourcePath                     + "\n";
+        out += "attack_ms="      + std::to_string(z.attackMs)      + "\n";
+        out += "decay_ms="       + std::to_string(z.decayMs)        + "\n";
+        out += "sustain_level="  + std::to_string(z.sustainLevel)   + "\n";
+        out += "release_ms="     + std::to_string(z.releaseMs)      + "\n";
+        out += "filter_enabled=" + std::to_string(z.filterEnabled ? 1 : 0) + "\n";
+        out += "filter_type="    + std::to_string(z.filterType)     + "\n";
+        out += "filter_cutoff="  + std::to_string(z.filterCutoffHz) + "\n";
+        out += "filter_q="       + std::to_string(z.filterQ)        + "\n";
     }
     return out;
 }
@@ -122,7 +130,7 @@ std::optional<std::vector<SampleZone>> deserializeZones(const std::string& text)
         const std::string_view key = line.substr(0, sep);
         if (key == "version") { sawVersion = true; continue; }
         if (key == "zone_count") continue;
-        return std::nullopt;
+        // ignore unknown header keys for forward compatibility
     }
     if (!sawVersion) return std::nullopt;
 
@@ -137,7 +145,7 @@ std::optional<std::vector<SampleZone>> deserializeZones(const std::string& text)
             if (sep == std::string_view::npos) return std::nullopt;
             const std::string_view key = line.substr(0, sep);
             const std::string_view val = line.substr(sep + 1);
-            int iv = 0; std::uint32_t uv = 0;
+            int iv = 0; std::uint32_t uv = 0; float fv = 0.0f;
             if      (key == "root_note"        && parseInt(val, iv))    z.rootNote        = iv;
             else if (key == "range_low"        && parseInt(val, iv))    z.rangeLow        = iv;
             else if (key == "range_high"       && parseInt(val, iv))    z.rangeHigh       = iv;
@@ -147,7 +155,15 @@ std::optional<std::vector<SampleZone>> deserializeZones(const std::string& text)
             else if (key == "loop_end"         && parseUint32(val, uv)) z.loopEnd         = uv;
             else if (key == "crossfade_frames" && parseUint32(val, uv)) z.crossfadeFrames = uv;
             else if (key == "source_path")                              z.sourcePath      = std::string(val);
-            else return std::nullopt;
+            else if (key == "attack_ms"      && parseFloat(val, fv)) z.attackMs      = fv;
+            else if (key == "decay_ms"       && parseFloat(val, fv)) z.decayMs       = fv;
+            else if (key == "sustain_level"  && parseFloat(val, fv)) z.sustainLevel  = fv;
+            else if (key == "release_ms"     && parseFloat(val, fv)) z.releaseMs     = fv;
+            else if (key == "filter_enabled" && parseInt(val, iv))   z.filterEnabled = iv != 0;
+            else if (key == "filter_type"    && parseInt(val, iv))   z.filterType    = iv;
+            else if (key == "filter_cutoff"  && parseFloat(val, fv)) z.filterCutoffHz = fv;
+            else if (key == "filter_q"       && parseFloat(val, fv)) z.filterQ       = fv;
+            // ignore unknown keys for forward compatibility
         }
         zones.push_back(std::move(z));
     }

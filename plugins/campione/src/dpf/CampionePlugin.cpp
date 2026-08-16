@@ -52,6 +52,7 @@ using downspout::campione::kStateKeyZoneReverse;
 using downspout::campione::kStateKeyZoneTrim;
 using downspout::campione::kStateKeyZoneUpdate;
 using downspout::campione::kStateKeyZones;
+using downspout::campione::kStateKeyZoneDsp;
 using downspout::campione::kStateParameters;
 using downspout::campione::kStateZoneFade;
 using downspout::campione::kStateZoneLoad;
@@ -61,6 +62,7 @@ using downspout::campione::kStateZoneReverse;
 using downspout::campione::kStateZoneTrim;
 using downspout::campione::kStateZoneUpdate;
 using downspout::campione::kStateZones;
+using downspout::campione::kStateZoneDsp;
 
 // Default MCP port; increments up to +9 on conflict.
 constexpr int kMcpDefaultPort = 7220;
@@ -322,6 +324,12 @@ protected:
             state.hints        = 0;
             state.defaultValue = "";
             break;
+        case kStateZoneDsp:
+            state.key          = kStateKeyZoneDsp;
+            state.label        = "Zone DSP";
+            state.hints        = 0;
+            state.defaultValue = "";
+            break;
         }
     }
 
@@ -451,6 +459,36 @@ protected:
                 downspout::campione::reverseZone(z);
                 return {};
             });
+            return;
+        }
+
+        if (std::strcmp(key, kStateKeyZoneDsp) == 0 && value && value[0] != '\0')
+        {
+            int idx = 0, filterEnabled = 0, filterType = 0;
+            float attackMs = 5.0f, decayMs = 100.0f, sustainLevel = 1.0f, releaseMs = 200.0f;
+            float filterCutoff = 20000.0f, filterQ = 0.707f;
+            const int parsed = std::sscanf(value, "%d|%f|%f|%f|%f|%d|%d|%f|%f",
+                                           &idx, &attackMs, &decayMs, &sustainLevel, &releaseMs,
+                                           &filterEnabled, &filterType, &filterCutoff, &filterQ);
+            if (parsed >= 5)
+            {
+                std::lock_guard<std::mutex> lk(zoneMtx_);
+                zonesInitialized_ = true;
+                const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+                if (existing && idx >= 0 && idx < static_cast<int>(existing->size())) {
+                    auto newZones = std::make_shared<ZoneVec>(*existing);
+                    auto& z = (*newZones)[static_cast<std::size_t>(idx)];
+                    z.attackMs      = attackMs;
+                    z.decayMs       = decayMs;
+                    z.sustainLevel  = std::clamp(sustainLevel, 0.0f, 1.0f);
+                    z.releaseMs     = releaseMs;
+                    if (parsed >= 7) { z.filterEnabled = filterEnabled != 0; z.filterType = filterType; }
+                    if (parsed >= 9) { z.filterCutoffHz = filterCutoff; z.filterQ = filterQ; }
+                    std::atomic_store_explicit(&zones_,
+                                               std::shared_ptr<const ZoneVec>(std::move(newZones)),
+                                               std::memory_order_release);
+                }
+            }
             return;
         }
     }
@@ -611,6 +649,14 @@ private:
             result.zone.loopEnd         = meta.loopEnd;
             result.zone.crossfadeFrames = meta.crossfadeFrames;
             result.zone.sourcePath      = meta.sourcePath;
+            result.zone.attackMs        = meta.attackMs;
+            result.zone.decayMs         = meta.decayMs;
+            result.zone.sustainLevel    = meta.sustainLevel;
+            result.zone.releaseMs       = meta.releaseMs;
+            result.zone.filterEnabled   = meta.filterEnabled;
+            result.zone.filterType      = meta.filterType;
+            result.zone.filterCutoffHz  = meta.filterCutoffHz;
+            result.zone.filterQ         = meta.filterQ;
             newZones->push_back(std::move(result.zone));
         }
 
@@ -824,6 +870,102 @@ private:
             } else {
                 applyLoopPoints(z, parameters_.crossfadeDurationMs);
             }
+            std::atomic_store_explicit(&zones_,
+                                       std::shared_ptr<const ZoneVec>(std::move(nz)),
+                                       std::memory_order_release);
+            notifyZonesChanged();
+            return {};
+        };
+
+        api.updateZoneDsp = [this](int idx,
+                                    float attackMs, float decayMs, float sustainLevel, float releaseMs,
+                                    int filterEnabled, int filterType, float filterCutoff, float filterQ)
+                                    -> std::string {
+            std::lock_guard<std::mutex> lk(zoneMtx_);
+            zonesInitialized_ = true;
+            const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+            if (!existing || idx < 0 || idx >= static_cast<int>(existing->size()))
+                return "zone index out of range";
+            auto nz = std::make_shared<ZoneVec>(*existing);
+            auto& z = (*nz)[static_cast<std::size_t>(idx)];
+            // Negative = preserve existing value (not provided by caller)
+            if (attackMs      >= 0.0f) z.attackMs      = attackMs;
+            if (decayMs       >= 0.0f) z.decayMs       = decayMs;
+            if (sustainLevel  >= 0.0f) z.sustainLevel  = std::clamp(sustainLevel, 0.0f, 1.0f);
+            if (releaseMs     >= 0.0f) z.releaseMs     = releaseMs;
+            if (filterEnabled >= 0)    z.filterEnabled = filterEnabled != 0;
+            if (filterType    >= 0)    z.filterType    = filterType;
+            if (filterCutoff  >= 0.0f) z.filterCutoffHz = filterCutoff;
+            if (filterQ       >= 0.0f) z.filterQ       = filterQ;
+            std::atomic_store_explicit(&zones_,
+                                       std::shared_ptr<const ZoneVec>(std::move(nz)),
+                                       std::memory_order_release);
+            notifyZonesChanged();
+            return {};
+        };
+
+        api.sliceZone = [this](int idx, int numSlices, int startNote) -> std::string {
+            std::lock_guard<std::mutex> lk(zoneMtx_);
+            zonesInitialized_ = true;
+            const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+            if (!existing || idx < 0 || idx >= static_cast<int>(existing->size()))
+                return "zone index out of range";
+
+            const CoreSampleZone& src = (*existing)[static_cast<std::size_t>(idx)];
+            if (src.data.empty()) return "zone has no audio data";
+
+            const int totalFrames = static_cast<int>(src.data.size() / src.channelCount);
+            if (startNote < 0) startNote = src.rangeLow;
+
+            std::vector<uint32_t> boundaries;
+            if (numSlices == 0) {
+                // Auto-detect transients
+                const auto onsets = downspout::campione::detectTransients(
+                    src.data, src.channelCount, src.sampleRate);
+                if (onsets.empty()) return "no transients detected, specify num_slices explicitly";
+                boundaries.push_back(0);
+                for (uint32_t f : onsets)
+                    if (f > 0) boundaries.push_back(f);
+                boundaries.push_back(static_cast<uint32_t>(totalFrames));
+                numSlices = static_cast<int>(boundaries.size()) - 1;
+            } else {
+                // Even slices
+                boundaries.resize(static_cast<std::size_t>(numSlices + 1));
+                for (int s = 0; s <= numSlices; ++s)
+                    boundaries[static_cast<std::size_t>(s)] =
+                        static_cast<uint32_t>(static_cast<int64_t>(s) * totalFrames / numSlices);
+            }
+
+            auto nz = std::make_shared<ZoneVec>(*existing);
+            nz->erase(nz->begin() + idx);
+
+            for (int s = 0; s < numSlices; ++s) {
+                const uint32_t f0 = boundaries[static_cast<std::size_t>(s)];
+                const uint32_t f1 = boundaries[static_cast<std::size_t>(s + 1)];
+                if (f1 <= f0) continue;
+
+                CoreSampleZone slice;
+                slice.channelCount = src.channelCount;
+                slice.sampleRate   = src.sampleRate;
+                const std::size_t start = static_cast<std::size_t>(f0) * src.channelCount;
+                const std::size_t end   = static_cast<std::size_t>(f1) * src.channelCount;
+                slice.data.assign(src.data.begin() + static_cast<std::ptrdiff_t>(start),
+                                  src.data.begin() + static_cast<std::ptrdiff_t>(end));
+                const int note = std::clamp(startNote + s, 0, 127);
+                slice.rootNote  = note;
+                slice.rangeLow  = note;
+                slice.rangeHigh = note;
+                slice.attackMs      = src.attackMs;
+                slice.decayMs       = src.decayMs;
+                slice.sustainLevel  = src.sustainLevel;
+                slice.releaseMs     = src.releaseMs;
+                slice.filterEnabled = src.filterEnabled;
+                slice.filterType    = src.filterType;
+                slice.filterCutoffHz = src.filterCutoffHz;
+                slice.filterQ       = src.filterQ;
+                nz->insert(nz->begin() + idx + s, std::move(slice));
+            }
+
             std::atomic_store_explicit(&zones_,
                                        std::shared_ptr<const ZoneVec>(std::move(nz)),
                                        std::memory_order_release);

@@ -173,7 +173,29 @@ static json buildToolsList()
 
         {{"name","set_recording_dir"},
          {"description","Set the directory where recorded WAV files are saved. Default is ~/campione_recordings."},
-         {"inputSchema", makeSchema({{"path", strProp("Absolute path to directory")}}, {"path"})}}
+         {"inputSchema", makeSchema({{"path", strProp("Absolute path to directory")}}, {"path"})}},
+
+        {{"name","update_zone_dsp"},
+         {"description","Update per-zone ADSR envelope and biquad filter parameters."},
+         {"inputSchema", makeSchema({
+             {"index",         intProp("Zone index")},
+             {"attack_ms",     numProp("Attack ms (optional)")},
+             {"decay_ms",      numProp("Decay ms (optional)")},
+             {"sustain_level", numProp("Sustain 0.0-1.0 (optional)")},
+             {"release_ms",    numProp("Release ms (optional)")},
+             {"filter_enabled",boolProp("Enable filter (optional)")},
+             {"filter_type",   intProp("Filter type 0=LP 1=BP 2=HP 3=Notch (optional)")},
+             {"filter_cutoff", numProp("Filter cutoff Hz (optional)")},
+             {"filter_q",      numProp("Filter Q (optional)")}
+         }, {"index"})}},
+
+        {{"name","slice_zone"},
+         {"description","Slice a zone into equal or transient-detected sub-zones mapped to consecutive MIDI notes."},
+         {"inputSchema", makeSchema({
+             {"index",      intProp("Zone index to slice")},
+             {"num_slices", intProp("Number of equal slices (0 = auto-detect from transients)")},
+             {"start_note", intProp("First MIDI note to assign (default = zone rangeLow)")}
+         }, {"index"})}}
     });
 }
 
@@ -428,6 +450,36 @@ std::string CampioneMcpServer::dispatch(const std::string& body)
                 const std::string err  = api_.setRecordingDir(path);
                 if (!err.empty()) throw std::runtime_error(err);
                 return makeResult(textContent("recording dir set to: " + path), id).dump();
+            }
+
+            if (name == "update_zone_dsp") {
+                int idx = args.at("index").get<int>();
+                // Use -1.0f as sentinel meaning "preserve existing value in plugin"
+                float attackMs     = args.contains("attack_ms")     ? args["attack_ms"].get<float>()     : -1.0f;
+                float decayMs      = args.contains("decay_ms")      ? args["decay_ms"].get<float>()      : -1.0f;
+                float sustainLevel = args.contains("sustain_level") ? args["sustain_level"].get<float>() : -1.0f;
+                float releaseMs    = args.contains("release_ms")    ? args["release_ms"].get<float>()    : -1.0f;
+                // -2 = not provided (preserve existing)
+                int   filterEnabled = args.contains("filter_enabled") ? (args["filter_enabled"].get<bool>() ? 1 : 0) : -2;
+                int   filterType   = args.contains("filter_type") ? args["filter_type"].get<int>() : -2;
+                float filterCutoff = args.contains("filter_cutoff") ? args["filter_cutoff"].get<float>() : -1.0f;
+                float filterQ      = args.contains("filter_q")      ? args["filter_q"].get<float>()      : -1.0f;
+                const std::string err = api_.updateZoneDsp(idx,
+                    attackMs, decayMs, sustainLevel, releaseMs,
+                    filterEnabled, filterType, filterCutoff, filterQ);
+                if (!err.empty()) throw std::runtime_error(err);
+                char buf[64]; std::snprintf(buf, sizeof(buf), "zone %d DSP updated", idx);
+                return makeResult(textContent(buf), id).dump();
+            }
+
+            if (name == "slice_zone") {
+                int idx       = args.at("index").get<int>();
+                int numSlices = args.value("num_slices", 0);
+                int startNote = args.value("start_note", -1);
+                const std::string err = api_.sliceZone(idx, numSlices, startNote);
+                if (!err.empty()) throw std::runtime_error(err);
+                char buf[80]; std::snprintf(buf, sizeof(buf), "zone %d sliced", idx);
+                return makeResult(textContent(buf), id).dump();
             }
 
             return makeError(-32601, "Unknown tool: " + name, id).dump();

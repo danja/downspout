@@ -165,6 +165,54 @@ double computePlaybackRate(const SampleZone& zone, const int midiNote, const dou
     return pitchRatio * sampleRateRatio;
 }
 
+std::vector<std::uint32_t> detectTransients(const std::vector<float>& data,
+                                             const int channelCount,
+                                             const double sampleRate,
+                                             const float threshold,
+                                             const std::uint32_t minGapFrames)
+{
+    std::vector<std::uint32_t> onsets;
+    if (data.empty() || channelCount <= 0 || sampleRate <= 0.0) return onsets;
+
+    // ~10ms analysis window
+    const int winFrames = std::max(1, static_cast<int>(sampleRate * 0.01));
+    const int totalFrames = static_cast<int>(data.size() / channelCount);
+    const int numWindows  = totalFrames / winFrames;
+    if (numWindows < 2) return onsets;
+
+    std::vector<float> rms(static_cast<std::size_t>(numWindows));
+    for (int w = 0; w < numWindows; ++w) {
+        float sum = 0.0f;
+        for (int f = w * winFrames; f < (w + 1) * winFrames && f < totalFrames; ++f) {
+            float mono = 0.0f;
+            for (int c = 0; c < channelCount; ++c)
+                mono += data[static_cast<std::size_t>(f * channelCount + c)];
+            mono /= static_cast<float>(channelCount);
+            sum += mono * mono;
+        }
+        rms[static_cast<std::size_t>(w)] = std::sqrt(sum / static_cast<float>(winFrames));
+    }
+
+    // Running average over last 8 windows
+    constexpr int kAvgLen = 8;
+    std::uint32_t lastOnsetFrame = 0;
+    for (int w = kAvgLen; w < numWindows; ++w) {
+        float avg = 0.0f;
+        for (int k = 1; k <= kAvgLen; ++k)
+            avg += rms[static_cast<std::size_t>(w - k)];
+        avg /= static_cast<float>(kAvgLen);
+
+        const float cur = rms[static_cast<std::size_t>(w)];
+        const std::uint32_t frame = static_cast<std::uint32_t>(w * winFrames);
+        if (cur > avg + threshold && (onsets.empty() || frame - lastOnsetFrame >= minGapFrames)) {
+            onsets.push_back(frame);
+            lastOnsetFrame = frame;
+        }
+    }
+
+    return onsets;
+}
+
 double detectFundamentalHz(const std::vector<float>& data, const int channelCount, const double sampleRate)
 {
     if (data.empty() || channelCount <= 0 || sampleRate <= 0.0) return 440.0;

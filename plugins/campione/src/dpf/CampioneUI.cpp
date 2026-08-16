@@ -35,6 +35,7 @@ using downspout::campione::kStateKeyZoneTrim;
 using downspout::campione::kStateKeyZoneUpdate;
 using downspout::campione::kStateKeyParameters;
 using downspout::campione::kStateKeyZones;
+using downspout::campione::kStateKeyZoneDsp;
 
 struct Rect {
     float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
@@ -52,6 +53,16 @@ struct ZoneEntry {
     uint32_t     loopStart   = 0;
     uint32_t     loopEnd     = 0;
     uint32_t     totalFrames = 0;  // populated when waveform is loaded
+    // ADSR
+    float        attackMs     = 5.0f;
+    float        decayMs      = 100.0f;
+    float        sustainLevel = 1.0f;
+    float        releaseMs    = 200.0f;
+    // Filter
+    bool         filterEnabled  = false;
+    int          filterType     = 0;
+    float        filterCutoffHz = 20000.0f;
+    float        filterQ        = 0.707f;
 };
 
 enum DragField {
@@ -61,7 +72,13 @@ enum DragField {
     kDragRangeLow,
     kDragRangeHigh,
     kDragLoopStart,
-    kDragLoopEnd
+    kDragLoopEnd,
+    kDragAttack,
+    kDragDecay,
+    kDragSustain,
+    kDragRelease,
+    kDragFilterCutoff,
+    kDragFilterQ
 };
 
 [[nodiscard]] std::string basename(const std::string& path) {
@@ -81,7 +98,7 @@ constexpr float kPad     = 20.0f;
 constexpr float kHeaderH = 56.0f;
 constexpr float kRowH    = 26.0f;
 constexpr float kFooterH = 60.0f;
-constexpr float kWaveH   = 118.0f;  // waveform 100px + 18px action bar
+constexpr float kWaveH   = 170.0f;  // waveform 100px + 18px action bar + 52px ADSR/filter row
 
 // Column x positions (left edge relative to kPad)
 constexpr float kColNum    =  8.0f;
@@ -238,6 +255,17 @@ protected:
                 dragField_ = kDragNone;
                 return false;
             }
+            // Commit ADSR/filter drag
+            if ((dragField_ == kDragAttack || dragField_ == kDragDecay ||
+                 dragField_ == kDragSustain || dragField_ == kDragRelease ||
+                 dragField_ == kDragFilterCutoff || dragField_ == kDragFilterQ)
+                && dragZoneIdx_ >= 0 && dragZoneIdx_ < static_cast<int>(zones_.size()))
+            {
+                pushZoneDspUpdate(static_cast<std::size_t>(dragZoneIdx_));
+                dragField_   = kDragNone;
+                dragZoneIdx_ = -1;
+                return false;
+            }
             // Commit zone field drag
             if (dragField_ != kDragNone && dragField_ != kDragVol && dragZoneIdx_ >= 0
                 && dragZoneIdx_ < static_cast<int>(zones_.size()))
@@ -339,6 +367,43 @@ protected:
                 setState(kStateKeyZoneReverse, buf);
                 return true;
             }
+
+            // Filter enable toggle
+            if (filterEnableBtn_.contains(px, py)) {
+                zones_[static_cast<std::size_t>(si)].filterEnabled =
+                    !zones_[static_cast<std::size_t>(si)].filterEnabled;
+                pushZoneDspUpdate(static_cast<std::size_t>(si));
+                repaint();
+                return true;
+            }
+
+            // Filter type toggle (cycles 0→1→2→3→0)
+            if (filterTypeBtn_.contains(px, py)) {
+                auto& fz = zones_[static_cast<std::size_t>(si)];
+                fz.filterType = (fz.filterType + 1) % 4;
+                pushZoneDspUpdate(static_cast<std::size_t>(si));
+                repaint();
+                return true;
+            }
+
+            // ADSR/filter drag slider start
+            auto startDspDrag = [&](Rect& r, DragField field, float startVal) -> bool {
+                if (r.contains(px, py)) {
+                    dragField_     = field;
+                    dragZoneIdx_   = si;
+                    dragStartY_    = py;
+                    dragStartFloat_ = startVal;
+                    return true;
+                }
+                return false;
+            };
+            const ZoneEntry& dze = zones_[static_cast<std::size_t>(si)];
+            if (startDspDrag(adsrAttackSlider_,   kDragAttack,       dze.attackMs))      return true;
+            if (startDspDrag(adsrDecaySlider_,    kDragDecay,        dze.decayMs))       return true;
+            if (startDspDrag(adsrSustainSlider_,  kDragSustain,      dze.sustainLevel))  return true;
+            if (startDspDrag(adsrReleaseSlider_,  kDragRelease,      dze.releaseMs))     return true;
+            if (startDspDrag(filterCutoffSlider_, kDragFilterCutoff, dze.filterCutoffHz)) return true;
+            if (startDspDrag(filterQSlider_,      kDragFilterQ,      dze.filterQ))       return true;
         }
 
         // Zone row interactions
@@ -448,6 +513,32 @@ protected:
             return true;
         }
 
+        if ((dragField_ == kDragAttack || dragField_ == kDragDecay ||
+             dragField_ == kDragSustain || dragField_ == kDragRelease ||
+             dragField_ == kDragFilterCutoff || dragField_ == kDragFilterQ)
+            && dragZoneIdx_ >= 0 && dragZoneIdx_ < static_cast<int>(zones_.size()))
+        {
+            ZoneEntry& dz = zones_[static_cast<std::size_t>(dragZoneIdx_)];
+            const float dy = dragStartY_ - py;  // upward = increase
+            if (dragField_ == kDragAttack) {
+                dz.attackMs = std::clamp(dragStartFloat_ + dy * 2.0f, 0.0f, 5000.0f);
+            } else if (dragField_ == kDragDecay) {
+                dz.decayMs = std::clamp(dragStartFloat_ + dy * 2.0f, 0.0f, 5000.0f);
+            } else if (dragField_ == kDragSustain) {
+                dz.sustainLevel = std::clamp(dragStartFloat_ + dy / 100.0f, 0.0f, 1.0f);
+            } else if (dragField_ == kDragRelease) {
+                dz.releaseMs = std::clamp(dragStartFloat_ + dy * 2.0f, 0.0f, 10000.0f);
+            } else if (dragField_ == kDragFilterCutoff) {
+                // Logarithmic feel: scale by factor relative to start value
+                const float factor = std::pow(2.0f, dy / 60.0f);
+                dz.filterCutoffHz = std::clamp(dragStartFloat_ * factor, 20.0f, 20000.0f);
+            } else if (dragField_ == kDragFilterQ) {
+                dz.filterQ = std::clamp(dragStartFloat_ + dy / 100.0f, 0.1f, 20.0f);
+            }
+            repaint();
+            return true;
+        }
+
         if (dragField_ != kDragNone && dragZoneIdx_ >= 0
             && dragZoneIdx_ < static_cast<int>(zones_.size()))
         {
@@ -498,6 +589,19 @@ private:
                       z.loopEnabled ? 1 : 0,
                       z.loopStart, z.loopEnd);
         setState(kStateKeyZoneUpdate, buf);
+    }
+
+    void pushZoneDspUpdate(std::size_t idx)
+    {
+        if (idx >= zones_.size()) return;
+        const ZoneEntry& z = zones_[idx];
+        char buf[192];
+        std::snprintf(buf, sizeof(buf), "%d|%.4f|%.4f|%.4f|%.4f|%d|%d|%.2f|%.4f",
+                      static_cast<int>(idx),
+                      z.attackMs, z.decayMs, z.sustainLevel, z.releaseMs,
+                      z.filterEnabled ? 1 : 0, z.filterType,
+                      z.filterCutoffHz, z.filterQ);
+        setState(kStateKeyZoneDsp, buf);
     }
 
     void loadPeaks(int idx)
@@ -802,22 +906,23 @@ private:
         const ZoneEntry& z = zones_[static_cast<std::size_t>(selectedZone_)];
         const uint32_t totalF = z.totalFrames > 0 ? z.totalFrames : 1;
 
-        // Loop region highlight
+        // Loop region highlight (confined to waveform display area)
+        constexpr float kWaveDisplayH = 100.0f;
         if (z.loopEnabled && z.loopEnd > z.loopStart) {
             const float lx0 = waveRect_.x + static_cast<float>(z.loopStart) / static_cast<float>(totalF) * waveRect_.w;
             const float lx1 = waveRect_.x + static_cast<float>(z.loopEnd)   / static_cast<float>(totalF) * waveRect_.w;
             beginPath();
             fillColor(36, 68, 88, 100);
-            rect(lx0, waveRect_.y, lx1 - lx0, waveRect_.h);
+            rect(lx0, waveRect_.y, lx1 - lx0, kWaveDisplayH);
             fill();
             closePath();
         }
 
-        // Waveform peaks
+        // Waveform peaks (confined to top 100px; action bar + ADSR row occupy the rest)
         if (!peaks_.empty() && peakZoneIdx_ == selectedZone_) {
             const int kPeakBins = static_cast<int>(peaks_.size()) / 2;
-            const float midY = waveRect_.y + waveRect_.h * 0.5f;
-            const float ampH = waveRect_.h * 0.44f;
+            const float midY = waveRect_.y + kWaveDisplayH * 0.5f;
+            const float ampH = kWaveDisplayH * 0.44f;
 
             for (int bin = 0; bin < kPeakBins; ++bin) {
                 const float fx  = waveRect_.x + static_cast<float>(bin)     / static_cast<float>(kPeakBins) * waveRect_.w;
@@ -837,7 +942,7 @@ private:
             fontSize(11.0f);
             textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
             fillColor(72, 95, 112, 255);
-            text(waveRect_.x + waveRect_.w * 0.5f, waveRect_.y + waveRect_.h * 0.5f,
+            text(waveRect_.x + waveRect_.w * 0.5f, waveRect_.y + kWaveDisplayH * 0.5f,
                  "loading\xe2\x80\xa6", nullptr);
         }
 
@@ -846,10 +951,10 @@ private:
             const float lx0 = waveRect_.x + static_cast<float>(z.loopStart) / static_cast<float>(totalF) * waveRect_.w;
             const float lx1 = waveRect_.x + static_cast<float>(z.loopEnd)   / static_cast<float>(totalF) * waveRect_.w;
 
-            // Loop start — green line + tab
+            // Loop start — green line + tab (confined to waveform display area)
             beginPath();
             fillColor(60, 190, 110, 200);
-            rect(lx0, waveRect_.y, 2.0f, waveRect_.h);
+            rect(lx0, waveRect_.y, 2.0f, kWaveDisplayH);
             fill();
             closePath();
             beginPath();
@@ -857,12 +962,12 @@ private:
             roundedRect(lx0 - 5.0f, waveRect_.y, 12.0f, 12.0f, 3.0f);
             fill();
             closePath();
-            loopStartHandle_ = { lx0 - 6.0f, waveRect_.y, 14.0f, waveRect_.h };
+            loopStartHandle_ = { lx0 - 6.0f, waveRect_.y, 14.0f, kWaveDisplayH };
 
             // Loop end — orange line + tab
             beginPath();
             fillColor(210, 130, 50, 200);
-            rect(lx1 - 2.0f, waveRect_.y, 2.0f, waveRect_.h);
+            rect(lx1 - 2.0f, waveRect_.y, 2.0f, kWaveDisplayH);
             fill();
             closePath();
             beginPath();
@@ -870,7 +975,7 @@ private:
             roundedRect(lx1 - 7.0f, waveRect_.y, 12.0f, 12.0f, 3.0f);
             fill();
             closePath();
-            loopEndHandle_ = { lx1 - 8.0f, waveRect_.y, 14.0f, waveRect_.h };
+            loopEndHandle_ = { lx1 - 8.0f, waveRect_.y, 14.0f, kWaveDisplayH };
         } else {
             loopStartHandle_ = {};
             loopEndHandle_   = {};
@@ -887,7 +992,8 @@ private:
         // Action bar (Normalize / Trim / Fade / Reverse)
         {
             constexpr float kActionH = 16.0f;
-            const float ay = waveRect_.y + waveRect_.h - kActionH - 1.0f;
+            // Place action bar above the ADSR row, leaving 52px at bottom for ADSR/filter
+            const float ay = waveRect_.y + waveRect_.h - 52.0f - kActionH - 2.0f;
             const float btnW = 66.0f;
             const float gap  = 6.0f;
             float bx = waveRect_.x + 6.0f;
@@ -916,6 +1022,132 @@ private:
             drawActionBtn(waveTrimBtn_, "Trim");
             drawActionBtn(waveFadeBtn_, "Fade");
             drawActionBtn(waveRevBtn_,  "Reverse");
+        }
+
+        // ADSR + filter row (bottom 50px of waveform panel)
+        if (selectedZone_ >= 0 && selectedZone_ < static_cast<int>(zones_.size()))
+        {
+            const ZoneEntry& dz = zones_[static_cast<std::size_t>(selectedZone_)];
+            const float ry  = waveRect_.y + waveRect_.h - 50.0f;
+
+            // Separator line
+            beginPath();
+            fillColor(30, 44, 56, 200);
+            rect(waveRect_.x + 2.0f, ry, waveRect_.w - 4.0f, 1.0f);
+            fill();
+            closePath();
+
+            // Helper: draw a labeled drag slider
+            auto drawDragSlider = [&](Rect& out, float bx, float by, float bw,
+                                      const char* label, const char* valStr, bool active) {
+                out = { bx, by, bw, 38.0f };
+                // Label
+                fontSize(8.5f);
+                textAlign(ALIGN_CENTER | ALIGN_TOP);
+                fillColor(108, 130, 148, 255);
+                text(bx + bw * 0.5f, by + 2.0f, label, nullptr);
+                // Value box
+                const float vby = by + 13.0f;
+                beginPath();
+                fillColor(active ? 40 : 22, active ? 60 : 34, active ? 80 : 44, 255);
+                roundedRect(bx + 2.0f, vby, bw - 4.0f, 20.0f, 3.0f);
+                fill();
+                closePath();
+                beginPath();
+                strokeColor(active ? 100 : 55, active ? 150 : 78, active ? 180 : 95, 180);
+                strokeWidth(1.0f);
+                roundedRect(bx + 2.0f, vby, bw - 4.0f, 20.0f, 3.0f);
+                stroke();
+                closePath();
+                fontSize(9.0f);
+                textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+                fillColor(active ? 240 : 180, active ? 210 : 200, active ? 170 : 215, 255);
+                text(bx + bw * 0.5f, vby + 10.0f, valStr, nullptr);
+            };
+
+            char buf[32];
+            const float slotW = (waveRect_.w - 12.0f) / 8.0f;
+            float sx = waveRect_.x + 6.0f;
+
+            // Attack
+            std::snprintf(buf, sizeof(buf), "%.0fms", dz.attackMs);
+            drawDragSlider(adsrAttackSlider_,  sx, ry + 2.0f, slotW - 2.0f, "ATK", buf,
+                           dragField_ == kDragAttack && dragZoneIdx_ == selectedZone_);
+            sx += slotW;
+
+            // Decay
+            std::snprintf(buf, sizeof(buf), "%.0fms", dz.decayMs);
+            drawDragSlider(adsrDecaySlider_,   sx, ry + 2.0f, slotW - 2.0f, "DEC", buf,
+                           dragField_ == kDragDecay && dragZoneIdx_ == selectedZone_);
+            sx += slotW;
+
+            // Sustain
+            std::snprintf(buf, sizeof(buf), "%.2f", dz.sustainLevel);
+            drawDragSlider(adsrSustainSlider_, sx, ry + 2.0f, slotW - 2.0f, "SUS", buf,
+                           dragField_ == kDragSustain && dragZoneIdx_ == selectedZone_);
+            sx += slotW;
+
+            // Release
+            std::snprintf(buf, sizeof(buf), "%.0fms", dz.releaseMs);
+            drawDragSlider(adsrReleaseSlider_, sx, ry + 2.0f, slotW - 2.0f, "REL", buf,
+                           dragField_ == kDragRelease && dragZoneIdx_ == selectedZone_);
+            sx += slotW;
+
+            // Filter enable toggle
+            filterEnableBtn_ = { sx + 1.0f, ry + 4.0f, slotW - 4.0f, 36.0f };
+            beginPath();
+            fillColor(dz.filterEnabled ? 36 : 22, dz.filterEnabled ? 70 : 34, dz.filterEnabled ? 90 : 44, 255);
+            roundedRect(filterEnableBtn_.x, filterEnableBtn_.y, filterEnableBtn_.w, filterEnableBtn_.h, 4.0f);
+            fill();
+            closePath();
+            beginPath();
+            strokeColor(dz.filterEnabled ? 80 : 50, dz.filterEnabled ? 160 : 78, dz.filterEnabled ? 190 : 95, 180);
+            strokeWidth(1.0f);
+            roundedRect(filterEnableBtn_.x, filterEnableBtn_.y, filterEnableBtn_.w, filterEnableBtn_.h, 4.0f);
+            stroke();
+            closePath();
+            fontSize(8.5f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            fillColor(dz.filterEnabled ? 200 : 140, dz.filterEnabled ? 230 : 170, dz.filterEnabled ? 245 : 185, 255);
+            text(filterEnableBtn_.x + filterEnableBtn_.w * 0.5f, filterEnableBtn_.y + filterEnableBtn_.h * 0.5f - 6.0f, "FLT", nullptr);
+            fillColor(dz.filterEnabled ? 120 : 100, dz.filterEnabled ? 220 : 140, dz.filterEnabled ? 240 : 160, 255);
+            text(filterEnableBtn_.x + filterEnableBtn_.w * 0.5f, filterEnableBtn_.y + filterEnableBtn_.h * 0.5f + 6.0f,
+                 dz.filterEnabled ? "ON" : "OFF", nullptr);
+            sx += slotW;
+
+            // Filter type toggle
+            static const char* kFltNames[] = {"LP","BP","HP","NT"};
+            filterTypeBtn_ = { sx + 1.0f, ry + 4.0f, slotW - 4.0f, 36.0f };
+            beginPath();
+            fillColor(28, 44, 58, 255);
+            roundedRect(filterTypeBtn_.x, filterTypeBtn_.y, filterTypeBtn_.w, filterTypeBtn_.h, 4.0f);
+            fill();
+            closePath();
+            beginPath();
+            strokeColor(55, 80, 100, 180);
+            strokeWidth(1.0f);
+            roundedRect(filterTypeBtn_.x, filterTypeBtn_.y, filterTypeBtn_.w, filterTypeBtn_.h, 4.0f);
+            stroke();
+            closePath();
+            fontSize(8.5f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            fillColor(108, 130, 148, 255);
+            text(filterTypeBtn_.x + filterTypeBtn_.w * 0.5f, filterTypeBtn_.y + filterTypeBtn_.h * 0.5f - 6.0f, "TYPE", nullptr);
+            fillColor(200, 215, 225, 255);
+            text(filterTypeBtn_.x + filterTypeBtn_.w * 0.5f, filterTypeBtn_.y + filterTypeBtn_.h * 0.5f + 6.0f,
+                 kFltNames[std::clamp(dz.filterType, 0, 3)], nullptr);
+            sx += slotW;
+
+            // Cutoff
+            std::snprintf(buf, sizeof(buf), "%.0fHz", dz.filterCutoffHz);
+            drawDragSlider(filterCutoffSlider_, sx, ry + 2.0f, slotW - 2.0f, "CUTOFF", buf,
+                           dragField_ == kDragFilterCutoff && dragZoneIdx_ == selectedZone_);
+            sx += slotW;
+
+            // Q
+            std::snprintf(buf, sizeof(buf), "%.2f", dz.filterQ);
+            drawDragSlider(filterQSlider_, sx, ry + 2.0f, slotW - 2.0f, "Q", buf,
+                           dragField_ == kDragFilterQ && dragZoneIdx_ == selectedZone_);
         }
 
         // Border
@@ -999,13 +1231,21 @@ private:
         zones_.reserve(metas->size());
         for (const auto& z : *metas) {
             ZoneEntry e;
-            e.path        = z.sourcePath;
-            e.rootNote    = z.rootNote;
-            e.rangeLow    = z.rangeLow;
-            e.rangeHigh   = z.rangeHigh;
-            e.loopEnabled = z.loopEnabled;
-            e.loopStart   = z.loopStart;
-            e.loopEnd     = z.loopEnd;
+            e.path          = z.sourcePath;
+            e.rootNote      = z.rootNote;
+            e.rangeLow      = z.rangeLow;
+            e.rangeHigh     = z.rangeHigh;
+            e.loopEnabled   = z.loopEnabled;
+            e.loopStart     = z.loopStart;
+            e.loopEnd       = z.loopEnd;
+            e.attackMs      = z.attackMs;
+            e.decayMs       = z.decayMs;
+            e.sustainLevel  = z.sustainLevel;
+            e.releaseMs     = z.releaseMs;
+            e.filterEnabled = z.filterEnabled;
+            e.filterType    = z.filterType;
+            e.filterCutoffHz = z.filterCutoffHz;
+            e.filterQ       = z.filterQ;
             zones_.push_back(std::move(e));
         }
         // Reload waveform peaks if selected zone is still valid
@@ -1029,6 +1269,17 @@ private:
     Rect waveTrimBtn_  {};
     Rect waveFadeBtn_  {};
     Rect waveRevBtn_   {};
+    // ADSR/filter drag sliders (built during draw, hit-tested in onMouse)
+    Rect adsrAttackSlider_  {};
+    Rect adsrDecaySlider_   {};
+    Rect adsrSustainSlider_ {};
+    Rect adsrReleaseSlider_ {};
+    Rect filterEnableBtn_   {};
+    Rect filterTypeBtn_     {};
+    Rect filterCutoffSlider_{};
+    Rect filterQSlider_     {};
+    // For ADSR float drags: track start value during drag
+    float dragStartFloat_ = 0.0f;
 
     DragField dragField_     = kDragNone;
     int       dragZoneIdx_   = -1;

@@ -54,4 +54,12 @@ dsp:campione a trn:PluginProfile ;
         trn:default "1.0"^^xsd:float ;
         trn:min "0.0"^^xsd:float ;
         trn:max "1.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "Zones Version" ;
+        trn:symbol "zones_version" ;
+        trn:comment "Hidden counter bumped on every zone list change; drives UI refresh via host parameter path." ;
+        trn:default "0.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "1000000.0"^^xsd:float
     ] .
