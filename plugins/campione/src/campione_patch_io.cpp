@@ -1,5 +1,6 @@
 #include "campione_patch_io.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -98,7 +99,8 @@ std::string savePatch(const PatchData& patch, const std::string& filePath)
         std::fprintf(f, "    dsp:filterEnabled \"%s\"^^xsd:boolean ;\n",  z.filterEnabled ? "true" : "false");
         std::fprintf(f, "    dsp:filterType \"%d\"^^xsd:integer ;\n",     z.filterType);
         std::fprintf(f, "    dsp:filterCutoff \"%.6g\"^^xsd:float ;\n",   z.filterCutoffHz);
-        std::fprintf(f, "    dsp:filterQ \"%.6g\"^^xsd:float .\n\n",      z.filterQ);
+        std::fprintf(f, "    dsp:filterQ \"%.6g\"^^xsd:float ;\n",        z.filterQ);
+        std::fprintf(f, "    dsp:pan \"%.6g\"^^xsd:float .\n\n",          z.pan);
     }
 
     std::fclose(f);
@@ -191,6 +193,7 @@ std::pair<std::optional<PatchData>, std::string> loadPatch(const std::string& fi
             else if (predicate == "filterType")   z.filterType     = std::stoi(value);
             else if (predicate == "filterCutoff") z.filterCutoffHz = std::stof(value);
             else if (predicate == "filterQ")      z.filterQ        = std::stof(value);
+            else if (predicate == "pan")          z.pan            = std::clamp(std::stof(value), -1.0f, 1.0f);
         }
     }
 

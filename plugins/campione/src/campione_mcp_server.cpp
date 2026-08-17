@@ -472,9 +472,10 @@ std::string CampioneMcpServer::dispatch(const std::string& body)
                 int   filterType   = args.contains("filter_type") ? args["filter_type"].get<int>() : -2;
                 float filterCutoff = args.contains("filter_cutoff") ? args["filter_cutoff"].get<float>() : -1.0f;
                 float filterQ      = args.contains("filter_q")      ? args["filter_q"].get<float>()      : -1.0f;
+                float pan          = args.contains("pan")           ? args["pan"].get<float>()           : -2.0f;
                 const std::string err = api_.updateZoneDsp(idx,
                     attackMs, decayMs, sustainLevel, releaseMs,
-                    filterEnabled, filterType, filterCutoff, filterQ);
+                    filterEnabled, filterType, filterCutoff, filterQ, pan);
                 if (!err.empty()) throw std::runtime_error(err);
                 char buf[64]; std::snprintf(buf, sizeof(buf), "zone %d DSP updated", idx);
                 return makeResult(textContent(buf), id).dump();

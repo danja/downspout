@@ -1,6 +1,16 @@
 # Downspout TODO
 
-Add MCP to campione
+new plugin - bassproc - ducker and mid/side eq
+
+Transmission
+add parse to transmission console
+add audio/midi clip - to loop
+
+## Campione
+
+add Pan to zone edit
+
+maybe - FFT analyse beat slices to determine drum instrument
 
 ## Screenshots
 

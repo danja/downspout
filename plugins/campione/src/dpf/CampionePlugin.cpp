@@ -506,10 +506,11 @@ protected:
         {
             int idx = 0, filterEnabled = 0, filterType = 0;
             float attackMs = 5.0f, decayMs = 100.0f, sustainLevel = 1.0f, releaseMs = 200.0f;
-            float filterCutoff = 20000.0f, filterQ = 0.707f;
-            const int parsed = std::sscanf(value, "%d|%f|%f|%f|%f|%d|%d|%f|%f",
+            float filterCutoff = 20000.0f, filterQ = 0.707f, pan = 0.0f;
+            const int parsed = std::sscanf(value, "%d|%f|%f|%f|%f|%d|%d|%f|%f|%f",
                                            &idx, &attackMs, &decayMs, &sustainLevel, &releaseMs,
-                                           &filterEnabled, &filterType, &filterCutoff, &filterQ);
+                                           &filterEnabled, &filterType, &filterCutoff, &filterQ,
+                                           &pan);
             if (parsed >= 5)
             {
                 std::lock_guard<std::mutex> lk(zoneMtx_);
@@ -524,6 +525,7 @@ protected:
                     z.releaseMs     = releaseMs;
                     if (parsed >= 7) { z.filterEnabled = filterEnabled != 0; z.filterType = filterType; }
                     if (parsed >= 9) { z.filterCutoffHz = filterCutoff; z.filterQ = filterQ; }
+                    if (parsed >= 10) { z.pan = std::clamp(pan, -1.0f, 1.0f); }
                     std::atomic_store_explicit(&zones_,
                                                std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                                std::memory_order_release);
@@ -976,6 +978,7 @@ private:
                 meta.filterType    = z.filterType;
                 meta.filterCutoffHz = z.filterCutoffHz;
                 meta.filterQ       = z.filterQ;
+                meta.pan           = z.pan;
                 pd.zones.push_back(std::move(meta));
             }
         }
@@ -1019,6 +1022,7 @@ private:
             result.zone.filterType    = meta.filterType;
             result.zone.filterCutoffHz = meta.filterCutoffHz;
             result.zone.filterQ       = meta.filterQ;
+            result.zone.pan           = meta.pan;
             newZones->push_back(std::move(result.zone));
         }
 
@@ -1138,7 +1142,8 @@ private:
 
         api.updateZoneDsp = [this](int idx,
                                     float attackMs, float decayMs, float sustainLevel, float releaseMs,
-                                    int filterEnabled, int filterType, float filterCutoff, float filterQ)
+                                    int filterEnabled, int filterType, float filterCutoff, float filterQ,
+                                    float pan)
                                     -> std::string {
             std::lock_guard<std::mutex> lk(zoneMtx_);
             zonesInitialized_ = true;
@@ -1156,6 +1161,7 @@ private:
             if (filterType    >= 0)    z.filterType    = filterType;
             if (filterCutoff  >= 0.0f) z.filterCutoffHz = filterCutoff;
             if (filterQ       >= 0.0f) z.filterQ       = filterQ;
+            if (pan           >= -1.0f && pan <= 1.0f) z.pan = pan;
             std::atomic_store_explicit(&zones_,
                                        std::shared_ptr<const ZoneVec>(std::move(nz)),
                                        std::memory_order_release);

@@ -69,6 +69,7 @@ struct ZoneEntry {
     int          filterType     = 0;
     float        filterCutoffHz = 20000.0f;
     float        filterQ        = 0.707f;
+    float        pan            = 0.0f;
 };
 
 enum DragField {
@@ -84,7 +85,8 @@ enum DragField {
     kDragSustain,
     kDragRelease,
     kDragFilterCutoff,
-    kDragFilterQ
+    kDragFilterQ,
+    kDragPan
 };
 
 [[nodiscard]] std::string basename(const std::string& path) {
@@ -141,9 +143,9 @@ public:
        #else
         loadSharedResources();
        #endif
-
-        // Tell DSP about the default data directory so recordings and patches land there.
-        setState(kStateKeyDataDir, dataDir_.c_str());
+        // setState must not be called from the constructor: the VST3 component
+        // handler may not be set up yet, causing the host to crash.  Deferred
+        // to the first uiIdle() call via dataDirSent_.
     }
 
 protected:
@@ -203,6 +205,12 @@ protected:
 
     void uiIdle() override
     {
+        // Send data directory to DSP on first idle (safe point after host init).
+        if (!dataDirSent_) {
+            dataDirSent_ = true;
+            setState(kStateKeyDataDir, dataDir_.c_str());
+        }
+
         // Poll the in-process bridge for MCP-driven zone changes.
         const uint32_t zSerial = downspout::campione::uiBridge().zonesSerial.load(std::memory_order_acquire);
         if (zSerial != lastZonesSerial_) {
@@ -283,10 +291,11 @@ protected:
                 dragField_ = kDragNone;
                 return false;
             }
-            // Commit ADSR/filter drag
+            // Commit ADSR/filter/pan drag
             if ((dragField_ == kDragAttack || dragField_ == kDragDecay ||
                  dragField_ == kDragSustain || dragField_ == kDragRelease ||
-                 dragField_ == kDragFilterCutoff || dragField_ == kDragFilterQ)
+                 dragField_ == kDragFilterCutoff || dragField_ == kDragFilterQ ||
+                 dragField_ == kDragPan)
                 && dragZoneIdx_ >= 0 && dragZoneIdx_ < static_cast<int>(zones_.size()))
             {
                 pushZoneDspUpdate(static_cast<std::size_t>(dragZoneIdx_));
@@ -453,12 +462,13 @@ protected:
                 return true;
             }
 
-            // ADSR/filter drag slider start
+            // ADSR/filter/pan drag slider start
             auto startDspDrag = [&](Rect& r, DragField field, float startVal) -> bool {
                 if (r.contains(px, py)) {
-                    dragField_     = field;
-                    dragZoneIdx_   = si;
-                    dragStartY_    = py;
+                    dragField_      = field;
+                    dragZoneIdx_    = si;
+                    dragStartY_     = py;
+                    dragStartX_     = px;
                     dragStartFloat_ = startVal;
                     return true;
                 }
@@ -471,6 +481,7 @@ protected:
             if (startDspDrag(adsrReleaseSlider_,  kDragRelease,      dze.releaseMs))     return true;
             if (startDspDrag(filterCutoffSlider_, kDragFilterCutoff, dze.filterCutoffHz)) return true;
             if (startDspDrag(filterQSlider_,      kDragFilterQ,      dze.filterQ))       return true;
+            if (startDspDrag(panSlider_,          kDragPan,          dze.pan))           return true;
         }
 
         // Zone row interactions
@@ -503,6 +514,10 @@ protected:
             const Rect loopR { W - kPad - 76.0f, ry + 3.0f, 46.0f, 20.0f };
             if (loopR.contains(px, py)) {
                 zones_[i].loopEnabled = !zones_[i].loopEnabled;
+                // When enabling loop with uninitialised endpoints, set loopEnd
+                // to the full sample length so both handles are immediately draggable.
+                if (zones_[i].loopEnabled && zones_[i].loopEnd == 0 && zones_[i].totalFrames > 0)
+                    zones_[i].loopEnd = zones_[i].totalFrames - 1;
                 pushZoneUpdate(i);
                 repaint();
                 return true;
@@ -582,7 +597,8 @@ protected:
 
         if ((dragField_ == kDragAttack || dragField_ == kDragDecay ||
              dragField_ == kDragSustain || dragField_ == kDragRelease ||
-             dragField_ == kDragFilterCutoff || dragField_ == kDragFilterQ)
+             dragField_ == kDragFilterCutoff || dragField_ == kDragFilterQ ||
+             dragField_ == kDragPan)
             && dragZoneIdx_ >= 0 && dragZoneIdx_ < static_cast<int>(zones_.size()))
         {
             ZoneEntry& dz = zones_[static_cast<std::size_t>(dragZoneIdx_)];
@@ -595,6 +611,8 @@ protected:
                 dz.sustainLevel = std::clamp(dragStartFloat_ + dy / 100.0f, 0.0f, 1.0f);
             } else if (dragField_ == kDragRelease) {
                 dz.releaseMs = std::clamp(dragStartFloat_ + dy * 2.0f, 0.0f, 10000.0f);
+            } else if (dragField_ == kDragPan) {
+                dz.pan = std::clamp(dragStartFloat_ - (px - dragStartX_) / 60.0f, -1.0f, 1.0f);
             } else if (dragField_ == kDragFilterCutoff) {
                 // Logarithmic feel: scale by factor relative to start value
                 const float factor = std::pow(2.0f, dy / 60.0f);
@@ -690,12 +708,12 @@ private:
     {
         if (idx >= zones_.size()) return;
         const ZoneEntry& z = zones_[idx];
-        char buf[192];
-        std::snprintf(buf, sizeof(buf), "%d|%.4f|%.4f|%.4f|%.4f|%d|%d|%.2f|%.4f",
+        char buf[256];
+        std::snprintf(buf, sizeof(buf), "%d|%.4f|%.4f|%.4f|%.4f|%d|%d|%.2f|%.4f|%.4f",
                       static_cast<int>(idx),
                       z.attackMs, z.decayMs, z.sustainLevel, z.releaseMs,
                       z.filterEnabled ? 1 : 0, z.filterType,
-                      z.filterCutoffHz, z.filterQ);
+                      z.filterCutoffHz, z.filterQ, z.pan);
         setState(kStateKeyZoneDsp, buf);
     }
 
@@ -1199,7 +1217,7 @@ private:
             };
 
             char buf[32];
-            const float slotW = (waveRect_.w - 12.0f) / 8.0f;
+            const float slotW = (waveRect_.w - 12.0f) / 9.0f;
             float sx = waveRect_.x + 6.0f;
 
             // Attack
@@ -1224,6 +1242,16 @@ private:
             std::snprintf(buf, sizeof(buf), "%.0fms", dz.releaseMs);
             drawDragSlider(adsrReleaseSlider_, sx, ry + 2.0f, slotW - 2.0f, "REL", buf,
                            dragField_ == kDragRelease && dragZoneIdx_ == selectedZone_);
+            sx += slotW;
+
+            // Pan
+            if (dz.pan == 0.0f)
+                std::snprintf(buf, sizeof(buf), "C");
+            else
+                std::snprintf(buf, sizeof(buf), dz.pan < 0.0f ? "L%.0f" : "R%.0f",
+                              std::abs(dz.pan) * 100.0f);
+            drawDragSlider(panSlider_, sx, ry + 2.0f, slotW - 2.0f, "PAN", buf,
+                           dragField_ == kDragPan && dragZoneIdx_ == selectedZone_);
             sx += slotW;
 
             // Filter enable toggle
@@ -1404,6 +1432,7 @@ private:
             e.filterType    = z.filterType;
             e.filterCutoffHz = z.filterCutoffHz;
             e.filterQ       = z.filterQ;
+            e.pan           = z.pan;
             zones_.push_back(std::move(e));
         }
         // Auto-select first zone when none is selected (e.g. after project reload)
@@ -1591,7 +1620,8 @@ private:
     Rect filterTypeBtn_     {};
     Rect filterCutoffSlider_{};
     Rect filterQSlider_     {};
-    // For ADSR float drags: track start value during drag
+    Rect panSlider_         {};
+    // For ADSR/pan float drags: track start value during drag
     float dragStartFloat_ = 0.0f;
 
     DragField dragField_     = kDragNone;
@@ -1612,6 +1642,7 @@ private:
     bool patchSaved_ = false;
     std::chrono::steady_clock::time_point patchSavedAt_;
 
+    bool     dataDirSent_      = false;
     uint32_t lastZonesSerial_  = 0;
     uint32_t lastParamsSerial_ = 0;
     int      zoneScrollOffset_ = 0;

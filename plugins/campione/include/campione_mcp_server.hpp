@@ -39,9 +39,9 @@ public:
         std::function<std::string(int)>                removeZone;   // index → "" or error
         std::function<std::string(int, int, int, int, bool,
                                   uint32_t, uint32_t)> updateZone;   // → "" or error
-        // ADSR+filter: negative values = preserve existing zone value
+        // ADSR+filter+pan: negative values = preserve existing zone value
         std::function<std::string(int, float, float, float, float,
-                                  int, int, float, float)> updateZoneDsp; // ADSR+filter → "" or error
+                                  int, int, float, float, float)> updateZoneDsp; // ADSR+filter+pan → "" or error
         std::function<std::string(int, int, int)> sliceZone;  // idx, numSlices, startNote → "" or error
 
         // ── Wave editing ──────────────────────────────────────────────────
