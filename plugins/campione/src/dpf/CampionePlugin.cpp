@@ -53,6 +53,8 @@ using downspout::campione::kStateKeyZoneTrim;
 using downspout::campione::kStateKeyZoneUpdate;
 using downspout::campione::kStateKeyZones;
 using downspout::campione::kStateKeyZoneDsp;
+using downspout::campione::kStateKeyZoneSlice;
+using downspout::campione::kStateZoneSlice;
 using downspout::campione::kStateParameters;
 using downspout::campione::kStateZoneFade;
 using downspout::campione::kStateZoneLoad;
@@ -330,6 +332,12 @@ protected:
             state.hints        = 0;
             state.defaultValue = "";
             break;
+        case kStateZoneSlice:
+            state.key          = kStateKeyZoneSlice;
+            state.label        = "Slice Zone";
+            state.hints        = 0;
+            state.defaultValue = "";
+            break;
         }
     }
 
@@ -491,6 +499,14 @@ protected:
             }
             return;
         }
+
+        if (std::strcmp(key, kStateKeyZoneSlice) == 0 && value && value[0] != '\0')
+        {
+            int idx = 0, numSlices = 0, startNote = -1;
+            std::sscanf(value, "%d|%d|%d", &idx, &numSlices, &startNote);
+            doSliceZone(idx, numSlices, startNote);
+            return;
+        }
     }
 
     void activate() override
@@ -590,6 +606,79 @@ protected:
 
 private:
     // ── Zone helpers ──────────────────────────────────────────────────────────
+
+    std::string doSliceZone(int idx, int numSlices, int startNote)
+    {
+        std::lock_guard<std::mutex> lk(zoneMtx_);
+        zonesInitialized_ = true;
+        const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+        if (!existing || idx < 0 || idx >= static_cast<int>(existing->size()))
+            return "zone index out of range";
+        const CoreSampleZone& src = (*existing)[static_cast<std::size_t>(idx)];
+        if (src.data.empty()) return "zone has no audio data";
+        const int totalFrames = static_cast<int>(src.data.size() / src.channelCount);
+        if (startNote < 0) startNote = src.rangeLow;
+        std::vector<uint32_t> boundaries;
+        if (numSlices == 0) {
+            const auto onsets = downspout::campione::detectTransients(
+                src.data, src.channelCount, src.sampleRate);
+            if (onsets.empty()) return "no transients detected, specify num_slices explicitly";
+            boundaries.push_back(0);
+            for (uint32_t f : onsets) if (f > 0) boundaries.push_back(f);
+            boundaries.push_back(static_cast<uint32_t>(totalFrames));
+            numSlices = static_cast<int>(boundaries.size()) - 1;
+        } else {
+            boundaries.resize(static_cast<std::size_t>(numSlices + 1));
+            for (int s = 0; s <= numSlices; ++s)
+                boundaries[static_cast<std::size_t>(s)] =
+                    static_cast<uint32_t>(static_cast<int64_t>(s) * totalFrames / numSlices);
+        }
+        auto nz = std::make_shared<ZoneVec>(*existing);
+        nz->erase(nz->begin() + idx);
+        for (int s = 0; s < numSlices; ++s) {
+            const uint32_t f0 = boundaries[static_cast<std::size_t>(s)];
+            const uint32_t f1 = boundaries[static_cast<std::size_t>(s + 1)];
+            if (f1 <= f0) continue;
+            CoreSampleZone slice;
+            slice.channelCount  = src.channelCount;
+            slice.sampleRate    = src.sampleRate;
+            const std::size_t start = static_cast<std::size_t>(f0) * src.channelCount;
+            const std::size_t end   = static_cast<std::size_t>(f1) * src.channelCount;
+            slice.data.assign(src.data.begin() + static_cast<std::ptrdiff_t>(start),
+                              src.data.begin() + static_cast<std::ptrdiff_t>(end));
+            const int note     = std::clamp(startNote + s, 0, 127);
+            slice.rootNote     = note;
+            slice.rangeLow     = note;
+            slice.rangeHigh    = note;
+            slice.attackMs     = src.attackMs;
+            slice.decayMs      = src.decayMs;
+            slice.sustainLevel = src.sustainLevel;
+            slice.releaseMs    = src.releaseMs;
+            slice.filterEnabled  = src.filterEnabled;
+            slice.filterType     = src.filterType;
+            slice.filterCutoffHz = src.filterCutoffHz;
+            slice.filterQ        = src.filterQ;
+            // Save slice to disk so the UI can show its waveform and it survives project reload
+            {
+                const std::string dir = recordingOutputDir_.empty()
+                    ? ([]{ const char* h = std::getenv("HOME");
+                           return std::string(h ? h : "/tmp") + "/campione_recordings"; }())
+                    : recordingOutputDir_;
+                ::mkdir(dir.c_str(), 0755);
+                char fname[256];
+                std::snprintf(fname, sizeof(fname), "%s/slice_%lld_%d.wav",
+                              dir.c_str(), static_cast<long long>(std::time(nullptr)), s);
+                if (downspout::campione::saveWavZone(slice, fname).empty())
+                    slice.sourcePath = fname;
+            }
+            nz->insert(nz->begin() + idx + s, std::move(slice));
+        }
+        std::atomic_store_explicit(&zones_,
+                                   std::shared_ptr<const ZoneVec>(std::move(nz)),
+                                   std::memory_order_release);
+        notifyZonesChanged();
+        return {};
+    }
 
     // Returns empty string on success, error message on failure.
     std::string appendZone(const std::string& path)
@@ -905,72 +994,7 @@ private:
         };
 
         api.sliceZone = [this](int idx, int numSlices, int startNote) -> std::string {
-            std::lock_guard<std::mutex> lk(zoneMtx_);
-            zonesInitialized_ = true;
-            const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
-            if (!existing || idx < 0 || idx >= static_cast<int>(existing->size()))
-                return "zone index out of range";
-
-            const CoreSampleZone& src = (*existing)[static_cast<std::size_t>(idx)];
-            if (src.data.empty()) return "zone has no audio data";
-
-            const int totalFrames = static_cast<int>(src.data.size() / src.channelCount);
-            if (startNote < 0) startNote = src.rangeLow;
-
-            std::vector<uint32_t> boundaries;
-            if (numSlices == 0) {
-                // Auto-detect transients
-                const auto onsets = downspout::campione::detectTransients(
-                    src.data, src.channelCount, src.sampleRate);
-                if (onsets.empty()) return "no transients detected, specify num_slices explicitly";
-                boundaries.push_back(0);
-                for (uint32_t f : onsets)
-                    if (f > 0) boundaries.push_back(f);
-                boundaries.push_back(static_cast<uint32_t>(totalFrames));
-                numSlices = static_cast<int>(boundaries.size()) - 1;
-            } else {
-                // Even slices
-                boundaries.resize(static_cast<std::size_t>(numSlices + 1));
-                for (int s = 0; s <= numSlices; ++s)
-                    boundaries[static_cast<std::size_t>(s)] =
-                        static_cast<uint32_t>(static_cast<int64_t>(s) * totalFrames / numSlices);
-            }
-
-            auto nz = std::make_shared<ZoneVec>(*existing);
-            nz->erase(nz->begin() + idx);
-
-            for (int s = 0; s < numSlices; ++s) {
-                const uint32_t f0 = boundaries[static_cast<std::size_t>(s)];
-                const uint32_t f1 = boundaries[static_cast<std::size_t>(s + 1)];
-                if (f1 <= f0) continue;
-
-                CoreSampleZone slice;
-                slice.channelCount = src.channelCount;
-                slice.sampleRate   = src.sampleRate;
-                const std::size_t start = static_cast<std::size_t>(f0) * src.channelCount;
-                const std::size_t end   = static_cast<std::size_t>(f1) * src.channelCount;
-                slice.data.assign(src.data.begin() + static_cast<std::ptrdiff_t>(start),
-                                  src.data.begin() + static_cast<std::ptrdiff_t>(end));
-                const int note = std::clamp(startNote + s, 0, 127);
-                slice.rootNote  = note;
-                slice.rangeLow  = note;
-                slice.rangeHigh = note;
-                slice.attackMs      = src.attackMs;
-                slice.decayMs       = src.decayMs;
-                slice.sustainLevel  = src.sustainLevel;
-                slice.releaseMs     = src.releaseMs;
-                slice.filterEnabled = src.filterEnabled;
-                slice.filterType    = src.filterType;
-                slice.filterCutoffHz = src.filterCutoffHz;
-                slice.filterQ       = src.filterQ;
-                nz->insert(nz->begin() + idx + s, std::move(slice));
-            }
-
-            std::atomic_store_explicit(&zones_,
-                                       std::shared_ptr<const ZoneVec>(std::move(nz)),
-                                       std::memory_order_release);
-            notifyZonesChanged();
-            return {};
+            return doSliceZone(idx, numSlices, startNote);
         };
 
         api.normalizeZone = [this](int idx) -> std::string {

@@ -36,6 +36,7 @@ using downspout::campione::kStateKeyZoneUpdate;
 using downspout::campione::kStateKeyParameters;
 using downspout::campione::kStateKeyZones;
 using downspout::campione::kStateKeyZoneDsp;
+using downspout::campione::kStateKeyZoneSlice;
 
 struct Rect {
     float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
@@ -367,6 +368,19 @@ protected:
                 setState(kStateKeyZoneReverse, buf);
                 return true;
             }
+            if (waveSliceBtn_.contains(px, py)) {
+                std::snprintf(buf, sizeof(buf), "%d|%d|-1", si, sliceCount_);
+                setState(kStateKeyZoneSlice, buf);
+                return true;
+            }
+            if (waveSliceDecBtn_.contains(px, py)) {
+                if (sliceCount_ > 0) sliceCount_--;
+                repaint(); return true;
+            }
+            if (waveSliceIncBtn_.contains(px, py)) {
+                if (sliceCount_ < 64) sliceCount_++;
+                repaint(); return true;
+            }
 
             // Filter enable toggle
             if (filterEnableBtn_.contains(px, py)) {
@@ -607,14 +621,18 @@ private:
     void loadPeaks(int idx)
     {
         peaks_.clear();
-        peakZoneIdx_ = -1;
+        peakZoneIdx_   = -1;
+        peakLoadFailed_ = false;
         if (idx < 0 || idx >= static_cast<int>(zones_.size())) return;
 
         ZoneEntry& z = zones_[static_cast<std::size_t>(idx)];
         if (z.path.empty()) return;
 
         auto result = downspout::campione::loadWavZone(z.path);
-        if (!result.error.empty() || result.zone.data.empty()) return;
+        if (!result.error.empty() || result.zone.data.empty()) {
+            peakLoadFailed_ = true;
+            return;
+        }
 
         const auto& data   = result.zone.data;
         const int chCount  = result.zone.channelCount;
@@ -938,12 +956,14 @@ private:
                 fill();
                 closePath();
             }
-        } else if (z.totalFrames == 0 && !z.path.empty()) {
+        } else if (!z.path.empty()) {
             fontSize(11.0f);
             textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-            fillColor(72, 95, 112, 255);
+            fillColor(peakLoadFailed_ ? 160 : 72,
+                      peakLoadFailed_ ?  80 : 95,
+                      peakLoadFailed_ ?  80 : 112, 255);
             text(waveRect_.x + waveRect_.w * 0.5f, waveRect_.y + kWaveDisplayH * 0.5f,
-                 "loading\xe2\x80\xa6", nullptr);
+                 peakLoadFailed_ ? "file not found" : "loading\xe2\x80\xa6", nullptr);
         }
 
         // Loop handles (only when loop enabled and waveform loaded)
@@ -1022,6 +1042,38 @@ private:
             drawActionBtn(waveTrimBtn_, "Trim");
             drawActionBtn(waveFadeBtn_, "Fade");
             drawActionBtn(waveRevBtn_,  "Reverse");
+
+            // Slice controls: [−][N][+]  [Slice ▸]
+            {
+                // Count spin: − box, count display, + box
+                const float spinW = 16.0f, countW = 34.0f;
+                auto drawSpinBtn = [&](Rect& out, float x, const char* label) {
+                    out = { x, ay, spinW, kActionH };
+                    beginPath(); fillColor(24, 38, 50, 240);
+                    roundedRect(x, ay, spinW, kActionH, 3.0f); fill(); closePath();
+                    beginPath(); strokeColor(55, 80, 100, 160); strokeWidth(1.0f);
+                    roundedRect(x, ay, spinW, kActionH, 3.0f); stroke(); closePath();
+                    fontSize(10.0f); textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+                    fillColor(160, 185, 205, 255);
+                    text(x + spinW * 0.5f, ay + kActionH * 0.5f, label, nullptr);
+                };
+                drawSpinBtn(waveSliceDecBtn_, bx, "\xe2\x88\x92");  // minus sign
+                bx += spinW;
+                // Count display
+                waveSliceCountRect_ = { bx, ay, countW, kActionH };
+                beginPath(); fillColor(20, 32, 44, 240);
+                roundedRect(bx, ay, countW, kActionH, 0.0f); fill(); closePath();
+                fontSize(9.0f); textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+                fillColor(190, 210, 225, 255);
+                char countBuf[12];
+                std::snprintf(countBuf, sizeof(countBuf), sliceCount_ == 0 ? "auto" : "%d", sliceCount_);
+                text(bx + countW * 0.5f, ay + kActionH * 0.5f, countBuf, nullptr);
+                bx += countW;
+                drawSpinBtn(waveSliceIncBtn_, bx, "+");
+                bx += spinW + gap;
+                // Slice trigger button
+                drawActionBtn(waveSliceBtn_, "Slice \xe2\x96\xb8");
+            }
         }
 
         // ADSR + filter row (bottom 50px of waveform panel)
@@ -1248,6 +1300,9 @@ private:
             e.filterQ       = z.filterQ;
             zones_.push_back(std::move(e));
         }
+        // Auto-select first zone when none is selected (e.g. after project reload)
+        if (selectedZone_ < 0 && !zones_.empty())
+            selectedZone_ = 0;
         // Reload waveform peaks if selected zone is still valid
         if (selectedZone_ >= 0 && selectedZone_ < static_cast<int>(zones_.size()))
             loadPeaks(selectedZone_);
@@ -1269,6 +1324,11 @@ private:
     Rect waveTrimBtn_  {};
     Rect waveFadeBtn_  {};
     Rect waveRevBtn_   {};
+    Rect waveSliceBtn_     {};
+    Rect waveSliceDecBtn_  {};
+    Rect waveSliceCountRect_{};
+    Rect waveSliceIncBtn_  {};
+    int  sliceCount_ = 0;   // 0 = auto-detect, >0 = explicit slice count
     // ADSR/filter drag sliders (built during draw, hit-tested in onMouse)
     Rect adsrAttackSlider_  {};
     Rect adsrDecaySlider_   {};
@@ -1288,9 +1348,10 @@ private:
     int       dragStartNote_ = 0;
     uint32_t  dragStartFrame_= 0;
 
-    int              selectedZone_ = -1;
+    int              selectedZone_   = -1;
     std::vector<float> peaks_;
-    int              peakZoneIdx_  = -1;
+    int              peakZoneIdx_   = -1;
+    bool             peakLoadFailed_ = false;
 
     bool recording_ = false;
     std::chrono::steady_clock::time_point recordStart_;
