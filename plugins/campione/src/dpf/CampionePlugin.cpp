@@ -617,7 +617,8 @@ private:
         const CoreSampleZone& src = (*existing)[static_cast<std::size_t>(idx)];
         if (src.data.empty()) return "zone has no audio data";
         const int totalFrames = static_cast<int>(src.data.size() / src.channelCount);
-        if (startNote < 0) startNote = src.rangeLow;
+        // autoSpread: distribute slices evenly across C2–B5 (MIDI 36–83, 4 octaves)
+        const bool autoSpread = (startNote < 0);
         std::vector<uint32_t> boundaries;
         if (numSlices == 0) {
             const auto onsets = downspout::campione::detectTransients(
@@ -646,10 +647,29 @@ private:
             const std::size_t end   = static_cast<std::size_t>(f1) * src.channelCount;
             slice.data.assign(src.data.begin() + static_cast<std::ptrdiff_t>(start),
                               src.data.begin() + static_cast<std::ptrdiff_t>(end));
-            const int note     = std::clamp(startNote + s, 0, 127);
-            slice.rootNote     = note;
-            slice.rangeLow     = note;
-            slice.rangeHigh    = note;
+            // Assign MIDI notes: spread evenly across C2–B5 (MIDI 36–83) or use explicit startNote
+            if (autoSpread) {
+                constexpr int kLow = 36, kHigh = 83, kSpan = kHigh - kLow + 1;
+                if (numSlices <= kSpan) {
+                    const int lo = kLow + s * kSpan / numSlices;
+                    const int hi = (s == numSlices - 1)
+                                   ? kHigh
+                                   : kLow + (s + 1) * kSpan / numSlices - 1;
+                    slice.rootNote = lo;
+                    slice.rangeLow = lo;
+                    slice.rangeHigh = hi;
+                } else {
+                    const int note = std::clamp(kLow + s, 0, 127);
+                    slice.rootNote = note;
+                    slice.rangeLow = note;
+                    slice.rangeHigh = note;
+                }
+            } else {
+                const int note = std::clamp(startNote + s, 0, 127);
+                slice.rootNote = note;
+                slice.rangeLow = note;
+                slice.rangeHigh = note;
+            }
             slice.attackMs     = src.attackMs;
             slice.decayMs      = src.decayMs;
             slice.sustainLevel = src.sustainLevel;

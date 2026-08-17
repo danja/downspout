@@ -483,11 +483,11 @@ protected:
             // Row click (any unhandled area) → select zone and load waveform
             const Rect rowR { kPad, ry, W - kPad * 2.0f, kRowH };
             if (rowR.contains(px, py)) {
-                if (selectedZone_ != static_cast<int>(i)) {
-                    selectedZone_ = static_cast<int>(i);
+                selectedZone_ = static_cast<int>(i);
+                // Reload peaks if not already loaded for this zone (retry on prior failure too)
+                if (peakZoneIdx_ != selectedZone_)
                     loadPeaks(selectedZone_);
-                    repaint();
-                }
+                repaint();
                 return true;
             }
         }
