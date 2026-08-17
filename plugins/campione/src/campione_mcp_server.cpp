@@ -195,7 +195,15 @@ static json buildToolsList()
              {"index",      intProp("Zone index to slice")},
              {"num_slices", intProp("Number of equal slices (0 = auto-detect from transients)")},
              {"start_note", intProp("First MIDI note to assign (default = zone rangeLow)")}
-         }, {"index"})}}
+         }, {"index"})}},
+
+        {{"name","save_patch"},
+         {"description","Save current zones and parameters to a Turtle RDF patch file (.ttl). Path is auto-generated if omitted."},
+         {"inputSchema", makeSchema({{"path", strProp("Absolute path to .ttl file (optional, auto-generated if omitted)")}})  }},
+
+        {{"name","load_patch"},
+         {"description","Load zones and parameters from a Turtle RDF patch file (.ttl). Replaces the current zone list."},
+         {"inputSchema", makeSchema({{"path", strProp("Absolute path to .ttl file")}}, {"path"})}}
     });
 }
 
@@ -480,6 +488,20 @@ std::string CampioneMcpServer::dispatch(const std::string& body)
                 if (!err.empty()) throw std::runtime_error(err);
                 char buf[80]; std::snprintf(buf, sizeof(buf), "zone %d sliced", idx);
                 return makeResult(textContent(buf), id).dump();
+            }
+
+            if (name == "save_patch") {
+                const std::string path = args.value("path", std::string{});
+                const std::string err  = api_.savePatch(path);
+                if (!err.empty()) throw std::runtime_error(err);
+                return makeResult(textContent("patch saved" + (path.empty() ? "" : ": " + path)), id).dump();
+            }
+
+            if (name == "load_patch") {
+                const std::string path = args.at("path").get<std::string>();
+                const std::string err  = api_.loadPatch(path);
+                if (!err.empty()) throw std::runtime_error(err);
+                return makeResult(textContent("patch loaded: " + path), id).dump();
             }
 
             return makeError(-32601, "Unknown tool: " + name, id).dump();

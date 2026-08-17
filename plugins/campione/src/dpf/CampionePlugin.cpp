@@ -3,6 +3,7 @@
 #include "campione_engine.hpp"
 #include "campione_mcp_server.hpp"
 #include "campione_params.hpp"
+#include "campione_patch_io.hpp"
 #include "campione_ui_bridge.hpp"
 #include "campione_pitch_utils.hpp"
 #include "campione_sample_loader.hpp"
@@ -54,7 +55,11 @@ using downspout::campione::kStateKeyZoneUpdate;
 using downspout::campione::kStateKeyZones;
 using downspout::campione::kStateKeyZoneDsp;
 using downspout::campione::kStateKeyZoneSlice;
+using downspout::campione::kStateKeyPatchSave;
+using downspout::campione::kStateKeyPatchLoad;
 using downspout::campione::kStateZoneSlice;
+using downspout::campione::kStatePatchSave;
+using downspout::campione::kStatePatchLoad;
 using downspout::campione::kStateParameters;
 using downspout::campione::kStateZoneFade;
 using downspout::campione::kStateZoneLoad;
@@ -338,6 +343,18 @@ protected:
             state.hints        = 0;
             state.defaultValue = "";
             break;
+        case kStatePatchSave:
+            state.key          = kStateKeyPatchSave;
+            state.label        = "Save Patch";
+            state.hints        = 0;
+            state.defaultValue = "";
+            break;
+        case kStatePatchLoad:
+            state.key          = kStateKeyPatchLoad;
+            state.label        = "Load Patch";
+            state.hints        = kStateIsFilenamePath;
+            state.defaultValue = "";
+            break;
         }
     }
 
@@ -505,6 +522,20 @@ protected:
             int idx = 0, numSlices = 0, startNote = -1;
             std::sscanf(value, "%d|%d|%d", &idx, &numSlices, &startNote);
             doSliceZone(idx, numSlices, startNote);
+            return;
+        }
+
+        if (std::strcmp(key, kStateKeyPatchSave) == 0)
+        {
+            // "auto" sentinel (or empty) → auto-generate path; otherwise use explicit path
+            const bool autoPath = (!value || value[0] == '\0' || std::strcmp(value, "auto") == 0);
+            doSavePatch(autoPath ? "" : value);
+            return;
+        }
+
+        if (std::strcmp(key, kStateKeyPatchLoad) == 0 && value && value[0] != '\0')
+        {
+            doLoadPatch(value);
             return;
         }
     }
@@ -883,6 +914,103 @@ private:
         return {};
     }
 
+    // ── Patch save / load ────────────────────────────────────────────────────
+
+    std::string doSavePatch(const std::string& path)
+    {
+        std::string savePath = path;
+        if (savePath.empty()) {
+            const std::string dir = recordingOutputDir_.empty()
+                ? ([]{ const char* h = std::getenv("HOME");
+                       return std::string(h ? h : "/tmp") + "/campione_recordings"; }())
+                : recordingOutputDir_;
+            ::mkdir(dir.c_str(), 0755);
+            char fname[256];
+            std::snprintf(fname, sizeof(fname), "%s/patch_%lld.ttl",
+                          dir.c_str(), static_cast<long long>(std::time(nullptr)));
+            savePath = fname;
+        }
+
+        const auto zonesPtr = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+        downspout::campione::PatchData pd;
+        pd.label      = "Campione Patch";
+        pd.parameters = parameters_;
+        if (zonesPtr) {
+            for (const auto& z : *zonesPtr) {
+                downspout::campione::SampleZone meta;
+                meta.sourcePath    = z.sourcePath;
+                meta.rootNote      = z.rootNote;
+                meta.rangeLow      = z.rangeLow;
+                meta.rangeHigh     = z.rangeHigh;
+                meta.midiChannel   = z.midiChannel;
+                meta.loopEnabled   = z.loopEnabled;
+                meta.loopStart     = z.loopStart;
+                meta.loopEnd       = z.loopEnd;
+                meta.attackMs      = z.attackMs;
+                meta.decayMs       = z.decayMs;
+                meta.sustainLevel  = z.sustainLevel;
+                meta.releaseMs     = z.releaseMs;
+                meta.filterEnabled = z.filterEnabled;
+                meta.filterType    = z.filterType;
+                meta.filterCutoffHz = z.filterCutoffHz;
+                meta.filterQ       = z.filterQ;
+                pd.zones.push_back(std::move(meta));
+            }
+        }
+        return downspout::campione::savePatch(pd, savePath);
+    }
+
+    std::string doLoadPatch(const std::string& path)
+    {
+        auto [pd, err] = downspout::campione::loadPatch(path);
+        if (!pd.has_value()) return err;
+
+        // Queue parameter update for audio thread
+        {
+            std::lock_guard<std::mutex> lk(mcpParamsMtx_);
+            mcpPendingParams_ = pd->parameters;
+            hasMcpParams_     = true;
+            pendingParamNotify_.store(true, std::memory_order_release);
+        }
+
+        // Load zone WAV files
+        auto newZones = std::make_shared<ZoneVec>();
+        newZones->reserve(pd->zones.size());
+        for (const auto& meta : pd->zones) {
+            if (meta.sourcePath.empty()) continue;
+            auto result = downspout::campione::loadWavZone(meta.sourcePath);
+            if (!result.error.empty()) continue;
+            result.zone.rootNote      = meta.rootNote;
+            result.zone.rangeLow      = meta.rangeLow;
+            result.zone.rangeHigh     = meta.rangeHigh;
+            result.zone.midiChannel   = meta.midiChannel;
+            result.zone.loopEnabled   = meta.loopEnabled;
+            result.zone.loopStart     = meta.loopStart;
+            result.zone.loopEnd       = meta.loopEnd;
+            result.zone.crossfadeFrames = meta.crossfadeFrames;
+            result.zone.sourcePath    = meta.sourcePath;
+            result.zone.attackMs      = meta.attackMs;
+            result.zone.decayMs       = meta.decayMs;
+            result.zone.sustainLevel  = meta.sustainLevel;
+            result.zone.releaseMs     = meta.releaseMs;
+            result.zone.filterEnabled = meta.filterEnabled;
+            result.zone.filterType    = meta.filterType;
+            result.zone.filterCutoffHz = meta.filterCutoffHz;
+            result.zone.filterQ       = meta.filterQ;
+            newZones->push_back(std::move(result.zone));
+        }
+
+        {
+            std::lock_guard<std::mutex> lk(zoneMtx_);
+            zonesInitialized_ = true;
+            std::atomic_store_explicit(&zones_,
+                                       std::shared_ptr<const ZoneVec>(std::move(newZones)),
+                                       std::memory_order_release);
+        }
+        notifyZonesChanged();
+        return {};
+    }
+
     // ── MCP API factory ───────────────────────────────────────────────────────
 
     downspout::campione::CampioneMcpServer::Api buildMcpApi()
@@ -1089,6 +1217,14 @@ private:
                 return "directory does not exist: " + path;
             recordingOutputDir_ = path;
             return {};
+        };
+
+        api.savePatch = [this](const std::string& path) -> std::string {
+            return doSavePatch(path);
+        };
+
+        api.loadPatch = [this](const std::string& path) -> std::string {
+            return doLoadPatch(path);
         };
 
         return api;

@@ -37,6 +37,8 @@ using downspout::campione::kStateKeyParameters;
 using downspout::campione::kStateKeyZones;
 using downspout::campione::kStateKeyZoneDsp;
 using downspout::campione::kStateKeyZoneSlice;
+using downspout::campione::kStateKeyPatchSave;
+using downspout::campione::kStateKeyPatchLoad;
 
 struct Rect {
     float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
@@ -214,7 +216,7 @@ protected:
             repaint();
         }
 
-        if (recording_)
+        if (recording_ || patchSaved_)
             repaint();
     }
 
@@ -292,6 +294,21 @@ protected:
             setParameterValue(kParamMcpEnabled, newVal);
             editParameter(kParamMcpEnabled, false);
             repaint();
+            return true;
+        }
+
+        // Save Patch — auto-generate path in DSP
+        if (savePatchBtn_.contains(px, py)) {
+            setState(kStateKeyPatchSave, "auto");
+            patchSavedAt_ = std::chrono::steady_clock::now();
+            patchSaved_   = true;
+            repaint();
+            return true;
+        }
+
+        // Load Patch — open file browser
+        if (loadPatchBtn_.contains(px, py)) {
+            requestStateFile(kStateKeyPatchLoad);
             return true;
         }
 
@@ -1245,14 +1262,39 @@ private:
             text(kPad + 232.0f, fy + 30.0f, buf, nullptr);
         } else {
             drawButton(recBtn_, "\xe2\x97\x8f  Record", 80, 36, 36);
-            char buf[48];
-            std::snprintf(buf, sizeof(buf), "XFade: %.0f ms", values_[kParamCrossfadeDuration]);
-            fontSize(12.0f);
-            textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-            fillColor(143, 158, 169, 255);
-            text(kPad + 232.0f, fy + 30.0f, buf, nullptr);
         }
 
+        // Patch buttons
+        savePatchBtn_ = { kPad + 232.0f, fy + 16.0f, 98.0f, 28.0f };
+        drawButton(savePatchBtn_, "Save Patch", 36, 58, 74);
+
+        loadPatchBtn_ = { kPad + 340.0f, fy + 16.0f, 98.0f, 28.0f };
+        drawButton(loadPatchBtn_, "Load Patch", 36, 58, 74);
+
+        // XFade label and patch-saved flash
+        {
+            const float labelX = kPad + 448.0f;
+            if (patchSaved_) {
+                const auto age = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - patchSavedAt_).count();
+                if (age < 2000) {
+                    fontSize(11.0f);
+                    textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+                    fillColor(80, 200, 120, static_cast<uint8_t>(255 - age * 255 / 2000));
+                    text(labelX, fy + 30.0f, "patch saved", nullptr);
+                } else {
+                    patchSaved_ = false;
+                }
+            }
+            if (!patchSaved_) {
+                char buf[32];
+                std::snprintf(buf, sizeof(buf), "XF: %.0fms", values_[kParamCrossfadeDuration]);
+                fontSize(11.0f);
+                textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+                fillColor(120, 140, 154, 255);
+                text(labelX, fy + 30.0f, buf, nullptr);
+            }
+        }
     }
 
     void drawButton(const Rect& r, const char* label, uint8_t cr, uint8_t cg, uint8_t cb)
@@ -1311,10 +1353,12 @@ private:
     std::array<float, kParameterCount> values_ {};
     std::vector<ZoneEntry>             zones_;
 
-    Rect loadBtn_   {};
-    Rect recBtn_    {};
-    Rect mcpBtn_    {};
-    Rect chBtn_     {};
+    Rect loadBtn_       {};
+    Rect recBtn_        {};
+    Rect savePatchBtn_  {};
+    Rect loadPatchBtn_  {};
+    Rect mcpBtn_        {};
+    Rect chBtn_         {};
     Rect volSlider_ {};
     Rect waveRect_       {};
     Rect loopStartHandle_{};
@@ -1355,6 +1399,9 @@ private:
 
     bool recording_ = false;
     std::chrono::steady_clock::time_point recordStart_;
+
+    bool patchSaved_ = false;
+    std::chrono::steady_clock::time_point patchSavedAt_;
 
     uint32_t lastZonesSerial_  = 0;
     uint32_t lastParamsSerial_ = 0;

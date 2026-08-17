@@ -55,6 +55,12 @@ public:
         std::function<void()>              refreshUi;
         std::function<std::string()>       getRecordingStatus;
         std::function<std::string(const std::string&)> setRecordingDir;
+
+        // ── Patch I/O ─────────────────────────────────────────────────────────
+        // path="" → auto-generate timestamped path; returns "" or error
+        std::function<std::string(const std::string&)> savePatch;
+        // path must be absolute; loads zones+params from Turtle file; returns "" or error
+        std::function<std::string(const std::string&)> loadPatch;
     };
 
     // preferredPort: first port to try; increments up to preferredPort+9 on EADDRINUSE.
