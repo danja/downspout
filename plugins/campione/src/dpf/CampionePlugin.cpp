@@ -57,9 +57,12 @@ using downspout::campione::kStateKeyZoneDsp;
 using downspout::campione::kStateKeyZoneSlice;
 using downspout::campione::kStateKeyPatchSave;
 using downspout::campione::kStateKeyPatchLoad;
+using downspout::campione::kStateKeyDataDir;
 using downspout::campione::kStateZoneSlice;
 using downspout::campione::kStatePatchSave;
 using downspout::campione::kStatePatchLoad;
+using downspout::campione::kStateDataDir;
+using downspout::campione::kDefaultDataDir;
 using downspout::campione::kStateParameters;
 using downspout::campione::kStateZoneFade;
 using downspout::campione::kStateZoneLoad;
@@ -73,6 +76,12 @@ using downspout::campione::kStateZoneDsp;
 
 // Default MCP port; increments up to +9 on conflict.
 constexpr int kMcpDefaultPort = 7220;
+
+static std::string defaultDataDir()
+{
+    const char* h = std::getenv("HOME");
+    return std::string(h ? h : "/tmp") + kDefaultDataDir;
+}
 
 ParameterEnumerationValue kMidiChannelEnumValues[] = {
     { 0.0f, "All" },
@@ -355,6 +364,12 @@ protected:
             state.hints        = kStateIsFilenamePath;
             state.defaultValue = "";
             break;
+        case kStateDataDir:
+            state.key          = kStateKeyDataDir;
+            state.label        = "Data Directory";
+            state.hints        = 0;
+            state.defaultValue = "";
+            break;
         }
     }
 
@@ -538,6 +553,15 @@ protected:
             doLoadPatch(value);
             return;
         }
+
+        if (std::strcmp(key, kStateKeyDataDir) == 0 && value && value[0] != '\0')
+        {
+            ::mkdir(value, 0755);
+            struct stat st{};
+            if (::stat(value, &st) == 0 && S_ISDIR(st.st_mode))
+                recordingOutputDir_ = value;
+            return;
+        }
     }
 
     void activate() override
@@ -712,8 +736,7 @@ private:
             // Save slice to disk so the UI can show its waveform and it survives project reload
             {
                 const std::string dir = recordingOutputDir_.empty()
-                    ? ([]{ const char* h = std::getenv("HOME");
-                           return std::string(h ? h : "/tmp") + "/campione_recordings"; }())
+                    ? defaultDataDir()
                     : recordingOutputDir_;
                 ::mkdir(dir.c_str(), 0755);
                 char fname[256];
@@ -827,7 +850,7 @@ private:
         zone.rangeHigh = zone.rootNote;
 
         std::string dir = recordingOutputDir_.empty()
-                          ? ([]{ const char* h = std::getenv("HOME"); return std::string(h ? h : "/tmp"); }() + "/campione_recordings")
+                          ? defaultDataDir()
                           : recordingOutputDir_;
         ::mkdir(dir.c_str(), 0755);
 
@@ -921,8 +944,7 @@ private:
         std::string savePath = path;
         if (savePath.empty()) {
             const std::string dir = recordingOutputDir_.empty()
-                ? ([]{ const char* h = std::getenv("HOME");
-                       return std::string(h ? h : "/tmp") + "/campione_recordings"; }())
+                ? defaultDataDir()
                 : recordingOutputDir_;
             ::mkdir(dir.c_str(), 0755);
             char fname[256];

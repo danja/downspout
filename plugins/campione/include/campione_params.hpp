@@ -27,8 +27,9 @@ enum StateIndex : std::uint32_t {
     kStateZoneReverse,   // UI sends index string
     kStateZoneDsp,       // UI sends "idx|attackMs|decayMs|sustainLevel|releaseMs|filterEnabled|filterType|filterCutoff|filterQ"
     kStateZoneSlice,     // UI sends "idx|numSlices|startNote"  (numSlices=0 → auto-detect)
-    kStatePatchSave,     // UI sends file path (or "" to auto-generate) → DSP writes Turtle patch
+    kStatePatchSave,     // UI sends file path → DSP writes Turtle patch
     kStatePatchLoad,     // UI sends file path → DSP reads Turtle patch + reloads zones
+    kStateDataDir,       // UI sends data directory path → DSP updates recording/patch output dir
     kStateCount
 };
 
@@ -45,5 +46,8 @@ inline constexpr const char* kStateKeyZoneDsp       = "zone_dsp";
 inline constexpr const char* kStateKeyZoneSlice     = "zone_slice";
 inline constexpr const char* kStateKeyPatchSave     = "patch_save";
 inline constexpr const char* kStateKeyPatchLoad     = "patch_load";
+inline constexpr const char* kStateKeyDataDir       = "data_dir";
+
+inline constexpr const char* kDefaultDataDir        = "/.vst3/campione-data";
 
 }  // namespace downspout::campione

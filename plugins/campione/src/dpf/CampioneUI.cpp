@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <ctime>
 #include <string>
 #include <vector>
 
@@ -39,6 +40,8 @@ using downspout::campione::kStateKeyZoneDsp;
 using downspout::campione::kStateKeyZoneSlice;
 using downspout::campione::kStateKeyPatchSave;
 using downspout::campione::kStateKeyPatchLoad;
+using downspout::campione::kStateKeyDataDir;
+using downspout::campione::kDefaultDataDir;
 
 struct Rect {
     float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
@@ -103,6 +106,14 @@ constexpr float kRowH    = 26.0f;
 constexpr float kFooterH = 60.0f;
 constexpr float kWaveH   = 170.0f;  // waveform 100px + 18px action bar + 52px ADSR/filter row
 
+enum DialogMode { kDialogNone, kDialogSavePatch, kDialogSettings };
+
+static std::string uiDefaultDataDir()
+{
+    const char* h = std::getenv("HOME");
+    return std::string(h ? h : "/tmp") + kDefaultDataDir;
+}
+
 // Column x positions (left edge relative to kPad)
 constexpr float kColNum    =  8.0f;
 constexpr float kColRoot   = 28.0f;
@@ -116,6 +127,7 @@ class CampioneUI : public UI
 public:
     CampioneUI()
         : UI(DISTRHO_UI_DEFAULT_WIDTH, DISTRHO_UI_DEFAULT_HEIGHT)
+        , dataDir_(uiDefaultDataDir())
     {
         values_.fill(0.0f);
         values_[kParamMasterVolume]      = 0.8f;
@@ -129,6 +141,9 @@ public:
        #else
         loadSharedResources();
        #endif
+
+        // Tell DSP about the default data directory so recordings and patches land there.
+        setState(kStateKeyDataDir, dataDir_.c_str());
     }
 
 protected:
@@ -216,7 +231,7 @@ protected:
             repaint();
         }
 
-        if (recording_ || patchSaved_)
+        if (recording_ || patchSaved_ || dialogMode_ != kDialogNone)
             repaint();
     }
 
@@ -241,6 +256,8 @@ protected:
         drawZoneList(W, H);
         drawWaveform(W, H);
         drawFooter(W, H);
+        if (dialogMode_ != kDialogNone)
+            drawDialog(W, H);
     }
 
     bool onMouse(const MouseEvent& ev) override
@@ -249,6 +266,14 @@ protected:
 
         const float px = static_cast<float>(ev.pos.getX());
         const float py = static_cast<float>(ev.pos.getY());
+
+        // When a dialog is open, route all clicks to it.
+        if (dialogMode_ != kDialogNone) {
+            if (!ev.press) return false;
+            if (dialogOkBtn_.contains(px, py))     { confirmDialog(); return true; }
+            if (dialogCancelBtn_.contains(px, py)) { dialogMode_ = kDialogNone; repaint(); return true; }
+            return true; // swallow all other clicks
+        }
 
         if (!ev.press) {
             // Commit loop handle drag
@@ -297,11 +322,22 @@ protected:
             return true;
         }
 
-        // Save Patch — auto-generate path in DSP
+        // Save Patch — open dialog with pre-filled timestamped path
         if (savePatchBtn_.contains(px, py)) {
-            setState(kStateKeyPatchSave, "auto");
-            patchSavedAt_ = std::chrono::steady_clock::now();
-            patchSaved_   = true;
+            std::time_t t = std::time(nullptr);
+            char tbuf[32];
+            struct tm* tm_info = std::localtime(&t);
+            std::strftime(tbuf, sizeof(tbuf), "patch_%Y%m%d_%H%M%S.ttl", tm_info);
+            dialogText_ = dataDir_ + "/" + tbuf;
+            dialogMode_ = kDialogSavePatch;
+            repaint();
+            return true;
+        }
+
+        // Settings
+        if (settingsBtn_.contains(px, py)) {
+            dialogText_ = dataDir_;
+            dialogMode_ = kDialogSettings;
             repaint();
             return true;
         }
@@ -598,6 +634,34 @@ protected:
         zoneScrollOffset_ = std::clamp(zoneScrollOffset_ - static_cast<int>(ev.delta.getY()), 0, maxScroll);
         repaint();
         return true;
+    }
+
+    bool onKeyboard(const KeyboardEvent& ev) override
+    {
+        if (dialogMode_ == kDialogNone) return false;
+        if (!ev.press) return true; // swallow key-release too while dialog is open
+
+        const uint32_t k = ev.key;
+        if (k == 27) { // Escape
+            dialogMode_ = kDialogNone;
+            repaint();
+            return true;
+        }
+        if (k == 13 || k == '\n') { // Enter
+            confirmDialog();
+            return true;
+        }
+        if (k == 8 && !dialogText_.empty()) { // Backspace
+            dialogText_.pop_back();
+            repaint();
+            return true;
+        }
+        if (ev.key >= 0x20 && ev.key < 0x7f) {
+            dialogText_ += static_cast<char>(ev.key);
+            repaint();
+            return true;
+        }
+        return true; // swallow all other keys while dialog is open
     }
 
 private:
@@ -1238,63 +1302,63 @@ private:
         fill();
         closePath();
 
-        loadBtn_ = { kPad, fy + 16.0f, 110.0f, 28.0f };
+        // Footer buttons — evenly packed from left; MCP anchored to right
+        //   [Load WAV][Record][Save Patch][Load Patch][Settings] ... [MCP]
+        constexpr float kBtnW = 90.0f, kBtnH = 28.0f, kBtnGap = 8.0f;
+        float bx = kPad;
+
+        loadBtn_ = { bx, fy + 16.0f, kBtnW, kBtnH };
         drawButton(loadBtn_, "Load WAV", 51, 64, 74);
+        bx += kBtnW + kBtnGap;
 
-        // MCP toggle button
-        mcpBtn_ = { W - kPad - 72.0f, fy + 16.0f, 72.0f, 28.0f };
-        const bool mcpOn = values_[kParamMcpEnabled] >= 0.5f;
-        drawButton(mcpBtn_, mcpOn ? "MCP ON" : "MCP OFF",
-                   mcpOn ? 30 : 51, mcpOn ? 100 : 64, mcpOn ? 30 : 74);
-
-        recBtn_ = { kPad + 120.0f, fy + 16.0f, 100.0f, 28.0f };
+        recBtn_ = { bx, fy + 16.0f, kBtnW, kBtnH };
         if (recording_) {
             drawButton(recBtn_, "\xe2\x97\x8f  Stop", 140, 40, 40);
             const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
                 std::chrono::steady_clock::now() - recordStart_).count();
-            char buf[16];
-            std::snprintf(buf, sizeof(buf), "%lld:%02lld",
+            char rbuf[16];
+            std::snprintf(rbuf, sizeof(rbuf), "%lld:%02lld",
                           static_cast<long long>(elapsed / 60),
                           static_cast<long long>(elapsed % 60));
-            fontSize(12.0f);
+            fontSize(10.0f);
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
             fillColor(220, 100, 100, 255);
-            text(kPad + 232.0f, fy + 30.0f, buf, nullptr);
+            text(bx + kBtnW + 4.0f, fy + 30.0f, rbuf, nullptr);
         } else {
             drawButton(recBtn_, "\xe2\x97\x8f  Record", 80, 36, 36);
         }
+        bx += kBtnW + kBtnGap;
 
-        // Patch buttons
-        savePatchBtn_ = { kPad + 232.0f, fy + 16.0f, 98.0f, 28.0f };
-        drawButton(savePatchBtn_, "Save Patch", 36, 58, 74);
+        savePatchBtn_ = { bx, fy + 16.0f, kBtnW, kBtnH };
+        drawButton(savePatchBtn_, "Save Patch", 36, 64, 80);
+        bx += kBtnW + kBtnGap;
 
-        loadPatchBtn_ = { kPad + 340.0f, fy + 16.0f, 98.0f, 28.0f };
-        drawButton(loadPatchBtn_, "Load Patch", 36, 58, 74);
+        loadPatchBtn_ = { bx, fy + 16.0f, kBtnW, kBtnH };
+        drawButton(loadPatchBtn_, "Load Patch", 36, 64, 80);
+        bx += kBtnW + kBtnGap;
 
-        // XFade label and patch-saved flash
-        {
-            const float labelX = kPad + 448.0f;
-            if (patchSaved_) {
-                const auto age = std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now() - patchSavedAt_).count();
-                if (age < 2000) {
-                    fontSize(11.0f);
-                    textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-                    fillColor(80, 200, 120, static_cast<uint8_t>(255 - age * 255 / 2000));
-                    text(labelX, fy + 30.0f, "patch saved", nullptr);
-                } else {
-                    patchSaved_ = false;
-                }
-            }
-            if (!patchSaved_) {
-                char buf[32];
-                std::snprintf(buf, sizeof(buf), "XF: %.0fms", values_[kParamCrossfadeDuration]);
+        settingsBtn_ = { bx, fy + 16.0f, 76.0f, kBtnH };
+        drawButton(settingsBtn_, "Settings", 46, 54, 62);
+
+        // Patch-saved flash (between Settings and MCP)
+        if (patchSaved_) {
+            const auto age = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - patchSavedAt_).count();
+            if (age < 2000) {
                 fontSize(11.0f);
                 textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-                fillColor(120, 140, 154, 255);
-                text(labelX, fy + 30.0f, buf, nullptr);
+                fillColor(80, 200, 120, static_cast<uint8_t>(255 - age * 255 / 2000));
+                text(bx + 84.0f, fy + 30.0f, "patch saved", nullptr);
+            } else {
+                patchSaved_ = false;
             }
         }
+
+        // MCP toggle — right-anchored
+        mcpBtn_ = { W - kPad - 72.0f, fy + 16.0f, 72.0f, kBtnH };
+        const bool mcpOn = values_[kParamMcpEnabled] >= 0.5f;
+        drawButton(mcpBtn_, mcpOn ? "MCP ON" : "MCP OFF",
+                   mcpOn ? 30 : 51, mcpOn ? 100 : 64, mcpOn ? 30 : 74);
     }
 
     void drawButton(const Rect& r, const char* label, uint8_t cr, uint8_t cg, uint8_t cb)
@@ -1350,6 +1414,143 @@ private:
             loadPeaks(selectedZone_);
     }
 
+    void confirmDialog()
+    {
+        switch (dialogMode_) {
+        case kDialogSavePatch:
+            if (!dialogText_.empty()) {
+                setState(kStateKeyPatchSave, dialogText_.c_str());
+                patchSaved_   = true;
+                patchSavedAt_ = std::chrono::steady_clock::now();
+            }
+            break;
+        case kDialogSettings:
+            if (!dialogText_.empty()) {
+                dataDir_ = dialogText_;
+                setState(kStateKeyDataDir, dialogText_.c_str());
+            }
+            break;
+        default: break;
+        }
+        dialogMode_ = kDialogNone;
+        repaint();
+    }
+
+    void drawDialog(float W, float H)
+    {
+        // Dim background
+        beginPath();
+        fillColor(0, 0, 0, 180);
+        rect(0.0f, 0.0f, W, H);
+        fill();
+        closePath();
+
+        const float pw  = 500.0f;
+        const float ph  = (dialogMode_ == kDialogSettings) ? 170.0f : 140.0f;
+        const float dlgX = (W - pw) * 0.5f;
+        const float dlgY = (H - ph) * 0.5f;
+
+        // Panel background
+        beginPath();
+        fillColor(22, 32, 44, 255);
+        roundedRect(dlgX, dlgY, pw, ph, 10.0f);
+        fill();
+        closePath();
+        beginPath();
+        strokeColor(72, 108, 136, 255);
+        strokeWidth(1.5f);
+        roundedRect(dlgX, dlgY, pw, ph, 10.0f);
+        stroke();
+        closePath();
+
+        // Title
+        const char* title = (dialogMode_ == kDialogSavePatch) ? "Save Patch" : "Settings";
+        fontSize(15.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(220, 232, 242, 255);
+        text(dlgX + 18.0f, dlgY + 14.0f, title, nullptr);
+
+        float fieldY = dlgY + 48.0f;
+
+        // Settings: extra note
+        if (dialogMode_ == kDialogSettings) {
+            fontSize(11.0f);
+            textAlign(ALIGN_LEFT | ALIGN_TOP);
+            fillColor(110, 140, 162, 255);
+            text(dlgX + 18.0f, dlgY + 36.0f, "Data directory (recordings, patches, slices):", nullptr);
+            fieldY = dlgY + 60.0f;
+        } else {
+            fontSize(11.0f);
+            textAlign(ALIGN_LEFT | ALIGN_TOP);
+            fillColor(140, 162, 178, 255);
+            text(dlgX + 18.0f, dlgY + 36.0f, "Save to:", nullptr);
+        }
+
+        // Text field
+        dialogTextField_ = { dlgX + 18.0f, fieldY, pw - 36.0f, 26.0f };
+        beginPath();
+        fillColor(12, 18, 26, 255);
+        roundedRect(dialogTextField_.x, dialogTextField_.y,
+                    dialogTextField_.w, dialogTextField_.h, 4.0f);
+        fill();
+        closePath();
+        beginPath();
+        strokeColor(82, 128, 162, 255);
+        strokeWidth(1.0f);
+        roundedRect(dialogTextField_.x, dialogTextField_.y,
+                    dialogTextField_.w, dialogTextField_.h, 4.0f);
+        stroke();
+        closePath();
+
+        // Text content (clipped, scroll to show end)
+        fontSize(11.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        {
+            const float maxW = dialogTextField_.w - 12.0f;
+            Rectangle<float> twBounds;
+            const float tw = textBounds(0.0f, 0.0f, dialogText_.c_str(), nullptr, twBounds);
+            float textX = dialogTextField_.x + 6.0f;
+            if (tw > maxW) textX = dialogTextField_.x + 6.0f + maxW - tw;
+
+            save();
+            scissor(dialogTextField_.x + 2.0f, dialogTextField_.y,
+                    dialogTextField_.w - 4.0f, dialogTextField_.h);
+            fillColor(210, 222, 232, 255);
+            text(textX, dialogTextField_.y + dialogTextField_.h * 0.5f,
+                 dialogText_.c_str(), nullptr);
+
+            // Blinking cursor (500ms period)
+            const bool cursorOn = (std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count() / 500) % 2 == 0;
+            if (cursorOn) {
+                const float cx = std::min(textX + tw + 1.0f,
+                                          dialogTextField_.x + dialogTextField_.w - 4.0f);
+                beginPath();
+                fillColor(200, 220, 240, 200);
+                rect(cx, dialogTextField_.y + 4.0f, 1.5f, dialogTextField_.h - 8.0f);
+                fill();
+                closePath();
+            }
+            restore();
+        }
+
+        // Buttons
+        const float btnW = 86.0f, btnH = 28.0f;
+        const float btnY = dlgY + ph - btnH - 14.0f;
+        dialogOkBtn_     = { dlgX + pw - btnW * 2.0f - 26.0f, btnY, btnW, btnH };
+        dialogCancelBtn_ = { dlgX + pw - btnW - 14.0f,         btnY, btnW, btnH };
+
+        const char* okLabel = (dialogMode_ == kDialogSavePatch) ? "Save" : "Apply";
+        drawButton(dialogOkBtn_,     okLabel,  36, 90, 54);
+        drawButton(dialogCancelBtn_, "Cancel", 55, 55, 62);
+
+        // Keyboard hint
+        fontSize(9.5f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        fillColor(72, 95, 112, 200);
+        text(dlgX + 18.0f, btnY + btnH * 0.5f, "Enter to confirm \xe2\x80\xa2  Esc to cancel", nullptr);
+    }
+
     std::array<float, kParameterCount> values_ {};
     std::vector<ZoneEntry>             zones_;
 
@@ -1357,8 +1558,16 @@ private:
     Rect recBtn_        {};
     Rect savePatchBtn_  {};
     Rect loadPatchBtn_  {};
+    Rect settingsBtn_   {};
     Rect mcpBtn_        {};
     Rect chBtn_         {};
+    // Dialog
+    DialogMode  dialogMode_      = kDialogNone;
+    std::string dialogText_;
+    Rect        dialogTextField_ {};
+    Rect        dialogOkBtn_     {};
+    Rect        dialogCancelBtn_ {};
+    std::string dataDir_;
     Rect volSlider_ {};
     Rect waveRect_       {};
     Rect loopStartHandle_{};
