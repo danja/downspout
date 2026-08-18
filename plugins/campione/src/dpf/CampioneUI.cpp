@@ -450,6 +450,38 @@ protected:
                 repaint(); return true;
             }
 
+            // Drum: map zones to sequential GM drum notes (35, 36, 37 …), one note each
+            if (drumBtn_.contains(px, py)) {
+                const int n = static_cast<int>(zones_.size());
+                for (int zi = 0; zi < n; ++zi) {
+                    zones_[static_cast<std::size_t>(zi)].rootNote  = 35 + zi;
+                    zones_[static_cast<std::size_t>(zi)].rangeLow  = 35 + zi;
+                    zones_[static_cast<std::size_t>(zi)].rangeHigh = 35 + zi;
+                    pushZoneUpdate(static_cast<std::size_t>(zi));
+                }
+                repaint();
+                return true;
+            }
+
+            // Spread: distribute zones equally over a 4-octave range (C2=36 … B5=83)
+            if (spreadBtn_.contains(px, py)) {
+                const int n = static_cast<int>(zones_.size());
+                if (n > 0) {
+                    constexpr int kLow = 36, kRange = 48;  // C2 – B5
+                    for (int zi = 0; zi < n; ++zi) {
+                        const int lo   = kLow + zi       * kRange / n;
+                        const int hi   = kLow + (zi + 1) * kRange / n - 1;
+                        const int root = (lo + hi) / 2;
+                        zones_[static_cast<std::size_t>(zi)].rootNote  = root;
+                        zones_[static_cast<std::size_t>(zi)].rangeLow  = lo;
+                        zones_[static_cast<std::size_t>(zi)].rangeHigh = hi;
+                        pushZoneUpdate(static_cast<std::size_t>(zi));
+                    }
+                }
+                repaint();
+                return true;
+            }
+
             // Filter enable toggle
             if (filterEnableBtn_.contains(px, py)) {
                 zones_[static_cast<std::size_t>(si)].filterEnabled =
@@ -1267,6 +1299,11 @@ private:
                 // Slice trigger button
                 drawActionBtn(waveSliceBtn_, "Slice \xe2\x96\xb8");
             }
+
+            // Zone-layout buttons (operate on all zones)
+            bx += gap;
+            drawActionBtn(drumBtn_,   "Drum");
+            drawActionBtn(spreadBtn_, "Spread");
         }
 
         // ADSR + filter row (bottom 50px of waveform panel)
@@ -1754,6 +1791,8 @@ private:
     Rect waveSliceDecBtn_  {};
     Rect waveSliceCountRect_{};
     Rect waveSliceIncBtn_  {};
+    Rect drumBtn_          {};
+    Rect spreadBtn_        {};
     int  sliceCount_ = 0;   // 0 = auto-detect, >0 = explicit slice count
     // ADSR/filter drag sliders (built during draw, hit-tested in onMouse)
     Rect adsrAttackSlider_  {};
