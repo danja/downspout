@@ -6,6 +6,8 @@ Transmission
 add parse to transmission console
 add audio/midi clip - to loop
 
+check that everything in UI works with MCP & vice versa
+
 ## Campione
 
 add Pan to zone edit
