@@ -10,19 +10,15 @@ The "Load File" prompt should present immediate treatment options:
 - **Beat slice** — detect transients, split into slices, map each to successive keys
 - **Crop ends** — trim silence/low-level content from head and tail
 
-## Per-zone envelopes and filters
+Note: `slice_zone` (equal or auto-detected slices) is already available via the MCP
+server and the UI zone row. What is still missing is an automatic prompt at load time.
 
-In the zone editor view, expose per-zone DSP controls:
+## ~~Per-zone envelopes and filters~~ ✓ Implemented
 
-### ADSR envelope
-- Attack, Decay, Sustain, Release sliders
-- Applied per voice, per zone
+Per-zone ADSR envelope and biquad filter are fully implemented:
 
-### Simple filter
-- Type selector: LP / BP / HP / Notch
-- Frequency and Q controls
-- Applied per voice, per zone
-
-Both envelope and filter parameters must be:
-- Persisted in plugin state (serialized with zone data)
-- Implemented in the DSP engine (lightweight — biquad filter, linear ADSR ramp)
+- Attack, Decay, Sustain, Release — rotary knob controls in the zone DSP panel
+- Filter type (LP / BP / HP / Notch), frequency, and Q — rotary knobs
+- Pan — rotary knob, −1 (full left) to +1 (full right)
+- All DSP parameters persisted in zone state and in Turtle patch files
+- Editable via the UI knob panel and via the `update_zone_dsp` MCP tool
