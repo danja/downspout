@@ -155,7 +155,7 @@ void processBlock(EngineState& state,
 
             if (status == 0x90u && vel > 0u) {  // note-on
                 const int zoneIdx = findZone(zones, note, channel);
-                if (zoneIdx >= 0) {
+                if (zoneIdx >= 0 && !zones[static_cast<std::size_t>(zoneIdx)].muted) {
                     const std::uint64_t now = state.frameCounter + f;
                     const int vi = allocateVoice(state.voices, note, channel, now);
                     Voice& v = state.voices[vi];

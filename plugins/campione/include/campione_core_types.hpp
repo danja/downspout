@@ -34,6 +34,7 @@ struct SampleZone {
     float filterQ        = 0.707f;
     bool  filterEnabled  = false;
     float pan            = 0.0f;   // -1.0 = full left, 0 = centre, +1.0 = full right
+    bool  muted          = false;
 };
 
 struct Voice {

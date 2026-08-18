@@ -512,13 +512,13 @@ protected:
 
         if (std::strcmp(key, kStateKeyZoneDsp) == 0 && value && value[0] != '\0')
         {
-            int idx = 0, filterEnabled = 0, filterType = 0;
+            int idx = 0, filterEnabled = 0, filterType = 0, muted = 0;
             float attackMs = 5.0f, decayMs = 100.0f, sustainLevel = 1.0f, releaseMs = 200.0f;
             float filterCutoff = 20000.0f, filterQ = 0.707f, pan = 0.0f;
-            const int parsed = std::sscanf(value, "%d|%f|%f|%f|%f|%d|%d|%f|%f|%f",
+            const int parsed = std::sscanf(value, "%d|%f|%f|%f|%f|%d|%d|%f|%f|%f|%d",
                                            &idx, &attackMs, &decayMs, &sustainLevel, &releaseMs,
                                            &filterEnabled, &filterType, &filterCutoff, &filterQ,
-                                           &pan);
+                                           &pan, &muted);
             if (parsed >= 5)
             {
                 std::lock_guard<std::mutex> lk(zoneMtx_);
@@ -534,6 +534,7 @@ protected:
                     if (parsed >= 7) { z.filterEnabled = filterEnabled != 0; z.filterType = filterType; }
                     if (parsed >= 9) { z.filterCutoffHz = filterCutoff; z.filterQ = filterQ; }
                     if (parsed >= 10) { z.pan = std::clamp(pan, -1.0f, 1.0f); }
+                    if (parsed >= 11) { z.muted = muted != 0; }
                     std::atomic_store_explicit(&zones_,
                                                std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                                std::memory_order_release);

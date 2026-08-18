@@ -71,6 +71,7 @@ struct ZoneEntry {
     float        filterCutoffHz = 20000.0f;
     float        filterQ        = 0.707f;
     float        pan            = 0.0f;
+    bool         muted          = false;
 };
 
 enum DragField {
@@ -520,8 +521,11 @@ protected:
             }
 
             // Play button — toggle preview
-            const Rect playR { W - kPad - 106.0f, ry + 3.0f, 26.0f, 20.0f };
+            const Rect playR { W - kPad - 140.0f, ry + 3.0f, 26.0f, 20.0f };
             if (playR.contains(px, py)) {
+                selectedZone_ = static_cast<int>(i);
+                if (peakZoneIdx_ != selectedZone_)
+                    loadPeaks(selectedZone_);
                 char buf[16];
                 if (previewZoneIdx_ == static_cast<int>(i)) {
                     // Stop playback
@@ -537,9 +541,24 @@ protected:
                 return true;
             }
 
+            // Mute toggle
+            const Rect muteR { W - kPad - 60.0f, ry + 3.0f, 36.0f, 20.0f };
+            if (muteR.contains(px, py)) {
+                selectedZone_ = static_cast<int>(i);
+                if (peakZoneIdx_ != selectedZone_)
+                    loadPeaks(selectedZone_);
+                zones_[i].muted = !zones_[i].muted;
+                pushZoneDspUpdate(i);
+                repaint();
+                return true;
+            }
+
             // Loop toggle
-            const Rect loopR { W - kPad - 76.0f, ry + 3.0f, 46.0f, 20.0f };
+            const Rect loopR { W - kPad - 110.0f, ry + 3.0f, 46.0f, 20.0f };
             if (loopR.contains(px, py)) {
+                selectedZone_ = static_cast<int>(i);
+                if (peakZoneIdx_ != selectedZone_)
+                    loadPeaks(selectedZone_);
                 zones_[i].loopEnabled = !zones_[i].loopEnabled;
                 // When enabling loop with uninitialised endpoints, set loopEnd
                 // to the full sample length so both handles are immediately draggable.
@@ -743,11 +762,12 @@ private:
         if (idx >= zones_.size()) return;
         const ZoneEntry& z = zones_[idx];
         char buf[256];
-        std::snprintf(buf, sizeof(buf), "%d|%.4f|%.4f|%.4f|%.4f|%d|%d|%.2f|%.4f|%.4f",
+        std::snprintf(buf, sizeof(buf), "%d|%.4f|%.4f|%.4f|%.4f|%d|%d|%.2f|%.4f|%.4f|%d",
                       static_cast<int>(idx),
                       z.attackMs, z.decayMs, z.sustainLevel, z.releaseMs,
                       z.filterEnabled ? 1 : 0, z.filterType,
-                      z.filterCutoffHz, z.filterQ, z.pan);
+                      z.filterCutoffHz, z.filterQ, z.pan,
+                      z.muted ? 1 : 0);
         setState(kStateKeyZoneDsp, buf);
     }
 
@@ -891,8 +911,9 @@ private:
         text(kPad + kColNum,   hy, "#",     nullptr);
         text(kPad + kColRoot,  hy, "Root",  nullptr);
         text(kPad + kColRange, hy, "Range", nullptr);
-        text(W - kPad - 116.0f, hy, "Loop", nullptr);
-        text(kPad + kColFile,  hy, "File",  nullptr);
+        text(W - kPad - 150.0f, hy, "Loop", nullptr);
+        text(W - kPad - 68.0f,  hy, "Mute", nullptr);
+        text(kPad + kColFile,   hy, "File",  nullptr);
 
         beginPath();
         fillColor(50, 62, 72, 255);
@@ -966,7 +987,7 @@ private:
 
             // Play button (one-shot preview)
             const bool isPlaying = (previewZoneIdx_ == static_cast<int>(i));
-            const Rect playR { W - kPad - 106.0f, ry + 3.0f, 26.0f, 20.0f };
+            const Rect playR { W - kPad - 140.0f, ry + 3.0f, 26.0f, 20.0f };
             beginPath();
             fillColor(isPlaying ? 32 : 22, isPlaying ? 100 : 60, isPlaying ? 32 : 22, 255);
             roundedRect(playR.x, playR.y, playR.w, playR.h, 5.0f);
@@ -985,7 +1006,7 @@ private:
                  "\xe2\x96\xb6", nullptr);
 
             // Loop button
-            const Rect loopR { W - kPad - 76.0f, ry + 3.0f, 46.0f, 20.0f };
+            const Rect loopR { W - kPad - 110.0f, ry + 3.0f, 46.0f, 20.0f };
             beginPath();
             fillColor(z.loopEnabled ? 72 : 36,
                       z.loopEnabled ? 103 : 48,
@@ -1009,6 +1030,25 @@ private:
                       z.loopEnabled ? 252 : 200, 255);
             text(loopR.x + loopR.w * 0.5f, loopR.y + loopR.h * 0.5f,
                  z.loopEnabled ? "LOOP" : "OFF", nullptr);
+
+            // Mute button
+            const Rect muteR { W - kPad - 60.0f, ry + 3.0f, 36.0f, 20.0f };
+            beginPath();
+            fillColor(z.muted ? 100 : 36, z.muted ? 30 : 36, z.muted ? 30 : 36, 255);
+            roundedRect(muteR.x, muteR.y, muteR.w, muteR.h, 5.0f);
+            fill();
+            closePath();
+            beginPath();
+            strokeColor(z.muted ? 220 : 82, z.muted ? 80 : 112, z.muted ? 80 : 112,
+                        z.muted ? 220 : 110);
+            strokeWidth(1.0f);
+            roundedRect(muteR.x, muteR.y, muteR.w, muteR.h, 5.0f);
+            stroke();
+            closePath();
+            fontSize(10.0f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            fillColor(z.muted ? 240 : 178, z.muted ? 100 : 120, z.muted ? 100 : 120, 255);
+            text(muteR.x + muteR.w * 0.5f, muteR.y + muteR.h * 0.5f, "MUTE", nullptr);
 
             // Remove button
             const Rect removeR { W - kPad - 22.0f, ry + 4.0f, 18.0f, 18.0f };
@@ -1535,6 +1575,7 @@ private:
             e.filterCutoffHz = z.filterCutoffHz;
             e.filterQ       = z.filterQ;
             e.pan           = z.pan;
+            e.muted         = z.muted;
             zones_.push_back(std::move(e));
         }
         // Auto-select first zone when none is selected (e.g. after project reload)

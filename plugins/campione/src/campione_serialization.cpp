@@ -113,6 +113,7 @@ std::string serializeZones(const std::vector<SampleZone>& zones) {
         out += "filter_cutoff="  + std::to_string(z.filterCutoffHz) + "\n";
         out += "filter_q="       + std::to_string(z.filterQ)        + "\n";
         out += "pan="            + std::to_string(z.pan)            + "\n";
+        out += "muted="          + std::to_string(z.muted ? 1 : 0)  + "\n";
     }
     return out;
 }
@@ -166,6 +167,7 @@ std::optional<std::vector<SampleZone>> deserializeZones(const std::string& text)
             else if (key == "filter_cutoff"  && parseFloat(val, fv)) z.filterCutoffHz = fv;
             else if (key == "filter_q"       && parseFloat(val, fv)) z.filterQ       = fv;
             else if (key == "pan"            && parseFloat(val, fv)) z.pan            = std::clamp(fv, -1.0f, 1.0f);
+            else if (key == "muted"          && parseInt(val, iv))   z.muted          = iv != 0;
             // ignore unknown keys for forward compatibility
         }
         zones.push_back(std::move(z));
