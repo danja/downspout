@@ -270,8 +270,8 @@ void processBlock(EngineState& state,
             }
 
             const float gain = v.velocity * params.masterVolume * v.adsrValue;
-            const float panL = std::max(0.0f, 1.0f - zone.pan);
-            const float panR = std::max(0.0f, 1.0f + zone.pan);
+            const float panL = std::clamp(1.0f - zone.pan, 0.0f, 1.0f);
+            const float panR = std::clamp(1.0f + zone.pan, 0.0f, 1.0f);
             if (audio.outputs[0]) audio.outputs[0][f] += outL * gain * panL;
             if (hasStereo && audio.outputs[1]) audio.outputs[1][f] += outR * gain * panR;
 

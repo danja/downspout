@@ -604,22 +604,22 @@ protected:
             ZoneEntry& dz = zones_[static_cast<std::size_t>(dragZoneIdx_)];
             const float dy = dragStartY_ - py;  // upward = increase
             if (dragField_ == kDragAttack) {
-                dz.attackMs = std::clamp(dragStartFloat_ + dy * 2.0f, 0.0f, 5000.0f);
+                dz.attackMs = std::clamp(dragStartFloat_ + dy * 6.0f, 0.0f, 5000.0f);
             } else if (dragField_ == kDragDecay) {
-                dz.decayMs = std::clamp(dragStartFloat_ + dy * 2.0f, 0.0f, 5000.0f);
+                dz.decayMs = std::clamp(dragStartFloat_ + dy * 6.0f, 0.0f, 5000.0f);
             } else if (dragField_ == kDragSustain) {
-                dz.sustainLevel = std::clamp(dragStartFloat_ + dy / 100.0f, 0.0f, 1.0f);
+                dz.sustainLevel = std::clamp(dragStartFloat_ + dy / 33.0f, 0.0f, 1.0f);
             } else if (dragField_ == kDragRelease) {
-                dz.releaseMs = std::clamp(dragStartFloat_ + dy * 2.0f, 0.0f, 10000.0f);
+                dz.releaseMs = std::clamp(dragStartFloat_ + dy * 6.0f, 0.0f, 10000.0f);
             } else if (dragField_ == kDragPan) {
-                dz.pan = std::clamp(dragStartFloat_ + dy / 100.0f, -1.0f, 1.0f);
+                dz.pan = std::clamp(dragStartFloat_ + dy / 33.0f, -1.0f, 1.0f);
             } else if (dragField_ == kDragFilterCutoff) {
-                // Logarithmic feel: scale by factor relative to start value
-                const float factor = std::pow(2.0f, dy / 60.0f);
+                const float factor = std::pow(2.0f, dy / 20.0f);
                 dz.filterCutoffHz = std::clamp(dragStartFloat_ * factor, 20.0f, 20000.0f);
             } else if (dragField_ == kDragFilterQ) {
-                dz.filterQ = std::clamp(dragStartFloat_ + dy / 100.0f, 0.1f, 20.0f);
+                dz.filterQ = std::clamp(dragStartFloat_ + dy / 33.0f, 0.1f, 20.0f);
             }
+            pushZoneDspUpdate(static_cast<std::size_t>(dragZoneIdx_));
             repaint();
             return true;
         }
