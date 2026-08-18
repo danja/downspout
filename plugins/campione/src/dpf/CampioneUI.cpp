@@ -41,6 +41,7 @@ using downspout::campione::kStateKeyZoneSlice;
 using downspout::campione::kStateKeyPatchSave;
 using downspout::campione::kStateKeyPatchLoad;
 using downspout::campione::kStateKeyDataDir;
+using downspout::campione::kStateKeyZonePreview;
 using downspout::campione::kDefaultDataDir;
 
 struct Rect {
@@ -351,9 +352,13 @@ protected:
             return true;
         }
 
-        // Load Patch — open file browser
+        // Load Patch — open file browser starting at dataDir_
         if (loadPatchBtn_.contains(px, py)) {
-            requestStateFile(kStateKeyPatchLoad);
+            FileBrowserOptions opts;
+            opts.startDir = dataDir_.empty() ? nullptr : dataDir_.c_str();
+            opts.title    = "Load Patch";
+            fileBrowserKey_ = kStateKeyPatchLoad;
+            openFileBrowser(opts);
             return true;
         }
 
@@ -506,6 +511,28 @@ protected:
                     selectedZone_ = -1;
                 else if (selectedZone_ > static_cast<int>(i))
                     --selectedZone_;
+                if (previewZoneIdx_ == static_cast<int>(i))
+                    previewZoneIdx_ = -1;
+                else if (previewZoneIdx_ > static_cast<int>(i))
+                    --previewZoneIdx_;
+                repaint();
+                return true;
+            }
+
+            // Play button — toggle preview
+            const Rect playR { W - kPad - 106.0f, ry + 3.0f, 26.0f, 20.0f };
+            if (playR.contains(px, py)) {
+                char buf[16];
+                if (previewZoneIdx_ == static_cast<int>(i)) {
+                    // Stop playback
+                    previewZoneIdx_ = -1;
+                    std::snprintf(buf, sizeof(buf), "-1");
+                } else {
+                    // Start playback
+                    previewZoneIdx_ = static_cast<int>(i);
+                    std::snprintf(buf, sizeof(buf), "%d", static_cast<int>(i));
+                }
+                setState(kStateKeyZonePreview, buf);
                 repaint();
                 return true;
             }
@@ -680,6 +707,13 @@ protected:
             return true;
         }
         return true; // swallow all other keys while dialog is open
+    }
+
+    void uiFileBrowserSelected(const char* filename) override
+    {
+        if (filename && filename[0] != '\0' && !fileBrowserKey_.empty())
+            setState(fileBrowserKey_.c_str(), filename);
+        fileBrowserKey_.clear();
     }
 
 private:
@@ -929,6 +963,26 @@ private:
             else
                 fillColor(200, 205, 215, 255);
             text(kPad + kColRange + 52.0f, mid, hi.c_str(), nullptr);
+
+            // Play button (one-shot preview)
+            const bool isPlaying = (previewZoneIdx_ == static_cast<int>(i));
+            const Rect playR { W - kPad - 106.0f, ry + 3.0f, 26.0f, 20.0f };
+            beginPath();
+            fillColor(isPlaying ? 32 : 22, isPlaying ? 100 : 60, isPlaying ? 32 : 22, 255);
+            roundedRect(playR.x, playR.y, playR.w, playR.h, 5.0f);
+            fill();
+            closePath();
+            beginPath();
+            strokeColor(isPlaying ? 80 : 60, isPlaying ? 220 : 140, isPlaying ? 80 : 60, 220);
+            strokeWidth(1.0f);
+            roundedRect(playR.x, playR.y, playR.w, playR.h, 5.0f);
+            stroke();
+            closePath();
+            fontSize(11.0f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            fillColor(isPlaying ? 80 : 60, isPlaying ? 230 : 160, isPlaying ? 80 : 60, 255);
+            text(playR.x + playR.w * 0.5f, playR.y + playR.h * 0.5f,
+                 "\xe2\x96\xb6", nullptr);
 
             // Loop button
             const Rect loopR { W - kPad - 76.0f, ry + 3.0f, 46.0f, 20.0f };
@@ -1645,6 +1699,7 @@ private:
     Rect        dialogOkBtn_     {};
     Rect        dialogCancelBtn_ {};
     std::string dataDir_;
+    std::string fileBrowserKey_;  // state key to route the next uiFileBrowserSelected result
     Rect volSlider_ {};
     Rect waveRect_       {};
     Rect loopStartHandle_{};
@@ -1680,6 +1735,7 @@ private:
     uint32_t  dragStartFrame_= 0;
 
     int              selectedZone_   = -1;
+    int              previewZoneIdx_ = -1;  // zone currently playing via Play button (-1 = none)
     std::vector<float> peaks_;
     int              peakZoneIdx_   = -1;
     bool             peakLoadFailed_ = false;

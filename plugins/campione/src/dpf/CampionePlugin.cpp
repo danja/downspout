@@ -62,6 +62,8 @@ using downspout::campione::kStateZoneSlice;
 using downspout::campione::kStatePatchSave;
 using downspout::campione::kStatePatchLoad;
 using downspout::campione::kStateDataDir;
+using downspout::campione::kStateZonePreview;
+using downspout::campione::kStateKeyZonePreview;
 using downspout::campione::kDefaultDataDir;
 using downspout::campione::kStateParameters;
 using downspout::campione::kStateZoneFade;
@@ -370,6 +372,12 @@ protected:
             state.hints        = 0;
             state.defaultValue = "";
             break;
+        case kStateZonePreview:
+            state.key          = kStateKeyZonePreview;
+            state.label        = "Preview Zone";
+            state.hints        = 0;
+            state.defaultValue = "";
+            break;
         }
     }
 
@@ -564,6 +572,12 @@ protected:
                 recordingOutputDir_ = value;
             return;
         }
+
+        if (std::strcmp(key, kStateKeyZonePreview) == 0 && value)
+        {
+            pendingPreviewZone_.store(std::atoi(value), std::memory_order_release);
+            return;
+        }
     }
 
     void activate() override
@@ -611,13 +625,45 @@ protected:
                 coreMidi[i].data[b] = data[b];
         }
 
+        // Synthetic preview injection (UI play button → pendingPreviewZone_ → note event)
+        uint32_t coreMidiCount = midiCount;
+        {
+            const int pending = pendingPreviewZone_.exchange(-2, std::memory_order_acq_rel);
+            if (pending >= -1 && coreMidiCount + 2 <= kMaxMidi)
+            {
+                // Stop any previous preview note
+                if (previewNote_ >= 0)
+                {
+                    CoreMidiEvent& off = coreMidi[coreMidiCount++];
+                    off.frame   = 0;
+                    off.size    = 3;
+                    off.data[0] = 0x80;  // note-off ch1
+                    off.data[1] = static_cast<uint8_t>(previewNote_);
+                    off.data[2] = 0;
+                    previewNote_ = -1;
+                }
+                if (pending >= 0 && pending < static_cast<int>(zones.size()))
+                {
+                    // Use zone's root note for preview
+                    const int note = zones[static_cast<std::size_t>(pending)].rootNote;
+                    CoreMidiEvent& on = coreMidi[coreMidiCount++];
+                    on.frame   = 0;
+                    on.size    = 3;
+                    on.data[0] = 0x90;  // note-on ch1
+                    on.data[1] = static_cast<uint8_t>(note);
+                    on.data[2] = 100;
+                    previewNote_ = note;
+                }
+            }
+        }
+
         CoreAudioBlock audio;
         audio.outputs[0]   = outputs[0];
         audio.outputs[1]   = outputs[1];
         audio.channelCount = DISTRHO_PLUGIN_NUM_OUTPUTS;
 
         downspout::campione::processBlock(engineState_, parameters_, zones,
-                                          coreMidi, midiCount, frames,
+                                          coreMidi, coreMidiCount, frames,
                                           getSampleRate(), audio);
 
         if (pendingZoneUpdate_.exchange(false, std::memory_order_acq_rel)) {
@@ -1267,8 +1313,11 @@ private:
     std::shared_ptr<const ZoneVec> zones_ {};
     const ZoneVec                  emptyZones_ {};
 
-    std::atomic<bool>        pendingZoneUpdate_  {false};
-    std::atomic<bool>        pendingParamNotify_ {false};
+    std::atomic<bool>        pendingZoneUpdate_   {false};
+    std::atomic<bool>        pendingParamNotify_  {false};
+    // -2 = nothing pending; -1 = stop preview; >=0 = play zone at that index
+    std::atomic<int>         pendingPreviewZone_  {-2};
+    int                      previewNote_         {-1};  // audio-thread only
     std::atomic<int>         zonesVersion_       {0};
     std::mutex               zoneMtx_;           // guards zonesInitialized_ + zone writes
     bool                     zonesInitialized_  {false};

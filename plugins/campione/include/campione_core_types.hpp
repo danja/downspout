@@ -54,9 +54,13 @@ struct Voice {
     // Biquad filter state (one per output channel)
     float bqZ1[2] = {};
     float bqZ2[2] = {};
-    // Biquad coefficients (set at note-on from zone params)
+    // Biquad coefficients (recomputed lazily when zone params change)
     float bqB0 = 1.0f, bqB1 = 0.0f, bqB2 = 0.0f;
     float bqA1 = 0.0f, bqA2 = 0.0f;
+    // Last params used to compute coefficients — sentinel -1 forces recompute on first use
+    float lastFilterCutoff = -1.0f;
+    float lastFilterQ      = -1.0f;
+    int   lastFilterType   = -1;
 };
 
 struct Parameters {

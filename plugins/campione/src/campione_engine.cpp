@@ -174,7 +174,9 @@ void processBlock(EngineState& state,
                     v.adsrValue = 0.0f;
                     v.bqZ1[0] = v.bqZ1[1] = 0.0f;
                     v.bqZ2[0] = v.bqZ2[1] = 0.0f;
-                    if (zone.filterEnabled) computeBiquad(v, zone, hostSampleRate);
+                    v.lastFilterCutoff = -1.0f;  // force recompute on first use
+                    v.lastFilterQ      = -1.0f;
+                    v.lastFilterType   = -1;
                 }
             } else if (status == 0x80u || (status == 0x90u && vel == 0u)) {  // note-off
                 for (Voice& v : state.voices)
@@ -265,8 +267,19 @@ void processBlock(EngineState& state,
             }
 
             if (zone.filterEnabled) {
+                // Recompute coefficients when filter params change (live update, same as ADSR)
+                if (zone.filterCutoffHz != v.lastFilterCutoff ||
+                    zone.filterQ        != v.lastFilterQ      ||
+                    zone.filterType     != v.lastFilterType) {
+                    computeBiquad(v, zone, hostSampleRate);
+                    v.lastFilterCutoff = zone.filterCutoffHz;
+                    v.lastFilterQ      = zone.filterQ;
+                    v.lastFilterType   = zone.filterType;
+                }
                 outL = applyBiquad(v, outL, 0);
-                outR = applyBiquad(v, outR, zone.channelCount > 1 ? 1 : 0);
+                // Stereo: independent filter state per channel.
+                // Mono: reuse the already-filtered L rather than running the same biquad state twice.
+                outR = (zone.channelCount > 1) ? applyBiquad(v, outR, 1) : outL;
             }
 
             const float gain = v.velocity * params.masterVolume * v.adsrValue;
