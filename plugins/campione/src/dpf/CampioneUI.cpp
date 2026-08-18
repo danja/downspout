@@ -612,7 +612,7 @@ protected:
             } else if (dragField_ == kDragRelease) {
                 dz.releaseMs = std::clamp(dragStartFloat_ + dy * 2.0f, 0.0f, 10000.0f);
             } else if (dragField_ == kDragPan) {
-                dz.pan = std::clamp(dragStartFloat_ - (px - dragStartX_) / 60.0f, -1.0f, 1.0f);
+                dz.pan = std::clamp(dragStartFloat_ + dy / 100.0f, -1.0f, 1.0f);
             } else if (dragField_ == kDragFilterCutoff) {
                 // Logarithmic feel: scale by factor relative to start value
                 const float factor = std::pow(2.0f, dy / 60.0f);
@@ -1188,32 +1188,68 @@ private:
             fill();
             closePath();
 
-            // Helper: draw a labeled drag slider
-            auto drawDragSlider = [&](Rect& out, float bx, float by, float bw,
-                                      const char* label, const char* valStr, bool active) {
-                out = { bx, by, bw, 38.0f };
+            // Helper: draw a rotary knob.
+            // t = normalised 0..1. arc() is only called when sweep > 0 to avoid crashes.
+            constexpr float kStartAng = 0.75f * 3.14159265f;  // lower-left (~8 o'clock)
+            constexpr float kSweep    = 1.5f  * 3.14159265f;  // 270°
+
+            auto drawKnob = [&](Rect& out, float bx, float by, float bw,
+                                const char* label, const char* valStr,
+                                float t, bool active) {
+                out = { bx, by, bw, 48.0f };
+                const float r = std::min(bw * 0.40f, 12.0f);
+                if (r <= 0.5f) return;
+                const float cx = bx + bw * 0.5f;
+                const float cy = by + 10.0f + r;
+                const float tc = std::clamp(t, 0.0f, 1.0f);
+                const float endAng = kStartAng + tc * kSweep;
+
                 // Label
-                fontSize(8.5f);
+                fontSize(7.5f);
                 textAlign(ALIGN_CENTER | ALIGN_TOP);
                 fillColor(108, 130, 148, 255);
-                text(bx + bw * 0.5f, by + 2.0f, label, nullptr);
-                // Value box
-                const float vby = by + 13.0f;
+                text(cx, by + 1.0f, label, nullptr);
+
+                // Knob body
                 beginPath();
-                fillColor(active ? 40 : 22, active ? 60 : 34, active ? 80 : 44, 255);
-                roundedRect(bx + 2.0f, vby, bw - 4.0f, 20.0f, 3.0f);
+                circle(cx, cy, r);
+                fillColor(active ? 30 : 22, active ? 46 : 34, active ? 62 : 46, 255);
                 fill();
-                closePath();
+
+                // Track ring (always draw full 270° — sweep is constant, never zero)
                 beginPath();
-                strokeColor(active ? 100 : 55, active ? 150 : 78, active ? 180 : 95, 180);
-                strokeWidth(1.0f);
-                roundedRect(bx + 2.0f, vby, bw - 4.0f, 20.0f, 3.0f);
+                arc(cx, cy, r - 1.5f, kStartAng, kStartAng + kSweep, CW);
+                strokeColor(38, 55, 72, 255);
+                strokeWidth(2.5f);
                 stroke();
-                closePath();
-                fontSize(9.0f);
-                textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-                fillColor(active ? 240 : 180, active ? 210 : 200, active ? 170 : 215, 255);
-                text(bx + bw * 0.5f, vby + 10.0f, valStr, nullptr);
+
+                // Fill arc (only draw when value is meaningfully above min)
+                const float fillSweep = tc * kSweep;
+                if (fillSweep > 0.01f) {
+                    beginPath();
+                    arc(cx, cy, r - 1.5f, kStartAng, kStartAng + fillSweep, CW);
+                    strokeColor(active ? 80 : 52, active ? 168 : 126, active ? 214 : 172, 255);
+                    strokeWidth(2.5f);
+                    stroke();
+                }
+
+                // Indicator line from centre to rim
+                {
+                    const float ix = cx + (r - 3.5f) * std::cos(endAng);
+                    const float iy = cy + (r - 3.5f) * std::sin(endAng);
+                    beginPath();
+                    moveTo(cx, cy);
+                    lineTo(ix, iy);
+                    strokeColor(active ? 235 : 185, active ? 218 : 198, active ? 185 : 215, 255);
+                    strokeWidth(1.5f);
+                    stroke();
+                }
+
+                // Value label below knob
+                fontSize(7.5f);
+                textAlign(ALIGN_CENTER | ALIGN_TOP);
+                fillColor(active ? 235 : 165, active ? 218 : 185, active ? 185 : 205, 255);
+                text(cx, cy + r + 2.0f, valStr, nullptr);
             };
 
             char buf[32];
@@ -1222,40 +1258,45 @@ private:
 
             // Attack
             std::snprintf(buf, sizeof(buf), "%.0fms", dz.attackMs);
-            drawDragSlider(adsrAttackSlider_,  sx, ry + 2.0f, slotW - 2.0f, "ATK", buf,
-                           dragField_ == kDragAttack && dragZoneIdx_ == selectedZone_);
+            drawKnob(adsrAttackSlider_,  sx, ry + 2.0f, slotW - 2.0f, "ATK", buf,
+                     dz.attackMs / 5000.0f,
+                     dragField_ == kDragAttack && dragZoneIdx_ == selectedZone_);
             sx += slotW;
 
             // Decay
             std::snprintf(buf, sizeof(buf), "%.0fms", dz.decayMs);
-            drawDragSlider(adsrDecaySlider_,   sx, ry + 2.0f, slotW - 2.0f, "DEC", buf,
-                           dragField_ == kDragDecay && dragZoneIdx_ == selectedZone_);
+            drawKnob(adsrDecaySlider_,   sx, ry + 2.0f, slotW - 2.0f, "DEC", buf,
+                     dz.decayMs / 5000.0f,
+                     dragField_ == kDragDecay && dragZoneIdx_ == selectedZone_);
             sx += slotW;
 
             // Sustain
             std::snprintf(buf, sizeof(buf), "%.2f", dz.sustainLevel);
-            drawDragSlider(adsrSustainSlider_, sx, ry + 2.0f, slotW - 2.0f, "SUS", buf,
-                           dragField_ == kDragSustain && dragZoneIdx_ == selectedZone_);
+            drawKnob(adsrSustainSlider_, sx, ry + 2.0f, slotW - 2.0f, "SUS", buf,
+                     dz.sustainLevel,
+                     dragField_ == kDragSustain && dragZoneIdx_ == selectedZone_);
             sx += slotW;
 
             // Release
             std::snprintf(buf, sizeof(buf), "%.0fms", dz.releaseMs);
-            drawDragSlider(adsrReleaseSlider_, sx, ry + 2.0f, slotW - 2.0f, "REL", buf,
-                           dragField_ == kDragRelease && dragZoneIdx_ == selectedZone_);
+            drawKnob(adsrReleaseSlider_, sx, ry + 2.0f, slotW - 2.0f, "REL", buf,
+                     dz.releaseMs / 10000.0f,
+                     dragField_ == kDragRelease && dragZoneIdx_ == selectedZone_);
             sx += slotW;
 
-            // Pan
+            // Pan — centre (pan=0) maps to t=0.5 (12 o'clock)
             if (dz.pan == 0.0f)
                 std::snprintf(buf, sizeof(buf), "C");
             else
                 std::snprintf(buf, sizeof(buf), dz.pan < 0.0f ? "L%.0f" : "R%.0f",
                               std::abs(dz.pan) * 100.0f);
-            drawDragSlider(panSlider_, sx, ry + 2.0f, slotW - 2.0f, "PAN", buf,
-                           dragField_ == kDragPan && dragZoneIdx_ == selectedZone_);
+            drawKnob(panSlider_, sx, ry + 2.0f, slotW - 2.0f, "PAN", buf,
+                     (dz.pan + 1.0f) * 0.5f,
+                     dragField_ == kDragPan && dragZoneIdx_ == selectedZone_);
             sx += slotW;
 
-            // Filter enable toggle
-            filterEnableBtn_ = { sx + 1.0f, ry + 4.0f, slotW - 4.0f, 36.0f };
+            // Filter enable toggle (kept as button)
+            filterEnableBtn_ = { sx + 1.0f, ry + 3.0f, slotW - 4.0f, 44.0f };
             beginPath();
             fillColor(dz.filterEnabled ? 36 : 22, dz.filterEnabled ? 70 : 34, dz.filterEnabled ? 90 : 44, 255);
             roundedRect(filterEnableBtn_.x, filterEnableBtn_.y, filterEnableBtn_.w, filterEnableBtn_.h, 4.0f);
@@ -1276,9 +1317,9 @@ private:
                  dz.filterEnabled ? "ON" : "OFF", nullptr);
             sx += slotW;
 
-            // Filter type toggle
+            // Filter type toggle (kept as button)
             static const char* kFltNames[] = {"LP","BP","HP","NT"};
-            filterTypeBtn_ = { sx + 1.0f, ry + 4.0f, slotW - 4.0f, 36.0f };
+            filterTypeBtn_ = { sx + 1.0f, ry + 3.0f, slotW - 4.0f, 44.0f };
             beginPath();
             fillColor(28, 44, 58, 255);
             roundedRect(filterTypeBtn_.x, filterTypeBtn_.y, filterTypeBtn_.w, filterTypeBtn_.h, 4.0f);
@@ -1299,16 +1340,23 @@ private:
                  kFltNames[std::clamp(dz.filterType, 0, 3)], nullptr);
             sx += slotW;
 
-            // Cutoff
-            std::snprintf(buf, sizeof(buf), "%.0fHz", dz.filterCutoffHz);
-            drawDragSlider(filterCutoffSlider_, sx, ry + 2.0f, slotW - 2.0f, "CUTOFF", buf,
-                           dragField_ == kDragFilterCutoff && dragZoneIdx_ == selectedZone_);
+            // Cutoff — logarithmic mapping 20..20000 Hz
+            {
+                const float logT = std::log(std::max(dz.filterCutoffHz, 20.0f) / 20.0f)
+                                   / std::log(1000.0f);
+                std::snprintf(buf, sizeof(buf), "%.0fHz", dz.filterCutoffHz);
+                drawKnob(filterCutoffSlider_, sx, ry + 2.0f, slotW - 2.0f, "CUTOFF", buf,
+                         logT,
+                         dragField_ == kDragFilterCutoff && dragZoneIdx_ == selectedZone_);
+            }
             sx += slotW;
 
-            // Q
+            // Q — linear 0.1..20
             std::snprintf(buf, sizeof(buf), "%.2f", dz.filterQ);
-            drawDragSlider(filterQSlider_, sx, ry + 2.0f, slotW - 2.0f, "Q", buf,
-                           dragField_ == kDragFilterQ && dragZoneIdx_ == selectedZone_);
+            drawKnob(filterQSlider_, sx, ry + 2.0f, slotW - 2.0f, "Q", buf,
+                     (dz.filterQ - 0.1f) / 19.9f,
+                     dragField_ == kDragFilterQ && dragZoneIdx_ == selectedZone_);
+            (void)sx;
         }
 
         // Border
