@@ -426,6 +426,8 @@ protected:
                                            &loopStart, &loopEnd);
             if (parsed >= 5)
             {
+                std::lock_guard<std::mutex> lk(zoneMtx_);
+                zonesInitialized_ = true;
                 const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
                 if (existing && idx >= 0 && idx < static_cast<int>(existing->size())) {
                     auto newZones = std::make_shared<ZoneVec>(*existing);
@@ -457,6 +459,8 @@ protected:
         if (std::strcmp(key, kStateKeyZoneRemove) == 0 && value && value[0] != '\0')
         {
             const int idx = std::atoi(value);
+            std::lock_guard<std::mutex> lk(zoneMtx_);
+            zonesInitialized_ = true;
             const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
             if (existing && idx >= 0 && idx < static_cast<int>(existing->size())) {
                 auto newZones = std::make_shared<ZoneVec>(*existing);
@@ -877,6 +881,10 @@ private:
         std::atomic_store_explicit(&zones_,
                                    std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                    std::memory_order_release);
+        // Mark initialized so the host re-sending state on UI reopen won't
+        // overwrite in-memory zones (REAPER sends IEditController::setState
+        // with the saved project state each time the plugin window opens).
+        zonesInitialized_ = true;
         // Seed the UI bridge so uiIdle() sees the correct state on first poll,
         // even before any MCP call triggers notifyZonesChanged().
         notifyZonesChanged();
