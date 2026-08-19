@@ -13,7 +13,6 @@ struct EngineState {
     PatternState pattern {};
     VariationState variation {};
     bool patternValid = false;
-    bool templateLocked = false;
     std::array<PendingNoteOff, kMaxPendingNoteOffs> pendingNoteOffs {};
     std::int64_t lastTransportStep = -1;
     bool wasPlaying = false;

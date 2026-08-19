@@ -458,7 +458,6 @@ protected:
             {
                 engine_.pattern = *pattern;
                 engine_.patternValid = true;
-                engine_.templateLocked = true;
             }
         }
     }

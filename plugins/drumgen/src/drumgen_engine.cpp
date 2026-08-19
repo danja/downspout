@@ -1,7 +1,6 @@
 #include "drumgen_engine.hpp"
 
 #include "drumgen_pattern.hpp"
-#include "drumgen_rng.hpp"
 #include "drumgen_transport.hpp"
 #include "drumgen_variation.hpp"
 
@@ -14,22 +13,6 @@ namespace {
 constexpr int kLaneCrash   = static_cast<int>(LaneId::crash);
 constexpr int kLaneOpenHat = static_cast<int>(LaneId::openHat);
 
-// Amount-slider scale when playing a locked template (0.0-1.0 → 0.0-2.0, neutral at 0.5)
-[[nodiscard]] float templateVelocityScale(int lane, const Controls& controls) {
-    const float amt = [&]() {
-        switch (static_cast<LaneId>(lane)) {
-        case LaneId::kick:                         return controls.kickAmt;
-        case LaneId::clap: case LaneId::snare:     return controls.backbeatAmt;
-        case LaneId::crash: case LaneId::bash:
-        case LaneId::cowbell:                      return controls.metalAmt;
-        case LaneId::closedHat: case LaneId::openHat: return controls.hatAmt;
-        case LaneId::lowTom: case LaneId::highTom: return controls.tomAmt;
-        case LaneId::clave:                        return controls.auxAmt;
-        default:                                   return 1.0f;
-        }
-    }();
-    return amt * 2.0f;   // 0.5 → 1.0 (neutral), 0.0 → silence, 1.0 → double
-}
 
 [[nodiscard]] int clampi(int value, int minValue, int maxValue) {
     if (value < minValue) {
@@ -147,7 +130,10 @@ struct UpdateDecision {
 };
 
 [[nodiscard]] ::downspout::Meter targetMeterForTransport(const EngineState& state, const TransportSnapshot& transport) {
-    if (transport.valid && transport.beatsPerBar > 0.0 && transport.beatType > 0.0) {
+    // Only pull the transport meter while playing; when stopped, keep the current pattern's
+    // meter so that a loaded template with an odd time signature isn't immediately overwritten
+    // by the host's project time signature before the user has a chance to hear it.
+    if (transport.valid && transport.playing && transport.beatsPerBar > 0.0 && transport.beatType > 0.0) {
         return ::downspout::sanitizeMeter(transport.meter);
     }
     if (state.patternValid) {
@@ -167,25 +153,9 @@ UpdateDecision updatePatternIfNeeded(EngineState& state,
     const bool varyChanged = std::fabs(current.vary - state.previousControls.vary) >= 0.0001f;
     const bool meterChanged = !state.patternValid || !::downspout::metersEqual(state.pattern.meter, targetMeter);
 
-    if (newChanged) {
-        state.templateLocked = false;
-    }
-
-    const bool fullRegen = !state.patternValid ||
-                           (!state.templateLocked && (controlsChanged || meterChanged)) ||
-                           newChanged ||
-                           (mutateChanged && !state.templateLocked);
-
-    if (fullRegen) {
+    if (!state.patternValid || controlsChanged || meterChanged || newChanged || mutateChanged) {
         regeneratePattern(state.pattern, current, targetMeter, false);
         state.patternValid = true;
-        resetVariationProgress(state.variation);
-    } else if (mutateChanged && state.templateLocked) {
-        // Vary the loaded template in place — pick a bar and refresh its hits.
-        Rng rng;
-        rng.seed(current.seed ^ (static_cast<std::uint32_t>(current.actionMutate) * 2654435761u));
-        const int barIndex = state.pattern.bars > 1 ? rng.nextInt(0, state.pattern.bars - 1) : 0;
-        refreshBar(state.pattern, current, state.pattern.meter, barIndex);
         resetVariationProgress(state.variation);
     } else if (varyChanged) {
         resetVariationProgress(state.variation);
@@ -244,11 +214,7 @@ void emitStepHits(EngineState& state,
         const int onFrame = clampi(static_cast<int>(frame) + (lane == kLaneOpenHat ? kSafetyGapSamples : 0),
                                    0,
                                    static_cast<int>(nframes) - 1);
-        const std::uint8_t emitVel = state.templateLocked
-            ? static_cast<std::uint8_t>(clampi(
-                  static_cast<int>(static_cast<float>(cell.velocity) * templateVelocityScale(lane, state.controls)),
-                  0, 127))
-            : cell.velocity;
+        const std::uint8_t emitVel = cell.velocity;
         emitNoteOn(result, state, static_cast<std::uint32_t>(onFrame), note, emitVel);
 
         const int gateSamples = clampi(static_cast<int>(std::lround(samplesPerStep * (lane == kLaneCrash ? 0.60 : 0.35))),
