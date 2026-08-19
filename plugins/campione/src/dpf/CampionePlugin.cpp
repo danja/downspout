@@ -1192,7 +1192,7 @@ private:
         api.updateZoneDsp = [this](int idx,
                                     float attackMs, float decayMs, float sustainLevel, float releaseMs,
                                     int filterEnabled, int filterType, float filterCutoff, float filterQ,
-                                    float pan)
+                                    float pan, int muted)
                                     -> std::string {
             std::lock_guard<std::mutex> lk(zoneMtx_);
             zonesInitialized_ = true;
@@ -1211,6 +1211,47 @@ private:
             if (filterCutoff  >= 0.0f) z.filterCutoffHz = filterCutoff;
             if (filterQ       >= 0.0f) z.filterQ       = filterQ;
             if (pan           >= -1.0f && pan <= 1.0f) z.pan = pan;
+            if (muted         >= 0)    z.muted         = muted != 0;
+            std::atomic_store_explicit(&zones_,
+                                       std::shared_ptr<const ZoneVec>(std::move(nz)),
+                                       std::memory_order_release);
+            notifyZonesChanged();
+            return {};
+        };
+
+        api.mapDrum = [this]() -> std::string {
+            std::lock_guard<std::mutex> lk(zoneMtx_);
+            zonesInitialized_ = true;
+            const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+            if (!existing || existing->empty()) return "no zones loaded";
+            auto nz = std::make_shared<ZoneVec>(*existing);
+            for (int i = 0; i < static_cast<int>(nz->size()); ++i) {
+                (*nz)[i].rootNote  = 35 + i;
+                (*nz)[i].rangeLow  = 35 + i;
+                (*nz)[i].rangeHigh = 35 + i;
+            }
+            std::atomic_store_explicit(&zones_,
+                                       std::shared_ptr<const ZoneVec>(std::move(nz)),
+                                       std::memory_order_release);
+            notifyZonesChanged();
+            return {};
+        };
+
+        api.mapSpread = [this]() -> std::string {
+            std::lock_guard<std::mutex> lk(zoneMtx_);
+            zonesInitialized_ = true;
+            const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+            if (!existing || existing->empty()) return "no zones loaded";
+            auto nz = std::make_shared<ZoneVec>(*existing);
+            constexpr int kLow = 36, kRange = 48;
+            const int n = static_cast<int>(nz->size());
+            for (int i = 0; i < n; ++i) {
+                const int lo   = kLow + i * kRange / n;
+                const int hi   = kLow + (i + 1) * kRange / n - 1;
+                (*nz)[i].rootNote  = (lo + hi) / 2;
+                (*nz)[i].rangeLow  = lo;
+                (*nz)[i].rangeHigh = hi;
+            }
             std::atomic_store_explicit(&zones_,
                                        std::shared_ptr<const ZoneVec>(std::move(nz)),
                                        std::memory_order_release);

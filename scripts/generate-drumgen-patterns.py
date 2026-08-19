@@ -369,5 +369,238 @@ write_template(OUT_DIR, "samai.dg-pattern", "Samai", SRC, TAGS, "10/8",
     HAT:  {4: STRONG, 16: STRONG},
 })
 
-count = len([f for f in os.listdir(OUT_DIR) if f.endswith(".dg-pattern")])
-print(f"\nDone. {count} pattern files in {OUT_DIR}")
+# =========================================================================
+# LATIN patterns
+# =========================================================================
+LAT_DIR  = os.path.join(REPO_ROOT, "plugins", "drumgen", "patterns", "latin")
+LAT_SRC  = "Latin Rhythm Reference"
+AFCUBAN  = "latin,afro-cuban"
+BRAZN    = "latin,brazilian"
+
+print(f"\nWriting Latin patterns to: {LAT_DIR}")
+
+# --- Clave patterns (pure rhythm in CLAVE lane + kick on beat 1) ----------
+
+# Son Clave 3-2   x . . x . . x . . . . x . x . .
+write_template(LAT_DIR, "son-clave-32.dg-pattern", "Son Clave 3-2", LAT_SRC, AFCUBAN, "4/4",
+               "Foundation 3-2 son clave; basis of all Afro-Cuban music",
+               1, 4, 4, 4, 16, 16, {
+    KICK:  {0: STRONG},
+    CLAVE: {0: STRONG, 3: STRONG, 6: STRONG, 11: STRONG, 13: STRONG},
+})
+
+# Son Clave 2-3   . . . x . x . . x . . x . . x .
+write_template(LAT_DIR, "son-clave-23.dg-pattern", "Son Clave 2-3", LAT_SRC, AFCUBAN, "4/4",
+               "2-3 son clave (2-side first); common in Puerto Rican salsa",
+               1, 4, 4, 4, 16, 16, {
+    KICK:  {0: STRONG},
+    CLAVE: {3: STRONG, 5: STRONG, 8: STRONG, 11: STRONG, 14: STRONG},
+})
+
+# Rumba Clave 3-2  x . . x . . . x . . . x . x . .
+write_template(LAT_DIR, "rumba-clave-32.dg-pattern", "Rumba Clave 3-2", LAT_SRC, AFCUBAN, "4/4",
+               "Rumba 3-2 clave; 3rd hit shifted one 16th later than son",
+               1, 4, 4, 4, 16, 16, {
+    KICK:  {0: STRONG},
+    CLAVE: {0: STRONG, 3: STRONG, 7: STRONG, 11: STRONG, 13: STRONG},
+})
+
+# Rumba Clave 2-3  . . . x . x . . x . . x . . . x
+write_template(LAT_DIR, "rumba-clave-23.dg-pattern", "Rumba Clave 2-3", LAT_SRC, AFCUBAN, "4/4",
+               "Rumba 2-3 clave; used in Cuban rumba and guaguancó",
+               1, 4, 4, 4, 16, 16, {
+    KICK:  {0: STRONG},
+    CLAVE: {3: STRONG, 5: STRONG, 8: STRONG, 11: STRONG, 15: STRONG},
+})
+
+# Tresillo  x . . x . . x . x . . x . . x .   (3-feel over 4/4; precursor to clave)
+write_template(LAT_DIR, "tresillo.dg-pattern", "Tresillo", LAT_SRC, AFCUBAN, "4/4",
+               "3-over-8 tresillo; African-derived root of Caribbean rhythms",
+               1, 4, 4, 4, 16, 16, {
+    KICK:  {0: STRONG, 3: STRONG, 6: STRONG},
+    CLAVE: {0: STRONG, 3: STRONG, 6: STRONG, 8: SOFT, 11: SOFT, 14: SOFT},
+})
+
+# --- Latin grooves ---
+
+# Bossa Nova  (Joao Gilberto-style; kick 1/+2/3, brushed snare on 2/4, son 3-2 clave)
+write_template(LAT_DIR, "bossa-nova.dg-pattern", "Bossa Nova", LAT_SRC, BRAZN, "4/4",
+               "Brazilian bossa nova; kick on 1/+2/3, brushed snare, son clave",
+               1, 4, 4, 4, 16, 16, {
+    KICK:  {0: STRONG, 6: 80, 8: STRONG},
+    SNARE: {4: SOFT, 12: SOFT},
+    HAT:   {0: 80, 2: 80, 4: 80, 6: 80, 8: 80, 10: 80, 12: 80, 14: 80},
+    CLAVE: {0: STRONG, 3: STRONG, 6: STRONG, 11: STRONG, 13: STRONG},
+})
+
+# Samba  (partido alto tamborim in CLAVE lane, quarter hi-hat)
+write_template(LAT_DIR, "samba.dg-pattern", "Samba", LAT_SRC, BRAZN, "4/4",
+               "Brazilian samba; surdo kick, partido alto tamborim in CLAVE lane",
+               1, 4, 4, 4, 16, 16, {
+    KICK:  {0: STRONG, 8: STRONG},
+    SNARE: {4: SOFT, 12: SOFT},
+    HAT:   {0: 80, 4: 80, 8: 80, 12: 80},
+    CLAVE: {0: STRONG, 3: STRONG, 6: SOFT, 8: STRONG, 11: STRONG, 14: SOFT},
+})
+
+# Mambo  (2-3 son clave, cowbell, kick on 1/3)
+write_template(LAT_DIR, "mambo.dg-pattern", "Mambo", LAT_SRC, AFCUBAN, "4/4",
+               "Afro-Cuban mambo; cowbell on clave-derived accents, 2-3 son clave",
+               1, 4, 4, 4, 16, 16, {
+    KICK:    {0: STRONG, 8: STRONG},
+    SNARE:   {4: SOFT, 12: SOFT},
+    HAT:     {0: 80, 2: 80, 4: 80, 6: 80, 8: 80, 10: 80, 12: 80, 14: 80},
+    COWBELL: {0: STRONG, 4: SOFT, 6: SOFT, 8: STRONG, 10: SOFT, 12: SOFT, 14: SOFT},
+    CLAVE:   {3: STRONG, 5: STRONG, 8: STRONG, 11: STRONG, 14: STRONG},
+})
+
+# Cha-Cha  (2-3 son clave, kick on 1/3, characteristic beat on +4)
+write_template(LAT_DIR, "cha-cha.dg-pattern", "Cha Cha", LAT_SRC, AFCUBAN, "4/4",
+               "Cha-cha-cha; 2-3 son clave, snare on 2/4 plus the 'cha' on +4",
+               1, 4, 4, 4, 16, 16, {
+    KICK:  {0: STRONG, 8: STRONG},
+    SNARE: {4: STRONG, 12: STRONG, 14: 80},
+    HAT:   {0: 80, 2: 80, 4: 80, 6: 80, 8: 80, 10: 80, 12: 80, 14: 80},
+    CLAVE: {3: STRONG, 5: STRONG, 8: STRONG, 11: STRONG, 14: STRONG},
+})
+
+# Cumbia  (kick on 1, clap on 2/3/4, open hat on and-of-2)
+write_template(LAT_DIR, "cumbia.dg-pattern", "Cumbia", LAT_SRC, "latin,colombian", "4/4",
+               "Colombian cumbia; kick on 1, claps on 2/3/4, open hat offbeat",
+               1, 4, 4, 4, 16, 16, {
+    KICK:    {0: STRONG, 4: SOFT},
+    CLAP:    {4: STRONG, 8: STRONG, 12: STRONG},
+    OPENHAT: {6: STRONG},
+    HAT:     {0: 80, 2: 80, 4: 80, 8: 80, 10: 80, 12: 80, 14: 80},
+})
+
+# =========================================================================
+# CLASSIC drum machine patterns
+# =========================================================================
+CLS_DIR = os.path.join(REPO_ROOT, "plugins", "drumgen", "patterns", "classic")
+CLS_SRC = "Classic Drum Machine Reference"
+
+print(f"\nWriting Classic patterns to: {CLS_DIR}")
+
+# Four on the Floor  (disco/house foundation)
+write_template(CLS_DIR, "four-on-floor.dg-pattern", "Four on the Floor", CLS_SRC, "house,disco,techno", "4/4",
+               "Kick on every quarter note; the rhythmic foundation of house and disco",
+               1, 4, 4, 4, 16, 16, {
+    KICK:    {0: STRONG, 4: STRONG, 8: STRONG, 12: STRONG},
+    CLAP:    {4: STRONG, 12: STRONG},
+    OPENHAT: {2: 80, 6: 80, 10: 80, 14: 80},
+})
+
+# Boom Bap  (classic 90s hip-hop)
+write_template(CLS_DIR, "boom-bap.dg-pattern", "Boom Bap", CLS_SRC, "hip-hop", "4/4",
+               "Classic 90s hip-hop; kick on 1 and +3, snare on 2 and 4",
+               1, 4, 4, 4, 16, 16, {
+    KICK:  {0: STRONG, 10: STRONG},
+    SNARE: {4: STRONG, 12: STRONG},
+    HAT:   {0: 80, 2: 80, 4: 80, 6: 80, 8: 80, 10: 80, 12: 80, 14: 80},
+})
+
+# 808 Hip-Hop  (TR-808 trap/hip-hop style)
+write_template(CLS_DIR, "hip-hop-808.dg-pattern", "Hip-Hop 808", CLS_SRC, "hip-hop,trap", "4/4",
+               "TR-808 hip-hop; syncopated kick, clap on 2/4, 16th hi-hat",
+               1, 4, 4, 4, 16, 16, {
+    KICK:  {0: STRONG, 6: SOFT, 8: STRONG, 14: SOFT},
+    CLAP:  {4: STRONG, 12: STRONG},
+    HAT:   {0: 80, 1: SOFT, 2: 80, 3: SOFT, 4: 80, 5: SOFT, 6: 80, 7: SOFT,
+            8: 80, 9: SOFT, 10: 80, 11: SOFT, 12: 80, 13: SOFT, 14: 80, 15: SOFT},
+})
+
+# House / 909  (Roland TR-909 club house)
+write_template(CLS_DIR, "house-909.dg-pattern", "House 909", CLS_SRC, "house,techno", "4/4",
+               "Roland TR-909 house; four-on-floor, snare on 2/4, 16th hat, open hat on +2/+4",
+               1, 4, 4, 4, 16, 16, {
+    KICK:    {0: STRONG, 4: STRONG, 8: STRONG, 12: STRONG},
+    SNARE:   {4: STRONG, 12: STRONG},
+    HAT:     {0: 80, 1: SOFT, 2: 80, 3: SOFT, 4: 80, 5: SOFT,
+              8: 80, 9: SOFT, 10: 80, 11: SOFT, 12: 80, 13: SOFT},
+    OPENHAT: {6: STRONG, 14: STRONG},
+})
+
+# Electro  (TR-808 electro-funk)
+write_template(CLS_DIR, "electro.dg-pattern", "Electro", CLS_SRC, "electro,hip-hop", "4/4",
+               "TR-808 electro; syncopated kick on 1/a1/3/a3, clap on 2/4",
+               1, 4, 4, 4, 16, 16, {
+    KICK:  {0: STRONG, 3: STRONG, 8: STRONG, 11: STRONG},
+    CLAP:  {4: STRONG, 12: STRONG},
+    HAT:   {0: 80, 2: 80, 4: 80, 6: 80, 8: 80, 10: 80, 12: 80, 14: 80},
+})
+
+# Dembow  (reggaeton)
+write_template(CLS_DIR, "dembow.dg-pattern", "Dembow", CLS_SRC, "reggaeton,latin", "4/4",
+               "Reggaeton dembow; kick on 1/3, clap on 2/4 and the syncopated 'bow' on a4",
+               1, 4, 4, 4, 16, 16, {
+    KICK:  {0: STRONG, 8: STRONG},
+    CLAP:  {4: STRONG, 12: STRONG, 14: STRONG},
+    HAT:   {2: 80, 6: 80, 10: 80, 14: 80},
+})
+
+# Funk  (Clyde Stubblefield / Funky Drummer style)
+write_template(CLS_DIR, "funk.dg-pattern", "Funk", CLS_SRC, "funk,soul", "4/4",
+               "Funky drummer style; dense 16th hat, syncopated kick, ghost snare on a4",
+               1, 4, 4, 4, 16, 16, {
+    KICK:  {0: STRONG, 8: STRONG, 10: 80},
+    SNARE: {4: STRONG, 12: STRONG, 14: SOFT},
+    HAT:   {0: 80, 2: 80, 3: SOFT, 4: 80, 5: SOFT, 6: 80,
+            8: 80, 10: 80, 11: SOFT, 12: 80, 13: SOFT, 14: 80},
+})
+
+# Second Line  (New Orleans)
+write_template(CLS_DIR, "second-line.dg-pattern", "Second Line", CLS_SRC, "funk,new-orleans", "4/4",
+               "New Orleans second line; syncopated kick on 1/+2/3, snare on 2/+3/+4",
+               1, 4, 4, 4, 16, 16, {
+    KICK:  {0: STRONG, 6: 80, 8: STRONG},
+    SNARE: {4: STRONG, 10: 80, 14: STRONG},
+    HAT:   {0: 80, 2: 80, 4: 80, 6: 80, 8: 80, 10: 80, 12: 80, 14: 80},
+})
+
+# Classic Rock
+write_template(CLS_DIR, "classic-rock.dg-pattern", "Classic Rock", CLS_SRC, "rock", "4/4",
+               "Classic rock; kick on 1/3 with pickup, snare on 2/4, 8th hat, crash on 1",
+               1, 4, 4, 4, 16, 16, {
+    KICK:  {0: STRONG, 8: STRONG, 10: 80},
+    SNARE: {4: STRONG, 12: STRONG},
+    HAT:   {0: 80, 2: 80, 4: 80, 6: 80, 8: 80, 10: 80, 12: 80, 14: 80},
+    CRASH: {0: STRONG},
+})
+
+# Shuffle  (swung 8ths approximated in 16th grid: "and" lands on position 3, 7, 11, 15)
+write_template(CLS_DIR, "shuffle.dg-pattern", "Shuffle", CLS_SRC, "blues,rock,swing", "4/4",
+               "Blues shuffle; swung 8ths approximated in 16th grid (+beat on positions 3/7/11/15)",
+               1, 4, 4, 4, 16, 16, {
+    KICK:  {0: STRONG, 8: STRONG},
+    SNARE: {4: STRONG, 12: STRONG},
+    HAT:   {0: 80, 3: 80, 4: 80, 7: 80, 8: 80, 11: 80, 12: 80, 15: 80},
+})
+
+# Breakbeat / DnB  (2 bars, Amen-inspired)
+write_template(CLS_DIR, "breakbeat.dg-pattern", "Breakbeat", CLS_SRC, "dnb,jungle,breakbeat", "4/4",
+               "Drum-and-bass breakbeat over 2 bars; syncopated kick roll, snare on 3 of each bar",
+               2, 4, 4, 4, 16, 32, {
+    KICK:    {0: STRONG, 14: 80, 16: STRONG, 22: STRONG},
+    SNARE:   {8: STRONG, 24: STRONG, 26: 80},
+    HAT:     {0: 80, 2: 80, 4: 80, 6: 80, 8: 80, 10: 80, 12: 80, 14: 80,
+              16: 80, 18: 80, 20: 80, 22: 80, 24: 80, 26: 80, 28: 80, 30: 80},
+    OPENHAT: {6: STRONG, 22: STRONG, 30: STRONG},
+})
+
+# Waltz  (3/4)
+write_template(CLS_DIR, "waltz.dg-pattern", "Waltz", CLS_SRC, "classical,pop", "3/4",
+               "Classic 3/4 waltz; kick on beat 1, snare/hat on beats 2 and 3",
+               1, 3, 4, 4, 12, 12, {
+    KICK:  {0: STRONG},
+    SNARE: {4: SOFT, 8: SOFT},
+    HAT:   {0: STRONG, 4: 80, 8: 80},
+})
+
+# =========================================================================
+# Final count
+# =========================================================================
+import glob
+all_patterns = glob.glob(os.path.join(REPO_ROOT, "plugins", "drumgen", "patterns", "**", "*.dg-pattern"),
+                         recursive=True)
+print(f"\nDone. {len(all_patterns)} total pattern files across all directories")

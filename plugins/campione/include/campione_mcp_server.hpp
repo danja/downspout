@@ -39,10 +39,12 @@ public:
         std::function<std::string(int)>                removeZone;   // index → "" or error
         std::function<std::string(int, int, int, int, bool,
                                   uint32_t, uint32_t)> updateZone;   // → "" or error
-        // ADSR+filter+pan: negative values = preserve existing zone value
+        // ADSR+filter+pan+muted: negative float values = preserve existing; -2 int = preserve
         std::function<std::string(int, float, float, float, float,
-                                  int, int, float, float, float)> updateZoneDsp; // ADSR+filter+pan → "" or error
+                                  int, int, float, float, float, int)> updateZoneDsp; // ADSR+filter+pan+muted → "" or error
         std::function<std::string(int, int, int)> sliceZone;  // idx, numSlices, startNote → "" or error
+        std::function<std::string()> mapDrum;    // map zones to GM drum layout → "" or error
+        std::function<std::string()> mapSpread;  // spread zones over 4-octave keyboard → "" or error
 
         // ── Wave editing ──────────────────────────────────────────────────
         std::function<std::string(int)>         normalizeZone; // index → "" or error

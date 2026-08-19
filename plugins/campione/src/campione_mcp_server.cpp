@@ -176,7 +176,7 @@ static json buildToolsList()
          {"inputSchema", makeSchema({{"path", strProp("Absolute path to directory")}}, {"path"})}},
 
         {{"name","update_zone_dsp"},
-         {"description","Update per-zone ADSR envelope and biquad filter parameters."},
+         {"description","Update per-zone ADSR envelope, biquad filter parameters, pan, and mute state."},
          {"inputSchema", makeSchema({
              {"index",         intProp("Zone index")},
              {"attack_ms",     numProp("Attack ms (optional)")},
@@ -186,7 +186,9 @@ static json buildToolsList()
              {"filter_enabled",boolProp("Enable filter (optional)")},
              {"filter_type",   intProp("Filter type 0=LP 1=BP 2=HP 3=Notch (optional)")},
              {"filter_cutoff", numProp("Filter cutoff Hz (optional)")},
-             {"filter_q",      numProp("Filter Q (optional)")}
+             {"filter_q",      numProp("Filter Q (optional)")},
+             {"pan",           numProp("Pan -1.0 (left) to 1.0 (right) (optional)")},
+             {"muted",         boolProp("Mute this zone (optional)")}
          }, {"index"})}},
 
         {{"name","slice_zone"},
@@ -196,6 +198,14 @@ static json buildToolsList()
              {"num_slices", intProp("Number of equal slices (0 = auto-detect from transients)")},
              {"start_note", intProp("First MIDI note to assign (default = zone rangeLow)")}
          }, {"index"})}},
+
+        {{"name","map_drum"},
+         {"description","Map all zones to consecutive General MIDI drum notes starting at 35 (Bass Drum 2), one note per zone."},
+         {"inputSchema", makeSchema(json::object())}},
+
+        {{"name","map_spread"},
+         {"description","Spread all zones equally over a 4-octave keyboard range (C2=36 to B5=83)."},
+         {"inputSchema", makeSchema(json::object())}},
 
         {{"name","save_patch"},
          {"description","Save current zones and parameters to a Turtle RDF patch file (.ttl). Path is auto-generated if omitted."},
@@ -473,12 +483,25 @@ std::string CampioneMcpServer::dispatch(const std::string& body)
                 float filterCutoff = args.contains("filter_cutoff") ? args["filter_cutoff"].get<float>() : -1.0f;
                 float filterQ      = args.contains("filter_q")      ? args["filter_q"].get<float>()      : -1.0f;
                 float pan          = args.contains("pan")           ? args["pan"].get<float>()           : -2.0f;
+                int   muted        = args.contains("muted")         ? (args["muted"].get<bool>() ? 1 : 0) : -2;
                 const std::string err = api_.updateZoneDsp(idx,
                     attackMs, decayMs, sustainLevel, releaseMs,
-                    filterEnabled, filterType, filterCutoff, filterQ, pan);
+                    filterEnabled, filterType, filterCutoff, filterQ, pan, muted);
                 if (!err.empty()) throw std::runtime_error(err);
                 char buf[64]; std::snprintf(buf, sizeof(buf), "zone %d DSP updated", idx);
                 return makeResult(textContent(buf), id).dump();
+            }
+
+            if (name == "map_drum") {
+                const std::string err = api_.mapDrum();
+                if (!err.empty()) throw std::runtime_error(err);
+                return makeResult(textContent("zones mapped to GM drum layout"), id).dump();
+            }
+
+            if (name == "map_spread") {
+                const std::string err = api_.mapSpread();
+                if (!err.empty()) throw std::runtime_error(err);
+                return makeResult(textContent("zones spread over 4-octave keyboard"), id).dump();
             }
 
             if (name == "slice_zone") {

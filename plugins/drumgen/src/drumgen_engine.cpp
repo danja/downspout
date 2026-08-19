@@ -1,6 +1,7 @@
 #include "drumgen_engine.hpp"
 
 #include "drumgen_pattern.hpp"
+#include "drumgen_rng.hpp"
 #include "drumgen_transport.hpp"
 #include "drumgen_variation.hpp"
 
@@ -166,16 +167,25 @@ UpdateDecision updatePatternIfNeeded(EngineState& state,
     const bool varyChanged = std::fabs(current.vary - state.previousControls.vary) >= 0.0001f;
     const bool meterChanged = !state.patternValid || !::downspout::metersEqual(state.pattern.meter, targetMeter);
 
-    const bool explicitAction = newChanged || mutateChanged;
-    if (explicitAction) {
+    if (newChanged) {
         state.templateLocked = false;
     }
 
-    if (!state.patternValid ||
-        (!state.templateLocked && (controlsChanged || meterChanged)) ||
-        explicitAction) {
+    const bool fullRegen = !state.patternValid ||
+                           (!state.templateLocked && (controlsChanged || meterChanged)) ||
+                           newChanged ||
+                           (mutateChanged && !state.templateLocked);
+
+    if (fullRegen) {
         regeneratePattern(state.pattern, current, targetMeter, false);
         state.patternValid = true;
+        resetVariationProgress(state.variation);
+    } else if (mutateChanged && state.templateLocked) {
+        // Vary the loaded template in place — pick a bar and refresh its hits.
+        Rng rng;
+        rng.seed(current.seed ^ (static_cast<std::uint32_t>(current.actionMutate) * 2654435761u));
+        const int barIndex = state.pattern.bars > 1 ? rng.nextInt(0, state.pattern.bars - 1) : 0;
+        refreshBar(state.pattern, current, state.pattern.meter, barIndex);
         resetVariationProgress(state.variation);
     } else if (varyChanged) {
         resetVariationProgress(state.variation);
