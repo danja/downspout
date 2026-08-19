@@ -448,6 +448,7 @@ protected:
                     std::atomic_store_explicit(&zones_,
                                                std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                                std::memory_order_release);
+                    notifyZonesChanged();
                 }
             }
             return;
@@ -463,7 +464,7 @@ protected:
                 std::atomic_store_explicit(&zones_,
                                            std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                            std::memory_order_release);
-                pendingZoneUpdate_.store(true, std::memory_order_release);
+                notifyZonesChanged();
             }
             return;
         }
@@ -538,6 +539,7 @@ protected:
                     std::atomic_store_explicit(&zones_,
                                                std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                                std::memory_order_release);
+                    notifyZonesChanged();
                 }
             }
             return;

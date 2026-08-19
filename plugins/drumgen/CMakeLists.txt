@@ -3,6 +3,7 @@ add_library(downspout_drumgen_core STATIC
     src/drumgen_pattern.cpp
     src/drumgen_serialization.cpp
     src/drumgen_state.cpp
+    src/drumgen_template.cpp
     src/drumgen_transport.cpp
     src/drumgen_variation.cpp
 )
@@ -30,10 +31,15 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
     target_include_directories(drumgen PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
+        "${PROJECT_SOURCE_DIR}/include"
     )
 
     install(DIRECTORY "${PROJECT_BINARY_DIR}/bin/drumgen.vst3"
         DESTINATION "."
+        OPTIONAL
+    )
+    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/patterns"
+        DESTINATION "drumgen.vst3/Contents/Resources"
         OPTIONAL
     )
 endif()

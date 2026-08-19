@@ -40,12 +40,14 @@ enum StateIndex : uint32_t {
     kStateControls = 0,
     kStatePattern,
     kStateVariation,
+    kStateTemplateLoad,
     kStateCount
 };
 
-constexpr const char* kStateKeyControls = "controls";
-constexpr const char* kStateKeyPattern = "pattern";
-constexpr const char* kStateKeyVariation = "variation";
+constexpr const char* kStateKeyControls      = "controls";
+constexpr const char* kStateKeyPattern       = "pattern";
+constexpr const char* kStateKeyVariation     = "variation";
+constexpr const char* kStateKeyTemplateLoad  = "template_load";
 
 using CoreControls = downspout::drumgen::Controls;
 using CoreEngineState = downspout::drumgen::EngineState;
@@ -332,6 +334,12 @@ protected:
             state.key = kStateKeyVariation;
             state.label = "Variation";
             break;
+        case kStateTemplateLoad:
+            state.key = kStateKeyTemplateLoad;
+            state.label = "Template Load";
+            state.hints = kStateIsOnlyForDSP;
+            state.defaultValue = "";
+            break;
         }
     }
 
@@ -404,7 +412,7 @@ protected:
             return String(downspout::drumgen::serializePatternState(engine_.pattern).c_str());
         if (std::strcmp(key, kStateKeyVariation) == 0)
             return String(downspout::drumgen::serializeVariationState(engine_.variation).c_str());
-
+        // kStateKeyTemplateLoad is write-only; host saves pattern via kStateKeyPattern
         return String();
     }
 
@@ -440,6 +448,18 @@ protected:
             const auto variation = downspout::drumgen::deserializeVariationState(text);
             if (variation.has_value())
                 engine_.variation = *variation;
+            return;
+        }
+
+        if (std::strcmp(key, kStateKeyTemplateLoad) == 0)
+        {
+            const auto pattern = downspout::drumgen::deserializePatternState(text);
+            if (pattern.has_value())
+            {
+                engine_.pattern = *pattern;
+                engine_.patternValid = true;
+                engine_.templateLocked = true;
+            }
         }
     }
 

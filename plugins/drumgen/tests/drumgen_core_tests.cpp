@@ -2,6 +2,7 @@
 #include "drumgen_pattern.hpp"
 #include "drumgen_serialization.hpp"
 #include "drumgen_state.hpp"
+#include "drumgen_template.hpp"
 #include "drumgen_transport.hpp"
 #include "drumgen_variation.hpp"
 
@@ -859,5 +860,43 @@ int main() {
     testEngineSchedulesBoundaryHitsWithinBlock();
     testEngineFillTriggerTargetsCurrentBar();
     testEngineFillTriggerUsesLastPulseInCompoundMeter();
+
+    // Template library
+    {
+        const std::string patternDir =
+            std::string(__FILE__).substr(0, std::string(__FILE__).rfind('/'))
+            + "/../patterns/world";
+
+        TemplateLibrary lib;
+        lib.scan(patternDir);
+        assert(lib.count() > 0 && "template library found no patterns");
+
+        const PatternTemplate* maqsum = lib.findByName("Maqsum");
+        assert(maqsum != nullptr && "Maqsum template not found");
+        assert(maqsum->timeSig == "4/4" && "Maqsum time sig wrong");
+        assert(maqsum->pattern.totalSteps == 16 && "Maqsum totalSteps wrong");
+        assert(maqsum->pattern.bars == 1 && "Maqsum bars wrong");
+
+        // Kick should have a hit at step 0
+        assert(maqsum->pattern.lanes[static_cast<int>(LaneId::kick)].steps[0].velocity > 0
+               && "Maqsum kick step 0 missing");
+        // Hat should have a hit at step 2 (first Tek)
+        assert(maqsum->pattern.lanes[static_cast<int>(LaneId::closedHat)].steps[2].velocity > 0
+               && "Maqsum hat step 2 missing");
+
+        // Kit note assignment
+        assert(midiNoteForLane(LaneId::kick, KitMapId::fluesDrumkit) == 36);
+        assert(midiNoteForLane(LaneId::kick, KitMapId::gm) == 36);
+        assert(midiNoteForLane(LaneId::snare, KitMapId::fluesDrumkit) == 40);
+        assert(midiNoteForLane(LaneId::snare, KitMapId::gm) == 38);
+
+        // applyKitNotes fills in the correct notes
+        PatternState pat = maqsum->pattern;
+        applyKitNotes(pat, KitMapId::fluesDrumkit);
+        assert(pat.lanes[static_cast<int>(LaneId::kick)].midiNote == 36);
+        applyKitNotes(pat, KitMapId::gm);
+        assert(pat.lanes[static_cast<int>(LaneId::snare)].midiNote == 38);
+    }
+
     return 0;
 }

@@ -1,5 +1,8 @@
 #include "DistrhoUI.hpp"
 
+#include "drumgen_serialization.hpp"
+#include "drumgen_template.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -34,6 +37,8 @@ enum ParameterIndex : uint32_t {
     kParamConductorChannel,
     kParameterCount
 };
+
+constexpr const char* kStateKeyTemplateLoad = "template_load";
 
 struct Rect {
     float x = 0.0f;
@@ -193,6 +198,14 @@ public:
         loadSharedResources();
        #endif
 
+        // Scan bundled and user patterns directories
+        const std::string bundle = getBundlePath();
+        if (!bundle.empty()) {
+            templateLibrary_.scan(bundle + "/Contents/Resources/patterns");
+        }
+        templateLibrary_.scan(std::string(getenv("HOME") != nullptr ? getenv("HOME") : "")
+                              + "/.vst3/drumgen-data/patterns");
+
         values_[kParamGenre] = 0.0f;
         values_[kParamStyleMode] = 0.0f;
         values_[kParamChannel] = 10.0f;
@@ -256,6 +269,16 @@ protected:
         if (openSelector_ >= 0) {
             drawOpenSelectorMenu(openSelector_);
         }
+
+        if (showTemplateMenu_ && templateLibrary_.count() > 0) {
+            drawTemplateMenu();
+        }
+
+        if (showPreview_ && selectedTemplate_ >= 0) {
+            if (const auto* tmpl = templateLibrary_.get(selectedTemplate_)) {
+                drawStepGridOverlay(*tmpl, pad, contentY, width - pad * 2.0f, contentH);
+            }
+        }
     }
 
     bool onMouse(const MouseEvent& ev) override
@@ -270,6 +293,25 @@ protected:
         if (!ev.press) {
             draggingSlider_ = -1;
             return false;
+        }
+
+        if (showPreview_) {
+            if (previewOverlayLoadRect_.contains(x, y)) {
+                loadSelectedTemplate();
+            } else if (previewOverlayCloseRect_.contains(x, y) ||
+                       !previewOverlayLoadRect_.contains(x, y)) {
+                showPreview_ = false;
+                repaint();
+            }
+            return true;
+        }
+
+        if (showTemplateMenu_) {
+            if (handleTemplateMenuClick(x, y)) {
+                return true;
+            }
+            showTemplateMenu_ = false;
+            repaint();
         }
 
         if (openSelector_ >= 0) {
@@ -298,6 +340,23 @@ protected:
         for (std::size_t i = 0; i < buttonRects_.size(); ++i) {
             if (buttonRects_[i].contains(x, y)) {
                 triggerButton(static_cast<int>(i));
+                return true;
+            }
+        }
+
+        if (templateLibrary_.count() > 0) {
+            if (templateSelectorRect_.contains(x, y)) {
+                showTemplateMenu_ = !showTemplateMenu_;
+                repaint();
+                return true;
+            }
+            if (templateLoadRect_.contains(x, y)) {
+                loadSelectedTemplate();
+                return true;
+            }
+            if (templatePreviewRect_.contains(x, y) && selectedTemplate_ >= 0) {
+                showPreview_ = !showPreview_;
+                repaint();
                 return true;
             }
         }
@@ -350,6 +409,17 @@ private:
     std::array<int, kButtons.size()> buttonPulse_ {};
     int draggingSlider_ = -1;
     int openSelector_ = -1;
+
+    downspout::drumgen::TemplateLibrary templateLibrary_ {};
+    int selectedTemplate_ = -1;       // -1 = none selected
+    bool showTemplateMenu_ = false;
+    bool templateIsLoaded_ = false;    // visual indicator
+    bool showPreview_ = false;
+    Rect templateSelectorRect_ {};
+    Rect templateLoadRect_ {};
+    Rect templatePreviewRect_ {};
+    Rect previewOverlayLoadRect_ {};
+    Rect previewOverlayCloseRect_ {};
 
     static constexpr float kSelectorItemHeight = 30.0f;
 
@@ -444,6 +514,11 @@ private:
         for (std::size_t i = 0; i < kButtons.size(); ++i) {
             buttonRects_[i] = {x + 20.0f + static_cast<float>(i) * (buttonW + buttonGap), cy, buttonW, 50.0f};
             drawButton(static_cast<int>(i), kButtons[i], buttonRects_[i]);
+        }
+        cy += 58.0f;
+
+        if (templateLibrary_.count() > 0) {
+            drawTemplateSection(x, cy, w);
         }
     }
 
@@ -682,6 +757,9 @@ private:
         setParameterValue(index, 1.0f);
         editParameter(index, false);
         buttonPulse_[buttonIndex] = 8;
+        if (index == kParamActionNew || index == kParamActionMutate) {
+            templateIsLoaded_ = false;
+        }
         repaint();
     }
 
@@ -699,6 +777,277 @@ private:
         editParameter(index, false);
         values_[index] = value;
         repaint();
+    }
+
+    void drawTemplateSection(float x, float cy, float w)
+    {
+        // Separator
+        beginPath();
+        strokeColor(55, 70, 82, 180);
+        strokeWidth(1.0f);
+        moveTo(x + 20.0f, cy);
+        lineTo(x + w - 20.0f, cy);
+        stroke();
+        closePath();
+        cy += 14.0f;
+
+        fontSize(15.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(227, 231, 234, 255);
+        text(x + 20.0f, cy, "Templates", nullptr);
+
+        if (templateIsLoaded_) {
+            drawPill(x + w - 100.0f, cy + 1.0f, 80.0f, 18.0f, "loaded", 62, 148, 112);
+        }
+        cy += 28.0f;
+
+        // Template dropdown
+        const std::string tmplName = (selectedTemplate_ >= 0 && templateLibrary_.get(selectedTemplate_))
+            ? templateLibrary_.get(selectedTemplate_)->name
+            : "— select —";
+
+        templateSelectorRect_ = {x + 20.0f, cy, w - 40.0f, 42.0f};
+        {
+            const Rect& r = templateSelectorRect_;
+            beginPath();
+            roundedRect(r.x, r.y, r.w, r.h, 14.0f);
+            fillColor(31, 40, 49, 255);
+            fill();
+            closePath();
+
+            fontSize(12.0f);
+            textAlign(ALIGN_LEFT | ALIGN_TOP);
+            fillColor(151, 167, 178, 255);
+            text(r.x + 16.0f, r.y + 8.0f, "Template", nullptr);
+
+            fontSize(16.0f);
+            fillColor(236, 240, 242, 255);
+            text(r.x + 16.0f, r.y + 26.0f, tmplName.c_str(), nullptr);
+
+            fontSize(16.0f);
+            textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
+            fillColor(126, 143, 154, 255);
+            text(r.x + r.w - 16.0f, r.y + r.h * 0.5f + 1.0f,
+                 showTemplateMenu_ ? "^" : "v", nullptr);
+        }
+        cy += 50.0f;
+
+        // Load + Preview buttons
+        const float halfW = (w - 40.0f - 10.0f) * 0.5f;
+        templateLoadRect_    = {x + 20.0f,              cy, halfW, 38.0f};
+        templatePreviewRect_ = {x + 20.0f + halfW + 10.0f, cy, halfW, 38.0f};
+
+        auto drawTmplBtn = [&](const Rect& r, const char* label, bool enabled, int gr, int gg, int gb) {
+            beginPath();
+            roundedRect(r.x, r.y, r.w, r.h, 13.0f);
+            fillColor(enabled ? gr : 38, enabled ? gg : 48, enabled ? gb : 58, 255);
+            fill();
+            closePath();
+            fontSize(14.0f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            fillColor(enabled ? 245 : 110, enabled ? 247 : 125, enabled ? 248 : 138, 255);
+            text(r.x + r.w * 0.5f, r.y + r.h * 0.5f, label, nullptr);
+        };
+
+        const bool canLoad    = selectedTemplate_ >= 0;
+        const bool canPreview = selectedTemplate_ >= 0;
+        drawTmplBtn(templateLoadRect_,    "Load",    canLoad,    62, 148, 112);
+        drawTmplBtn(templatePreviewRect_, "Preview", canPreview, 74, 126, 188);
+    }
+
+    void drawTemplateMenu()
+    {
+        const Rect& base = templateSelectorRect_;
+        const int n = templateLibrary_.count();
+        const int cols = n > 8 ? 2 : 1;
+        const int rows = (n + cols - 1) / cols;
+        constexpr float kItemH = 28.0f;
+        const Rect menuRect = {base.x, base.y + base.h + 4.0f, base.w,
+                               static_cast<float>(rows) * kItemH};
+
+        beginPath();
+        roundedRect(menuRect.x, menuRect.y, menuRect.w, menuRect.h, 14.0f);
+        fillColor(22, 28, 35, 252);
+        fill();
+        closePath();
+
+        const float colW = menuRect.w / static_cast<float>(cols);
+        for (int i = 0; i < n; ++i) {
+            const auto* tmpl = templateLibrary_.get(i);
+            if (!tmpl) continue;
+            const int col = i / rows;
+            const int row = i % rows;
+            const float ix = menuRect.x + static_cast<float>(col) * colW;
+            const float iy = menuRect.y + static_cast<float>(row) * kItemH;
+            if (i == selectedTemplate_) {
+                beginPath();
+                roundedRect(ix + 4.0f, iy + 3.0f, colW - 8.0f, kItemH - 6.0f, 8.0f);
+                fillColor(74, 103, 114, 255);
+                fill();
+                closePath();
+            }
+            fontSize(12.0f);
+            textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+            fillColor(237, 240, 242, 255);
+            text(ix + 12.0f, iy + kItemH * 0.5f + 1.0f, tmpl->name.c_str(), nullptr);
+        }
+    }
+
+    bool handleTemplateMenuClick(float x, float y)
+    {
+        const Rect& base = templateSelectorRect_;
+        if (base.contains(x, y)) {
+            showTemplateMenu_ = false;
+            repaint();
+            return true;
+        }
+
+        const int n = templateLibrary_.count();
+        const int cols = n > 8 ? 2 : 1;
+        const int rows = (n + cols - 1) / cols;
+        constexpr float kItemH = 28.0f;
+        const Rect menuRect = {base.x, base.y + base.h + 4.0f, base.w,
+                               static_cast<float>(rows) * kItemH};
+        if (!menuRect.contains(x, y)) {
+            return false;
+        }
+
+        const float colW = menuRect.w / static_cast<float>(cols);
+        const int col = clampi(static_cast<int>((x - menuRect.x) / colW), 0, cols - 1);
+        const int row = clampi(static_cast<int>((y - menuRect.y) / kItemH), 0, rows - 1);
+        const int item = col * rows + row;
+        if (item < n) {
+            selectedTemplate_ = item;
+        }
+        showTemplateMenu_ = false;
+        repaint();
+        return true;
+    }
+
+    void loadSelectedTemplate()
+    {
+        if (selectedTemplate_ < 0) return;
+        const auto* tmpl = templateLibrary_.get(selectedTemplate_);
+        if (!tmpl) return;
+
+        // Apply MIDI notes from current kit map before sending to DSP
+        downspout::drumgen::PatternState pattern = tmpl->pattern;
+        const auto kitMap = static_cast<downspout::drumgen::KitMapId>(
+            static_cast<int>(std::lround(values_[kParamKitMap])));
+        downspout::drumgen::applyKitNotes(pattern, kitMap);
+
+        const std::string serialized = downspout::drumgen::serializePatternState(pattern);
+        setState(kStateKeyTemplateLoad, serialized.c_str());
+        templateIsLoaded_ = true;
+        showPreview_ = false;
+        repaint();
+    }
+
+    void drawStepGridOverlay(const downspout::drumgen::PatternTemplate& tmpl,
+                             float ox, float oy, float ow, float oh)
+    {
+        // Dim background
+        beginPath();
+        fillColor(8, 12, 16, 210);
+        rect(ox, oy, ow, oh);
+        fill();
+        closePath();
+
+        const float pw = ow * 0.88f;
+        const float ph = oh * 0.72f;
+        const float px = ox + (ow - pw) * 0.5f;
+        const float py = oy + (oh - ph) * 0.5f;
+
+        beginPath();
+        roundedRect(px, py, pw, ph, 18.0f);
+        fillColor(18, 25, 32, 252);
+        fill();
+        closePath();
+
+        // Title
+        fontSize(16.0f);
+        textAlign(ALIGN_CENTER | ALIGN_TOP);
+        fillColor(238, 241, 243, 255);
+        char title[64];
+        std::snprintf(title, sizeof(title), "Preview: %s (%s)",
+                      tmpl.name.c_str(), tmpl.timeSig.c_str());
+        text(px + pw * 0.5f, py + 16.0f, title, nullptr);
+
+        // Draw step grid for lanes that have any hits
+        constexpr int kLanesToShow[] = {0, 1, 2, 4, 5, 6, 7, 9, 10};
+        constexpr const char* kLaneShortNames[] = {
+            "Kick", "Clap", "Snare", "Hat", "LTom", "OHat", "HTom", "Cowb", "Clav"
+        };
+        constexpr int kNumShow = 9;
+
+        const int total = tmpl.pattern.totalSteps;
+        if (total <= 0) return;
+
+        const float gridX     = px + 60.0f;
+        const float gridW     = pw - 80.0f;
+        const float gridY     = py + 46.0f;
+        const float rowH      = (ph - 80.0f) / static_cast<float>(kNumShow);
+        const float cellW     = gridW / static_cast<float>(total);
+
+        for (int ri = 0; ri < kNumShow; ++ri) {
+            const int laneIdx = kLanesToShow[ri];
+            const float ry = gridY + static_cast<float>(ri) * rowH;
+
+            fontSize(11.0f);
+            textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
+            fillColor(157, 174, 176, 255);
+            text(gridX - 6.0f, ry + rowH * 0.5f, kLaneShortNames[ri], nullptr);
+
+            for (int step = 0; step < total; ++step) {
+                const auto& cell = tmpl.pattern.lanes[laneIdx].steps[step];
+                const float cx2 = gridX + static_cast<float>(step) * cellW;
+                const float cw2 = std::max(1.0f, cellW - 1.5f);
+                const float ch2 = rowH - 2.0f;
+
+                if (cell.velocity > 0) {
+                    const float bright = static_cast<float>(cell.velocity) / 127.0f;
+                    const int r2 = static_cast<int>(100 + bright * 128);
+                    const int g2 = static_cast<int>(80  + bright * 100);
+                    const int b2 = static_cast<int>(40  + bright * 40);
+                    beginPath();
+                    roundedRect(cx2, ry + 1.0f, cw2, ch2, 3.0f);
+                    fillColor(r2, g2, b2, 255);
+                    fill();
+                    closePath();
+                } else {
+                    beginPath();
+                    roundedRect(cx2, ry + 1.0f, cw2, ch2, 3.0f);
+                    fillColor(32, 42, 52, 255);
+                    fill();
+                    closePath();
+                }
+            }
+        }
+
+        // "Load" and "Close" buttons
+        const float btnY  = py + ph - 46.0f;
+        const float btnW  = 110.0f;
+        const float btnH  = 34.0f;
+        const float btnGap = 14.0f;
+        const float btnX1 = px + pw * 0.5f - btnW - btnGap * 0.5f;
+        const float btnX2 = px + pw * 0.5f + btnGap * 0.5f;
+
+        previewOverlayLoadRect_  = {btnX1, btnY, btnW, btnH};
+        previewOverlayCloseRect_ = {btnX2, btnY, btnW, btnH};
+
+        auto drawOvBtn = [&](float bx, const char* label, int r2, int g2, int b2) {
+            beginPath();
+            roundedRect(bx, btnY, btnW, btnH, 12.0f);
+            fillColor(r2, g2, b2, 255);
+            fill();
+            closePath();
+            fontSize(14.0f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            fillColor(245, 247, 248, 255);
+            text(bx + btnW * 0.5f, btnY + btnH * 0.5f, label, nullptr);
+        };
+        drawOvBtn(btnX1, "Load",  62, 148, 112);
+        drawOvBtn(btnX2, "Close", 52,  66,  80);
     }
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumgenUI)

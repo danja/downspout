@@ -1,0 +1,26 @@
+# DrumGen Pattern Template v1
+name=Khaligi
+source=Doumbek Rhythm Cheat Sheet
+genre_tags=world,middle-eastern
+time_sig=2/4
+description=Gulf region 2/4; Malfuf with double Doum
+# ---
+version=2
+bars=1
+meterNumerator=2
+meterDenominator=4
+stepsPerBeat=4
+stepsPerBar=8
+totalSteps=8
+generationSerial=0
+lane=0,0,100:0,0:0,0:0,0:0,100:0,0:0,0:0,0:0
+lane=1,0,0:0,0:0,0:0,0:0,0:0,0:0,0:0,0:0
+lane=2,0,0:0,0:0,0:0,0:0,0:0,0:0,0:0,0:0
+lane=3,0,0:0,0:0,0:0,0:0,0:0,0:0,0:0,0:0
+lane=4,0,0:0,0:0,0:0,0:0,0:0,0:0,100:0,0:0
+lane=5,0,0:0,0:0,0:0,0:0,0:0,0:0,0:0,0:0
+lane=6,0,0:0,0:0,0:0,0:0,0:0,0:0,0:0,0:0
+lane=7,0,0:0,0:0,0:0,0:0,0:0,0:0,0:0,0:0
+lane=8,0,0:0,0:0,0:0,0:0,0:0,0:0,0:0,0:0
+lane=9,0,0:0,0:0,0:0,0:0,0:0,0:0,0:0,0:0
+lane=10,0,0:0,0:0,0:0,0:0,0:0,0:0,0:0,0:0
