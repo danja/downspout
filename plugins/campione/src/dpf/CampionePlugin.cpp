@@ -420,11 +420,11 @@ protected:
 
         if (std::strcmp(key, kStateKeyZoneUpdate) == 0 && value && value[0] != '\0')
         {
-            int idx = 0, rootNote = 60, rangeLow = 0, rangeHigh = 127, loopEn = 0;
+            int idx = 0, rootNote = 60, rangeLow = 0, rangeHigh = 127, loopEn = 0, octaveShift = 0;
             unsigned int loopStart = 0, loopEnd = 0;
-            const int parsed = std::sscanf(value, "%d|%d|%d|%d|%d|%u|%u",
+            const int parsed = std::sscanf(value, "%d|%d|%d|%d|%d|%u|%u|%d",
                                            &idx, &rootNote, &rangeLow, &rangeHigh, &loopEn,
-                                           &loopStart, &loopEnd);
+                                           &loopStart, &loopEnd, &octaveShift);
             if (parsed >= 5)
             {
                 std::lock_guard<std::mutex> lk(zoneMtx_);
@@ -437,6 +437,7 @@ protected:
                     z.rangeLow    = rangeLow;
                     z.rangeHigh   = rangeHigh;
                     z.loopEnabled = loopEn != 0;
+                    if (parsed >= 8) z.octaveShift = std::clamp(octaveShift, -6, 6);
                     if (parsed >= 7) {
                         z.loopStart = static_cast<std::uint32_t>(loopStart);
                         z.loopEnd   = static_cast<std::uint32_t>(loopEnd);
@@ -797,6 +798,7 @@ private:
             slice.filterType     = src.filterType;
             slice.filterCutoffHz = src.filterCutoffHz;
             slice.filterQ        = src.filterQ;
+            slice.octaveShift    = src.octaveShift;
             // Save slice to disk so the UI can show its waveform and it survives project reload
             {
                 const std::string dir = recordingOutputDir_.empty()
@@ -886,6 +888,7 @@ private:
             result.zone.filterType      = meta.filterType;
             result.zone.filterCutoffHz  = meta.filterCutoffHz;
             result.zone.filterQ         = meta.filterQ;
+            result.zone.octaveShift     = meta.octaveShift;
             newZones->push_back(std::move(result.zone));
         }
 
@@ -1055,6 +1058,7 @@ private:
                 meta.filterCutoffHz = z.filterCutoffHz;
                 meta.filterQ       = z.filterQ;
                 meta.pan           = z.pan;
+                meta.octaveShift   = z.octaveShift;
                 pd.zones.push_back(std::move(meta));
             }
         }
@@ -1099,6 +1103,7 @@ private:
             result.zone.filterCutoffHz = meta.filterCutoffHz;
             result.zone.filterQ       = meta.filterQ;
             result.zone.pan           = meta.pan;
+            result.zone.octaveShift   = meta.octaveShift;
             newZones->push_back(std::move(result.zone));
         }
 
@@ -1187,7 +1192,7 @@ private:
         };
 
         api.updateZone = [this](int idx, int root, int lo, int hi, bool loop,
-                                 uint32_t lStart, uint32_t lEnd) -> std::string {
+                                 uint32_t lStart, uint32_t lEnd, int octaveShift) -> std::string {
             std::lock_guard<std::mutex> lk(zoneMtx_);
             zonesInitialized_ = true;
             const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
@@ -1199,6 +1204,7 @@ private:
             z.rangeLow    = lo;
             z.rangeHigh   = hi;
             z.loopEnabled = loop;
+            z.octaveShift = std::clamp(octaveShift, -6, 6);
             if (lEnd > lStart) {
                 z.loopStart = lStart;
                 z.loopEnd   = lEnd;

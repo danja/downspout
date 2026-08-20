@@ -76,12 +76,14 @@ struct ZoneEntry {
     float        filterQ        = 0.707f;
     float        pan            = 0.0f;
     bool         muted          = false;
+    int          octaveShift    = 0;
 };
 
 enum DragField {
     kDragNone,
     kDragVol,
     kDragRoot,
+    kDragOctave,
     kDragRangeLow,
     kDragRangeHigh,
     kDragLoopStart,
@@ -125,8 +127,9 @@ static std::string uiDefaultDataDir()
 // Column x positions (left edge relative to kPad)
 constexpr float kColNum    =  8.0f;
 constexpr float kColRoot   = 28.0f;
-constexpr float kColRange  = 80.0f;
-constexpr float kColFile   = 192.0f;
+constexpr float kColOctave = 82.0f;
+constexpr float kColRange  = 134.0f;
+constexpr float kColFile   = 246.0f;
 
 struct PeakResult {
     std::vector<float> peaks;
@@ -678,6 +681,16 @@ protected:
                 return true;
             }
 
+            // Octave shift — drag start (up = increase, down = decrease; 8px/octave)
+            const Rect octaveR { kPad + kColOctave, ry, 46.0f, kRowH };
+            if (octaveR.contains(px, py)) {
+                dragField_     = kDragOctave;
+                dragZoneIdx_   = static_cast<int>(i);
+                dragStartY_    = py;
+                dragStartNote_ = zones_[i].octaveShift;
+                return true;
+            }
+
             // Range low/high — drag start
             const Rect rangeCell { kPad + kColRange, ry, 100.0f, kRowH };
             if (rangeCell.contains(px, py)) {
@@ -769,6 +782,16 @@ protected:
             return true;
         }
 
+        if (dragField_ == kDragOctave && dragZoneIdx_ >= 0
+            && dragZoneIdx_ < static_cast<int>(zones_.size()))
+        {
+            const int delta  = static_cast<int>((dragStartY_ - py) / 8.0f);
+            ZoneEntry& z     = zones_[static_cast<std::size_t>(dragZoneIdx_)];
+            z.octaveShift    = std::clamp(dragStartNote_ + delta, -6, 6);
+            repaint();
+            return true;
+        }
+
         if (dragField_ != kDragNone && dragZoneIdx_ >= 0
             && dragZoneIdx_ < static_cast<int>(zones_.size()))
         {
@@ -847,12 +870,13 @@ private:
     {
         if (idx >= zones_.size()) return;
         const ZoneEntry& z = zones_[idx];
-        char buf[96];
-        std::snprintf(buf, sizeof(buf), "%d|%d|%d|%d|%d|%u|%u",
+        char buf[128];
+        std::snprintf(buf, sizeof(buf), "%d|%d|%d|%d|%d|%u|%u|%d",
                       static_cast<int>(idx),
                       z.rootNote, z.rangeLow, z.rangeHigh,
                       z.loopEnabled ? 1 : 0,
-                      z.loopStart, z.loopEnd);
+                      z.loopStart, z.loopEnd,
+                      z.octaveShift);
         setState(kStateKeyZoneUpdate, buf);
     }
 
@@ -1011,9 +1035,10 @@ private:
         fontSize(10.0f);
         fillColor(108, 125, 137, 255);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        text(kPad + kColNum,   hy, "#",     nullptr);
-        text(kPad + kColRoot,  hy, "Root",  nullptr);
-        text(kPad + kColRange, hy, "Range", nullptr);
+        text(kPad + kColNum,    hy, "#",     nullptr);
+        text(kPad + kColRoot,   hy, "Root",  nullptr);
+        text(kPad + kColOctave, hy, "Oct",   nullptr);
+        text(kPad + kColRange,  hy, "Range", nullptr);
         text(W - kPad - 150.0f, hy, "Loop", nullptr);
         text(W - kPad - 68.0f,  hy, "Mute", nullptr);
         text(kPad + kColFile,   hy, "File",  nullptr);
@@ -1069,6 +1094,15 @@ private:
             else
                 fillColor(200, 205, 215, 255);
             text(kPad + kColRoot, mid, midiNoteName(z.rootNote).c_str(), nullptr);
+
+            // Octave shift
+            if (isDragged && dragField_ == kDragOctave)
+                fillColor(240, 205, 170, 255);
+            else
+                fillColor(z.octaveShift != 0 ? 180 : 120, 180, z.octaveShift != 0 ? 100 : 170, 255);
+            std::snprintf(buf, sizeof(buf), "%+d", z.octaveShift);
+            text(kPad + kColOctave, mid, buf, nullptr);
+            fillColor(200, 205, 215, 255);
 
             // Range
             const std::string lo = midiNoteName(z.rangeLow);
@@ -1684,6 +1718,7 @@ private:
             e.filterQ       = z.filterQ;
             e.pan           = z.pan;
             e.muted         = z.muted;
+            e.octaveShift   = z.octaveShift;
             zones_.push_back(std::move(e));
         }
         // Auto-select first zone when none is selected (e.g. after project reload)

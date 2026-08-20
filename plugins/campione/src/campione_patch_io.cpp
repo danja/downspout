@@ -101,7 +101,8 @@ std::string savePatch(const PatchData& patch, const std::string& filePath)
         std::fprintf(f, "    dsp:filterCutoff \"%.6g\"^^xsd:float ;\n",   z.filterCutoffHz);
         std::fprintf(f, "    dsp:filterQ \"%.6g\"^^xsd:float ;\n",        z.filterQ);
         std::fprintf(f, "    dsp:pan \"%.6g\"^^xsd:float ;\n",             z.pan);
-        std::fprintf(f, "    dsp:muted \"%d\"^^xsd:integer .\n\n",        z.muted ? 1 : 0);
+        std::fprintf(f, "    dsp:muted \"%d\"^^xsd:integer ;\n",          z.muted ? 1 : 0);
+        std::fprintf(f, "    dsp:octaveShift \"%d\"^^xsd:integer .\n\n",  z.octaveShift);
     }
 
     std::fclose(f);
@@ -196,6 +197,7 @@ std::pair<std::optional<PatchData>, std::string> loadPatch(const std::string& fi
             else if (predicate == "filterQ")      z.filterQ        = std::stof(value);
             else if (predicate == "pan")          z.pan            = std::clamp(std::stof(value), -1.0f, 1.0f);
             else if (predicate == "muted")        z.muted          = std::stoi(value) != 0;
+            else if (predicate == "octaveShift")  z.octaveShift    = std::clamp(std::stoi(value), -6, 6);
         }
     }
 

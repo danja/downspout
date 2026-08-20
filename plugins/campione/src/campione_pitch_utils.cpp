@@ -160,7 +160,8 @@ double freqToMidi(const double freqHz)
 double computePlaybackRate(const SampleZone& zone, const int midiNote, const double hostSampleRate)
 {
     const int semitones = midiNote - zone.rootNote;
-    const double pitchRatio = std::pow(2.0, static_cast<double>(semitones) / 12.0);
+    const double pitchRatio = std::pow(2.0, static_cast<double>(semitones) / 12.0
+                                           + static_cast<double>(zone.octaveShift));
     const double sampleRateRatio = hostSampleRate > 0.0 ? zone.sampleRate / hostSampleRate : 1.0;
     return pitchRatio * sampleRateRatio;
 }

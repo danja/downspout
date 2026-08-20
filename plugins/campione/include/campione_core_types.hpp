@@ -35,6 +35,7 @@ struct SampleZone {
     bool  filterEnabled  = false;
     float pan            = 0.0f;   // -1.0 = full left, 0 = centre, +1.0 = full right
     bool  muted          = false;
+    int   octaveShift    = 0;      // -6..+6 octaves applied on top of root-note pitch shift
 };
 
 struct Voice {

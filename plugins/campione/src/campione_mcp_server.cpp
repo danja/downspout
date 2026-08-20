@@ -110,15 +110,16 @@ static json buildToolsList()
          {"inputSchema", makeSchema({{"index", intProp("Zone index")}}, {"index"})}},
 
         {{"name","update_zone"},
-         {"description","Update zone metadata: root note, key range, loop toggle, and optional loop points."},
+         {"description","Update zone metadata: root note, key range, octave shift, loop toggle, and optional loop points."},
          {"inputSchema", makeSchema({
-             {"index",       intProp("Zone index")},
-             {"root_note",   intProp("Root MIDI note 0–127")},
-             {"range_low",   intProp("Lowest MIDI note 0–127")},
-             {"range_high",  intProp("Highest MIDI note 0–127")},
-             {"loop_enabled",boolProp("Enable looping")},
-             {"loop_start",  intProp("Loop start frame (optional)")},
-             {"loop_end",    intProp("Loop end frame (optional)")}
+             {"index",        intProp("Zone index")},
+             {"root_note",    intProp("Root MIDI note 0–127")},
+             {"range_low",    intProp("Lowest MIDI note 0–127")},
+             {"range_high",   intProp("Highest MIDI note 0–127")},
+             {"loop_enabled", boolProp("Enable looping")},
+             {"octave_shift", intProp("Octave shift -6..+6 applied on top of pitch (optional, default 0)")},
+             {"loop_start",   intProp("Loop start frame (optional)")},
+             {"loop_end",     intProp("Loop end frame (optional)")}
          }, {"index","root_note","range_low","range_high","loop_enabled"})}},
 
         // Wave editing
@@ -386,14 +387,15 @@ std::string CampioneMcpServer::dispatch(const std::string& body)
             }
 
             if (name == "update_zone") {
-                int      idx   = args.at("index").get<int>();
-                int      root  = args.at("root_note").get<int>();
-                int      lo    = args.at("range_low").get<int>();
-                int      hi    = args.at("range_high").get<int>();
-                bool     loop  = args.at("loop_enabled").get<bool>();
+                int      idx    = args.at("index").get<int>();
+                int      root   = args.at("root_note").get<int>();
+                int      lo     = args.at("range_low").get<int>();
+                int      hi     = args.at("range_high").get<int>();
+                bool     loop   = args.at("loop_enabled").get<bool>();
+                int      octave = args.value("octave_shift", 0);
                 uint32_t lStart = args.value("loop_start", 0);
                 uint32_t lEnd   = args.value("loop_end",   0);
-                const std::string err = api_.updateZone(idx, root, lo, hi, loop, lStart, lEnd);
+                const std::string err = api_.updateZone(idx, root, lo, hi, loop, lStart, lEnd, octave);
                 if (!err.empty()) throw std::runtime_error(err);
                 char buf[64]; std::snprintf(buf, sizeof(buf), "zone %d updated", idx);
                 return makeResult(textContent(buf), id).dump();
