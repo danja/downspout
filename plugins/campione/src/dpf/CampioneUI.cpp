@@ -1376,7 +1376,7 @@ private:
             textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
             fillColor(80, 95, 108, 255);
             text(W * 0.5f, listY + listH * 0.5f,
-                 "No zones loaded \xe2\x80\x94 click Load WAV or Record", nullptr);
+                 "No zones loaded \xe2\x80\x94 click Load WAV(s) or Record", nullptr);
         }
     }
 
@@ -1784,7 +1784,7 @@ private:
         float bx = kPad;
 
         loadBtn_ = { bx, fy + 16.0f, kBtnW, kBtnH };
-        drawButton(loadBtn_, "Load WAV", 51, 64, 74);
+        drawButton(loadBtn_, "Load WAV(s)", 51, 64, 74);
         bx += kBtnW + kBtnGap;
 
         recBtn_ = { bx, fy + 16.0f, kBtnW, kBtnH };
