@@ -862,6 +862,10 @@ private:
         std::lock_guard<std::mutex> lk(zoneMtx_);
         if (zonesInitialized_) { notifyZonesChanged(); return; }
 
+        // Empty host state means the host has no saved zones (fresh project).
+        // Don't mark initialized — allow kStateKeyDataDir to load the auto-save.
+        if (metas->empty()) return;
+
         auto newZones = std::make_shared<ZoneVec>();
         newZones->reserve(metas->size());
 
