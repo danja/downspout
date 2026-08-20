@@ -27,6 +27,7 @@ enum StateIndex : std::uint32_t {
     kStateZoneReverse,   // UI sends index string
     kStateZoneDsp,       // UI sends "idx|attackMs|decayMs|sustainLevel|releaseMs|filterEnabled|filterType|filterCutoff|filterQ"
     kStateZoneSlice,     // UI sends "idx|numSlices|startNote"  (numSlices=0 → auto-detect)
+    kStateZoneReorder,   // UI sends "fromIdx|toIdx" → DSP moves zone + redistributes ranges
     kStatePatchSave,     // UI sends file path → DSP writes Turtle patch
     kStatePatchLoad,     // UI sends file path → DSP reads Turtle patch + reloads zones
     kStateDataDir,       // UI sends data directory path → DSP updates recording/patch output dir
@@ -45,6 +46,7 @@ inline constexpr const char* kStateKeyZoneFade      = "zone_fade";
 inline constexpr const char* kStateKeyZoneReverse   = "zone_reverse";
 inline constexpr const char* kStateKeyZoneDsp       = "zone_dsp";
 inline constexpr const char* kStateKeyZoneSlice     = "zone_slice";
+inline constexpr const char* kStateKeyZoneReorder   = "zone_reorder";
 inline constexpr const char* kStateKeyPatchSave     = "patch_save";
 inline constexpr const char* kStateKeyPatchLoad     = "patch_load";
 inline constexpr const char* kStateKeyDataDir        = "data_dir";

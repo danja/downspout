@@ -55,10 +55,12 @@ using downspout::campione::kStateKeyZoneUpdate;
 using downspout::campione::kStateKeyZones;
 using downspout::campione::kStateKeyZoneDsp;
 using downspout::campione::kStateKeyZoneSlice;
+using downspout::campione::kStateKeyZoneReorder;
 using downspout::campione::kStateKeyPatchSave;
 using downspout::campione::kStateKeyPatchLoad;
 using downspout::campione::kStateKeyDataDir;
 using downspout::campione::kStateZoneSlice;
+using downspout::campione::kStateZoneReorder;
 using downspout::campione::kStatePatchSave;
 using downspout::campione::kStatePatchLoad;
 using downspout::campione::kStateDataDir;
@@ -354,6 +356,12 @@ protected:
             state.hints        = 0;
             state.defaultValue = "";
             break;
+        case kStateZoneReorder:
+            state.key          = kStateKeyZoneReorder;
+            state.label        = "Reorder Zone";
+            state.hints        = 0;
+            state.defaultValue = "";
+            break;
         case kStatePatchSave:
             state.key          = kStateKeyPatchSave;
             state.label        = "Save Patch";
@@ -559,6 +567,14 @@ protected:
             return;
         }
 
+        if (std::strcmp(key, kStateKeyZoneReorder) == 0 && value && value[0] != '\0')
+        {
+            int from = 0, to = 0;
+            if (std::sscanf(value, "%d|%d", &from, &to) == 2)
+                doZoneReorder(from, to);
+            return;
+        }
+
         if (std::strcmp(key, kStateKeyPatchSave) == 0)
         {
             // "auto" sentinel (or empty) → auto-generate path; otherwise use explicit path
@@ -726,6 +742,42 @@ protected:
 
 private:
     // ── Zone helpers ──────────────────────────────────────────────────────────
+
+    void doZoneReorder(int from, int to)
+    {
+        std::lock_guard<std::mutex> lk(zoneMtx_);
+        zonesInitialized_ = true;
+        const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+        if (!existing) return;
+        const int n = static_cast<int>(existing->size());
+        if (from < 0 || from >= n || to < 0 || to > n) return;
+        if (to == from || to == from + 1) return;
+
+        // Collect sorted ranges (by rangeLow) — these stay fixed on the keyboard.
+        std::vector<std::pair<int,int>> ranges;
+        ranges.reserve(static_cast<std::size_t>(n));
+        for (const auto& z : *existing)
+            ranges.push_back({z.rangeLow, z.rangeHigh});
+        std::sort(ranges.begin(), ranges.end());
+
+        // Move zone in the vector (PCM data + all zone metadata travels with it).
+        auto newZones = std::make_shared<ZoneVec>(*existing);
+        CoreSampleZone moved = (*newZones)[static_cast<std::size_t>(from)];
+        newZones->erase(newZones->begin() + from);
+        const int insertAt = (to > from) ? to - 1 : to;
+        newZones->insert(newZones->begin() + insertAt, std::move(moved));
+
+        // Redistribute sorted keyboard ranges to zones in their new display order.
+        for (int i = 0; i < n; ++i) {
+            (*newZones)[static_cast<std::size_t>(i)].rangeLow  = ranges[static_cast<std::size_t>(i)].first;
+            (*newZones)[static_cast<std::size_t>(i)].rangeHigh = ranges[static_cast<std::size_t>(i)].second;
+        }
+
+        std::atomic_store_explicit(&zones_,
+                                   std::shared_ptr<const ZoneVec>(std::move(newZones)),
+                                   std::memory_order_release);
+        notifyZonesChanged(true);
+    }
 
     std::string doSliceZone(int idx, int numSlices, int startNote)
     {

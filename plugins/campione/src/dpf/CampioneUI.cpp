@@ -42,6 +42,7 @@ using downspout::campione::kStateKeyParameters;
 using downspout::campione::kStateKeyZones;
 using downspout::campione::kStateKeyZoneDsp;
 using downspout::campione::kStateKeyZoneSlice;
+using downspout::campione::kStateKeyZoneReorder;
 using downspout::campione::kStateKeyPatchSave;
 using downspout::campione::kStateKeyPatchLoad;
 using downspout::campione::kStateKeyDataDir;
@@ -82,6 +83,7 @@ struct ZoneEntry {
 enum DragField {
     kDragNone,
     kDragVol,
+    kDragZoneReorder,   // drag zone row up/down to reorder
     kDragRoot,
     kDragOctave,
     kDragRangeLow,
@@ -167,8 +169,8 @@ public:
     ~CampioneUI() override
     {
         peakPendingIdx_ = -1;
-        if (peakThread_.joinable())
-            peakThread_.join();
+        if (peakThread_.joinable())     peakThread_.join();
+        if (filePickerThread_.joinable()) filePickerThread_.join();
     }
 
 protected:
@@ -302,6 +304,24 @@ protected:
             }
         }
 
+        // Apply completed multi-file picker results.
+        if (filePickerDone_.load(std::memory_order_acquire) && filePickerThread_.joinable()) {
+            filePickerThread_.join();
+            std::vector<std::string> paths;
+            bool fallback = false;
+            {
+                std::lock_guard<std::mutex> lk(filePickerMtx_);
+                paths    = std::move(filePickerPaths_);
+                fallback = filePickerFallback_;
+            }
+            if (fallback) {
+                requestStateFile(kStateKeyZoneLoad);  // zenity unavailable — single-file browser
+            } else {
+                for (const auto& p : paths)
+                    setState(kStateKeyZoneLoad, p.c_str());
+            }
+        }
+
         // Rate-limit animation repaints (recording timer, patch-saved flash, dialog).
         if (recording_ || patchSaved_ || dialogMode_ != kDialogNone) {
             using Clock = std::chrono::steady_clock;
@@ -357,6 +377,21 @@ protected:
         }
 
         if (!ev.press) {
+            // Commit zone reorder drag
+            if (dragField_ == kDragZoneReorder) {
+                const int from = reorderFromIdx_;
+                const int to   = reorderTargetIdx_;
+                dragField_        = kDragNone;
+                reorderFromIdx_   = -1;
+                reorderTargetIdx_ = -1;
+                if (from >= 0 && to >= 0 && to != from && to != from + 1) {
+                    char buf[32];
+                    std::snprintf(buf, sizeof(buf), "%d|%d", from, to);
+                    setState(kStateKeyZoneReorder, buf);
+                }
+                repaint();
+                return true;
+            }
             // Commit loop handle drag
             if (dragField_ == kDragLoopStart || dragField_ == kDragLoopEnd) {
                 if (selectedZone_ >= 0 && selectedZone_ < static_cast<int>(zones_.size()))
@@ -387,9 +422,57 @@ protected:
             return false;
         }
 
-        // Load WAV
+        // Load WAV(s) — multi-select via zenity, fallback to DPF single-file browser
         if (loadBtn_.contains(px, py)) {
-            requestStateFile(kStateKeyZoneLoad);
+            if (!filePickerDone_.load(std::memory_order_acquire)) return true;
+            filePickerDone_.store(false, std::memory_order_release);
+            if (filePickerThread_.joinable()) filePickerThread_.join();
+            filePickerThread_ = std::thread([this]() {
+                std::vector<std::string> paths;
+                bool needFallback = false;
+
+                // Check zenity availability
+                FILE* check = ::popen("which zenity >/dev/null 2>&1", "r");
+                if (check) {
+                    needFallback = (::pclose(check) != 0);
+                } else {
+                    needFallback = true;
+                }
+
+                if (!needFallback) {
+                    FILE* pipe = ::popen(
+                        "zenity --file-selection --multiple"
+                        " --title='Load WAV Files'"
+                        " --file-filter='WAV files | *.wav *.WAV'"
+                        " 2>/dev/null", "r");
+                    if (pipe) {
+                        char buf[4096];
+                        std::string all;
+                        while (std::fgets(buf, sizeof(buf), pipe))
+                            all += buf;
+                        ::pclose(pipe);
+                        // zenity separates multiple paths with '|'; strip trailing newline
+                        while (!all.empty() && (all.back() == '\n' || all.back() == '\r'))
+                            all.pop_back();
+                        std::size_t pos = 0;
+                        while (pos <= all.size()) {
+                            const std::size_t sep = all.find('|', pos);
+                            const std::string p = all.substr(pos, sep == std::string::npos
+                                                                  ? std::string::npos : sep - pos);
+                            if (!p.empty()) paths.push_back(p);
+                            if (sep == std::string::npos) break;
+                            pos = sep + 1;
+                        }
+                    }
+                }
+
+                {
+                    std::lock_guard<std::mutex> lk(filePickerMtx_);
+                    filePickerPaths_    = std::move(paths);
+                    filePickerFallback_ = needFallback;
+                }
+                filePickerDone_.store(true, std::memory_order_release);
+            });
             return true;
         }
 
@@ -674,6 +757,16 @@ protected:
                 return true;
             }
 
+            // Reorder grab handle (left of Root column — the '#' number area)
+            const Rect grabR { kPad, ry, kColRoot - 4.0f, kRowH };
+            if (grabR.contains(px, py)) {
+                dragField_        = kDragZoneReorder;
+                reorderFromIdx_   = static_cast<int>(i);
+                reorderTargetIdx_ = static_cast<int>(i);
+                dragStartY_       = py;
+                return true;
+            }
+
             // Root note — drag start
             const Rect rootR { kPad + kColRoot, ry, 46.0f, kRowH };
             if (rootR.contains(px, py)) {
@@ -728,6 +821,27 @@ protected:
     {
         const float py = static_cast<float>(ev.pos.getY());
         const float px = static_cast<float>(ev.pos.getX());
+
+        if (dragField_ == kDragZoneReorder) {
+            // Compute insertion target from cursor position in the zone list
+            const float H2    = static_cast<float>(getHeight());
+            const float listY = kHeaderH + kPad * 2.0f;
+            const float listH = H2 - listY - kFooterH - kPad * 1.5f - kWaveH;
+            const float rowsY = listY + 23.0f;
+            const int n       = static_cast<int>(zones_.size());
+            // Find which gap the cursor is closest to (0 = above row 0, n = below last row)
+            int target = n;
+            for (int i = static_cast<int>(zoneScrollOffset_); i < n; ++i) {
+                const float ry = rowsY + static_cast<float>(i - zoneScrollOffset_) * kRowH;
+                if (ry > listY + listH) break;
+                if (py < ry + kRowH * 0.5f) { target = i; break; }
+            }
+            if (reorderTargetIdx_ != target) {
+                reorderTargetIdx_ = target;
+                repaint();
+            }
+            return true;
+        }
 
         if (dragField_ == kDragVol) {
             updateVolFromX(px);
@@ -1057,13 +1171,16 @@ private:
             const float ry  = rowsY + static_cast<float>(i - static_cast<std::size_t>(zoneScrollOffset_)) * kRowH;
             if (ry + kRowH > listY + listH) break;
 
-            const ZoneEntry& z      = zones_[i];
-            const bool even         = (i % 2) == 0;
-            const bool isDragged    = dragZoneIdx_ == static_cast<int>(i) && dragField_ != kDragNone;
-            const bool isSelected   = selectedZone_ == static_cast<int>(i);
+            const ZoneEntry& z           = zones_[i];
+            const bool even              = (i % 2) == 0;
+            const bool isDragged         = dragZoneIdx_ == static_cast<int>(i) && dragField_ != kDragNone;
+            const bool isReorderSource   = dragField_ == kDragZoneReorder && reorderFromIdx_ == static_cast<int>(i);
+            const bool isSelected        = selectedZone_ == static_cast<int>(i);
 
             beginPath();
-            if (isSelected)
+            if (isReorderSource)
+                fillColor(40, 56, 72, 180);  // dim while being dragged
+            else if (isSelected)
                 fillColor(28, 42, 60, 255);
             else
                 fillColor(even ? 22 : 18, even ? 31 : 26,
@@ -1071,6 +1188,15 @@ private:
             rect(kPad + 1.0f, ry, W - kPad * 2.0f - 2.0f, kRowH - 1.0f);
             fill();
             closePath();
+
+            // Drop indicator line above this row when reorderTargetIdx_ == i
+            if (dragField_ == kDragZoneReorder && reorderTargetIdx_ == static_cast<int>(i)) {
+                beginPath();
+                fillColor(82, 162, 240, 220);
+                rect(kPad + 1.0f, ry - 2.0f, W - kPad * 2.0f - 2.0f, 3.0f);
+                fill();
+                closePath();
+            }
 
             // Selection accent bar
             if (isSelected) {
@@ -1208,6 +1334,41 @@ private:
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
             fillColor(143, 158, 169, 255);
             text(kPad + kColFile, mid, basename(z.path).c_str(), nullptr);
+
+            // Drag grip dots in the '#' column
+            if (dragField_ == kDragZoneReorder && reorderFromIdx_ == static_cast<int>(i)) {
+                fillColor(82, 162, 240, 200);
+            } else {
+                fillColor(70, 88, 100, 180);
+            }
+            for (int dot = 0; dot < 3; ++dot) {
+                const float dx = kPad + 4.0f;
+                const float dy = ry + 7.0f + static_cast<float>(dot) * 5.0f;
+                beginPath();
+                circle(dx, dy, 1.5f);
+                fill();
+                closePath();
+                beginPath();
+                circle(dx + 5.0f, dy, 1.5f);
+                fill();
+                closePath();
+            }
+        }
+
+        // Drop indicator below the last visible row
+        if (dragField_ == kDragZoneReorder
+            && reorderTargetIdx_ == static_cast<int>(zones_.size()))
+        {
+            const int lastVisible = std::min(static_cast<int>(zones_.size()),
+                                             zoneScrollOffset_ + static_cast<int>(listH / kRowH));
+            const float lineY = rowsY + static_cast<float>(lastVisible - zoneScrollOffset_) * kRowH - 2.0f;
+            if (lineY < listY + listH) {
+                beginPath();
+                fillColor(82, 162, 240, 220);
+                rect(kPad + 1.0f, lineY, W - kPad * 2.0f - 2.0f, 3.0f);
+                fill();
+                closePath();
+            }
         }
 
         if (zones_.empty()) {
@@ -1916,12 +2077,21 @@ private:
     // For ADSR/pan float drags: track start value during drag
     float dragStartFloat_ = 0.0f;
 
-    DragField dragField_     = kDragNone;
-    int       dragZoneIdx_   = -1;
-    float     dragStartY_    = 0.0f;
-    float     dragStartX_    = 0.0f;
-    int       dragStartNote_ = 0;
-    uint32_t  dragStartFrame_= 0;
+    DragField dragField_        = kDragNone;
+    int       dragZoneIdx_      = -1;
+    float     dragStartY_       = 0.0f;
+    float     dragStartX_       = 0.0f;
+    int       dragStartNote_    = 0;
+    uint32_t  dragStartFrame_   = 0;
+    // Zone reorder drag state
+    int       reorderFromIdx_   = -1;   // zone being dragged
+    int       reorderTargetIdx_ = -1;   // insertion position (0..zones_.size())
+    // Multi-file picker (zenity background thread)
+    std::thread              filePickerThread_;
+    std::atomic<bool>        filePickerDone_     {true};
+    std::mutex               filePickerMtx_;
+    std::vector<std::string> filePickerPaths_;
+    bool                     filePickerFallback_ = false;
 
     int              selectedZone_   = -1;
     int              previewZoneIdx_ = -1;  // zone currently playing via Play button (-1 = none)
