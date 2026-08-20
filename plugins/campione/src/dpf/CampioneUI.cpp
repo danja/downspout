@@ -431,7 +431,9 @@ protected:
                 std::vector<std::string> paths;
                 bool needFallback = false;
 
-                // Check zenity availability
+#ifdef __linux__
+                // zenity is the standard GTK multi-file picker on Linux desktops.
+                // Check availability first so we can fall back immediately if absent.
                 FILE* check = ::popen("which zenity >/dev/null 2>&1", "r");
                 if (check) {
                     needFallback = (::pclose(check) != 0);
@@ -465,6 +467,9 @@ protected:
                         }
                     }
                 }
+#else
+                needFallback = true;  // zenity is Linux-only; use DPF browser on macOS/Windows
+#endif
 
                 {
                     std::lock_guard<std::mutex> lk(filePickerMtx_);

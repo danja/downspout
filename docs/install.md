@@ -22,6 +22,21 @@
 - `DOWNSPOUT_RUN_TESTS`
   Set to `0` to skip `ctest` during install.
 
+## Linux runtime dependencies
+
+**campione** — optional multi-file WAV loading uses `zenity` (the standard GTK
+file-chooser helper). On GNOME desktops it is typically pre-installed. On KDE
+or minimal installs, install it with:
+
+```bash
+sudo apt install zenity          # Debian / Ubuntu
+sudo dnf install zenity          # Fedora
+sudo pacman -S zenity            # Arch
+```
+
+If `zenity` is absent the "Load WAV(s)" button falls back to the DPF built-in
+single-file browser transparently — no other functionality is affected.
+
 ## Linux UI build dependencies
 
 DPF UI targets use OpenGL and DBus development headers through `DistrhoUI.hpp`.
