@@ -24,10 +24,9 @@ enum ParameterIndex : uint32_t {
 
 struct Rect {
     float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
-
     [[nodiscard]] bool contains(float px, float py) const noexcept
     {
-        return px >= x && px <= (x + w) && py >= y && py <= (y + h);
+        return px >= x && px <= x + w && py >= y && py <= y + h;
     }
 };
 
@@ -35,47 +34,42 @@ struct SliderDef {
     uint32_t    index;
     const char* label;
     const char* unit;
-    const char* hint;
-    float       min;
-    float       max;
+    float       min, max;
     bool        logScale;
 };
 
 constexpr std::array<SliderDef, 4> kSliders = {{
-    {kParamDuckDepth, "Duck Depth", "%",  "Amount of gain reduction when sidechain fires",  0.0f,    100.0f, false},
-    {kParamAttackMs,  "Attack",     "ms", "Envelope follower attack time",                  1.0f,    500.0f, true},
-    {kParamReleaseMs, "Release",    "ms", "Envelope follower release time",                 10.0f,  2000.0f, true},
-    {kParamCutoffHz,  "M/S Cutoff", "Hz", "LP (mid) / HP (side) crossover frequency",      50.0f,  5000.0f, true},
+    {kParamDuckDepth, "Duck\nDepth", "%",   0.0f,    100.0f, false},
+    {kParamAttackMs,  "Attack",      "ms",  1.0f,    500.0f, true},
+    {kParamReleaseMs, "Release",     "ms",  10.0f,  2000.0f, true},
+    {kParamCutoffHz,  "M/S\nCutoff", "Hz",  50.0f,  5000.0f, true},
 }};
 
-// Meter definitions (index, label, colour R/G/B)
 struct MeterDef {
     uint32_t    index;
     const char* label;
-    const char* sublabel;
+    bool        isDb;      // true → dBFS display; false → linear 0-1
+    bool        isInverted; // true → fill from top (gain reduction)
     uint8_t     r, g, b;
-    bool        isDb;        // true = dBFS display; false = linear 0-1 display
-    bool        isInverted;  // true = draw from right (gain reduction)
 };
 
 constexpr std::array<MeterDef, 4> kMeters = {{
-    {kParamInputLevel,  "Input",     "pre-duck",   100, 160, 220, true,  false},
-    {kParamScLevel,     "Sidechain", "envelope",   210, 140,  50, false, false},
-    {kParamDuckGain,    "Reduction", "gain cut",   200,  70,  60, false, true},
-    {kParamOutputLevel, "Output",    "post-EQ",     80, 190, 120, true,  false},
+    {kParamInputLevel,  "In",   true,  false, 100, 160, 220},
+    {kParamScLevel,     "Side", false, false, 210, 140,  50},
+    {kParamDuckGain,    "Cut",  false, true,  200,  70,  60},
+    {kParamOutputLevel, "Out",  true,  false,  80, 190, 120},
 }};
 
 [[nodiscard]] float clampf(float v, float lo, float hi) noexcept
 {
-    return std::max(lo, std::min(v, hi));
+    return v < lo ? lo : (v > hi ? hi : v);
 }
 
 [[nodiscard]] float toNorm(const SliderDef& def, float value) noexcept
 {
     if (def.logScale) {
-        const float logMin = std::log(def.min);
-        const float logMax = std::log(def.max);
-        return clampf((std::log(std::max(value, def.min)) - logMin) / (logMax - logMin), 0.0f, 1.0f);
+        const float lMin = std::log(def.min), lMax = std::log(def.max);
+        return clampf((std::log(std::max(value, def.min)) - lMin) / (lMax - lMin), 0.0f, 1.0f);
     }
     return clampf((value - def.min) / (def.max - def.min), 0.0f, 1.0f);
 }
@@ -84,85 +78,57 @@ constexpr std::array<MeterDef, 4> kMeters = {{
 {
     t = clampf(t, 0.0f, 1.0f);
     if (def.logScale) {
-        const float logMin = std::log(def.min);
-        const float logMax = std::log(def.max);
-        return std::exp(logMin + t * (logMax - logMin));
+        const float lMin = std::log(def.min), lMax = std::log(def.max);
+        return std::exp(lMin + t * (lMax - lMin));
     }
     return def.min + t * (def.max - def.min);
 }
 
-[[nodiscard]] std::string formatSliderValue(const SliderDef& def, float value)
+[[nodiscard]] std::string fmtSlider(const SliderDef& def, float v)
 {
     char buf[32];
-    if (def.index == kParamDuckDepth) {
-        std::snprintf(buf, sizeof(buf), "%.0f%%", value);
-    } else if (def.index == kParamCutoffHz) {
-        if (value >= 1000.0f) {
-            std::snprintf(buf, sizeof(buf), "%.2f kHz", value / 1000.0f);
-        } else {
-            std::snprintf(buf, sizeof(buf), "%.0f Hz", value);
-        }
-    } else {
-        std::snprintf(buf, sizeof(buf), "%.1f ms", value);
-    }
+    if (def.index == kParamDuckDepth)
+        std::snprintf(buf, sizeof(buf), "%.0f%%", v);
+    else if (def.index == kParamCutoffHz)
+        v >= 1000.0f
+            ? std::snprintf(buf, sizeof(buf), "%.1fk", v / 1000.0f)
+            : std::snprintf(buf, sizeof(buf), "%.0f", v);
+    else
+        std::snprintf(buf, sizeof(buf), "%.0f", v);
     return buf;
 }
 
-// Linear amplitude 0-1 → meter fill position 0-1, using -60 dBFS floor
-[[nodiscard]] float levelToMeter(float linear) noexcept
+[[nodiscard]] float meterFill(const MeterDef& def, float value) noexcept
 {
-    if (linear < 1e-6f) { return 0.0f; }
-    const float dB = 20.0f * std::log10(linear);
-    return clampf((dB + 60.0f) / 60.0f, 0.0f, 1.0f);
+    if (def.isInverted) return clampf(1.0f - value, 0.0f, 1.0f); // gain→reduction
+    if (def.isDb) {
+        if (value < 1e-6f) return 0.0f;
+        return clampf((20.0f * std::log10(value) + 60.0f) / 60.0f, 0.0f, 1.0f);
+    }
+    return clampf(value, 0.0f, 1.0f);
 }
 
-[[nodiscard]] std::string formatDb(float linear)
+[[nodiscard]] std::string fmtMeter(const MeterDef& def, float value)
 {
     char buf[16];
-    if (linear < 1e-6f) {
-        std::snprintf(buf, sizeof(buf), "-inf");
-    } else {
-        std::snprintf(buf, sizeof(buf), "%.0f dB", 20.0f * std::log10(linear));
-    }
-    return buf;
-}
-
-[[nodiscard]] std::string formatMeterValue(const MeterDef& def, float value)
-{
-    char buf[24];
     if (def.isInverted) {
-        // duckGain: 0=full duck, 1=no duck; show gain reduction in dB
-        const float gain = clampf(value, 0.0001f, 1.0f);
-        const float reductionDb = -20.0f * std::log10(gain);
-        std::snprintf(buf, sizeof(buf), "%.1f dB", reductionDb);
+        const float g = clampf(value, 0.0001f, 1.0f);
+        std::snprintf(buf, sizeof(buf), "%.0fdB", -20.0f * std::log10(g));
     } else if (def.isDb) {
-        return formatDb(value);
+        if (value < 1e-6f) std::snprintf(buf, sizeof(buf), "-inf");
+        else               std::snprintf(buf, sizeof(buf), "%.0f", 20.0f * std::log10(value));
     } else {
         std::snprintf(buf, sizeof(buf), "%.0f%%", value * 100.0f);
     }
     return buf;
 }
 
-// Fill fraction for a meter given raw parameter value
-[[nodiscard]] float meterFill(const MeterDef& def, float value) noexcept
-{
-    if (def.isInverted) {
-        // gain 1→no fill (no reduction), gain 0→full fill
-        return clampf(1.0f - value, 0.0f, 1.0f);
-    }
-    if (def.isDb) {
-        return levelToMeter(value);
-    }
-    return clampf(value, 0.0f, 1.0f);
-}
-
-}  // namespace
+} // namespace
 
 class BassopsUI : public UI
 {
 public:
-    BassopsUI()
-        : UI(DISTRHO_UI_DEFAULT_WIDTH, DISTRHO_UI_DEFAULT_HEIGHT)
+    BassopsUI() : UI(DISTRHO_UI_DEFAULT_WIDTH, DISTRHO_UI_DEFAULT_HEIGHT)
     {
         values_[kParamDuckDepth]   = 80.0f;
         values_[kParamAttackMs]    = 10.0f;
@@ -183,44 +149,36 @@ public:
 protected:
     void parameterChanged(uint32_t index, float value) override
     {
-        if (index < kParameterCount) {
-            values_[index] = value;
-            repaint();
-        }
+        if (index < kParameterCount) { values_[index] = value; repaint(); }
     }
 
     void onNanoDisplay() override
     {
-        const float W   = static_cast<float>(getWidth());
-        const float H   = static_cast<float>(getHeight());
-        const float pad = 20.0f;
+        const float W = static_cast<float>(getWidth());
+        const float H = static_cast<float>(getHeight());
+        constexpr float pad = 18.0f;
 
         drawBackground(W, H);
-        drawHeader(pad, pad, W - pad * 2.0f, 70.0f);
+        drawHeader(pad, pad, W - pad * 2.0f, 64.0f);
 
-        const float contentY = pad + 88.0f;
-        const float contentH = H - contentY - pad;
+        const float cy = pad + 80.0f;
+        const float ch = H - cy - pad;
+        const float splitX = W * 0.54f;
 
-        drawControlPanel(pad, contentY, W * 0.55f - pad * 0.5f, contentH);
-        drawMeterPanel(W * 0.55f + pad * 0.5f, contentY, W * 0.45f - pad * 1.5f, contentH);
+        drawSliderPanel(pad, cy, splitX - pad * 1.5f, ch);
+        drawMeterPanel(splitX + pad * 0.5f, cy, W - splitX - pad * 1.5f, ch);
     }
 
     bool onMouse(const MouseEvent& ev) override
     {
-        if (ev.button != 1) { return false; }
-
+        if (ev.button != 1) return false;
         const float x = static_cast<float>(ev.pos.getX());
         const float y = static_cast<float>(ev.pos.getY());
-
-        if (!ev.press) {
-            draggingSlider_ = -1;
-            return false;
-        }
-
-        for (std::size_t i = 0; i < sliderRects_.size(); ++i) {
+        if (!ev.press) { dragging_ = -1; return false; }
+        for (int i = 0; i < static_cast<int>(sliderRects_.size()); ++i) {
             if (sliderRects_[i].contains(x, y)) {
-                draggingSlider_ = static_cast<int>(i);
-                updateSliderFromX(draggingSlider_, x);
+                dragging_ = i;
+                updateFromY(i, y);
                 return true;
             }
         }
@@ -229,10 +187,7 @@ protected:
 
     bool onMotion(const MotionEvent& ev) override
     {
-        if (draggingSlider_ >= 0) {
-            updateSliderFromX(draggingSlider_, static_cast<float>(ev.pos.getX()));
-            return true;
-        }
+        if (dragging_ >= 0) { updateFromY(dragging_, static_cast<float>(ev.pos.getY())); return true; }
         return false;
     }
 
@@ -240,9 +195,9 @@ protected:
     {
         const float x = static_cast<float>(ev.pos.getX());
         const float y = static_cast<float>(ev.pos.getY());
-        for (std::size_t i = 0; i < sliderRects_.size(); ++i) {
+        for (int i = 0; i < static_cast<int>(sliderRects_.size()); ++i) {
             if (sliderRects_[i].contains(x, y)) {
-                nudgeSlider(static_cast<int>(i), ev.delta.getY() > 0.0f ? 1.0f : -1.0f);
+                nudge(i, ev.delta.getY() > 0.0f ? 1.0f : -1.0f);
                 return true;
             }
         }
@@ -252,254 +207,213 @@ protected:
 private:
     std::array<float, kParameterCount> values_ {};
     std::array<Rect,  kSliders.size()> sliderRects_ {};
-    int                                draggingSlider_ = -1;
+    int dragging_ = -1;
+
+    // ── drawing helpers ────────────────────────────────────────────────────
 
     void drawBackground(float W, float H)
     {
-        beginPath();
-        fillColor(10, 14, 20, 255);
-        rect(0, 0, W, H);
-        fill();
-        closePath();
-
-        beginPath();
-        fillColor(18, 32, 46, 255);
-        rect(0, 0, W, H * 0.28f);
-        fill();
-        closePath();
+        beginPath(); fillColor(9, 13, 19, 255); rect(0, 0, W, H); fill(); closePath();
+        beginPath(); fillColor(17, 30, 44, 255); rect(0, 0, W, H * 0.26f); fill(); closePath();
     }
 
     void drawHeader(float x, float y, float w, float h)
     {
-        beginPath();
-        roundedRect(x, y, w, h, 18.0f);
-        fillColor(16, 25, 36, 240);
-        fill();
-        closePath();
+        beginPath(); roundedRect(x, y, w, h, 16.0f); fillColor(15, 23, 33, 240); fill(); closePath();
 
-        fontSize(28.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(235, 240, 245, 255);
-        text(x + 20.0f, y + 14.0f, "Bassops", nullptr);
+        fontSize(26.0f); textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        fillColor(232, 238, 245, 255);
+        text(x + 18.0f, y + h * 0.38f, "Bassops", nullptr);
 
-        fontSize(12.0f);
-        fillColor(140, 160, 178, 255);
-        text(x + 22.0f, y + 46.0f,
-             DOWNSPOUT_PLUGIN_VERSION_STRING "  |  Sidechain ducker + mid/side EQ",
-             nullptr);
+        fontSize(11.0f); fillColor(130, 152, 172, 255);
+        text(x + 20.0f, y + h * 0.76f,
+             DOWNSPOUT_PLUGIN_VERSION_STRING "  |  Sidechain ducker + mid/side EQ", nullptr);
     }
 
-    void drawControlPanel(float x, float y, float w, float h)
+    void drawSliderPanel(float x, float y, float w, float h)
     {
-        beginPath();
-        roundedRect(x, y, w, h, 18.0f);
-        fillColor(15, 21, 29, 248);
-        fill();
-        closePath();
+        beginPath(); roundedRect(x, y, w, h, 16.0f); fillColor(14, 20, 28, 248); fill(); closePath();
 
-        fontSize(13.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(220, 228, 235, 255);
-        text(x + 18.0f, y + 16.0f, "Controls", nullptr);
+        fontSize(12.0f); textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(210, 220, 230, 255);
+        text(x + 16.0f, y + 14.0f, "Controls", nullptr);
 
-        const float innerX = x + 18.0f;
-        const float innerW = w - 36.0f;
-        const float rowH   = 62.0f;
-        const float rowGap = 12.0f;
+        const float innerX = x + 14.0f;
+        const float innerW = w - 28.0f;
+        const float barH   = h - 100.0f;   // height of the slider track
+        const float barY   = y + 42.0f;
+        const float colW   = (innerW - 3.0f * 14.0f) / 4.0f;
 
-        for (std::size_t i = 0; i < kSliders.size(); ++i) {
-            const float ry = y + 44.0f + static_cast<float>(i) * (rowH + rowGap);
-            sliderRects_[i] = {innerX, ry + 28.0f, innerW, 18.0f};
-            drawSlider(kSliders[i], sliderRects_[i], values_[kSliders[i].index], draggingSlider_ == static_cast<int>(i));
+        for (int i = 0; i < 4; ++i) {
+            const float cx = innerX + i * (colW + 14.0f);
+            // The interactive hit area is the full column
+            sliderRects_[i] = {cx, barY, colW, barH};
+            drawVSlider(kSliders[i], cx, barY, colW, barH,
+                        values_[kSliders[i].index], dragging_ == i);
         }
     }
 
-    void drawSlider(const SliderDef& def, const Rect& rect, float value, bool active)
+    // Draws a vertical slider column.
+    // Track fills from bottom up.  Label above, value below.
+    void drawVSlider(const SliderDef& def, float x, float y, float w, float h, float value, bool active)
     {
-        fontSize(12.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(155, 172, 187, 255);
-        text(rect.x, rect.y - 24.0f, def.label, nullptr);
+        const float trackW = 18.0f;
+        const float trackX = x + (w - trackW) * 0.5f;
 
-        textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(228, 234, 240, 255);
-        const std::string valStr = formatSliderValue(def, value);
-        text(rect.x + rect.w, rect.y - 24.0f, valStr.c_str(), nullptr);
+        // Label (supports \n for two-line labels)
+        fontSize(11.0f); textAlign(ALIGN_CENTER | ALIGN_TOP);
+        fillColor(150, 168, 184, 255);
+        // Simple two-line label: split on '\n'
+        std::string lbl(def.label);
+        const auto nl = lbl.find('\n');
+        if (nl != std::string::npos) {
+            text(x + w * 0.5f, y,           lbl.substr(0, nl).c_str(), nullptr);
+            text(x + w * 0.5f, y + 13.0f,   lbl.substr(nl + 1).c_str(), nullptr);
+        } else {
+            text(x + w * 0.5f, y + 6.0f, lbl.c_str(), nullptr);
+        }
 
-        fontSize(10.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(100, 118, 135, 255);
-        text(rect.x, rect.y + 24.0f, def.hint, nullptr);
+        // Track background
+        const float trackTop = y + 28.0f;
+        const float trackH   = h - 54.0f;
+        beginPath(); roundedRect(trackX, trackTop, trackW, trackH, trackW * 0.5f);
+        fillColor(30, 40, 52, 255); fill(); closePath();
 
-        beginPath();
-        roundedRect(rect.x, rect.y, rect.w, rect.h, 9.0f);
-        fillColor(35, 44, 56, 255);
-        fill();
-        closePath();
+        // Fill from bottom up
+        const float t     = toNorm(def, value);
+        const float fillH = std::max(trackW, trackH * t);
+        const float fillY = trackTop + trackH - fillH;
+        beginPath(); roundedRect(trackX, fillY, trackW, fillH, trackW * 0.5f);
+        fillColor(active ? 220 : 175, active ? 128 : 98, 50, 255);
+        fill(); closePath();
 
-        const float t = toNorm(def, value);
-        beginPath();
-        roundedRect(rect.x, rect.y, std::max(12.0f, rect.w * t), rect.h, 9.0f);
-        fillColor(active ? 220 : 180, active ? 130 : 100, 55, 255);
-        fill();
-        closePath();
+        // Unit label inside track (tiny)
+        fontSize(9.0f); textAlign(ALIGN_CENTER | ALIGN_TOP);
+        fillColor(120, 136, 150, 180);
+        text(trackX + trackW * 0.5f, trackTop + 4.0f, def.unit, nullptr);
+
+        // Value readout below track
+        fontSize(11.0f); textAlign(ALIGN_CENTER | ALIGN_TOP);
+        fillColor(225, 232, 240, 255);
+        text(x + w * 0.5f, trackTop + trackH + 6.0f, fmtSlider(def, value).c_str(), nullptr);
     }
 
     void drawMeterPanel(float x, float y, float w, float h)
     {
-        beginPath();
-        roundedRect(x, y, w, h, 18.0f);
-        fillColor(12, 18, 26, 248);
-        fill();
-        closePath();
+        beginPath(); roundedRect(x, y, w, h, 16.0f); fillColor(11, 17, 25, 248); fill(); closePath();
 
-        fontSize(13.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(220, 228, 235, 255);
-        text(x + 18.0f, y + 16.0f, "Ducker", nullptr);
+        fontSize(12.0f); textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(210, 220, 230, 255);
+        text(x + 16.0f, y + 14.0f, "Ducker", nullptr);
 
-        // dBFS tick marks: -60 -40 -20 -10 -6 -3 0
-        const float barX = x + 18.0f;
-        const float barW = w - 36.0f;
-        const float tickY = y + 44.0f;
-        drawDbTicks(barX, tickY, barW);
+        const float innerX = x + 14.0f;
+        const float innerW = w - 28.0f;
+        const float barH   = h - 100.0f;
+        const float barY   = y + 42.0f;
+        const float colW   = (innerW - 3.0f * 10.0f) / 4.0f;
 
-        // 4 meter rows
-        const float firstRowY = tickY + 18.0f;
-        const float rowH   = 44.0f;
-        const float rowGap = 14.0f;
-
-        for (std::size_t i = 0; i < kMeters.size(); ++i) {
-            const float ry = firstRowY + static_cast<float>(i) * (rowH + rowGap);
-            drawMeter(kMeters[i], barX, ry, barW, 20.0f, values_[kMeters[i].index]);
+        for (int i = 0; i < 4; ++i) {
+            const float cx = innerX + i * (colW + 10.0f);
+            drawVMeter(kMeters[i], cx, barY, colW, barH, values_[kMeters[i].index]);
         }
 
-        // Separator + legend at bottom
-        const float legendY = y + h - 38.0f;
-        beginPath();
-        strokeColor(40, 55, 70, 200);
-        strokeWidth(1.0f);
-        moveTo(x + 18.0f, legendY - 8.0f);
-        lineTo(x + w - 18.0f, legendY - 8.0f);
-        stroke();
-        closePath();
-
-        fontSize(10.0f);
-        textAlign(ALIGN_LEFT | ALIGN_BOTTOM);
-        fillColor(90, 110, 128, 255);
-        text(x + 18.0f, legendY + 22.0f, "Reduction shows VCA gain cut in dB", nullptr);
+        // dBFS scale on the left edge of panel
+        drawDbScale(innerX, barY, barH);
     }
 
-    void drawDbTicks(float x, float y, float w)
+    void drawVMeter(const MeterDef& def, float x, float y, float w, float h, float value)
     {
-        struct Tick { float dB; const char* label; };
-        constexpr Tick ticks[] = {
-            {-60.0f, "-60"}, {-40.0f, "-40"}, {-20.0f, "-20"},
-            {-10.0f, "-10"}, {-6.0f,  "-6"},  { 0.0f,  "0"},
-        };
+        const float barW  = 20.0f;
+        const float barX  = x + (w - barW) * 0.5f;
+        const float barTop = y + 20.0f;
+        const float barH  = h - 44.0f;
 
-        fontSize(9.0f);
-        textAlign(ALIGN_CENTER | ALIGN_TOP);
+        // Label above
+        fontSize(11.0f); textAlign(ALIGN_CENTER | ALIGN_TOP);
+        fillColor(190, 205, 218, 255);
+        text(x + w * 0.5f, y + 2.0f, def.label, nullptr);
 
-        for (const Tick& t : ticks) {
-            const float xPos = x + w * clampf((t.dB + 60.0f) / 60.0f, 0.0f, 1.0f);
+        // Track background
+        beginPath(); roundedRect(barX, barTop, barW, barH, barW * 0.5f);
+        fillColor(25, 33, 43, 255); fill(); closePath();
 
-            beginPath();
-            strokeColor(50, 65, 80, 200);
-            strokeWidth(1.0f);
-            moveTo(xPos, y);
-            lineTo(xPos, y + 6.0f);
-            stroke();
-            closePath();
-
-            fillColor(90, 108, 124, 255);
-            text(xPos, y + 7.0f, t.label, nullptr);
-        }
-    }
-
-    void drawMeter(const MeterDef& def, float x, float y, float w, float barH, float value)
-    {
-        // Label + sub-label
-        fontSize(11.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(200, 212, 222, 255);
-        text(x, y, def.label, nullptr);
-
-        fontSize(9.0f);
-        fillColor(100, 120, 138, 255);
-        text(x, y + 13.0f, def.sublabel, nullptr);
-
-        // Value text on the right
-        fontSize(11.0f);
-        textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(def.r, def.g, def.b, 220);
-        const std::string valStr = formatMeterValue(def, value);
-        text(x + w, y, valStr.c_str(), nullptr);
-
-        // Bar background
-        const float barY = y + barH * 0.15f;  // centre bar in the row
-        beginPath();
-        roundedRect(x, barY, w, barH * 0.6f, 5.0f);
-        fillColor(28, 36, 46, 255);
-        fill();
-        closePath();
-
-        // Bar fill
+        // Fill fraction
         const float fillFrac = meterFill(def, value);
         if (fillFrac > 0.0f) {
-            const float fillW = std::max(6.0f, w * fillFrac);
+            const float fillH = std::max(barW, barH * fillFrac);
+            const float fillY = def.isInverted
+                ? barTop                              // fills from top for reduction
+                : barTop + barH - fillH;              // fills from bottom for levels
 
-            // Colour gradient: dim at low end, bright at high end
-            // For reduction meter: red gets brighter as more gain is cut
-            const float brightness = 0.4f + 0.6f * fillFrac;
-            const int   rr = static_cast<int>(def.r * brightness);
-            const int   gg = static_cast<int>(def.g * brightness);
-            const int   bb = static_cast<int>(def.b * brightness);
-
-            beginPath();
-            roundedRect(x, barY, fillW, barH * 0.6f, 5.0f);
-            fillColor(static_cast<uint8_t>(rr), static_cast<uint8_t>(gg), static_cast<uint8_t>(bb), 255);
-            fill();
-            closePath();
+            const float brt = 0.45f + 0.55f * fillFrac;
+            beginPath(); roundedRect(barX, fillY, barW, fillH, barW * 0.5f);
+            fillColor(static_cast<uint8_t>(def.r * brt),
+                      static_cast<uint8_t>(def.g * brt),
+                      static_cast<uint8_t>(def.b * brt), 255);
+            fill(); closePath();
         }
 
-        // 0 dB / unity marker line for level meters
+        // 0 dBFS / unity tick
         if (!def.isInverted) {
-            const float markerX = x + w * (def.isDb ? 1.0f : 1.0f);
-            beginPath();
-            strokeColor(200, 200, 200, 60);
-            strokeWidth(1.0f);
-            moveTo(markerX, barY - 2.0f);
-            lineTo(markerX, barY + barH * 0.6f + 2.0f);
-            stroke();
-            closePath();
+            const float tickY = barTop;  // top of bar = 0 dBFS
+            beginPath(); strokeColor(180, 180, 180, 60); strokeWidth(1.0f);
+            moveTo(barX - 2.0f, tickY); lineTo(barX + barW + 2.0f, tickY);
+            stroke(); closePath();
+        }
+
+        // Value readout below bar
+        fontSize(10.0f); textAlign(ALIGN_CENTER | ALIGN_TOP);
+        fillColor(static_cast<uint8_t>(def.r * 0.9f),
+                  static_cast<uint8_t>(def.g * 0.9f),
+                  static_cast<uint8_t>(def.b * 0.9f), 220);
+        text(x + w * 0.5f, barTop + barH + 5.0f, fmtMeter(def, value).c_str(), nullptr);
+    }
+
+    // Draws dB tick marks along the left side of the meter panel bars
+    void drawDbScale(float x, float y, float h)
+    {
+        const float barTop = y + 20.0f;
+        const float barH   = h - 44.0f;
+
+        struct Tick { float dB; };
+        constexpr Tick ticks[] = {{0.0f},{-6.0f},{-12.0f},{-24.0f},{-48.0f}};
+
+        fontSize(8.0f); textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
+        fillColor(80, 100, 118, 200);
+
+        for (const Tick& t : ticks) {
+            const float frac = (t.dB + 60.0f) / 60.0f;
+            const float ty   = barTop + barH * (1.0f - frac);
+            beginPath(); strokeColor(50, 65, 80, 160); strokeWidth(1.0f);
+            moveTo(x, ty); lineTo(x + 6.0f, ty); stroke(); closePath();
+            char buf[8]; std::snprintf(buf, sizeof(buf), "%d", static_cast<int>(t.dB));
+            text(x - 1.0f, ty, buf, nullptr);
         }
     }
 
-    void updateSliderFromX(int sliderIndex, float mouseX)
+    // ── interaction ───────────────────────────────────────────────────────
+
+    void updateFromY(int idx, float mouseY)
     {
-        const SliderDef& def  = kSliders[sliderIndex];
-        const Rect&      rect = sliderRects_[sliderIndex];
-        const float      t    = clampf((mouseX - rect.x) / rect.w, 0.0f, 1.0f);
-        commitParameter(def.index, fromNorm(def, t));
+        const SliderDef& def  = kSliders[idx];
+        const Rect&      rect = sliderRects_[idx];
+        // top of rect = max, bottom = min
+        const float t = clampf(1.0f - (mouseY - rect.y) / rect.h, 0.0f, 1.0f);
+        commit(def.index, fromNorm(def, t));
     }
 
-    void nudgeSlider(int sliderIndex, float direction)
+    void nudge(int idx, float dir)
     {
-        const SliderDef& def  = kSliders[sliderIndex];
-        const float      step = def.logScale
-            ? (def.max - def.min) / 200.0f
-            : (def.max - def.min) / 100.0f;
-        commitParameter(def.index, values_[def.index] + direction * step);
+        const SliderDef& def = kSliders[idx];
+        const float step = def.logScale ? (def.max - def.min) / 150.0f
+                                        : (def.max - def.min) / 100.0f;
+        commit(def.index, values_[def.index] + dir * step);
     }
 
-    void commitParameter(uint32_t index, float value)
+    void commit(uint32_t index, float value)
     {
         for (const SliderDef& def : kSliders) {
-            if (def.index == index) {
-                value = clampf(value, def.min, def.max);
-                break;
-            }
+            if (def.index == index) { value = clampf(value, def.min, def.max); break; }
         }
         editParameter(index, true);
         setParameterValue(index, value);
@@ -511,9 +425,6 @@ private:
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BassopsUI)
 };
 
-UI* createUI()
-{
-    return new BassopsUI();
-}
+UI* createUI() { return new BassopsUI(); }
 
 END_NAMESPACE_DISTRHO

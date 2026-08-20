@@ -16,12 +16,17 @@ struct Parameters {
     float cutoffHz  = 200.0f;  // 50-5000 Hz
 };
 
+inline constexpr std::uint32_t kMidDelayLen = kFirOrder / 2;  // 64 samples
+
 struct FirBank {
-    std::array<float, kFirTaps> lp {};
-    std::array<float, kFirTaps> hp {};
-    std::array<float, kFirTaps> bufMid {};
-    std::array<float, kFirTaps> bufSide {};
-    std::uint32_t pos = 0;
+    // HP applied to side channel only; mid uses a matching delay line.
+    // This avoids signal loss: LP(mid)+HP(side) drops mono content above cutoff,
+    // but delayed_mid+HP(side) preserves everything while still mono-fying bass.
+    std::array<float, kFirTaps>   hp {};
+    std::array<float, kFirTaps>   bufSide {};
+    std::array<float, kMidDelayLen> midDelay {};
+    std::uint32_t pos      = 0;
+    std::uint32_t delayPos = 0;
     float lastCutoffHz   = -1.0f;
     float lastSampleRate = 0.0f;
 };
