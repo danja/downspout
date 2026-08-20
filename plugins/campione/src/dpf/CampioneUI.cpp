@@ -352,6 +352,7 @@ protected:
             if (!ev.press) return false;
             if (dialogOkBtn_.contains(px, py))     { confirmDialog(); return true; }
             if (dialogCancelBtn_.contains(px, py)) { dialogMode_ = kDialogNone; repaint(); return true; }
+            getWindow().focus();  // re-assert keyboard focus on any click inside dialog
             return true; // swallow all other clicks
         }
 
@@ -411,6 +412,7 @@ protected:
             std::strftime(tbuf, sizeof(tbuf), "patch_%Y%m%d_%H%M%S.ttl", tm_info);
             dialogText_ = dataDir_ + "/" + tbuf;
             dialogMode_ = kDialogSavePatch;
+            getWindow().focus();
             repaint();
             return true;
         }
@@ -419,6 +421,7 @@ protected:
         if (settingsBtn_.contains(px, py)) {
             dialogText_ = dataDir_;
             dialogMode_ = kDialogSettings;
+            getWindow().focus();
             repaint();
             return true;
         }
