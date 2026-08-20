@@ -1,0 +1,99 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:bassops a trn:PluginProfile ;
+    rdfs:label "Bassops" ;
+    rdfs:comment """Sidechain ducker with mid/side EQ. A kick-drum or other control
+signal on inputs 3-4 drives an envelope follower whose inverted output attenuates
+the main stereo signal on inputs 1-2. After ducking the signal is split into mid
+and side components: a linear-phase LP filter is applied to the mid and a
+complementary HP filter to the side, both sharing a single cutoff control. The
+mid and side are recombined into stereo output. Introduces 64-sample FIR latency
+reported to the host.""" ;
+    trn:bundleName "bassops.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/bassops/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio ;
+
+    ## Automatable parameters
+    trn:parameter [
+        rdfs:label "Duck Depth" ;
+        trn:symbol "duck_depth" ;
+        trn:unit "%" ;
+        rdfs:comment "How much the main signal is attenuated when the sidechain envelope reaches full scale. 0 = no ducking; 100 = full silence on hit." ;
+        trn:default "80.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "100.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "Attack" ;
+        trn:symbol "attack_ms" ;
+        trn:unit "ms" ;
+        rdfs:comment "Envelope follower rise time. Shorter values track transients tightly; longer values produce a slower pump." ;
+        trn:default "10.0"^^xsd:float ;
+        trn:min "1.0"^^xsd:float ;
+        trn:max "500.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "Release" ;
+        trn:symbol "release_ms" ;
+        trn:unit "ms" ;
+        rdfs:comment "Envelope follower fall time. Controls how quickly the main signal returns to full level after the sidechain transient." ;
+        trn:default "100.0"^^xsd:float ;
+        trn:min "10.0"^^xsd:float ;
+        trn:max "2000.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "M/S Cutoff" ;
+        trn:symbol "cutoff_hz" ;
+        trn:unit "Hz" ;
+        rdfs:comment "Crossover frequency for the mid/side EQ. Below this frequency only the mid (sum) channel passes through, keeping bass centred; above it only the side (difference) channel passes, preserving stereo width in the highs." ;
+        trn:default "200.0"^^xsd:float ;
+        trn:min "50.0"^^xsd:float ;
+        trn:max "5000.0"^^xsd:float
+    ] ;
+
+    ## Read-only meter outputs (not automatable; driven by the DSP)
+    trn:parameter [
+        rdfs:label "Input Level" ;
+        trn:symbol "input_level" ;
+        trn:comment "Peak amplitude of the main stereo input, 0-1, with ballistic decay. Read-only." ;
+        trn:default "0.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "1.0"^^xsd:float ;
+        trn:readonly true
+    ] ;
+    trn:parameter [
+        rdfs:label "Sidechain Level" ;
+        trn:symbol "sc_level" ;
+        trn:comment "Current sidechain envelope follower output, 0-1. Read-only." ;
+        trn:default "0.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "1.0"^^xsd:float ;
+        trn:readonly true
+    ] ;
+    trn:parameter [
+        rdfs:label "Duck Gain" ;
+        trn:symbol "duck_gain" ;
+        trn:comment "Current VCA gain applied to the main signal, 0-1. 1 = no ducking; 0 = fully ducked. Read-only." ;
+        trn:default "1.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "1.0"^^xsd:float ;
+        trn:readonly true
+    ] ;
+    trn:parameter [
+        rdfs:label "Output Level" ;
+        trn:symbol "output_level" ;
+        trn:comment "Peak amplitude of the stereo output after ducking and M/S EQ, 0-1, with ballistic decay. Read-only." ;
+        trn:default "0.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "1.0"^^xsd:float ;
+        trn:readonly true
+    ] ;
+
+    trn:caution "Introduces 64-sample linear-phase FIR latency; enable delay compensation in the host. Route a dry kick send to inputs 3-4, not a processed bus, to avoid timing smear on the sidechain." .

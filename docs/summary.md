@@ -126,6 +126,10 @@ Transport-aware probabilistic stereo gate/mix processor. It creates evolving cha
 
 Transport-aware Euclidean stereo gate. It applies deterministic Euclidean block rhythms to audio, creating repeatable rhythmic stereo patterns.
 
+### Bassops (`bassops.vst3`)
+
+Four-input sidechain ducker with mid/side EQ. Inputs 3-4 carry a control signal (typically a dry kick-drum send) that drives an envelope follower; the inverted envelope ducks the main stereo signal on inputs 1-2. After ducking, a linear-phase LP/HP FIR pair splits the signal at a shared cutoff: bass stays centred in the mid channel, highs retain stereo width in the side channel. Introduces 64-sample FIR latency reported to the host. Use after bass and kick tracks to tighten low-end separation.
+
 ### Rift (`rift.vst3`)
 
 Transport-locked live/sample buffer disruptor with WAV loading, chop/stutter repeats, reverse, skip, smear, and pitch-slip actions. Best for fills, transitions, breakdown edits, and controlled glitching.

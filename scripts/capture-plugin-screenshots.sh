@@ -21,6 +21,7 @@ plugins=(
   "bassgen:bassgen"
   "p-mix:p_mix"
   "e-mix:e_mix"
+  "bassops:bassops"
   "m-mix:m_mix"
   "t-mix:t_mix"
   "mixgen:mixgen"
