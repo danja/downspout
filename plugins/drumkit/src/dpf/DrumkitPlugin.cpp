@@ -85,9 +85,13 @@ protected:
         const auto& spec = kParameterSpecs[index];
         parameter.name = spec.name;
         parameter.symbol = spec.symbol;
-        parameter.hints = kParameterIsAutomatable;
-        if (spec.boolean)
-            parameter.hints |= kParameterIsBoolean | kParameterIsInteger;
+        if (spec.output) {
+            parameter.hints = kParameterIsOutput;
+        } else {
+            parameter.hints = kParameterIsAutomatable;
+            if (spec.boolean)
+                parameter.hints |= kParameterIsBoolean | kParameterIsInteger;
+        }
         parameter.ranges.min = spec.minimum;
         parameter.ranges.max = spec.maximum;
         parameter.ranges.def = spec.defaultValue;

@@ -51,8 +51,10 @@ private:
     void applyParameter(std::uint32_t index, float value);
 
     float sampleRate_;
+    std::uint32_t trigDecayLength_ = 4800;
     std::array<float, kParameterCount> parameters_ {};
     std::array<bool, kInstrumentCount> muted_ {};
+    std::array<std::uint32_t, kInstrumentCount> trigDecay_ {};
 
     std::unique_ptr<KickVoice> kick_;
     std::unique_ptr<SnareVoice> snare_;

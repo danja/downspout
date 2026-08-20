@@ -483,6 +483,11 @@ private:
         panRects_[index] = {panCx - panR, panCy - panR, panR * 2.0f, panR * 2.0f};
         drawPanKnob(index, panCx, panCy, panR, color, muted);
 
+        const float ledCx = rect.x + rect.w * 0.5f;
+        const float ledCy = rect.y + 248.0f;
+        const bool lit = values_[kInstrumentSpecs[index].trigParam] >= 0.5f;
+        drawNoteLED(ledCx, ledCy, 6.0f, color, lit, muted);
+
         const Rect mute {rect.x + 12.0f, rect.y + rect.h - 42.0f, rect.w - 24.0f, 28.0f};
         muteRects_[index] = mute;
         drawMuteButton(mute, color, muted);
@@ -511,6 +516,31 @@ private:
         fillColor(230, 235, 232, muted ? 90 : 230);
         fill();
         closePath();
+    }
+
+    void drawNoteLED(const float cx, const float cy, const float r, const Color& color, const bool lit, const bool muted)
+    {
+        if (lit && !muted) {
+            beginPath();
+            circle(cx, cy, r + 4.0f);
+            fillColor(color.r, color.g, color.b, 50);
+            fill();
+        }
+
+        beginPath();
+        circle(cx, cy, r);
+        if (lit && !muted)
+            fillColor(color.r, color.g, color.b, 240);
+        else
+            fillColor(26, 31, 33, 255);
+        fill();
+
+        if (lit && !muted) {
+            beginPath();
+            circle(cx - r * 0.28f, cy - r * 0.38f, r * 0.32f);
+            fillColor(255, 255, 255, 90);
+            fill();
+        }
     }
 
     void drawMuteButton(const Rect& rect, const Color& color, const bool muted)

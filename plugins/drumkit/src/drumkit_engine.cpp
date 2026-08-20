@@ -24,6 +24,7 @@ namespace {
 
 Engine::Engine(const float sampleRate)
     : sampleRate_(sampleRate)
+    , trigDecayLength_(static_cast<std::uint32_t>(sampleRate * 0.1f))
     , reverbL_(sampleRate)
     , reverbR_(sampleRate)
     , dcBlockerL_(0.999f)
@@ -40,6 +41,7 @@ Engine::Engine(const float sampleRate)
 void Engine::setSampleRate(const float sampleRate)
 {
     sampleRate_ = sampleRate > 1.0f ? sampleRate : 48000.0f;
+    trigDecayLength_ = static_cast<std::uint32_t>(sampleRate_ * 0.1f);
     rebuildVoices();
     for (std::uint32_t i = 0; i < kParameterCount; ++i)
         applyParameter(i, parameters_[i]);
@@ -111,50 +113,67 @@ void Engine::handleNoteOn(const std::uint8_t note, const std::uint8_t velocity)
 {
     const float vel = static_cast<float>(velocity) / 127.0f;
 
+    auto fireTrig = [&](const InstrumentId id) {
+        const std::size_t idx = instrumentIndex(id);
+        trigDecay_[idx] = trigDecayLength_;
+        parameters_[kInstrumentSpecs[idx].trigParam] = 1.0f;
+    };
+
     switch (note)
     {
     case 36:
+        fireTrig(InstrumentId::Kick);
         if (!isInstrumentMuted(InstrumentId::Kick))
             kick_->trigger(vel);
         break;
     case 39:
+        fireTrig(InstrumentId::Clap);
         if (!isInstrumentMuted(InstrumentId::Clap))
             clap_->trigger(1.0f);
         break;
     case 40:
+        fireTrig(InstrumentId::Snare);
         if (!isInstrumentMuted(InstrumentId::Snare))
             snare_->trigger(vel);
         break;
     case 41:
+        fireTrig(InstrumentId::Crash);
         if (!isInstrumentMuted(InstrumentId::Crash))
             crash_->trigger(1.0f);
         break;
     case 42:
+        fireTrig(InstrumentId::ClosedHH);
         openHH_->kill();
         if (!isInstrumentMuted(InstrumentId::ClosedHH))
             closedHH_->trigger(1.0f);
         break;
     case 45:
+        fireTrig(InstrumentId::Tom1);
         if (!isInstrumentMuted(InstrumentId::Tom1))
             loTom_->trigger(vel);
         break;
     case 46:
+        fireTrig(InstrumentId::OpenHH);
         if (!isInstrumentMuted(InstrumentId::OpenHH))
             openHH_->trigger(1.0f);
         break;
     case 50:
+        fireTrig(InstrumentId::Tom2);
         if (!isInstrumentMuted(InstrumentId::Tom2))
             hiTom_->trigger(vel);
         break;
     case 51:
+        fireTrig(InstrumentId::Bash);
         if (!isInstrumentMuted(InstrumentId::Bash))
             bash_->trigger(vel);
         break;
     case 52:
+        fireTrig(InstrumentId::Cowbell);
         if (!isInstrumentMuted(InstrumentId::Cowbell))
             cowbell_->trigger(vel);
         break;
     case 53:
+        fireTrig(InstrumentId::Clave);
         if (!isInstrumentMuted(InstrumentId::Clave))
             clave_->trigger(vel);
         break;
@@ -165,6 +184,12 @@ void Engine::handleNoteOn(const std::uint8_t note, const std::uint8_t velocity)
 
 StereoFrame Engine::processStereo()
 {
+    for (std::size_t i = 0; i < kInstrumentCount; ++i)
+    {
+        if (trigDecay_[i] > 0 && --trigDecay_[i] == 0)
+            parameters_[kInstrumentSpecs[i].trigParam] = 0.0f;
+    }
+
     StereoFrame frame;
 
     for (std::size_t i = 0; i < kInstrumentCount; ++i)
@@ -193,7 +218,11 @@ StereoFrame Engine::processStereo()
 void Engine::reset()
 {
     for (std::size_t i = 0; i < kInstrumentCount; ++i)
+    {
         resetInstrument(static_cast<InstrumentId>(i));
+        trigDecay_[i] = 0;
+        parameters_[kInstrumentSpecs[i].trigParam] = 0.0f;
+    }
 
     reverbL_.reset();
     reverbR_.reset();

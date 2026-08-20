@@ -14,6 +14,7 @@ struct ParameterSpec {
     float maximum;
     float defaultValue;
     bool boolean;
+    bool output = false;
 };
 
 enum ParameterId : std::uint32_t {
@@ -92,6 +93,17 @@ enum ParameterId : std::uint32_t {
     kParamBashPan,
     kParamCowbellPan,
     kParamClavePan,
+    kParamKickTrig,
+    kParamClapTrig,
+    kParamSnareTrig,
+    kParamCrashTrig,
+    kParamClosedHHTrig,
+    kParamTom1Trig,
+    kParamOpenHHTrig,
+    kParamTom2Trig,
+    kParamBashTrig,
+    kParamCowbellTrig,
+    kParamClaveTrig,
     kParameterCount
 };
 
@@ -120,6 +132,7 @@ struct InstrumentSpec {
     std::uint32_t levelParam;
     std::uint32_t muteParam;
     std::uint32_t panParam;
+    std::uint32_t trigParam;
 };
 
 inline constexpr std::array<ParameterSpec, kParameterCount> kParameterSpecs = {{
@@ -198,6 +211,17 @@ inline constexpr std::array<ParameterSpec, kParameterCount> kParameterSpecs = {{
     {"Bash Pan", "bash_pan", -1.0f, 1.0f, 0.42f, false},
     {"Cowbell Pan", "cowbell_pan", -1.0f, 1.0f, 0.14f, false},
     {"Clave Pan", "clave_pan", -1.0f, 1.0f, -0.24f, false},
+    {"Kick Trig",      "kick_trig",      0.0f, 1.0f, 0.0f, false, true},
+    {"Clap Trig",      "clap_trig",      0.0f, 1.0f, 0.0f, false, true},
+    {"Snare Trig",     "snare_trig",     0.0f, 1.0f, 0.0f, false, true},
+    {"Crash Trig",     "crash_trig",     0.0f, 1.0f, 0.0f, false, true},
+    {"Closed HH Trig", "hh_closed_trig", 0.0f, 1.0f, 0.0f, false, true},
+    {"Tom 1 Trig",     "tom1_trig",      0.0f, 1.0f, 0.0f, false, true},
+    {"Open HH Trig",   "hh_open_trig",   0.0f, 1.0f, 0.0f, false, true},
+    {"Tom 2 Trig",     "tom2_trig",      0.0f, 1.0f, 0.0f, false, true},
+    {"Bash Trig",      "bash_trig",      0.0f, 1.0f, 0.0f, false, true},
+    {"Cowbell Trig",   "cowbell_trig",   0.0f, 1.0f, 0.0f, false, true},
+    {"Clave Trig",     "clave_trig",     0.0f, 1.0f, 0.0f, false, true},
 }};
 
 [[nodiscard]] inline float normalizedKickPitchToHz(const float value)
@@ -218,17 +242,17 @@ inline constexpr std::array<ParameterSpec, kParameterCount> kParameterSpecs = {{
 }
 
 inline constexpr std::array<InstrumentSpec, kInstrumentCount> kInstrumentSpecs = {{
-    {InstrumentId::Kick, "Kick", "KICK", 36, kParamKickLevel, kParamKickMute, kParamKickPan},
-    {InstrumentId::Clap, "Clap", "CLAP", 39, kParamClapLevel, kParamClapMute, kParamClapPan},
-    {InstrumentId::Snare, "Snare", "SNARE", 40, kParamSnareLevel, kParamSnareMute, kParamSnarePan},
-    {InstrumentId::Crash, "Crash", "CRASH", 41, kParamCrashLevel, kParamCrashMute, kParamCrashPan},
-    {InstrumentId::ClosedHH, "Closed Hat", "CHH", 42, kParamClosedHHLevel, kParamClosedHHMute, kParamClosedHHPan},
-    {InstrumentId::Tom1, "Low Tom", "LTOM", 45, kParamTom1Level, kParamTom1Mute, kParamTom1Pan},
-    {InstrumentId::OpenHH, "Open Hat", "OHH", 46, kParamOpenHHLevel, kParamOpenHHMute, kParamOpenHHPan},
-    {InstrumentId::Tom2, "High Tom", "HTOM", 50, kParamTom2Level, kParamTom2Mute, kParamTom2Pan},
-    {InstrumentId::Bash, "Bash", "BASH", 51, kParamBashLevel, kParamBashMute, kParamBashPan},
-    {InstrumentId::Cowbell, "Cowbell", "COW", 52, kParamCowbellLevel, kParamCowbellMute, kParamCowbellPan},
-    {InstrumentId::Clave, "Clave", "CLAVE", 53, kParamClaveLevel, kParamClaveMute, kParamClavePan},
+    {InstrumentId::Kick,     "Kick",       "KICK",  36, kParamKickLevel,     kParamKickMute,     kParamKickPan,     kParamKickTrig},
+    {InstrumentId::Clap,     "Clap",       "CLAP",  39, kParamClapLevel,     kParamClapMute,     kParamClapPan,     kParamClapTrig},
+    {InstrumentId::Snare,    "Snare",      "SNARE", 40, kParamSnareLevel,    kParamSnareMute,    kParamSnarePan,    kParamSnareTrig},
+    {InstrumentId::Crash,    "Crash",      "CRASH", 41, kParamCrashLevel,    kParamCrashMute,    kParamCrashPan,    kParamCrashTrig},
+    {InstrumentId::ClosedHH, "Closed Hat", "CHH",   42, kParamClosedHHLevel, kParamClosedHHMute, kParamClosedHHPan, kParamClosedHHTrig},
+    {InstrumentId::Tom1,     "Low Tom",    "LTOM",  45, kParamTom1Level,     kParamTom1Mute,     kParamTom1Pan,     kParamTom1Trig},
+    {InstrumentId::OpenHH,   "Open Hat",   "OHH",   46, kParamOpenHHLevel,   kParamOpenHHMute,   kParamOpenHHPan,   kParamOpenHHTrig},
+    {InstrumentId::Tom2,     "High Tom",   "HTOM",  50, kParamTom2Level,     kParamTom2Mute,     kParamTom2Pan,     kParamTom2Trig},
+    {InstrumentId::Bash,     "Bash",       "BASH",  51, kParamBashLevel,     kParamBashMute,     kParamBashPan,     kParamBashTrig},
+    {InstrumentId::Cowbell,  "Cowbell",    "COW",   52, kParamCowbellLevel,  kParamCowbellMute,  kParamCowbellPan,  kParamCowbellTrig},
+    {InstrumentId::Clave,    "Clave",      "CLAVE", 53, kParamClaveLevel,    kParamClaveMute,    kParamClavePan,    kParamClaveTrig},
 }};
 
 } // namespace downspout::drumkit
