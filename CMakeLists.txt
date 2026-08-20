@@ -56,6 +56,7 @@ option(DOWNSPOUT_BUILD_ORBIT "Configure the Orbit spatial effect target" ON)
 option(DOWNSPOUT_BUILD_GUARDIAN "Configure the Guardian safety effect target" ON)
 option(DOWNSPOUT_BUILD_MIDISCRIBE "Configure the Midiscribe MIDI capture target" ON)
 option(DOWNSPOUT_BUILD_CAMPIONE "Configure the Campione sampler target" ON)
+option(DOWNSPOUT_BUILD_BASSOPS "Configure the Bassops ducker/MS-EQ effect target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 option(DOWNSPOUT_BUILD_SCREENSHOT_APPS "Build DPF standalone apps for documentation screenshots" OFF)
 
@@ -104,6 +105,10 @@ endif()
 
 if(DOWNSPOUT_BUILD_EMIX)
     add_subdirectory(plugins/e-mix)
+endif()
+
+if(DOWNSPOUT_BUILD_BASSOPS)
+    add_subdirectory(plugins/bassops)
 endif()
 
 if(DOWNSPOUT_BUILD_MMIX)
