@@ -414,6 +414,7 @@ protected:
         if (std::strcmp(key, kStateKeyZoneLoad) == 0 && value && value[0] != '\0')
         {
             appendZone(value);
+            notifyZonesChanged(true);
             return;
         }
 
@@ -468,7 +469,7 @@ protected:
                 std::atomic_store_explicit(&zones_,
                                            std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                            std::memory_order_release);
-                notifyZonesChanged();
+                notifyZonesChanged(true);
             }
             return;
         }
@@ -577,6 +578,14 @@ protected:
             struct stat st{};
             if (::stat(value, &st) == 0 && S_ISDIR(st.st_mode))
                 recordingOutputDir_ = value;
+            // Load auto-save if REAPER hasn't provided zones from a saved project.
+            // This makes zone state independent of whether the host project was saved.
+            if (!zonesInitialized_) {
+                const std::string autoSave = recordingOutputDir_ + "/campione_autosave.ttl";
+                struct stat ast{};
+                if (::stat(autoSave.c_str(), &ast) == 0)
+                    doLoadPatch(autoSave);
+            }
             return;
         }
 
@@ -805,7 +814,7 @@ private:
         std::atomic_store_explicit(&zones_,
                                    std::shared_ptr<const ZoneVec>(std::move(nz)),
                                    std::memory_order_release);
-        notifyZonesChanged();
+        notifyZonesChanged(true);
         return {};
     }
 
@@ -845,9 +854,11 @@ private:
         const auto metas = downspout::campione::deserializeZones(text);
         if (!metas.has_value()) return;
 
-        // Under the lock: bail out if MCP has already claimed zone ownership.
+        // Under the lock: bail out if zones have been modified by user/MCP.
+        // Re-assert current state to the UI so the host's stale setState call
+        // (which DPF forwards unconditionally via sendStateSetToUI) is overridden.
         std::lock_guard<std::mutex> lk(zoneMtx_);
-        if (zonesInitialized_) return;
+        if (zonesInitialized_) { notifyZonesChanged(); return; }
 
         auto newZones = std::make_shared<ZoneVec>();
         newZones->reserve(metas->size());
@@ -928,14 +939,14 @@ private:
         std::atomic_store_explicit(&zones_,
                                    std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                    std::memory_order_release);
-        notifyZonesChanged();
+        notifyZonesChanged(true);
     }
 
     // Notify host+UI of zone list change. Called directly from the MCP thread;
     // also sets pendingZoneUpdate_ so run() re-sends if the host drops the
     // off-thread call (e.g. some hosts only accept updateStateValue from the
     // audio thread). Both paths are harmlessly idempotent.
-    void notifyZonesChanged()
+    void notifyZonesChanged(bool saveAutoSave = false)
     {
         const auto zp = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
         const std::string s = zp ? downspout::campione::serializeZones(*zp) : std::string{};
@@ -954,6 +965,8 @@ private:
         // Also attempt the DPF path (no-op in VST3 but works in other formats).
         updateStateValue(kStateKeyZones, s.c_str());
         pendingZoneUpdate_.store(true, std::memory_order_release);
+        // Persist zone list changes to disk so they survive host state failures.
+        if (saveAutoSave) autoSavePatch();
     }
 
     // ── MCP-sourced parameter update (called from MCP thread) ─────────────────
@@ -997,6 +1010,12 @@ private:
     }
 
     // ── Patch save / load ────────────────────────────────────────────────────
+
+    void autoSavePatch()
+    {
+        if (recordingOutputDir_.empty()) return;
+        doSavePatch(recordingOutputDir_ + "/campione_autosave.ttl");
+    }
 
     std::string doSavePatch(const std::string& path)
     {
@@ -1090,7 +1109,7 @@ private:
                                        std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                        std::memory_order_release);
         }
-        notifyZonesChanged();
+        notifyZonesChanged(true);
         return {};
     }
 
@@ -1148,7 +1167,7 @@ private:
         api.loadZone = [this](const std::string& path) -> std::string {
             const std::string err = appendZone(path);  // single load, errors propagated
             if (!err.empty()) return err;
-            notifyZonesChanged();
+            notifyZonesChanged(true);
             return {};
         };
 
@@ -1163,7 +1182,7 @@ private:
             std::atomic_store_explicit(&zones_,
                                        std::shared_ptr<const ZoneVec>(std::move(nz)),
                                        std::memory_order_release);
-            notifyZonesChanged();
+            notifyZonesChanged(true);
             return {};
         };
 
@@ -1241,7 +1260,7 @@ private:
             std::atomic_store_explicit(&zones_,
                                        std::shared_ptr<const ZoneVec>(std::move(nz)),
                                        std::memory_order_release);
-            notifyZonesChanged();
+            notifyZonesChanged(true);
             return {};
         };
 
@@ -1263,7 +1282,7 @@ private:
             std::atomic_store_explicit(&zones_,
                                        std::shared_ptr<const ZoneVec>(std::move(nz)),
                                        std::memory_order_release);
-            notifyZonesChanged();
+            notifyZonesChanged(true);
             return {};
         };
 
@@ -1307,7 +1326,7 @@ private:
             std::atomic_store_explicit(&zones_,
                                        std::shared_ptr<const ZoneVec>(std::make_shared<ZoneVec>()),
                                        std::memory_order_release);
-            notifyZonesChanged();
+            notifyZonesChanged(true);
         };
 
         api.refreshUi = [this]() {

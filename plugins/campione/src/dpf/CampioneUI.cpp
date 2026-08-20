@@ -194,7 +194,23 @@ protected:
             return;
         }
         if (std::strcmp(key, kStateKeyZones) == 0) {
-            rebuildFromZonesState(value ? value : "");
+            // If the bridge has been populated, it reflects the actual DSP state
+            // (set by notifyZonesChanged). Prefer it over the raw host-pushed value,
+            // which may be stale (REAPER resends the saved project state each time
+            // the plugin window opens, even if zones changed since the last save).
+            const uint32_t bridgeSerial =
+                downspout::campione::uiBridge().zonesSerial.load(std::memory_order_acquire);
+            if (bridgeSerial > 0) {
+                std::string data;
+                {
+                    std::lock_guard<std::mutex> lk(downspout::campione::uiBridge().zonesMtx);
+                    data = downspout::campione::uiBridge().zonesData;
+                }
+                lastZonesSerial_ = bridgeSerial;
+                rebuildFromZonesState(data);
+            } else {
+                rebuildFromZonesState(value ? value : "");
+            }
             if (selectedZone_ >= static_cast<int>(zones_.size()))
                 selectedZone_ = -1;
             repaint();
