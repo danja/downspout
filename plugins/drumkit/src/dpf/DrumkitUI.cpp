@@ -192,9 +192,9 @@ protected:
 
         drawBackground(width, height);
         drawHeader(pad, pad, width - pad * 2.0f, 72.0f);
-        drawInstrumentStrips(pad, 112.0f, width - pad * 2.0f, 258.0f);
-        drawVoiceEditor(pad, 404.0f, width * 0.62f - pad * 1.5f, height - 426.0f);
-        drawMasterPanel(width * 0.62f + pad * 0.5f, 404.0f, width * 0.38f - pad * 1.5f, height - 426.0f);
+        drawInstrumentStrips(pad, 112.0f, width - pad * 2.0f, 308.0f);
+        drawVoiceEditor(pad, 454.0f, width * 0.62f - pad * 1.5f, height - 476.0f);
+        drawMasterPanel(width * 0.62f + pad * 0.5f, 454.0f, width * 0.38f - pad * 1.5f, height - 476.0f);
     }
 
     bool onMouse(const MouseEvent& ev) override
@@ -209,6 +209,7 @@ protected:
         {
             activeControlParam_ = -1;
             activeLevelStrip_ = -1;
+            activePanStrip_ = -1;
             return false;
         }
 
@@ -226,6 +227,14 @@ protected:
                 selectedInstrument_ = static_cast<int>(i);
                 activeLevelStrip_ = selectedInstrument_;
                 updateLevelFromPosition(selectedInstrument_, y);
+                return true;
+            }
+
+            if (panRects_[i].contains(x, y))
+            {
+                selectedInstrument_ = static_cast<int>(i);
+                activePanStrip_ = static_cast<int>(i);
+                updatePanFromPosition(activePanStrip_, x);
                 return true;
             }
 
@@ -273,6 +282,12 @@ protected:
             return true;
         }
 
+        if (activePanStrip_ >= 0)
+        {
+            updatePanFromPosition(activePanStrip_, static_cast<float>(ev.pos.getX()));
+            return true;
+        }
+
         if (activeControlParam_ >= 0)
         {
             const std::uint32_t parameter = static_cast<std::uint32_t>(activeControlParam_);
@@ -310,6 +325,12 @@ protected:
                 nudgeParameter(kInstrumentSpecs[i].levelParam, direction * 0.03f);
                 return true;
             }
+
+            if (panRects_[i].contains(x, y))
+            {
+                nudgeParameter(kInstrumentSpecs[i].panParam, direction * 0.02f);
+                return true;
+            }
         }
 
         for (std::size_t i = 0; i < selectedControlCount_; ++i)
@@ -338,10 +359,12 @@ private:
     std::array<Rect, kInstrumentCount> stripRects_ {};
     std::array<Rect, kInstrumentCount> muteRects_ {};
     std::array<Rect, kInstrumentCount> levelRects_ {};
+    std::array<Rect, kInstrumentCount> panRects_ {};
     std::array<Rect, kMaxVoiceControls> controlRects_ {};
     std::array<Rect, kMasterControlCount> masterRects_ {};
     int selectedInstrument_ = 0;
     int activeLevelStrip_ = -1;
+    int activePanStrip_ = -1;
     int activeControlParam_ = -1;
     std::size_t selectedControlCount_ = 0;
 
@@ -360,13 +383,13 @@ private:
 
         beginPath();
         fillColor(31, 35, 38, 255);
-        rect(0.0f, 0.0f, width, 386.0f);
+        rect(0.0f, 0.0f, width, 436.0f);
         fill();
         closePath();
 
         beginPath();
         fillColor(78, 126, 133, 26);
-        rect(0.0f, 386.0f, width, height - 386.0f);
+        rect(0.0f, 436.0f, width, height - 436.0f);
         fill();
         closePath();
     }
@@ -454,6 +477,12 @@ private:
         levelRects_[index] = meter;
         drawLevelFader(index, meter, color, muted);
 
+        const float panCx = rect.x + rect.w * 0.5f;
+        const float panCy = rect.y + 216.0f;
+        const float panR  = 14.0f;
+        panRects_[index] = {panCx - panR, panCy - panR, panR * 2.0f, panR * 2.0f};
+        drawPanKnob(index, panCx, panCy, panR, color, muted);
+
         const Rect mute {rect.x + 12.0f, rect.y + rect.h - 42.0f, rect.w - 24.0f, 28.0f};
         muteRects_[index] = mute;
         drawMuteButton(mute, color, muted);
@@ -496,6 +525,50 @@ private:
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
         fillColor(muted ? 12 : 190, muted ? 14 : 199, muted ? 15 : 199, 255);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 1.0f, "M", nullptr);
+    }
+
+    void drawPanKnob(const std::size_t index, const float cx, const float cy, const float r, const Color& color, const bool muted)
+    {
+        constexpr float kPi       = 3.14159265359f;
+        constexpr float kStartAng = 0.75f * kPi;
+        constexpr float kSweep    = 1.5f  * kPi;
+        constexpr float kCenterAng = kStartAng + 0.5f * kSweep;
+
+        const std::uint32_t param = kInstrumentSpecs[index].panParam;
+        const float norm = normalizedValue(param, values_[param]);
+        const float endAng = kStartAng + norm * kSweep;
+
+        beginPath();
+        circle(cx, cy, r);
+        fillColor(22, 28, 31, 255);
+        fill();
+
+        beginPath();
+        arc(cx, cy, r - 2.0f, kStartAng, kStartAng + kSweep, CW);
+        strokeColor(37, 43, 45, 255);
+        strokeWidth(2.5f);
+        stroke();
+
+        const float valueSweep = std::abs(norm - 0.5f) * kSweep;
+        if (valueSweep > 0.01f) {
+            beginPath();
+            if (norm < 0.5f)
+                arc(cx, cy, r - 2.0f, endAng, kCenterAng, CW);
+            else
+                arc(cx, cy, r - 2.0f, kCenterAng, endAng, CW);
+            strokeColor(color.r, color.g, color.b, muted ? 80 : 200);
+            strokeWidth(2.5f);
+            stroke();
+        }
+
+        const float ix = cx + (r - 4.0f) * std::cos(endAng);
+        const float iy = cy + (r - 4.0f) * std::sin(endAng);
+        beginPath();
+        moveTo(cx, cy);
+        lineTo(ix, iy);
+        strokeColor(230, 235, 232, muted ? 80 : 220);
+        strokeWidth(2.0f);
+        stroke();
     }
 
     void drawVoiceEditor(const float x, const float y, const float w, const float h)
@@ -609,6 +682,18 @@ private:
         const Rect& rect = levelRects_[static_cast<std::size_t>(stripIndex)];
         const float norm = clampf(1.0f - ((y - rect.y) / rect.h), 0.0f, 1.0f);
         const std::uint32_t parameter = kInstrumentSpecs[static_cast<std::size_t>(stripIndex)].levelParam;
+        const auto& spec = kParameterSpecs[parameter];
+        commitParameter(parameter, spec.minimum + norm * (spec.maximum - spec.minimum));
+    }
+
+    void updatePanFromPosition(const int stripIndex, const float x)
+    {
+        if (stripIndex < 0 || stripIndex >= static_cast<int>(kInstrumentCount))
+            return;
+
+        const Rect& strip = stripRects_[static_cast<std::size_t>(stripIndex)];
+        const float norm = clampf((x - strip.x) / strip.w, 0.0f, 1.0f);
+        const std::uint32_t parameter = kInstrumentSpecs[static_cast<std::size_t>(stripIndex)].panParam;
         const auto& spec = kParameterSpecs[parameter];
         commitParameter(parameter, spec.minimum + norm * (spec.maximum - spec.minimum));
     }

@@ -43,19 +43,6 @@ public:
 
 private:
     static constexpr float kPi = 3.14159265359f;
-    static constexpr std::array<float, kInstrumentCount> kVoicePan = {{
-        0.00f,
-        0.16f,
-        -0.08f,
-        -0.44f,
-        -0.52f,
-        0.22f,
-        0.32f,
-        -0.16f,
-        0.42f,
-        0.14f,
-        -0.24f,
-    }};
 
     static void addPanned(float sample, float pan, float& left, float& right);
     [[nodiscard]] float processInstrument(InstrumentId instrument);

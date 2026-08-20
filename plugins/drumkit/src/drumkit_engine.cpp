@@ -171,7 +171,7 @@ StereoFrame Engine::processStereo()
     {
         if (muted_[i])
             continue;
-        addPanned(processInstrument(static_cast<InstrumentId>(i)), kVoicePan[i], frame.left, frame.right);
+        addPanned(processInstrument(static_cast<InstrumentId>(i)), parameters_[kInstrumentSpecs[i].panParam], frame.left, frame.right);
     }
 
     frame.left = bitcrusherL_.process(frame.left);

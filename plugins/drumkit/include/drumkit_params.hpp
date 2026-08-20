@@ -81,6 +81,17 @@ enum ParameterId : std::uint32_t {
     kParamTom2Metal,
     kParamCowbellMetal,
     kParamClaveMetal,
+    kParamKickPan,
+    kParamClapPan,
+    kParamSnarePan,
+    kParamCrashPan,
+    kParamClosedHHPan,
+    kParamTom1Pan,
+    kParamOpenHHPan,
+    kParamTom2Pan,
+    kParamBashPan,
+    kParamCowbellPan,
+    kParamClavePan,
     kParameterCount
 };
 
@@ -108,6 +119,7 @@ struct InstrumentSpec {
     std::uint8_t midiNote;
     std::uint32_t levelParam;
     std::uint32_t muteParam;
+    std::uint32_t panParam;
 };
 
 inline constexpr std::array<ParameterSpec, kParameterCount> kParameterSpecs = {{
@@ -175,6 +187,17 @@ inline constexpr std::array<ParameterSpec, kParameterCount> kParameterSpecs = {{
     {"Tom 2 Metal", "tom2_metal", 0.0f, 1.0f, 0.0f, false},
     {"Cowbell Metal", "cowbell_metal", 0.0f, 1.0f, 0.0f, false},
     {"Clave Metal", "clave_metal", 0.0f, 1.0f, 0.0f, false},
+    {"Kick Pan", "kick_pan", -1.0f, 1.0f, 0.00f, false},
+    {"Clap Pan", "clap_pan", -1.0f, 1.0f, 0.16f, false},
+    {"Snare Pan", "snare_pan", -1.0f, 1.0f, -0.08f, false},
+    {"Crash Pan", "crash_pan", -1.0f, 1.0f, -0.44f, false},
+    {"Closed HH Pan", "hh_closed_pan", -1.0f, 1.0f, -0.52f, false},
+    {"Tom 1 Pan", "tom1_pan", -1.0f, 1.0f, 0.22f, false},
+    {"Open HH Pan", "hh_open_pan", -1.0f, 1.0f, 0.32f, false},
+    {"Tom 2 Pan", "tom2_pan", -1.0f, 1.0f, -0.16f, false},
+    {"Bash Pan", "bash_pan", -1.0f, 1.0f, 0.42f, false},
+    {"Cowbell Pan", "cowbell_pan", -1.0f, 1.0f, 0.14f, false},
+    {"Clave Pan", "clave_pan", -1.0f, 1.0f, -0.24f, false},
 }};
 
 [[nodiscard]] inline float normalizedKickPitchToHz(const float value)
@@ -195,17 +218,17 @@ inline constexpr std::array<ParameterSpec, kParameterCount> kParameterSpecs = {{
 }
 
 inline constexpr std::array<InstrumentSpec, kInstrumentCount> kInstrumentSpecs = {{
-    {InstrumentId::Kick, "Kick", "KICK", 36, kParamKickLevel, kParamKickMute},
-    {InstrumentId::Clap, "Clap", "CLAP", 39, kParamClapLevel, kParamClapMute},
-    {InstrumentId::Snare, "Snare", "SNARE", 40, kParamSnareLevel, kParamSnareMute},
-    {InstrumentId::Crash, "Crash", "CRASH", 41, kParamCrashLevel, kParamCrashMute},
-    {InstrumentId::ClosedHH, "Closed Hat", "CHH", 42, kParamClosedHHLevel, kParamClosedHHMute},
-    {InstrumentId::Tom1, "Low Tom", "LTOM", 45, kParamTom1Level, kParamTom1Mute},
-    {InstrumentId::OpenHH, "Open Hat", "OHH", 46, kParamOpenHHLevel, kParamOpenHHMute},
-    {InstrumentId::Tom2, "High Tom", "HTOM", 50, kParamTom2Level, kParamTom2Mute},
-    {InstrumentId::Bash, "Bash", "BASH", 51, kParamBashLevel, kParamBashMute},
-    {InstrumentId::Cowbell, "Cowbell", "COW", 52, kParamCowbellLevel, kParamCowbellMute},
-    {InstrumentId::Clave, "Clave", "CLAVE", 53, kParamClaveLevel, kParamClaveMute},
+    {InstrumentId::Kick, "Kick", "KICK", 36, kParamKickLevel, kParamKickMute, kParamKickPan},
+    {InstrumentId::Clap, "Clap", "CLAP", 39, kParamClapLevel, kParamClapMute, kParamClapPan},
+    {InstrumentId::Snare, "Snare", "SNARE", 40, kParamSnareLevel, kParamSnareMute, kParamSnarePan},
+    {InstrumentId::Crash, "Crash", "CRASH", 41, kParamCrashLevel, kParamCrashMute, kParamCrashPan},
+    {InstrumentId::ClosedHH, "Closed Hat", "CHH", 42, kParamClosedHHLevel, kParamClosedHHMute, kParamClosedHHPan},
+    {InstrumentId::Tom1, "Low Tom", "LTOM", 45, kParamTom1Level, kParamTom1Mute, kParamTom1Pan},
+    {InstrumentId::OpenHH, "Open Hat", "OHH", 46, kParamOpenHHLevel, kParamOpenHHMute, kParamOpenHHPan},
+    {InstrumentId::Tom2, "High Tom", "HTOM", 50, kParamTom2Level, kParamTom2Mute, kParamTom2Pan},
+    {InstrumentId::Bash, "Bash", "BASH", 51, kParamBashLevel, kParamBashMute, kParamBashPan},
+    {InstrumentId::Cowbell, "Cowbell", "COW", 52, kParamCowbellLevel, kParamCowbellMute, kParamCowbellPan},
+    {InstrumentId::Clave, "Clave", "CLAVE", 53, kParamClaveLevel, kParamClaveMute, kParamClavePan},
 }};
 
 } // namespace downspout::drumkit
