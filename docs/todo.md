@@ -1,11 +1,6 @@
 # Downspout TODO
 
-
-arabic beats in drumgen
-
-plugins/drumgen needs a new piece of functionality : pattern load & save. The patterns will be templates that act as a starting point, their behaviour will be modified by the slider parameters. This should complement the existing Genre and Style selectors somehow. I don't know what format would be appropriate for the patterns - would .mid snippets be appropriate? The kind of patterns we need to have available can be seen in docs/reference/Doumbek_Rhythm_Cheat_Sheet.pdf these need encoding into whatever format we decide on. The UI should have some kind of preview functionality to listen to patterns before loading.
-
-we need some Latin clave patterns, plus any others you think  might be useful, like classic drum machine patterns
+Turtle for campione & drumkit
 
 new plugin - bassproc - ducker and mid/side eq
 
@@ -14,8 +9,6 @@ new plugin - clipper/soft distortion
 check that all key operations in the UI are covered by MCP & vice versa
 
 ## Campione
-
-add Pan to zone edit
 
 maybe - FFT analyse beat slices to determine drum instrument
 
