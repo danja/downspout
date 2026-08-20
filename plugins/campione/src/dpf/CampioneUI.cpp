@@ -7,12 +7,16 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <mutex>
 #include <string>
+#include <thread>
+#include <utility>
 #include <vector>
 
 START_NAMESPACE_DISTRHO
@@ -124,6 +128,13 @@ constexpr float kColRoot   = 28.0f;
 constexpr float kColRange  = 80.0f;
 constexpr float kColFile   = 192.0f;
 
+struct PeakResult {
+    std::vector<float> peaks;
+    int      zoneIdx     = -1;
+    uint32_t totalFrames = 0;
+    bool     failed      = false;
+};
+
 }  // namespace
 
 class CampioneUI : public UI
@@ -148,6 +159,13 @@ public:
         // setState must not be called from the constructor: the VST3 component
         // handler may not be set up yet, causing the host to crash.  Deferred
         // to the first uiIdle() call via dataDirSent_.
+    }
+
+    ~CampioneUI() override
+    {
+        peakPendingIdx_ = -1;
+        if (peakThread_.joinable())
+            peakThread_.join();
     }
 
 protected:
@@ -257,8 +275,41 @@ protected:
             repaint();
         }
 
-        if (recording_ || patchSaved_ || dialogMode_ != kDialogNone)
-            repaint();
+        // Apply completed async peak load, then start next queued load if any.
+        if (peakThreadDone_.load(std::memory_order_acquire)) {
+            if (peakThread_.joinable()) {
+                peakThread_.join();
+                PeakResult r;
+                { std::lock_guard<std::mutex> lk(peakResultMtx_); r = std::move(peakThreadResult_); }
+                if (!r.failed && r.zoneIdx >= 0 && r.zoneIdx < static_cast<int>(zones_.size())) {
+                    peaks_          = std::move(r.peaks);
+                    peakZoneIdx_    = r.zoneIdx;
+                    peakLoadFailed_ = false;
+                    zones_[static_cast<std::size_t>(r.zoneIdx)].totalFrames = r.totalFrames;
+                } else {
+                    peakLoadFailed_ = (r.zoneIdx >= 0);
+                }
+                repaint();
+            }
+            if (peakPendingIdx_ >= 0) {
+                const int idx = std::exchange(peakPendingIdx_, -1);
+                if (idx < static_cast<int>(zones_.size())
+                        && !zones_[static_cast<std::size_t>(idx)].path.empty())
+                    launchPeakThread(idx, zones_[static_cast<std::size_t>(idx)].path);
+            }
+        }
+
+        // Rate-limit animation repaints (recording timer, patch-saved flash, dialog).
+        if (recording_ || patchSaved_ || dialogMode_ != kDialogNone) {
+            using Clock = std::chrono::steady_clock;
+            const auto now = Clock::now();
+            const auto ms  = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                 now - lastAnimRepaint_).count();
+            if (ms >= 50) {
+                lastAnimRepaint_ = now;
+                repaint();
+            }
+        }
     }
 
     void onNanoDisplay() override
@@ -819,47 +870,51 @@ private:
         setState(kStateKeyZoneDsp, buf);
     }
 
+    // Queue a waveform peak load. Non-blocking: the actual I/O runs on a
+    // background thread and uiIdle applies the result when ready.
     void loadPeaks(int idx)
     {
+        if (idx == peakZoneIdx_ && !peakLoadFailed_) return;
         peaks_.clear();
-        peakZoneIdx_   = -1;
+        peakZoneIdx_    = -1;
         peakLoadFailed_ = false;
-        if (idx < 0 || idx >= static_cast<int>(zones_.size())) return;
+        peakPendingIdx_ = idx;
+    }
 
-        ZoneEntry& z = zones_[static_cast<std::size_t>(idx)];
-        if (z.path.empty()) return;
-
-        auto result = downspout::campione::loadWavZone(z.path);
-        if (!result.error.empty() || result.zone.data.empty()) {
-            peakLoadFailed_ = true;
-            return;
-        }
-
-        const auto& data   = result.zone.data;
-        const int chCount  = result.zone.channelCount;
-        const int totalF   = static_cast<int>(data.size()) / std::max(1, chCount);
-
-        z.totalFrames = static_cast<uint32_t>(totalF);
-
-        constexpr int kPeakBins = 400;
-        peaks_.resize(kPeakBins * 2, 0.0f);
-
-        for (int bin = 0; bin < kPeakBins; ++bin) {
-            const int f0 = static_cast<int>(static_cast<int64_t>(bin)     * totalF / kPeakBins);
-            const int f1 = static_cast<int>(static_cast<int64_t>(bin + 1) * totalF / kPeakBins);
-            float mn = 0.0f, mx = 0.0f;
-            for (int f = f0; f < f1; ++f) {
-                float s = 0.0f;
-                for (int c = 0; c < chCount; ++c)
-                    s += data[static_cast<std::size_t>(f * chCount + c)];
-                s /= static_cast<float>(std::max(1, chCount));
-                mn = std::min(mn, s);
-                mx = std::max(mx, s);
+    void launchPeakThread(int idx, const std::string& path)
+    {
+        peakThreadDone_.store(false, std::memory_order_release);
+        peakThread_ = std::thread([this, idx, path]() {
+            PeakResult r;
+            r.zoneIdx = idx;
+            auto loaded = downspout::campione::loadWavZone(path);
+            if (!loaded.error.empty() || loaded.zone.data.empty()) {
+                r.failed = true;
+            } else {
+                const auto& data  = loaded.zone.data;
+                const int ch      = loaded.zone.channelCount;
+                const int totalF  = static_cast<int>(data.size()) / std::max(1, ch);
+                r.totalFrames     = static_cast<uint32_t>(totalF);
+                constexpr int kPeakBins = 400;
+                r.peaks.resize(kPeakBins * 2, 0.0f);
+                for (int bin = 0; bin < kPeakBins; ++bin) {
+                    const int f0 = static_cast<int>(static_cast<int64_t>(bin)     * totalF / kPeakBins);
+                    const int f1 = static_cast<int>(static_cast<int64_t>(bin + 1) * totalF / kPeakBins);
+                    float mn = 0.0f, mx = 0.0f;
+                    for (int f = f0; f < f1; ++f) {
+                        float s = 0.0f;
+                        for (int c = 0; c < ch; ++c)
+                            s += data[static_cast<std::size_t>(f * ch + c)];
+                        s /= static_cast<float>(std::max(1, ch));
+                        mn = std::min(mn, s); mx = std::max(mx, s);
+                    }
+                    r.peaks[bin * 2 + 0] = mn;
+                    r.peaks[bin * 2 + 1] = mx;
+                }
             }
-            peaks_[bin * 2 + 0] = mn;
-            peaks_[bin * 2 + 1] = mx;
-        }
-        peakZoneIdx_ = idx;
+            { std::lock_guard<std::mutex> lk(peakResultMtx_); peakThreadResult_ = std::move(r); }
+            peakThreadDone_.store(true, std::memory_order_release);
+        });
     }
 
     void drawHeader(float W)
@@ -1833,8 +1888,16 @@ private:
     int              selectedZone_   = -1;
     int              previewZoneIdx_ = -1;  // zone currently playing via Play button (-1 = none)
     std::vector<float> peaks_;
-    int              peakZoneIdx_   = -1;
+    int              peakZoneIdx_    = -1;
     bool             peakLoadFailed_ = false;
+    // Async peak loading state
+    std::thread              peakThread_;
+    std::atomic<bool>        peakThreadDone_   {true};
+    int                      peakPendingIdx_   {-1};
+    std::mutex               peakResultMtx_;
+    PeakResult               peakThreadResult_;
+    // Rate-limiter for animation repaints (recording timer, patch-saved flash, dialog)
+    std::chrono::steady_clock::time_point lastAnimRepaint_ {};
 
     bool recording_ = false;
     std::chrono::steady_clock::time_point recordStart_;
