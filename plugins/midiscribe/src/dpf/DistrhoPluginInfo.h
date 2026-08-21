@@ -15,7 +15,7 @@
 #define DOWNSPOUT_PLUGIN_VERSION_STRING "v0.1.0"
 
 // MIDI effect: no audio I/O
-#define DISTRHO_PLUGIN_HAS_UI           0
+#define DISTRHO_PLUGIN_HAS_UI           1
 #define DISTRHO_PLUGIN_IS_RT_SAFE       0   // file I/O on write trigger — not RT-safe
 #define DISTRHO_PLUGIN_NUM_INPUTS       0
 #define DISTRHO_PLUGIN_NUM_OUTPUTS      0
@@ -25,5 +25,9 @@
 #define DISTRHO_PLUGIN_WANT_FULL_STATE  1
 #define DISTRHO_PLUGIN_WANT_TIMEPOS     1
 #define DISTRHO_PLUGIN_VST3_CATEGORIES  "Fx|Tools"
+#define DISTRHO_UI_DEFAULT_WIDTH        520
+#define DISTRHO_UI_DEFAULT_HEIGHT       280
+#define DISTRHO_UI_USE_NANOVG           1
+#define DISTRHO_UI_FILE_BROWSER         1
 
 #endif  // DOWNSPOUT_MIDISCRIBE_DISTRHO_PLUGIN_INFO_H_INCLUDED

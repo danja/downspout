@@ -45,6 +45,52 @@ dsp:midiscribe a trn:PluginProfile ;
         rdfs:comment "Rolling capture window length: 0=8, 1=16 (default), 2=32, 3=64 beats."
     ] ;
 
+    trn:parameter [
+        trn:paramId 3 ;
+        rdfs:label "Bar" ;
+        trn:symbol "bar" ;
+        trn:datatype xsd:integer ;
+        trn:minimum "1" ;
+        trn:maximum "9999" ;
+        trn:default "1" ;
+        trn:direction "output" ;
+        rdfs:comment "Current bar number from host transport (output)."
+    ] ;
+
+    trn:parameter [
+        trn:paramId 4 ;
+        rdfs:label "Beat" ;
+        trn:symbol "beat" ;
+        trn:datatype xsd:integer ;
+        trn:minimum "1" ;
+        trn:maximum "16" ;
+        trn:default "1" ;
+        trn:direction "output" ;
+        rdfs:comment "Current beat within bar from host transport (output)."
+    ] ;
+
+    trn:parameter [
+        trn:paramId 5 ;
+        rdfs:label "BPM" ;
+        trn:symbol "bpm" ;
+        trn:datatype xsd:float ;
+        trn:minimum "20" ;
+        trn:maximum "300" ;
+        trn:default "120" ;
+        trn:direction "output" ;
+        rdfs:comment "Current tempo in beats per minute from host transport (output)."
+    ] ;
+
+    trn:parameter [
+        trn:paramId 6 ;
+        rdfs:label "Playing" ;
+        trn:symbol "playing" ;
+        trn:datatype xsd:boolean ;
+        trn:default "false" ;
+        trn:direction "output" ;
+        rdfs:comment "Transport playing state from host (output)."
+    ] ;
+
     trn:state [
         trn:stateKey "exportPath" ;
         rdfs:label "Export Path" ;

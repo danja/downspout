@@ -138,6 +138,42 @@ protected:
             break;
         }
 
+        case kParamBar:
+            parameter.name    = "Bar";
+            parameter.symbol  = "bar";
+            parameter.hints   = kParameterIsOutput | kParameterIsInteger;
+            parameter.ranges.min = 1.0f;
+            parameter.ranges.max = 9999.0f;
+            parameter.ranges.def = 1.0f;
+            break;
+
+        case kParamBeat:
+            parameter.name    = "Beat";
+            parameter.symbol  = "beat";
+            parameter.hints   = kParameterIsOutput | kParameterIsInteger;
+            parameter.ranges.min = 1.0f;
+            parameter.ranges.max = 16.0f;
+            parameter.ranges.def = 1.0f;
+            break;
+
+        case kParamBpm:
+            parameter.name    = "BPM";
+            parameter.symbol  = "bpm";
+            parameter.hints   = kParameterIsOutput;
+            parameter.ranges.min = 20.0f;
+            parameter.ranges.max = 300.0f;
+            parameter.ranges.def = static_cast<float>(kDefaultBpm);
+            break;
+
+        case kParamIsPlaying:
+            parameter.name    = "Playing";
+            parameter.symbol  = "playing";
+            parameter.hints   = kParameterIsOutput | kParameterIsBoolean;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.0f;
+            break;
+
         default:
             break;
         }
@@ -150,6 +186,10 @@ protected:
         case downspout::midiscribe::kParamArmed:        return c.armed ? 1.0f : 0.0f;
         case downspout::midiscribe::kParamWrite:        return c.writeTrigger;
         case downspout::midiscribe::kParamCaptureBeats: return static_cast<float>(c.captureBeatIndex);
+        case downspout::midiscribe::kParamBar:          return outBar_;
+        case downspout::midiscribe::kParamBeat:         return outBeat_;
+        case downspout::midiscribe::kParamBpm:          return outBpm_;
+        case downspout::midiscribe::kParamIsPlaying:    return outIsPlaying_;
         default: return 0.0f;
         }
     }
@@ -177,18 +217,19 @@ protected:
     // ----- State -----
     void initState(uint32_t index, State& state) override
     {
-        state.hints        = kStateIsOnlyForDSP;
         state.defaultValue = "";
 
         switch (index) {
         case kStateExportPath:
-            state.key   = downspout::midiscribe::kStateKeyExportPath;
-            state.label = "Export Path";
+            state.key          = downspout::midiscribe::kStateKeyExportPath;
+            state.label        = "Export Path";
+            state.hints        = kStateIsFilenamePath;
             state.defaultValue = downspout::midiscribe::kDefaultExportPath;
             break;
         case kStateControls:
             state.key   = "controls";
             state.label = "Controls";
+            state.hints = kStateIsOnlyForDSP;
             break;
         default:
             break;
@@ -226,7 +267,14 @@ protected:
              uint32_t         midiEventCount) override
     {
         // Snapshot transport.
-        const TransportInfo transport = extractTransport(getTimePosition(), getSampleRate());
+        const TimePosition& tp = getTimePosition();
+        const TransportInfo transport = extractTransport(tp, getSampleRate());
+
+        // Update output parameter values — host polls getParameterValue() and notifies UI.
+        outBar_  = (tp.bbt.valid && tp.bbt.bar  > 0) ? static_cast<float>(tp.bbt.bar)  : 1.0f;
+        outBeat_ = (tp.bbt.valid && tp.bbt.beat > 0) ? static_cast<float>(tp.bbt.beat) : 1.0f;
+        outBpm_  = static_cast<float>(transport.bpm);
+        outIsPlaying_ = tp.playing ? 1.0f : 0.0f;
 
         // Convert incoming DPF MIDI events to CapturedEvent.
         // We use transport.absoluteBeat as the timestamp; for sub-block
@@ -278,6 +326,12 @@ protected:
 private:
     downspout::midiscribe::MidiscribeCore core_ {};
     float prevWriteTrigger_ = 0.0f;
+
+    // Cached output parameter values — updated in run(), read by getParameterValue()
+    float outBar_       = 1.0f;
+    float outBeat_      = 1.0f;
+    float outBpm_       = static_cast<float>(downspout::midiscribe::kDefaultBpm);
+    float outIsPlaying_ = 0.0f;
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MidiscribePlugin)
 };

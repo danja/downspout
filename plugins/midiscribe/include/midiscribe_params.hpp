@@ -6,9 +6,13 @@ namespace downspout::midiscribe {
 
 // Parameter IDs — keep in sync with MidiscribePlugin::initParameter
 enum ParamId : uint32_t {
-    kParamArmed        = 0,   // bool: 0=off, 1=on
-    kParamWrite        = 1,   // trigger: momentary float 0→1
-    kParamCaptureBeats = 2,   // enum: 8, 16, 32, 64 (default 16)
+    kParamArmed        = 0,   // bool: 0=off, 1=on (input)
+    kParamWrite        = 1,   // trigger: momentary float 0→1 (input)
+    kParamCaptureBeats = 2,   // enum: 8, 16, 32, 64 (input)
+    kParamBar          = 3,   // current bar number (output)
+    kParamBeat         = 4,   // current beat within bar (output)
+    kParamBpm          = 5,   // current BPM (output)
+    kParamIsPlaying    = 6,   // transport playing bool (output)
     kParamCount
 };
 
