@@ -28,6 +28,7 @@ plugins=(
   "loopdelay:loopdelay"
   "lightverb:lightverb"
   "melgen:melgen"
+  "bubbles:bubbles"
   "rift:rift"
   "orchid:orchid"
   "drumgen:drumgen"
