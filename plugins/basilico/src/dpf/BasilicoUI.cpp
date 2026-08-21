@@ -48,7 +48,7 @@ struct ControlDef {
 struct SectionDef {
     const char* title;
     Color color;
-    std::array<ControlDef, 7> controls;
+    std::array<ControlDef, 8> controls;
     std::size_t count;
 };
 
@@ -58,12 +58,12 @@ constexpr std::uint32_t paramId(const ParamId id)
 }
 
 constexpr std::array<SectionDef, 6> kSections = {{
-    {"Voice", {112, 177, 139}, {{{paramId(ParamId::model), "Model"}, {paramId(ParamId::waveform), "Wave"}, {paramId(ParamId::subLevel), "Sub"}, {paramId(ParamId::body), "Body"}, {paramId(ParamId::bite), "Bite"}, {0, ""}, {0, ""}}}, 5},
-    {"Phrase", {215, 163, 78}, {{{paramId(ParamId::mute), "Mute"}, {paramId(ParamId::glide), "Glide"}, {paramId(ParamId::accent), "Accent"}, {paramId(ParamId::punch), "Punch"}, {0, ""}, {0, ""}, {0, ""}}}, 4},
-    {"Filter", {105, 158, 218}, {{{paramId(ParamId::cutoff), "Cutoff"}, {paramId(ParamId::resonance), "Res"}, {paramId(ParamId::filterEnv), "Env"}, {paramId(ParamId::keyTrack), "Track"}, {paramId(ParamId::lfoDepth), "Wob Filter"}, {paramId(ParamId::squelch), "Squelch"}, {0, ""}}}, 6},
-    {"Wobble", {92, 185, 194}, {{{paramId(ParamId::lfoFrequency), "Rate"}, {paramId(ParamId::wobbleStart), "Start"}, {paramId(ParamId::wobbleSync), "Sync"}, {paramId(ParamId::wobbleDivision), "Division"}, {paramId(ParamId::wobbleShape), "Shape"}, {paramId(ParamId::ampWobble), "Amp"}, {paramId(ParamId::phaseWobble), "Phase"}}}, 7},
-    {"Envelope", {176, 132, 214}, {{{paramId(ParamId::attack), "Attack"}, {paramId(ParamId::decay), "Decay"}, {paramId(ParamId::sustain), "Sustain"}, {paramId(ParamId::release), "Release"}, {0, ""}, {0, ""}, {0, ""}}}, 4},
-    {"Drive", {214, 112, 92}, {{{paramId(ParamId::driveType), "Type"}, {paramId(ParamId::drive), "Drive"}, {paramId(ParamId::output), "Output"}, {0, ""}, {0, ""}, {0, ""}, {0, ""}}}, 3},
+    {"Voice", {112, 177, 139}, {{{paramId(ParamId::model), "Model"}, {paramId(ParamId::waveform), "Wave"}, {paramId(ParamId::subLevel), "Sub"}, {paramId(ParamId::body), "Body"}, {paramId(ParamId::bite), "Bite"}, {paramId(ParamId::harmonic), "Harmonic"}, {paramId(ParamId::harmonicLevel), "Harm Level"}, {0, ""}}}, 7},
+    {"Phrase", {215, 163, 78}, {{{paramId(ParamId::mute), "Mute"}, {paramId(ParamId::glide), "Glide"}, {paramId(ParamId::accent), "Accent"}, {paramId(ParamId::punch), "Punch"}, {0, ""}, {0, ""}, {0, ""}, {0, ""}}}, 4},
+    {"Filter", {105, 158, 218}, {{{paramId(ParamId::cutoff), "Cutoff"}, {paramId(ParamId::resonance), "Res"}, {paramId(ParamId::filterEnv), "Env"}, {paramId(ParamId::keyTrack), "Track"}, {paramId(ParamId::lfoDepth), "Wob Filter"}, {paramId(ParamId::squelch), "Squelch"}, {0, ""}, {0, ""}}}, 6},
+    {"Wobble", {92, 185, 194}, {{{paramId(ParamId::lfoFrequency), "Rate"}, {paramId(ParamId::wobbleStart), "Start"}, {paramId(ParamId::wobbleSync), "Sync"}, {paramId(ParamId::wobbleDivision), "Division"}, {paramId(ParamId::wobbleShape), "Shape"}, {paramId(ParamId::ampWobble), "Amp"}, {paramId(ParamId::phaseWobble), "Phase"}, {paramId(ParamId::wobbleSubMix), "Sub Mix"}}}, 8},
+    {"Envelope", {176, 132, 214}, {{{paramId(ParamId::attack), "Attack"}, {paramId(ParamId::decay), "Decay"}, {paramId(ParamId::sustain), "Sustain"}, {paramId(ParamId::release), "Release"}, {paramId(ParamId::envSubMix), "Sub Mix"}, {0, ""}, {0, ""}, {0, ""}}}, 5},
+    {"Drive", {214, 112, 92}, {{{paramId(ParamId::driveType), "Type"}, {paramId(ParamId::drive), "Drive"}, {paramId(ParamId::output), "Output"}, {0, ""}, {0, ""}, {0, ""}, {0, ""}, {0, ""}}}, 3},
 }};
 
 float clampf(const float value, const float minimum, const float maximum)
@@ -141,6 +141,14 @@ std::string formatValue(const std::uint32_t parameter, const float value)
     else if (parameter == static_cast<std::uint32_t>(ParamId::wobbleStart))
     {
         std::snprintf(buffer, sizeof(buffer), "%d deg", static_cast<int>(std::lround(clampf(value, 0.0f, 360.0f))));
+    }
+    else if (parameter == static_cast<std::uint32_t>(ParamId::harmonic))
+    {
+        std::snprintf(buffer, sizeof(buffer), "x%d", static_cast<int>(std::lround(clampf(value, 2.0f, 8.0f))));
+    }
+    else if (parameter == static_cast<std::uint32_t>(ParamId::envSubMix))
+    {
+        std::snprintf(buffer, sizeof(buffer), "%+d%%", static_cast<int>(std::lround(clampf(value, -1.0f, 1.0f) * 100.0f)));
     }
     else
     {

@@ -37,9 +37,13 @@ enum class ParamId : std::uint32_t {
     squelch,
     wobbleStart,
     bypass,
+    harmonic,
+    harmonicLevel,
+    wobbleSubMix,
+    envSubMix,
 };
 
-inline constexpr std::size_t kParameterCount = 30;
+inline constexpr std::size_t kParameterCount = 34;
 
 struct ParamSpec {
     const char* symbol;
@@ -81,6 +85,10 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"squelch", "Squelch", 0.0f, 1.0f, 0.0f, false},
     {"wobble_start", "Wobble Start", 0.0f, 360.0f, 0.0f, false},
     {"dpf_bypass", "Bypass", 0.0f, 1.0f, 0.0f, true},
+    {"harmonic", "Harmonic", 2.0f, 8.0f, 2.0f, true},
+    {"harmonic_level", "Harmonic Level", 0.0f, 1.0f, 0.0f, false},
+    {"wobble_sub_mix", "Wobble Sub Mix", 0.0f, 1.0f, 0.0f, false},
+    {"env_sub_mix", "Env Sub Mix", -1.0f, 1.0f, 0.0f, false},
 }};
 
 inline constexpr std::array<const char*, 5> kModelNames = {{

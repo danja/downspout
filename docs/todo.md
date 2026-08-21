@@ -4,8 +4,6 @@ UI for midiscribe
 
 screenshots
 
-basilico add harmonic signal
-add mod to Sub level
 
 new plugin - clipper/soft distortion
 

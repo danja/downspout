@@ -6,7 +6,7 @@
 
 dsp:basilico a trn:PluginProfile ;
     rdfs:label "Basilico" ;
-    rdfs:comment "Monophonic bass instrument with upright, electric, dub, acid, and industrial models." ;
+    rdfs:comment "Monophonic bass instrument with upright, electric, dub, acid, and industrial models. Voice block adds a sine harmonic at an integer multiple of the main pitch. Wobble Sub Mix modulates sub level via the LFO. Envelope Sub Mix adds or subtracts sub level via the amplitude envelope." ;
     trn:bundleName "basilico.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/basilico/> ;

@@ -487,17 +487,26 @@ public:
         const float body = bodyTone(main, sub, profile);
         const float transient = transientTone(profile);
 
+        const WobbleFrame wobble = wobble_.process(wobbleConfig(), sampleRate_);
+
         advancePhase(phase_, currentFrequency_);
         advancePhase(subPhase_, currentFrequency_ * 0.5f);
 
+        const float harmonicMult = params_.values[static_cast<std::size_t>(ParamId::harmonic)];
+        const float harmonicLevel = params_.values[static_cast<std::size_t>(ParamId::harmonicLevel)];
+        const float harmonicSig = std::sin(phase_ * kTwoPi * harmonicMult) * harmonicLevel;
+
+        const float subLevel = params_.values[static_cast<std::size_t>(ParamId::subLevel)];
+        const float wobbleSubMix = params_.values[static_cast<std::size_t>(ParamId::wobbleSubMix)];
+        const float envSubMix = params_.values[static_cast<std::size_t>(ParamId::envSubMix)];
+        const float subWobbleMod = wobbleSubMix > 0.0001f ? (1.0f + wobble.bipolar * wobbleSubMix) : 1.0f;
+        const float effectiveSubLevel = clampUnit(subLevel * profile.subMix * subWobbleMod * (1.0f + envSubMix * amp));
+
         const float bodyAmount = params_.values[static_cast<std::size_t>(ParamId::body)] * profile.bodyAmount;
-        const float dry = main * profile.oscMix +
-                          sub * params_.values[static_cast<std::size_t>(ParamId::subLevel)] * profile.subMix;
+        const float dry = main * profile.oscMix + sub * effectiveSubLevel + harmonicSig;
         const float source = dry * (1.0f - bodyAmount * 0.45f) +
                              body * bodyAmount * 1.65f +
                              transient;
-
-        const WobbleFrame wobble = wobble_.process(wobbleConfig(), sampleRate_);
 
         const float cutoff = cutoffHz(profile, filterEnv, wobble);
         const float filtered = filter_.process(sanitizeAudio(source), cutoff, resonance(profile), sampleRate_);
