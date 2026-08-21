@@ -1,13 +1,8 @@
 # Downspout TODO
 
-UI for midiscribe
-
-screenshots
-
-
 new plugin - clipper/soft distortion
 
-check that all key operations in the UI are covered by MCP & vice versa
+Transmission & Campione : check that all key operations in the UI are covered by MCP & vice versa
 
 ## Campione
 

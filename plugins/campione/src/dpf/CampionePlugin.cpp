@@ -452,8 +452,8 @@ protected:
                         z.loopEnd   = static_cast<std::uint32_t>(loopEnd);
                         const std::uint32_t loopLen = z.loopEnd > z.loopStart
                                                       ? z.loopEnd - z.loopStart : 1;
-                        z.crossfadeFrames = static_cast<std::uint32_t>(
-                            (parameters_.crossfadeDurationMs / 1000.0f) * z.sampleRate);
+                        // Preserve the zone's existing crossfadeFrames (set on load);
+                        // only cap it if the loop region was shortened by the UI drag.
                         if (z.crossfadeFrames > loopLen / 2) z.crossfadeFrames = loopLen / 2;
                     } else {
                         downspout::campione::applyLoopPoints(z, parameters_.crossfadeDurationMs);
