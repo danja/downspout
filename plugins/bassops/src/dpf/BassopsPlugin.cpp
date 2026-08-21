@@ -15,6 +15,8 @@ enum ParameterIndex : uint32_t {
     kParamAttackMs,
     kParamReleaseMs,
     kParamCutoffHz,
+    kParamSideShape,
+    kParamWet,
     // Output meters (read-only, written by DSP)
     kParamInputLevel,
     kParamScLevel,
@@ -135,6 +137,24 @@ protected:
             parameter.ranges.max    = 5000.0f;
             parameter.ranges.def    = 200.0f;
             break;
+        case kParamSideShape:
+            parameter.hints         = kParameterIsAutomatable;
+            parameter.name          = "Side Shape";
+            parameter.symbol        = "side_shape";
+            parameter.unit          = "%";
+            parameter.ranges.min    = 0.0f;
+            parameter.ranges.max    = 100.0f;
+            parameter.ranges.def    = 0.0f;
+            break;
+        case kParamWet:
+            parameter.hints         = kParameterIsAutomatable;
+            parameter.name          = "Wet";
+            parameter.symbol        = "wet";
+            parameter.unit          = "%";
+            parameter.ranges.min    = 0.0f;
+            parameter.ranges.max    = 100.0f;
+            parameter.ranges.def    = 100.0f;
+            break;
         case kParamInputLevel:
             parameter.hints         = kParameterIsOutput;
             parameter.name          = "Input Level";
@@ -188,6 +208,8 @@ protected:
         case kParamAttackMs:    return parameters_.attackMs;
         case kParamReleaseMs:   return parameters_.releaseMs;
         case kParamCutoffHz:    return parameters_.cutoffHz;
+        case kParamSideShape:   return parameters_.sideShape;
+        case kParamWet:         return parameters_.wet;
         case kParamInputLevel:  return engineState_.meters.inputPeak;
         case kParamScLevel:     return engineState_.meters.scLevel;
         case kParamDuckGain:    return engineState_.meters.duckGain;
@@ -204,6 +226,8 @@ protected:
         case kParamAttackMs:  parameters_.attackMs  = value; break;
         case kParamReleaseMs: parameters_.releaseMs = value; break;
         case kParamCutoffHz:  parameters_.cutoffHz  = value; break;
+        case kParamSideShape: parameters_.sideShape = value; break;
+        case kParamWet:       parameters_.wet       = value; break;
         }
         parameters_ = downspout::bassops::clampParameters(parameters_);
     }

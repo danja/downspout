@@ -41,7 +41,9 @@ std::string serializeParameters(const Parameters& p)
            "duckDepth=" + std::to_string(p.duckDepth) + "\n"
            "attackMs="  + std::to_string(p.attackMs)  + "\n"
            "releaseMs=" + std::to_string(p.releaseMs) + "\n"
-           "cutoffHz="  + std::to_string(p.cutoffHz)  + "\n";
+           "cutoffHz="  + std::to_string(p.cutoffHz)  + "\n"
+           "sideShape=" + std::to_string(p.sideShape) + "\n"
+           "wet="       + std::to_string(p.wet)       + "\n";
 }
 
 std::optional<Parameters> deserializeParameters(const std::string& text)
@@ -65,6 +67,10 @@ std::optional<Parameters> deserializeParameters(const std::string& text)
             p.releaseMs = fv;
         } else if (key == "cutoffHz" && parseFloat(value, fv)) {
             p.cutoffHz = fv;
+        } else if (key == "sideShape" && parseFloat(value, fv)) {
+            p.sideShape = fv;
+        } else if (key == "wet" && parseFloat(value, fv)) {
+            p.wet = fv;
         } else {
             return std::nullopt;
         }

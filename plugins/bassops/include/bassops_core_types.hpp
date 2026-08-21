@@ -14,17 +14,21 @@ struct Parameters {
     float attackMs  = 10.0f;   // 1-500 ms
     float releaseMs = 100.0f;  // 10-2000 ms
     float cutoffHz  = 200.0f;  // 50-5000 Hz
+    float sideShape = 0.0f;    // 0=linear, 100=hard clip (waveshaper on side channel)
+    float wet       = 100.0f;  // 0=dry original input, 100=fully processed
 };
 
-inline constexpr std::uint32_t kMidDelayLen = kFirOrder / 2;  // 64 samples
+inline constexpr std::uint32_t kMidDelayLen = kFirOrder / 2;  // 64 samples (FIR group delay)
 
 struct FirBank {
-    // HP applied to side channel only; mid uses a matching delay line.
-    // This avoids signal loss: LP(mid)+HP(side) drops mono content above cutoff,
-    // but delayed_mid+HP(side) preserves everything while still mono-fying bass.
-    std::array<float, kFirTaps>   hp {};
-    std::array<float, kFirTaps>   bufSide {};
-    std::array<float, kMidDelayLen> midDelay {};
+    // LP → mid (clean low-end), HP(distorted mono) → side (harmonic stereo width).
+    // LP + HP = delayed identity at shape=0, so outL=outR=delayed mono (phase-coherent).
+    std::array<float, kFirTaps>    lp {};
+    std::array<float, kFirTaps>    hp {};
+    std::array<float, kFirTaps>    bufMid {};      // convolution buffer for LP path
+    std::array<float, kFirTaps>    bufSide {};     // convolution buffer for HP path
+    std::array<float, kMidDelayLen> dryDelayL {};  // delay dry L to match FIR latency
+    std::array<float, kMidDelayLen> dryDelayR {};  // delay dry R to match FIR latency
     std::uint32_t pos      = 0;
     std::uint32_t delayPos = 0;
     float lastCutoffHz   = -1.0f;

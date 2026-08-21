@@ -24,20 +24,19 @@ void recomputeFir(FirBank& fir, float cutoffHz, float sampleRate)
     const auto  M  = static_cast<int>(kFirOrder);
     const float pi = static_cast<float>(M_PI);
 
-    // LP coefficients (scratch)
-    std::array<float, kFirTaps> lp {};
+    // LP coefficients
     for (int n = 0; n <= M; ++n) {
         const float x = static_cast<float>(n) - static_cast<float>(M) * 0.5f;
         float sinc = (std::fabs(x) < 1e-6f)
             ? 2.0f * fc
             : std::sin(2.0f * pi * fc * x) / (pi * x);
         const float window = 0.5f * (1.0f - std::cos(2.0f * pi * static_cast<float>(n) / static_cast<float>(M)));
-        lp[static_cast<std::size_t>(n)] = sinc * window;
+        fir.lp[static_cast<std::size_t>(n)] = sinc * window;
     }
 
     // HP = delta[M/2] - LP
     for (std::uint32_t n = 0; n < kFirTaps; ++n) {
-        fir.hp[n] = -lp[n];
+        fir.hp[n] = -fir.lp[n];
     }
     fir.hp[kFirOrder / 2] += 1.0f;
 
@@ -57,6 +56,20 @@ void recomputeFir(FirBank& fir, float cutoffHz, float sampleRate)
     return acc;
 }
 
+// Waveshaper applied to the side channel before the HP filter.
+// drive and hardMix are precomputed per block from sideShape.
+// drive = exp(shape * ln8): 1 at shape=0, 8 at shape=1.
+// hardMix = shape^2: blends tanh (soft) toward clamp (hard) as shape rises.
+// Dividing by drive after clipping normalises small-signal gain back to unity.
+[[nodiscard]] float shapeSide(float x, float drive, float hardMix) noexcept
+{
+    const float driven  = x * drive;
+    const float soft    = std::tanh(driven);
+    const float hard    = clampf(driven, -1.0f, 1.0f);
+    const float clipped = soft + hardMix * (hard - soft);
+    return clipped / drive;
+}
+
 }  // namespace
 
 Parameters clampParameters(const Parameters& raw)
@@ -66,14 +79,18 @@ Parameters clampParameters(const Parameters& raw)
     p.attackMs  = clampf(p.attackMs,  1.0f, 500.0f);
     p.releaseMs = clampf(p.releaseMs, 10.0f, 2000.0f);
     p.cutoffHz  = clampf(p.cutoffHz,  50.0f, 5000.0f);
+    p.sideShape = clampf(p.sideShape, 0.0f, 100.0f);
+    p.wet       = clampf(p.wet,       0.0f, 100.0f);
     return p;
 }
 
 void activate(EngineState& state)
 {
     state.env.envelope = 0.0f;
+    state.fir.bufMid.fill(0.0f);
     state.fir.bufSide.fill(0.0f);
-    state.fir.midDelay.fill(0.0f);
+    state.fir.dryDelayL.fill(0.0f);
+    state.fir.dryDelayR.fill(0.0f);
     state.fir.pos          = 0;
     state.fir.delayPos     = 0;
     state.fir.lastCutoffHz = -1.0f;
@@ -100,6 +117,14 @@ void processBlock(EngineState& state,
     const float attackCoeff  = 1.0f - std::exp(-1.0f / (sr * p.attackMs  * 0.001f));
     const float releaseCoeff = 1.0f - std::exp(-1.0f / (sr * p.releaseMs * 0.001f));
     const float duckScale    = p.duckDepth * 0.01f;
+    const float wetScale     = p.wet * 0.01f;
+    const float dryScale     = 1.0f - wetScale;
+
+    // Precompute waveshaper coefficients (avoid per-sample exp)
+    constexpr float kLn8 = 2.0794415f;
+    const float sideShapeNorm = p.sideShape * 0.01f;
+    const float shapeDrive    = std::exp(sideShapeNorm * kLn8);  // 1 → 8
+    const float shapeHardMix  = sideShapeNorm * sideShapeNorm;
 
     state.meters.inputPeak *= 0.85f;
     float blockInPeak  = 0.0f;
@@ -127,25 +152,31 @@ void processBlock(EngineState& state,
         const float dL = inL * lastDuckGain;
         const float dR = inR * lastDuckGain;
 
-        // M/S encode
-        const float mid  = (dL + dR) * 0.5f;
-        const float side = (dL - dR) * 0.5f;
+        // New routing: mono sum → LP for mid (clean bass), distorted mono → HP for side (harmonic width)
+        // At shape=0: LP(x)+HP(x) = delayed(x), so outL=outR=delayed mono (perfect reconstruction, phase-coherent)
+        // At shape>0: distortion adds harmonics to side, creating stereo width above cutoff
+        const float mono = (dL + dR) * 0.5f;
 
-        // Delay mid by kMidDelayLen samples to match HP FIR group delay
-        const float delayedMid = state.fir.midDelay[state.fir.delayPos];
-        state.fir.midDelay[state.fir.delayPos] = mid;
-        state.fir.delayPos = (state.fir.delayPos + 1) % kMidDelayLen;
+        // LP path (clean mid)
+        state.fir.bufMid[state.fir.pos] = mono;
+        const float midF = firConvolve(state.fir.lp, state.fir.bufMid, state.fir.pos);
 
-        // HP filter on side only: bass in side is suppressed, treble passes
-        state.fir.bufSide[state.fir.pos] = side;
+        // Distort + HP path (harmonic side)
+        const float shaped = sideShapeNorm > 0.0f ? shapeSide(mono, shapeDrive, shapeHardMix) : mono;
+        state.fir.bufSide[state.fir.pos] = shaped;
         const float sideF = firConvolve(state.fir.hp, state.fir.bufSide, state.fir.pos);
+
         state.fir.pos = (state.fir.pos + 1) % kFirTaps;
 
-        // Decode: delayed_mid ± HP(side)
-        // Below cutoff: HP(side)≈0 → both channels = mid (mono bass)
-        // Above cutoff: HP(side)≈side → channels = mid±side = L,R (full stereo)
-        const float outL = delayedMid + sideF;
-        const float outR = delayedMid - sideF;
+        // Delay dry signal to match FIR group delay (kMidDelayLen samples)
+        const float delayedInL = state.fir.dryDelayL[state.fir.delayPos];
+        const float delayedInR = state.fir.dryDelayR[state.fir.delayPos];
+        state.fir.dryDelayL[state.fir.delayPos] = inL;
+        state.fir.dryDelayR[state.fir.delayPos] = inR;
+        state.fir.delayPos = (state.fir.delayPos + 1) % kMidDelayLen;
+
+        const float outL = wetScale * (midF + sideF) + dryScale * delayedInL;
+        const float outR = wetScale * (midF - sideF) + dryScale * delayedInR;
         if (audio.outL) { audio.outL[frame] = outL; }
         if (audio.outR) { audio.outR[frame] = outR; }
 

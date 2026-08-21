@@ -15,6 +15,8 @@ enum ParameterIndex : uint32_t {
     kParamAttackMs,
     kParamReleaseMs,
     kParamCutoffHz,
+    kParamSideShape,
+    kParamWet,
     kParamInputLevel,
     kParamScLevel,
     kParamDuckGain,
@@ -38,11 +40,13 @@ struct SliderDef {
     bool        logScale;
 };
 
-constexpr std::array<SliderDef, 4> kSliders = {{
-    {kParamDuckDepth, "Duck\nDepth", "%",   0.0f,    100.0f, false},
-    {kParamAttackMs,  "Attack",      "ms",  1.0f,    500.0f, true},
-    {kParamReleaseMs, "Release",     "ms",  10.0f,  2000.0f, true},
-    {kParamCutoffHz,  "M/S\nCutoff", "Hz",  50.0f,  5000.0f, true},
+constexpr std::array<SliderDef, 6> kSliders = {{
+    {kParamDuckDepth, "Duck\nDepth",  "%",   0.0f,    100.0f, false},
+    {kParamAttackMs,  "Attack",       "ms",  1.0f,    500.0f, true},
+    {kParamReleaseMs, "Release",      "ms",  10.0f,  2000.0f, true},
+    {kParamCutoffHz,  "M/S\nCutoff",  "Hz",  50.0f,  5000.0f, true},
+    {kParamSideShape, "Side\nShape",  "%",   0.0f,    100.0f, false},
+    {kParamWet,       "Wet",          "%",   0.0f,    100.0f, false},
 }};
 
 struct MeterDef {
@@ -134,6 +138,8 @@ public:
         values_[kParamAttackMs]    = 10.0f;
         values_[kParamReleaseMs]   = 100.0f;
         values_[kParamCutoffHz]    = 200.0f;
+        values_[kParamSideShape]   = 0.0f;
+        values_[kParamWet]         = 100.0f;
         values_[kParamInputLevel]  = 0.0f;
         values_[kParamScLevel]     = 0.0f;
         values_[kParamDuckGain]    = 1.0f;
@@ -242,10 +248,10 @@ private:
         const float innerW = w - 28.0f;
         const float barH   = h - 100.0f;   // height of the slider track
         const float barY   = y + 42.0f;
-        const float colW   = (innerW - 3.0f * 14.0f) / 4.0f;
+        const float colW   = (innerW - 5.0f * 10.0f) / 6.0f;
 
-        for (int i = 0; i < 4; ++i) {
-            const float cx = innerX + i * (colW + 14.0f);
+        for (int i = 0; i < 6; ++i) {
+            const float cx = innerX + i * (colW + 10.0f);
             // The interactive hit area is the full column
             sliderRects_[i] = {cx, barY, colW, barH};
             drawVSlider(kSliders[i], cx, barY, colW, barH,
