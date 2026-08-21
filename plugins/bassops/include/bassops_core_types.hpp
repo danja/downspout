@@ -39,7 +39,7 @@ struct Meters {
     float inputPeak  = 0.0f;  // peak of main input this block, 0-1 with ballistic decay
     float scLevel    = 0.0f;  // sidechain envelope follower output, 0-1
     float duckGain   = 1.0f;  // current VCA gain, 0-1 (1=no duck, 0=full duck)
-    float outputPeak = 0.0f;  // peak of output this block, 0-1 with ballistic decay
+    float outputPeak = 0.0f;  // mean-abs output level, 0-1 with fast-release ballistic
 };
 
 struct EngineState {

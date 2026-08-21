@@ -101,10 +101,9 @@ void processBlock(EngineState& state,
     const float releaseCoeff = 1.0f - std::exp(-1.0f / (sr * p.releaseMs * 0.001f));
     const float duckScale    = p.duckDepth * 0.01f;
 
-    state.meters.inputPeak  *= 0.85f;
-    state.meters.outputPeak *= 0.85f;
+    state.meters.inputPeak *= 0.85f;
     float blockInPeak  = 0.0f;
-    float blockOutPeak = 0.0f;
+    float blockOutSum  = 0.0f;
     float lastDuckGain = state.meters.duckGain;
 
     for (std::uint32_t frame = 0; frame < nframes; ++frame) {
@@ -150,14 +149,13 @@ void processBlock(EngineState& state,
         if (audio.outL) { audio.outL[frame] = outL; }
         if (audio.outR) { audio.outR[frame] = outR; }
 
-        const float absOL = std::fabs(outL);
-        const float absOR = std::fabs(outR);
-        if (absOL > blockOutPeak) { blockOutPeak = absOL; }
-        if (absOR > blockOutPeak) { blockOutPeak = absOR; }
+        blockOutSum += std::fabs(outL) + std::fabs(outR);
     }
 
-    if (blockInPeak  > state.meters.inputPeak)  { state.meters.inputPeak  = blockInPeak;  }
-    if (blockOutPeak > state.meters.outputPeak) { state.meters.outputPeak = blockOutPeak; }
+    if (blockInPeak > state.meters.inputPeak) { state.meters.inputPeak = blockInPeak; }
+    // Mean absolute output with fast-release ballistic so the meter tracks ducking immediately
+    const float blockOutMean = blockOutSum / (2.0f * static_cast<float>(nframes));
+    state.meters.outputPeak = std::max(state.meters.outputPeak * 0.7f, blockOutMean);
     state.meters.scLevel  = state.env.envelope;
     state.meters.duckGain = lastDuckGain;
 }

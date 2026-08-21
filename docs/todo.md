@@ -4,6 +4,8 @@
 
 bassops will be a new plugin featuring a ducker and mid/side eq. It will has 4 audio inputs, 2 outputs. The main signal will flow into inputs 1 and 2, a control signal into inputs 3 and 4. The control signal, which will typically be a bass drum send, will go to an envelope follower and  inverter, which will then feed into VCAs in the main signal path. After ducking the signal will be split into mid and side channels. Two matching linear phase filters will be applied : a LP to the mid signal and a HP to the side. There will be a control for the cutoff frequency. The mid and side will then be recombined into regular stereo and the signal output. 
 
+can you add an extra processing block on the side signal before its high pass filter. This will be a function controlled by a slider that goes from direct linear transfer through non-linear soft clipping to hard clipping, to boost the harmonics on the side channels.
+
 new plugin - clipper/soft distortion
 
 check that all key operations in the UI are covered by MCP & vice versa
