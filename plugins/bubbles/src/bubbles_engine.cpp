@@ -1,4 +1,5 @@
 #include "bubbles_engine.hpp"
+#include "bubbles_modulator.hpp"
 
 #include <algorithm>
 #include <array>
@@ -113,10 +114,11 @@ static float nextRandFloat(uint32_t& rng)
 // Filter coefficient update (called every kControlUpdatePeriod samples)
 // ---------------------------------------------------------------------------
 
-static void updateCoefficients(EngineState&    state,
-                                const Parameters& params,
-                                const ModeMix&  mix,
-                                float           sr)
+static void updateCoefficients(EngineState&             state,
+                                const Parameters&        params,
+                                const ModeMix&           mix,
+                                float                    sr,
+                                const TransportSnapshot& transport)
 {
     // Flow LP chain: two stages, brightness shifts cutoffs upward
     const float brightScale = 0.3f + params.brightness * 1.7f;
@@ -151,8 +153,14 @@ static void updateCoefficients(EngineState&    state,
     calcOnePoleLP(state.depthLPL, depthFreq, sr);
     calcOnePoleLP(state.depthLPR, depthFreq, sr);
 
-    // Wave oscillator rate (Hz / sample)
-    state.cachedWaveRate = (mix.waveFreqHz * (0.5f + params.flow * 0.5f)) / sr;
+    // Wave oscillator rate (Hz / sample); lock to host tempo when transport is running
+    if (transport.valid && transport.playing && transport.bpm > 1.0) {
+        const double bpb = std::max(1.0, transport.beatsPerBar);
+        const double barSamples = 60.0 / transport.bpm * bpb * static_cast<double>(sr);
+        state.cachedWaveRate = 1.0f / static_cast<float>(barSamples);
+    } else {
+        state.cachedWaveRate = (mix.waveFreqHz * (0.5f + params.flow * 0.5f)) / sr;
+    }
 
     // Advance wave phase and snapshot modulation (avoids sin() in the hot loop)
     state.wavePhase  += state.cachedWaveRate * static_cast<float>(kControlUpdatePeriod);
@@ -267,9 +275,16 @@ Parameters clampParameters(const Parameters& raw)
     p.brightness = std::clamp(p.brightness, 0.0f, 1.0f);
     p.resonance  = std::clamp(p.resonance,  0.0f, 1.0f);
     p.randomness = std::clamp(p.randomness, 0.0f, 1.0f);
-    p.space      = std::clamp(p.space,      0.0f, 1.0f);
-    p.drive      = std::clamp(p.drive,      0.0f, 1.0f);
-    p.output     = std::clamp(p.output,     0.0f, 1.0f);
+    p.space       = std::clamp(p.space,       0.0f, 1.0f);
+    p.drive       = std::clamp(p.drive,       0.0f, 1.0f);
+    p.output      = std::clamp(p.output,      0.0f, 1.0f);
+    p.conductorCh = std::clamp(p.conductorCh, 0.0f, 16.0f);
+    p.lfoTarget   = std::clamp(p.lfoTarget,   0.0f, 6.0f);
+    p.lfoShape    = std::clamp(p.lfoShape,    0.0f, 4.0f);
+    p.lfoRate     = std::clamp(p.lfoRate,     0.05f, 20.0f);
+    p.lfoDepth    = std::clamp(p.lfoDepth,    0.0f, 1.0f);
+    p.lfoSync     = std::clamp(p.lfoSync,     0.0f, 1.0f);
+    p.lfoDivision = std::clamp(p.lfoDivision, 0.0f, 7.0f);
     return p;
 }
 
@@ -289,13 +304,14 @@ void activate(EngineState& state, double sampleRate)
     state.delayR.fill(0.0f);
     state.delayWrL = 0;
     state.delayWrR = 0;
+    state.lfo = LfoState{};
     for (auto& v : state.bubbles) { v.active = false; v.envAmp = 0.0f; v.impAmp = 0.0f; }
     for (auto& v : state.drips)   { v.active = false; v.envAmp = 0.0f; v.impAmp = 0.0f; }
 }
 
 void processBlock(EngineState&           state,
                   const Parameters&      params,
-                  const TransportSnapshot& /*transport*/,
+                  const TransportSnapshot& transport,
                   uint32_t               nframes,
                   double                 sampleRate,
                   float*                 outL,
@@ -345,7 +361,20 @@ void processBlock(EngineState&           state,
         // --- Coefficient updates ---
         if (--state.controlCounter <= 0) {
             state.controlCounter = kControlUpdatePeriod;
-            updateCoefficients(state, params, mix, sr);
+            // Apply LFO modulation to a local copy of params
+            Parameters effParams = params;
+            const int lfoTarget = static_cast<int>(params.lfoTarget + 0.5f);
+            if (lfoTarget != 0 && params.lfoDepth > 0.0f) {
+                const float lfoOut = processLfo(
+                    state.lfo, transport,
+                    static_cast<int>(params.lfoShape + 0.5f),
+                    params.lfoRate,
+                    params.lfoSync >= 0.5f,
+                    static_cast<int>(params.lfoDivision + 0.5f),
+                    sr, kControlUpdatePeriod);
+                applyLfoToParams(effParams, lfoOut, params.lfoDepth, lfoTarget);
+            }
+            updateCoefficients(state, effParams, mix, sr, transport);
         }
 
         // --- White noise source ---

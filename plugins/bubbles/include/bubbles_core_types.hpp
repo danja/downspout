@@ -38,11 +38,29 @@ struct Parameters {
     float space       = 0.35f;  // stereo spread (delay wet/feedback)
     float drive       = 0.35f;  // saturation amount
     float output      = 0.80f;  // post-saturation output level
+    // Conductor CC
+    float conductorCh = 0.0f;   // 0 = disabled, 1–16 = MIDI channel
+    // LFO modulator
+    float lfoTarget   = 0.0f;   // 0=off,1=flow,2=density,3=brightness,4=size,5=heat,6=randomness
+    float lfoShape    = 0.0f;   // 0=sine,1=tri,2=rampDn,3=rampUp,4=square
+    float lfoRate     = 0.50f;  // Hz (free-run mode)
+    float lfoDepth    = 0.0f;   // modulation depth [0,1]
+    float lfoSync     = 0.0f;   // 0=free, 1=tempo-synced
+    float lfoDivision = 2.0f;   // division index (0=1/1 … 7=1/32); default=1/4
 };
 
 struct TransportSnapshot {
-    bool valid   = false;
-    bool playing = false;
+    bool   valid       = false;
+    bool   playing     = false;
+    double bar         = 0.0;   // current bar, 0-based
+    double barBeat     = 0.0;   // beat within bar, 0-based (includes tick fraction)
+    double beatsPerBar = 4.0;
+    double bpm         = 120.0;
+};
+
+struct LfoState {
+    float freePhase = 0.0f;
+    float smoothed  = 0.0f;
 };
 
 // One-pole low-pass filter
@@ -116,6 +134,8 @@ struct EngineState {
     float gateAmp     = 1.0f;
     int   midiNote    = 60;
     float midiVelocity = 0.80f;
+    // LFO modulator state
+    LfoState lfo;
     // Coefficient update scheduling
     int controlCounter = 0;
     // Cached computed values (updated every kControlUpdatePeriod samples)

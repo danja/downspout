@@ -107,6 +107,25 @@ This implementation hardcodes Conductor's default CC numbers (20–24).  If the 
 changes Conductor's CC assignments, the generators will not follow.  Future work could
 expose CC number parameters on the generator side.
 
+## Bubbles mapping
+
+Bubbles adds one new parameter for Conductor reception:
+
+| Parameter | Symbol | Range | Default | Purpose |
+|-----------|--------|-------|---------|---------|
+| Conductor Ch | `conductor_ch` | 0–16 | 0 (off) | MIDI channel to receive Conductor CCs; 0 = disabled |
+
+CC→control mapping:
+
+| CC | Conductor name | Bubbles control | Notes |
+|----|---------------|-----------------|-------|
+| 21 | Density | `density` | Overall bubble/drip spawn rate |
+| 22 | Energy | `flow` | Noise flow and wave amplitude |
+| 23 | Mutation | `randomness` | Stochastic pitch jitter |
+| 24 | Reset | spawn burst (trigger) | Fires when CC value = 127; immediately triggers a burst of bubble/drip events |
+
+CC 20 (Scene) is not mapped — mode selection is a manual arrangement decision.
+
 ## Behaviour when disabled
 
 When **Conductor Ch** = 0, all CC scanning is skipped and existing Note On follow/dodge

@@ -38,20 +38,27 @@ std::vector<std::string_view> split(std::string_view text, char delim)
 
 std::string serializeParameters(const Parameters& p)
 {
-    return "version=1\n"
-           "mode="        + std::to_string(p.mode)        + "\n"
-           "flow="        + std::to_string(p.flow)        + "\n"
-           "turbulence="  + std::to_string(p.turbulence)  + "\n"
-           "size="        + std::to_string(p.size)        + "\n"
-           "density="     + std::to_string(p.density)     + "\n"
-           "heat="        + std::to_string(p.heat)        + "\n"
-           "depth="       + std::to_string(p.depth)       + "\n"
-           "brightness="  + std::to_string(p.brightness)  + "\n"
-           "resonance="   + std::to_string(p.resonance)   + "\n"
-           "randomness="  + std::to_string(p.randomness)  + "\n"
-           "space="       + std::to_string(p.space)       + "\n"
-           "drive="       + std::to_string(p.drive)       + "\n"
-           "output="      + std::to_string(p.output)      + "\n";
+    return "version=2\n"
+           "mode="         + std::to_string(p.mode)        + "\n"
+           "flow="         + std::to_string(p.flow)        + "\n"
+           "turbulence="   + std::to_string(p.turbulence)  + "\n"
+           "size="         + std::to_string(p.size)        + "\n"
+           "density="      + std::to_string(p.density)     + "\n"
+           "heat="         + std::to_string(p.heat)        + "\n"
+           "depth="        + std::to_string(p.depth)       + "\n"
+           "brightness="   + std::to_string(p.brightness)  + "\n"
+           "resonance="    + std::to_string(p.resonance)   + "\n"
+           "randomness="   + std::to_string(p.randomness)  + "\n"
+           "space="        + std::to_string(p.space)       + "\n"
+           "drive="        + std::to_string(p.drive)       + "\n"
+           "output="       + std::to_string(p.output)      + "\n"
+           "conductor_ch=" + std::to_string(p.conductorCh) + "\n"
+           "lfo_target="   + std::to_string(p.lfoTarget)   + "\n"
+           "lfo_shape="    + std::to_string(p.lfoShape)    + "\n"
+           "lfo_rate="     + std::to_string(p.lfoRate)     + "\n"
+           "lfo_depth="    + std::to_string(p.lfoDepth)    + "\n"
+           "lfo_sync="     + std::to_string(p.lfoSync)     + "\n"
+           "lfo_division=" + std::to_string(p.lfoDivision) + "\n";
 }
 
 std::optional<Parameters> deserializeParameters(const std::string& text)
@@ -75,9 +82,16 @@ std::optional<Parameters> deserializeParameters(const std::string& text)
         else if (key == "brightness" && parseFloat(value, v)) p.brightness = v;
         else if (key == "resonance"  && parseFloat(value, v)) p.resonance  = v;
         else if (key == "randomness" && parseFloat(value, v)) p.randomness = v;
-        else if (key == "space"      && parseFloat(value, v)) p.space      = v;
-        else if (key == "drive"      && parseFloat(value, v)) p.drive      = v;
-        else if (key == "output"     && parseFloat(value, v)) p.output     = v;
+        else if (key == "space"        && parseFloat(value, v)) p.space       = v;
+        else if (key == "drive"        && parseFloat(value, v)) p.drive       = v;
+        else if (key == "output"       && parseFloat(value, v)) p.output      = v;
+        else if (key == "conductor_ch" && parseFloat(value, v)) p.conductorCh = v;
+        else if (key == "lfo_target"   && parseFloat(value, v)) p.lfoTarget   = v;
+        else if (key == "lfo_shape"    && parseFloat(value, v)) p.lfoShape    = v;
+        else if (key == "lfo_rate"     && parseFloat(value, v)) p.lfoRate     = v;
+        else if (key == "lfo_depth"    && parseFloat(value, v)) p.lfoDepth    = v;
+        else if (key == "lfo_sync"     && parseFloat(value, v)) p.lfoSync     = v;
+        else if (key == "lfo_division" && parseFloat(value, v)) p.lfoDivision = v;
         else return std::nullopt;
     }
     return clampParameters(p);
