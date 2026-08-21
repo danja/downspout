@@ -66,6 +66,7 @@ using downspout::campione::kStatePatchLoad;
 using downspout::campione::kStateDataDir;
 using downspout::campione::kStateZonePreview;
 using downspout::campione::kStateKeyZonePreview;
+using downspout::campione::kStateKeyWavetableImport;
 using downspout::campione::kDefaultDataDir;
 using downspout::campione::kStateParameters;
 using downspout::campione::kStateZoneFade;
@@ -609,6 +610,25 @@ protected:
         if (std::strcmp(key, kStateKeyZonePreview) == 0 && value)
         {
             pendingPreviewZone_.store(std::atoi(value), std::memory_order_release);
+            return;
+        }
+
+        if (std::strcmp(key, kStateKeyWavetableImport) == 0 && value && value[0] != '\0')
+        {
+            const std::string dir = recordingOutputDir_.empty() ? defaultDataDir() : recordingOutputDir_;
+            ::mkdir(dir.c_str(), 0755);
+            auto result = downspout::campione::importWavetableZone(value, dir);
+            if (!result.error.empty()) return;
+
+            std::lock_guard<std::mutex> lk(zoneMtx_);
+            zonesInitialized_ = true;
+            const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+            auto newZones = std::make_shared<ZoneVec>(existing ? *existing : ZoneVec{});
+            newZones->push_back(std::move(result.zone));
+            std::atomic_store_explicit(&zones_,
+                                       std::shared_ptr<const ZoneVec>(std::move(newZones)),
+                                       std::memory_order_release);
+            notifyZonesChanged(true);
             return;
         }
     }

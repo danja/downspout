@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
@@ -227,6 +228,118 @@ std::string saveWavZone(const SampleZone& zone, const std::string& path)
     }
 
     return f.good() ? "" : "Write error";
+}
+
+ZoneLoadResult importWavetableZone(const std::string& srcPath, const std::string& destDir)
+{
+    ZoneLoadResult result;
+
+    std::ifstream file(srcPath, std::ios::binary);
+    if (!file) { result.error = "Could not open file"; return result; }
+
+    char riff[4]{}, wave[4]{};
+    std::uint32_t riffSize = 0;
+    if (!readBytes(file, riff, 4) || !readU32FromFile(file, riffSize) || !readBytes(file, wave, 4)) {
+        result.error = "File too short";
+        return result;
+    }
+    if (std::strncmp(riff, "RIFF", 4) != 0 || std::strncmp(wave, "WAVE", 4) != 0) {
+        result.error = "Not a RIFF/WAVE file";
+        return result;
+    }
+
+    WavFormat fmt;
+    bool foundFmt = false;
+    std::vector<unsigned char> dataBytes;
+    std::uint32_t clmFrameLen = 0;
+
+    while (file) {
+        char chunkId[4]{};
+        std::uint32_t chunkSize = 0;
+        if (!readBytes(file, chunkId, 4) || !readU32FromFile(file, chunkSize)) break;
+
+        if (std::strncmp(chunkId, "fmt ", 4) == 0) {
+            if (!parseFmtChunk(file, chunkSize, fmt)) { result.error = "Invalid fmt chunk"; return result; }
+            foundFmt = true;
+        } else if (std::strncmp(chunkId, "clm ", 4) == 0) {
+            // Serum wavetable marker: "<!>2048 ..." where the number is samples per frame
+            std::vector<char> clmData(chunkSize + 1, '\0');
+            if (readBytes(file, clmData.data(), static_cast<std::streamsize>(chunkSize))) {
+                if (chunkSize >= 4 && std::strncmp(clmData.data(), "<!>", 3) == 0)
+                    clmFrameLen = static_cast<std::uint32_t>(std::strtoul(clmData.data() + 3, nullptr, 10));
+            }
+        } else if (std::strncmp(chunkId, "data", 4) == 0) {
+            dataBytes.resize(chunkSize);
+            if (!readBytes(file, reinterpret_cast<char*>(dataBytes.data()),
+                           static_cast<std::streamsize>(chunkSize))) {
+                result.error = "Invalid data chunk";
+                return result;
+            }
+        } else {
+            file.seekg(static_cast<std::streamoff>(chunkSize), std::ios::cur);
+        }
+        if ((chunkSize & 1u) != 0u) file.seekg(1, std::ios::cur);
+    }
+
+    if (!foundFmt || dataBytes.empty()) { result.error = "Missing fmt or data chunk"; return result; }
+    if (!isSupportedFormat(fmt))         { result.error = "Unsupported WAV format";    return result; }
+
+    const std::uint32_t bytesPerSample = fmt.bitsPerSample / 8u;
+    const std::uint32_t expectedAlign  = bytesPerSample * fmt.channels;
+    if (bytesPerSample == 0u || fmt.blockAlign < expectedAlign) {
+        result.error = "Invalid WAV frame layout";
+        return result;
+    }
+
+    const std::uint32_t totalFrames = static_cast<std::uint32_t>(dataBytes.size() / fmt.blockAlign);
+    if (totalFrames == 0) { result.error = "No complete frames"; return result; }
+
+    // Use clm frame size if present and valid; otherwise treat the whole file as one cycle.
+    const std::uint32_t frameLen = (clmFrameLen > 0 && clmFrameLen <= totalFrames)
+                                       ? clmFrameLen : totalFrames;
+
+    // Decode the first frame.
+    result.zone.channelCount = static_cast<int>(fmt.channels);
+    result.zone.sampleRate   = static_cast<double>(fmt.sampleRate);
+    result.zone.data.resize(static_cast<std::size_t>(frameLen) * fmt.channels);
+
+    for (std::uint32_t fr = 0; fr < frameLen; ++fr) {
+        const unsigned char* fp = dataBytes.data() + static_cast<std::size_t>(fr) * fmt.blockAlign;
+        for (std::uint32_t ch = 0; ch < fmt.channels; ++ch) {
+            const unsigned char* sp = fp + static_cast<std::size_t>(ch) * bytesPerSample;
+            const float v = fmt.audioFormat == 3u
+                                ? readFloatSample(sp)
+                                : readPcmSample(sp, fmt.bitsPerSample);
+            result.zone.data[static_cast<std::size_t>(fr) * fmt.channels + ch] =
+                std::clamp(v, -1.0f, 1.0f);
+        }
+    }
+
+    // Root note: nearest MIDI note to the natural loop frequency (sr / frameLen).
+    // At that note campione plays at rate≈1, so the loop repeats at the right pitch.
+    const double naturalHz = static_cast<double>(fmt.sampleRate) / static_cast<double>(frameLen);
+    const double midiFloat = 69.0 + 12.0 * std::log2(naturalHz / 440.0);
+    result.zone.rootNote = std::clamp(static_cast<int>(std::lround(midiFloat)), 0, 127);
+
+    // Enable full-frame loop with no crossfade (single-cycle waveforms don't need it).
+    result.zone.loopEnabled   = true;
+    result.zone.loopStart     = 0;
+    result.zone.loopEnd       = frameLen - 1;
+    result.zone.crossfadeFrames = 0;
+
+    // Derive output filename from the source stem.
+    std::string stem = srcPath;
+    const auto slash = stem.rfind('/');
+    if (slash != std::string::npos) stem = stem.substr(slash + 1);
+    const auto dot = stem.rfind('.');
+    if (dot != std::string::npos) stem = stem.substr(0, dot);
+    const std::string outPath = destDir + "/" + stem + "_wt.wav";
+
+    const std::string saveErr = saveWavZone(result.zone, outPath);
+    if (!saveErr.empty()) { result.error = "Could not save converted file: " + saveErr; return result; }
+
+    result.zone.sourcePath = outPath;
+    return result;
 }
 
 }  // namespace downspout::campione

@@ -31,7 +31,8 @@ enum StateIndex : std::uint32_t {
     kStatePatchSave,     // UI sends file path → DSP writes Turtle patch
     kStatePatchLoad,     // UI sends file path → DSP reads Turtle patch + reloads zones
     kStateDataDir,       // UI sends data directory path → DSP updates recording/patch output dir
-    kStateZonePreview,   // UI sends zone index (or -1 to stop) → DSP injects synthetic note
+    kStateZonePreview,       // UI sends zone index (or -1 to stop) → DSP injects synthetic note
+    kStateWavetableImport,   // UI sends source WAV path → DSP converts + appends zone
     kStateCount
 };
 
@@ -50,7 +51,8 @@ inline constexpr const char* kStateKeyZoneReorder   = "zone_reorder";
 inline constexpr const char* kStateKeyPatchSave     = "patch_save";
 inline constexpr const char* kStateKeyPatchLoad     = "patch_load";
 inline constexpr const char* kStateKeyDataDir        = "data_dir";
-inline constexpr const char* kStateKeyZonePreview    = "zone_preview";
+inline constexpr const char* kStateKeyZonePreview      = "zone_preview";
+inline constexpr const char* kStateKeyWavetableImport  = "wavetable_import";
 
 inline constexpr const char* kDefaultDataDir        = "/.vst3/campione-data";
 
