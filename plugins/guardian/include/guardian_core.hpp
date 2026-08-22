@@ -4,12 +4,12 @@
 #include <vector>
 namespace downspout::guardian {
 using downspout::generative::ParamSpec;
-enum Param:std::uint32_t{kCeilingDb,kLookaheadMs,kReleaseMs,kDcRemove,kTruePeak,kSoftClip,kSilenceDb,kReset,
+enum Param:std::uint32_t{kInputDb,kCeilingDb,kAttackMs,kReleaseMs,kLookaheadMs,kDcRemove,kTruePeak,kClipperShape,kBypass,kSilenceDb,kReset,
 kStatusReduction,kStatusFaults,kStatusOverload,kStatusSilence,kStatusPeak,kParameterCount};
 inline constexpr std::array<ParamSpec,kParameterCount>kParameterSpecs{{
-{"ceiling_db","Ceiling (dB)",-24,-0.1f,-1},{"lookahead_ms","Look-ahead (ms)",0,20,5},{"release_ms","Release (ms)",10,1000,120},
-{"dc_remove","DC removal",0,1,1,true},{"true_peak","True-peak guard",0,1,1,true},{"soft_clip","Soft clipping",0,1,1,true},
-{"silence_db","Silence threshold",-120,-30,-72},{"reset","Reset diagnostics",0,65535,0,true},
+{"input_db","Input (dB)",-24,24,0},{"ceiling_db","Ceiling (dB)",-24,-0.1f,-1},{"attack_ms","Attack (ms)",0,50,0},{"release_ms","Release (ms)",10,1000,120},
+{"lookahead_ms","Look-ahead (ms)",0,20,5},{"dc_remove","DC removal",0,1,1,true},{"true_peak","True-peak guard",0,1,1,true},
+{"clipper_shape","Clipper shape",0,1,0},{"bypass","Bypass",0,1,0,true},{"silence_db","Silence threshold",-120,-30,-72},{"reset","Reset diagnostics",0,65535,0,true},
 {"status_reduction","Gain reduction (dB)",0,48,0,false,true},{"status_faults","Fault count",0,1000000,0,true,true},
 {"status_overload","Overload latched",0,1,0,true,true},{"status_silence","Silence detected",0,1,0,true,true},{"status_peak","True peak",0,4,0,false,true}
 }};

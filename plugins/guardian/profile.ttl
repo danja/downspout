@@ -6,7 +6,7 @@
 
 dsp:guardian a trn:PluginProfile ;
     rdfs:label "Guardian" ;
-    rdfs:comment "Output-safety processor with DC removal, look-ahead limiting, true-peak protection, soft clipping, and latched diagnostics." ;
+    rdfs:comment "Output-safety processor with input gain, look-ahead limiting (attack + release), variable-curve clipping (soft to hard), DC removal, true-peak protection, bypass, and latched diagnostics." ;
     trn:bundleName "guardian.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/guardian/> ;

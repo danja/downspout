@@ -1,6 +1,6 @@
 # Downspout TODO
 
-new plugin - clipper/soft distortion
+new plugin - distortion & waveshaping
 
 Transmission & Campione : check that all key operations in the UI are covered by MCP & vice versa
 
@@ -41,6 +41,7 @@ purposes and can differ.
 * arpgen
 * conductor
 * drift
+* guardian
 * harmonic-atlas
 * mnemosyne
 * mosaic
@@ -48,4 +49,4 @@ purposes and can differ.
 * orbit
 * polymeter
 * resonance-garden
-* tuny-vst
+* tuney-vst
