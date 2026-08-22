@@ -135,7 +135,74 @@ static void testPresetDecode()
         CHECK(pp.formant2Hz >= 200.0f && pp.formant2Hz <= 8000.0f);
         CHECK(pp.formantQ >= 0.7f && pp.formantQ <= 20.0f);
         CHECK(pp.coupling >= 0.0f && pp.coupling <= 1.0f);
+        CHECK(pp.regime >= 0.0f && pp.regime <= 1.0f);
+        CHECK(pp.tracheaCm >= 0.0f && pp.tracheaCm <= 10.0f);
     }
+}
+
+// Air-sac ODE produces non-trivial pressure under constant forcing
+static void testAirSacOdePressure()
+{
+    float rx = 0.0f, rp = 0.0f;
+    const float dt = 1.0f / 48000.0f;
+    const float kRespTauX   = 0.25f;
+    const float kRespTauP   = 0.20f;
+    const float kRespAlphaI = 0.05f;
+    const float kRespAlphaR = 0.125f;
+    const float kRespF0     = 35.0f;
+    float maxP = 0.0f;
+    for (int i = 0; i < 2400; ++i) {
+        const float aP = (rp <= 0.0f) ? kRespAlphaI : kRespAlphaI / kRespAlphaR;
+        const float dx = (-(1.0f + rx*rx)*rx - rp + kRespF0) / kRespTauX;
+        const float dp = (-(1.0f + rx*rx)*rx - (1.0f + aP)*rp + kRespF0) / kRespTauP;
+        rx += dx * dt;
+        rp += dp * dt;
+        if (rp > maxP) maxP = rp;
+    }
+    CHECK(maxP > 0.5f);
+}
+
+// regime=0 → gammaScale=1; the ODE regime shift is decoupled from harmonic band level
+static void testRegimeIndependentOfHarmonic()
+{
+    // With regime=0, gammaScale must equal 1, so betaClean = 1/(1^2) = 1.
+    // Verify a voice at regime=0, harmonic=0.5 produces sound (vs old gammaScale=1.5).
+    Engine engine(48000.0f);
+    engine.setParameter(presetParam(0, kPresetParamRegime),   0.0f);
+    engine.setParameter(presetParam(0, kPresetParamHarmonic), 0.5f);
+    const std::uint8_t noteOn[] = { 0x90, 69, 100 };
+    engine.handleMidi(noteOn, 3);
+    bool gotSound = false;
+    for (int i = 0; i < 4096 && !gotSound; ++i) {
+        const auto frame = engine.processStereo();
+        if (std::abs(frame.left) > 1e-6f) gotSound = true;
+    }
+    CHECK(gotSound);
+
+    // Also check that regime param decodes correctly
+    float params[kParameterCount];
+    for (std::uint32_t i = 0; i < kParameterCount; ++i)
+        params[i] = getParameterSpec(i).defaultValue;
+    params[presetParam(0, kPresetParamRegime)] = 0.0f;
+    const auto pp = decodePreset(params, 0);
+    CHECK(pp.regime == 0.0f);
+}
+
+// tracheaCm=0 with coupling>0 uses simple mix (no crash, produces sound)
+static void testTracheaCmZeroSimpleMix()
+{
+    Engine engine(48000.0f);
+    engine.setParameter(presetParam(0, kPresetParamCoupling),    0.3f);
+    engine.setParameter(presetParam(0, kPresetParamTracheaCm),   0.0f);
+    engine.setParameter(presetParam(0, kPresetParamVoiceOffset), 0.1f);
+    const std::uint8_t noteOn[] = { 0x90, 60, 100 };
+    engine.handleMidi(noteOn, 3);
+    bool gotSound = false;
+    for (int i = 0; i < 4096 && !gotSound; ++i) {
+        const auto frame = engine.processStereo();
+        if (std::abs(frame.left) > 1e-6f) gotSound = true;
+    }
+    CHECK(gotSound);
 }
 
 int main()
@@ -149,6 +216,9 @@ int main()
     testAllPanic();
     testOutputBounded();
     testPresetDecode();
+    testAirSacOdePressure();
+    testRegimeIndependentOfHarmonic();
+    testTracheaCmZeroSimpleMix();
 
     if (failures == 0) {
         std::printf("All Syrinx core tests passed.\n");

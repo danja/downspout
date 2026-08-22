@@ -4,6 +4,8 @@ new plugin - clipper/soft distortion
 
 Transmission & Campione : check that all key operations in the UI are covered by MCP & vice versa
 
+plugins/syrinx/docs/design-notes.md
+
 ## Campione
 
 maybe - FFT analyse beat slices to determine drum instrument

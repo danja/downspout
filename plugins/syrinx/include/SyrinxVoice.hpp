@@ -4,6 +4,7 @@
 #include "modules/BiquadFilter.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <optional>
@@ -41,6 +42,8 @@ public:
         , tractHarm_(sampleRate, BiquadFilter::Type::Bandpass)
         , formant1_(sampleRate, BiquadFilter::Type::Bandpass)
         , formant2_(sampleRate, BiquadFilter::Type::Bandpass)
+        , formant3_(sampleRate, BiquadFilter::Type::Bandpass)
+        , formant4_(sampleRate, BiquadFilter::Type::Bandpass)
     {
         dcCoeff_ = std::exp(-2.0f * kPi * 180.0f / sampleRate);
         lpCoeff_ = 1.0f - std::exp(-2.0f * kPi * 12000.0f / sampleRate);
@@ -55,6 +58,8 @@ public:
         tractHarm_.setSampleRate(sr);
         formant1_.setSampleRate(sr);
         formant2_.setSampleRate(sr);
+        formant3_.setSampleRate(sr);
+        formant4_.setSampleRate(sr);
     }
 
     // Trigger a new note. stream = unique noise stream id for xorshift.
@@ -70,8 +75,11 @@ public:
         x_ = kOdeX0;
         y_ = 0.0f;
 
-        // Gamma: time-scale so that beta≈1 at this pitch; gammaScale shifts ODE regime
-        gammaScale_  = 1.0f + p.harmonic;          // range 1–2
+        // Gamma: time-scale so that beta≈1 at this pitch.
+        // gammaScale now driven by regime (independent of harmonic band level).
+        // regime=0 → gammaScale=1 (tonal); regime=1 → gammaScale=4 (pulse/chaotic).
+        regime_      = 1.0f + p.regime * 3.0f;
+        gammaScale_  = regime_;
         baseGamma_   = std::clamp(baseF0_ / kPhiAtBetaOne, 1200.0f, 150000.0f);
         gamma_       = baseGamma_ * gammaScale_;
 
@@ -81,7 +89,7 @@ public:
         // Timbre: blends tractQ and timbreGain
         tractQ_      = 9.0f - p.timbre * 7.0f;                     // 9→2
         timbreGain_  = 1.0f + p.timbre * 1.5f;                     // 1→2.5
-        betaMin_     = 0.15f;
+        betaMin_     = 0.002f;   // Lyrebird value; enables pulse/chaotic regime
 
         // Store preset params
         noise_       = std::clamp(p.noise, 0.0f, 1.0f);
@@ -95,29 +103,56 @@ public:
         level_       = std::clamp(p.level, 0.0f, 1.4f);
         durationSec_ = std::max(0.05f, p.durationSec);
         respiration_ = std::clamp(p.respiration, 0.0f, 1.0f);
-        breathPhase_ = 0.0f;
 
-        // Formant filters (fixed-frequency resonances)
+        // Formant filters: 4-partial tracheal comb (f1, 3f1, 5f1, 7f1) in cascade.
+        // Cascade produces antiresonances between peaks, giving hollow/reedy timbres
+        // that parallel summing cannot produce. f3/f4 derived from f1.
         formant1Hz_  = std::clamp(p.formant1Hz, 200.0f, 8000.0f);
         formant2Hz_  = std::clamp(p.formant2Hz, 200.0f, 8000.0f);
+        formant3Hz_  = std::min(formant1Hz_ * 5.0f, 8000.0f);
+        formant4Hz_  = std::min(formant1Hz_ * 7.0f, 8000.0f);
         formantQ_    = std::clamp(p.formantQ, 0.7f, 20.0f);
         coupling_    = std::clamp(p.coupling, 0.0f, 1.0f);
         voiceOffset_ = std::clamp(p.voiceOffset, 0.0f, 1.0f);
+        tracheaCm_   = std::clamp(p.tracheaCm, 0.0f, 10.0f);
 
-        formant1_.setParameters(formant1Hz_, formantQ_);
-        formant1_.reset();
-        formant2_.setParameters(formant2Hz_, formantQ_);
-        formant2_.reset();
+        formant1_.setParameters(formant1Hz_, formantQ_);  formant1_.reset();
+        formant2_.setParameters(formant2Hz_, formantQ_);  formant2_.reset();
+        formant3_.setParameters(formant3Hz_, formantQ_);  formant3_.reset();
+        formant4_.setParameters(formant4Hz_, formantQ_);  formant4_.reset();
 
-        // Second oscillator: compute its own oversample from the offset gamma
-        {
-            const float g2base = gamma_ * (1.0f + voiceOffset_);
-            oversample2_ = oversampleForGamma(g2base);
+        // Air-sac respiration ODE: reset state
+        respirX_ = 0.0f;
+        respirP_ = 0.0f;
+        psBase_  = 1.0f;
+        // Pre-calibrate: run ODE 50 ms with constant forcing to find peak pressure
+        if (respiration_ > 0.0f) {
+            float rx = 0.0f, rp = 0.0f, peakP = 0.001f;
+            const float dt = 1.0f / sampleRate_;
+            for (int i = 0; i < static_cast<int>(0.05f * sampleRate_); ++i) {
+                const float aP = (rp <= 0.0f) ? kRespAlphaI : kRespAlphaI / kRespAlphaR;
+                const float dx = (-(1.0f + rx*rx)*rx - rp + kRespF0) / kRespTauX;
+                const float dp = (-(1.0f + rx*rx)*rx - (1.0f + aP)*rp + kRespF0) / kRespTauP;
+                rx += dx * dt;
+                rp += dp * dt;
+                if (rp > peakP) peakP = rp;
+            }
+            psBase_  = peakP;
+            respirX_ = 0.0f;
+            respirP_ = 0.0f;
         }
 
-        // Coupling: second oscillator state (slightly offset initial conditions)
+        // Second oscillator: compute gamma and oversample from the offset
+        gamma2_      = gamma_ * (1.0f + voiceOffset_) * (1.0f + coupling_ * 0.02f);
+        oversample2_ = oversampleForGamma(gamma2_);
         x2_ = kOdeX0 * 1.5f;
         y2_ = 0.0f;
+
+        // Physics tracheal coupling ring buffer
+        piRing_.fill(0.0f);
+        piRingPos_ = 0;
+        // Round-trip delay: 2L/c samples
+        piDelaySamples_ = 2.0f * tracheaCm_ * 0.01f / 344.0f * sampleRate_;
 
         // Roughness LP
         roughCoeff_ = std::exp(-2.0f * kPi * 140.0f / sampleRate_);
@@ -200,13 +235,28 @@ public:
         if (amRateHz_ > 0.0f && amDepth_ > 0.0f) {
             amPhase_ += 2.0f * kPi * amRateHz_ / sampleRate_;
             if (amPhase_ > 2.0f * kPi) amPhase_ -= 2.0f * kPi;
-            // amDepth_=0: no modulation, amDepth_=1: full trill 0→1
             amFactor = 1.0f - amDepth_ * (0.5f - 0.5f * std::cos(amPhase_));
         }
 
         // Pressure drives ODE physics (level_ applied as output gain below)
         const float pressure = std::clamp(env * velocity_ * timbreGain_ * amFactor, 0.0f, 1.4f);
-        const float alpha    = 0.05f + 0.4f * pressure;
+
+        // Air-sac ODE: modulate syringeal pressure ps multiplicatively.
+        // When respiration_=0, ps == pressure (no change to behavior).
+        float ps = pressure;
+        if (respiration_ > 0.0f && pressure > 0.001f) {
+            const float ft = env;
+            const float aP = (respirP_ <= 0.0f) ? kRespAlphaI : kRespAlphaI / kRespAlphaR;
+            const float dt = 1.0f / sampleRate_;
+            const float dx = (-(1.0f + respirX_*respirX_)*respirX_ - respirP_ + kRespF0 * ft) / kRespTauX;
+            const float dp = (-(1.0f + respirX_*respirX_)*respirX_ - (1.0f + aP)*respirP_ + kRespF0 * ft) / kRespTauP;
+            respirX_ += dx * dt;
+            respirP_ += dp * dt;
+            if (!(std::abs(respirX_) < 1e6f)) { respirX_ = 0.0f; respirP_ = 0.0f; }
+            ps = std::clamp(std::max(0.0f, respirP_) / psBase_ * pressure, 0.0f, 1.4f);
+        }
+
+        const float alpha = 0.05f + 0.4f * ps;
 
         // Beta (with gammaScale: gammaScale>1 → lower beta → richer harmonics)
         const float betaClean = std::clamp(1.0f / (gammaScale_ * gammaScale_), betaMin_, 16.0f);
@@ -220,14 +270,40 @@ public:
                 tractHarm_.setParameters(f0 * 2.0f, tractQ_);
         }
 
-        // ODE integration (single syringeal side)
+        // Physics tracheal coupling: compute pi(t) from previous sample's y_ values
+        // (weak-coupling / explicit Euler approximation — valid for coupling_ < 0.5)
+        float alphaA = alpha;
+        float alphaB = alpha;
+        if (coupling_ > 0.0f && tracheaCm_ > 0.0f) {
+            const float betaInj = coupling_ * 0.5f;
+            const float ps_a = ps;
+            const float ps_b = ps;
+
+            // Fractional delay read from ring buffer
+            const float frac  = piDelaySamples_ - std::floor(piDelaySamples_);
+            const int delayI  = static_cast<int>(std::floor(piDelaySamples_));
+            const int posA    = (piRingPos_ - delayI      + kPiRingLen) % kPiRingLen;
+            const int posB    = (piRingPos_ - delayI - 1  + kPiRingLen) % kPiRingLen;
+            const float piDelayed = piRing_[posA] * (1.0f - frac) + piRing_[posB] * frac;
+
+            const float injectA = std::sqrt(std::max(0.0f, ps_a)) * (y_  / gamma_);
+            const float injectB = std::sqrt(std::max(0.0f, ps_b)) * (y2_ / gamma2_);
+            const float piNow   = betaInj * (injectA + injectB) - kTrachRefl * piDelayed;
+            piRing_[piRingPos_] = piNow;
+            piRingPos_ = (piRingPos_ + 1) % kPiRingLen;
+
+            alphaA = alpha - kTrachAlphaSlope * piNow;
+            alphaB = alpha - kTrachAlphaSlope * piNow;
+        }
+
+        // ODE integration (primary syringeal side)
         {
             const float g  = gamma_;
             const float g2 = g * g;
             float xv = x_, yv = y_;
             for (int s = 0; s < oversample_; ++s) {
                 const float dx = yv;
-                const float dy = -alpha*g2 - beta*g2*xv - g2*xv*xv*xv
+                const float dy = -alphaA*g2 - beta*g2*xv - g2*xv*xv*xv
                                  - g*xv*xv*yv + g2*xv*xv - g*xv*yv;
                 xv += dx * dt_;
                 yv += dy * dt_;
@@ -240,20 +316,25 @@ public:
         const float ampPP  = 0.5f + 3.4f * alpha + 0.62f * betaClean;
         float source = (y_ / gamma_) * kSourceGain / ampPP;
 
+        // Apply air-sac pressure scaling to source: √(ps/pressure) per Laje & Mindlin low-freq limit
+        if (respiration_ > 0.0f && pressure > 0.001f) {
+            source *= std::sqrt(ps / pressure);
+        }
+
         // Turbulence noise injection (at labia, before tract)
         if (noiseRng_.has_value() && noise_ > 0.0f) {
-            const float flow = std::max(pressure - kNoisePsFloor, 0.0f);
+            const float flow = std::max(ps - kNoisePsFloor, 0.0f);
             source += noise_ * kNoiseGain * flow * noiseRng_->next();
         }
 
-        // Coupling: second ODE at voice-offset frequency + tiny coupling detune → beating/chorus
+        // Second oscillator (simple linear mix when tracheaCm_==0, physics mix otherwise)
         if (coupling_ > 0.0f) {
-            const float g2  = gamma_ * (1.0f + voiceOffset_) * (1.0f + coupling_ * 0.02f);
+            const float g2  = gamma2_;
             const float g22 = g2 * g2;
             float xv = x2_, yv = y2_;
             for (int s = 0; s < oversample2_; ++s) {
                 const float dx = yv;
-                const float dy = -alpha*g22 - beta*g22*xv - g22*xv*xv*xv
+                const float dy = -alphaB*g22 - beta*g22*xv - g22*xv*xv*xv
                                  - g2*xv*xv*yv + g22*xv*xv - g2*xv*yv;
                 xv += dx * dt_;
                 yv += dy * dt_;
@@ -263,6 +344,9 @@ public:
             const float ampPP2 = 0.5f + 3.4f * alpha + 0.62f * betaClean;
             const float source2 = (y2_ / g2) * kSourceGain / ampPP2;
             source = source * (1.0f - coupling_ * 0.4f) + source2 * coupling_ * 0.4f;
+
+            // Write piNow after both y_ values are updated (physics coupling only)
+            // (already written above before integration if tracheaCm_>0; nothing extra needed)
         }
 
         // 180 Hz highpass on source (mirrors syrinx-processor §8.1)
@@ -270,29 +354,25 @@ public:
         srcHpX_ = source;
         srcHpY_ = hp;
 
-        // Tract filter + harmonic
+        // Tract filter + harmonic band (harmonic_ now solely controls band level)
         float filtered = tract_.process(hp);
         if (harmonic_ > 0.0f)
             filtered += harmonic_ * 0.9f * tractHarm_.process(hp);
 
-        // Fixed-frequency formant resonances (supplementary vocal-tract coloring)
-        filtered += kFormantGain * formant1_.process(hp);
-        filtered += kFormantGain * formant2_.process(hp);
+        // Tracheal comb: 4-partial cascade (f1, 3f1, 5f1, 7f1).
+        // Cascade two-at-a-time produces antiresonances between peaks — the zeros that give
+        // hollow, reedy, and nasal bird timbres. Parallel summing cannot produce spectral zeros.
+        filtered += kFormantGain * formant4_.process(
+                        formant3_.process(
+                            formant2_.process(
+                                formant1_.process(hp))));
 
         // DC block then tracheal LP
         const float dcOut = filtered - dcX_ + dcCoeff_ * dcY_;
         dcX_ = filtered; dcY_ = dcOut;
         lpY_ += lpCoeff_ * (dcOut - lpY_);
 
-        // Breathing modulation
-        float breathFactor = 1.0f;
-        if (respiration_ > 0.0f) {
-            breathPhase_ += 2.0f * kPi * kBreathRateHz / sampleRate_;
-            if (breathPhase_ > 2.0f * kPi) breathPhase_ -= 2.0f * kPi;
-            breathFactor = 1.0f - respiration_ * 0.5f * (1.0f - std::cos(breathPhase_));
-        }
-
-        return lpY_ * env * level_ * breathFactor;
+        return lpY_ * env * level_;
     }
 
 private:
@@ -306,8 +386,19 @@ private:
     static constexpr float kDefaultAttack = 0.008f;
     static constexpr float kReleaseTau    = 0.06f;  // 60 ms release
     static constexpr float kBendDuration  = 0.5f;   // pitch sweep over first 0.5 s
-    static constexpr float kBreathRateHz  = 0.8f;   // breathing cycle rate
     static constexpr float kFormantGain   = 0.25f;  // fixed formant mix level
+
+    // Air-sac ODE constants (Fainstein, Goller & Mindlin 2025, Table S2)
+    static constexpr float kRespTauX   = 0.25f;
+    static constexpr float kRespTauP   = 0.20f;
+    static constexpr float kRespAlphaI = 0.05f;
+    static constexpr float kRespAlphaR = 0.125f;  // alpha_i / alpha_o
+    static constexpr float kRespF0     = 35.0f;
+
+    // Tracheal physics coupling constants
+    static constexpr int   kPiRingLen       = 64;   // safe at 96 kHz with 10 cm tube
+    static constexpr float kTrachRefl       = 0.9f;
+    static constexpr float kTrachAlphaSlope = 0.40f;
 
     enum EnvState { EnvIdle, EnvAttack, EnvSustain, EnvRelease };
 
@@ -354,7 +445,7 @@ private:
 
     // ---- DSP state ----
     float sampleRate_;
-    BiquadFilter tract_, tractHarm_, formant1_, formant2_;
+    BiquadFilter tract_, tractHarm_, formant1_, formant2_, formant3_, formant4_;
     float srcHpX_ = 0, srcHpY_ = 0;
     float dcX_ = 0, dcY_ = 0, lpY_ = 0;
     float dcCoeff_, lpCoeff_;
@@ -362,10 +453,18 @@ private:
     // ODE state (primary + coupling)
     float x_ = kOdeX0, y_ = 0.0f;
     float x2_ = kOdeX0, y2_ = 0.0f;
-    float gamma_, baseGamma_, gammaScale_;
+    float gamma_, gamma2_, baseGamma_, gammaScale_, regime_;
     float dt_;
     int   oversample_;
     int   oversample2_ = 16;
+
+    // Air-sac respiration ODE state
+    float respirX_ = 0.0f, respirP_ = 0.0f, psBase_ = 1.0f;
+
+    // Physics tracheal coupling
+    std::array<float, kPiRingLen> piRing_{};
+    int   piRingPos_       = 0;
+    float piDelaySamples_  = 0.0f;
 
     // Envelope
     EnvState envState_ = EnvIdle;
@@ -389,8 +488,9 @@ private:
     float noise_, roughness_, timbre_, timbreGain_, tractQ_, betaMin_;
     float vibratoRateHz_, vibratoDepthCents_;
     float bend_, harmonic_, amRateHz_, amDepth_, level_;
-    float durationSec_, respiration_, breathPhase_ = 0.0f;
-    float formant1Hz_, formant2Hz_, formantQ_, coupling_, voiceOffset_;
+    float durationSec_, respiration_;
+    float formant1Hz_, formant2Hz_, formant3Hz_, formant4Hz_, formantQ_;
+    float coupling_, voiceOffset_, tracheaCm_;
 
     std::uint8_t midiNote_ = 0;
     int sampleCount_   = 0;

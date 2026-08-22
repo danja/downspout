@@ -36,6 +36,8 @@ using downspout::syrinx::kPresetParamFormant2;
 using downspout::syrinx::kPresetParamFormantQ;
 using downspout::syrinx::kPresetParamCoupling;
 using downspout::syrinx::kPresetParamVoiceOffset;
+using downspout::syrinx::kPresetParamRegime;
+using downspout::syrinx::kPresetParamTracheaCm;
 using downspout::syrinx::kParamDistance;
 using downspout::syrinx::kParamMasterGain;
 using downspout::syrinx::kParamSelectedPreset;
@@ -43,8 +45,8 @@ using downspout::syrinx::presetParam;
 using downspout::syrinx::getParameterSpec;
 using downspout::syrinx::kPresetNames;
 
-constexpr std::size_t kVoiceControlCount  = 18;
-constexpr std::size_t kVoiceRow1Count     = 6;   // controls per row (rows 1 and 2)
+constexpr std::size_t kVoiceControlCount  = 20;
+constexpr std::size_t kVoiceRow1Count     = 5;   // controls per row
 constexpr std::size_t kMasterControlCount = 2;
 
 // Layout constants
@@ -60,7 +62,7 @@ constexpr float kTrackW        = 14.0f;
 constexpr float kThumbW        = 46.0f;
 constexpr float kThumbH        = 14.0f;
 constexpr float kDropdownItemH = 30.0f;
-constexpr std::size_t kNumRows = 3;
+constexpr std::size_t kNumRows = 4;
 
 struct Rect {
     float x=0, y=0, w=0, h=0;
@@ -116,6 +118,10 @@ constexpr std::array<Color, kPresetCount> kPresetColors = {{
         std::snprintf(buf, sizeof(buf), "%.0fHz", value);
     } else if (pp == kPresetParamFormantQ) {
         std::snprintf(buf, sizeof(buf), "Q%.1f", value);
+    } else if (pp == kPresetParamRegime) {
+        std::snprintf(buf, sizeof(buf), "x%.1f", 1.0f + value * 3.0f);
+    } else if (pp == kPresetParamTracheaCm) {
+        std::snprintf(buf, sizeof(buf), "%.1fcm", value);
     } else if (spec.maximum <= 1.0f && spec.minimum >= 0.0f) {
         std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::lround(value * 100.0f)));
     } else {
@@ -125,27 +131,30 @@ constexpr std::array<Color, kPresetCount> kPresetColors = {{
 }
 
 constexpr std::array<ControlDef, kVoiceControlCount> kVoiceControls = {{
-    // Row 1 — core tonal (6)
+    // Row 1 — character (5)
     { kPresetParamLevel,        "Level"    },
     { kPresetParamNoise,        "Noise"    },
     { kPresetParamRoughness,    "Rough"    },
     { kPresetParamTimbre,       "Timbre"   },
-    { kPresetParamBend,         "Bend"     },
-    { kPresetParamHarmonic,     "Harmonic" },
-    // Row 2 — modulation & shaping (6)
+    { kPresetParamRegime,       "Regime"   },
+    // Row 2 — modulation (5)
     { kPresetParamVibRate,      "Vib Rate" },
     { kPresetParamVibDepth,     "Vib Dep"  },
     { kPresetParamAMRate,       "AM Rate"  },
     { kPresetParamAMDepth,      "AM Depth" },
+    { kPresetParamBend,         "Bend"     },
+    // Row 3 — articulation (5)
     { kPresetParamPitch,        "Pitch"    },
     { kPresetParamDuration,     "Duration" },
-    // Row 3 — formants, voice offset, coupling, respiration (6)
+    { kPresetParamHarmonic,     "Harmonic" },
+    { kPresetParamRespiration,  "Breath"   },
+    { kPresetParamCoupling,     "Coupling" },
+    // Row 4 — tract (5)
     { kPresetParamFormant1,     "Formant1" },
     { kPresetParamFormant2,     "Formant2" },
     { kPresetParamFormantQ,     "Form Q"   },
+    { kPresetParamTracheaCm,    "Trachea"  },
     { kPresetParamVoiceOffset,  "V.Offset" },
-    { kPresetParamCoupling,     "Coupling" },
-    { kPresetParamRespiration,  "Breath"   },
 }};
 
 constexpr std::array<ControlDef, kMasterControlCount> kMasterControls = {{
@@ -584,7 +593,8 @@ private:
         commitParameter(presetParam(p, kPresetParamFormantQ),     rr(2.0f,    12.0f));
         commitParameter(presetParam(p, kPresetParamCoupling),     rr(0.0f,    0.4f));
         commitParameter(presetParam(p, kPresetParamVoiceOffset),  rr(0.0f,    0.5f));
-        // preserve mute
+        commitParameter(presetParam(p, kPresetParamRegime),       rr(0.0f,    0.3f));
+        // preserve mute, TracheaCm (physics coupling left at user's choice)
     }
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SyrinxUI)
