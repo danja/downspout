@@ -14,6 +14,8 @@ Every receiver remains usable through its panel and ordinary host automation.
 | 31 | Delay feedback | Loopdelay |
 | 32 | Reverb wet mix | Lightverb |
 | 33 | Reverb space | Lightverb |
+| 34 | Duck depth overlay | Bassops (MIDI input not yet enabled) |
+| 35 | Wet/dry blend | Bassops (MIDI input not yet enabled) |
 
 Payload values are absolute 0–127 values. Receivers own smoothing, range
 mapping, and safety limits. Producer values are transient overlays and never
@@ -46,3 +48,42 @@ same producer to control a third-party effect without changing its engine.
 The default profile remains T-Mix-only for existing projects. Choose Full bus
 to emit CC 20–33 together. Inverted default FX lanes make delay and reverb rise
 when their source mix lane recedes.
+
+## Audio-sidechain receivers
+
+Not all bus-adjacent plugins use MIDI CC as their primary control input.
+**Bassops** accepts a dedicated audio sidechain on inputs 3–4 (typically a dry
+kick-drum send): an internal envelope follower drives a VCA over the main signal
+on inputs 1–2. Its core ducking behaviour therefore works without any bus
+connection.
+
+However, Bassops parameters can be overlaid by the bus once MIDI input is
+enabled (requires `DISTRHO_PLUGIN_WANT_MIDI_INPUT 1` in the build):
+
+| CC | Parameter | Effect |
+| ---: | --- | --- |
+| 34 | Duck Depth | Deepen or soften the sidechain duck in real time |
+| 35 | Wet | Blend the processed signal in or out |
+
+Adding Bassops after a T-Mix or Loopdelay in the signal chain keeps the CC 19
+gate and audio MIDI-through working as usual.
+
+## Vocabulary
+
+Profile files (`.ttl`) use the `trn:` prefix to describe bus participation.
+The following terms are in use across plugin profiles:
+
+| Term | Kind | Meaning |
+| --- | --- | --- |
+| `trn:ControlMidi` | Port type | MIDI input/output carrying CC bus messages |
+| `trn:AudioSidechain` | Port type | Audio input used as an amplitude control source via an envelope follower, not audio-to-process |
+| `trn:BusProducer` | `trn:busRole` value | Plugin emits CC on the bus (e.g. Mixgen) |
+| `trn:BusReceiver` | `trn:busRole` value | Plugin accepts CC parameter overlays from a bus producer |
+| `trn:ccMapping` | Property | Declares a CC slot produced or consumed by the plugin |
+| `trn:ccGate` | Boolean flag on `trn:ccMapping` | Marks the ownership-gate CC (19) as distinct from parameter-overlay CCs |
+| `trn:feedsControls` | Property | Producer side: names specific downstream receiver plugins |
+
+`trn:AudioSidechain` and `trn:BusProducer`/`trn:BusReceiver` are extensions
+introduced to distinguish audio-envelope control from CC control, and to make
+bus membership machine-readable rather than inferred from ccMapping entries
+alone.

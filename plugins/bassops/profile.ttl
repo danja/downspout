@@ -6,19 +6,46 @@
 
 dsp:bassops a trn:PluginProfile ;
     rdfs:label "Bassops" ;
-    rdfs:comment """Sidechain ducker with mid/side EQ. A kick-drum or other control
-signal on inputs 3-4 drives an envelope follower whose inverted output attenuates
-the main stereo signal on inputs 1-2. After ducking the signal is split into mid
-and side components: a linear-phase LP filter is applied to the mid and a
-complementary HP filter to the side, both sharing a single cutoff control. The
-mid and side are recombined into stereo output. Introduces 64-sample FIR latency
+    rdfs:comment """Sidechain ducker with harmonic stereo synthesis. A kick-drum or other
+control signal on inputs 3-4 (audio sidechain) drives an envelope follower whose inverted
+output attenuates the main stereo signal on inputs 1-2. After ducking, the stereo signal
+is summed to mono and split by a complementary Hann-windowed sinc LP/HP FIR pair (order
+128, latency 64 samples). The LP path produces the clean bass centre component; optionally
+distorted mono fed to the HP path becomes the stereo-difference component after M/S
+decoding, generating stereo width above the crossover from the added harmonics. At Side
+Shape 0 the wet output is phase-coherent mono. A Wet control blends the processed signal
+against the latency-compensated dry stereo input. Introduces 64-sample FIR latency
 reported to the host.""" ;
     trn:bundleName "bassops.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/bassops/> ;
     trn:role trn:AudioEffect ;
-    trn:accepts trn:Audio ;
+    trn:accepts trn:Audio, trn:AudioSidechain ;
     trn:produces trn:Audio ;
+
+    ## Bus participation — MIDI input not yet enabled in the build.
+    ## CC 34/35 are reserved for Bassops; enable DISTRHO_PLUGIN_WANT_MIDI_INPUT
+    ## and add trn:accepts trn:ControlMidi when wired.
+    trn:busRole trn:BusReceiver ;
+
+    trn:ccMapping [
+        trn:ccNumber 34 ;
+        trn:ccRole "Duck Depth" ;
+        trn:targetParameter "duck_depth" ;
+        rdfs:comment "Temporarily overrides duck depth; Release MIDI restores the saved panel value. Requires MIDI input enabled."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 35 ;
+        trn:ccRole "Wet" ;
+        trn:targetParameter "wet" ;
+        rdfs:comment "Temporarily overrides wet/dry blend; Release MIDI restores the saved panel value. Requires MIDI input enabled."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 19 ;
+        trn:ccRole "Gate" ;
+        trn:ccGate true ;
+        rdfs:comment "Optional ownership gate: acquires/releases control of CC 34 and CC 35. Requires MIDI input enabled."
+    ] ;
 
     ## Automatable parameters
     trn:parameter [
@@ -52,17 +79,35 @@ reported to the host.""" ;
         rdfs:label "M/S Cutoff" ;
         trn:symbol "cutoff_hz" ;
         trn:unit "Hz" ;
-        rdfs:comment "Crossover frequency for the mid/side EQ. Below this frequency only the mid (sum) channel passes through, keeping bass centred; above it only the side (difference) channel passes, preserving stereo width in the highs." ;
+        rdfs:comment "LP/HP crossover frequency. Below this, only the clean mono sum passes through (locked centre). Above it, the distorted HP path forms the stereo-difference component after M/S decoding." ;
         trn:default "200.0"^^xsd:float ;
         trn:min "50.0"^^xsd:float ;
         trn:max "5000.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "Side Shape" ;
+        trn:symbol "side_shape" ;
+        trn:unit "%" ;
+        rdfs:comment "Distortion amount on the HP path. 0 = no distortion, wet output is mono. 100 = drive x8 with hard clipping, maximum stereo width above cutoff. Gain-normalised to unity for small signals." ;
+        trn:default "0.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "100.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "Wet" ;
+        trn:symbol "wet" ;
+        trn:unit "%" ;
+        rdfs:comment "Wet/dry blend. 0 = dry original stereo (latency-compensated); 100 = fully processed. Dry is the only path that preserves the input's original stereo difference." ;
+        trn:default "100.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "100.0"^^xsd:float
     ] ;
 
     ## Read-only meter outputs (not automatable; driven by the DSP)
     trn:parameter [
         rdfs:label "Input Level" ;
         trn:symbol "input_level" ;
-        trn:comment "Peak amplitude of the main stereo input, 0-1, with ballistic decay. Read-only." ;
+        rdfs:comment "Peak amplitude of the main stereo input, 0-1, with ballistic decay. Read-only." ;
         trn:default "0.0"^^xsd:float ;
         trn:min "0.0"^^xsd:float ;
         trn:max "1.0"^^xsd:float ;
@@ -71,7 +116,7 @@ reported to the host.""" ;
     trn:parameter [
         rdfs:label "Sidechain Level" ;
         trn:symbol "sc_level" ;
-        trn:comment "Current sidechain envelope follower output, 0-1. Read-only." ;
+        rdfs:comment "Current sidechain envelope follower output, 0-1. Read-only." ;
         trn:default "0.0"^^xsd:float ;
         trn:min "0.0"^^xsd:float ;
         trn:max "1.0"^^xsd:float ;
@@ -80,7 +125,7 @@ reported to the host.""" ;
     trn:parameter [
         rdfs:label "Duck Gain" ;
         trn:symbol "duck_gain" ;
-        trn:comment "Current VCA gain applied to the main signal, 0-1. 1 = no ducking; 0 = fully ducked. Read-only." ;
+        rdfs:comment "Current VCA gain applied to the main signal, 0-1. 1 = no ducking; 0 = fully ducked. Read-only." ;
         trn:default "1.0"^^xsd:float ;
         trn:min "0.0"^^xsd:float ;
         trn:max "1.0"^^xsd:float ;
@@ -89,11 +134,11 @@ reported to the host.""" ;
     trn:parameter [
         rdfs:label "Output Level" ;
         trn:symbol "output_level" ;
-        trn:comment "Peak amplitude of the stereo output after ducking and M/S EQ, 0-1, with ballistic decay. Read-only." ;
+        rdfs:comment "Mean-absolute amplitude of the stereo output after ducking and processing, 0-1, with fast-release ballistic. Read-only." ;
         trn:default "0.0"^^xsd:float ;
         trn:min "0.0"^^xsd:float ;
         trn:max "1.0"^^xsd:float ;
         trn:readonly true
     ] ;
 
-    trn:caution "Introduces 64-sample linear-phase FIR latency; enable delay compensation in the host. Route a dry kick send to inputs 3-4, not a processed bus, to avoid timing smear on the sidechain." .
+    trn:caution "Introduces 64-sample linear-phase FIR latency; enable delay compensation in the host. Route a dry kick send to inputs 3-4 (AudioSidechain), not a processed bus, to avoid timing smear on the envelope follower. At Wet=100 and Side Shape=0 the output is mono; use the Wet control or raise Side Shape to restore stereo content." .
