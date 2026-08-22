@@ -18,6 +18,7 @@ struct Parameters {
     float fadeDurMax = 1.0f;
     float bias = 50.0f;
     float mute = 0.0f;
+    float seed = 0.0f;  // normalized [0,1]; 0 = not yet generated
 };
 
 struct TransportSnapshot {

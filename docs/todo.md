@@ -34,3 +34,18 @@ The BassGen "MIDI Follow" system (Note On response for drum triggering) and the
 can coexist on the same channel. However, the UI should make this clearer — consider
 a tooltip or panel note explaining that Follow Ch and Conductor Ch serve different
 purposes and can differ.
+
+## Newer plugins needing evaluation
+
+* ambo
+* arpgen
+* conductor
+* drift
+* harmonic-atlas
+* mnemosyne
+* mosaic
+* oracle
+* orbit
+* polymeter
+* resonance-garden
+* tuny-vst

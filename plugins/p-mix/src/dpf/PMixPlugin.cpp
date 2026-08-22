@@ -18,8 +18,14 @@ enum ParameterIndex : uint32_t {
     kParamFadeDurMax,
     kParamBias,
     kParamMute,
+    kParamSeed,
     kParameterCount
 };
+
+[[nodiscard]] uint32_t seedToUint(float seed) {
+    if (seed <= 0.0f) return 0u;
+    return static_cast<uint32_t>(seed * static_cast<float>(0xFFFFFFFFu));
+}
 
 enum StateIndex : uint32_t {
     kStateParameters = 0,
@@ -177,6 +183,14 @@ protected:
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = 0.0f;
             break;
+        case kParamSeed:
+            parameter.hints = 0;
+            parameter.name = "Seed";
+            parameter.symbol = "seed";
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.0f;
+            break;
         }
     }
 
@@ -202,6 +216,7 @@ protected:
         case kParamFadeDurMax: return parameters_.fadeDurMax;
         case kParamBias: return parameters_.bias;
         case kParamMute: return parameters_.mute;
+        case kParamSeed: return parameters_.seed;
         default: return 0.0f;
         }
     }
@@ -217,9 +232,15 @@ protected:
         case kParamFadeDurMax: parameters_.fadeDurMax = value; break;
         case kParamBias: parameters_.bias = value; break;
         case kParamMute: parameters_.mute = value; break;
+        case kParamSeed: parameters_.seed = value; break;
         }
 
         parameters_ = downspout::pmix::clampParameters(parameters_);
+
+        if (index == kParamSeed) {
+            const uint32_t s = seedToUint(parameters_.seed);
+            if (s > 0u) engineState_.rngState = s;
+        }
     }
 
     String getState(const char* key) const override
@@ -243,7 +264,7 @@ protected:
 
     void activate() override
     {
-        downspout::pmix::activate(engineState_);
+        downspout::pmix::activate(engineState_, seedToUint(parameters_.seed));
     }
 
     void run(const float** inputs, float** outputs, uint32_t frames) override

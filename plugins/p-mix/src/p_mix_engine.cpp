@@ -146,14 +146,25 @@ Parameters clampParameters(const Parameters& raw) {
     parameters.fadeDurMax = clampf(parameters.fadeDurMax, kFadeMinFraction, 1.0f);
     parameters.bias = clampf(parameters.bias, 0.0f, 100.0f);
     parameters.mute = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.mute)), 0, 1));
+    parameters.seed = clampf(parameters.seed, 0.0f, 1.0f);
     return parameters;
 }
 
-void activate(EngineState& state) {
-    state.currentGain = 1.0f;
-    state.targetGain = 1.0f;
+void activate(EngineState& state, std::uint32_t seed) {
     state.fadeStep = 0.0f;
     state.fadeRemaining = 0;
+
+    if (seed == 0u) {
+        state.currentGain = 1.0f;
+        state.targetGain = 1.0f;
+        return;
+    }
+
+    state.rngState = seed;
+    state.rngState = (state.rngState * 1664525u) + 1013904223u;
+    const float g = (state.rngState & 0x00800000u) ? 1.0f : 0.0f;
+    state.currentGain = g;
+    state.targetGain = g;
 }
 
 void processBlock(EngineState& state,

@@ -14,7 +14,7 @@ struct AudioBlock {
 };
 
 [[nodiscard]] Parameters clampParameters(const Parameters& raw);
-void activate(EngineState& state);
+void activate(EngineState& state, std::uint32_t seed = 0u);
 void processBlock(EngineState& state,
                   const Parameters& parameters,
                   const TransportSnapshot& transport,

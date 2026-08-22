@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -18,6 +19,7 @@ enum ParameterIndex : uint32_t {
     kParamFadeDurMax,
     kParamBias,
     kParamMute,
+    kParamSeed,
     kParameterCount
 };
 
@@ -123,6 +125,9 @@ protected:
             values_[index] = value;
             repaint();
         }
+        if (index == kParamSeed && value == 0.0f) {
+            triggerNewSeed();
+        }
     }
 
     void onNanoDisplay() override
@@ -159,6 +164,11 @@ protected:
 
         if (muteButtonRect_.contains(x, y)) {
             toggleMute();
+            return true;
+        }
+
+        if (seedButtonRect_.contains(x, y)) {
+            triggerNewSeed();
             return true;
         }
 
@@ -202,6 +212,7 @@ private:
     std::array<float, kParameterCount> values_ {};
     std::array<Rect, kSliders.size()> sliderRects_ {};
     Rect muteButtonRect_ {};
+    Rect seedButtonRect_ {};
     int draggingSlider_ = -1;
 
     void drawBackground(const float width, const float height)
@@ -260,11 +271,14 @@ private:
 
         const float innerX = x + 22.0f;
         const float buttonY = y + 52.0f;
-        muteButtonRect_ = {innerX, buttonY, w - 44.0f, 40.0f};
+        const float innerW = w - 44.0f;
+        const float halfW = (innerW - 12.0f) * 0.5f;
+        muteButtonRect_ = {innerX, buttonY, halfW, 40.0f};
+        seedButtonRect_ = {innerX + halfW + 12.0f, buttonY, halfW, 40.0f};
         drawToggleButton(kMuteButton, muteButtonRect_, values_[kParamMute] >= 0.5f);
+        drawSeedButton(seedButtonRect_);
 
         const float innerY = buttonY + 62.0f;
-        const float innerW = w - 44.0f;
         const float rowGap = 18.0f;
         const float rowH = 56.0f;
         const float colGap = 18.0f;
@@ -497,6 +511,47 @@ private:
     {
         const float next = values_[kParamMute] >= 0.5f ? 0.0f : 1.0f;
         commitParameter(kParamMute, next);
+    }
+
+    void triggerNewSeed()
+    {
+        using Clock = std::chrono::high_resolution_clock;
+        const auto ticks = static_cast<uint64_t>(Clock::now().time_since_epoch().count());
+        auto s = static_cast<uint32_t>(ticks ^ (ticks >> 32));
+        if (s == 0u) s = 0xDEADBEEFu;
+        float newSeed = static_cast<float>(s) / static_cast<float>(0xFFFFFFFFu);
+        if (newSeed <= 0.0f) newSeed = 1.0f / static_cast<float>(0xFFFFFFFFu);
+        commitParameter(kParamSeed, newSeed);
+    }
+
+    void drawSeedButton(const Rect& r)
+    {
+        beginPath();
+        roundedRect(r.x, r.y, r.w, r.h, 8.0f);
+        fillColor(28, 48, 68, 255);
+        fill();
+        closePath();
+
+        beginPath();
+        roundedRect(r.x, r.y, r.w, r.h, 8.0f);
+        strokeColor(72, 118, 162, 255);
+        strokeWidth(1.0f);
+        stroke();
+        closePath();
+
+        fontSize(13.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        fillColor(200, 220, 240, 255);
+        text(r.x + 14.0f, r.y + r.h * 0.5f + 1.0f, "Seed", nullptr);
+
+        const auto s = static_cast<uint32_t>(values_[kParamSeed] * static_cast<float>(0xFFFFFFFFu));
+        char buf[12];
+        std::snprintf(buf, sizeof(buf), "#%06X", s & 0x00FFFFFFu);
+
+        fontSize(11.0f);
+        textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
+        fillColor(90, 155, 215, 255);
+        text(r.x + r.w - 14.0f, r.y + r.h * 0.5f + 1.0f, buf, nullptr);
     }
 
     void commitParameter(uint32_t index, float value)

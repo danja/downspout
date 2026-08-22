@@ -175,6 +175,7 @@ void testSerializationRoundTrip() {
     parameters.fadeDurMax = 0.5f;
     parameters.bias = 35.0f;
     parameters.mute = 1.0f;
+    parameters.seed = 0.75f;
 
     const auto roundTrip = deserializeParameters(serializeParameters(parameters));
     assert(roundTrip.has_value());
@@ -185,6 +186,24 @@ void testSerializationRoundTrip() {
     assert(std::fabs(roundTrip->fadeDurMax - 0.5f) < 1e-6f);
     assert(std::fabs(roundTrip->bias - 35.0f) < 1e-6f);
     assert(std::fabs(roundTrip->mute - 1.0f) < 1e-6f);
+    assert(std::fabs(roundTrip->seed - 0.75f) < 1e-5f);
+}
+
+void testActivateSeedBehavior() {
+    EngineState stateA;
+    activate(stateA, 0u);
+    assert(std::fabs(stateA.currentGain - 1.0f) < 1e-6f);
+    assert(std::fabs(stateA.targetGain - 1.0f) < 1e-6f);
+
+    EngineState stateB;
+    activate(stateB, 0x12345678u);
+    assert(stateB.currentGain == 0.0f || stateB.currentGain == 1.0f);
+    assert(stateB.currentGain == stateB.targetGain);
+
+    EngineState stateC;
+    activate(stateC, 0xABCDEF01u);
+    assert(stateC.currentGain == 0.0f || stateC.currentGain == 1.0f);
+    assert(stateB.currentGain != stateC.currentGain || stateB.rngState != stateC.rngState);
 }
 
 void testLegacySerializationDefaultsMuteOff() {
@@ -211,5 +230,6 @@ int main() {
     testFadeProgression();
     testSerializationRoundTrip();
     testLegacySerializationDefaultsMuteOff();
+    testActivateSeedBehavior();
     return 0;
 }
