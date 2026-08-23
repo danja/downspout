@@ -13,8 +13,8 @@ Demo -
 
 See also : 
 
-* [flues](https://github.com/danja/flues) LV2 plugins and Web Audio toys
-* [Transmission](https://github.com/danja/transmission) Generative Audio Workstation
+* [flues](https://github.com/danja/flues) earlier LV2 plugins and Web Audio toys
+* [Transmission](https://danja.github.io/transmission/) Generative Audio Workstation
 
 ## Install From Releases
 
