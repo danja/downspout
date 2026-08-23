@@ -403,6 +403,9 @@ protected:
             return String(downspout::campione::serializeZones(*zones).c_str());
         }
 
+        if (std::strcmp(key, kStateKeyPatchLoad) == 0)
+            return String(lastPatchPath_.c_str());
+
         return String();
     }
 
@@ -587,6 +590,12 @@ protected:
 
         if (std::strcmp(key, kStateKeyPatchLoad) == 0 && value && value[0] != '\0')
         {
+            // Skip reload if zones are already initialised from this same path (host
+            // re-sends state on UI reopen; reloading would trigger an unnecessary restart).
+            {
+                std::lock_guard<std::mutex> lk(zoneMtx_);
+                if (zonesInitialized_ && lastPatchPath_ == value) return;
+            }
             doLoadPatch(value);
             return;
         }
@@ -1197,6 +1206,7 @@ private:
                                        std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                        std::memory_order_release);
         }
+        lastPatchPath_ = path;
         notifyZonesChanged(true);
         return {};
     }
@@ -1476,6 +1486,7 @@ private:
     std::shared_ptr<const ZoneVec> zones_ {};
     const ZoneVec                  emptyZones_ {};
 
+    std::string              lastPatchPath_;
     std::atomic<bool>        pendingZoneUpdate_   {false};
     std::atomic<bool>        pendingParamNotify_  {false};
     // -2 = nothing pending; -1 = stop preview; >=0 = play zone at that index
