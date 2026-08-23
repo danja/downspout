@@ -58,7 +58,7 @@ controls as MCP tools. This allows Claude Code or any MCP client to load zones,
 edit wave data, adjust parameters, and inspect state without touching the DAW
 UI. Register once with `claude mcp add campione /path/to/campione_mcp_proxy.sh`.
 
-See `plugins/campione/docs/mcp.md` for the full tool reference.
+See [plugins/campione/docs/mcp.md](https://github.com/danja/downspout/blob/main/plugins/campione/docs/mcp.md) for the full tool reference.
 
 ### Status
 
