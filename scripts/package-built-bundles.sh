@@ -47,7 +47,7 @@ fi
 found_bundles=()
 while IFS= read -r bundle; do
   found_bundles+=("$bundle")
-done < <(cd "$bin_dir" && find . -maxdepth 1 -type d -name '*.vst3' -printf '%f\n' | sort)
+done < <(cd "$bin_dir" && find . -maxdepth 1 -type d -name '*.vst3' | sed 's|^\./||' | sort)
 
 if [[ ${#found_bundles[@]} -eq 0 ]]; then
   echo "No VST3 bundles found in $bin_dir" >&2
