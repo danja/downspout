@@ -6,6 +6,7 @@
 #pragma GCC diagnostic ignored "-Wsign-conversion"
 #endif
 
+#include <thread>  // httplib.h uses std::thread but omits this include on MSVC
 #include "../../../third_party/cpp-httplib/httplib.h"
 #include "../../../third_party/nlohmann/json.hpp"
 
