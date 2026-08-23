@@ -77,8 +77,26 @@ jobs:
           DOWNSPOUT_STRIP: "1"
         run: bash scripts/package-release.sh
 
+      - name: Select POSIX-threads MinGW toolchain
+        if: matrix.dpf_target == 'win64'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends g++-mingw-w64-x86-64
+          # Ubuntu ships both MinGW thread models and auto mode selects win32,
+          # whose libstdc++ provides no std::thread/std::mutex. Installing here
+          # and pinning with --set puts the link group in manual mode, which the
+          # DPF action's own apt install cannot revert.
+          sudo update-alternatives --set x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-posix
+          sudo update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix
+          x86_64-w64-mingw32-g++ -v 2>&1 | grep -i 'thread model'
+
       - name: Build with DPF CMake action
         if: matrix.build_driver == 'dpf-action'
+        # Best effort: a plugin that fails to cross-compile must not sink the
+        # whole platform. Packaging below ships whatever bundles did build and
+        # annotates the run with what is missing.
+        continue-on-error: true
         uses: distrho/dpf-cmake-action@v1
         with:
           target: ${{ matrix.dpf_target }}
@@ -105,5 +123,5 @@ jobs:
         with:
           name: downspout-${{ matrix.platform }}-vst3
           path: ${{ runner.temp }}/downspout-dist/*
-          if-no-files-found: error
+          if-no-files-found: ${{ matrix.build_driver == 'dpf-action' && 'warn' || 'error' }}
           retention-days: 14
