@@ -278,7 +278,8 @@ protected:
                 recording_.store(true, std::memory_order_release);
             } else if (!arm && recording_.load(std::memory_order_acquire)) {
                 recording_.store(false, std::memory_order_release);
-                finalizeRecording();
+                // No channel to report errors on a host parameter change.
+                (void) finalizeRecording();
             }
             return;
         }
@@ -980,10 +981,13 @@ private:
         notifyZonesChanged();
     }
 
-    void finalizeRecording()
+    // Returns "" on success, or a human-readable error. Callers that surface
+    // results to the user (MCP) must not report success without checking this.
+    std::string finalizeRecording()
     {
         const std::size_t written = recordWritePos_.load(std::memory_order_acquire);
-        if (written == 0) return;
+        if (written == 0)
+            return "no audio captured; the host audio engine may not be running";
 
         CoreSampleZone zone;
         zone.data         = std::vector<float>(recordBuffer_.begin(),
@@ -1008,7 +1012,9 @@ private:
                       dir.c_str(), static_cast<long long>(std::time(nullptr)));
         zone.sourcePath = fname;
 
-        if (!downspout::campione::saveWavZone(zone, fname).empty()) return;
+        const std::string saveErr = downspout::campione::saveWavZone(zone, fname);
+        if (!saveErr.empty())
+            return "could not write " + std::string(fname) + ": " + saveErr;
 
         downspout::campione::applyLoopPoints(zone, parameters_.crossfadeDurationMs);
 
@@ -1019,6 +1025,7 @@ private:
                                    std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                    std::memory_order_release);
         notifyZonesChanged(true);
+        return {};
     }
 
     // Notify host+UI of zone list change. Called directly from the MCP thread;
@@ -1229,20 +1236,23 @@ private:
             mcpSetParam(&CoreParameters::pitchBendRange, sem);
         };
 
-        api.startRecording = [this]() {
-            if (!recording_.load(std::memory_order_acquire)) {
-                recordChannels_ = DISTRHO_PLUGIN_NUM_INPUTS;
-                recordBuffer_.assign(kMaxRecordSamples, 0.0f);
-                recordWritePos_.store(0, std::memory_order_release);
-                recording_.store(true, std::memory_order_release);
-            }
+        api.startRecording = [this]() -> std::string {
+            if (recording_.load(std::memory_order_acquire))
+                return "already recording";
+            recordChannels_ = DISTRHO_PLUGIN_NUM_INPUTS;
+            recordBuffer_.assign(kMaxRecordSamples, 0.0f);
+            recordWritePos_.store(0, std::memory_order_release);
+            recording_.store(true, std::memory_order_release);
+            return {};
         };
 
-        api.stopRecording = [this]() {
-            if (recording_.load(std::memory_order_acquire)) {
-                recording_.store(false, std::memory_order_release);
-                finalizeRecording();
-            }
+        api.stopRecording = [this]() -> std::string {
+            if (!recording_.load(std::memory_order_acquire))
+                return "not recording";
+            recording_.store(false, std::memory_order_release);
+            const std::string err = finalizeRecording();
+            if (!err.empty()) return "recording stopped, no zone added: " + err;
+            return {};
         };
 
         api.loadZone = [this](const std::string& path) -> std::string {

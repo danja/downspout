@@ -31,8 +31,8 @@ public:
         std::function<void(float)>         setPitchBendRange;
 
         // ── Transport ─────────────────────────────────────────────────────
-        std::function<void()>              startRecording;
-        std::function<void()>              stopRecording;
+        std::function<std::string()>       startRecording; // → "" or error
+        std::function<std::string()>       stopRecording;  // → "" or error
 
         // ── Zone management ───────────────────────────────────────────────
         std::function<std::string(const std::string&)> loadZone;     // path → "" or error

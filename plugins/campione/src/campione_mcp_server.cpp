@@ -362,12 +362,14 @@ std::string CampioneMcpServer::dispatch(const std::string& body)
 
             // Recording
             if (name == "start_recording") {
-                api_.startRecording();
+                const std::string err = api_.startRecording();
+                if (!err.empty()) throw std::runtime_error(err);
                 return makeResult(textContent("recording started"), id).dump();
             }
 
             if (name == "stop_recording") {
-                api_.stopRecording();
+                const std::string err = api_.stopRecording();
+                if (!err.empty()) throw std::runtime_error(err);
                 return makeResult(textContent("recording stopped and zone added"), id).dump();
             }
 

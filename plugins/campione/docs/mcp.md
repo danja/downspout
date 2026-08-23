@@ -136,7 +136,7 @@ codex mcp list
 | Tool | Description |
 |------|-------------|
 | `start_recording` | Capture audio input into a new zone |
-| `stop_recording` | Stop capture and auto-map the recording |
+| `stop_recording` | Stop capture and auto-map the recording; errors if nothing was captured |
 | `get_recording_status` | Recording state: active, frames captured, elapsed seconds |
 | `set_recording_dir` | Directory for recorded WAVs, slices, and the autosave patch (default `~/.vst3/campione-data`) |
 
