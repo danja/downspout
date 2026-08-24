@@ -62,11 +62,22 @@ if [[ -n "${DPF_ROOT:-}" ]]; then
   cmake_args+=("-DDPF_ROOT=$DPF_ROOT")
 fi
 
-echo "Configuring downspout"
-cmake "${cmake_args[@]}"
+needs_configure=1
+if [[ -f "$build_dir/CMakeCache.txt" ]]; then
+  if ! find "$repo_root" -name "CMakeLists.txt" -newer "$build_dir/CMakeCache.txt" -print -quit | grep -q .; then
+    needs_configure=0
+  fi
+fi
+
+if [[ "$needs_configure" == "1" ]]; then
+  echo "Configuring downspout"
+  cmake "${cmake_args[@]}"
+else
+  echo "CMake cache is up to date, skipping configure"
+fi
 
 echo "Building downspout"
-cmake --build "$build_dir"
+cmake --build "$build_dir" --parallel "$(nproc)"
 
 if [[ -d "$repo_root/third_party/DPF" || -n "${DPF_ROOT:-}" ]]; then
   echo "DPF available for wrapper targets"
