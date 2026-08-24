@@ -1,5 +1,6 @@
 #include "DistrhoUI.hpp"
 
+#include "campione_drum_map.hpp"
 #include "campione_params.hpp"
 #include "campione_sample_loader.hpp"
 #include "campione_serialization.hpp"
@@ -119,7 +120,7 @@ constexpr float kRowH    = 26.0f;
 constexpr float kFooterH = 60.0f;
 constexpr float kWaveH   = 170.0f;  // waveform 100px + 18px action bar + 52px ADSR/filter row
 
-enum DialogMode { kDialogNone, kDialogSavePatch, kDialogSettings };
+enum DialogMode { kDialogNone, kDialogSavePatch, kDialogSettings, kDialogContextMenu };
 
 static std::string uiDefaultDataDir()
 {
@@ -320,14 +321,21 @@ protected:
             const char* stateKey = isImport ? kStateKeyWavetableImport : kStateKeyZoneLoad;
             if (fallback) {
                 requestStateFile(stateKey);
-            } else {
+                showStatus("Loading file…");
+            } else if (!paths.empty()) {
+                char sb[48];
+                std::snprintf(sb, sizeof(sb), "Loading %d file%s…",
+                              static_cast<int>(paths.size()), paths.size() == 1 ? "" : "s");
+                showStatus(sb);
                 for (const auto& p : paths)
                     setState(stateKey, p.c_str());
+            } else {
+                showStatus("No files selected");
             }
         }
 
-        // Rate-limit animation repaints (recording timer, patch-saved flash, dialog).
-        if (recording_ || patchSaved_ || dialogMode_ != kDialogNone) {
+        // Rate-limit animation repaints (recording timer, status flash, dialog).
+        if (recording_ || !statusMsg_.empty() || dialogMode_ != kDialogNone) {
             using Clock = std::chrono::steady_clock;
             const auto now = Clock::now();
             const auto ms  = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -360,18 +368,46 @@ protected:
         drawZoneList(W, H);
         drawWaveform(W, H);
         drawFooter(W, H);
-        if (dialogMode_ != kDialogNone)
+        if (dialogMode_ == kDialogContextMenu)
+            drawContextMenu(W, H);
+        else if (dialogMode_ != kDialogNone)
             drawDialog(W, H);
     }
 
     bool onMouse(const MouseEvent& ev) override
     {
-        if (ev.button != 1) return false;
+        if (ev.button != 1 && ev.button != 2) return false;
 
         const float px = static_cast<float>(ev.pos.getX());
         const float py = static_cast<float>(ev.pos.getY());
 
-        // When a dialog is open, route all clicks to it.
+        // Right-click anywhere in the zone list area → open context menu.
+        if (ev.button == 2 && ev.press) {
+            if (dialogMode_ == kDialogContextMenu) {
+                dialogMode_ = kDialogNone;
+            } else {
+                const float listY = kHeaderH + kPad * 2.0f;
+                const float W     = static_cast<float>(getWidth());
+                const float H     = static_cast<float>(getHeight());
+                const float listH = H - listY - kFooterH - kPad * 1.5f - kWaveH;
+                if (px >= kPad && px <= W - kPad && py >= listY && py <= listY + listH) {
+                    contextMenuX_ = px;
+                    contextMenuY_ = py;
+                    dialogMode_   = kDialogContextMenu;
+                }
+            }
+            repaint();
+            return true;
+        }
+
+        if (ev.button != 1) return false;
+
+        // When a modal dialog is open, route all left-clicks to it.
+        if (dialogMode_ == kDialogContextMenu) {
+            if (!ev.press) return true;
+            dispatchContextMenuClick(px, py);
+            return true;
+        }
         if (dialogMode_ != kDialogNone) {
             if (!ev.press) return false;
             if (dialogOkBtn_.contains(px, py))     { confirmDialog(); return true; }
@@ -670,16 +706,32 @@ protected:
                 repaint(); return true;
             }
 
-            // Drum: map zones to sequential GM drum notes (35, 36, 37 …), one note each
+            // Drum: assign zones to GM percussion notes using filename analysis + Hungarian.
             if (drumBtn_.contains(px, py)) {
-                const int n = static_cast<int>(zones_.size());
-                for (int zi = 0; zi < n; ++zi) {
-                    zones_[static_cast<std::size_t>(zi)].rootNote  = 35 + zi;
-                    zones_[static_cast<std::size_t>(zi)].rangeLow  = 35 + zi;
-                    zones_[static_cast<std::size_t>(zi)].rangeHigh = 35 + zi;
-                    pushZoneUpdate(static_cast<std::size_t>(zi));
+                std::vector<std::string> paths;
+                paths.reserve(zones_.size());
+                for (const auto& ze : zones_) paths.push_back(ze.path);
+                const auto assignments = downspout::campione::assignDrumNotes(paths);
+                int assigned = 0;
+                for (std::size_t zi = 0; zi < zones_.size(); ++zi) {
+                    const auto& a = assignments[zi];
+                    if (a.gmNote >= 0) {
+                        zones_[zi].rootNote  = a.gmNote;
+                        zones_[zi].rangeLow  = a.gmNote;
+                        zones_[zi].rangeHigh = a.gmNote;
+                        ++assigned;
+                    }
+                    pushZoneUpdate(zi);
                 }
-                repaint();
+                char sb[64];
+                if (zones_.empty())
+                    showStatus("No zones to assign");
+                else if (assigned == 0)
+                    showStatus("No matches — use names like kick.wav");
+                else
+                    std::snprintf(sb, sizeof(sb), "Assigned %d/%d zones to GM notes",
+                                  assigned, static_cast<int>(zones_.size())),
+                    showStatus(sb);
                 return true;
             }
 
@@ -748,6 +800,24 @@ protected:
         const float listY = kHeaderH + kPad * 2.0f;
         const float listH = H - listY - kFooterH - kPad * 1.5f - kWaveH;
         const float rowsY = listY + 23.0f;
+
+        // Delete-all button
+        if (deleteAllBtn_.contains(px, py) && !zones_.empty()) {
+            // Remove zones from last to first to keep indices valid
+            for (int zi = static_cast<int>(zones_.size()) - 1; zi >= 0; --zi) {
+                char buf[16];
+                std::snprintf(buf, sizeof(buf), "%d", zi);
+                setState(kStateKeyZoneRemove, buf);
+            }
+            zones_.clear();
+            selectedZone_   = -1;
+            previewZoneIdx_ = -1;
+            peaks_.clear();
+            peakZoneIdx_    = -1;
+            showStatus("All zones removed");
+            repaint();
+            return true;
+        }
 
         for (std::size_t i = static_cast<std::size_t>(zoneScrollOffset_); i < zones_.size(); ++i) {
             const float ry = rowsY + static_cast<float>(i - static_cast<std::size_t>(zoneScrollOffset_)) * kRowH;
@@ -1223,6 +1293,19 @@ private:
         text(W - kPad - 150.0f, hy, "Loop", nullptr);
         text(W - kPad - 68.0f,  hy, "Mute", nullptr);
         text(kPad + kColFile,   hy, "File",  nullptr);
+
+        // Delete-all button (header row, same column as per-row remove button)
+        deleteAllBtn_ = { W - kPad - 22.0f, listY + 4.0f, 18.0f, 16.0f };
+        beginPath();
+        fillColor(120, 36, 36, 255);
+        roundedRect(deleteAllBtn_.x, deleteAllBtn_.y, deleteAllBtn_.w, deleteAllBtn_.h, 4.0f);
+        fill();
+        closePath();
+        fontSize(9.0f);
+        textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+        fillColor(220, 140, 140, 255);
+        text(deleteAllBtn_.x + deleteAllBtn_.w * 0.5f,
+             deleteAllBtn_.y + deleteAllBtn_.h * 0.5f, "All", nullptr);
 
         beginPath();
         fillColor(50, 62, 72, 255);
@@ -1848,7 +1931,10 @@ private:
         float bx = kPad;
 
         loadBtn_ = { bx, fy + 16.0f, kBtnW, kBtnH };
-        drawButton(loadBtn_, "Load WAV(s)", 51, 64, 74);
+        if (!filePickerDone_.load(std::memory_order_relaxed) && !filePickerIsImport_)
+            drawButton(loadBtn_, "Loading…", 110, 80, 20);
+        else
+            drawButton(loadBtn_, "Load WAV(s)", 51, 64, 74);
         bx += kBtnW + kBtnGap;
 
         recBtn_ = { bx, fy + 16.0f, kBtnW, kBtnH };
@@ -1884,16 +1970,22 @@ private:
         settingsBtn_ = { bx, fy + 16.0f, 76.0f, kBtnH };
         drawButton(settingsBtn_, "Settings", 46, 54, 62);
 
-        // Patch-saved flash (between Settings and MCP)
-        if (patchSaved_) {
+        // Status flash (between Settings and MCP)
+        if (!statusMsg_.empty()) {
             const auto age = std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - patchSavedAt_).count();
-            if (age < 2000) {
+                std::chrono::steady_clock::now() - statusMsgAt_).count();
+            if (age < 2500) {
+                const uint8_t alpha = static_cast<uint8_t>(255 - age * 255 / 2500);
+                const bool isError = statusMsg_.rfind("Error", 0) == 0;
                 fontSize(11.0f);
                 textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-                fillColor(80, 200, 120, static_cast<uint8_t>(255 - age * 255 / 2000));
-                text(bx + 84.0f, fy + 30.0f, "patch saved", nullptr);
+                if (isError)
+                    fillColor(220, 80, 80, alpha);
+                else
+                    fillColor(80, 200, 120, alpha);
+                text(bx + 84.0f, fy + 30.0f, statusMsg_.c_str(), nullptr);
             } else {
+                statusMsg_.clear();
                 patchSaved_ = false;
             }
         }
@@ -1922,6 +2014,246 @@ private:
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
         fillColor(239, 243, 246, 255);
         text(r.x + r.w * 0.5f, r.y + r.h * 0.5f + 1.0f, label, nullptr);
+    }
+
+    // ── Context menu ─────────────────────────────────────────────────────────
+
+    struct ContextItem { const char* label; bool separator; };
+
+    // Returns bounds (mx, my, totalH) after position clamping.
+    void contextMenuGeometry(float W, float H,
+                             float& outMx, float& outMy, float& outTotalH,
+                             const ContextItem* items, int count) const
+    {
+        constexpr float kItemH = 22.0f, kSepH = 8.0f, kMenuW = 130.0f;
+        float totalH = 8.0f;
+        for (int i = 0; i < count; ++i)
+            totalH += items[i].separator ? kSepH : kItemH;
+        float mx = contextMenuX_;
+        float my = contextMenuY_;
+        if (mx + kMenuW > W - kPad) mx = W - kPad - kMenuW;
+        if (my + totalH > H - kPad) my = H - kPad - totalH;
+        outMx = mx; outMy = my; outTotalH = totalH;
+    }
+
+    void drawContextMenu(float W, float H)
+    {
+        constexpr float kItemH = 22.0f, kSepH = 8.0f, kMenuW = 130.0f, kPadX = 10.0f;
+        static const ContextItem items[] = {
+            { "Load WAV",   false },
+            { "Import WT",  false },
+            { nullptr,      true  },
+            { "Record",     false },
+            { nullptr,      true  },
+            { "Save Patch", false },
+            { "Load Patch", false },
+            { "Settings",   false },
+            { "MCP Toggle", false },
+        };
+        constexpr int n = static_cast<int>(sizeof(items) / sizeof(items[0]));
+
+        float mx, my, totalH;
+        contextMenuGeometry(W, H, mx, my, totalH, items, n);
+
+        // Shadow
+        beginPath();
+        fillColor(0, 0, 0, 80);
+        roundedRect(mx + 3.0f, my + 3.0f, kMenuW, totalH, 6.0f);
+        fill();
+        closePath();
+        // Background
+        beginPath();
+        fillColor(32, 42, 52, 248);
+        roundedRect(mx, my, kMenuW, totalH, 6.0f);
+        fill();
+        closePath();
+        beginPath();
+        strokeColor(80, 100, 120, 200);
+        strokeWidth(1.0f);
+        roundedRect(mx, my, kMenuW, totalH, 6.0f);
+        stroke();
+        closePath();
+
+        float iy = my + 4.0f;
+        for (int i = 0; i < n; ++i) {
+            if (items[i].separator) {
+                beginPath();
+                fillColor(55, 70, 82, 200);
+                rect(mx + 6.0f, iy + kSepH * 0.5f - 0.5f, kMenuW - 12.0f, 1.0f);
+                fill();
+                closePath();
+                iy += kSepH;
+            } else {
+                fontSize(11.5f);
+                textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+                fillColor(210, 225, 238, 255);
+                text(mx + kPadX, iy + kItemH * 0.5f, items[i].label, nullptr);
+                iy += kItemH;
+            }
+        }
+    }
+
+    void dispatchContextMenuClick(float px, float py)
+    {
+        constexpr float kItemH = 22.0f, kSepH = 8.0f, kMenuW = 130.0f;
+        static const ContextItem items[] = {
+            { "Load WAV",   false },
+            { "Import WT",  false },
+            { nullptr,      true  },
+            { "Record",     false },
+            { nullptr,      true  },
+            { "Save Patch", false },
+            { "Load Patch", false },
+            { "Settings",   false },
+            { "MCP Toggle", false },
+        };
+        constexpr int n = static_cast<int>(sizeof(items) / sizeof(items[0]));
+
+        const float W = static_cast<float>(getWidth());
+        const float H = static_cast<float>(getHeight());
+        float mx, my, totalH;
+        contextMenuGeometry(W, H, mx, my, totalH, items, n);
+
+        // Click outside → dismiss
+        if (px < mx || px > mx + kMenuW || py < my || py > my + totalH) {
+            dialogMode_ = kDialogNone;
+            repaint();
+            return;
+        }
+
+        // Find which item was clicked
+        float iy = my + 4.0f;
+        for (int i = 0; i < n; ++i) {
+            if (items[i].separator) {
+                iy += kSepH;
+            } else {
+                if (py >= iy && py < iy + kItemH) {
+                    dialogMode_ = kDialogNone;
+                    repaint();
+                    executeContextItem(i);
+                    return;
+                }
+                iy += kItemH;
+            }
+        }
+        dialogMode_ = kDialogNone;
+        repaint();
+    }
+
+    void executeContextItem(int idx)
+    {
+        switch (idx) {
+        case 0: // Load WAV
+            if (filePickerDone_.load(std::memory_order_acquire)) {
+                filePickerDone_.store(false, std::memory_order_release);
+                if (filePickerThread_.joinable()) filePickerThread_.join();
+                filePickerIsImport_ = false;
+                triggerZenityOrFallback(kStateKeyZoneLoad);
+            }
+            break;
+        case 1: // Import WT
+            if (filePickerDone_.load(std::memory_order_acquire)) {
+                filePickerDone_.store(false, std::memory_order_release);
+                if (filePickerThread_.joinable()) filePickerThread_.join();
+                filePickerIsImport_ = true;
+                triggerZenityOrFallback(kStateKeyWavetableImport);
+            }
+            break;
+        case 2: // separator — never reached
+            break;
+        case 3: // Record
+            recording_ = !recording_;
+            if (recording_) recordStart_ = std::chrono::steady_clock::now();
+            editParameter(kParamRecording, true);
+            setParameterValue(kParamRecording, recording_ ? 1.0f : 0.0f);
+            editParameter(kParamRecording, false);
+            repaint();
+            break;
+        case 4: // separator
+            break;
+        case 5: { // Save Patch
+            std::time_t t = std::time(nullptr);
+            char tbuf[32];
+            std::strftime(tbuf, sizeof(tbuf), "patch_%Y%m%d_%H%M%S.ttl", std::localtime(&t));
+            dialogText_ = dataDir_ + "/" + tbuf;
+            dialogMode_ = kDialogSavePatch;
+            getWindow().focus();
+            repaint();
+            break;
+        }
+        case 6: { // Load Patch
+            FileBrowserOptions opts;
+            opts.startDir = dataDir_.empty() ? nullptr : dataDir_.c_str();
+            opts.title    = "Load Patch";
+            fileBrowserKey_ = kStateKeyPatchLoad;
+            openFileBrowser(opts);
+            break;
+        }
+        case 7: // Settings
+            dialogText_ = dataDir_;
+            dialogMode_ = kDialogSettings;
+            getWindow().focus();
+            repaint();
+            break;
+        case 8: { // MCP Toggle
+            const float newVal = values_[kParamMcpEnabled] >= 0.5f ? 0.0f : 1.0f;
+            values_[kParamMcpEnabled] = newVal;
+            editParameter(kParamMcpEnabled, true);
+            setParameterValue(kParamMcpEnabled, newVal);
+            editParameter(kParamMcpEnabled, false);
+            repaint();
+            break;
+        }
+        default: break;
+        }
+    }
+
+    // Shared zenity/fallback file picker launcher used by buttons and context menu.
+    void triggerZenityOrFallback(const char* stateKey)
+    {
+        const bool isImport = (stateKey == kStateKeyWavetableImport);
+        filePickerThread_ = std::thread([this, isImport, stateKeyStr = std::string(stateKey)]() {
+            std::vector<std::string> paths;
+            bool needFallback = false;
+#ifdef __linux__
+            FILE* check = ::popen("which zenity >/dev/null 2>&1", "r");
+            if (check) {
+                needFallback = (::pclose(check) != 0);
+            } else {
+                needFallback = true;
+            }
+            if (!needFallback) {
+                FILE* pipe = ::popen("zenity --file-selection --multiple --file-filter='WAV files (*.wav)|*.wav' --separator='\\n' 2>/dev/null", "r");
+                if (pipe) {
+                    char buf[4096];
+                    while (std::fgets(buf, sizeof(buf), pipe)) {
+                        std::string s(buf);
+                        while (!s.empty() && (s.back() == '\n' || s.back() == '\r')) s.pop_back();
+                        if (!s.empty()) paths.push_back(s);
+                    }
+                    ::pclose(pipe);
+                } else {
+                    needFallback = true;
+                }
+            }
+#else
+            needFallback = true;
+#endif
+            (void)isImport;
+            {
+                std::lock_guard<std::mutex> lk(filePickerMtx_);
+                filePickerPaths_    = std::move(paths);
+                filePickerFallback_ = needFallback;
+            }
+            filePickerDone_.store(true, std::memory_order_release);
+        });
+    }
+
+    void showStatus(const char* msg)
+    {
+        statusMsg_   = msg;
+        statusMsgAt_ = std::chrono::steady_clock::now();
+        repaint();
     }
 
     void rebuildFromZonesState(const std::string& s)
@@ -1959,6 +2291,10 @@ private:
         // Reload waveform peaks if selected zone is still valid
         if (selectedZone_ >= 0 && selectedZone_ < static_cast<int>(zones_.size()))
             loadPeaks(selectedZone_);
+        char sb[48];
+        std::snprintf(sb, sizeof(sb), "Loaded %d zone%s",
+                      static_cast<int>(zones_.size()), zones_.size() == 1 ? "" : "s");
+        showStatus(sb);
     }
 
     void confirmDialog()
@@ -1967,8 +2303,7 @@ private:
         case kDialogSavePatch:
             if (!dialogText_.empty()) {
                 setState(kStateKeyPatchSave, dialogText_.c_str());
-                patchSaved_   = true;
-                patchSavedAt_ = std::chrono::steady_clock::now();
+                showStatus("patch saved");
             }
             break;
         case kDialogSettings:
@@ -2108,6 +2443,10 @@ private:
     Rect settingsBtn_   {};
     Rect mcpBtn_        {};
     Rect chBtn_         {};
+    Rect deleteAllBtn_  {};
+    // Context menu
+    float contextMenuX_ = 0.0f;
+    float contextMenuY_ = 0.0f;
     // Dialog
     DialogMode  dialogMode_      = kDialogNone;
     std::string dialogText_;
@@ -2182,6 +2521,9 @@ private:
 
     bool patchSaved_ = false;
     std::chrono::steady_clock::time_point patchSavedAt_;
+
+    std::string statusMsg_;
+    std::chrono::steady_clock::time_point statusMsgAt_;
 
     bool     dataDirSent_      = false;
     uint32_t lastZonesSerial_  = 0;

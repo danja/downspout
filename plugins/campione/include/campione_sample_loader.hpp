@@ -11,6 +11,7 @@ inline constexpr std::uint32_t kMaxChannels = 8;
 struct ZoneLoadResult {
     SampleZone zone;
     std::string error;
+    bool hasEmbeddedRootNote = false;  // smpl unityNote was present; skip pitch detection
 };
 
 // Load a WAV file (PCM 8/16/24/32-bit or IEEE float32) into a SampleZone.

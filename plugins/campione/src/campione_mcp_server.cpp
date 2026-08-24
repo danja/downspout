@@ -202,7 +202,7 @@ static json buildToolsList()
          }, {"index"})}},
 
         {{"name","map_drum"},
-         {"description","Map all zones to consecutive General MIDI drum notes starting at 35 (Bass Drum 2), one note per zone."},
+         {"description","Assign each zone to its appropriate General MIDI percussion note using filename tokenisation and the Hungarian algorithm for collision-free kit-level assignment. Zones whose filename cannot be confidently matched (confidence < 0.30) keep their current note. Returns a per-zone assignment summary."},
          {"inputSchema", makeSchema(json::object())}},
 
         {{"name","map_spread"},
@@ -498,9 +498,11 @@ std::string CampioneMcpServer::dispatch(const std::string& body)
             }
 
             if (name == "map_drum") {
-                const std::string err = api_.mapDrum();
-                if (!err.empty()) throw std::runtime_error(err);
-                return makeResult(textContent("zones mapped to GM drum layout"), id).dump();
+                const std::string result = api_.mapDrum();
+                // "Error: ..." prefix → propagate as error; otherwise result is the assignment summary.
+                if (result.rfind("Error:", 0) == 0)
+                    throw std::runtime_error(result.substr(7));
+                return makeResult(textContent(result), id).dump();
             }
 
             if (name == "map_spread") {

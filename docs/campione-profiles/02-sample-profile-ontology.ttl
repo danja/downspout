@@ -1,0 +1,550 @@
+@prefix sp:      <http://purl.org/stuff/sampleprofile/> .
+@prefix gm:      <http://purl.org/stuff/gm/> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix vann:    <http://purl.org/vocab/vann/> .
+
+################################################################################
+# Ontology metadata
+################################################################################
+
+<http://purl.org/stuff/sampleprofile/>
+    a owl:Ontology ;
+    dcterms:title "Sample Profile Ontology" ;
+    dcterms:description """A vocabulary for describing deterministic acoustic
+        descriptors extracted from audio samples, principally percussion one-shots,
+        together with the provenance of their extraction and any resulting
+        instrument classification. Descriptor semantics are defined normatively in
+        the accompanying Audio Sample Descriptor Specification; this ontology
+        provides only the terms and their structural relationships.""" ;
+    vann:preferredNamespacePrefix "sp" ;
+    vann:preferredNamespaceUri "http://purl.org/stuff/sampleprofile/" ;
+    owl:versionInfo "0.1.0-draft" ;
+    dcterms:requires <http://purl.org/stuff/gm/> ;
+    rdfs:comment """Serialisation note: documents using this vocabulary are expected to
+        be produced and consumed with serd (ISC, dependency-free, suitable for
+        embedding in audio plugins). Numeric values are formatted by the extractor to
+        six significant figures and emitted as explicitly typed xsd:double literals,
+        not delegated to the serialiser's default rendering.""" ;
+    rdfs:seeAlso <http://purl.org/ontology/af/> ,
+                 <http://purl.org/ontology/mo/> ,
+                 <http://www.w3.org/ns/prov#> .
+
+################################################################################
+# Core classes
+################################################################################
+
+sp:Sample a owl:Class ;
+    rdfs:label "Audio Sample" ;
+    rdfs:comment """A single audio sample file. The recommended IRI form is
+        urn:sha256:<contentHash>, which is stable under renaming, re-tagging and
+        container conversion.""" .
+
+sp:AudioProfile a owl:Class ;
+    rdfs:label "Audio Profile" ;
+    rdfs:comment """The complete set of descriptors extracted from one sample by one
+        run of one extractor version. A sample may carry several profiles produced by
+        different extractor versions; consumers MUST NOT compare descriptors across
+        versions.""" .
+
+sp:Extraction a owl:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "Extraction" ;
+    rdfs:comment "One execution of a descriptor extractor, carrying its parameters." .
+
+sp:Extractor a owl:Class ;
+    rdfs:subClassOf prov:SoftwareAgent ;
+    rdfs:label "Extractor" ;
+    rdfs:comment "A versioned implementation of the descriptor specification." .
+
+sp:FrameStatistic a owl:Class ;
+    rdfs:label "Frame Statistic" ;
+    rdfs:comment """Summary of a per-frame spectral descriptor over the included
+        STFT frames: arithmetic mean and population standard deviation.""" .
+
+sp:BandEnergy a owl:Class ;
+    rdfs:label "Band Energy" ;
+    rdfs:comment """The share of total energy falling in one of the eight
+        logarithmically spaced frequency bands. The eight values for a profile sum
+        to 1.0.""" .
+
+sp:EnvelopeSegment a owl:Class ;
+    rdfs:label "Envelope Segment" ;
+    rdfs:comment """One of ten equal time divisions of the effective region,
+        carrying broadband and high-band RMS in dB relative to the loudest
+        segment.""" .
+
+sp:Classification a owl:Class ;
+    rdfs:label "Classification" ;
+    rdfs:comment """An assertion that a sample represents a particular instrument,
+        with a confidence and a record of the evidence that supported it. Multiple
+        competing classifications may coexist; they are distinguished by their
+        prov:wasAttributedTo agent.""" .
+
+sp:Evidence a owl:Class ;
+    rdfs:label "Evidence" ;
+    rdfs:comment "A kind of signal used in reaching a classification." .
+
+################################################################################
+# Structural properties
+################################################################################
+
+sp:hasProfile a owl:ObjectProperty ;
+    rdfs:domain sp:Sample ; rdfs:range sp:AudioProfile ;
+    rdfs:label "has profile" ;
+    rdfs:comment """Profile nodes carry skolemised IRIs of the form
+        <sampleIRI>#profile-<extractorVersion>, never blank nodes. See section 1.3 of
+        the descriptor specification: blank nodes break byte-level determinism, make
+        output non-diffable, and cause duplication rather than replacement when a
+        profile is re-ingested into a triplestore.""" .
+
+sp:hasClassification a owl:ObjectProperty ;
+    rdfs:domain sp:Sample ; rdfs:range sp:Classification ;
+    rdfs:label "has classification" .
+
+sp:bandEnergy a owl:ObjectProperty ;
+    rdfs:domain sp:AudioProfile ; rdfs:range sp:BandEnergy ;
+    rdfs:label "band energy" .
+
+sp:envelopeSegment a owl:ObjectProperty ;
+    rdfs:domain sp:AudioProfile ; rdfs:range sp:EnvelopeSegment ;
+    rdfs:label "envelope segment" .
+
+sp:index a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "index" ;
+    rdfs:comment """Zero-based ordinal. Indexed nodes are used in preference to RDF
+        collections throughout: collections preserve order but are painful to query,
+        and every consumer of this vocabulary is expected to use SPARQL. Indexed nodes
+        take skolemised IRIs (<sampleIRI>#band-0, <sampleIRI>#env-3) and are emitted in
+        ascending index order.""" .
+
+sp:value a owl:DatatypeProperty ;
+    rdfs:range xsd:double ; rdfs:label "value" .
+
+sp:mean a owl:DatatypeProperty ;
+    rdfs:domain sp:FrameStatistic ; rdfs:range xsd:double ; rdfs:label "mean" .
+
+sp:stdDev a owl:DatatypeProperty ;
+    rdfs:domain sp:FrameStatistic ; rdfs:range xsd:double ;
+    rdfs:label "standard deviation" ;
+    rdfs:comment "Population standard deviation, divided by n." .
+
+################################################################################
+# Container metadata
+################################################################################
+
+sp:contentHash a owl:DatatypeProperty ;
+    rdfs:domain sp:Sample ; rdfs:range xsd:string ;
+    rdfs:label "content hash" ;
+    rdfs:comment "Lowercase hex SHA-256 of the decoded PCM payload only." .
+
+sp:sourceFile a owl:DatatypeProperty ;
+    rdfs:domain sp:Sample ; rdfs:range xsd:string ; rdfs:label "source file name" .
+
+sp:sampleRate a owl:DatatypeProperty ;
+    rdfs:domain sp:Sample ; rdfs:range xsd:integer ; rdfs:label "sample rate (Hz)" .
+
+sp:channelCount a owl:DatatypeProperty ;
+    rdfs:domain sp:Sample ; rdfs:range xsd:integer ; rdfs:label "channel count" .
+
+sp:bitDepth a owl:DatatypeProperty ;
+    rdfs:domain sp:Sample ; rdfs:range xsd:integer ; rdfs:label "bit depth" .
+
+sp:frameCount a owl:DatatypeProperty ;
+    rdfs:domain sp:Sample ; rdfs:range xsd:integer ;
+    rdfs:label "frame count" ; rdfs:comment "Sample frames, not analysis frames." .
+
+sp:encoding a owl:DatatypeProperty ;
+    rdfs:domain sp:Sample ; rdfs:range xsd:string ;
+    rdfs:label "encoding" ; rdfs:comment "For example \"pcm_s24le\", \"pcm_f32le\"." .
+
+################################################################################
+# Extraction parameters
+################################################################################
+
+sp:fftSize a owl:DatatypeProperty ;
+    rdfs:domain sp:Extraction ; rdfs:range xsd:integer ; rdfs:label "FFT size" .
+
+sp:hopSize a owl:DatatypeProperty ;
+    rdfs:domain sp:Extraction ; rdfs:range xsd:integer ; rdfs:label "hop size" .
+
+sp:windowFunction a owl:DatatypeProperty ;
+    rdfs:domain sp:Extraction ; rdfs:range xsd:string ; rdfs:label "window function" .
+
+sp:downmixMode a owl:DatatypeProperty ;
+    rdfs:domain sp:Extraction ; rdfs:range xsd:string ;
+    rdfs:label "downmix mode" ;
+    rdfs:comment "One of \"mean\", \"left\", \"right\"." .
+
+sp:specificationVersion a owl:DatatypeProperty ;
+    rdfs:domain sp:Extraction ; rdfs:range xsd:string ;
+    rdfs:label "specification version" .
+
+################################################################################
+# Temporal descriptors
+################################################################################
+
+sp:Descriptor a owl:DatatypeProperty ;
+    rdfs:label "descriptor" ;
+    rdfs:comment "Abstract superproperty of every scalar descriptor." ;
+    rdfs:domain sp:AudioProfile .
+
+sp:durationSeconds a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "duration (s)" .
+
+sp:effectiveDurationSeconds a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "effective duration (s)" ;
+    rdfs:comment "Onset to the last envelope crossing of -40 dB after the peak." .
+
+sp:attackTimeSeconds a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "attack time (s)" .
+
+sp:logAttackTime a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "log attack time" .
+
+sp:temporalCentroidNormalised a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "normalised temporal centroid" ;
+    rdfs:comment "Energy centre of gravity as a fraction of the effective duration." .
+
+sp:crestFactorDb a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "crest factor (dB)" .
+
+sp:decaySlopeDbPerSecond a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "decay slope (dB/s)" .
+
+sp:decayFitR2 a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "decay fit R squared" ;
+    rdfs:comment """Goodness of the single-exponential decay fit. Values near 1
+        indicate a damped membrane; lower values indicate multi-modal or beating
+        decay, as in cymbals.""" .
+
+sp:peakDbfs a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "peak level (dBFS)" .
+
+sp:rmsDbfs a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "RMS level (dBFS)" .
+
+################################################################################
+# Frame-summarised spectral descriptors (range sp:FrameStatistic)
+################################################################################
+
+sp:FrameDescriptor a owl:ObjectProperty ;
+    rdfs:domain sp:AudioProfile ; rdfs:range sp:FrameStatistic ;
+    rdfs:label "frame descriptor" ;
+    rdfs:comment "Abstract superproperty of every frame-summarised descriptor." .
+
+sp:spectralCentroid a owl:ObjectProperty ; rdfs:subPropertyOf sp:FrameDescriptor ;
+    rdfs:label "spectral centroid (Hz)" .
+
+sp:spectralSpread a owl:ObjectProperty ; rdfs:subPropertyOf sp:FrameDescriptor ;
+    rdfs:label "spectral spread (Hz)" .
+
+sp:spectralSkewness a owl:ObjectProperty ; rdfs:subPropertyOf sp:FrameDescriptor ;
+    rdfs:label "spectral skewness" .
+
+sp:spectralKurtosis a owl:ObjectProperty ; rdfs:subPropertyOf sp:FrameDescriptor ;
+    rdfs:label "spectral kurtosis" ;
+    rdfs:comment "Raw, not excess: 3.0 corresponds to a Gaussian distribution." .
+
+sp:spectralRolloff85 a owl:ObjectProperty ; rdfs:subPropertyOf sp:FrameDescriptor ;
+    rdfs:label "spectral rolloff 85% (Hz)" .
+
+sp:spectralRolloff95 a owl:ObjectProperty ; rdfs:subPropertyOf sp:FrameDescriptor ;
+    rdfs:label "spectral rolloff 95% (Hz)" .
+
+sp:spectralFlatness a owl:ObjectProperty ; rdfs:subPropertyOf sp:FrameDescriptor ;
+    rdfs:label "spectral flatness" ;
+    rdfs:comment """Wiener entropy over 50 Hz to Nyquist, in [0,1]. The principal
+        noise-versus-pitch discriminator: high for snares, hats and cymbals, low for
+        kicks, toms and tuned percussion.""" .
+
+sp:spectralFlux a owl:ObjectProperty ; rdfs:subPropertyOf sp:FrameDescriptor ;
+    rdfs:label "spectral flux" .
+
+sp:zeroCrossingRate a owl:ObjectProperty ; rdfs:subPropertyOf sp:FrameDescriptor ;
+    rdfs:label "zero crossing rate (crossings/s)" .
+
+################################################################################
+# Attack, tail and dominant partial
+################################################################################
+
+sp:attackCentroid a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "attack spectral centroid (Hz)" .
+
+sp:tailCentroid a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "tail spectral centroid (Hz)" .
+
+sp:attackTailCentroidDelta a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "attack minus tail centroid (Hz)" ;
+    rdfs:comment """Large positive values indicate a downward spectral sweep, as in
+        kick drums and toms; values near zero indicate spectrally static material,
+        as in hi-hats.""" .
+
+sp:attackFlatness a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "attack spectral flatness" .
+
+sp:tailFlatness a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "tail spectral flatness" .
+
+sp:dominantPartialFrequency a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "dominant partial frequency (Hz)" .
+
+sp:dominantPartialSalience a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "dominant partial salience" ;
+    rdfs:comment """In [0,1]. Low salience on a strongly frequency-swept source is
+        expected and is itself informative.""" .
+
+################################################################################
+# Envelope segment properties
+################################################################################
+
+sp:rmsDb a owl:DatatypeProperty ;
+    rdfs:domain sp:EnvelopeSegment ; rdfs:range xsd:double ;
+    rdfs:label "segment RMS (dB relative to loudest segment)" .
+
+sp:highBandRmsDb a owl:DatatypeProperty ;
+    rdfs:domain sp:EnvelopeSegment ; rdfs:range xsd:double ;
+    rdfs:label "segment high-band RMS (dB relative to loudest segment)" ;
+    rdfs:comment "Measured on the signal high-passed at 2 kHz." .
+
+sp:lowerFrequency a owl:DatatypeProperty ;
+    rdfs:domain sp:BandEnergy ; rdfs:range xsd:double ;
+    rdfs:label "band lower edge (Hz)" .
+
+sp:upperFrequency a owl:DatatypeProperty ;
+    rdfs:domain sp:BandEnergy ; rdfs:range xsd:double ;
+    rdfs:label "band upper edge (Hz)" .
+
+################################################################################
+# Stereo descriptors
+################################################################################
+
+sp:interChannelCorrelation a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "inter-channel correlation" .
+
+sp:midSideRatioDb a owl:DatatypeProperty ; rdfs:subPropertyOf sp:Descriptor ;
+    rdfs:range xsd:double ; rdfs:label "mid/side ratio (dB)" .
+
+################################################################################
+# Advisory flags
+################################################################################
+
+sp:silent a owl:DatatypeProperty ; rdfs:domain sp:AudioProfile ;
+    rdfs:range xsd:boolean ; rdfs:label "silent" .
+
+sp:clipped a owl:DatatypeProperty ; rdfs:domain sp:AudioProfile ;
+    rdfs:range xsd:boolean ; rdfs:label "clipped" .
+
+sp:multipleOnsets a owl:DatatypeProperty ; rdfs:domain sp:AudioProfile ;
+    rdfs:range xsd:boolean ; rdfs:label "multiple onsets" ;
+    rdfs:comment "True when the sample is probably not a single one-shot." .
+
+sp:sustained a owl:DatatypeProperty ; rdfs:domain sp:AudioProfile ;
+    rdfs:range xsd:boolean ; rdfs:label "sustained" .
+
+sp:phaseWarning a owl:DatatypeProperty ; rdfs:domain sp:AudioProfile ;
+    rdfs:range xsd:boolean ; rdfs:label "phase warning" ;
+    rdfs:comment "True when the channels are substantially out of phase." .
+
+################################################################################
+# Classification
+################################################################################
+
+sp:instrument a owl:ObjectProperty ;
+    rdfs:domain sp:Classification ; rdfs:range gm:Instrument ;
+    rdfs:label "instrument" .
+
+sp:confidence a owl:DatatypeProperty ;
+    rdfs:domain sp:Classification ; rdfs:range xsd:double ;
+    rdfs:label "confidence" ; rdfs:comment "In [0,1]. Not calibrated across classifiers." .
+
+sp:evidence a owl:ObjectProperty ;
+    rdfs:domain sp:Classification ; rdfs:range sp:Evidence ;
+    rdfs:label "evidence" .
+
+sp:rank a owl:DatatypeProperty ;
+    rdfs:domain sp:Classification ; rdfs:range xsd:integer ;
+    rdfs:label "rank" ;
+    rdfs:comment "Zero-based; 0 is the chosen candidate. Runners-up may be retained." .
+
+sp:FilenameToken   a sp:Evidence ; rdfs:label "filename token" .
+sp:SpectralProfile a sp:Evidence ; rdfs:label "spectral profile" .
+sp:TemporalProfile a sp:Evidence ; rdfs:label "temporal profile" .
+sp:KitConstraint   a sp:Evidence ; rdfs:label "kit assignment constraint" ;
+    rdfs:comment "The choice was influenced by the joint assignment over the kit." .
+sp:UserAssignment  a sp:Evidence ; rdfs:label "user assignment" ;
+    rdfs:comment "Ground truth. Corrections carrying this evidence form the training corpus." .
+sp:ModelInference  a sp:Evidence ; rdfs:label "model inference" .
+
+################################################################################
+# Vocabulary alignment
+#
+# UNVERIFIED. Each mapping below must be checked against the live vocabulary
+# before release; the term names are plausible but have not been confirmed, and
+# an incorrect owl:equivalentClass is worse than no mapping at all. Until then
+# they are commented out deliberately — do not uncomment without checking.
+#
+# sp:Sample          rdfs:subClassOf   mo:AudioFile .
+# sp:spectralCentroid rdfs:subPropertyOf af:spectralCentroid .
+# sp:sampleRate      owl:equivalentProperty ebucore:sampleRate .
+################################################################################
+
+
+################################################################################
+# General MIDI percussion vocabulary
+################################################################################
+
+<http://purl.org/stuff/gm/>
+    a owl:Ontology ;
+    dcterms:title "General MIDI Percussion Vocabulary" ;
+    vann:preferredNamespacePrefix "gm" ;
+    vann:preferredNamespaceUri "http://purl.org/stuff/gm/" ;
+    owl:versionInfo "0.1.0-draft" .
+
+gm:Instrument a owl:Class ;
+    rdfs:label "Instrument" ;
+    rdfs:comment "A General MIDI percussion instrument, keyed to a note number on channel 10." .
+
+gm:Family a owl:Class ; rdfs:label "Instrument Family" ;
+    rdfs:comment """Coarse grouping used to constrain classification and to structure
+        the kit assignment cost matrix.""" .
+
+gm:noteNumber a owl:DatatypeProperty ;
+    rdfs:domain gm:Instrument ; rdfs:range xsd:integer ;
+    rdfs:label "MIDI note number" .
+
+gm:family a owl:ObjectProperty ;
+    rdfs:domain gm:Instrument ; rdfs:range gm:Family ; rdfs:label "family" .
+
+gm:alias a owl:DatatypeProperty ;
+    rdfs:domain gm:Instrument ; rdfs:range xsd:string ;
+    rdfs:label "filename alias" ;
+    rdfs:comment """A case-folded token commonly appearing in sample filenames for this
+        instrument. This vocabulary is data, not code: extend it without recompiling.
+        Ambiguous tokens may legitimately attach to several instruments, in which case
+        the tokeniser must emit multiple candidates rather than choose.""" .
+
+gm:Kick     a gm:Family ; rdfs:label "kick" .
+gm:Snare    a gm:Family ; rdfs:label "snare" .
+gm:Tom      a gm:Family ; rdfs:label "tom" .
+gm:HiHat    a gm:Family ; rdfs:label "hi-hat" .
+gm:Cymbal   a gm:Family ; rdfs:label "cymbal" .
+gm:HandPerc a gm:Family ; rdfs:label "hand percussion" .
+gm:Metallic a gm:Family ; rdfs:label "metallic percussion" .
+gm:Wooden   a gm:Family ; rdfs:label "wooden percussion" .
+gm:Shaken   a gm:Family ; rdfs:label "shaken percussion" .
+gm:Other    a gm:Family ; rdfs:label "other percussion" .
+
+gm:AcousticBassDrum a gm:Instrument ; rdfs:label "Acoustic Bass Drum" ;
+    gm:noteNumber 35 ; gm:family gm:Kick ;
+    gm:alias "kick", "bd", "bassdrum", "kik" .
+gm:BassDrum1 a gm:Instrument ; rdfs:label "Bass Drum 1" ;
+    gm:noteNumber 36 ; gm:family gm:Kick ;
+    gm:alias "kick", "bd", "bd1", "kick1" .
+gm:SideStick a gm:Instrument ; rdfs:label "Side Stick" ;
+    gm:noteNumber 37 ; gm:family gm:Snare ;
+    gm:alias "sidestick", "rimshot", "rim", "xstick", "crossstick" .
+gm:AcousticSnare a gm:Instrument ; rdfs:label "Acoustic Snare" ;
+    gm:noteNumber 38 ; gm:family gm:Snare ;
+    gm:alias "snare", "sd", "sn", "snr" .
+gm:HandClap a gm:Instrument ; rdfs:label "Hand Clap" ;
+    gm:noteNumber 39 ; gm:family gm:HandPerc ;
+    gm:alias "clap", "cp", "handclap" .
+gm:ElectricSnare a gm:Instrument ; rdfs:label "Electric Snare" ;
+    gm:noteNumber 40 ; gm:family gm:Snare ;
+    gm:alias "esnare", "snare2", "sd2", "elecsnare" .
+gm:LowFloorTom a gm:Instrument ; rdfs:label "Low Floor Tom" ;
+    gm:noteNumber 41 ; gm:family gm:Tom ;
+    gm:alias "floortom", "lft", "tomlow", "tom1" .
+gm:ClosedHiHat a gm:Instrument ; rdfs:label "Closed Hi-Hat" ;
+    gm:noteNumber 42 ; gm:family gm:HiHat ;
+    gm:alias "chh", "ch", "closedhat", "hatclosed", "hh", "hihat" .
+gm:HighFloorTom a gm:Instrument ; rdfs:label "High Floor Tom" ;
+    gm:noteNumber 43 ; gm:family gm:Tom ;
+    gm:alias "hft", "floortom2", "tom2" .
+gm:PedalHiHat a gm:Instrument ; rdfs:label "Pedal Hi-Hat" ;
+    gm:noteNumber 44 ; gm:family gm:HiHat ;
+    gm:alias "phh", "pedalhat", "foothat" .
+gm:LowTom a gm:Instrument ; rdfs:label "Low Tom" ;
+    gm:noteNumber 45 ; gm:family gm:Tom ;
+    gm:alias "lowtom", "tom3" .
+gm:OpenHiHat a gm:Instrument ; rdfs:label "Open Hi-Hat" ;
+    gm:noteNumber 46 ; gm:family gm:HiHat ;
+    gm:alias "ohh", "oh", "openhat", "hatopen" .
+gm:LowMidTom a gm:Instrument ; rdfs:label "Low-Mid Tom" ;
+    gm:noteNumber 47 ; gm:family gm:Tom ; gm:alias "lowmidtom", "tom4" .
+gm:HiMidTom a gm:Instrument ; rdfs:label "Hi-Mid Tom" ;
+    gm:noteNumber 48 ; gm:family gm:Tom ; gm:alias "himidtom", "tom5" .
+gm:CrashCymbal1 a gm:Instrument ; rdfs:label "Crash Cymbal 1" ;
+    gm:noteNumber 49 ; gm:family gm:Cymbal ;
+    gm:alias "crash", "cr", "crash1", "cym" .
+gm:HighTom a gm:Instrument ; rdfs:label "High Tom" ;
+    gm:noteNumber 50 ; gm:family gm:Tom ; gm:alias "hightom", "tom6", "tomhi" .
+gm:RideCymbal1 a gm:Instrument ; rdfs:label "Ride Cymbal 1" ;
+    gm:noteNumber 51 ; gm:family gm:Cymbal ; gm:alias "ride", "rd", "ride1" .
+gm:ChineseCymbal a gm:Instrument ; rdfs:label "Chinese Cymbal" ;
+    gm:noteNumber 52 ; gm:family gm:Cymbal ; gm:alias "china", "chinese" .
+gm:RideBell a gm:Instrument ; rdfs:label "Ride Bell" ;
+    gm:noteNumber 53 ; gm:family gm:Cymbal ; gm:alias "ridebell", "bell" .
+gm:Tambourine a gm:Instrument ; rdfs:label "Tambourine" ;
+    gm:noteNumber 54 ; gm:family gm:Shaken ; gm:alias "tambourine", "tamb", "tmb" .
+gm:SplashCymbal a gm:Instrument ; rdfs:label "Splash Cymbal" ;
+    gm:noteNumber 55 ; gm:family gm:Cymbal ; gm:alias "splash", "spl" .
+gm:Cowbell a gm:Instrument ; rdfs:label "Cowbell" ;
+    gm:noteNumber 56 ; gm:family gm:Metallic ; gm:alias "cowbell", "cb" .
+gm:CrashCymbal2 a gm:Instrument ; rdfs:label "Crash Cymbal 2" ;
+    gm:noteNumber 57 ; gm:family gm:Cymbal ; gm:alias "crash2", "cr2" .
+gm:Vibraslap a gm:Instrument ; rdfs:label "Vibraslap" ;
+    gm:noteNumber 58 ; gm:family gm:Other ; gm:alias "vibraslap" .
+gm:RideCymbal2 a gm:Instrument ; rdfs:label "Ride Cymbal 2" ;
+    gm:noteNumber 59 ; gm:family gm:Cymbal ; gm:alias "ride2", "rd2" .
+gm:HiBongo a gm:Instrument ; rdfs:label "Hi Bongo" ;
+    gm:noteNumber 60 ; gm:family gm:HandPerc ; gm:alias "bongohi", "hibongo", "bongo" .
+gm:LowBongo a gm:Instrument ; rdfs:label "Low Bongo" ;
+    gm:noteNumber 61 ; gm:family gm:HandPerc ; gm:alias "bongolo", "lowbongo" .
+gm:MuteHiConga a gm:Instrument ; rdfs:label "Mute Hi Conga" ;
+    gm:noteNumber 62 ; gm:family gm:HandPerc ; gm:alias "congamute", "muteconga" .
+gm:OpenHiConga a gm:Instrument ; rdfs:label "Open Hi Conga" ;
+    gm:noteNumber 63 ; gm:family gm:HandPerc ; gm:alias "congahi", "conga" .
+gm:LowConga a gm:Instrument ; rdfs:label "Low Conga" ;
+    gm:noteNumber 64 ; gm:family gm:HandPerc ; gm:alias "congalo", "lowconga" .
+gm:HighTimbale a gm:Instrument ; rdfs:label "High Timbale" ;
+    gm:noteNumber 65 ; gm:family gm:HandPerc ; gm:alias "timbalehi", "timbale" .
+gm:LowTimbale a gm:Instrument ; rdfs:label "Low Timbale" ;
+    gm:noteNumber 66 ; gm:family gm:HandPerc ; gm:alias "timbalelo" .
+gm:HighAgogo a gm:Instrument ; rdfs:label "High Agogo" ;
+    gm:noteNumber 67 ; gm:family gm:Metallic ; gm:alias "agogohi", "agogo" .
+gm:LowAgogo a gm:Instrument ; rdfs:label "Low Agogo" ;
+    gm:noteNumber 68 ; gm:family gm:Metallic ; gm:alias "agogolo" .
+gm:Cabasa a gm:Instrument ; rdfs:label "Cabasa" ;
+    gm:noteNumber 69 ; gm:family gm:Shaken ; gm:alias "cabasa" .
+gm:Maracas a gm:Instrument ; rdfs:label "Maracas" ;
+    gm:noteNumber 70 ; gm:family gm:Shaken ; gm:alias "maracas", "shaker" .
+gm:ShortWhistle a gm:Instrument ; rdfs:label "Short Whistle" ;
+    gm:noteNumber 71 ; gm:family gm:Other ; gm:alias "whistleshort" .
+gm:LongWhistle a gm:Instrument ; rdfs:label "Long Whistle" ;
+    gm:noteNumber 72 ; gm:family gm:Other ; gm:alias "whistlelong", "whistle" .
+gm:ShortGuiro a gm:Instrument ; rdfs:label "Short Guiro" ;
+    gm:noteNumber 73 ; gm:family gm:Wooden ; gm:alias "guiroshort" .
+gm:LongGuiro a gm:Instrument ; rdfs:label "Long Guiro" ;
+    gm:noteNumber 74 ; gm:family gm:Wooden ; gm:alias "guirolong", "guiro" .
+gm:Claves a gm:Instrument ; rdfs:label "Claves" ;
+    gm:noteNumber 75 ; gm:family gm:Wooden ; gm:alias "claves", "clave" .
+gm:HiWoodBlock a gm:Instrument ; rdfs:label "Hi Wood Block" ;
+    gm:noteNumber 76 ; gm:family gm:Wooden ; gm:alias "woodblockhi", "woodblock", "wb" .
+gm:LowWoodBlock a gm:Instrument ; rdfs:label "Low Wood Block" ;
+    gm:noteNumber 77 ; gm:family gm:Wooden ; gm:alias "woodblocklo" .
+gm:MuteCuica a gm:Instrument ; rdfs:label "Mute Cuica" ;
+    gm:noteNumber 78 ; gm:family gm:Other ; gm:alias "cuicamute" .
+gm:OpenCuica a gm:Instrument ; rdfs:label "Open Cuica" ;
+    gm:noteNumber 79 ; gm:family gm:Other ; gm:alias "cuica" .
+gm:MuteTriangle a gm:Instrument ; rdfs:label "Mute Triangle" ;
+    gm:noteNumber 80 ; gm:family gm:Metallic ; gm:alias "trianglemute" .
+gm:OpenTriangle a gm:Instrument ; rdfs:label "Open Triangle" ;
+    gm:noteNumber 81 ; gm:family gm:Metallic ; gm:alias "triangle", "tri" .

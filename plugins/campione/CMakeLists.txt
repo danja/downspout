@@ -6,6 +6,7 @@ add_library(downspout_campione_core STATIC
     src/campione_wave_edit.cpp
     src/campione_mcp_server.cpp
     src/campione_patch_io.cpp
+    src/campione_drum_map.cpp
 )
 target_link_libraries(downspout_campione_core PUBLIC downspout-project-options)
 target_include_directories(downspout_campione_core PUBLIC

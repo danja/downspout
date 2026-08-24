@@ -9,6 +9,7 @@
 #include "campione_sample_loader.hpp"
 #include "campione_serialization.hpp"
 #include "campione_wave_edit.hpp"
+#include "campione_drum_map.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -910,15 +911,19 @@ private:
         if (!result.error.empty()) return result.error;
 
         result.zone.sourcePath = path;
-        result.zone.rootNote   = 60;
 
-        const double hz = downspout::campione::detectFundamentalHz(
-            result.zone.data, result.zone.channelCount, result.zone.sampleRate);
-        const int detected = static_cast<int>(std::lround(downspout::campione::freqToMidi(hz)));
-        if (detected >= 0 && detected <= 127)
-            result.zone.rootNote = detected;
+        if (!result.hasEmbeddedRootNote) {
+            result.zone.rootNote = 60;
+            const double hz = downspout::campione::detectFundamentalHz(
+                result.zone.data, result.zone.channelCount, result.zone.sampleRate);
+            const int detected = static_cast<int>(std::lround(downspout::campione::freqToMidi(hz)));
+            if (detected >= 0 && detected <= 127)
+                result.zone.rootNote = detected;
+        }
 
-        downspout::campione::applyLoopPoints(result.zone, parameters_.crossfadeDurationMs);
+        // Only auto-compute loop points if the smpl chunk didn't provide them.
+        if (!result.zone.loopEnabled)
+            downspout::campione::applyLoopPoints(result.zone, parameters_.crossfadeDurationMs);
 
         // Lock out restoreZones, then atomically claim ownership and append.
         std::lock_guard<std::mutex> lk(zoneMtx_);
@@ -1352,18 +1357,39 @@ private:
             std::lock_guard<std::mutex> lk(zoneMtx_);
             zonesInitialized_ = true;
             const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
-            if (!existing || existing->empty()) return "no zones loaded";
+            if (!existing || existing->empty()) return "Error: no zones loaded";
             auto nz = std::make_shared<ZoneVec>(*existing);
-            for (int i = 0; i < static_cast<int>(nz->size()); ++i) {
-                (*nz)[i].rootNote  = 35 + i;
-                (*nz)[i].rangeLow  = 35 + i;
-                (*nz)[i].rangeHigh = 35 + i;
+
+            const auto assignments = downspout::campione::assignDrumNotes(*existing);
+
+            std::string summary;
+            int assignedCount = 0;
+            for (int i = 0; i < static_cast<int>(assignments.size()); ++i) {
+                const auto& a = assignments[static_cast<std::size_t>(i)];
+                if (a.gmNote >= 0) {
+                    (*nz)[static_cast<std::size_t>(i)].rootNote  = a.gmNote;
+                    (*nz)[static_cast<std::size_t>(i)].rangeLow  = a.gmNote;
+                    (*nz)[static_cast<std::size_t>(i)].rangeHigh = a.gmNote;
+                    ++assignedCount;
+                    const auto& path = (*existing)[static_cast<std::size_t>(i)].sourcePath;
+                    const auto sep  = path.find_last_of("/\\");
+                    const auto base = (sep == std::string::npos) ? path : path.substr(sep + 1);
+                    char buf[160];
+                    std::snprintf(buf, sizeof(buf), "\n  %s → %s (note %d)",
+                                  base.c_str(), a.evidence.c_str(), a.gmNote);
+                    summary += buf;
+                }
             }
+
             std::atomic_store_explicit(&zones_,
                                        std::shared_ptr<const ZoneVec>(std::move(nz)),
                                        std::memory_order_release);
             notifyZonesChanged(true);
-            return {};
+
+            char header[80];
+            std::snprintf(header, sizeof(header), "%d/%d zones assigned to GM drum notes:",
+                          assignedCount, static_cast<int>(assignments.size()));
+            return std::string(header) + summary;
         };
 
         api.mapSpread = [this]() -> std::string {

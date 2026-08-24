@@ -108,6 +108,49 @@ struct WavFormat {
     return f.audioFormat == 3u && f.bitsPerSample == 32u;
 }
 
+struct SmplInfo {
+    bool     hasLoop     = false;
+    bool     hasUnityNote = false;
+    int      unityNote   = 60;
+    std::uint32_t loopStart = 0;
+    std::uint32_t loopEnd   = 0;
+};
+
+// Parse a WAV 'smpl' chunk. Returns false if the chunk is too short to be valid.
+// Only the first loop point is used; loop type 2 (backward) is not honoured.
+[[nodiscard]] bool parseSmplChunk(const std::vector<unsigned char>& b, SmplInfo& out)
+{
+    // smpl header is 36 bytes: manufacturer(4) product(4) samplePeriod(4)
+    // midiUnityNote(4) midiPitchFraction(4) smpteFormat(4) smpteOffset(4)
+    // numSampleLoops(4) samplerData(4)
+    if (b.size() < 36u) return false;
+    const auto u32b = [&](std::size_t o) -> std::uint32_t {
+        return static_cast<std::uint32_t>(b[o])        |
+               (static_cast<std::uint32_t>(b[o+1]) << 8) |
+               (static_cast<std::uint32_t>(b[o+2]) << 16) |
+               (static_cast<std::uint32_t>(b[o+3]) << 24);
+    };
+    const std::uint32_t unityNote      = u32b(12);
+    const std::uint32_t numSampleLoops = u32b(28);
+
+    if (unityNote <= 127u) {
+        out.hasUnityNote = true;
+        out.unityNote    = static_cast<int>(unityNote);
+    }
+
+    // Each loop record is 24 bytes starting at offset 36.
+    if (numSampleLoops > 0u && b.size() >= 36u + 24u) {
+        // loop type: 0=forward, 1=ping-pong, 2=backward — skip backward
+        const std::uint32_t loopType = u32b(36 + 4);
+        if (loopType != 2u) {
+            out.hasLoop  = true;
+            out.loopStart = u32b(36 + 8);
+            out.loopEnd   = u32b(36 + 12);
+        }
+    }
+    return true;
+}
+
 }  // namespace
 
 ZoneLoadResult loadWavZone(const std::string& path)
@@ -131,6 +174,7 @@ ZoneLoadResult loadWavZone(const std::string& path)
     WavFormat fmt;
     bool foundFmt = false;
     std::vector<unsigned char> dataBytes;
+    SmplInfo smpl;
 
     while (file) {
         char chunkId[4] {};
@@ -146,6 +190,10 @@ ZoneLoadResult loadWavZone(const std::string& path)
                 result.error = "Invalid data chunk";
                 return result;
             }
+        } else if (std::strncmp(chunkId, "smpl", 4) == 0 && chunkSize >= 4u) {
+            std::vector<unsigned char> smplBytes(chunkSize);
+            if (readBytes(file, reinterpret_cast<char*>(smplBytes.data()), static_cast<std::streamsize>(chunkSize)))
+                parseSmplChunk(smplBytes, smpl);
         } else {
             file.seekg(static_cast<std::streamoff>(chunkSize), std::ios::cur);
         }
@@ -175,6 +223,23 @@ ZoneLoadResult loadWavZone(const std::string& path)
             const unsigned char* sp = framePtr + static_cast<std::size_t>(ch) * bytesPerSample;
             const float v = fmt.audioFormat == 3u ? readFloatSample(sp) : readPcmSample(sp, fmt.bitsPerSample);
             result.zone.data[static_cast<std::size_t>(fr) * fmt.channels + ch] = std::clamp(v, -1.0f, 1.0f);
+        }
+    }
+
+    // Apply embedded smpl chunk data: root note and loop points.
+    if (smpl.hasUnityNote) {
+        result.zone.rootNote       = smpl.unityNote;
+        result.hasEmbeddedRootNote = true;
+    }
+    if (smpl.hasLoop) {
+        const std::uint32_t totalF = frameCount;
+        result.zone.loopEnabled = true;
+        result.zone.loopStart   = std::min(smpl.loopStart, totalF > 0u ? totalF - 1u : 0u);
+        result.zone.loopEnd     = std::min(smpl.loopEnd,   totalF > 0u ? totalF - 1u : 0u);
+        // Ensure loopEnd > loopStart; fall back to full-file loop if the markers are degenerate.
+        if (result.zone.loopEnd <= result.zone.loopStart) {
+            result.zone.loopStart = 0;
+            result.zone.loopEnd   = totalF > 0u ? totalF - 1u : 0u;
         }
     }
 
