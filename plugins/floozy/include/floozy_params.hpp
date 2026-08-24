@@ -54,7 +54,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"dc_level", "DC Level", 0.0f, 1.0f, 0.0f, false},
     {"attack", "Envelope Attack", 0.0f, 1.0f, 0.33f, false},
     {"release", "Envelope Release", 0.0f, 1.0f, 0.28f, false},
-    {"interface_type", "Interface Type", 0.0f, 11.0f, 2.0f, true},
+    {"interface_type", "Interface Type", 0.0f, 12.0f, 2.0f, true},
     {"interface_intensity", "Interface Intensity", 0.0f, 1.0f, 0.50f, false},
     {"tuning", "Delay Tuning", 0.0f, 1.0f, 0.50f, false},
     {"ratio", "Delay Ratio", 0.0f, 1.0f, 0.50f, false},
@@ -93,7 +93,7 @@ inline constexpr std::array<std::array<const char*, 2>, 7> kSourceAlgorithmParam
     {{"Index", "Ratio"}},
 }};
 
-inline constexpr std::array<const char*, 12> kInterfaceTypeNames = {{
+inline constexpr std::array<const char*, 13> kInterfaceTypeNames = {{
     "Pluck",
     "Hit",
     "Reed",
@@ -106,6 +106,7 @@ inline constexpr std::array<const char*, 12> kInterfaceTypeNames = {{
     "Vapor",
     "Quantum",
     "Plasma",
+    "Tube",
 }};
 
 } // namespace downspout::floozy

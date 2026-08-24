@@ -80,7 +80,7 @@ std::string formatValue(const std::uint32_t parameter, const float value)
     }
     else if (parameter == static_cast<std::uint32_t>(ParamId::interfaceType))
     {
-        const int index = std::clamp(static_cast<int>(std::lround(value)), 0, 11);
+        const int index = std::clamp(static_cast<int>(std::lround(value)), 0, 12);
         std::snprintf(buffer, sizeof(buffer), "%s", kInterfaceTypeNames[static_cast<std::size_t>(index)]);
     }
     else if (parameter == static_cast<std::uint32_t>(ParamId::tuning))

@@ -41,6 +41,7 @@ ParameterEnumerationValue kInterfaceEnumValues[] = {
     {9.0f, kInterfaceTypeNames[9]},
     {10.0f, kInterfaceTypeNames[10]},
     {11.0f, kInterfaceTypeNames[11]},
+    {12.0f, kInterfaceTypeNames[12]},
 };
 
 MidiMessage toCoreMidiMessage(const MidiEvent& event)

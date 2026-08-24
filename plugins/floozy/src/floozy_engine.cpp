@@ -161,7 +161,7 @@ public:
 
     void noteOn(const int interfaceType, const float velocity)
     {
-        interfaceType_ = std::clamp(interfaceType, 0, 11);
+        interfaceType_ = std::clamp(interfaceType, 0, 12);
         transient_ = std::clamp(velocity, 0.0f, 1.0f);
         bowState_ = 0.0f;
     }
@@ -169,7 +169,7 @@ public:
     void sync(const FloozyParams& params)
     {
         interfaceType_ = std::clamp(
-            static_cast<int>(std::lround(params.values[static_cast<std::size_t>(ParamId::interfaceType)])), 0, 11);
+            static_cast<int>(std::lround(params.values[static_cast<std::size_t>(ParamId::interfaceType)])), 0, 12);
         intensity_ = clampUnit(params.values[static_cast<std::size_t>(ParamId::interfaceIntensity)]);
         tuneSemitones_ = quantizedTuneSemitone(params.values[static_cast<std::size_t>(ParamId::tuning)]);
         ratioControl_ = clampUnit(params.values[static_cast<std::size_t>(ParamId::ratio)]);
@@ -321,6 +321,21 @@ private:
             profile.transientDecay = 0.986f;
             profile.outputGain = 10.00f;
             break;
+        case 12: // PVC tube struck at open end (Blue Man Group style).
+            // Closed-open tube: fundamental + odd harmonics only (ratio 1:3).
+            // Very brief impulsive excitation, low damping — PVC rings clearly.
+            profile.ratio1 = 1.0f;
+            profile.ratio2 = 3.0f + ratioSpread * 0.15f;
+            profile.feedback1 = 0.89f;
+            profile.feedback2 = 0.60f;
+            profile.cross = 0.03f;
+            profile.damping = 0.07f + (1.0f - intensity_) * 0.18f;
+            profile.mix1 = 0.88f;
+            profile.mix2 = 0.12f;
+            profile.secondInput = 0.45f;
+            profile.transientDecay = 0.984f;
+            profile.outputGain = 9.0f;
+            break;
         default: // Synthetic body variants keep more inharmonicity.
             profile.ratio2 = 1.25f + ratioControl_ * 2.75f;
             profile.feedback1 = 0.84f + intensity_ * 0.08f;
@@ -391,6 +406,8 @@ private:
             return sanitizeAudio((gatedSource * 0.30f + noise * 1.05f) * transient * (0.95f + intensity_ * 0.75f));
         case 7:
             return sanitizeAudio((noise * 1.35f + gatedSource * 0.18f) * transient * (1.25f + intensity_ * 0.80f));
+        case 12: // PVC tube: dominant noise burst, minimal tonal drive, resonator takes over.
+            return sanitizeAudio((noise * 1.60f + gatedSource * 0.10f) * transient * (1.40f + intensity_ * 0.75f));
         default:
             return sanitizeAudio(gatedSource * (0.26f + intensity_ * 0.30f) +
                                  noise * transient * 0.45f -
