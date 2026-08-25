@@ -83,8 +83,21 @@ class DamianoUI : public UI
 public:
     DamianoUI() : UI(780, 500)
     {
-        for (uint32_t i = 0; i < kParameterCount; ++i)
-            values_[i] = getParameterDefault(i);
+        values_[kParamMode]       = 1.0f;   // Tanh
+        values_[kParamDrive]      = 2.0f;
+        values_[kParamTone]       = 50.0f;
+        values_[kParamFoldCount]  = 2.0f;
+        values_[kParamMix]        = 100.0f;
+        values_[kParamOutputGain] = 0.0f;
+        values_[kParamCCDrive]    = 0.0f;
+        values_[kParamCCChannel]  = 1.0f;
+
+       #ifdef DGL_NO_SHARED_RESOURCES
+        createFontFromFile("sans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
+        createFontFromFile("sans-bold", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf");
+       #else
+        loadSharedResources();
+       #endif
     }
 
 protected:
