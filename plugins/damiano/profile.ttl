@@ -1,0 +1,57 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:damiano a trn:PluginProfile ;
+    rdfs:label "Damiano" ;
+    rdfs:comment "Stereo distortion with six modes (soft clip, tanh, fuzz, overdrive, tube, wavefold) and MIDI CC control of drive via Drift." ;
+    trn:bundleName "damiano.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/damiano/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio, trn:MidiCC ;
+    trn:produces trn:Audio .
+
+dsp:damiano trn:hasParameter [
+    trn:symbol "mode" ;
+    trn:label "Mode" ;
+    trn:minimum 0 ; trn:maximum 5 ; trn:default 1 ;
+    rdfs:comment "0=Soft 1=Tanh 2=Fuzz 3=Overdrive 4=Tube 5=Wavefold"
+], [
+    trn:symbol "drive" ;
+    trn:label "Drive" ;
+    trn:minimum 1.0 ; trn:maximum 10.0 ; trn:default 2.0 ;
+    rdfs:comment "Pre-distortion gain; overridden by MIDI CC when CC Drive > 0"
+], [
+    trn:symbol "tone" ;
+    trn:label "Tone" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 50.0 ;
+    rdfs:comment "High-shelf tone: 50=flat, 0=darkest, 100=brightest"
+], [
+    trn:symbol "fold_count" ;
+    trn:label "Fold Count" ;
+    trn:minimum 1 ; trn:maximum 8 ; trn:default 2 ;
+    rdfs:comment "Wavefold mode only: number of triangle fold iterations"
+], [
+    trn:symbol "mix" ;
+    trn:label "Mix" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 100.0 ;
+    rdfs:comment "Dry/wet blend percentage"
+], [
+    trn:symbol "output_gain" ;
+    trn:label "Output Gain" ;
+    trn:minimum -24.0 ; trn:maximum 24.0 ; trn:default 0.0 ;
+    rdfs:comment "Post-distortion gain in dB"
+], [
+    trn:symbol "cc_drive" ;
+    trn:label "CC Drive" ;
+    trn:minimum 0 ; trn:maximum 127 ; trn:default 0 ;
+    rdfs:comment "MIDI CC number that modulates drive (0 = disabled)"
+], [
+    trn:symbol "cc_channel" ;
+    trn:label "CC Channel" ;
+    trn:minimum 1 ; trn:maximum 16 ; trn:default 1 ;
+    rdfs:comment "MIDI channel to listen on for drive CC"
+] .

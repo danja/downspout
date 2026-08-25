@@ -57,6 +57,7 @@ option(DOWNSPOUT_BUILD_GUARDIAN "Configure the Guardian safety effect target" ON
 option(DOWNSPOUT_BUILD_MIDISCRIBE "Configure the Midiscribe MIDI capture target" ON)
 option(DOWNSPOUT_BUILD_CAMPIONE "Configure the Campione sampler target" ON)
 option(DOWNSPOUT_BUILD_BASSOPS "Configure the Bassops ducker/MS-EQ effect target" ON)
+option(DOWNSPOUT_BUILD_DAMIANO "Configure the Damiano stereo distortion target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 option(DOWNSPOUT_BUILD_SCREENSHOT_APPS "Build DPF standalone apps for documentation screenshots" OFF)
 
@@ -289,4 +290,8 @@ endif()
 
 if(DOWNSPOUT_BUILD_CAMPIONE)
     add_subdirectory(plugins/campione)
+endif()
+
+if(DOWNSPOUT_BUILD_DAMIANO)
+    add_subdirectory(plugins/damiano)
 endif()
