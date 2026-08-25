@@ -8,6 +8,10 @@ screenshot: /assets/plugins/rift.png
 summary: Transport-locked stereo buffer effect with live/sample modes, WAV loading, chop/stutter repeats, reverse, skip, smear, and pitch-slip actions.
 ---
 
+## Opinion
+
+The user interface leaves a lot to be desired, and the effects are very dependent on the source material. But when it works well, it *really* works well.
+
 ## Functionality
 
 Rift records short pieces of source audio and reorders or damages them with

@@ -9,6 +9,10 @@ capabilities: [audio output, MIDI input, host transport]
 summary: Stereo ambient water synthesizer combining subtractive noise, physical bubble and drip modelling, body resonances, wave oscillator, and an LFO modulator — with seven water-environment presets.
 ---
 
+## Opinion
+
+The kind of thing you'll only need once in a blue moon. But it does the job reasonably well (paiored with Drift).
+
 ## Functionality
 
 Bubbles generates continuous stereo water textures without requiring a MIDI

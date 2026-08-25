@@ -8,6 +8,10 @@ screenshot: /assets/plugins/bassgen.png
 summary: Transport-synced bassline generator with style, scale, Moroder/Fugue/Jazz genres, variation, color, and MIDI follow/dodge controls.
 ---
 
+## Opinion
+
+Not bad at all. Excels at very repetitive patterns (Conductor &  Ground are useful adjuncts).
+
 ## Functionality
 
 BassGen creates monophonic bass parts that follow host transport and saved

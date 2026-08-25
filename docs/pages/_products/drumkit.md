@@ -8,6 +8,10 @@ screenshot: /assets/plugins/drumkit.png
 summary: Drum synth instrument with stereo output, MIDI triggering, per-voice controls, and mute strips.
 ---
 
+## Opinion
+
+I am sick of the cowbell sound! Having said that, the peculiarity of the voices are what makes this interesting. It can do the typical electronic beat sounds in a workhorse-like fashion.
+
 ## Functionality
 
 DrumKit ports the flues drum synth into a DPF instrument. It responds to a fixed

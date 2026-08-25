@@ -8,6 +8,10 @@ screenshot: /assets/plugins/canticle.png
 summary: 12-voice keys, reed, pad, pluck, and glass instrument for melody, counterpoint, and chord generators.
 ---
 
+## Opinion
+
+Claude says "stable middle voice" to describe this thing, which is accurate. Very useful when an extra layer is needed in something, but the sounds are rather boring on their own.
+
 ## Functionality
 
 Canticle is a stable middle voice for the Downspout ensemble. It gives

@@ -8,6 +8,10 @@ screenshot: /assets/plugins/bassops.png
 summary: Four-input sidechain ducker with optional harmonic stereo synthesis. A control signal (typically a kick-drum send) ducks the main stereo signal; the ducked result is summed to mono and split by a complementary LP/HP FIR pair. Distorting the HP path before decoding generates stereo width above the crossover from harmonic content.
 ---
 
+## Opinion
+
+Still new, I haven't tested much. But it basically works, should be useful.
+
 ## Functionality
 
 Bassops combines two processing stages into a single plugin:

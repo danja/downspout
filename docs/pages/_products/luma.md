@@ -8,6 +8,10 @@ screenshot: /assets/plugins/luma.png
 summary: Launchpad-oriented performance generator where lit pads become bass, chord, melody, and drum agents.
 ---
 
+## Opinion
+
+Yet another attempt to make something interesting out of the Launchpad. It works quite nicely, but isn't very compelling, needs review.
+
 ## Functionality
 
 Luma turns an 8x8 Launchpad-style grid into a set of lightweight musical

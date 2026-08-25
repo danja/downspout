@@ -177,7 +177,8 @@ protected:
         if (std::strcmp(key, kStateKeyParameters) != 0) return;
         const std::string text = value ? value : "";
         const auto parsed = downspout::damiano::deserializeParameters(text);
-        if (parsed.has_value()) parameters_ = *parsed;
+        if (parsed.has_value())
+            parameters_ = downspout::damiano::clampParameters(*parsed);
     }
 
     void activate() override

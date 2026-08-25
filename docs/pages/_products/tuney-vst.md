@@ -8,6 +8,10 @@ screenshot: /assets/plugins/tuney-vst.png
 summary: Focused typing and stored text become microtonal synthesized audio and MIDI through configurable character maps, scales, tunings, and human timing.
 ---
 
+## Opinion
+
+An experiment. I got it going then got distracted, should maybe revisit some time.
+
 ## Functionality
 
 Tuney VST ports the musical core of Tom Ritchford's MIT-licensed [Tuney](https://github.com/rec/tuney/) 0.3.39.

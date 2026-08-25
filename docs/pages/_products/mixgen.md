@@ -9,6 +9,10 @@ capabilities: [audio passthrough, MIDI CC output, host transport]
 summary: Eight repeatable mix lanes plus four configurable effect macros for the loosely coupled Producer Control Bus.
 ---
 
+## Opinion
+
+## Functionality
+
 Mixgen turns broad production intent—density, depth, variation, rate, and lane
 spread—into eight transport-synchronized gain lanes. Route its MIDI output to
 T-Mix and fixed CC 20-27 control strips 1-8 without overwriting their saved

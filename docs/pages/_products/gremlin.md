@@ -8,6 +8,10 @@ screenshot: /assets/plugins/gremlin.png
 summary: Glitch instrument with six sound modes, scenes, fader-block macros, action triggers, hold pads, and MIDImix LED feedback.
 ---
 
+## Opinion
+
+So far rather disappointing. Unintuitive UI and the sounds are mostly pretty awful (in an awful way). Needs attention.
+
 ## Functionality
 
 Gremlin is a playable chaotic synth built around six sound modes, scene

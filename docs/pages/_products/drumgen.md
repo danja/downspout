@@ -9,6 +9,10 @@ capabilities: [MIDI output, MIDI input, host transport, pattern variation, fills
 summary: Transport-aware MIDI drum generator with fills, style modes, Breakbeat/Jazz/Fugue genres, and sparse pulse options.
 ---
 
+## Opinion
+
+I'm pleased wit this one, it does its job admirably. The UI could probably do with tweaking a little, but that's low priority, it works.
+
 ## Functionality
 
 DrumGen emits MIDI drum patterns that stay aligned with host transport. It can

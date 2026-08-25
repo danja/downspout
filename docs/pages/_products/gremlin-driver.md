@@ -8,6 +8,10 @@ screenshot: /assets/plugins/gremlin-driver.png
 summary: MIDI modulation and action sequencer with expanded lane shapes intended to drive Gremlin.
 ---
 
+## Opinion
+
+It does its job, but depends entirely on Gremlin. As I improve that, I'll tweak things here to keep track.
+
 ## Functionality
 
 Gremlin Driver sits before Gremlin in a MIDI chain. It passes notes through

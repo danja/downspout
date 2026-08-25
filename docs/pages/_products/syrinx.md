@@ -8,6 +8,10 @@ screenshot: /assets/plugins/syrinx.png
 summary: Polyphonic MIDI synthesizer based on the Mindlin-Laje biophysical avian syrinx model, with 10 bird-species presets, chromatic MIDI pitch mapping, and a vertical-slider NanoVG UI.
 ---
 
+## Opinion
+
+Not bad. Birdish. It lacks the variety of the Lyre site/app on which it is based but is still interesting/useful.
+
 ## Functionality
 
 Syrinx is a polyphonic synthesizer that models avian vocal production using the

@@ -9,6 +9,10 @@ capabilities: [eight mono audio inputs, stereo output, MIDI CC input, producer g
 summary: Eight mono strips with manual controls, click-smoothed producer overlays, channel-isolated CC 19 ownership, and MIDI-through.
 ---
 
+## Opinion
+
+It's for Transmission, and in there it does its job nicely.
+
 ## Functionality
 
 T-Mix combines eight separately routable mono inputs into a stereo output.

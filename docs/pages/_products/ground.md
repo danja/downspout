@@ -8,6 +8,10 @@ screenshot: /assets/plugins/ground.png
 summary: Long-form bass generator with Grounded, Dub, Jazz, and other phrase styles plus a guarded bass register lane.
 ---
 
+## Opinion
+
+The UI probably needs some more work, I don't find it very intuitive (can't even tell if there are bugs in its sequencing). I tend to place it and forget about it. More integration with Conductor and the other generative plugins would be good.
+  
 ## Functionality
 
 Ground creates monophonic bass MIDI with a longer planning horizon than a simple

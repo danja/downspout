@@ -1,5 +1,7 @@
 #include "campione_drum_map.hpp"
 
+#include "downspout/sampleprofile.h"
+
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -430,6 +432,278 @@ static std::vector<int> hungarian(const std::vector<std::vector<double>>& c)
     return ans;
 }
 
+// ── Acoustic rule classifier (§3.4) ──────────────────────────────────────────
+// Scores a pre-computed sp_profile_t against GM percussion notes using
+// spectral and temporal descriptors as discriminators.
+
+static std::unordered_map<int, float> scoreAcoustic(const sp_profile_t& p)
+{
+    std::unordered_map<int, float> s;
+    if (p.silent) return s;
+
+    // Band energy helpers (NaN-safe)
+    auto be = [&](int b) -> double {
+        return (b >= 0 && b < SP_BAND_COUNT) ? p.band_energy[b] : 0.0;
+    };
+
+    double sub_bass = be(0) + be(1);          // 20–120 Hz
+    double low_mid  = be(2) + be(3);          // 120–500 Hz
+    double mid_high = be(4) + be(5);          // 500–2500 Hz
+    double high_end = be(6) + be(7);          // 2500–20000 Hz
+
+    double flatness = p.frame_stat[6].defined ? p.frame_stat[6].mean : 0.5;
+    double tcentr   = p.temporal_centroid_normalised;
+    double eff_dur  = p.effective_duration_seconds;
+    double dp_freq  = p.valid[33] ? p.dominant_partial_frequency  : 0.0;
+    double dp_sal   = p.valid[34] ? p.dominant_partial_salience   : 0.0;
+    double atcd     = p.valid[30] ? p.attack_tail_centroid_delta  : 0.0;
+    double r2       = p.valid[7]  ? p.decay_fit_r2               : 0.5;
+
+    // ── Kick / Bass Drum ─────────────────────────────────────────────────
+    {
+        float ks = 0.0f;
+        if (sub_bass > 0.55) ks += 0.35f;
+        else if (sub_bass > 0.38) ks += 0.18f;
+        if (flatness < 0.15) ks += 0.20f;
+        else if (flatness < 0.28) ks += 0.10f;
+        // Dominant partial in kick range; low salience expected due to pitch sweep
+        if (dp_freq > 28 && dp_freq < 130 && dp_sal < 0.55) ks += 0.20f;
+        else if (dp_freq > 28 && dp_freq < 130)              ks += 0.10f;
+        // Large attack-tail centroid delta: beater transient >> decaying fundamental
+        if (atcd > 200) ks += 0.15f;
+        else if (atcd > 100) ks += 0.08f;
+        if (eff_dur > 0.07 && eff_dur < 1.0) ks += 0.10f;
+        if (tcentr < 0.30) ks += 0.05f;
+        s[35] += ks * 0.85f;   // Acoustic Bass Drum
+        s[36] += ks;            // Bass Drum 1 (slightly preferred in ambiguous case)
+    }
+
+    // ── Snare ────────────────────────────────────────────────────────────
+    {
+        float ss = 0.0f;
+        if (flatness > 0.18 && flatness < 0.70) ss += 0.30f;
+        else if (flatness >= 0.70 && flatness < 0.85) ss += 0.15f;
+        if (mid_high > 0.15 && high_end > 0.12) ss += 0.25f;
+        if (sub_bass < 0.30) ss += 0.15f;
+        if (eff_dur > 0.04 && eff_dur < 0.55) ss += 0.20f;
+        if (tcentr < 0.35) ss += 0.10f;
+        s[38] += ss;
+        s[40] += ss * 0.80f;
+    }
+
+    // ── Hand Clap ────────────────────────────────────────────────────────
+    {
+        float cs = 0.0f;
+        if (flatness > 0.50) cs += 0.35f;
+        if (high_end > 0.40) cs += 0.25f;
+        if (eff_dur < 0.14) cs += 0.25f;
+        if (tcentr < 0.22) cs += 0.15f;
+        s[39] += cs;
+    }
+
+    // ── Side Stick ───────────────────────────────────────────────────────
+    {
+        float ss = 0.0f;
+        if (eff_dur < 0.10) ss += 0.30f;
+        if (flatness < 0.25 && mid_high > 0.30) ss += 0.30f;
+        if (tcentr < 0.20) ss += 0.25f;
+        if (dp_freq > 400 && dp_freq < 2500 && dp_sal > 0.40) ss += 0.15f;
+        s[37] += ss;
+    }
+
+    // ── Closed Hi-Hat ────────────────────────────────────────────────────
+    {
+        float hs = 0.0f;
+        if (high_end > 0.58) hs += 0.40f;
+        else if (high_end > 0.42) hs += 0.20f;
+        if (flatness > 0.40) hs += 0.25f;
+        if (eff_dur < 0.14) hs += 0.25f;
+        else if (eff_dur < 0.25) hs += 0.10f;
+        if (tcentr < 0.25) hs += 0.10f;
+        s[42] += hs;
+        s[44] += hs * 0.70f;   // Pedal HH
+    }
+
+    // ── Open Hi-Hat ──────────────────────────────────────────────────────
+    {
+        float hs = 0.0f;
+        if (high_end > 0.50) hs += 0.35f;
+        if (flatness > 0.35) hs += 0.25f;
+        if (eff_dur > 0.18 && eff_dur < 2.0) hs += 0.30f;
+        if (tcentr > 0.28) hs += 0.10f;
+        s[46] += hs;
+    }
+
+    // ── Crash Cymbal ─────────────────────────────────────────────────────
+    {
+        float cs = 0.0f;
+        if (high_end > 0.52) cs += 0.35f;
+        if (flatness > 0.35) cs += 0.20f;
+        if (eff_dur > 0.45) cs += 0.30f;
+        if (r2 < 0.45) cs += 0.15f;   // multi-modal decay
+        s[49] += cs;
+        s[57] += cs * 0.85f;
+    }
+
+    // ── Ride Cymbal ──────────────────────────────────────────────────────
+    {
+        float rs = 0.0f;
+        if (high_end > 0.42) rs += 0.30f;
+        if (flatness > 0.22 && flatness < 0.68) rs += 0.25f;
+        if (eff_dur > 0.28 && eff_dur < 3.5) rs += 0.25f;
+        if (dp_freq > 180 && dp_sal > 0.28) rs += 0.20f;
+        s[51] += rs;
+        s[59] += rs * 0.85f;
+    }
+
+    // ── Toms ─────────────────────────────────────────────────────────────
+    // Pitched (low flatness), dominant partial 60–350 Hz, medium decay
+    {
+        float ts = 0.0f;
+        if (flatness < 0.22) ts += 0.30f;
+        else if (flatness < 0.38) ts += 0.15f;
+        if (low_mid > 0.28) ts += 0.25f;
+        if (eff_dur > 0.12 && eff_dur < 1.8) ts += 0.20f;
+        if (dp_freq > 55 && dp_freq < 360 && dp_sal > 0.28) ts += 0.25f;
+        if (sub_bass < 0.42) ts += 0.10f;   // less sub-bass than kick
+
+        if (ts > 0.0f) {
+            // Distribute by dominant partial; fall back to equal when unknown
+            static const struct { double flo, fhi; int note; } kTomBands[] = {
+                { 55,  105, 41 },   // Low Floor Tom
+                { 105, 165, 43 },   // High Floor Tom
+                { 165, 230, 45 },   // Low Tom
+                { 230, 290, 47 },   // Low-Mid Tom
+                { 290, 370, 48 },   // Hi-Mid Tom
+                { 370, 600, 50 },   // High Tom
+            };
+            bool placed = false;
+            if (dp_freq > 0) {
+                for (const auto& b : kTomBands) {
+                    if (dp_freq >= b.flo && dp_freq < b.fhi) {
+                        s[b.note] += ts;
+                        // Spread half-weight to adjacent notes for smooth scoring
+                        int i = static_cast<int>(&b - kTomBands);
+                        if (i > 0)      s[kTomBands[i-1].note] += ts * 0.45f;
+                        if (i < 5)      s[kTomBands[i+1].note] += ts * 0.45f;
+                        placed = true;
+                        break;
+                    }
+                }
+            }
+            if (!placed)
+                for (const auto& b : kTomBands) s[b.note] += ts * 0.45f;
+        }
+    }
+
+    // ── Cowbell ──────────────────────────────────────────────────────────
+    {
+        float cs = 0.0f;
+        if (dp_freq > 380 && dp_freq < 1600 && dp_sal > 0.48) cs += 0.40f;
+        if (flatness < 0.20) cs += 0.25f;
+        if (high_end > 0.28 && high_end < 0.72) cs += 0.20f;
+        if (eff_dur > 0.10 && eff_dur < 0.90) cs += 0.15f;
+        s[56] += cs;
+    }
+
+    // ── Bongo / Conga ────────────────────────────────────────────────────
+    {
+        float bs = 0.0f;
+        if (dp_freq > 140 && dp_freq < 650 && dp_sal > 0.32) bs += 0.35f;
+        if (flatness < 0.30) bs += 0.20f;
+        if (low_mid > 0.22 && mid_high > 0.18) bs += 0.20f;
+        if (eff_dur > 0.08 && eff_dur < 0.90) bs += 0.15f;
+
+        if (bs > 0.0f) {
+            if (dp_freq > 300) {
+                s[60] += bs;         // Hi Bongo
+                s[62] += bs * 0.80f; // Mute Hi Conga
+                s[63] += bs * 0.70f; // Open Hi Conga
+            } else {
+                s[61] += bs;         // Low Bongo
+                s[64] += bs * 0.80f; // Low Conga
+            }
+        }
+    }
+
+    // Cap all scores at 1.0
+    for (auto& kv : s) kv.second = std::min(kv.second, 1.0f);
+    return s;
+}
+
+// ── Hungarian + result builder (shared by both assignDrumNotes overloads) ────
+
+static std::vector<DrumAssignment> solveFromScores(
+    const std::vector<std::vector<std::pair<int, float>>>& zoneScores)
+{
+    const int n = static_cast<int>(zoneScores.size());
+    if (n == 0) return {};
+
+    // Single-zone fast path: argmax, no collision possible.
+    if (n == 1) {
+        const auto& cands = zoneScores[0];
+        DrumAssignment a;
+        if (!cands.empty() && cands[0].second >= 0.30f) {
+            a.gmNote     = cands[0].first;
+            a.confidence = cands[0].second;
+            a.evidence   = gmNoteName(cands[0].first);
+        }
+        return {a};
+    }
+
+    // Collect union of candidate notes across all zones.
+    std::vector<int> noteList;
+    for (const auto& cands : zoneScores)
+        for (const auto& kv : cands)
+            if (kv.second >= 0.05f &&
+                std::find(noteList.begin(), noteList.end(), kv.first) == noteList.end())
+                noteList.push_back(kv.first);
+    std::sort(noteList.begin(), noteList.end());
+
+    const int nNotes = static_cast<int>(noteList.size());
+    const int sq     = std::max(n, nNotes + n);
+
+    constexpr double kRejCost  = 0.70;   // cost of "no assignment" slot (= 1 - 0.30 threshold)
+    constexpr double kLargeCost = 50.0;
+
+    std::vector<std::vector<double>> cost(
+        static_cast<std::size_t>(sq),
+        std::vector<double>(static_cast<std::size_t>(sq), kLargeCost));
+
+    for (int zi = 0; zi < n; ++zi) {
+        std::unordered_map<int, double> lookup;
+        for (const auto& kv : zoneScores[static_cast<std::size_t>(zi)])
+            lookup[kv.first] = static_cast<double>(kv.second);
+
+        for (int ni = 0; ni < nNotes; ++ni) {
+            auto it = lookup.find(noteList[static_cast<std::size_t>(ni)]);
+            cost[static_cast<std::size_t>(zi)][static_cast<std::size_t>(ni)] =
+                (it != lookup.end()) ? (1.0 - it->second) : kLargeCost;
+        }
+        cost[static_cast<std::size_t>(zi)][static_cast<std::size_t>(nNotes + zi)] = kRejCost;
+    }
+    for (int zi = n; zi < sq; ++zi)
+        for (int j = 0; j < sq; ++j)
+            cost[static_cast<std::size_t>(zi)][static_cast<std::size_t>(j)] = 0.0;
+
+    const auto assignment = hungarian(cost);
+
+    std::vector<DrumAssignment> results(static_cast<std::size_t>(n));
+    for (int zi = 0; zi < n; ++zi) {
+        const int col = assignment[static_cast<std::size_t>(zi)];
+        if (col >= 0 && col < nNotes) {
+            const int note = noteList[static_cast<std::size_t>(col)];
+            float conf = 0.0f;
+            for (const auto& kv : zoneScores[static_cast<std::size_t>(zi)])
+                if (kv.first == note) { conf = kv.second; break; }
+            results[static_cast<std::size_t>(zi)].gmNote     = note;
+            results[static_cast<std::size_t>(zi)].confidence = conf;
+            results[static_cast<std::size_t>(zi)].evidence   = gmNoteName(note);
+        }
+    }
+    return results;
+}
+
 } // namespace
 
 // ── public API ────────────────────────────────────────────────────────────────
@@ -456,98 +730,67 @@ std::vector<DrumAssignment> assignDrumNotes(const std::vector<std::string>& sour
     const int n = static_cast<int>(sourcePaths.size());
     if (n == 0) return {};
 
-    // Single-zone fast path: argmax, no collision possible.
-    if (n == 1) {
-        const auto cands = scoreFilename(sourcePaths[0]);
-        DrumAssignment a;
-        if (!cands.empty() && cands[0].second >= 0.30f) {
-            a.gmNote     = cands[0].first;
-            a.confidence = cands[0].second;
-            a.evidence   = gmNoteName(cands[0].first);
-        }
-        return {a};
-    }
-
-    // Score all zones.
-    std::vector<std::vector<std::pair<int,float>>> zoneScores;
+    std::vector<std::vector<std::pair<int, float>>> zoneScores;
     zoneScores.reserve(static_cast<std::size_t>(n));
     for (const auto& path : sourcePaths)
         zoneScores.push_back(scoreFilename(path));
-
-    // Collect the union of candidate note values that appear in any zone.
-    std::vector<int> noteList;
-    for (const auto& cands : zoneScores)
-        for (const auto& kv : cands)
-            if (kv.second >= 0.05f &&
-                std::find(noteList.begin(), noteList.end(), kv.first) == noteList.end())
-                noteList.push_back(kv.first);
-    std::sort(noteList.begin(), noteList.end());
-
-    const int nNotes = static_cast<int>(noteList.size());
-
-    // Column layout:
-    //   cols 0 .. nNotes-1        → real GM notes
-    //   cols nNotes .. nNotes+n-1 → dummy "unassigned" slots (one per zone)
-    // The matrix must be square for the algorithm; pad with dummy rows.
-    const int nCols = nNotes + n;
-    const int sq    = std::max(n, nCols);
-
-    constexpr double kRejectionThreshold = 0.30;
-    constexpr double kRejectionCost      = 1.0 - kRejectionThreshold; // 0.70
-    constexpr double kLargeCost          = 50.0;
-
-    std::vector<std::vector<double>> cost(
-        static_cast<std::size_t>(sq),
-        std::vector<double>(static_cast<std::size_t>(sq), kLargeCost));
-
-    for (int zi = 0; zi < n; ++zi) {
-        // Build per-note score lookup for this zone.
-        std::unordered_map<int, double> lookup;
-        for (const auto& kv : zoneScores[static_cast<std::size_t>(zi)])
-            lookup[kv.first] = static_cast<double>(kv.second);
-
-        // Real GM note columns: cost = 1 - confidence (minimise → maximise confidence).
-        for (int ni = 0; ni < nNotes; ++ni) {
-            auto it = lookup.find(noteList[static_cast<std::size_t>(ni)]);
-            cost[static_cast<std::size_t>(zi)][static_cast<std::size_t>(ni)] =
-                (it != lookup.end()) ? (1.0 - it->second) : kLargeCost;
-        }
-
-        // Dummy "no assignment" column for this zone.
-        cost[static_cast<std::size_t>(zi)][static_cast<std::size_t>(nNotes + zi)] = kRejectionCost;
-    }
-
-    // Dummy zone rows (padding): zero cost everywhere so they don't interfere.
-    for (int zi = n; zi < sq; ++zi)
-        for (int j = 0; j < sq; ++j)
-            cost[static_cast<std::size_t>(zi)][static_cast<std::size_t>(j)] = 0.0;
-
-    const auto assignment = hungarian(cost);
-
-    // Build results.
-    std::vector<DrumAssignment> results(static_cast<std::size_t>(n));
-    for (int zi = 0; zi < n; ++zi) {
-        const int col = assignment[static_cast<std::size_t>(zi)];
-        if (col >= 0 && col < nNotes) {
-            const int note = noteList[static_cast<std::size_t>(col)];
-            float conf = 0.0f;
-            for (const auto& kv : zoneScores[static_cast<std::size_t>(zi)])
-                if (kv.first == note) { conf = kv.second; break; }
-            results[static_cast<std::size_t>(zi)].gmNote     = note;
-            results[static_cast<std::size_t>(zi)].confidence = conf;
-            results[static_cast<std::size_t>(zi)].evidence   = gmNoteName(note);
-        }
-        // else: assigned to dummy → gmNote stays -1 (keep current note)
-    }
-    return results;
+    return solveFromScores(zoneScores);
 }
 
 std::vector<DrumAssignment> assignDrumNotes(const std::vector<SampleZone>& zones)
 {
-    std::vector<std::string> paths;
-    paths.reserve(zones.size());
-    for (const auto& z : zones) paths.push_back(z.sourcePath);
-    return assignDrumNotes(paths);
+    const int n = static_cast<int>(zones.size());
+    if (n == 0) return {};
+
+    std::vector<std::vector<std::pair<int, float>>> blended;
+    blended.reserve(static_cast<std::size_t>(n));
+
+    for (const auto& z : zones) {
+        auto fname = scoreFilename(z.sourcePath);
+
+        // No audio data → filename-only
+        if (z.data.empty()) {
+            blended.push_back(std::move(fname));
+            continue;
+        }
+
+        // Deinterleave PCM and run acoustic analysis
+        const int frames = static_cast<int>(z.data.size()) / std::max(1, z.channelCount);
+        std::vector<std::vector<float>> ch(z.channelCount, std::vector<float>(frames));
+        for (int c = 0; c < z.channelCount; ++c)
+            for (int i = 0; i < frames; ++i)
+                ch[static_cast<std::size_t>(c)][static_cast<std::size_t>(i)] =
+                    z.data[static_cast<std::size_t>(i * z.channelCount + c)];
+
+        std::vector<const float*> ptrs(z.channelCount);
+        for (int c = 0; c < z.channelCount; ++c)
+            ptrs[static_cast<std::size_t>(c)] = ch[static_cast<std::size_t>(c)].data();
+
+        const sp_profile_t prof = sp_analyse(
+            ptrs.data(), z.channelCount,
+            static_cast<std::size_t>(frames), z.sampleRate, nullptr);
+
+        const auto acoustic = scoreAcoustic(prof);
+
+        // Blend: 40% filename prior + 60% acoustic evidence
+        std::unordered_map<int, float> combined;
+        for (const auto& kv : fname)
+            combined[kv.first] += 0.40f * kv.second;
+        for (const auto& kv : acoustic)
+            combined[kv.first] += 0.60f * kv.second;
+
+        std::vector<std::pair<int, float>> merged;
+        merged.reserve(combined.size());
+        for (const auto& kv : combined)
+            if (kv.second > 0.05f)
+                merged.emplace_back(kv.first, std::min(kv.second, 1.0f));
+        std::sort(merged.begin(), merged.end(),
+                  [](const auto& a, const auto& b){ return a.second > b.second; });
+
+        blended.push_back(std::move(merged));
+    }
+
+    return solveFromScores(blended);
 }
 
 } // namespace downspout::campione

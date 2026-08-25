@@ -9,5 +9,11 @@ capabilities: [audio input, audio output, host transport, deterministic trajecto
 summary: Smooth seeded orbit, pendulum, random-walk, and figure-eight stereo trajectories with distance filtering and conservative Doppler.
 ---
 
+## Opinion
+
+An AI invention. I haven't played with it much, but it appears to basically work.
+
+## Functionality
+
 Orbit is an ordinary stereo spatial processor. It does not claim binaural or
 HRTF reproduction.

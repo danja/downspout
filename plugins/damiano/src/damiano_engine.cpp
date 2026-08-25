@@ -7,15 +7,19 @@ namespace downspout::damiano {
 
 Parameters clampParameters(const Parameters& p) noexcept
 {
+    // std::clamp is UB for NaN inputs — use explicit isfinite guard first
+    auto safe = [](float v, float lo, float hi, float def) noexcept {
+        return std::isfinite(v) ? std::clamp(v, lo, hi) : def;
+    };
     Parameters out = p;
-    out.mode       = std::clamp(out.mode,       0.0f, static_cast<float>(kModeCount - 1));
-    out.drive      = std::clamp(out.drive,      1.0f, 10.0f);
-    out.tone       = std::clamp(out.tone,       0.0f, 100.0f);
-    out.foldCount  = std::clamp(out.foldCount,  1.0f, 8.0f);
-    out.mix        = std::clamp(out.mix,        0.0f, 100.0f);
-    out.outputGain = std::clamp(out.outputGain, -24.0f, 24.0f);
-    out.ccDrive    = std::clamp(out.ccDrive,    0.0f, 127.0f);
-    out.ccChannel  = std::clamp(out.ccChannel,  1.0f, 16.0f);
+    out.mode       = safe(out.mode,       0.0f,  5.0f,  1.0f);
+    out.drive      = safe(out.drive,      1.0f, 10.0f,  2.0f);
+    out.tone       = safe(out.tone,       0.0f, 100.0f, 50.0f);
+    out.foldCount  = safe(out.foldCount,  1.0f,  8.0f,  2.0f);
+    out.mix        = safe(out.mix,        0.0f, 100.0f, 100.0f);
+    out.outputGain = safe(out.outputGain, -24.0f, 24.0f, 0.0f);
+    out.ccDrive    = safe(out.ccDrive,    0.0f, 127.0f, 0.0f);
+    out.ccChannel  = safe(out.ccChannel,  1.0f,  16.0f, 1.0f);
     return out;
 }
 
@@ -130,7 +134,8 @@ void processBlock(EngineState&      state,
     const int  foldCount = static_cast<int>(std::round(params.foldCount));
     const float wetMix  = params.mix / 100.0f;
     const float dryMix  = 1.0f - wetMix;
-    const float outGain = std::pow(10.0f, params.outputGain / 20.0f);
+    float outGain = std::pow(10.0f, params.outputGain / 20.0f);
+    if (!std::isfinite(outGain)) outGain = 1.0f;
 
     // Tone shelf: one-pole high-shelf via low-pass subtraction
     // toneAmount: -0.8 (dark) to +0.8 (bright), 0 at 50

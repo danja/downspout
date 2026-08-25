@@ -8,6 +8,10 @@ screenshot: /assets/plugins/floozy.png
 summary: Selectable 1-8 voice (default 4) synthesizer combining distortion sources, physical-model-style excitation, feedback, filtering, modulation, and reverb.
 ---
 
+## Opinion
+
+This thing is rather eccentric, the controls not altogether intuitive. But it can produce a wide range of sounds, some of them really good.
+
 ## Functionality
 
 Floozy is a playable stereo instrument derived from `floozy-poly`. It exposes

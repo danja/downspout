@@ -9,6 +9,12 @@ capabilities: [audio input, audio output, MIDI input, resonator bank]
 summary: Eight bounded damped resonators tuned by held MIDI or an internal scale.
 ---
 
+## Opinion
+
+An AI invention. Needs investigating.
+
+## Functionality
+
 Resonance Garden turns arbitrary audio into pitched evolving material with
 damping, inharmonicity, freeze, bounded feedback, and deterministic voice
 replacement.

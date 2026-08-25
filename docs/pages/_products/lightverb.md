@@ -9,6 +9,12 @@ capabilities: [stereo audio, MIDI CC input, zero latency, auxiliary send]
 summary: Fixed-cost stereo reverb with Producer Control Bus lifecycle, channel isolation, and MIDI-through.
 ---
 
+## Opinion
+
+The UI needs some more work, but its sound is very pleasing, in a cold dark way. The producer part needs attention (across all the related plugins).
+
+## Functionality
+
 Lightverb provides inexpensive space after T-Mix or Loopdelay, or on a 100% wet
 auxiliary return. Producer MIDI can take over Wet mix with CC 32 and Space with
 CC 33 without altering the saved manual settings.

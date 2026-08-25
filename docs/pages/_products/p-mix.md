@@ -8,6 +8,10 @@ screenshot: /assets/plugins/p-mix.png
 summary: Stereo audio effect for transport-aware probabilistic switching and fades.
 ---
 
+## Opinion
+
+Very useful for trying out mixes. I often leave P-Mix's mix in place.
+
 ## Functionality
 
 P-Mix gates or blends stereo audio around bar-aware probability decisions. It is

@@ -8,6 +8,10 @@ screenshot: /assets/plugins/paunchlad.png
 summary: Launchpad dub performance effect with echo throws, sirens, spring splashes, dropouts, and chops.
 ---
 
+## Opinion
+
+It's a bit weak, needs revisiting. But its name gives me endless amusement.
+
 ## Functionality
 
 PaunchLad is a Launchpad-controlled dub effect for snare sends, drum buses,

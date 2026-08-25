@@ -8,6 +8,10 @@ screenshot: /assets/plugins/lifeform.png
 summary: Conway Game of Life MIDI generator where the Launchpad grid evolves one beat at a time.
 ---
 
+## Opinion
+
+This was irresistable given the grid layout of the Launchpad. Good fun but not much use in  practice.
+
 ## Functionality
 
 Lifeform turns an 8x8 Launchpad-style grid into Conway's Game of Life. Living

@@ -9,6 +9,12 @@ capabilities: [audio input, audio output, bypass, input gain, attack/release, va
 summary: Input gain, look-ahead limiting with attack and release, variable-curve clipping (soft to hard), DC removal, true-peak protection, bypass, and latched fault recovery.
 ---
 
+## Opinion
+
+Still testing, but so far seems a good alternative to pre-existing limiters and clippers.
+
+## Functionality
+
 Guardian is intended for the end of autonomous graphs. An input gain control
 drives the limiter harder or preserves headroom. The clipper shape parameter
 sweeps continuously from no clipping through gentle tanh saturation to a

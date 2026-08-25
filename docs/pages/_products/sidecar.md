@@ -8,6 +8,10 @@ screenshot: /assets/plugins/sidecar.png
 summary: MIDI phrase player for generated solo material with deterministic local generation and optional localhost coordinator requests.
 ---
 
+## Opinion
+
+An experiment I gave up on (in favour of MCP).
+
 ## Functionality
 
 Sidecar plays validated solo phrases against host BBT transport. It can generate

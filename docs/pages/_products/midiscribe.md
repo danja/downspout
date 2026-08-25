@@ -6,7 +6,11 @@ kind: Utility
 summary: Non-destructive MIDI capture plugin that writes recorded events to a Standard MIDI File (.mid) on demand.
 ---
 
-# Midiscribe
+## Opinion
+
+As yet untested. Built for use with Transmission.
+
+## Functionality
 
 Midiscribe is a MIDI capture utility for tracking and exporting MIDI performances from within a VST3 host. It passes all incoming MIDI events through unchanged, optionally records them with beat-position timestamps, and writes the captured buffer to a Standard MIDI File when triggered.
 

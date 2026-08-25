@@ -8,6 +8,10 @@ screenshot: /assets/plugins/m-mix.png
 summary: MIDI gate combining probabilistic bar transitions with Euclidean block patterns.
 ---
 
+## Opinion
+
+I'd forgotten I made this. Need to remember for generative stuff with Transmission.
+
 ## Functionality
 
 M-Mix processes incoming MIDI notes rather than audio. Notes pass only when the

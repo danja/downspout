@@ -8,7 +8,7 @@ add_library(downspout_campione_core STATIC
     src/campione_patch_io.cpp
     src/campione_drum_map.cpp
 )
-target_link_libraries(downspout_campione_core PUBLIC downspout-project-options)
+target_link_libraries(downspout_campione_core PUBLIC downspout-project-options downspout_sampleprofile)
 target_include_directories(downspout_campione_core PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
     "${PROJECT_SOURCE_DIR}/include"

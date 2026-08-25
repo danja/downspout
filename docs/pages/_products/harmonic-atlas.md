@@ -9,6 +9,12 @@ capabilities: [MIDI output, host transport, autonomous harmony, deterministic se
 summary: Seeded autonomous chord and scale guidance with tonal, modal, chromatic-mediant, and neo-Riemannian-inspired movement.
 ---
 
+## Opinion
+
+An AI invention. I haven't played with it properly yet.
+
+## Functionality
+
 Harmonic Atlas generates bounded, voice-led harmony without MIDI input and can
 optionally follow incoming pitch classes. Stop, loop, seek, and tempo behavior
 are derived from absolute host position.

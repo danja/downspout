@@ -8,6 +8,10 @@ screenshot: /assets/plugins/e-mix.png
 summary: Transport-aware Euclidean stereo gate with density, block, pattern, and fade controls.
 ---
 
+## Opinion
+
+I haven't exercised this enough to determine if it is actually useful. Stay tuned.
+
 ## Functionality
 
 E-Mix applies Euclidean-style rhythmic gating to stereo audio. It exposes the

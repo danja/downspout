@@ -8,6 +8,10 @@ screenshot: /assets/plugins/campione.png
 summary: Multi-zone sampler with per-note MIDI mapping, WAV file loading, audio recording with auto-pitch detection, pitch-shift gap fill, zero-crossing loop snap, crossfade looping, per-zone ADSR/filter/pan, beat slicing, and an embedded MCP server.
 ---
 
+## Opinion
+
+New, with a lot of rough edges and no doubt bugs I haven't seen yet. But it mostly works very nicely, I can imagine using this a lot, in preference to other samplers.
+
 ## Functionality
 
 Campione is a multi-zone sampler instrument. Each loaded WAV file is mapped to

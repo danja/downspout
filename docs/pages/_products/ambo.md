@@ -8,6 +8,10 @@ screenshot: /assets/plugins/ambo.png
 summary: Stereo ambient effect with rearrangeable time, spectral, tape, shimmer, delay, drive, and feedback stages.
 ---
 
+## Opinion
+
+It's still a good idea, but the implementation isn't great, definitely needs a few more sysles before it's likely to be useful.
+
 ## Functionality
 
 Ambo is a stereo ambient processor built from modular time, spectral, tape,

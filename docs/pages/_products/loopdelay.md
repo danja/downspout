@@ -8,6 +8,11 @@ screenshot: /assets/plugins/loopdelay.png
 capabilities: [stereo audio, MIDI CC input, host transport, capture loop]
 summary: Producer-ready stereo delay and looper with BBT time, CC 19 ownership, channel isolation, and MIDI-through.
 ---
+## Opinion
+
+I've hardly looked at this.
+
+## Functionality
 
 Loopdelay is intended to follow T-Mix and precede Guardian. Use it as a
 filtered ping-pong delay or capture a transport-sized loop and continuously

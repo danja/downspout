@@ -8,6 +8,10 @@ screenshot: /assets/plugins/basilico.png
 summary: Monophonic bass instrument with tempo-synced wobble, acid squelch, and upright/electric/dub/acid/industrial tones.
 ---
 
+## Opinion
+
+I'm very pleased with this. It can cover a wide variety of sounds. Minor tweaks needed.
+
 ## Functionality
 
 Basilico is a generator-friendly bass synth intended to sit under `bassgen`,

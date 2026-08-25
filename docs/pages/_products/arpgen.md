@@ -8,6 +8,10 @@ screenshot: /assets/plugins/arpgen.png
 summary: Meter-aware chord-capture and scale-derived arpeggiator with four traversal orders and triplet grids.
 ---
 
+## Opinion
+
+Basically working but barely tested, will no doubt need a few revisions.
+
 ## Functionality
 
 Arpgen turns incoming MIDI into transport-locked single-note patterns. Chord

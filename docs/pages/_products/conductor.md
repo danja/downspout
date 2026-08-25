@@ -9,6 +9,12 @@ capabilities: [MIDI output, host transport, scene CC, deterministic form, genera
 summary: Bar-aligned intro, development, break, reprise, and coda commands for autonomous patches.
 ---
 
+## Opinion
+
+New, I've only just started experimenting.
+
+## Functionality
+
 Conductor emits section notes and scene, density, energy, mutation, and reset
 CC values on each section boundary. Forms can follow a fixed arc or a seeded
 weighted section graph.

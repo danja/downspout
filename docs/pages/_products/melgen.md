@@ -8,6 +8,10 @@ screenshot: /assets/plugins/melgen.png
 summary: Phrase-aware melody generator with contour, answer, structure, color, range, follow, and strict subject/answer behavior.
 ---
 
+## Opinion
+
+Sometimes it's really good, produces a convincing melody line. Often it's a bit unpredictable, likes discords.
+
 ## Functionality
 
 MelGen creates melodic MIDI phrases with controls for contour, range, rests,

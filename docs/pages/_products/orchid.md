@@ -8,6 +8,10 @@ screenshot: /assets/plugins/orchid.png
 summary: Transport-aware voiced freeze effect that captures stable pitched material and holds period-aligned loops on the host grid.
 ---
 
+## Opinion
+
+Good fun. Interesting kind of glitch.
+
 ## Functionality
 
 Orchid listens for stable pitched audio, captures a short period-aligned loop,

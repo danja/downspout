@@ -8,6 +8,10 @@ screenshot: /assets/plugins/cadence.png
 summary: Transport-aware MIDI harmonizer and comping generator with learned harmony, color, extended voicings, suspended dominants, and arpeggiated phrasing.
 ---
 
+## Opinion
+
+It is hard to tell ahead of time if this will work well on a given bassline/melody, but when it does it is good, surprisingly musical.
+
 ## Functionality
 
 Cadence listens to incoming MIDI and uses the learned material to produce

@@ -8,6 +8,10 @@ screenshot: /assets/plugins/xoxolo.png
 summary: Simple x0x-style MIDI drum pattern editor with note-map presets, per-lane preview, and selectable 8-32 step patterns.
 ---
 
+## Opinion
+
+It's minimal, could do with support for longer patterns. But for what it is, it works well.
+
 ## Functionality
 
 Xoxolo is a direct MIDI drum pattern editor for `drumkit.vst3` and other drum
