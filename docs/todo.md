@@ -1,6 +1,6 @@
 # Downspout TODO
 
-new plugin - distortion & waveshaping
+
 
 Transmission & Campione : check that all key operations in the UI are covered by MCP & vice versa
 

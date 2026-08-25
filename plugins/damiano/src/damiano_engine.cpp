@@ -36,15 +36,14 @@ float tanhShape(float x, float drive, float comp) noexcept
     return std::tanh(x * drive) * comp;
 }
 
-// Asymptotic fuzz — approaches ±1, asymmetric positive bias
+// Asymptotic fuzz — approaches ±1, slight positive-half asymmetry for even harmonics
+// Small-signal gain ≈ drive, consistent with other modes
 float fuzzShape(float x, float drive) noexcept
 {
-    float pre = x * drive * 4.0f;
-    // Asymmetric: positive half slightly harder
-    if (pre >= 0.0f) {
-        return 1.0f - std::exp(-pre * 1.1f);
+    if (x >= 0.0f) {
+        return 1.0f - std::exp(-x * drive * 1.2f);
     } else {
-        return -(1.0f - std::exp(pre));
+        return -(1.0f - std::exp(x * drive));
     }
 }
 
@@ -76,9 +75,10 @@ float tubeShape(float x, float drive) noexcept
     }
 }
 
-// Triangle wavefolder: maps any float into [-1, 1] with triangle reflection
+// Triangle wavefolder: maps any finite float into [-1, 1] with triangle reflection
 float triangleFold(float u) noexcept
 {
+    if (!std::isfinite(u)) return 0.0f;
     u += 1.0f;
     float t = std::fmod(u, 4.0f);
     if (t < 0.0f) t += 4.0f;
@@ -116,6 +116,8 @@ void processBlock(EngineState&      state,
                   const AudioBlock& audio,
                   float             effectiveDrive) noexcept
 {
+    effectiveDrive = std::clamp(effectiveDrive, 1.0f, 10.0f);
+
     // Update tanh compensation cache when drive changes
     if (effectiveDrive != state.cachedDrive) {
         state.tanhComp = (effectiveDrive > 0.001f)
@@ -144,17 +146,23 @@ void processBlock(EngineState&      state,
         float*       out = audio.outputs[c];
         if (!in || !out) continue;
 
+        // Reset LP state if it became non-finite (NaN/Inf from a bad input block)
         float lp = state.toneLp[c];
+        if (!std::isfinite(lp)) lp = 0.0f;
 
         for (uint32_t n = 0; n < frames; ++n) {
             float dry = in[n];
+            // Treat non-finite input as silence rather than poisoning filter state
+            if (!std::isfinite(dry)) dry = 0.0f;
 
-            // High-shelf tone: lp subtraction gives high band
             lp = toneAlpha * lp + (1.0f - toneAlpha) * dry;
             float toned = dry + toneAmount * (dry - lp);
 
             float wet = processSample(toned, mode, effectiveDrive,
                                       state.tanhComp, foldCount);
+            // Final guard: no mode should produce non-finite output, but be safe
+            if (!std::isfinite(wet)) wet = 0.0f;
+
             out[n] = (dry * dryMix + wet * wetMix) * outGain;
         }
 

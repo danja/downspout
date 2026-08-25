@@ -88,6 +88,8 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
     add_subdirectory("${DOWNSPOUT_DPF_DIR}" third_party/DPF)
 endif()
 
+add_subdirectory(src/common/sampleprofile)
+
 if(DOWNSPOUT_BUILD_BASSGEN)
     add_subdirectory(plugins/bassgen)
 endif()
