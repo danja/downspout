@@ -120,7 +120,7 @@ constexpr float kRowH    = 26.0f;
 constexpr float kFooterH = 60.0f;
 constexpr float kWaveH   = 170.0f;  // waveform 100px + 18px action bar + 52px ADSR/filter row
 
-enum DialogMode { kDialogNone, kDialogSavePatch, kDialogSettings, kDialogContextMenu };
+enum DialogMode { kDialogNone, kDialogSavePatch, kDialogSettings, kDialogContextMenu, kDialogDrumReport };
 
 static std::string uiDefaultDataDir()
 {
@@ -370,6 +370,8 @@ protected:
         drawFooter(W, H);
         if (dialogMode_ == kDialogContextMenu)
             drawContextMenu(W, H);
+        else if (dialogMode_ == kDialogDrumReport)
+            drawDrumReportDialog(W, H);
         else if (dialogMode_ != kDialogNone)
             drawDialog(W, H);
     }
@@ -706,32 +708,16 @@ protected:
                 repaint(); return true;
             }
 
-            // Drum: assign zones to GM percussion notes using filename analysis + Hungarian.
+            // Drum: assign zones to GM percussion notes — show report dialog before applying.
             if (drumBtn_.contains(px, py)) {
+                if (zones_.empty()) { showStatus("No zones to assign"); return true; }
                 std::vector<std::string> paths;
                 paths.reserve(zones_.size());
                 for (const auto& ze : zones_) paths.push_back(ze.path);
-                const auto assignments = downspout::campione::assignDrumNotes(paths);
-                int assigned = 0;
-                for (std::size_t zi = 0; zi < zones_.size(); ++zi) {
-                    const auto& a = assignments[zi];
-                    if (a.gmNote >= 0) {
-                        zones_[zi].rootNote  = a.gmNote;
-                        zones_[zi].rangeLow  = a.gmNote;
-                        zones_[zi].rangeHigh = a.gmNote;
-                        ++assigned;
-                    }
-                    pushZoneUpdate(zi);
-                }
-                char sb[64];
-                if (zones_.empty())
-                    showStatus("No zones to assign");
-                else if (assigned == 0)
-                    showStatus("No matches — use names like kick.wav");
-                else
-                    std::snprintf(sb, sizeof(sb), "Assigned %d/%d zones to GM notes",
-                                  assigned, static_cast<int>(zones_.size())),
-                    showStatus(sb);
+                drumReportAssignments_   = downspout::campione::assignDrumNotes(paths);
+                drumReportScrollOffset_  = 0;
+                dialogMode_              = kDialogDrumReport;
+                repaint();
                 return true;
             }
 
@@ -1061,6 +1047,17 @@ protected:
 
     bool onScroll(const ScrollEvent& ev) override
     {
+        if (dialogMode_ == kDialogDrumReport) {
+            constexpr float kRptRowH  = 22.0f;
+            constexpr float kRptBodyH = 280.0f;
+            const int visible   = static_cast<int>(kRptBodyH / kRptRowH);
+            const int maxScroll = std::max(0, static_cast<int>(drumReportAssignments_.size()) - visible);
+            drumReportScrollOffset_ = std::clamp(
+                drumReportScrollOffset_ - static_cast<int>(ev.delta.getY()), 0, maxScroll);
+            repaint();
+            return true;
+        }
+
         const float H     = static_cast<float>(getHeight());
         const float listY = kHeaderH + kPad * 2.0f;
         const float listH = H - listY - kFooterH - kPad * 1.5f - kWaveH;
@@ -2312,10 +2309,217 @@ private:
                 setState(kStateKeyDataDir, dialogText_.c_str());
             }
             break;
+        case kDialogDrumReport: {
+            int assigned = 0;
+            for (std::size_t zi = 0; zi < zones_.size() && zi < drumReportAssignments_.size(); ++zi) {
+                const auto& a = drumReportAssignments_[zi];
+                if (a.gmNote >= 0) {
+                    zones_[zi].rootNote  = a.gmNote;
+                    zones_[zi].rangeLow  = a.gmNote;
+                    zones_[zi].rangeHigh = a.gmNote;
+                    ++assigned;
+                }
+                pushZoneUpdate(zi);
+            }
+            char sb[64];
+            std::snprintf(sb, sizeof(sb), "Applied %d/%d drum assignments",
+                          assigned, static_cast<int>(zones_.size()));
+            showStatus(sb);
+            drumReportAssignments_.clear();
+            break;
+        }
         default: break;
         }
         dialogMode_ = kDialogNone;
         repaint();
+    }
+
+    void drawDrumReportDialog(float W, float H)
+    {
+        constexpr float kRptRowH  = 22.0f;
+        constexpr float kRptBodyH = 280.0f;
+        constexpr float kRptPw    = 560.0f;
+        constexpr float kBtnH     = 28.0f;
+        const float kRptPh = 56.0f + kRptBodyH + 14.0f + kBtnH + 14.0f;
+
+        // Dim background
+        beginPath();
+        fillColor(0, 0, 0, 180);
+        rect(0.0f, 0.0f, W, H);
+        fill();
+        closePath();
+
+        const float dlgX = (W - kRptPw) * 0.5f;
+        const float dlgY = (H - kRptPh) * 0.5f;
+
+        // Panel
+        beginPath();
+        fillColor(22, 32, 44, 255);
+        roundedRect(dlgX, dlgY, kRptPw, kRptPh, 10.0f);
+        fill();
+        closePath();
+        beginPath();
+        strokeColor(72, 108, 136, 255);
+        strokeWidth(1.5f);
+        roundedRect(dlgX, dlgY, kRptPw, kRptPh, 10.0f);
+        stroke();
+        closePath();
+
+        // Title
+        const int nAssigned = static_cast<int>(
+            std::count_if(drumReportAssignments_.begin(), drumReportAssignments_.end(),
+                          [](const downspout::campione::DrumAssignment& a){ return a.gmNote >= 0; }));
+        char title[80];
+        std::snprintf(title, sizeof(title), "Drum Map — %d/%d zones matched",
+                      nAssigned, static_cast<int>(drumReportAssignments_.size()));
+        fontSize(15.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(220, 232, 242, 255);
+        text(dlgX + 18.0f, dlgY + 14.0f, title, nullptr);
+
+        // Column headers
+        const float hdrY = dlgY + 36.0f;
+        fontSize(10.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(100, 140, 170, 255);
+        text(dlgX + 18.0f,        hdrY, "Zone", nullptr);
+        text(dlgX + 18.0f + 300.0f, hdrY, "GM Note", nullptr);
+        text(dlgX + 18.0f + 390.0f, hdrY, "Conf", nullptr);
+        text(dlgX + 18.0f + 450.0f, hdrY, "Evidence", nullptr);
+
+        // Separator line
+        beginPath();
+        strokeColor(52, 78, 100, 255);
+        strokeWidth(1.0f);
+        moveTo(dlgX + 14.0f, hdrY + 14.0f);
+        lineTo(dlgX + kRptPw - 14.0f, hdrY + 14.0f);
+        stroke();
+        closePath();
+
+        // Rows (clipped to body area)
+        const float bodyY = hdrY + 18.0f;
+        save();
+        scissor(dlgX + 4.0f, bodyY, kRptPw - 8.0f, kRptBodyH);
+
+        const int n = static_cast<int>(drumReportAssignments_.size());
+        for (int i = drumReportScrollOffset_; i < n; ++i) {
+            const float ry = bodyY + static_cast<float>(i - drumReportScrollOffset_) * kRptRowH;
+            if (ry > bodyY + kRptBodyH) break;
+
+            const auto& a = drumReportAssignments_[static_cast<std::size_t>(i)];
+            const bool matched = (a.gmNote >= 0);
+
+            // Alternating row shade
+            if (i % 2 == 0) {
+                beginPath();
+                fillColor(28, 40, 54, 180);
+                rect(dlgX + 14.0f, ry, kRptPw - 28.0f, kRptRowH);
+                fill();
+                closePath();
+            }
+
+            // Zone filename (truncated)
+            const std::string fname = basename(zones_.size() > static_cast<std::size_t>(i)
+                                               ? zones_[static_cast<std::size_t>(i)].path : "");
+            fontSize(11.0f);
+            textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+            fillColor(matched ? 200 : 110, matched ? 218 : 130, matched ? 232 : 148, 255);
+            {
+                // Clip filename to 295px
+                const float maxFw = 290.0f;
+                Rectangle<float> tb;
+                textBounds(0.0f, 0.0f, fname.c_str(), nullptr, tb);
+                if (tb.getWidth() <= maxFw) {
+                    text(dlgX + 18.0f, ry + kRptRowH * 0.5f, fname.c_str(), nullptr);
+                } else {
+                    // Walk from end until it fits with "…"
+                    std::string trimmed = fname;
+                    while (trimmed.size() > 1) {
+                        trimmed.pop_back();
+                        const std::string candidate = trimmed + "\xe2\x80\xa6";
+                        textBounds(0.0f, 0.0f, candidate.c_str(), nullptr, tb);
+                        if (tb.getWidth() <= maxFw) {
+                            text(dlgX + 18.0f, ry + kRptRowH * 0.5f, candidate.c_str(), nullptr);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // GM note name
+            if (matched) {
+                fillColor(120, 220, 140, 255);
+                text(dlgX + 18.0f + 300.0f, ry + kRptRowH * 0.5f,
+                     midiNoteName(a.gmNote).c_str(), nullptr);
+
+                // Confidence bar + value
+                const float barX = dlgX + 18.0f + 390.0f;
+                const float barW = 46.0f;
+                const float barH = 8.0f;
+                const float barY2 = ry + kRptRowH * 0.5f - barH * 0.5f;
+                beginPath();
+                fillColor(30, 55, 40, 255);
+                rect(barX, barY2, barW, barH);
+                fill();
+                closePath();
+                beginPath();
+                fillColor(60, 180, 90, 220);
+                rect(barX, barY2, barW * std::min(a.confidence, 1.0f), barH);
+                fill();
+                closePath();
+                char confBuf[8];
+                std::snprintf(confBuf, sizeof(confBuf), "%.0f%%", a.confidence * 100.0f);
+                fontSize(9.5f);
+                fillColor(160, 210, 170, 255);
+                text(barX + barW + 4.0f, ry + kRptRowH * 0.5f, confBuf, nullptr);
+
+                // Evidence label
+                if (!a.evidence.empty()) {
+                    fontSize(10.0f);
+                    fillColor(100, 150, 120, 200);
+                    text(dlgX + 18.0f + 450.0f, ry + kRptRowH * 0.5f,
+                         a.evidence.c_str(), nullptr);
+                }
+            } else {
+                fillColor(80, 90, 100, 255);
+                text(dlgX + 18.0f + 300.0f, ry + kRptRowH * 0.5f, "—", nullptr);
+                fillColor(70, 80, 90, 200);
+                fontSize(10.0f);
+                text(dlgX + 18.0f + 390.0f, ry + kRptRowH * 0.5f, "no match", nullptr);
+            }
+        }
+        restore();
+
+        // Bottom separator
+        const float sepY = bodyY + kRptBodyH + 6.0f;
+        beginPath();
+        strokeColor(52, 78, 100, 255);
+        strokeWidth(1.0f);
+        moveTo(dlgX + 14.0f, sepY);
+        lineTo(dlgX + kRptPw - 14.0f, sepY);
+        stroke();
+        closePath();
+
+        // Buttons
+        const float btnY = sepY + 8.0f;
+        const float btnW = 86.0f;
+        drumReportOkBtn_     = { dlgX + kRptPw - btnW * 2.0f - 26.0f, btnY, btnW, kBtnH };
+        drumReportCancelBtn_ = { dlgX + kRptPw - btnW - 14.0f,         btnY, btnW, kBtnH };
+
+        // Map to shared dialog button rects so the existing click handler works
+        dialogOkBtn_     = drumReportOkBtn_;
+        dialogCancelBtn_ = drumReportCancelBtn_;
+
+        drawButton(drumReportOkBtn_,     "Apply",  36, 90, 54);
+        drawButton(drumReportCancelBtn_, "Cancel", 55, 55, 62);
+
+        // Scroll hint
+        if (n > static_cast<int>(kRptBodyH / kRptRowH)) {
+            fontSize(9.5f);
+            textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+            fillColor(72, 95, 112, 200);
+            text(dlgX + 18.0f, btnY + kBtnH * 0.5f, "Scroll to see all zones", nullptr);
+        }
     }
 
     void drawDialog(float W, float H)
@@ -2453,6 +2657,11 @@ private:
     Rect        dialogTextField_ {};
     Rect        dialogOkBtn_     {};
     Rect        dialogCancelBtn_ {};
+    // Drum report dialog
+    std::vector<downspout::campione::DrumAssignment> drumReportAssignments_;
+    int  drumReportScrollOffset_ = 0;
+    Rect drumReportOkBtn_        {};
+    Rect drumReportCancelBtn_    {};
     std::string dataDir_;
     std::string fileBrowserKey_;  // state key to route the next uiFileBrowserSelected result
     Rect volSlider_ {};

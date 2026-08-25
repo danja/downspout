@@ -3,7 +3,6 @@
 #include "damiano_core.hpp"
 
 #include <array>
-#include <cstring>
 
 START_NAMESPACE_DISTRHO
 
@@ -21,13 +20,6 @@ enum ParameterIndex : uint32_t {
     kParameterCount
 };
 
-enum StateIndex : uint32_t {
-    kStateParameters = 0,
-    kStateCount
-};
-
-constexpr const char* kStateKeyParameters = "parameters";
-
 using CoreParameters = downspout::damiano::Parameters;
 using CoreEngineState = downspout::damiano::EngineState;
 using CoreAudioBlock  = downspout::damiano::AudioBlock;
@@ -40,7 +32,7 @@ class DamianoPlugin : public Plugin
 {
 public:
     DamianoPlugin()
-        : Plugin(kParameterCount, 0, kStateCount)
+        : Plugin(kParameterCount, 0, 0)
     {
         parameters_ = downspout::damiano::clampParameters(parameters_);
     }
@@ -125,16 +117,6 @@ protected:
         }
     }
 
-    void initState(uint32_t index, State& state) override
-    {
-        if (index == kStateParameters) {
-            state.key          = kStateKeyParameters;
-            state.label        = "Parameters";
-            state.hints        = kStateIsOnlyForDSP;
-            state.defaultValue = "";
-        }
-    }
-
     float getParameterValue(uint32_t index) const override
     {
         switch (index) {
@@ -163,22 +145,6 @@ protected:
         case kParamCCChannel:  parameters_.ccChannel  = value; break;
         }
         parameters_ = downspout::damiano::clampParameters(parameters_);
-    }
-
-    String getState(const char* key) const override
-    {
-        if (std::strcmp(key, kStateKeyParameters) == 0)
-            return String(downspout::damiano::serializeParameters(parameters_).c_str());
-        return String();
-    }
-
-    void setState(const char* key, const char* value) override
-    {
-        if (std::strcmp(key, kStateKeyParameters) != 0) return;
-        const std::string text = value ? value : "";
-        const auto parsed = downspout::damiano::deserializeParameters(text);
-        if (parsed.has_value())
-            parameters_ = downspout::damiano::clampParameters(*parsed);
     }
 
     void activate() override
