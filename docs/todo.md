@@ -9,7 +9,7 @@ The drum sound recognition part of plugins/campione doesn't find any matches whe
 
 ~/Music/samples/loops/Drum\ Loops/KSMB1_0_SandmanBreak_Original_CD.wav
 
-Create a helper system for Campione in JS using third_party/freesound-js to obtain drum samples to run the sound recognition algorithms over. You can find the API key in .env (Keep this secret!).
+~~Create a helper system for Campione in JS using third_party/freesound-js to obtain drum samples to run the sound recognition algorithms over.~~ Done: `scripts/campione-freesound-helper.js`. Downloads 5 samples per drum category (kick/snare/hihat/crash/ride/tom/clap) from Freesound into `tests/freesound-samples/`, then loads each through the Campione MCP server and reports recognition accuracy per category. Run with `--download` to fetch samples, `--test` to test against a running Campione instance.
 
 
 Ensure the operations supported by the UI are also covered by MCP, and vice versa.
