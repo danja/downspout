@@ -80,13 +80,16 @@ float tubeShape(float x, float drive) noexcept
 }
 
 // Sine wavefolder: smooth fold with no derivative discontinuities.
-// sin(π u/2) has the same period (4), zero, and peak positions as a triangle
-// fold but smooth transitions → avoids the aliasing noise that triangle corners
-// create at any drive above the fold threshold.
+// Normalized by 2/π so that f'(0) = 1, matching the triangle fold's small-signal
+// gain. Without normalization sin(πu/2) has gain π/2 ≈ 1.57 per stage, which
+// amplifies noise floors (d × π/2)^n times — the "latches into noise" behaviour.
+// With normalization the per-stage gain = d, identical to the triangle fold.
+// Peak output is 2/π ≈ 0.637 instead of 1.0; use Output Gain to compensate.
 float sineFold(float u) noexcept
 {
-    constexpr float kHalfPi = static_cast<float>(M_PI) * 0.5f;
-    return std::sin(u * kHalfPi);
+    constexpr float kHalfPi  = static_cast<float>(M_PI) * 0.5f;
+    constexpr float kNorm    = 2.0f / static_cast<float>(M_PI);  // restores f'(0)=1
+    return kNorm * std::sin(u * kHalfPi);
 }
 
 // Wavefold: apply sine fold `count` times, each time driving the signal.

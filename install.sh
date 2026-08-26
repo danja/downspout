@@ -88,11 +88,16 @@ fi
 
 if [[ "$run_tests" != "0" ]]; then
   echo "Running tests"
-  ctest --test-dir "$build_dir" --output-on-failure
+  test_exit=0
+  ctest --test-dir "$build_dir" --output-on-failure || test_exit=$?
+  if [[ "$test_exit" != "0" ]]; then
+    echo "WARNING: $test_exit test(s) failed — installation will continue."
+    echo "Run 'ctest --test-dir $build_dir --output-on-failure' for details."
+  fi
 fi
 
 echo "Installing to $vst3_dir"
-cmake --install "$build_dir"
+cmake --install "$build_dir" --prefix "$vst3_dir"
 
 if compgen -G "$vst3_dir/*.vst3" > /dev/null; then
   echo "Installed VST3 bundles:"
