@@ -48,7 +48,7 @@ struct ControlDef {
 struct SectionDef {
     const char* title;
     Color color;
-    std::array<ControlDef, 8> controls;
+    std::array<ControlDef, 9> controls;
     std::size_t count;
 };
 
@@ -58,7 +58,7 @@ constexpr std::uint32_t paramId(const ParamId id)
 }
 
 constexpr std::array<SectionDef, 6> kSections = {{
-    {"Voice", {112, 177, 139}, {{{paramId(ParamId::model), "Model"}, {paramId(ParamId::waveform), "Wave"}, {paramId(ParamId::subLevel), "Sub"}, {paramId(ParamId::body), "Body"}, {paramId(ParamId::bite), "Bite"}, {paramId(ParamId::harmonic), "Harmonic"}, {paramId(ParamId::harmonicLevel), "Harm Level"}, {0, ""}}}, 7},
+    {"Voice", {112, 177, 139}, {{{paramId(ParamId::model), "Model"}, {paramId(ParamId::waveform), "Wave"}, {paramId(ParamId::subLevel), "Sub"}, {paramId(ParamId::body), "Body"}, {paramId(ParamId::bite), "Bite"}, {paramId(ParamId::harmonic), "Harmonic"}, {paramId(ParamId::harmonicLevel), "Harm Level"}, {paramId(ParamId::detuneOffset), "Detune"}, {paramId(ParamId::detuneLevel), "Det Level"}}}, 9},
     {"Phrase", {215, 163, 78}, {{{paramId(ParamId::mute), "Mute"}, {paramId(ParamId::glide), "Glide"}, {paramId(ParamId::accent), "Accent"}, {paramId(ParamId::punch), "Punch"}, {0, ""}, {0, ""}, {0, ""}, {0, ""}}}, 4},
     {"Filter", {105, 158, 218}, {{{paramId(ParamId::cutoff), "Cutoff"}, {paramId(ParamId::resonance), "Res"}, {paramId(ParamId::filterEnv), "Env"}, {paramId(ParamId::keyTrack), "Track"}, {paramId(ParamId::lfoDepth), "Wob Filter"}, {paramId(ParamId::squelch), "Squelch"}, {0, ""}, {0, ""}}}, 6},
     {"Wobble", {92, 185, 194}, {{{paramId(ParamId::lfoFrequency), "Rate"}, {paramId(ParamId::wobbleStart), "Start"}, {paramId(ParamId::wobbleSync), "Sync"}, {paramId(ParamId::wobbleDivision), "Division"}, {paramId(ParamId::wobbleShape), "Shape"}, {paramId(ParamId::ampWobble), "Amp"}, {paramId(ParamId::phaseWobble), "Phase"}, {paramId(ParamId::wobbleSubMix), "Sub Mix"}}}, 8},
@@ -149,6 +149,10 @@ std::string formatValue(const std::uint32_t parameter, const float value)
     else if (parameter == static_cast<std::uint32_t>(ParamId::envSubMix))
     {
         std::snprintf(buffer, sizeof(buffer), "%+d%%", static_cast<int>(std::lround(clampf(value, -1.0f, 1.0f) * 100.0f)));
+    }
+    else if (parameter == static_cast<std::uint32_t>(ParamId::detuneOffset))
+    {
+        std::snprintf(buffer, sizeof(buffer), "%.0f ct", clampf(value, 0.0f, 50.0f));
     }
     else
     {
@@ -318,7 +322,7 @@ private:
 
         fontSize(13.0f);
         fillColor(157, 169, 162, 255);
-        text(x + 180.0f, y + 27.0f, "upright, electric, dub, acid, industrial bass", nullptr);
+        text(x + 180.0f, y + 27.0f, "upright, electric, dub, acid, industrial, reese, hoover bass", nullptr);
 
         fontSize(12.0f);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);

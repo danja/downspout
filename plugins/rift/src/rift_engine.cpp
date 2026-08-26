@@ -972,8 +972,11 @@ OutputStatus processBlock(EngineState& state,
     }
 
     const std::uint32_t channelCount = std::max<std::uint32_t>(1u, std::min(audio.channelCount, kMaxChannels));
+    // Allocate one extra nframes block of zeros at the end of the scratch buffer to serve as a
+    // silent dry-input pointer for channels that have no live audio in Sample mode.
     const std::size_t scratchFrames = static_cast<std::size_t>(nframes) * channelCount;
-    state.sourceInputScratch.assign(scratchFrames, 0.0f);
+    state.sourceInputScratch.assign(scratchFrames + static_cast<std::size_t>(nframes), 0.0f);
+    const float* const silentDry = state.sourceInputScratch.data() + scratchFrames;
 
     for (std::uint32_t channel = 0; channel < channelCount; ++channel) {
         for (std::uint32_t frame = 0; frame < nframes; ++frame) {
@@ -987,11 +990,13 @@ OutputStatus processBlock(EngineState& state,
     }
 
     AudioBlock sourcedAudio;
-    sourcedAudio.dryInputs = audio.inputs;
     sourcedAudio.outputs = audio.outputs;
     sourcedAudio.channelCount = channelCount;
     for (std::uint32_t channel = 0; channel < channelCount; ++channel) {
         sourcedAudio.inputs[channel] = state.sourceInputScratch.data() + static_cast<std::size_t>(channel) * nframes;
+        // Use the caller's live audio as the dry pass-through; fall back to the silent buffer
+        // so that dryInputFrame does not pick up the sample scratch as the dry signal.
+        sourcedAudio.dryInputs[channel] = audio.inputs[channel] ? audio.inputs[channel] : silentDry;
     }
 
     return processBlock(state, parameters, triggers, sequence, transport, nframes, sampleRate, sourcedAudio);

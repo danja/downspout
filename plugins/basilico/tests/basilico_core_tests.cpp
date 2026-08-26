@@ -139,7 +139,7 @@ void defaultsAndClamping()
 
 void allModelsRender()
 {
-    for (int model = 0; model <= 4; ++model)
+    for (int model = 0; model <= 6; ++model)
     {
         BasilicoEngine engine {48000.0f};
         engine.setParameter(ParamId::model, static_cast<float>(model));

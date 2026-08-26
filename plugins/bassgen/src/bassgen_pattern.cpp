@@ -1157,6 +1157,24 @@ void reinforceJazzWalkingBeats(std::array<bool, kMaxPatternSteps>& onset,
             onset[step] = true;
         }
     }
+
+    // Reinforce approach notes: the step immediately before each bar boundary
+    // enables jazzApproachOrEnclosureNote to place a lower/upper chromatic
+    // approach into the bar's first beat. Place unconditionally when the bar
+    // boundary beat is active and density is above the walking-bass threshold.
+    if (pattern.stepsPerBeat <= 1 || pattern.stepsPerBar <= 0) {
+        return;
+    }
+    for (int barBoundary = pattern.stepsPerBar; barBoundary < pattern.patternSteps; barBoundary += pattern.stepsPerBar) {
+        const int approachStep = barBoundary - 1;
+        if (approachStep > 0 &&
+            approachStep < pattern.patternSteps &&
+            !onset[approachStep] &&
+            onset[barBoundary] &&
+            controls.density >= 0.70f) {
+            onset[approachStep] = true;
+        }
+    }
 }
 
 void reinforceFugueSubjectSteps(std::array<bool, kMaxPatternSteps>& onset,

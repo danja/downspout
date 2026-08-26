@@ -41,9 +41,11 @@ enum class ParamId : std::uint32_t {
     harmonicLevel,
     wobbleSubMix,
     envSubMix,
+    detuneOffset,
+    detuneLevel,
 };
 
-inline constexpr std::size_t kParameterCount = 34;
+inline constexpr std::size_t kParameterCount = 36;
 
 struct ParamSpec {
     const char* symbol;
@@ -55,7 +57,7 @@ struct ParamSpec {
 };
 
 inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
-    {"model", "Model", 0.0f, 4.0f, 1.0f, true},
+    {"model", "Model", 0.0f, 6.0f, 1.0f, true},
     {"waveform", "Waveform", 0.0f, 4.0f, 2.0f, true},
     {"sub_level", "Sub Level", 0.0f, 1.0f, 0.55f, false},
     {"body", "Body", 0.0f, 1.0f, 0.55f, false},
@@ -89,14 +91,18 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"harmonic_level", "Harmonic Level", 0.0f, 1.0f, 0.0f, false},
     {"wobble_sub_mix", "Wobble Sub Mix", 0.0f, 1.0f, 0.0f, false},
     {"env_sub_mix", "Env Sub Mix", -1.0f, 1.0f, 0.0f, false},
+    {"detune_offset", "Detune Offset", 0.0f, 50.0f, 0.0f, false},
+    {"detune_level", "Detune Level", 0.0f, 1.0f, 0.0f, false},
 }};
 
-inline constexpr std::array<const char*, 5> kModelNames = {{
+inline constexpr std::array<const char*, 7> kModelNames = {{
     "Upright",
     "Electric",
     "Dub",
     "Acid",
     "Industrial",
+    "Reese",
+    "Hoover",
 }};
 
 inline constexpr std::array<const char*, 5> kWaveformNames = {{

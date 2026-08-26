@@ -28,6 +28,8 @@ ParameterEnumerationValue kModelEnumValues[] = {
     {2.0f, kModelNames[2]},
     {3.0f, kModelNames[3]},
     {4.0f, kModelNames[4]},
+    {5.0f, kModelNames[5]},
+    {6.0f, kModelNames[6]},
 };
 
 ParameterEnumerationValue kWaveEnumValues[] = {
@@ -172,6 +174,8 @@ protected:
         parameter.ranges.def = spec.defaultValue;
         if (index == static_cast<uint32_t>(ParamId::wobbleStart))
             parameter.unit = "deg";
+        if (index == static_cast<uint32_t>(ParamId::detuneOffset))
+            parameter.unit = "ct";
 
         if (index == static_cast<uint32_t>(ParamId::model))
         {

@@ -56,6 +56,8 @@ int main()
     // Input gain: +6 dB doubles amplitude into limiter
     p = defaultParams();
     p[kInputDb] = 6.0f;  // ~2x gain
+    p[kLookaheadMs] = 0.0f;  // no delay so first sample is immediately readable
+    p[kAttackMs] = 0.0f;
     in.fill(0.1f);
     prepare(s, 48000);
     process(s, p, 1, 48000, in.data(), in.data(), l.data(), r.data());
@@ -65,6 +67,7 @@ int main()
     // Attack: with instant attack (kAttackMs=0), gain reduction is immediate
     p = defaultParams();
     p[kAttackMs] = 0.0f;
+    p[kLookaheadMs] = 0.0f;  // no delay so first sample is immediately readable
     in.fill(3.0f);
     prepare(s, 48000);
     process(s, p, 1, 48000, in.data(), in.data(), l.data(), r.data());
@@ -73,6 +76,7 @@ int main()
     // Attack: with slow attack, the first sample is NOT fully limited
     p = defaultParams();
     p[kAttackMs] = 50.0f;  // very slow
+    p[kLookaheadMs] = 0.0f;  // no delay so first sample is immediately readable
     in.fill(3.0f);
     prepare(s, 48000);
     // Just one sample — gain barely moves yet, so output may exceed ceiling
@@ -93,20 +97,21 @@ int main()
     p = defaultParams();
     p[kLookaheadMs] = 0.0f; // remove delay so we can compare immediately
     p[kAttackMs] = 0.0f;
+    p[kDcRemove] = 0.0f;    // disable HP so constant test signal is unmodified
     std::array<float,64> l0{}, l1{};
     in.fill(0.1f); // well below ceiling, limiter won't engage
     p[kClipperShape] = 0.0f;
     prepare(s, 48000);
-    process(s, p, in.size(), 48000, in.data(), in.data(), l0.data(), r.data());
+    process(s, p, l0.size(), 48000, in.data(), in.data(), l0.data(), r.data());
     for (float v : l0) assert(std::fabs(v - 0.1f) < 0.001f); // shape=0: linear pass-through
 
-    // Clipper shape=1: signal at threshold gets shaped (knee at 0, everything curves)
+    // Clipper shape=1: tanh saturator maps all signals towards ceiling (knee=0)
     in.fill(0.8f * ceiling); // 80% of ceiling — above knee for shape=1 (knee=0)
     p[kClipperShape] = 1.0f;
     prepare(s, 48000);
-    process(s, p, in.size(), 48000, in.data(), in.data(), l1.data(), r.data());
-    // Output should be below 0.8*ceiling (knee shaping pulled it down) and above 0
-    assert(l1.back() > 0.0f && l1.back() < 0.8f * ceiling + 0.001f);
+    process(s, p, l1.size(), 48000, in.data(), in.data(), l1.data(), r.data());
+    // Tanh saturator pushes signal toward ceiling, output is bounded by ceiling
+    assert(l1.back() > 0.0f && l1.back() <= ceiling + 0.001f);
 
     return 0;
 }

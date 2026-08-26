@@ -58,7 +58,8 @@ float gainForStep(const std::array<float, kParameterCount>& parameters,
     const float spread = parameterValue(parameters, kSpread);
     const std::uint64_t seed = static_cast<std::uint64_t>(std::lround(parameterValue(parameters, kSeed)));
     const int rotation = static_cast<int>(std::lround(
-        spread * static_cast<float>(lane) * static_cast<float>(length) / kLaneCount));
+        spread * static_cast<float>(lane) * static_cast<float>(length > 1 ? length - 1 : length)
+        / static_cast<float>(kLaneCount > 1 ? kLaneCount - 1 : kLaneCount)));
     const std::uint64_t index = static_cast<std::uint64_t>(step * kLaneCount + lane);
 
     bool active = false;

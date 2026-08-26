@@ -226,7 +226,7 @@ struct ModelProfile {
 ModelProfile profileForModel(const int model)
 {
     ModelProfile profile {};
-    switch (std::clamp(model, 0, 4))
+    switch (std::clamp(model, 0, 6))
     {
     case 0: // Upright.
         profile.oscMix = 0.45f;
@@ -281,7 +281,7 @@ ModelProfile profileForModel(const int model)
         profile.driveScale = 1.25f;
         profile.forcedDrive = 2;
         break;
-    default: // Industrial.
+    case 4: // Industrial.
         profile.oscMix = 0.95f;
         profile.subMix = 0.42f;
         profile.bodyAmount = 0.28f;
@@ -293,6 +293,32 @@ ModelProfile profileForModel(const int model)
         profile.sustainScale = 0.70f;
         profile.driveScale = 1.75f;
         profile.forcedDrive = 3;
+        break;
+    case 5: // Reese — dark detuned saw, dominant sub, minimal filter movement.
+        profile.oscMix = 0.78f;
+        profile.subMix = 0.92f;
+        profile.bodyAmount = 0.35f;
+        profile.biteAmount = 0.06f;
+        profile.cutoffBias = 0.16f;
+        profile.resonanceBias = 0.12f;
+        profile.envScale = 0.08f;
+        profile.decayScale = 0.85f;
+        profile.sustainScale = 0.92f;
+        profile.driveScale = 0.72f;
+        profile.forcedWave = 2;
+        break;
+    default: // Hoover — nasal, sweeping, high resonance filter dive.
+        profile.oscMix = 0.95f;
+        profile.subMix = 0.12f;
+        profile.bodyAmount = 0.10f;
+        profile.biteAmount = 0.82f;
+        profile.cutoffBias = 0.68f;
+        profile.resonanceBias = 0.75f;
+        profile.envScale = 1.0f;
+        profile.decayScale = 0.28f;
+        profile.sustainScale = 0.28f;
+        profile.driveScale = 1.55f;
+        profile.forcedWave = 2;
         break;
     }
     return profile;
@@ -331,6 +357,7 @@ public:
         currentFrequency_ = 55.0f;
         phase_ = 0.0f;
         subPhase_ = 0.0f;
+        detunePhase_ = 0.0f;
         punch_ = 0.0f;
         active_ = false;
         velocity_ = 0.0f;
@@ -390,6 +417,7 @@ public:
             currentFrequency_ = targetFrequency_;
             phase_ = 0.0f;
             subPhase_ = 0.0f;
+            detunePhase_ = 0.0f;
             filter_.reset();
             bodyLow_.reset();
             bodyHigh_.reset();
@@ -489,8 +517,18 @@ public:
 
         const WobbleFrame wobble = wobble_.process(wobbleConfig(), sampleRate_);
 
+        const float detuneOffsetCents = params_.values[static_cast<std::size_t>(ParamId::detuneOffset)];
+        const float detuneLevel = params_.values[static_cast<std::size_t>(ParamId::detuneLevel)];
+        const float detuneVoice = detuneLevel > 0.001f
+                                      ? oscillator(wave, detunePhase_) * detuneLevel * profile.oscMix
+                                      : 0.0f;
+
         advancePhase(phase_, currentFrequency_);
         advancePhase(subPhase_, currentFrequency_ * 0.5f);
+        const float detuneRatio = detuneOffsetCents > 0.001f
+                                      ? std::pow(2.0f, detuneOffsetCents / 1200.0f)
+                                      : 1.0f;
+        advancePhase(detunePhase_, currentFrequency_ * detuneRatio);
 
         const float harmonicMult = params_.values[static_cast<std::size_t>(ParamId::harmonic)];
         const float harmonicLevel = params_.values[static_cast<std::size_t>(ParamId::harmonicLevel)];
@@ -503,7 +541,7 @@ public:
         const float effectiveSubLevel = clampUnit(subLevel * profile.subMix * subWobbleMod * (1.0f + envSubMix * amp));
 
         const float bodyAmount = params_.values[static_cast<std::size_t>(ParamId::body)] * profile.bodyAmount;
-        const float dry = main * profile.oscMix + sub * effectiveSubLevel + harmonicSig;
+        const float dry = main * profile.oscMix + sub * effectiveSubLevel + harmonicSig + detuneVoice;
         const float source = dry * (1.0f - bodyAmount * 0.45f) +
                              body * bodyAmount * 1.65f +
                              transient;
@@ -679,20 +717,30 @@ private:
     {
         const float squelch = params_.values[static_cast<std::size_t>(ParamId::squelch)];
         const float drive = params_.values[static_cast<std::size_t>(ParamId::drive)] * profile.driveScale + squelch * 0.18f;
-        const float amount = 1.0f + drive * 9.0f;
         input = sanitizeAudio(input + std::sin(phase_ * kTwoPi) * squelch * drive * 0.12f);
         switch (std::clamp(driveType, 0, 3))
         {
-        case 0:
+        case 0: // Clean — gentle soft saturation, unchanged.
             return std::tanh(input * (1.0f + drive * 1.5f));
-        case 1:
-            return std::tanh(input * amount) * (0.75f + drive * 0.20f);
-        case 2:
-            return std::tanh((input + std::sin(phase_ * kTwoPi) * drive * 0.15f) * amount);
-        default:
+        case 1: // Amp — hard saturation with x|x| shaping for odd harmonics.
         {
-            const float folded = std::sin(input * (1.5f + drive * 12.0f));
-            return std::tanh((folded * drive + input * (1.0f - drive * 0.35f)) * 1.6f);
+            const float gained = input * (1.0f + drive * 18.0f);
+            const float shaped = gained + gained * std::fabs(gained) * drive * 0.35f;
+            return std::tanh(shaped) * 0.82f;
+        }
+        case 2: // Acid — resonant sine injection with 3rd harmonic feedback.
+        {
+            const float mod = std::sin(phase_ * kTwoPi) * drive * 0.50f;
+            const float third = std::sin(phase_ * kTwoPi * 3.0f) * drive * 0.28f;
+            const float gained = (input + mod + third) * (1.0f + drive * 14.0f);
+            return std::tanh(gained);
+        }
+        default: // Fold — aggressive wave folding, dominates at high drive.
+        {
+            const float foldGain = 2.5f + drive * 22.0f;
+            const float folded = std::sin(input * foldGain);
+            const float foldMix = 0.40f + drive * 0.55f;
+            return sanitizeAudio((folded * foldMix + input * (1.0f - foldMix)) * (1.8f + drive * 0.8f));
         }
         }
     }
@@ -725,6 +773,7 @@ private:
     float currentFrequency_ = 55.0f;
     float phase_ = 0.0f;
     float subPhase_ = 0.0f;
+    float detunePhase_ = 0.0f;
     float punch_ = 0.0f;
     float velocity_ = 0.0f;
     float dcX_ = 0.0f;

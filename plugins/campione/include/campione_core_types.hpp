@@ -27,7 +27,7 @@ struct SampleZone {
     float attackMs     = 5.0f;
     float decayMs      = 100.0f;
     float sustainLevel = 1.0f;
-    float releaseMs    = 200.0f;
+    float releaseMs    = 0.0f;
     // Filter
     int   filterType     = 0;       // 0=LP 1=BP 2=HP 3=Notch
     float filterCutoffHz = 20000.0f;

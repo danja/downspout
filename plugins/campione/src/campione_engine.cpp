@@ -179,9 +179,18 @@ void processBlock(EngineState& state,
                     v.lastFilterType   = -1;
                 }
             } else if (status == 0x80u || (status == 0x90u && vel == 0u)) {  // note-off
-                for (Voice& v : state.voices)
-                    if (v.active && v.midiNote == note && v.midiChannel == channel)
+                for (Voice& v : state.voices) {
+                    if (!v.active || v.midiNote != note || v.midiChannel != channel) continue;
+                    const bool hasRelease = (v.zoneIndex >= 0 &&
+                                             v.zoneIndex < static_cast<int>(zones.size()) &&
+                                             zones[static_cast<std::size_t>(v.zoneIndex)].releaseMs > 0.0f);
+                    if (hasRelease) {
                         v.adsrPhase = Voice::AdsrPhase::Release;
+                    } else {
+                        v.active    = false;
+                        v.adsrPhase = Voice::AdsrPhase::Idle;
+                    }
+                }
             }
         }
 
