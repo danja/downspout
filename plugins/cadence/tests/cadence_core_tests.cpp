@@ -123,12 +123,16 @@ void testSerializationRoundTrip()
 
 void testHighColorFavorsJazzCadenceRoles()
 {
+    // Provide melodically meaningful capture data to drive a ii-V-I in C.
+    // Segment 0 uniform; segments 1/2/3 emphasise D/G/C as dominant pitches
+    // so the root-preference scoring aligns with the jazz-cadence bonuses.
     std::array<SegmentCapture, kMaxSegments> capture {};
-    for (int s = 0; s < 4; ++s) {
-        for (int pc = 0; pc < 12; ++pc) {
-            capture[static_cast<std::size_t>(s)].duration[static_cast<std::size_t>(pc)] = 0.02;
-        }
-    }
+    for (int s = 0; s < 4; ++s)
+        for (int pc = 0; pc < 12; ++pc)
+            capture[static_cast<std::size_t>(s)].duration[static_cast<std::size_t>(pc)] = 0.02f;
+    capture[1].duration[2] = 0.20f;  // D-heavy → ii (Dm7)
+    capture[2].duration[7] = 0.20f;  // G-heavy → V (G7)
+    capture[3].duration[0] = 0.20f;  // C-heavy → I (Cmaj7)
 
     Controls controls = defaultControls();
     controls.key = 0;
@@ -158,12 +162,16 @@ void testHighColorFavorsJazzCadenceRoles()
 
 void testHighColorFavorsCircleOfFifthsAndSuspendedDominant()
 {
+    // Melodic emphasis on each root so the root-preference scoring reinforces
+    // the classical circle-of-fifths bonuses: Am→Dm→Gsus4→C.
     std::array<SegmentCapture, kMaxSegments> capture {};
-    for (int s = 0; s < 4; ++s) {
-        for (int pc = 0; pc < 12; ++pc) {
-            capture[static_cast<std::size_t>(s)].duration[static_cast<std::size_t>(pc)] = 0.02;
-        }
-    }
+    for (int s = 0; s < 4; ++s)
+        for (int pc = 0; pc < 12; ++pc)
+            capture[static_cast<std::size_t>(s)].duration[static_cast<std::size_t>(pc)] = 0.02f;
+    capture[0].duration[9] = 0.20f;  // A-heavy → vi (Am)
+    capture[1].duration[2] = 0.20f;  // D-heavy → ii (Dm)
+    capture[2].duration[7] = 0.20f;  // G-heavy → V (Gsus4)
+    capture[3].duration[0] = 0.20f;  // C-heavy → I (C)
 
     Controls controls = defaultControls();
     controls.key = 0;

@@ -64,7 +64,7 @@ double syncQuarters(const int choice, const Transport& transport) noexcept
     const double beat = beatQuarters(transport);
     const double bar = beat * std::max(1.0, transport.beatsPerBar);
     switch (std::clamp(choice, 0, kSyncChoiceCount - 1)) {
-    case 0: return beat * 0.25;
+    case 0: return 0.25;       // 1 sixteenth note — fixed regardless of beat type
     case 1: return beat * 0.5;
     case 2: return beat;
     case 3: return beat * 2.0;
@@ -77,6 +77,7 @@ double syncQuarters(const int choice, const Transport& transport) noexcept
 void beginLoopCapture(State& state, const std::uint32_t length) noexcept
 {
     state.loopLength = std::clamp(length, 1u, std::max(1u, state.bufferFrames - 1u));
+    state.configuredLoopLength = state.loopLength;
     state.loopPosition = 0;
     state.loopCapturing = true;
     state.loopCaptureRequested = false;
@@ -157,6 +158,7 @@ void reset(State& state) noexcept
     state.loopCapturing = false;
     state.loopLength = 1;
     state.loopPosition = 0;
+    state.configuredLoopLength = 0;
     state.timeMidiActive = false;
     state.feedbackMidiActive = false;
     state.timeMidiValue = 0.0f;
@@ -321,7 +323,7 @@ OutputStatus process(State& state,
         } else {
             const std::uint32_t desiredLength = std::clamp(
                 static_cast<std::uint32_t>(std::lround(targetDelayFrames)), 1u, state.bufferFrames - 2u);
-            if (state.loopCaptureRequested || state.loopLength != desiredLength)
+            if (state.loopCaptureRequested || state.configuredLoopLength != desiredLength)
                 beginLoopCapture(state, desiredLength);
             if (state.loopCapturing) {
                 state.leftBuffer[state.loopPosition] = sanitize(inputLeft);

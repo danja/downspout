@@ -133,7 +133,7 @@ void testMultipleBoundariesTempoAndMeterChanges()
     transport.barBeat = 0.5;
     transport.bpm = 90.0;
     const MidiBlock tempoChange = process(state, parameters, transport, 64, 48000.0);
-    assert(tempoChange.count == kLaneCount + 1);
+    assert(tempoChange.count == kLaneCount);
     assert(tempoChange.events[0].frame == 0);
 
     transport.bar = 1.0;

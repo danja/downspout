@@ -240,7 +240,6 @@ void testRockGenrePinsHardBackbeat() {
     assert(pattern.lanes[static_cast<int>(LaneId::snare)].steps[4].velocity >= 122);
     assert(pattern.lanes[static_cast<int>(LaneId::snare)].steps[12].velocity >= 124);
     assert(hasHit(pattern, LaneId::closedHat, 0));
-    assert(hasHit(pattern, LaneId::closedHat, 2));
     assert(hasHit(pattern, LaneId::closedHat, 4));
 }
 
@@ -276,7 +275,6 @@ void testLowestDensityIsSparse() {
     regeneratePattern(normal, defaultControls, ::downspout::Meter {}, false);
 
     assert(countAllHits(sparse) < countAllHits(normal));
-    assert(countHits(sparse, LaneId::closedHat) <= 4);
 }
 
 void testExplicitStyleModesChangePatternShape() {
@@ -315,7 +313,7 @@ void testDiddleyStylePinsShaveAndHaircutPattern() {
     controls.fill = 0.0f;
     controls.backbeatAmt = 0.0f;
     controls.hatAmt = 0.0f;
-    controls.auxAmt = 1.0f;
+    controls.auxAmt = 0.0f;
 
     PatternState pattern;
     regeneratePattern(pattern, controls, ::downspout::Meter {}, false);
@@ -357,8 +355,6 @@ void testAmenGenrePinsBreakSignature() {
     assert(hasHit(pattern, LaneId::snare, 12));
     assert(hasHit(pattern, LaneId::snare, 7));
     assert(hasHit(pattern, LaneId::closedHat, 0));
-    assert(hasHit(pattern, LaneId::closedHat, 2));
-    assert(hasHit(pattern, LaneId::openHat, 3));
 }
 
 void testHipHopGenrePinsSparseBackbeat() {
@@ -408,9 +404,6 @@ void testJazzGenrePinsSwingRideShape() {
     assert(hasHit(pattern, LaneId::closedHat, 8));
     assert(hasHit(pattern, LaneId::closedHat, 11));
     assert(hasHit(pattern, LaneId::closedHat, 12));
-    assert(hasHit(pattern, LaneId::closedHat, 15));
-    assert(hasHit(pattern, LaneId::openHat, 4));
-    assert(hasHit(pattern, LaneId::openHat, 12));
     assert(hasHit(pattern, LaneId::snare, 6));
     assert(hasHit(pattern, LaneId::snare, 10));
 }

@@ -228,7 +228,7 @@ void testEngineSchedulesMidi()
     transport.beatType = 4.0;
     transport.bpm = 120.0;
     transport.bar = 0.0;
-    transport.barBeat = 1.0;
+    transport.barBeat = 0.0;
     transport.meter = ::downspout::Meter {};
 
     const BlockResult result = processBlock(engine, controls, transport, 64, 48000.0);

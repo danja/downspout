@@ -20,6 +20,8 @@ The drum sound recognition part of the system doesn't find any matches when test
 
 ~/Music/samples/loops/Drum\ Loops/KSMB1_0_SandmanBreak_Original_CD.wav
 
+Create a helper system for Campione in JS using third_party/freesound-js to obtain drum sample to run the sound recognition algorithms over. You can find the API key in .env (Keep this secret!).
+
 ## Rift
 
 Allow control from Drift

@@ -134,6 +134,7 @@ struct State {
     bool loopCapturing = false;
     std::uint32_t loopLength = 1;
     std::uint32_t loopPosition = 0;
+    std::uint32_t configuredLoopLength = 0;
 };
 
 void prepare(State& state, double sampleRate);
