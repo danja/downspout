@@ -22,6 +22,10 @@ The drum sound recognition part of the system doesn't find any matches when test
 
 Allow control from Drift
 
+## Gremlin
+
+Simplify UI, make sounds more varied.
+
 ## Lightverb
 
 Remove the SIGNAL FLOW block - is it only labels?
