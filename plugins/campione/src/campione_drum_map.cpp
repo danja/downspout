@@ -517,8 +517,9 @@ static std::unordered_map<int, float> scoreAcoustic(const sp_profile_t& p)
         if (high_end > 0.58) hs += 0.40f;
         else if (high_end > 0.42) hs += 0.20f;
         if (flatness > 0.40) hs += 0.25f;
-        if (eff_dur < 0.14) hs += 0.25f;
-        else if (eff_dur < 0.25) hs += 0.10f;
+        // Wider window than textbook: real samples carry bleed/room tail
+        if (eff_dur < 0.25) hs += 0.25f;
+        else if (eff_dur < 0.55) hs += 0.10f;
         if (tcentr < 0.25) hs += 0.10f;
         s[42] += hs;
         s[44] += hs * 0.70f;   // Pedal HH
@@ -529,7 +530,9 @@ static std::unordered_map<int, float> scoreAcoustic(const sp_profile_t& p)
         float hs = 0.0f;
         if (high_end > 0.50) hs += 0.35f;
         if (flatness > 0.35) hs += 0.25f;
-        if (eff_dur > 0.18 && eff_dur < 2.0) hs += 0.30f;
+        // Raised lower bound so closed HH with bleed isn't pulled into open HH
+        if (eff_dur > 0.40 && eff_dur < 2.0) hs += 0.30f;
+        else if (eff_dur > 0.22 && eff_dur < 2.0) hs += 0.12f;
         if (tcentr > 0.28) hs += 0.10f;
         s[46] += hs;
     }
@@ -539,7 +542,7 @@ static std::unordered_map<int, float> scoreAcoustic(const sp_profile_t& p)
         float cs = 0.0f;
         if (high_end > 0.52) cs += 0.35f;
         if (flatness > 0.35) cs += 0.20f;
-        if (eff_dur > 0.45) cs += 0.30f;
+        if (eff_dur > 0.30) cs += 0.30f;   // was 0.45; previews/slices are often clipped
         if (r2 < 0.45) cs += 0.15f;   // multi-modal decay
         s[49] += cs;
         s[57] += cs * 0.85f;
