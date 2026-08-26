@@ -35,8 +35,11 @@ public:
         std::function<std::string()>       stopRecording;  // → "" or error
 
         // ── Zone management ───────────────────────────────────────────────
-        std::function<std::string(const std::string&)> loadZone;     // path → "" or error
-        std::function<std::string(int)>                removeZone;   // index → "" or error
+        std::function<std::string(const std::string&)> loadZone;         // path → "" or error
+        std::function<std::string(const std::string&)> importWavetable;  // path → "" or error
+        std::function<std::string(int)>                removeZone;       // index → "" or error
+        std::function<std::string(int, int)>           reorderZone;      // from, to → "" or error
+        std::function<void(int)>                       previewZone;      // zone index
         std::function<std::string(int, int, int, int, bool,
                                   uint32_t, uint32_t, int)> updateZone;   // → "" or error; last int = octaveShift
         // ADSR+filter+pan+muted: negative float values = preserve existing; -2 int = preserve

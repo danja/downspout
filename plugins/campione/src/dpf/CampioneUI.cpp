@@ -49,6 +49,7 @@ using downspout::campione::kStateKeyPatchLoad;
 using downspout::campione::kStateKeyDataDir;
 using downspout::campione::kStateKeyZonePreview;
 using downspout::campione::kStateKeyWavetableImport;
+using downspout::campione::kStateKeyZoneClear;
 using downspout::campione::kDefaultDataDir;
 
 struct Rect {
@@ -2044,6 +2045,8 @@ private:
             { nullptr,      true  },
             { "Save Patch", false },
             { "Load Patch", false },
+            { nullptr,      true  },
+            { "Clear All",  false },
             { "Settings",   false },
             { "MCP Toggle", false },
         };
@@ -2101,6 +2104,8 @@ private:
             { nullptr,      true  },
             { "Save Patch", false },
             { "Load Patch", false },
+            { nullptr,      true  },
+            { "Clear All",  false },
             { "Settings",   false },
             { "MCP Toggle", false },
         };
@@ -2186,13 +2191,21 @@ private:
             openFileBrowser(opts);
             break;
         }
-        case 7: // Settings
+        case 7: // separator — never reached
+            break;
+        case 8: // Clear All
+            setState(kStateKeyZoneClear, "");
+            zones_.clear();
+            selectedZone_ = -1;
+            repaint();
+            break;
+        case 9: // Settings
             dialogText_ = dataDir_;
             dialogMode_ = kDialogSettings;
             getWindow().focus();
             repaint();
             break;
-        case 8: { // MCP Toggle
+        case 10: { // MCP Toggle
             const float newVal = values_[kParamMcpEnabled] >= 0.5f ? 0.0f : 1.0f;
             values_[kParamMcpEnabled] = newVal;
             editParameter(kParamMcpEnabled, true);

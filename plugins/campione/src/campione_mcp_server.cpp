@@ -106,6 +106,21 @@ static json buildToolsList()
          {"description","Load a WAV file from disk and add it as a new zone."},
          {"inputSchema", makeSchema({{"path", strProp("Absolute path to WAV file")}}, {"path"})}},
 
+        {{"name","import_wavetable"},
+         {"description","Import a single-cycle WAV as a wavetable zone with auto-detected loop points. Use for oscillator waveforms and single-cycle content."},
+         {"inputSchema", makeSchema({{"path", strProp("Absolute path to WAV file")}}, {"path"})}},
+
+        {{"name","reorder_zone"},
+         {"description","Move a zone from one position to another. MIDI ranges are redistributed to preserve the keyboard layout."},
+         {"inputSchema", makeSchema({
+             {"from", intProp("Source zone index (0-based)")},
+             {"to",   intProp("Destination index (zone inserted before this position)")}
+         }, {"from","to"})}},
+
+        {{"name","preview_zone"},
+         {"description","Trigger a one-shot preview playback of a zone at its root note."},
+         {"inputSchema", makeSchema({{"index", intProp("Zone index")}}, {"index"})}},
+
         {{"name","remove_zone"},
          {"description","Remove a zone by index (0-based)."},
          {"inputSchema", makeSchema({{"index", intProp("Zone index")}}, {"index"})}},
@@ -379,6 +394,29 @@ std::string CampioneMcpServer::dispatch(const std::string& body)
                 const std::string err  = api_.loadZone(path);
                 if (!err.empty()) throw std::runtime_error(err);
                 return makeResult(textContent("zone loaded: " + path), id).dump();
+            }
+
+            if (name == "import_wavetable") {
+                const std::string path = args.at("path").get<std::string>();
+                const std::string err  = api_.importWavetable(path);
+                if (!err.empty()) throw std::runtime_error(err);
+                return makeResult(textContent("wavetable loaded: " + path), id).dump();
+            }
+
+            if (name == "reorder_zone") {
+                int from = args.at("from").get<int>();
+                int to   = args.at("to").get<int>();
+                const std::string err = api_.reorderZone(from, to);
+                if (!err.empty()) throw std::runtime_error(err);
+                char buf[64]; std::snprintf(buf, sizeof(buf), "zone moved from %d to %d", from, to);
+                return makeResult(textContent(buf), id).dump();
+            }
+
+            if (name == "preview_zone") {
+                int idx = args.at("index").get<int>();
+                api_.previewZone(idx);
+                char buf[48]; std::snprintf(buf, sizeof(buf), "preview triggered for zone %d", idx);
+                return makeResult(textContent(buf), id).dump();
             }
 
             if (name == "remove_zone") {
