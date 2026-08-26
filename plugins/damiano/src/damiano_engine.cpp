@@ -79,34 +79,24 @@ float tubeShape(float x, float drive) noexcept
     }
 }
 
-// Sine wavefolder: smooth fold with no derivative discontinuities.
-// Normalized by 2/π so that f'(0) = 1, matching the triangle fold's small-signal
-// gain. Without normalization sin(πu/2) has gain π/2 ≈ 1.57 per stage, which
-// amplifies noise floors (d × π/2)^n times — the "latches into noise" behaviour.
-// With normalization the per-stage gain = d, identical to the triangle fold.
-// Peak output is 2/π ≈ 0.637 instead of 1.0; use Output Gain to compensate.
+// Sine wavefolder: smooth fold — sin(πu/2) with no derivative discontinuities.
+// Output is bounded by ±1; peak occurs at u=1, nulls at u=0,2,4,...
 float sineFold(float u) noexcept
 {
-    constexpr float kHalfPi  = static_cast<float>(M_PI) * 0.5f;
-    constexpr float kNorm    = 2.0f / static_cast<float>(M_PI);  // restores f'(0)=1
-    return kNorm * std::sin(u * kHalfPi);
+    constexpr float kHalfPi = static_cast<float>(M_PI) * 0.5f;
+    return std::sin(u * kHalfPi);
 }
 
-// Wavefold: parallel sum of `count` sine folds at linearly spaced depths.
-// Depths: d*(1/count), d*(3/count), ..., d*(2count-1)/count.
-// Small-signal gain = d (Σ(2i-1) for i=1..count = count², avg/count = d).
-// Drive sets the maximum fold depth; count adds harmonic variety. Both are
-// clearly audible. No serial gain compounding, so no noise-latch at high settings.
+// Wavefold: count multiplies the fold frequency so each additional fold
+// produces a distinct harmonic character — count=1 gives one fold peak per
+// drive range, count=8 gives eight. Drive and count jointly scale the
+// argument of sineFold; output is always bounded by ±1. No serial gain
+// compounding, so no noise amplification or latch.
 float wavefoldShape(float x, float drive, int count) noexcept
 {
     if (count <= 0) return x;
     const float d = 1.0f + (drive - 1.0f) * (2.0f / 9.0f);
-    float sum = 0.0f;
-    for (int i = 1; i <= count; ++i) {
-        const float di = d * static_cast<float>(2 * i - 1) / static_cast<float>(count);
-        sum += sineFold(x * di);
-    }
-    return sum / static_cast<float>(count);
+    return sineFold(x * d * static_cast<float>(count));
 }
 
 float processSample(float x, Mode mode, float drive, float tanhComp, int foldCount) noexcept
