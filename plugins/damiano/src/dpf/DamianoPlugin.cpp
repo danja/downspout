@@ -3,13 +3,18 @@
 #include "damiano_core.hpp"
 
 #include <array>
+#include <cstdlib>
+#include <cstring>
 
 START_NAMESPACE_DISTRHO
 
 namespace {
 
+// Parameter indices are stable — never reorder these.
+// Mode is kept at index 0 (non-automatable) for project save/restore compatibility.
+// Real-time mode switching uses the "mode" state key (bypasses IParameterChanges/automation).
 enum ParameterIndex : uint32_t {
-    kParamMode       = 0,
+    kParamMode = 0,
     kParamDrive,
     kParamTone,
     kParamFoldCount,
@@ -20,7 +25,9 @@ enum ParameterIndex : uint32_t {
     kParameterCount
 };
 
-using CoreParameters = downspout::damiano::Parameters;
+constexpr const char* kStateModeKey = "mode";
+
+using CoreParameters  = downspout::damiano::Parameters;
 using CoreEngineState = downspout::damiano::EngineState;
 using CoreAudioBlock  = downspout::damiano::AudioBlock;
 
@@ -32,7 +39,7 @@ class DamianoPlugin : public Plugin
 {
 public:
     DamianoPlugin()
-        : Plugin(kParameterCount, 0, 0)
+        : Plugin(kParameterCount, 0, 1)  // 1 state key for mode
     {
         parameters_ = downspout::damiano::clampParameters(parameters_);
     }
@@ -66,14 +73,18 @@ protected:
 
     void initParameter(uint32_t index, Parameter& parameter) override
     {
-        parameter.hints = kParameterIsAutomatable;
+        // No parameter is automatable: Reaper's Write/Latch mode records any
+        // slider touch and replays it every process() block via IParameterChanges,
+        // permanently overriding subsequent UI changes. Drive is controlled live
+        // via MIDI CC (Drift); all other parameters are set-and-forget.
+        parameter.hints = 0;
 
         switch (index)
         {
         case kParamMode:
             parameter.name   = "Mode";
             parameter.symbol = "mode";
-            parameter.hints |= kParameterIsInteger;
+            parameter.hints  = kParameterIsInteger;
             parameter.ranges = {0.0f, 5.0f, static_cast<float>(downspout::damiano::kModeTanh)};
             break;
         case kParamDrive:
@@ -89,7 +100,7 @@ protected:
         case kParamFoldCount:
             parameter.name   = "Fold Count";
             parameter.symbol = "fold_count";
-            parameter.hints |= kParameterIsInteger;
+            parameter.hints  = kParameterIsInteger;
             parameter.ranges = {1.0f, 8.0f, 2.0f};
             break;
         case kParamMix:
@@ -105,15 +116,25 @@ protected:
         case kParamCCDrive:
             parameter.name   = "CC Drive";
             parameter.symbol = "cc_drive";
-            parameter.hints |= kParameterIsInteger;
+            parameter.hints  = kParameterIsInteger;
             parameter.ranges = {0.0f, 127.0f, 0.0f};
             break;
         case kParamCCChannel:
             parameter.name   = "CC Channel";
             parameter.symbol = "cc_channel";
-            parameter.hints |= kParameterIsInteger;
+            parameter.hints  = kParameterIsInteger;
             parameter.ranges = {1.0f, 16.0f, 1.0f};
             break;
+        }
+    }
+
+    void initState(uint32_t index, State& state) override
+    {
+        if (index == 0) {
+            state.key          = kStateModeKey;
+            state.label        = "Mode";
+            state.hints        = kStateIsOnlyForDSP;
+            state.defaultValue = "1";  // kModeTanh
         }
     }
 
@@ -147,15 +168,25 @@ protected:
         parameters_ = downspout::damiano::clampParameters(parameters_);
     }
 
+    // State key "mode": set by the UI for real-time switching.
+    // This path bypasses IParameterChanges so Reaper automation cannot interfere.
+    void setState(const char* key, const char* value) override
+    {
+        if (std::strcmp(key, kStateModeKey) == 0 && value != nullptr) {
+            const int m = std::atoi(value);
+            parameters_.mode = static_cast<float>(std::max(0, std::min(5, m)));
+        }
+    }
+
     void activate() override
     {
-        engineState_ = CoreEngineState{};
+        engineState_      = CoreEngineState{};
+        ccDriveOverride_  = -1.0f;
     }
 
     void run(const float** inputs, float** outputs, uint32_t frames,
              const MidiEvent* midiEvents, uint32_t midiEventCount) override
     {
-        // Scan CC messages to update drive override
         const int ccNum = static_cast<int>(parameters_.ccDrive);
         const int ccCh  = static_cast<int>(parameters_.ccChannel);
 
@@ -169,10 +200,8 @@ protected:
                 const bool isCC       = (status & 0xF0) == 0xB0;
                 const int evChannel   = (status & 0x0F) + 1;
 
-                if (isCC && evChannel == ccCh && evCCNum == static_cast<uint8_t>(ccNum)) {
-                    // Map CC 0–127 → drive 1.0–10.0
+                if (isCC && evChannel == ccCh && evCCNum == static_cast<uint8_t>(ccNum))
                     ccDriveOverride_ = 1.0f + (static_cast<float>(evCCVal) / 127.0f) * 9.0f;
-                }
             }
         } else {
             ccDriveOverride_ = -1.0f;

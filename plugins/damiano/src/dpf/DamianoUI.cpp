@@ -4,14 +4,17 @@
 #include <array>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <string>
 
 START_NAMESPACE_DISTRHO
 
 namespace {
 
+// Must match DamianoPlugin.cpp exactly — indices are stable across saves
 enum ParameterIndex : uint32_t {
-    kParamMode       = 0,
+    kParamMode = 0,
     kParamDrive,
     kParamTone,
     kParamFoldCount,
@@ -104,6 +107,14 @@ protected:
         }
     }
 
+    void stateChanged(const char* key, const char* value) override
+    {
+        if (std::strcmp(key, "mode") == 0 && value != nullptr) {
+            currentMode_ = std::atoi(value);
+            repaint();
+        }
+    }
+
     void onNanoDisplay() override
     {
         const float W = static_cast<float>(getWidth());
@@ -127,11 +138,13 @@ protected:
             return false;
         }
 
-        // Mode buttons
+        // Mode buttons — sent as state (bypasses host automation)
         for (int m = 0; m < 6; ++m) {
             if (modeRect(m).contains(mx, my)) {
-                setParameterValue(kParamMode, static_cast<float>(m));
-                values_[kParamMode] = static_cast<float>(m);
+                char buf[4];
+                std::snprintf(buf, sizeof(buf), "%d", m);
+                setState("mode", buf);
+                currentMode_ = m;
                 repaint();
                 return true;
             }
@@ -158,13 +171,13 @@ protected:
 
 private:
     std::array<float, kParameterCount> values_ {};
-    int dragSlider_ = -1;
+    int   currentMode_ = 1;  // default kModeTanh; updated via stateChanged
+    int   dragSlider_  = -1;
 
     static constexpr float kPad     = 20.0f;
     static constexpr float kModeTop = 62.0f;
-    static constexpr float kSliderX = 310.0f;  // left edge of slider column
+    static constexpr float kSliderX = 310.0f;
 
-    // Six mode buttons arranged in a 2-column grid
     [[nodiscard]] Rect modeRect(int m) const noexcept
     {
         constexpr float bw = 118.0f, bh = 34.0f, gapX = 8.0f, gapY = 7.0f;
@@ -206,7 +219,6 @@ private:
 
     void drawHeader(float W)
     {
-        // Title bar
         beginPath();
         fillColor(28, 28, 36, 255);
         rect(0, 0, W, 50.0f);
@@ -223,7 +235,6 @@ private:
         fillColor(130, 130, 120, 255);
         text(kPad + 140.0f, 25.0f, "stereo distortion  |  MIDI CC via Drift", nullptr);
 
-        // Divider
         beginPath();
         strokeColor(60, 60, 70, 255);
         strokeWidth(1.0f);
@@ -232,7 +243,6 @@ private:
         stroke();
         closePath();
 
-        // Column headers
         fontSize(10.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fillColor(100, 100, 95, 255);
@@ -242,11 +252,9 @@ private:
 
     void drawModeButtons()
     {
-        const int activeMode = static_cast<int>(std::round(values_[kParamMode]));
-
         for (int m = 0; m < 6; ++m) {
             const Rect  r      = modeRect(m);
-            const bool  active = (m == activeMode);
+            const bool  active = (m == currentMode_);
 
             beginPath();
             roundedRect(r.x, r.y, r.w, r.h, 5.0f);
@@ -270,7 +278,6 @@ private:
 
     void drawSliders(float W)
     {
-        const int activeMode    = static_cast<int>(std::round(values_[kParamMode]));
         constexpr int kWavefold = 5;
 
         for (int s = 0; s < static_cast<int>(kSliders.size()); ++s) {
@@ -278,11 +285,9 @@ private:
             const Rect        tr = sliderTrackRect(s);
             const float       labelY = tr.y - 18.0f;
 
-            // Dim Fold Count when not in wavefold mode
-            const bool dimmed = (def.index == kParamFoldCount && activeMode != kWavefold);
+            const bool dimmed = (def.index == kParamFoldCount && currentMode_ != kWavefold);
             const uint8_t alpha = dimmed ? 70 : 255;
 
-            // Row separator
             if (s > 0) {
                 beginPath();
                 strokeColor(35, 35, 42, 255);
@@ -293,26 +298,22 @@ private:
                 closePath();
             }
 
-            // Label
             fontSize(12.0f);
             textAlign(ALIGN_LEFT | ALIGN_TOP);
             fillColor(190, 190, 180, alpha);
             text(kSliderX, labelY, def.label, nullptr);
 
-            // Value text
             fontSize(11.0f);
             textAlign(ALIGN_RIGHT | ALIGN_TOP);
             fillColor(dimmed ? 80 : 220, dimmed ? 80 : 160, dimmed ? 75 : 60, alpha);
             text(W - kPad, labelY, formatValue(def, values_[def.index]).c_str(), nullptr);
 
-            // Track background
             beginPath();
             roundedRect(tr.x, tr.y, tr.w, tr.h, 7.0f);
             fillColor(40, 40, 50, alpha);
             fill();
             closePath();
 
-            // Track fill
             const float norm = clampf((values_[def.index] - def.min) / (def.max - def.min),
                                       0.0f, 1.0f);
             if (norm > 0.0f) {

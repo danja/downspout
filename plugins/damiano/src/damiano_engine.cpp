@@ -79,21 +79,23 @@ float tubeShape(float x, float drive) noexcept
     }
 }
 
-// Triangle wavefolder: maps any finite float into [-1, 1] with triangle reflection
-float triangleFold(float u) noexcept
+// Sine wavefolder: smooth fold with no derivative discontinuities.
+// sin(π u/2) has the same period (4), zero, and peak positions as a triangle
+// fold but smooth transitions → avoids the aliasing noise that triangle corners
+// create at any drive above the fold threshold.
+float sineFold(float u) noexcept
 {
-    if (!std::isfinite(u)) return 0.0f;
-    u += 1.0f;
-    float t = std::fmod(u, 4.0f);
-    if (t < 0.0f) t += 4.0f;
-    return (t < 2.0f) ? (t - 1.0f) : (3.0f - t);
+    constexpr float kHalfPi = static_cast<float>(M_PI) * 0.5f;
+    return std::sin(u * kHalfPi);
 }
 
-// Wavefold: apply triangle fold `count` times, each time driving the signal
+// Wavefold: apply sine fold `count` times, each time driving the signal.
+// Per-stage drive is scaled from [1,10] → [1,3].
 float wavefoldShape(float x, float drive, int count) noexcept
 {
+    const float d = 1.0f + (drive - 1.0f) * (2.0f / 9.0f);
     for (int i = 0; i < count; ++i) {
-        x = triangleFold(x * drive);
+        x = sineFold(x * d);
     }
     return x;
 }
