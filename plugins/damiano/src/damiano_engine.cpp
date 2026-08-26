@@ -92,15 +92,21 @@ float sineFold(float u) noexcept
     return kNorm * std::sin(u * kHalfPi);
 }
 
-// Wavefold: apply sine fold `count` times, each time driving the signal.
-// Per-stage drive is scaled from [1,10] → [1,3].
+// Wavefold: parallel sum of `count` sine folds at linearly spaced depths.
+// Depths: d*(1/count), d*(3/count), ..., d*(2count-1)/count.
+// Small-signal gain = d (Σ(2i-1) for i=1..count = count², avg/count = d).
+// Drive sets the maximum fold depth; count adds harmonic variety. Both are
+// clearly audible. No serial gain compounding, so no noise-latch at high settings.
 float wavefoldShape(float x, float drive, int count) noexcept
 {
+    if (count <= 0) return x;
     const float d = 1.0f + (drive - 1.0f) * (2.0f / 9.0f);
-    for (int i = 0; i < count; ++i) {
-        x = sineFold(x * d);
+    float sum = 0.0f;
+    for (int i = 1; i <= count; ++i) {
+        const float di = d * static_cast<float>(2 * i - 1) / static_cast<float>(count);
+        sum += sineFold(x * di);
     }
-    return x;
+    return sum / static_cast<float>(count);
 }
 
 float processSample(float x, Mode mode, float drive, float tanhComp, int foldCount) noexcept

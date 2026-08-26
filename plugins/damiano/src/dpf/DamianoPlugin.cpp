@@ -25,7 +25,14 @@ enum ParameterIndex : uint32_t {
     kParameterCount
 };
 
-constexpr const char* kStateModeKey = "mode";
+constexpr const char* kStateModeKey       = "mode";
+constexpr const char* kStateDriveKey      = "drive";
+constexpr const char* kStateToneKey       = "tone";
+constexpr const char* kStateFoldCountKey  = "fold_count";
+constexpr const char* kStateMixKey        = "mix";
+constexpr const char* kStateOutputGainKey = "output_gain";
+constexpr const char* kStateCCDriveKey    = "cc_drive";
+constexpr const char* kStateCCChannelKey  = "cc_channel";
 
 using CoreParameters  = downspout::damiano::Parameters;
 using CoreEngineState = downspout::damiano::EngineState;
@@ -39,7 +46,7 @@ class DamianoPlugin : public Plugin
 {
 public:
     DamianoPlugin()
-        : Plugin(kParameterCount, 0, 1)  // 1 state key for mode
+        : Plugin(kParameterCount, 0, 8)  // 8 state keys: mode + 7 sliders
     {
         parameters_ = downspout::damiano::clampParameters(parameters_);
     }
@@ -130,11 +137,22 @@ protected:
 
     void initState(uint32_t index, State& state) override
     {
-        if (index == 0) {
-            state.key          = kStateModeKey;
-            state.label        = "Mode";
+        struct StateInfo { const char* key; const char* label; const char* def; };
+        static constexpr StateInfo kInfo[] = {
+            { kStateModeKey,       "Mode",        "1"   },
+            { kStateDriveKey,      "Drive",       "2"   },
+            { kStateToneKey,       "Tone",        "50"  },
+            { kStateFoldCountKey,  "Fold Count",  "2"   },
+            { kStateMixKey,        "Mix",         "100" },
+            { kStateOutputGainKey, "Output Gain", "0"   },
+            { kStateCCDriveKey,    "CC Drive",    "0"   },
+            { kStateCCChannelKey,  "CC Channel",  "1"   },
+        };
+        if (index < 8) {
+            state.key          = kInfo[index].key;
+            state.label        = kInfo[index].label;
             state.hints        = kStateIsOnlyForDSP;
-            state.defaultValue = "1";  // kModeTanh
+            state.defaultValue = kInfo[index].def;
         }
     }
 
@@ -153,29 +171,38 @@ protected:
         }
     }
 
-    void setParameterValue(uint32_t index, float value) override
+    void setParameterValue(uint32_t /*index*/, float /*value*/) override
     {
-        switch (index) {
-        case kParamMode:       parameters_.mode       = value; break;
-        case kParamDrive:      parameters_.drive      = value; break;
-        case kParamTone:       parameters_.tone       = value; break;
-        case kParamFoldCount:  parameters_.foldCount  = value; break;
-        case kParamMix:        parameters_.mix        = value; break;
-        case kParamOutputGain: parameters_.outputGain = value; break;
-        case kParamCCDrive:    parameters_.ccDrive    = value; break;
-        case kParamCCChannel:  parameters_.ccChannel  = value; break;
-        }
-        parameters_ = downspout::damiano::clampParameters(parameters_);
+        // Intentional no-op. REAPER Write/Latch mode records touches and
+        // replays them via IParameterChanges every process block, permanently
+        // overriding live values. All slider state is driven through setState
+        // so host automation cannot interfere.
     }
 
-    // State key "mode": set by the UI for real-time switching.
-    // This path bypasses IParameterChanges so Reaper automation cannot interfere.
+    // All parameters driven through state: bypasses IParameterChanges so
+    // REAPER automation cannot override live UI changes.
     void setState(const char* key, const char* value) override
     {
-        if (std::strcmp(key, kStateModeKey) == 0 && value != nullptr) {
+        if (!value) return;
+        if (std::strcmp(key, kStateModeKey) == 0) {
             const int m = std::atoi(value);
             parameters_.mode = static_cast<float>(std::max(0, std::min(5, m)));
+        } else if (std::strcmp(key, kStateDriveKey) == 0) {
+            parameters_.drive      = static_cast<float>(std::atof(value));
+        } else if (std::strcmp(key, kStateToneKey) == 0) {
+            parameters_.tone       = static_cast<float>(std::atof(value));
+        } else if (std::strcmp(key, kStateFoldCountKey) == 0) {
+            parameters_.foldCount  = static_cast<float>(std::atof(value));
+        } else if (std::strcmp(key, kStateMixKey) == 0) {
+            parameters_.mix        = static_cast<float>(std::atof(value));
+        } else if (std::strcmp(key, kStateOutputGainKey) == 0) {
+            parameters_.outputGain = static_cast<float>(std::atof(value));
+        } else if (std::strcmp(key, kStateCCDriveKey) == 0) {
+            parameters_.ccDrive    = static_cast<float>(std::atof(value));
+        } else if (std::strcmp(key, kStateCCChannelKey) == 0) {
+            parameters_.ccChannel  = static_cast<float>(std::atof(value));
         }
+        parameters_ = downspout::damiano::clampParameters(parameters_);
     }
 
     void activate() override

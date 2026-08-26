@@ -1,18 +1,8 @@
 # downspout agent notes
 
-API keys are sacred. They must not be shared.
-
-## Purpose
-
-`downspout` exists to port selected `flues` LV2 plugins into more broadly usable native plugin formats, with DPF as the current framework candidate and VST3 as the primary initial target.
-
-Initial plugin targets:
-
-- `bassgen`: MIDI generator with transport sync and persistent pattern state
-- `p-mix`: audio effect with transport-aware probabilistic switching
 
 ## Working rules
-
+- API keys are sacred. They must not be shared.
 - Do not run any `git` operations unless the user explicitly approves them.
 - Keep DSP/domain logic separate from framework glue.
 - Prefer portable C++ for shared logic; isolate DPF-, OS-, and format-specific code behind thin wrappers.
@@ -23,6 +13,7 @@ Initial plugin targets:
 - Document assumptions when mapping LV2 concepts to DPF/VST3, especially transport, state, and UI behavior.
 - On a fresh CMake build directory, do not launch the build command until configure has finished. In this repo, starting `cmake --build` too early regularly races cache generation and fails with `Error: could not load cache`.
 - Log mistakes in MISTAKES.md (what happened, root cause, prevention).
+- Periodically review docs/todo.md and revise as necessary
 
 ## Repository shape
 

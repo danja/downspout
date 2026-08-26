@@ -12,6 +12,21 @@ The following tests FAILED:
          45 - downspout_guardian_core_tests (Subprocess aborted)
          48 - downspout_campione_core_tests (Subprocess aborted)
 
+## Campione
+
+The drum sound recognition part of the system doesn't find any matches when tested on samples lifted from a drum loop 
+
+~/Music/samples/loops/Drum\ Loops/KSMB1_0_SandmanBreak_Original_CD.wav
+
+## Rift
+
+Allow control from Drift
+
+## Lightverb
+
+Remove the SIGNAL FLOW block - is it only labels?
+Think about lightweight additions: spatial? Presets?
+
 ## Floozy
 
 the planned Ground integration) currently

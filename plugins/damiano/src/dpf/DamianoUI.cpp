@@ -42,16 +42,17 @@ struct SliderDef {
     const char* unit;
     float       min, max;
     bool        integer;
+    const char* stateKey;
 };
 
 constexpr std::array<SliderDef, 7> kSliders = {{
-    {kParamDrive,      "Drive",       "",   1.0f,   10.0f, false},
-    {kParamTone,       "Tone",        "%",  0.0f,  100.0f, false},
-    {kParamFoldCount,  "Folds",       "",   1.0f,    8.0f, true },
-    {kParamMix,        "Mix",         "%",  0.0f,  100.0f, false},
-    {kParamOutputGain, "Output Gain", "dB", -24.0f, 24.0f, false},
-    {kParamCCDrive,    "CC Number",   "",   0.0f,  127.0f, true },
-    {kParamCCChannel,  "CC Channel",  "",   1.0f,   16.0f, true },
+    {kParamDrive,      "Drive",       "",   1.0f,   10.0f, false, "drive"       },
+    {kParamTone,       "Tone",        "%",  0.0f,  100.0f, false, "tone"        },
+    {kParamFoldCount,  "Folds",       "",   1.0f,    8.0f, true,  "fold_count"  },
+    {kParamMix,        "Mix",         "%",  0.0f,  100.0f, false, "mix"         },
+    {kParamOutputGain, "Output Gain", "dB", -24.0f, 24.0f, false, "output_gain" },
+    {kParamCCDrive,    "CC Number",   "",   0.0f,  127.0f, true,  "cc_drive"    },
+    {kParamCCChannel,  "CC Channel",  "",   1.0f,   16.0f, true,  "cc_channel"  },
 }};
 
 [[nodiscard]] float clampf(float v, float lo, float hi) noexcept
@@ -99,20 +100,33 @@ public:
     }
 
 protected:
-    void parameterChanged(uint32_t index, float value) override
+    void parameterChanged(uint32_t /*index*/, float /*value*/) override
     {
-        if (index < kParameterCount) {
-            values_[index] = value;
-            repaint();
-        }
+        // All slider values arrive via stateChanged; ignore host parameter
+        // notifications so REAPER automation replay cannot override the display.
     }
 
     void stateChanged(const char* key, const char* value) override
     {
-        if (std::strcmp(key, "mode") == 0 && value != nullptr) {
+        if (!value) return;
+        if (std::strcmp(key, "mode") == 0) {
             currentMode_ = std::atoi(value);
-            repaint();
+        } else if (std::strcmp(key, "drive") == 0) {
+            values_[kParamDrive]      = static_cast<float>(std::atof(value));
+        } else if (std::strcmp(key, "tone") == 0) {
+            values_[kParamTone]       = static_cast<float>(std::atof(value));
+        } else if (std::strcmp(key, "fold_count") == 0) {
+            values_[kParamFoldCount]  = static_cast<float>(std::atof(value));
+        } else if (std::strcmp(key, "mix") == 0) {
+            values_[kParamMix]        = static_cast<float>(std::atof(value));
+        } else if (std::strcmp(key, "output_gain") == 0) {
+            values_[kParamOutputGain] = static_cast<float>(std::atof(value));
+        } else if (std::strcmp(key, "cc_drive") == 0) {
+            values_[kParamCCDrive]    = static_cast<float>(std::atof(value));
+        } else if (std::strcmp(key, "cc_channel") == 0) {
+            values_[kParamCCChannel]  = static_cast<float>(std::atof(value));
         }
+        repaint();
     }
 
     void onNanoDisplay() override
@@ -203,7 +217,9 @@ private:
         const float t        = clampf((mx - tr.x) / tr.w, 0.0f, 1.0f);
         float v              = def.min + t * (def.max - def.min);
         if (def.integer) v   = std::round(v);
-        setParameterValue(def.index, v);
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "%.6g", v);
+        setState(def.stateKey, buf);
         values_[def.index] = v;
         repaint();
     }
