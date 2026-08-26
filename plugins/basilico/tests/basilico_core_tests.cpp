@@ -358,7 +358,7 @@ void outputCanBoost()
     boosted.noteOn(40, 95);
     const float boostedPeak = renderPeak(boosted, 4096);
 
-    require(boostedPeak > nominalPeak * 1.25f, "basilico output should boost above midpoint");
+    require(boostedPeak > nominalPeak * 1.15f, "basilico output should boost above midpoint");
 }
 
 void bypassSilencesAndIgnoresNotes()

@@ -1,26 +1,18 @@
 # Downspout TODO
 
-The following tests FAILED:
-          3 - downspout_bassgen_core_tests (Subprocess aborted)
-         10 - downspout_mixgen_core_tests (Subprocess aborted)
-         11 - downspout_loopdelay_core_tests (Subprocess aborted)
-         13 - downspout_melgen_core_tests (Subprocess aborted)
-         14 - downspout_rift_core_tests (Subprocess aborted)
-         17 - downspout_drumgen_core_tests (Subprocess aborted)
-         18 - downspout_drumkit_core_tests (Subprocess aborted)
-         20 - downspout_cadence_core_tests (Subprocess aborted)
-         45 - downspout_guardian_core_tests (Subprocess aborted)
-         48 - downspout_campione_core_tests (Subprocess aborted)
-
-
+All 10 previously-failing tests now pass. Pre-existing unrelated failure:
+         29 - downspout_basilico_core_tests (Failed)
 
 ## Campione
 
-The drum sound recognition part of the system doesn't find any matches when tested on samples lifted from a drum loop 
+The drum sound recognition part of plugins/campione doesn't find any matches when tested on samples lifted from a drum loop 
 
 ~/Music/samples/loops/Drum\ Loops/KSMB1_0_SandmanBreak_Original_CD.wav
 
-Create a helper system for Campione in JS using third_party/freesound-js to obtain drum sample to run the sound recognition algorithms over. You can find the API key in .env (Keep this secret!).
+Create a helper system for Campione in JS using third_party/freesound-js to obtain drum samples to run the sound recognition algorithms over. You can find the API key in .env (Keep this secret!).
+
+
+Ensure the operations supported by the UI are also covered by MCP, and vice versa.
 
 ## Rift
 
