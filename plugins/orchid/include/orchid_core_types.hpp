@@ -18,16 +18,18 @@ struct MidiInputEvent {
     std::uint8_t data[4] {};
 };
 
-// ── Scale names (index 0 = None, 1-20 match bassgen ScaleId 0-19) ─────────────
+// ── Scale names (index 0 = None, 1-23 in canonical order) ─────────────────────
 
-inline constexpr int kOrchidScaleCount = 21;
+inline constexpr int kOrchidScaleCount = 24;
 
 inline constexpr const char* kOrchidScaleNames[kOrchidScaleCount] = {
     "None",
-    "Minor", "Major", "Dorian", "Phrygian", "Pent Minor",
-    "Blues", "Mixolydian", "Harm Minor", "Pent Major", "Locrian",
-    "Phryg Dom", "Lydian", "Melodic Min", "Whole Tone", "Altered",
-    "Half-Whole", "Whole-Half", "Bebop Dom", "Bebop Major", "Bebop Minor",
+    "Major", "Ionian", "Minor", "Harm Minor", "Mel Minor",
+    "Dorian", "Phrygian", "Lydian", "Mixolydian", "Locrian",
+    "Phryg Dom", "Neo Major", "Neo Minor",
+    "Pent Major", "Pent Minor", "Blues",
+    "Whole Tone", "Altered", "Half-Whole", "Whole-Half",
+    "Bebop Dom", "Bebop Major", "Bebop Minor",
 };
 
 enum class ProcessorState : std::uint8_t {

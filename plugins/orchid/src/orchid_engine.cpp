@@ -12,20 +12,23 @@ constexpr double kTargetAnalysisRate = 12000.0;
 
 // ── Scale interval tables (chromatic semitone offsets from root) ───────────────
 
-constexpr int kScaleIntervals[20][12] = {
-    {0, 2, 3, 5, 7, 8, 10, -1, -1, -1, -1, -1},   // Minor (7)
+constexpr int kScaleIntervals[23][12] = {
     {0, 2, 4, 5, 7, 9, 11, -1, -1, -1, -1, -1},   // Major (7)
+    {0, 2, 4, 5, 7, 9, 11, -1, -1, -1, -1, -1},   // Ionian (7)
+    {0, 2, 3, 5, 7, 8, 10, -1, -1, -1, -1, -1},   // Minor (7)
+    {0, 2, 3, 5, 7, 8, 11, -1, -1, -1, -1, -1},   // Harmonic Minor (7)
+    {0, 2, 3, 5, 7, 9, 11, -1, -1, -1, -1, -1},   // Melodic Minor (7)
     {0, 2, 3, 5, 7, 9, 10, -1, -1, -1, -1, -1},   // Dorian (7)
     {0, 1, 3, 5, 7, 8, 10, -1, -1, -1, -1, -1},   // Phrygian (7)
-    {0, 3, 5, 7, 10, -1, -1, -1, -1, -1, -1, -1}, // Pent Minor (5)
-    {0, 3, 5, 6, 7, 10, -1, -1, -1, -1, -1, -1},  // Blues (6)
+    {0, 2, 4, 6, 7, 9, 11, -1, -1, -1, -1, -1},   // Lydian (7)
     {0, 2, 4, 5, 7, 9, 10, -1, -1, -1, -1, -1},   // Mixolydian (7)
-    {0, 2, 3, 5, 7, 8, 11, -1, -1, -1, -1, -1},   // Harmonic Minor (7)
-    {0, 2, 4, 7, 9, -1, -1, -1, -1, -1, -1, -1},  // Pent Major (5)
     {0, 1, 3, 5, 6, 8, 10, -1, -1, -1, -1, -1},   // Locrian (7)
     {0, 1, 4, 5, 7, 8, 10, -1, -1, -1, -1, -1},   // Phrygian Dominant (7)
-    {0, 2, 4, 6, 7, 9, 11, -1, -1, -1, -1, -1},   // Lydian (7)
-    {0, 2, 3, 5, 7, 9, 11, -1, -1, -1, -1, -1},   // Melodic Minor (7)
+    {0, 1, 4, 5, 7, 9, 11, -1, -1, -1, -1, -1},   // Neo Major (7)
+    {0, 1, 3, 5, 7, 8, 10, -1, -1, -1, -1, -1},   // Neo Minor (7)
+    {0, 2, 4, 7, 9, -1, -1, -1, -1, -1, -1, -1},  // Pent Major (5)
+    {0, 3, 5, 7, 10, -1, -1, -1, -1, -1, -1, -1}, // Pent Minor (5)
+    {0, 3, 5, 6, 7, 10, -1, -1, -1, -1, -1, -1},  // Blues (6)
     {0, 2, 4, 6, 8, 10, -1, -1, -1, -1, -1, -1},  // Whole Tone (6)
     {0, 1, 3, 4, 6, 8, 10, -1, -1, -1, -1, -1},   // Altered (7)
     {0, 1, 3, 4, 6, 7, 9, 10, -1, -1, -1, -1},    // Half-Whole Diminished (8)
@@ -35,14 +38,14 @@ constexpr int kScaleIntervals[20][12] = {
     {0, 2, 3, 4, 5, 7, 9, 10, -1, -1, -1, -1},    // Bebop Minor (8)
 };
 
-constexpr int kScaleIntervalCounts[20] = {
-    7, 7, 7, 7, 5, 6, 7, 7, 5, 7, 7, 7, 7, 6, 7, 8, 8, 8, 8, 8
+constexpr int kScaleIntervalCounts[23] = {
+    7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 5, 5, 6, 6, 7, 8, 8, 8, 8, 8
 };
 
 // Quantize a semitone offset to the nearest in-scale pitch.
-// scaleIndex is 0-19 (already offset by -1 from the parameter value 1-20).
+// scaleIndex is 0-22 (already offset by -1 from the parameter value 1-23).
 [[nodiscard]] int quantizeSemitone(const int semitone, const int scaleIndex) {
-    if (scaleIndex < 0 || scaleIndex >= 20) return semitone;
+    if (scaleIndex < 0 || scaleIndex >= 23) return semitone;
     const int count = kScaleIntervalCounts[scaleIndex];
     int best = semitone;
     int bestDist = 1000;
@@ -72,7 +75,7 @@ constexpr int kScaleIntervalCounts[20] = {
     int semitoneShift = state.activeMidiNote - static_cast<int>(std::lround(rootMidi));
 
     const int scaleParam = static_cast<int>(std::lround(parameters.scale));
-    if (scaleParam >= 1 && scaleParam <= 20)
+    if (scaleParam >= 1 && scaleParam <= 23)
         semitoneShift = quantizeSemitone(semitoneShift, scaleParam - 1);
 
     return std::pow(2.0, static_cast<double>(semitoneShift) / 12.0);

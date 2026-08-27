@@ -100,11 +100,12 @@ constexpr const char* kNoteNames[] = {
 };
 
 constexpr const char* kScaleNames[] = {
-    "Chrom", "Major", "Nat Min", "Harm Min", "Pent Maj",
-    "Pent Min", "Blues", "Dorian", "Mixolyd",
-    "Lydian", "Mel Min", "Whole", "Altered", "H-W Dim",
-    "W-H Dim", "Bebop Dom", "Bebop Maj", "Bebop Min",
-    "Phrygian", "Locrian", "Phryg Dom"
+    "Chrom", "Major", "Ionian", "Nat Min", "Harm Min", "Mel Min",
+    "Dorian", "Phrygian", "Lydian", "Mixolyd", "Locrian", "Phryg Dom",
+    "Neo Maj", "Neo Min",
+    "Pent Maj", "Pent Min", "Blues",
+    "Whole", "Altered", "H-W Dim", "W-H Dim",
+    "Bebop Dom", "Bebop Maj", "Bebop Min"
 };
 
 static_assert((sizeof(kScaleNames) / sizeof(kScaleNames[0])) == downspout::counterpointer::SCALE_COUNT,

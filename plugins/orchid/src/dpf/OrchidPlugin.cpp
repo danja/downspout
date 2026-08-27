@@ -48,10 +48,12 @@ using downspout::orchid::kStateParameters;
 
 ParameterEnumerationValue kScaleEnumValues[kOrchidScaleCount] = {
     {0.0f, "None"},
-    {1.0f, "Minor"}, {2.0f, "Major"}, {3.0f, "Dorian"}, {4.0f, "Phrygian"}, {5.0f, "Pent Minor"},
-    {6.0f, "Blues"}, {7.0f, "Mixolydian"}, {8.0f, "Harm Minor"}, {9.0f, "Pent Major"}, {10.0f, "Locrian"},
-    {11.0f, "Phryg Dom"}, {12.0f, "Lydian"}, {13.0f, "Melodic Min"}, {14.0f, "Whole Tone"}, {15.0f, "Altered"},
-    {16.0f, "Half-Whole"}, {17.0f, "Whole-Half"}, {18.0f, "Bebop Dom"}, {19.0f, "Bebop Major"}, {20.0f, "Bebop Minor"},
+    {1.0f, "Major"}, {2.0f, "Ionian"}, {3.0f, "Minor"}, {4.0f, "Harm Minor"}, {5.0f, "Mel Minor"},
+    {6.0f, "Dorian"}, {7.0f, "Phrygian"}, {8.0f, "Lydian"}, {9.0f, "Mixolydian"}, {10.0f, "Locrian"},
+    {11.0f, "Phryg Dom"}, {12.0f, "Neo Major"}, {13.0f, "Neo Minor"},
+    {14.0f, "Pent Major"}, {15.0f, "Pent Minor"}, {16.0f, "Blues"},
+    {17.0f, "Whole Tone"}, {18.0f, "Altered"}, {19.0f, "Half-Whole"}, {20.0f, "Whole-Half"},
+    {21.0f, "Bebop Dom"}, {22.0f, "Bebop Major"}, {23.0f, "Bebop Minor"},
 };
 
 ParameterEnumerationValue kStateEnumValues[] = {

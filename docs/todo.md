@@ -1,7 +1,5 @@
 # Downspout TODO
 
-To all plugins which offer a choice of scales, add Ionian, Neopolitan Major (NeoMajor) and Neopolitan Minor (NeoMinor)
-
 ## Producer Control Bus
 
 Read /home/danny/github/downspout/docs/producer-control-bus.md and see what might need tweaking/implementing in the plugins to make this more intuitive and useful in /home/danny/github/transmission

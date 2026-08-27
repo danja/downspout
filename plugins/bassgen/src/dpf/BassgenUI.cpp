@@ -86,9 +86,11 @@ constexpr SliderDef kSliders[] = {
 };
 
 constexpr const char* kScaleNames[] = {
-    "Minor", "Major", "Dorian", "Phrygian", "Pent Minor", "Blues",
-    "Mixolydian", "Harm Minor", "Pent Major", "Locrian", "Phryg Dom",
-    "Lydian", "Mel Minor", "Whole Tone", "Altered", "Half-Whole Dim",
+    "Major", "Ionian", "Minor", "Harm Minor", "Mel Minor",
+    "Dorian", "Phrygian", "Lydian", "Mixolydian", "Locrian",
+    "Phryg Dom", "Neo Major", "Neo Minor",
+    "Pent Major", "Pent Minor", "Blues",
+    "Whole Tone", "Altered", "Half-Whole Dim",
     "Whole-Half Dim", "Bebop Dom", "Bebop Major", "Bebop Minor"
 };
 
@@ -120,7 +122,7 @@ constexpr const char* kConductorChNames[] = {
 };
 
 constexpr SelectorDef kSelectors[] = {
-    {kParamScale, "Scale", kScaleNames, 20},
+    {kParamScale, "Scale", kScaleNames, 23},
     {kParamGenre, "Genre", kGenreNames, 12},
     {kParamStyleMode, "Style", kStyleNames, 6},
     {kParamSubdivision, "Subdivision", kSubdivisionNames, 4},

@@ -11,13 +11,16 @@ inline constexpr std::size_t kGridHeight = 8;
 inline constexpr std::size_t kCellCount = kGridWidth * kGridHeight;
 
 enum class ScaleId : std::uint32_t {
-    minor = 0,
+    chromatic = 0,
     major,
+    ionian,
+    minor,
     dorian,
     mixolydian,
     pentatonic,
     blues,
-    chromatic,
+    neapolitanMajor,
+    neapolitanMinor,
     altered,
     halfWholeDiminished,
     wholeHalfDiminished,
@@ -72,13 +75,16 @@ inline constexpr std::uint32_t kParamPassInput = kParamStatusCellStart + static_
 inline constexpr std::uint32_t kParameterCount = kParamPassInput + 1;
 
 inline constexpr std::array<const char*, static_cast<std::size_t>(ScaleId::count)> kScaleNames = {{
-    "Minor",
+    "Chromatic",
     "Major",
+    "Ionian",
+    "Minor",
     "Dorian",
     "Mixolydian",
     "Pentatonic",
     "Blues",
-    "Chromatic",
+    "Neo Major",
+    "Neo Minor",
     "Altered",
     "Half-Whole Dim",
     "Whole-Half Dim",

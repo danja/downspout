@@ -44,21 +44,27 @@ constexpr int kScaleWholeHalfDiminished[] = {0, 2, 3, 5, 6, 8, 9, 11};
 constexpr int kScaleBebopDominant[] = {0, 2, 4, 5, 7, 9, 10, 11};
 constexpr int kScaleBebopMajor[] = {0, 2, 4, 5, 7, 8, 9, 11};
 constexpr int kScaleBebopMinor[] = {0, 2, 3, 4, 5, 7, 9, 10};
+constexpr int kScaleIonian[] = {0, 2, 4, 5, 7, 9, 11};
+constexpr int kScaleNeapolitanMajor[] = {0, 1, 4, 5, 7, 9, 11};
+constexpr int kScaleNeapolitanMinor[] = {0, 1, 3, 5, 7, 8, 10};
 
 constexpr ScaleDef kScales[] = {
-    {kScaleMinor, 7},
     {kScaleMajor, 7},
+    {kScaleIonian, 7},
+    {kScaleMinor, 7},
+    {kScaleHarmonicMinor, 7},
+    {kScaleMelodicMinor, 7},
     {kScaleDorian, 7},
     {kScalePhrygian, 7},
-    {kScalePentMinor, 5},
-    {kScaleBlues, 6},
+    {kScaleLydian, 7},
     {kScaleMixolydian, 7},
-    {kScaleHarmonicMinor, 7},
-    {kScalePentMajor, 5},
     {kScaleLocrian, 7},
     {kScalePhrygianDominant, 7},
-    {kScaleLydian, 7},
-    {kScaleMelodicMinor, 7},
+    {kScaleNeapolitanMajor, 7},
+    {kScaleNeapolitanMinor, 7},
+    {kScalePentMajor, 5},
+    {kScalePentMinor, 5},
+    {kScaleBlues, 6},
     {kScaleWholeTone, 6},
     {kScaleAltered, 7},
     {kScaleHalfWholeDiminished, 8},

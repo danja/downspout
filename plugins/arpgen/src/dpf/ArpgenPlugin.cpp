@@ -30,10 +30,10 @@ ParameterEnumerationValue kKeyValues[] = {
     {8.0f, "G#"}, {9.0f, "A"}, {10.0f, "A#"}, {11.0f, "B"}
 };
 ParameterEnumerationValue kScaleValues[] = {
-    {0.0f, "Major"}, {1.0f, "Natural Minor"}, {2.0f, "Harmonic Minor"},
-    {3.0f, "Dorian"}, {4.0f, "Mixolydian"}, {5.0f, "Pentatonic Major"},
-    {6.0f, "Pentatonic Minor"}, {7.0f, "Blues"}, {8.0f, "Lydian"},
-    {9.0f, "Phrygian Dominant"}
+    {0.0f, "Major"}, {1.0f, "Ionian"}, {2.0f, "Natural Minor"}, {3.0f, "Harmonic Minor"},
+    {4.0f, "Dorian"}, {5.0f, "Mixolydian"}, {6.0f, "Lydian"}, {7.0f, "Phrygian Dominant"},
+    {8.0f, "Neo Major"}, {9.0f, "Neo Minor"}, {10.0f, "Pentatonic Major"},
+    {11.0f, "Pentatonic Minor"}, {12.0f, "Blues"}
 };
 ParameterEnumerationValue kShapeValues[] = {
     {0.0f, "Scale Run"}, {1.0f, "Triad"}, {2.0f, "Seventh"}

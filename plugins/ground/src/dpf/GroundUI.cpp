@@ -92,9 +92,11 @@ constexpr SliderDef kSliders[] = {
 };
 
 constexpr const char* kScaleNames[] = {
-    "Minor", "Major", "Dorian", "Phrygian", "Pent Minor", "Blues",
-    "Mixolydian", "Harm Minor", "Pent Major", "Locrian", "Phryg Dom",
-    "Lydian", "Mel Minor", "Whole Tone", "Altered", "Half-Whole Dim",
+    "Major", "Ionian", "Minor", "Harm Minor", "Mel Minor",
+    "Dorian", "Phrygian", "Lydian", "Mixolydian", "Locrian",
+    "Phryg Dom", "Neo Major", "Neo Minor",
+    "Pent Major", "Pent Minor", "Blues",
+    "Whole Tone", "Altered", "Half-Whole Dim",
     "Whole-Half Dim", "Bebop Dom", "Bebop Major", "Bebop Minor"
 };
 
@@ -164,7 +166,7 @@ constexpr const char* kConductorChNames[] = {
 };
 
 constexpr SelectorDef kSelectors[] = {
-    {kParamScale, "Scale", kScaleNames, 20, nullptr},
+    {kParamScale, "Scale", kScaleNames, 23, nullptr},
     {kParamStyle, "Style", kStyleNames, static_cast<int>(std::size(kStyleNames)), nullptr},
     {kParamFormShape, "Shape", kFormShapeNames, static_cast<int>(std::size(kFormShapeNames)), nullptr},
     {kParamFormBars, "Form", kFormNames, static_cast<int>(std::size(kFormNames)), kFormValues},

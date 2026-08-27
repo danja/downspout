@@ -60,29 +60,35 @@ static const int kScaleBebopMinor[] = {0, 2, 3, 4, 5, 7, 9, 10};
 static const int kScalePhrygian[] = {0, 1, 3, 5, 7, 8, 10};
 static const int kScaleLocrian[] = {0, 1, 3, 5, 6, 8, 10};
 static const int kScalePhrygianDominant[] = {0, 1, 4, 5, 7, 8, 10};
+static const int kScaleIonian[] = {0, 2, 4, 5, 7, 9, 11};
+static const int kScaleNeapolitanMajor[] = {0, 1, 4, 5, 7, 9, 11};
+static const int kScaleNeapolitanMinor[] = {0, 1, 3, 5, 7, 8, 10};
 
 static const ScaleDef kScales[SCALE_COUNT] = {
     {kScaleChromatic, 12},
     {kScaleMajor, 7},
+    {kScaleIonian, 7},
     {kScaleNatMinor, 7},
     {kScaleHarmMinor, 7},
+    {kScaleMelodicMinor, 7},
+    {kScaleDorian, 7},
+    {kScalePhrygian, 7},
+    {kScaleLydian, 7},
+    {kScaleMixolydian, 7},
+    {kScaleLocrian, 7},
+    {kScalePhrygianDominant, 7},
+    {kScaleNeapolitanMajor, 7},
+    {kScaleNeapolitanMinor, 7},
     {kScalePentMajor, 5},
     {kScalePentMinor, 5},
     {kScaleBlues, 6},
-    {kScaleDorian, 7},
-    {kScaleMixolydian, 7},
-    {kScaleLydian, 7},
-    {kScaleMelodicMinor, 7},
     {kScaleWholeTone, 6},
     {kScaleAltered, 7},
     {kScaleHalfWholeDiminished, 8},
     {kScaleWholeHalfDiminished, 8},
     {kScaleBebopDominant, 8},
     {kScaleBebopMajor, 8},
-    {kScaleBebopMinor, 8},
-    {kScalePhrygian, 7},
-    {kScaleLocrian, 7},
-    {kScalePhrygianDominant, 7}
+    {kScaleBebopMinor, 8}
 };
 
 int wrap12(const int value)

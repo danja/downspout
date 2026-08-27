@@ -84,9 +84,11 @@ constexpr const char* kNoteNames[] = {
 };
 
 constexpr const char* kScaleNames[] = {
-    "Chrom", "Major", "Nat Min", "Harm Min", "Pent Maj", "Pent Min",
-    "Blues", "Dorian", "Mixolyd", "Phryg", "Locrian", "Phryg Dom",
-    "Lydian", "Mel Min", "Whole", "Altered", "H-W Dim", "W-H Dim",
+    "Chrom", "Major", "Ionian", "Nat Min", "Harm Min", "Mel Min",
+    "Dorian", "Phrygian", "Lydian", "Mixolyd", "Locrian", "Phryg Dom",
+    "Neo Maj", "Neo Min",
+    "Pent Maj", "Pent Min", "Blues",
+    "Whole", "Altered", "H-W Dim", "W-H Dim",
     "Bebop Dom", "Bebop Maj", "Bebop Min"
 };
 
@@ -117,7 +119,7 @@ constexpr const char* kOutputChannelNames[] = {
 
 constexpr SelectorDef kSelectors[] = {
     {kParamKey, "Key", kNoteNames, 12, 0},
-    {kParamScale, "Scale", kScaleNames, 21, 0},
+    {kParamScale, "Scale", kScaleNames, 24, 0},
     {kParamCycleBars, "Cycle", kCycleBarNames, 8, 1},
     {kParamGranularity, "Segment", kGranularityNames, 3, 0},
     {kParamChordSize, "Voicing", kChordSizeNames, 3, 0},

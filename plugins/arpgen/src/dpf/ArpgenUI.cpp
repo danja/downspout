@@ -46,8 +46,10 @@ constexpr const char* kRates[] = {"1/4", "1/8", "1/8T", "1/16", "1/16T", "1/32"}
 constexpr const char* kSlices[] = {"Quarter bar", "Half bar", "Whole bar"};
 constexpr const char* kKeys[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 constexpr const char* kScales[] = {
-    "Major", "Natural minor", "Harmonic minor", "Dorian", "Mixolydian",
-    "Pentatonic major", "Pentatonic minor", "Blues", "Lydian", "Phrygian dominant"
+    "Major", "Ionian", "Natural minor", "Harmonic minor",
+    "Dorian", "Mixolydian", "Lydian", "Phrygian dominant",
+    "Neo major", "Neo minor",
+    "Pentatonic major", "Pentatonic minor", "Blues"
 };
 constexpr const char* kShapes[] = {"Scale run", "Triad stack", "Seventh stack"};
 constexpr const char* kOctaves[] = {"1", "2", "3", "4"};
