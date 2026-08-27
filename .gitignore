@@ -1,5 +1,6 @@
 .env
 build_syrinx_test
+tests/freesound-samples/peaks
 # .codex
 
 # Prerequisites

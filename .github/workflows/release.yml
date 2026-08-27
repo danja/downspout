@@ -234,6 +234,7 @@ jobs:
             echo "- resonance_garden.vst3"
             echo "- orbit.vst3"
             echo "- guardian.vst3"
+            echo "- skream.vst3"
             echo
             echo "Sidecar is currently Linux-only and is omitted from macOS and Windows release assets."
             echo "macOS and Windows release builds are best-effort and do not block Linux publication."

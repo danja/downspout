@@ -1,63 +1,63 @@
 [
   {
-    "file": "kick_1_fs266733.wav",
-    "tag": "kick",
-    "gmNote": 36,
-    "soundId": 266733
-  },
-  {
-    "file": "kick_2_fs337818.wav",
-    "tag": "kick",
-    "gmNote": 36,
-    "soundId": 337818
-  },
-  {
-    "file": "kick_3_fs337820.wav",
-    "tag": "kick",
-    "gmNote": 36,
-    "soundId": 337820
-  },
-  {
-    "file": "kick_4_fs581454.wav",
+    "file": "kick_1_fs581454.wav",
     "tag": "kick",
     "gmNote": 36,
     "soundId": 581454
   },
   {
-    "file": "kick_5_fs581453.wav",
+    "file": "kick_2_fs581453.wav",
     "tag": "kick",
     "gmNote": 36,
     "soundId": 581453
   },
   {
-    "file": "snare_1_fs266733.wav",
-    "tag": "snare",
-    "gmNote": 38,
-    "soundId": 266733
+    "file": "kick_3_fs563338.wav",
+    "tag": "kick",
+    "gmNote": 36,
+    "soundId": 563338
   },
   {
-    "file": "snare_2_fs513440.wav",
+    "file": "kick_4_fs422568.wav",
+    "tag": "kick",
+    "gmNote": 36,
+    "soundId": 422568
+  },
+  {
+    "file": "kick_5_fs671648.wav",
+    "tag": "kick",
+    "gmNote": 36,
+    "soundId": 671648
+  },
+  {
+    "file": "snare_1_fs513440.wav",
     "tag": "snare",
     "gmNote": 38,
     "soundId": 513440
   },
   {
-    "file": "snare_3_fs337818.wav",
-    "tag": "snare",
-    "gmNote": 38,
-    "soundId": 337818
-  },
-  {
-    "file": "snare_4_fs337820.wav",
-    "tag": "snare",
-    "gmNote": 38,
-    "soundId": 337820
-  },
-  {
-    "file": "snare_5_fs270002.wav",
+    "file": "snare_2_fs270002.wav",
     "tag": "snare",
     "gmNote": 38,
     "soundId": 270002
+  },
+  {
+    "file": "snare_3_fs270060.wav",
+    "tag": "snare",
+    "gmNote": 38,
+    "soundId": 270060
+  },
+  {
+    "file": "snare_4_fs693179.wav",
+    "tag": "snare",
+    "gmNote": 38,
+    "soundId": 693179
+  },
+  {
+    "file": "snare_5_fs513438.wav",
+    "tag": "snare",
+    "gmNote": 38,
+    "soundId": 513438
   },
   {
     "file": "closed-hihat_1_fs685866.wav",
@@ -96,88 +96,58 @@
     "soundId": 269932
   },
   {
-    "file": "open-hihat_2_fs581475.wav",
-    "tag": "open-hihat",
-    "gmNote": 46,
-    "soundId": 581475
-  },
-  {
-    "file": "open-hihat_3_fs581466.wav",
-    "tag": "open-hihat",
-    "gmNote": 46,
-    "soundId": 581466
-  },
-  {
-    "file": "open-hihat_4_fs270057.wav",
-    "tag": "open-hihat",
-    "gmNote": 46,
-    "soundId": 270057
-  },
-  {
-    "file": "open-hihat_5_fs270091.wav",
+    "file": "open-hihat_2_fs270091.wav",
     "tag": "open-hihat",
     "gmNote": 46,
     "soundId": 270091
   },
   {
-    "file": "crash_1_fs270002.wav",
-    "tag": "crash",
-    "gmNote": 49,
-    "soundId": 270002
+    "file": "open-hihat_3_fs270080.wav",
+    "tag": "open-hihat",
+    "gmNote": 46,
+    "soundId": 270080
   },
   {
-    "file": "crash_2_fs270060.wav",
-    "tag": "crash",
-    "gmNote": 49,
-    "soundId": 270060
+    "file": "open-hihat_4_fs581476.wav",
+    "tag": "open-hihat",
+    "gmNote": 46,
+    "soundId": 581476
   },
   {
-    "file": "crash_3_fs269932.wav",
-    "tag": "crash",
-    "gmNote": 49,
-    "soundId": 269932
+    "file": "open-hihat_5_fs816813.wav",
+    "tag": "open-hihat",
+    "gmNote": 46,
+    "soundId": 816813
   },
   {
-    "file": "crash_4_fs270067.wav",
+    "file": "crash_1_fs270067.wav",
     "tag": "crash",
     "gmNote": 49,
     "soundId": 270067
   },
   {
-    "file": "crash_5_fs270057.wav",
+    "file": "crash_2_fs581472.wav",
     "tag": "crash",
     "gmNote": 49,
-    "soundId": 270057
+    "soundId": 581472
   },
   {
-    "file": "ride_1_fs270002.wav",
-    "tag": "ride",
-    "gmNote": 51,
-    "soundId": 270002
+    "file": "crash_3_fs270102.wav",
+    "tag": "crash",
+    "gmNote": 49,
+    "soundId": 270102
   },
   {
-    "file": "ride_2_fs270060.wav",
-    "tag": "ride",
-    "gmNote": 51,
-    "soundId": 270060
+    "file": "crash_4_fs270156.wav",
+    "tag": "crash",
+    "gmNote": 49,
+    "soundId": 270156
   },
   {
-    "file": "ride_3_fs269932.wav",
-    "tag": "ride",
-    "gmNote": 51,
-    "soundId": 269932
-  },
-  {
-    "file": "ride_4_fs270067.wav",
-    "tag": "ride",
-    "gmNote": 51,
-    "soundId": 270067
-  },
-  {
-    "file": "ride_5_fs270057.wav",
-    "tag": "ride",
-    "gmNote": 51,
-    "soundId": 270057
+    "file": "crash_5_fs270154.wav",
+    "tag": "crash",
+    "gmNote": 49,
+    "soundId": 270154
   },
   {
     "file": "tom_1_fs522958.wav",
@@ -202,5 +172,209 @@
     "tag": "clap",
     "gmNote": 39,
     "soundId": 388546
+  },
+  {
+    "file": "kick_1_fs260541.wav",
+    "tag": "kick",
+    "gmNote": 36,
+    "soundId": 260541
+  },
+  {
+    "file": "kick_2_fs708817.wav",
+    "tag": "kick",
+    "gmNote": 36,
+    "soundId": 708817
+  },
+  {
+    "file": "kick_3_fs584787.wav",
+    "tag": "kick",
+    "gmNote": 36,
+    "soundId": 584787
+  },
+  {
+    "file": "kick_4_fs424662.wav",
+    "tag": "kick",
+    "gmNote": 36,
+    "soundId": 424662
+  },
+  {
+    "file": "kick_5_fs612614.wav",
+    "tag": "kick",
+    "gmNote": 36,
+    "soundId": 612614
+  },
+  {
+    "file": "snare_1_fs711688.wav",
+    "tag": "snare",
+    "gmNote": 38,
+    "soundId": 711688
+  },
+  {
+    "file": "snare_2_fs513439.wav",
+    "tag": "snare",
+    "gmNote": 38,
+    "soundId": 513439
+  },
+  {
+    "file": "snare_3_fs176346.wav",
+    "tag": "snare",
+    "gmNote": 38,
+    "soundId": 176346
+  },
+  {
+    "file": "snare_4_fs693160.wav",
+    "tag": "snare",
+    "gmNote": 38,
+    "soundId": 693160
+  },
+  {
+    "file": "snare_5_fs355068.wav",
+    "tag": "snare",
+    "gmNote": 38,
+    "soundId": 355068
+  },
+  {
+    "file": "closed-hihat_1_fs513362.wav",
+    "tag": "closed-hihat",
+    "gmNote": 42,
+    "soundId": 513362
+  },
+  {
+    "file": "closed-hihat_2_fs57527.wav",
+    "tag": "closed-hihat",
+    "gmNote": 42,
+    "soundId": 57527
+  },
+  {
+    "file": "closed-hihat_3_fs612831.wav",
+    "tag": "closed-hihat",
+    "gmNote": 42,
+    "soundId": 612831
+  },
+  {
+    "file": "closed-hihat_4_fs270029.wav",
+    "tag": "closed-hihat",
+    "gmNote": 42,
+    "soundId": 270029
+  },
+  {
+    "file": "closed-hihat_5_fs270023.wav",
+    "tag": "closed-hihat",
+    "gmNote": 42,
+    "soundId": 270023
+  },
+  {
+    "file": "open-hihat_1_fs504927.wav",
+    "tag": "open-hihat",
+    "gmNote": 46,
+    "soundId": 504927
+  },
+  {
+    "file": "open-hihat_2_fs708814.wav",
+    "tag": "open-hihat",
+    "gmNote": 46,
+    "soundId": 708814
+  },
+  {
+    "file": "open-hihat_3_fs612837.wav",
+    "tag": "open-hihat",
+    "gmNote": 46,
+    "soundId": 612837
+  },
+  {
+    "file": "open-hihat_4_fs126356.wav",
+    "tag": "open-hihat",
+    "gmNote": 46,
+    "soundId": 126356
+  },
+  {
+    "file": "crash_1_fs270090.wav",
+    "tag": "crash",
+    "gmNote": 49,
+    "soundId": 270090
+  },
+  {
+    "file": "crash_2_fs270157.wav",
+    "tag": "crash",
+    "gmNote": 49,
+    "soundId": 270157
+  },
+  {
+    "file": "crash_3_fs270137.wav",
+    "tag": "crash",
+    "gmNote": 49,
+    "soundId": 270137
+  },
+  {
+    "file": "ride_1_fs270134.wav",
+    "tag": "ride",
+    "gmNote": 51,
+    "soundId": 270134
+  },
+  {
+    "file": "ride_2_fs270115.wav",
+    "tag": "ride",
+    "gmNote": 51,
+    "soundId": 270115
+  },
+  {
+    "file": "tom_1_fs522984.wav",
+    "tag": "tom",
+    "gmNote": 41,
+    "soundId": 522984
+  },
+  {
+    "file": "tom_2_fs581448.wav",
+    "tag": "tom",
+    "gmNote": 41,
+    "soundId": 581448
+  },
+  {
+    "file": "tom_3_fs269970.wav",
+    "tag": "tom",
+    "gmNote": 41,
+    "soundId": 269970
+  },
+  {
+    "file": "tom_4_fs581447.wav",
+    "tag": "tom",
+    "gmNote": 41,
+    "soundId": 581447
+  },
+  {
+    "file": "tom_5_fs572786.wav",
+    "tag": "tom",
+    "gmNote": 41,
+    "soundId": 572786
+  },
+  {
+    "file": "clap_1_fs522977.wav",
+    "tag": "clap",
+    "gmNote": 39,
+    "soundId": 522977
+  },
+  {
+    "file": "clap_2_fs273770.wav",
+    "tag": "clap",
+    "gmNote": 39,
+    "soundId": 273770
+  },
+  {
+    "file": "clap_3_fs264178.wav",
+    "tag": "clap",
+    "gmNote": 39,
+    "soundId": 264178
+  },
+  {
+    "file": "clap_4_fs612833.wav",
+    "tag": "clap",
+    "gmNote": 39,
+    "soundId": 612833
+  },
+  {
+    "file": "clap_5_fs860388.wav",
+    "tag": "clap",
+    "gmNote": 39,
+    "soundId": 860388
   }
 ]

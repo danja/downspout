@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "campione": {
+      "type": "stdio",
+      "command": "/home/danny/github/downspout/scripts/campione_mcp_proxy.sh"
+    }
+  }
+}

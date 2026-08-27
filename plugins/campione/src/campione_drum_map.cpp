@@ -260,7 +260,7 @@ static const GmNoteName kGmNoteNames[] = {
     {80,"Mute Triangle"}, {81,"Open Triangle"},
 };
 
-static const char* gmNoteName(int note)
+const char* gmNoteName(int note)
 {
     for (const auto& e : kGmNoteNames)
         if (e.note == note) return e.name;

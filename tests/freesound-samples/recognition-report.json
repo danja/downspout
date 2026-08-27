@@ -1,0 +1,569 @@
+[
+  {
+    "file": "kick_1_fs581454.wav",
+    "tag": "kick",
+    "expected": 36,
+    "assigned": 36,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  kick_1_fs581454.wav → Bass Drum 1 (note 36)"
+  },
+  {
+    "file": "kick_2_fs581453.wav",
+    "tag": "kick",
+    "expected": 36,
+    "assigned": 36,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  kick_2_fs581453.wav → Bass Drum 1 (note 36)"
+  },
+  {
+    "file": "kick_3_fs563338.wav",
+    "tag": "kick",
+    "expected": 36,
+    "assigned": 35,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  kick_3_fs563338.wav → Bass Drum 2 (note 35)"
+  },
+  {
+    "file": "kick_4_fs422568.wav",
+    "tag": "kick",
+    "expected": 36,
+    "assigned": 35,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  kick_4_fs422568.wav → Bass Drum 2 (note 35)"
+  },
+  {
+    "file": "kick_5_fs671648.wav",
+    "tag": "kick",
+    "expected": 36,
+    "assigned": 35,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  kick_5_fs671648.wav → Bass Drum 2 (note 35)"
+  },
+  {
+    "file": "snare_1_fs513440.wav",
+    "tag": "snare",
+    "expected": 38,
+    "assigned": 38,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  snare_1_fs513440.wav → Snare 1 (note 38)"
+  },
+  {
+    "file": "snare_2_fs270002.wav",
+    "tag": "snare",
+    "expected": 38,
+    "assigned": 38,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  snare_2_fs270002.wav → Snare 1 (note 38)"
+  },
+  {
+    "file": "snare_3_fs270060.wav",
+    "tag": "snare",
+    "expected": 38,
+    "assigned": 38,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  snare_3_fs270060.wav → Snare 1 (note 38)"
+  },
+  {
+    "file": "snare_4_fs693179.wav",
+    "tag": "snare",
+    "expected": 38,
+    "assigned": 38,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  snare_4_fs693179.wav → Snare 1 (note 38)"
+  },
+  {
+    "file": "snare_5_fs513438.wav",
+    "tag": "snare",
+    "expected": 38,
+    "assigned": 38,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  snare_5_fs513438.wav → Snare 1 (note 38)"
+  },
+  {
+    "file": "closed-hihat_1_fs685866.wav",
+    "tag": "closed-hihat",
+    "expected": 42,
+    "assigned": 42,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  closed-hihat_1_fs685866.wav → Closed HH (note 42)"
+  },
+  {
+    "file": "closed-hihat_2_fs581475.wav",
+    "tag": "closed-hihat",
+    "expected": 42,
+    "assigned": 42,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  closed-hihat_2_fs581475.wav → Closed HH (note 42)"
+  },
+  {
+    "file": "closed-hihat_3_fs581466.wav",
+    "tag": "closed-hihat",
+    "expected": 42,
+    "assigned": 42,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  closed-hihat_3_fs581466.wav → Closed HH (note 42)"
+  },
+  {
+    "file": "closed-hihat_4_fs270057.wav",
+    "tag": "closed-hihat",
+    "expected": 42,
+    "assigned": 42,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  closed-hihat_4_fs270057.wav → Closed HH (note 42)"
+  },
+  {
+    "file": "closed-hihat_5_fs270089.wav",
+    "tag": "closed-hihat",
+    "expected": 42,
+    "assigned": 42,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  closed-hihat_5_fs270089.wav → Closed HH (note 42)"
+  },
+  {
+    "file": "open-hihat_1_fs269932.wav",
+    "tag": "open-hihat",
+    "expected": 46,
+    "assigned": 42,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  open-hihat_1_fs269932.wav → Closed HH (note 42)"
+  },
+  {
+    "file": "open-hihat_2_fs270091.wav",
+    "tag": "open-hihat",
+    "expected": 46,
+    "assigned": 42,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  open-hihat_2_fs270091.wav → Closed HH (note 42)"
+  },
+  {
+    "file": "open-hihat_3_fs270080.wav",
+    "tag": "open-hihat",
+    "expected": 46,
+    "assigned": 46,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  open-hihat_3_fs270080.wav → Open HH (note 46)"
+  },
+  {
+    "file": "open-hihat_4_fs581476.wav",
+    "tag": "open-hihat",
+    "expected": 46,
+    "assigned": 46,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  open-hihat_4_fs581476.wav → Open HH (note 46)"
+  },
+  {
+    "file": "open-hihat_5_fs816813.wav",
+    "tag": "open-hihat",
+    "expected": 46,
+    "assigned": 46,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  open-hihat_5_fs816813.wav → Open HH (note 46)"
+  },
+  {
+    "file": "crash_1_fs270067.wav",
+    "tag": "crash",
+    "expected": 49,
+    "assigned": 49,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  crash_1_fs270067.wav → Crash 1 (note 49)"
+  },
+  {
+    "file": "crash_2_fs581472.wav",
+    "tag": "crash",
+    "expected": 49,
+    "assigned": 49,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  crash_2_fs581472.wav → Crash 1 (note 49)"
+  },
+  {
+    "file": "crash_3_fs270102.wav",
+    "tag": "crash",
+    "expected": 49,
+    "assigned": 49,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  crash_3_fs270102.wav → Crash 1 (note 49)"
+  },
+  {
+    "file": "crash_4_fs270156.wav",
+    "tag": "crash",
+    "expected": 49,
+    "assigned": 49,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  crash_4_fs270156.wav → Crash 1 (note 49)"
+  },
+  {
+    "file": "crash_5_fs270154.wav",
+    "tag": "crash",
+    "expected": 49,
+    "assigned": 45,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  crash_5_fs270154.wav → Low Tom (note 45)"
+  },
+  {
+    "file": "tom_1_fs522958.wav",
+    "tag": "tom",
+    "expected": 41,
+    "assigned": 43,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  tom_1_fs522958.wav → High Floor Tom (note 43)"
+  },
+  {
+    "file": "clap_1_fs388544.wav",
+    "tag": "clap",
+    "expected": 39,
+    "assigned": 39,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  clap_1_fs388544.wav → Hand Clap (note 39)"
+  },
+  {
+    "file": "clap_2_fs388543.wav",
+    "tag": "clap",
+    "expected": 39,
+    "assigned": 39,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  clap_2_fs388543.wav → Hand Clap (note 39)"
+  },
+  {
+    "file": "clap_3_fs388546.wav",
+    "tag": "clap",
+    "expected": 39,
+    "assigned": 39,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  clap_3_fs388546.wav → Hand Clap (note 39)"
+  },
+  {
+    "file": "kick_1_fs260541.wav",
+    "tag": "kick",
+    "expected": 36,
+    "assigned": 36,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  kick_1_fs260541.wav → Bass Drum 1 (note 36)"
+  },
+  {
+    "file": "kick_2_fs708817.wav",
+    "tag": "kick",
+    "expected": 36,
+    "assigned": 36,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  kick_2_fs708817.wav → Bass Drum 1 (note 36)"
+  },
+  {
+    "file": "kick_3_fs584787.wav",
+    "tag": "kick",
+    "expected": 36,
+    "assigned": 35,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  kick_3_fs584787.wav → Bass Drum 2 (note 35)"
+  },
+  {
+    "file": "kick_4_fs424662.wav",
+    "tag": "kick",
+    "expected": 36,
+    "assigned": 35,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  kick_4_fs424662.wav → Bass Drum 2 (note 35)"
+  },
+  {
+    "file": "kick_5_fs612614.wav",
+    "tag": "kick",
+    "expected": 36,
+    "assigned": 35,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  kick_5_fs612614.wav → Bass Drum 2 (note 35)"
+  },
+  {
+    "file": "snare_1_fs711688.wav",
+    "tag": "snare",
+    "expected": 38,
+    "assigned": 38,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  snare_1_fs711688.wav → Snare 1 (note 38)"
+  },
+  {
+    "file": "snare_2_fs513439.wav",
+    "tag": "snare",
+    "expected": 38,
+    "assigned": 38,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  snare_2_fs513439.wav → Snare 1 (note 38)"
+  },
+  {
+    "file": "snare_3_fs176346.wav",
+    "tag": "snare",
+    "expected": 38,
+    "assigned": 38,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  snare_3_fs176346.wav → Snare 1 (note 38)"
+  },
+  {
+    "file": "snare_4_fs693160.wav",
+    "tag": "snare",
+    "expected": 38,
+    "assigned": 38,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  snare_4_fs693160.wav → Snare 1 (note 38)"
+  },
+  {
+    "file": "snare_5_fs355068.wav",
+    "tag": "snare",
+    "expected": 38,
+    "assigned": 38,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  snare_5_fs355068.wav → Snare 1 (note 38)"
+  },
+  {
+    "file": "closed-hihat_1_fs513362.wav",
+    "tag": "closed-hihat",
+    "expected": 42,
+    "assigned": 42,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  closed-hihat_1_fs513362.wav → Closed HH (note 42)"
+  },
+  {
+    "file": "closed-hihat_2_fs57527.wav",
+    "tag": "closed-hihat",
+    "expected": 42,
+    "assigned": 42,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  closed-hihat_2_fs57527.wav → Closed HH (note 42)"
+  },
+  {
+    "file": "closed-hihat_3_fs612831.wav",
+    "tag": "closed-hihat",
+    "expected": 42,
+    "assigned": 42,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  closed-hihat_3_fs612831.wav → Closed HH (note 42)"
+  },
+  {
+    "file": "closed-hihat_4_fs270029.wav",
+    "tag": "closed-hihat",
+    "expected": 42,
+    "assigned": 42,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  closed-hihat_4_fs270029.wav → Closed HH (note 42)"
+  },
+  {
+    "file": "closed-hihat_5_fs270023.wav",
+    "tag": "closed-hihat",
+    "expected": 42,
+    "assigned": 56,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  closed-hihat_5_fs270023.wav → Cowbell (note 56)"
+  },
+  {
+    "file": "open-hihat_1_fs504927.wav",
+    "tag": "open-hihat",
+    "expected": 46,
+    "assigned": 46,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  open-hihat_1_fs504927.wav → Open HH (note 46)"
+  },
+  {
+    "file": "open-hihat_2_fs708814.wav",
+    "tag": "open-hihat",
+    "expected": 46,
+    "assigned": 46,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  open-hihat_2_fs708814.wav → Open HH (note 46)"
+  },
+  {
+    "file": "open-hihat_3_fs612837.wav",
+    "tag": "open-hihat",
+    "expected": 46,
+    "assigned": 46,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  open-hihat_3_fs612837.wav → Open HH (note 46)"
+  },
+  {
+    "file": "open-hihat_4_fs126356.wav",
+    "tag": "open-hihat",
+    "expected": 46,
+    "assigned": 46,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  open-hihat_4_fs126356.wav → Open HH (note 46)"
+  },
+  {
+    "file": "crash_1_fs270090.wav",
+    "tag": "crash",
+    "expected": 49,
+    "assigned": 49,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  crash_1_fs270090.wav → Crash 1 (note 49)"
+  },
+  {
+    "file": "crash_2_fs270157.wav",
+    "tag": "crash",
+    "expected": 49,
+    "assigned": 49,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  crash_2_fs270157.wav → Crash 1 (note 49)"
+  },
+  {
+    "file": "crash_3_fs270137.wav",
+    "tag": "crash",
+    "expected": 49,
+    "assigned": 48,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  crash_3_fs270137.wav → High-Mid Tom (note 48)"
+  },
+  {
+    "file": "ride_1_fs270134.wav",
+    "tag": "ride",
+    "expected": 51,
+    "assigned": 51,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  ride_1_fs270134.wav → Ride 1 (note 51)"
+  },
+  {
+    "file": "ride_2_fs270115.wav",
+    "tag": "ride",
+    "expected": 51,
+    "assigned": 51,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  ride_2_fs270115.wav → Ride 1 (note 51)"
+  },
+  {
+    "file": "tom_1_fs522984.wav",
+    "tag": "tom",
+    "expected": 41,
+    "assigned": 48,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  tom_1_fs522984.wav → High-Mid Tom (note 48)"
+  },
+  {
+    "file": "tom_2_fs581448.wav",
+    "tag": "tom",
+    "expected": 41,
+    "assigned": 43,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  tom_2_fs581448.wav → High Floor Tom (note 43)"
+  },
+  {
+    "file": "tom_3_fs269970.wav",
+    "tag": "tom",
+    "expected": 41,
+    "assigned": 43,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  tom_3_fs269970.wav → High Floor Tom (note 43)"
+  },
+  {
+    "file": "tom_4_fs581447.wav",
+    "tag": "tom",
+    "expected": 41,
+    "assigned": 43,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  tom_4_fs581447.wav → High Floor Tom (note 43)"
+  },
+  {
+    "file": "tom_5_fs572786.wav",
+    "tag": "tom",
+    "expected": 41,
+    "assigned": 45,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  tom_5_fs572786.wav → Low Tom (note 45)"
+  },
+  {
+    "file": "clap_1_fs522977.wav",
+    "tag": "clap",
+    "expected": 39,
+    "assigned": 39,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  clap_1_fs522977.wav → Hand Clap (note 39)"
+  },
+  {
+    "file": "clap_2_fs273770.wav",
+    "tag": "clap",
+    "expected": 39,
+    "assigned": 39,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  clap_2_fs273770.wav → Hand Clap (note 39)"
+  },
+  {
+    "file": "clap_3_fs264178.wav",
+    "tag": "clap",
+    "expected": 39,
+    "assigned": 60,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  clap_3_fs264178.wav → High Bongo (note 60)"
+  },
+  {
+    "file": "clap_4_fs612833.wav",
+    "tag": "clap",
+    "expected": 39,
+    "assigned": 56,
+    "correct": false,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  clap_4_fs612833.wav → Cowbell (note 56)"
+  },
+  {
+    "file": "clap_5_fs860388.wav",
+    "tag": "clap",
+    "expected": 39,
+    "assigned": 39,
+    "correct": true,
+    "anyMatch": true,
+    "summary": "1/1 zones assigned to GM drum notes:\n  clap_5_fs860388.wav → Hand Clap (note 39)"
+  }
+]

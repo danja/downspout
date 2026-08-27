@@ -100,6 +100,7 @@ cmake_args=(
   -DDOWNSPOUT_BUILD_RESONANCE_GARDEN=ON
   -DDOWNSPOUT_BUILD_ORBIT=ON
   -DDOWNSPOUT_BUILD_GUARDIAN=ON
+  -DDOWNSPOUT_BUILD_SKREAM=ON
   "-DCMAKE_INSTALL_PREFIX=$staging_dir"
 )
 
@@ -140,9 +141,9 @@ fi
 echo "Installing release payload to $staging_dir"
 cmake --install "$build_dir" --config "$build_type" --prefix "$staging_dir"
 
-required_bundles=(campione.vst3 bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 t_mix.vst3 mixgen.vst3 loopdelay.vst3 lightverb.vst3 melgen.vst3 rift.vst3 orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 syrinx.vst3 cadence.vst3 arpgen.vst3 counterpointer.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 floozy.vst3 basilico.vst3 canticle.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3 xoxolo.vst3 tuney_vst.vst3 harmonic_atlas.vst3 conductor.vst3 drift.vst3 mnemosyne.vst3 polymeter.vst3 oracle.vst3 mosaic.vst3 resonance_garden.vst3 orbit.vst3 guardian.vst3)
+required_bundles=(campione.vst3 bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 t_mix.vst3 mixgen.vst3 loopdelay.vst3 lightverb.vst3 melgen.vst3 rift.vst3 orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 syrinx.vst3 cadence.vst3 arpgen.vst3 counterpointer.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 floozy.vst3 basilico.vst3 canticle.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3 xoxolo.vst3 tuney_vst.vst3 harmonic_atlas.vst3 conductor.vst3 drift.vst3 mnemosyne.vst3 polymeter.vst3 oracle.vst3 mosaic.vst3 resonance_garden.vst3 orbit.vst3 guardian.vst3 skream.vst3)
 if [[ "$sidecar_build" == "ON" ]]; then
-  required_bundles=(campione.vst3 bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 t_mix.vst3 mixgen.vst3 loopdelay.vst3 lightverb.vst3 melgen.vst3 rift.vst3 orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 syrinx.vst3 cadence.vst3 arpgen.vst3 counterpointer.vst3 sidecar.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 floozy.vst3 basilico.vst3 canticle.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3 xoxolo.vst3 tuney_vst.vst3 harmonic_atlas.vst3 conductor.vst3 drift.vst3 mnemosyne.vst3 polymeter.vst3 oracle.vst3 mosaic.vst3 resonance_garden.vst3 orbit.vst3 guardian.vst3)
+  required_bundles=(campione.vst3 bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 t_mix.vst3 mixgen.vst3 loopdelay.vst3 lightverb.vst3 melgen.vst3 rift.vst3 orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 syrinx.vst3 cadence.vst3 arpgen.vst3 counterpointer.vst3 sidecar.vst3 gremlin.vst3 gremlin_driver.vst3 ground.vst3 floozy.vst3 basilico.vst3 canticle.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3 xoxolo.vst3 tuney_vst.vst3 harmonic_atlas.vst3 conductor.vst3 drift.vst3 mnemosyne.vst3 polymeter.vst3 oracle.vst3 mosaic.vst3 resonance_garden.vst3 orbit.vst3 guardian.vst3 skream.vst3)
 fi
 for bundle in "${required_bundles[@]}"; do
   if [[ ! -d "$staging_dir/$bundle" ]]; then

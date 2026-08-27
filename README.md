@@ -107,6 +107,7 @@ installed bundle.
 | [Resonance Garden](plugins/resonance-garden/README.md) | `resonance_garden.vst3` | Audio effect | MIDI-tuned damped resonator bank with internal-scale fallback. |
 | [Orbit](plugins/orbit/README.md) | `orbit.vst3` | Audio effect | Seeded transport-aware stereo trajectories, distance filtering, and conservative Doppler. |
 | [Guardian](plugins/guardian/README.md) | `guardian.vst3` | Safety effect | DC removal, look-ahead limiting, true-peak protection, and latched diagnostics. |
+| [Skream](plugins/skream/README.md) | `skream.vst3` | Audio effect | Scream filter: SVF lowpass/highpass with ADAA2 feedback saturation for dubstep growl. Ten presets, MIDI CC control via Drift. |
 
 ## Architecture
 

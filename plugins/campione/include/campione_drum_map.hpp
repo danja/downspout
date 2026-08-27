@@ -32,4 +32,8 @@ std::vector<DrumAssignment> assignDrumNotes(const std::vector<SampleZone>& zones
 // per-note acoustic scores, filename scores, and blended result.
 std::string drumMapReport(const std::vector<SampleZone>& zones);
 
+// Returns the GM percussion note name for a MIDI note number (e.g. 36 → "Bass Drum 1").
+// Returns "Note N" for unmapped notes.
+const char* gmNoteName(int note);
+
 } // namespace downspout::campione

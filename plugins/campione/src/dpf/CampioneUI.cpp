@@ -50,6 +50,7 @@ using downspout::campione::kStateKeyDataDir;
 using downspout::campione::kStateKeyZonePreview;
 using downspout::campione::kStateKeyWavetableImport;
 using downspout::campione::kStateKeyZoneClear;
+using downspout::campione::kStateKeyMapDrum;
 using downspout::campione::kDefaultDataDir;
 
 struct Rect {
@@ -709,16 +710,12 @@ protected:
                 repaint(); return true;
             }
 
-            // Drum: assign zones to GM percussion notes — show report dialog before applying.
+            // Drum: delegate full acoustic drum mapping to DSP (has audio data).
+            // Filename-only analysis in the UI gives 0 matches for slice files.
             if (drumBtn_.contains(px, py)) {
                 if (zones_.empty()) { showStatus("No zones to assign"); return true; }
-                std::vector<std::string> paths;
-                paths.reserve(zones_.size());
-                for (const auto& ze : zones_) paths.push_back(ze.path);
-                drumReportAssignments_   = downspout::campione::assignDrumNotes(paths);
-                drumReportScrollOffset_  = 0;
-                dialogMode_              = kDialogDrumReport;
-                repaint();
+                setState(kStateKeyMapDrum, "");
+                showStatus("Drum map applied");
                 return true;
             }
 

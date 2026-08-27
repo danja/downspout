@@ -108,6 +108,7 @@ The repository currently installs forty real wrapper targets:
 - `resonance_garden.vst3` with UI
 - `orbit.vst3` with UI
 - `guardian.vst3` with UI
+- `skream.vst3` with UI
 
 The next install-related validation is host-side confirmation that all bundles behave correctly in `Release` builds.
 

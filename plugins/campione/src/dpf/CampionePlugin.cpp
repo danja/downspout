@@ -71,6 +71,8 @@ using downspout::campione::kStateKeyWavetableImport;
 using downspout::campione::kStateWavetableImport;
 using downspout::campione::kStateKeyZoneClear;
 using downspout::campione::kStateZoneClear;
+using downspout::campione::kStateKeyMapDrum;
+using downspout::campione::kStateMapDrum;
 using downspout::campione::kDefaultDataDir;
 using downspout::campione::kStateParameters;
 using downspout::campione::kStateZoneFade;
@@ -404,6 +406,12 @@ protected:
             state.hints        = 0;
             state.defaultValue = "";
             break;
+        case kStateMapDrum:
+            state.key          = kStateKeyMapDrum;
+            state.label        = "Map Drum";
+            state.hints        = 0;
+            state.defaultValue = "";
+            break;
         }
     }
 
@@ -645,6 +653,27 @@ protected:
             zonesInitialized_ = true;
             std::atomic_store_explicit(&zones_,
                                        std::shared_ptr<const ZoneVec>(std::make_shared<ZoneVec>()),
+                                       std::memory_order_release);
+            notifyZonesChanged(true);
+            return;
+        }
+
+        if (std::strcmp(key, kStateKeyMapDrum) == 0)
+        {
+            std::lock_guard<std::mutex> lk(zoneMtx_);
+            const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+            if (!existing || existing->empty()) return;
+            auto nz = std::make_shared<ZoneVec>(*existing);
+            const auto assignments = downspout::campione::assignDrumNotes(*existing);
+            for (std::size_t i = 0; i < assignments.size() && i < nz->size(); ++i) {
+                if (assignments[i].gmNote >= 0) {
+                    (*nz)[i].rootNote  = assignments[i].gmNote;
+                    (*nz)[i].rangeLow  = assignments[i].gmNote;
+                    (*nz)[i].rangeHigh = assignments[i].gmNote;
+                }
+            }
+            std::atomic_store_explicit(&zones_,
+                                       std::shared_ptr<const ZoneVec>(std::move(nz)),
                                        std::memory_order_release);
             notifyZonesChanged(true);
             return;

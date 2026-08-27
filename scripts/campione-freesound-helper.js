@@ -43,14 +43,15 @@ const SAMPLES_PER_CAT = 5;
 // Tags are chosen to match campione_drum_map.cpp's alias table so the
 // filename-scoring path has a fair chance; acoustic scoring is the focus.
 const DRUM_CATEGORIES = [
-  { tag: 'kick',          query: 'kick drum one shot',            gmNote: 36 },
-  { tag: 'snare',         query: 'snare drum one shot',           gmNote: 38 },
-  { tag: 'closed-hihat',  query: 'closed hi-hat one shot',        gmNote: 42 },
-  { tag: 'open-hihat',    query: 'open hi-hat one shot',          gmNote: 46 },
-  { tag: 'crash',         query: 'crash cymbal one shot',         gmNote: 49 },
-  { tag: 'ride',          query: 'ride cymbal one shot',          gmNote: 51 },
-  { tag: 'tom',           query: 'floor tom drum one shot',       gmNote: 41 },
-  { tag: 'clap',          query: 'hand clap percussion one shot', gmNote: 39 },
+  // maxDur: strict upper bound to exclude kits/loops in search results
+  { tag: 'kick',          query: 'kick drum one shot',            gmNote: 36, maxDur: 1.5 },
+  { tag: 'snare',         query: 'snare drum one shot',           gmNote: 38, maxDur: 1.5 },
+  { tag: 'closed-hihat',  query: 'closed hi-hat one shot',        gmNote: 42, maxDur: 1.0 },
+  { tag: 'open-hihat',    query: 'open hi-hat one shot',          gmNote: 46, maxDur: 3.0 },
+  { tag: 'crash',         query: 'crash cymbal one shot',         gmNote: 49, maxDur: 4.0 },
+  { tag: 'ride',          query: 'ride cymbal one shot',          gmNote: 51, maxDur: 4.0 },
+  { tag: 'tom',           query: 'tom drum one shot',             gmNote: 41, maxDur: 1.5 },
+  { tag: 'clap',          query: 'clap percussion one shot',      gmNote: 39, maxDur: 1.0 },
 ];
 
 // ── .env loader ────────────────────────────────────────────────────────────
@@ -91,14 +92,12 @@ function apiGet(apiKey, pathname, params) {
   });
 }
 
-function searchSounds(apiKey, query, count) {
+function searchSounds(apiKey, query, maxDuration, count) {
   return apiGet(apiKey, '/search/text/', {
     query,
-    // Include both WAV and all formats; we fall back to OGG preview when
-    // WAV download requires OAuth.
-    filter:    'duration:[0.05 TO 3.0]',
+    filter:    `duration:[0.05 TO ${maxDuration}]`,
     fields:    'id,name,download,previews,duration',
-    page_size: count,
+    page_size: count * 3,  // fetch extras to allow for ID deduplication
     sort:      'rating_desc',
   });
 }
@@ -222,49 +221,59 @@ async function downloadSamples(apiKey) {
   if (fs.existsSync(MANIFEST)) {
     try { manifest = JSON.parse(fs.readFileSync(MANIFEST, 'utf8')); } catch (_) {}
   }
-  const cached = new Set(manifest.map(e => e.file));
+  const cachedFiles  = new Set(manifest.map(e => e.file));
+  // Track used sound IDs globally to avoid downloading the same clip under
+  // multiple category labels (Freesound results often share IDs across queries).
+  const usedSoundIds = new Set(manifest.map(e => e.soundId));
 
   for (const cat of DRUM_CATEGORIES) {
-    console.log(`\nSearching: "${cat.query}"`);
+    console.log(`\nSearching: "${cat.query}" (max ${cat.maxDur}s)`);
     let results;
     try {
-      results = await searchSounds(apiKey, cat.query, SAMPLES_PER_CAT);
+      results = await searchSounds(apiKey, cat.query, cat.maxDur, SAMPLES_PER_CAT);
     } catch (e) {
       console.error(`  search failed: ${e.message}`);
       continue;
     }
 
     const sounds = results.results || [];
-    console.log(`  ${sounds.length} result(s)`);
+    console.log(`  ${sounds.length} candidate(s) returned`);
 
-    for (let i = 0; i < sounds.length; i++) {
-      const snd = sounds[i];
-      // Filename encodes the drum category tag so filename-scoring in
-      // campione_drum_map.cpp has useful tokens to work with.
-      const fname = `${cat.tag}_${i + 1}_fs${snd.id}.wav`;
+    let catCount = 0;
+    for (const snd of sounds) {
+      if (catCount >= SAMPLES_PER_CAT) break;
+
+      // Skip sound IDs already used by any category to prevent mislabeling.
+      if (usedSoundIds.has(snd.id)) {
+        console.log(`  [dup]    fs${snd.id} already used in another category`);
+        continue;
+      }
+
+      const fname = `${cat.tag}_${catCount + 1}_fs${snd.id}.wav`;
       const dest  = path.join(SAMPLE_DIR, fname);
 
-      if (cached.has(fname) && fs.existsSync(dest)) {
+      if (cachedFiles.has(fname) && fs.existsSync(dest)) {
         console.log(`  [cached] ${fname}`);
+        usedSoundIds.add(snd.id);
+        catCount++;
         continue;
       }
 
-      if (!snd.download) {
-        console.log(`  [skip]   no download URL for id ${snd.id}`);
-        continue;
-      }
-
-      process.stdout.write(`  downloading ${fname} … `);
+      process.stdout.write(`  downloading ${fname} (${snd.duration?.toFixed(2)}s) … `);
       try {
         await downloadSound(apiKey, snd, dest);
         console.log('ok');
         manifest.push({ file: fname, tag: cat.tag, gmNote: cat.gmNote, soundId: snd.id });
+        usedSoundIds.add(snd.id);
         fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2));
+        catCount++;
       } catch (e) {
         console.log(`FAILED: ${e.message}`);
         try { fs.unlinkSync(dest); } catch (_) {}
       }
     }
+    if (catCount < SAMPLES_PER_CAT)
+      console.log(`  warning: only ${catCount}/${SAMPLES_PER_CAT} unique samples found`);
   }
 
   console.log(`\nManifest: ${MANIFEST} (${manifest.length} entries)`);

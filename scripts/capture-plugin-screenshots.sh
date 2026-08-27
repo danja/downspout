@@ -63,6 +63,7 @@ plugins=(
   "gater:gater"
   "midiscribe:midiscribe"
   "damiano:damiano"
+  "skream:skream"
   )
 
 
