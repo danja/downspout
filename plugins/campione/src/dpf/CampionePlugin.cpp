@@ -631,12 +631,13 @@ protected:
             if (::stat(value, &st) == 0 && S_ISDIR(st.st_mode))
                 recordingOutputDir_ = value;
             // Load auto-save if REAPER hasn't provided zones from a saved project.
-            // This makes zone state independent of whether the host project was saved.
+            // markInitialized=false so a subsequent kStateZones from the host's saved
+            // project state can still override the autosave (data_dir fires first).
             if (!zonesInitialized_) {
                 const std::string autoSave = recordingOutputDir_ + "/campione_autosave.ttl";
                 struct stat ast{};
                 if (::stat(autoSave.c_str(), &ast) == 0)
-                    doLoadPatch(autoSave);
+                    doLoadPatch(autoSave, /*markInitialized=*/false);
             }
             return;
         }
@@ -1217,7 +1218,7 @@ private:
         return downspout::campione::savePatch(pd, savePath);
     }
 
-    std::string doLoadPatch(const std::string& path)
+    std::string doLoadPatch(const std::string& path, bool markInitialized = true)
     {
         auto [pd, err] = downspout::campione::loadPatch(path);
         if (!pd.has_value()) return err;
@@ -1261,7 +1262,7 @@ private:
 
         {
             std::lock_guard<std::mutex> lk(zoneMtx_);
-            zonesInitialized_ = true;
+            if (markInitialized) zonesInitialized_ = true;
             std::atomic_store_explicit(&zones_,
                                        std::shared_ptr<const ZoneVec>(std::move(newZones)),
                                        std::memory_order_release);
