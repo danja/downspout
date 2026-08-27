@@ -23,6 +23,7 @@ enum ParameterIndex : uint32_t {
     kParamResonance,
     kParamMix,
     kParamOutputGain,
+    kParamTrack,
     kParamCCCutoff,
     kParamCCScream,
     kParamCCChannel,
@@ -45,13 +46,14 @@ struct SliderDef {
     const char* stateKey;
 };
 
-constexpr std::array<SliderDef, 6> kMainSliders = {{
+constexpr std::array<SliderDef, 7> kMainSliders = {{
     { kParamInputGain,  "Input Gain",  "dB",  -24.0f,  24.0f, false, "input_gain"  },
     { kParamCutoff,     "Cutoff",      "%",     0.0f, 100.0f, false, "cutoff"      },
     { kParamScream,     "Scream",      "%",     0.0f, 100.0f, false, "scream"      },
     { kParamResonance,  "Resonance",   "%",     0.0f, 100.0f, false, "resonance"   },
     { kParamMix,        "Mix",         "%",     0.0f, 100.0f, false, "mix"         },
     { kParamOutputGain, "Output Gain", "dB",  -24.0f,   0.0f, false, "output_gain" },
+    { kParamTrack,      "Track",       "%",     0.0f, 100.0f, false, "track"       },
 }};
 
 constexpr std::array<SliderDef, 3> kCCSliders = {{
@@ -95,6 +97,7 @@ public:
         values_[kParamResonance]  = 100.0f;
         values_[kParamMix]        = 100.0f;
         values_[kParamOutputGain] = -6.0f;
+        values_[kParamTrack]      = 0.0f;
         values_[kParamCCCutoff]   = 0.0f;
         values_[kParamCCScream]   = 0.0f;
         values_[kParamCCChannel]  = 1.0f;
@@ -122,6 +125,7 @@ protected:
         else if (std::strcmp(key, "resonance")   == 0) { values_[kParamResonance]  = f; }
         else if (std::strcmp(key, "mix")         == 0) { values_[kParamMix]        = f; }
         else if (std::strcmp(key, "output_gain") == 0) { values_[kParamOutputGain] = f; }
+        else if (std::strcmp(key, "track")       == 0) { values_[kParamTrack]      = f; }
         else if (std::strcmp(key, "cc_cutoff")   == 0) { values_[kParamCCCutoff]   = f; }
         else if (std::strcmp(key, "cc_scream")   == 0) { values_[kParamCCScream]   = f; }
         else if (std::strcmp(key, "cc_channel")  == 0) { values_[kParamCCChannel]  = f; }
@@ -219,7 +223,7 @@ private:
     static constexpr float kSliderX  = 200.0f;
     static constexpr float kMainTop  = 62.0f;
     static constexpr float kMainStep = 48.0f;
-    static constexpr float kCCTop    = 358.0f;
+    static constexpr float kCCTop    = 412.0f;
     static constexpr float kCCStep   = 42.0f;
     static constexpr float kTrackH   = 14.0f;
 
@@ -284,6 +288,7 @@ private:
         send("resonance",   p.resonance);
         send("mix",         p.mix);
         send("output_gain", p.outputGain);
+        send("track",       p.track);
 
         values_[kParamInputGain]  = p.inputGain;
         values_[kParamCutoff]     = p.cutoff;
@@ -291,6 +296,7 @@ private:
         values_[kParamResonance]  = p.resonance;
         values_[kParamMix]        = p.mix;
         values_[kParamOutputGain] = p.outputGain;
+        values_[kParamTrack]      = p.track;
     }
 
     // ---- Drawing -----------------------------------------------------------

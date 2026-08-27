@@ -1,8 +1,5 @@
 # Downspout TODO
 
-All 10 previously-failing tests now pass. Pre-existing unrelated failure:
-         29 - downspout_basilico_core_tests (Failed)
-
 ## Campione
 
 ~~The drum sound recognition part of plugins/campione doesn't find any matches when tested on samples lifted from a drum loop~~ Fixed: three-part acoustic fix + loop-slicing mode.
@@ -17,7 +14,7 @@ All 10 previously-failing tests now pass. Pre-existing unrelated failure:
 
 ## Rift
 
-Allow control from Drift
+Can you set up skream so that with default settings here and in plugins/drift,  the CCs will work. Also allow control of plugins/rift from plugins/drift - it should just work with default CCs.
 
 ## Gremlin
 
@@ -25,7 +22,7 @@ Simplify UI, make sounds more varied.
 
 ## Lightverb
 
-Remove the SIGNAL FLOW block - is it only labels?
+Remove the SIGNAL FLOW block - if it is only labels
 Think about lightweight additions: spatial? Presets?
 
 ## Floozy

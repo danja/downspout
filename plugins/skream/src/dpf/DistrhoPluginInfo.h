@@ -22,7 +22,7 @@
 #define DISTRHO_PLUGIN_WANT_STATE       1
 #define DISTRHO_PLUGIN_VST3_CATEGORIES  "Fx|Distortion"
 #define DISTRHO_UI_DEFAULT_WIDTH        780
-#define DISTRHO_UI_DEFAULT_HEIGHT       500
+#define DISTRHO_UI_DEFAULT_HEIGHT       560
 #define DISTRHO_UI_USE_NANOVG           1
 
 #endif

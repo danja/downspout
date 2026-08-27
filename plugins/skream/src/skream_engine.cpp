@@ -210,6 +210,7 @@ Parameters clampParameters(const Parameters& p) noexcept
     out.resonance  = safe(p.resonance,    0.0f, 100.0f, 100.0f);
     out.mix        = safe(p.mix,          0.0f, 100.0f, 100.0f);
     out.outputGain = safe(p.outputGain, -24.0f,   0.0f,  -6.0f);
+    out.track      = safe(p.track,        0.0f, 100.0f,   0.0f);
     out.ccCutoff   = safe(p.ccCutoff,    0.0f, 127.0f,   0.0f);
     out.ccScream   = safe(p.ccScream,    0.0f, 127.0f,   0.0f);
     out.ccChannel  = safe(p.ccChannel,   1.0f,  16.0f,   1.0f);
@@ -254,13 +255,18 @@ void processBlock(EngineState&      state,
     const float lpHz = std::clamp(midiToHz(lpMidi), 5.0f, nyq);
     const float hpHz = std::clamp(midiToHz(hpMidi), 5.0f, lpHz);
 
-    // Resonance → Q and feedback gain
+    // Resonance → Q and feedback gain.
+    // LP Q rises with resonance (Butterworth at 0 → high-resonance peak at 100 %) so the
+    // filter itself provides formant character via its internal state.  The external
+    // feedback gain is kept below unity (max –6 dB = 0.5×) so the loop cannot sustain
+    // free self-oscillation regardless of preset.
     const float res          = params.resonance / 100.0f;
+    const float lpQ          = lerpf(res, kSqrtHalf, 8.0f);
     const float hpQ          = lerpf(res, kSqrtHalf, kSqrt2);
-    const float feedbackGain = dbToGain(lerpf(res, -12.0f, 12.0f));
+    const float feedbackGain = dbToGain(lerpf(res, -18.0f, -6.0f));
 
     // SVF coefficients (constant per block)
-    const SvfCoeffs lpC = svfLP(lpHz, kSqrtHalf, sampleRate);  // LP Q fixed (Butterworth)
+    const SvfCoeffs lpC = svfLP(lpHz, lpQ, sampleRate);
     const SvfCoeffs hpC = svfHP(hpHz, hpQ, sampleRate);
 
     // Feedback gate time constants (1-sample attack, 1ms release)
@@ -282,8 +288,11 @@ void processBlock(EngineState&      state,
 
             audio.outputs[ch][i] = (wet * y + dry * xDry) * outGain;
 
-            // Feedback path: scale → HP → tanh
-            float feed = y * feedbackGain;
+            // Feedback path: scale → [+ input coupling] → HP → tanh
+            // Injecting a fraction of the post-gain input nudges the resonator toward
+            // the input's harmonic content (injection locking).
+            const float trackGain = params.track / 100.0f;
+            float feed = y * feedbackGain + trackGain * x;
             feed = svfProcess(feed, hpC, cs.hpState);
             feed = static_cast<float>(tanhAdaa2Process(cs.tanh2, static_cast<double>(feed)));
 

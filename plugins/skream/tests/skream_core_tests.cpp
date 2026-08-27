@@ -38,6 +38,7 @@ static void testClamp()
     check("clamp: inputGain stays clamped", c.inputGain >= -24.0f && c.inputGain <= 24.0f);
     check("clamp: outputGain stays clamped", c.outputGain >= -24.0f && c.outputGain <= 0.0f);
     check("clamp: ccChannel min", nearlyEqual(c.ccChannel, 1.0f));
+    check("clamp: track default", nearlyEqual(c.track, 0.0f));
 }
 
 // ── Silence passthrough ──────────────────────────────────────────────────────
@@ -86,6 +87,7 @@ static void testSerialize()
     p.resonance  = 80.0f;
     p.mix        = 90.0f;
     p.outputGain = -9.0f;
+    p.track      = 55.0f;
     p.ccCutoff   = 74.0f;
     p.ccScream   = 20.0f;
     p.ccChannel  =  3.0f;
@@ -102,6 +104,7 @@ static void testSerialize()
     check("serialize: resonance",  nearlyEqual(result->resonance,  p.resonance));
     check("serialize: mix",        nearlyEqual(result->mix,        p.mix));
     check("serialize: outputGain", nearlyEqual(result->outputGain, p.outputGain));
+    check("serialize: track",      nearlyEqual(result->track,      p.track));
     check("serialize: ccCutoff",   nearlyEqual(result->ccCutoff,   p.ccCutoff));
     check("serialize: ccScream",   nearlyEqual(result->ccScream,   p.ccScream));
     check("serialize: ccChannel",  nearlyEqual(result->ccChannel,  p.ccChannel));
@@ -126,7 +129,8 @@ static void testPresets()
               nearlyEqual(c.scream,     p.scream)      &&
               nearlyEqual(c.resonance,  p.resonance)   &&
               nearlyEqual(c.mix,        p.mix)         &&
-              nearlyEqual(c.outputGain, p.outputGain));
+              nearlyEqual(c.outputGain, p.outputGain)  &&
+              nearlyEqual(c.track,      p.track));
     }
 }
 
@@ -150,11 +154,12 @@ static void testBounded()
     audio.outputs[0] = outL.data();
     audio.outputs[1] = outR.data();
 
-    // Test with max resonance (most aggressive settings)
+    // Test with max resonance and full track coupling (most aggressive settings)
     Parameters p;
     p.resonance = 100.0f;
     p.cutoff    = 50.0f;
     p.scream    = 50.0f;
+    p.track     = 100.0f;
     EngineState state;
 
     // Process several blocks to let state settle

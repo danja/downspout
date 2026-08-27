@@ -18,6 +18,7 @@ enum ParameterIndex : uint32_t {
     kParamResonance,
     kParamMix,
     kParamOutputGain,
+    kParamTrack,
     kParamCCCutoff,
     kParamCCScream,
     kParamCCChannel,
@@ -30,11 +31,12 @@ constexpr const char* kStateScream     = "scream";
 constexpr const char* kStateResonance  = "resonance";
 constexpr const char* kStateMix        = "mix";
 constexpr const char* kStateOutputGain = "output_gain";
+constexpr const char* kStateTrack      = "track";
 constexpr const char* kStateCCCutoff   = "cc_cutoff";
 constexpr const char* kStateCCScream   = "cc_scream";
 constexpr const char* kStateCCChannel  = "cc_channel";
 
-constexpr uint32_t kStateCount = 9;
+constexpr uint32_t kStateCount = 10;
 
 using CoreParameters  = downspout::skream::Parameters;
 using CoreEngineState = downspout::skream::EngineState;
@@ -115,6 +117,11 @@ protected:
             parameter.symbol = "output_gain";
             parameter.ranges = { -24.0f, 0.0f, -6.0f };
             break;
+        case kParamTrack:
+            parameter.name   = "Track";
+            parameter.symbol = "track";
+            parameter.ranges = { 0.0f, 100.0f, 0.0f };
+            break;
         case kParamCCCutoff:
             parameter.name   = "CC Cutoff";
             parameter.symbol = "cc_cutoff";
@@ -146,6 +153,7 @@ protected:
             { kStateResonance,  "Resonance",   "100"  },
             { kStateMix,        "Mix",         "100"  },
             { kStateOutputGain, "Output Gain", "-6"   },
+            { kStateTrack,      "Track",       "0"    },
             { kStateCCCutoff,   "CC Cutoff",   "0"    },
             { kStateCCScream,   "CC Scream",   "0"    },
             { kStateCCChannel,  "CC Channel",  "1"    },
@@ -167,6 +175,7 @@ protected:
         case kParamResonance:  return parameters_.resonance;
         case kParamMix:        return parameters_.mix;
         case kParamOutputGain: return parameters_.outputGain;
+        case kParamTrack:      return parameters_.track;
         case kParamCCCutoff:   return parameters_.ccCutoff;
         case kParamCCScream:   return parameters_.ccScream;
         case kParamCCChannel:  return parameters_.ccChannel;
@@ -190,6 +199,7 @@ protected:
         else if (std::strcmp(key, kStateResonance)  == 0) { parameters_.resonance  = f(); }
         else if (std::strcmp(key, kStateMix)        == 0) { parameters_.mix        = f(); }
         else if (std::strcmp(key, kStateOutputGain) == 0) { parameters_.outputGain = f(); }
+        else if (std::strcmp(key, kStateTrack)      == 0) { parameters_.track      = f(); }
         else if (std::strcmp(key, kStateCCCutoff)   == 0) { parameters_.ccCutoff   = f(); }
         else if (std::strcmp(key, kStateCCScream)   == 0) { parameters_.ccScream   = f(); }
         else if (std::strcmp(key, kStateCCChannel)  == 0) { parameters_.ccChannel  = f(); }

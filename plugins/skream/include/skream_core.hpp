@@ -34,6 +34,7 @@ struct Parameters {
     float resonance  = 100.0f;  // 0-100 % (feedback gain + HP Q)
     float mix        = 100.0f;  // 0-100 % dry/wet
     float outputGain = -6.0f;   // -24 to 0 dB
+    float track      =  0.0f;   // 0-100 % input coupling into feedback (harmonic locking)
     float ccCutoff   =  0.0f;   // 0-127 CC# for cutoff (0 = off)
     float ccScream   =  0.0f;   // 0-127 CC# for scream (0 = off)
     float ccChannel  =  1.0f;   // 1-16 MIDI channel

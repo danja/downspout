@@ -42,6 +42,7 @@ std::string serializeParameters(const Parameters& p)
            "resonance="   + std::to_string(p.resonance)   + "\n"
            "mix="         + std::to_string(p.mix)         + "\n"
            "output_gain=" + std::to_string(p.outputGain)  + "\n"
+           "track="       + std::to_string(p.track)       + "\n"
            "cc_cutoff="   + std::to_string(p.ccCutoff)    + "\n"
            "cc_scream="   + std::to_string(p.ccScream)    + "\n"
            "cc_channel="  + std::to_string(p.ccChannel)   + "\n";
@@ -59,17 +60,18 @@ std::optional<Parameters> deserializeParameters(const std::string& text)
         const std::string_view value = line.substr(sep + 1);
         float v = 0.0f;
 
-        if (key == "version")                           { continue; }
+        if      (key == "version")                              { continue; }
         else if (key == "input_gain"  && parseFloat(value, v)) { p.inputGain  = v; }
         else if (key == "cutoff"      && parseFloat(value, v)) { p.cutoff     = v; }
         else if (key == "scream"      && parseFloat(value, v)) { p.scream     = v; }
         else if (key == "resonance"   && parseFloat(value, v)) { p.resonance  = v; }
         else if (key == "mix"         && parseFloat(value, v)) { p.mix        = v; }
         else if (key == "output_gain" && parseFloat(value, v)) { p.outputGain = v; }
+        else if (key == "track"       && parseFloat(value, v)) { p.track      = v; }
         else if (key == "cc_cutoff"   && parseFloat(value, v)) { p.ccCutoff   = v; }
         else if (key == "cc_scream"   && parseFloat(value, v)) { p.ccScream   = v; }
         else if (key == "cc_channel"  && parseFloat(value, v)) { p.ccChannel  = v; }
-        else { return std::nullopt; }
+        else { continue; }  // unknown keys are ignored for forward compatibility
     }
     return clampParameters(p);
 }
