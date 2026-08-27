@@ -1,5 +1,11 @@
 # Downspout TODO
 
+To all plugins which offer a choice of scales, add Ionian, Neopolitan Major (NeoMajor) and Neopolitan Minor (NeoMinor)
+
+## Producer Control Bus
+
+Read /home/danny/github/downspout/docs/producer-control-bus.md and see what might need tweaking/implementing in the plugins to make this more intuitive and useful in /home/danny/github/transmission
+
 ## Campione
 
 ~~The drum sound recognition part of plugins/campione doesn't find any matches when tested on samples lifted from a drum loop~~ Fixed: three-part acoustic fix + loop-slicing mode.

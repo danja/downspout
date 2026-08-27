@@ -98,8 +98,8 @@ public:
         values_[kParamMix]        = 100.0f;
         values_[kParamOutputGain] = -6.0f;
         values_[kParamTrack]      = 0.0f;
-        values_[kParamCCCutoff]   = 0.0f;
-        values_[kParamCCScream]   = 0.0f;
+        values_[kParamCCCutoff]   = 1.0f;
+        values_[kParamCCScream]   = 2.0f;
         values_[kParamCCChannel]  = 1.0f;
 
        #ifdef DGL_NO_SHARED_RESOURCES

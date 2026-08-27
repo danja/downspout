@@ -57,9 +57,15 @@ using downspout::rift::kStateCount;
 using downspout::rift::kStateKeyParameters;
 using downspout::rift::kStateKeySamplePath;
 using downspout::rift::kStateKeySequence;
+using downspout::rift::kStateKeyCCDensity;
+using downspout::rift::kStateKeyCCReach;
+using downspout::rift::kStateKeyCCChannel;
 using downspout::rift::kStateParameters;
 using downspout::rift::kStateSamplePath;
 using downspout::rift::kStateSequence;
+using downspout::rift::kStateCCDensity;
+using downspout::rift::kStateCCReach;
+using downspout::rift::kStateCCChannel;
 
 ParameterEnumerationValue kActionEnumValues[] = {
     {0.0f, "Pass"},
@@ -394,6 +400,27 @@ protected:
             state.hints = kStateIsOnlyForDSP;
             state.defaultValue = defaultSequenceState.c_str();
         }
+        else if (index == kStateCCDensity)
+        {
+            state.key = kStateKeyCCDensity;
+            state.label = "CC Density";
+            state.hints = kStateIsOnlyForDSP;
+            state.defaultValue = "3";
+        }
+        else if (index == kStateCCReach)
+        {
+            state.key = kStateKeyCCReach;
+            state.label = "CC Reach";
+            state.hints = kStateIsOnlyForDSP;
+            state.defaultValue = "4";
+        }
+        else if (index == kStateCCChannel)
+        {
+            state.key = kStateKeyCCChannel;
+            state.label = "CC Channel";
+            state.hints = kStateIsOnlyForDSP;
+            state.defaultValue = "1";
+        }
     }
 
     float getParameterValue(uint32_t index) const override
@@ -473,6 +500,14 @@ protected:
         if (std::strcmp(key, kStateKeySequence) == 0)
             return String(downspout::rift::serializeSequencePattern(sequence_).c_str());
 
+        char buf[8];
+        if (std::strcmp(key, kStateKeyCCDensity) == 0)
+            { std::snprintf(buf, sizeof(buf), "%d", ccDensityNum_); return String(buf); }
+        if (std::strcmp(key, kStateKeyCCReach) == 0)
+            { std::snprintf(buf, sizeof(buf), "%d", ccReachNum_); return String(buf); }
+        if (std::strcmp(key, kStateKeyCCChannel) == 0)
+            { std::snprintf(buf, sizeof(buf), "%d", ccChannelNum_); return String(buf); }
+
         return String();
     }
 
@@ -500,6 +535,15 @@ protected:
                 sequence_ = *sequence;
             return;
         }
+
+        if (value == nullptr) return;
+        const int n = static_cast<int>(std::atoi(value));
+        if (std::strcmp(key, kStateKeyCCDensity) == 0)
+            { ccDensityNum_ = std::max(0, std::min(127, n)); return; }
+        if (std::strcmp(key, kStateKeyCCReach) == 0)
+            { ccReachNum_ = std::max(0, std::min(127, n)); return; }
+        if (std::strcmp(key, kStateKeyCCChannel) == 0)
+            { ccChannelNum_ = std::max(1, std::min(16, n)); return; }
     }
 
     void activate() override
@@ -511,8 +555,27 @@ protected:
         statusSequenceCell_ = -1.0f;
     }
 
-    void run(const float** inputs, float** outputs, uint32_t frames) override
+    void run(const float** inputs, float** outputs, uint32_t frames,
+             const MidiEvent* midiEvents, uint32_t midiEventCount) override
     {
+        // Apply incoming CC to Density and Reach (Drift) parameters.
+        for (uint32_t i = 0; i < midiEventCount; ++i) {
+            const auto& ev = midiEvents[i];
+            if (ev.size < 3) continue;
+            const uint8_t status = ev.data[0];
+            if ((status & 0xF0) != 0xB0) continue;
+            if ((status & 0x0F) + 1 != ccChannelNum_) continue;
+
+            const uint8_t evCC  = ev.data[1];
+            const uint8_t evVal = ev.data[2];
+            const float   norm  = std::round(static_cast<float>(evVal) / 127.0f * 100.0f);
+
+            if (ccDensityNum_ > 0 && evCC == static_cast<uint8_t>(ccDensityNum_))
+                parameters_.density = norm;
+            if (ccReachNum_ > 0 && evCC == static_cast<uint8_t>(ccReachNum_))
+                parameters_.drift = norm;
+        }
+
         if (pendingHistoryReset_.exchange(false, std::memory_order_acq_rel))
             downspout::rift::resetHistory(engineState_);
 
@@ -605,6 +668,9 @@ private:
 
     CoreParameters parameters_ {};
     CoreTriggers triggers_ {};
+    int ccDensityNum_  = 3;  // CC → Density (Drift lane 3 default)
+    int ccReachNum_    = 4;  // CC → Reach   (Drift lane 4 default)
+    int ccChannelNum_  = 1;  // MIDI channel
     CoreSequencePattern sequence_ {};
     CoreEngineState engineState_ {};
     CoreSampleSource testSampleSource_ {};

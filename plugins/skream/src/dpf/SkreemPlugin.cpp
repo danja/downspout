@@ -154,8 +154,8 @@ protected:
             { kStateMix,        "Mix",         "100"  },
             { kStateOutputGain, "Output Gain", "-6"   },
             { kStateTrack,      "Track",       "0"    },
-            { kStateCCCutoff,   "CC Cutoff",   "0"    },
-            { kStateCCScream,   "CC Scream",   "0"    },
+            { kStateCCCutoff,   "CC Cutoff",   "1"    },
+            { kStateCCScream,   "CC Scream",   "2"    },
             { kStateCCChannel,  "CC Channel",  "1"    },
         };
         if (index < kStateCount) {
