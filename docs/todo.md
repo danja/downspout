@@ -6,6 +6,8 @@ Read /home/danny/github/downspout/docs/producer-control-bus.md and see what migh
 
 ## Campione
 
+High priority : it forgets its zones between loads.
+
 ~~The drum sound recognition part of plugins/campione doesn't find any matches when tested on samples lifted from a drum loop~~ Fixed: three-part acoustic fix + loop-slicing mode.
 
 - Kick vs Low Floor Tom: added high-salience/low-flatness bonus to kick scorer; added matching penalty to tom scorer (very high dp_sal + low flatness + dp_freq < 110 Hz = kick, not tom)
@@ -15,10 +17,6 @@ Read /home/danny/github/downspout/docs/producer-control-bus.md and see what migh
 ~~Create a helper system for Campione in JS using third_party/freesound-js to obtain drum samples to run the sound recognition algorithms over.~~ Done: `scripts/campione-freesound-helper.js`.
 
 ~~Ensure the operations supported by the UI are also covered by MCP, and vice versa.~~ Done: added `import_wavetable`, `reorder_zone`, `preview_zone` to MCP; added "Clear All" to UI context menu; registered all state keys in `initState()`.
-
-## Rift
-
-Can you set up skream so that with default settings here and in plugins/drift,  the CCs will work. Also allow control of plugins/rift from plugins/drift - it should just work with default CCs.
 
 ## Gremlin
 

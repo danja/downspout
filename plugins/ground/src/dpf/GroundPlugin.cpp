@@ -290,7 +290,7 @@ protected:
             parameter.hints |= kParameterIsInteger;
             parameter.ranges.min = 0.0f;
             parameter.ranges.max = static_cast<float>(static_cast<int>(ScaleId::count) - 1);
-            parameter.ranges.def = 0.0f;
+            parameter.ranges.def = static_cast<float>(static_cast<int>(ScaleId::minor));
             parameter.enumValues.count = static_cast<uint8_t>(std::size(kScaleEnumValues));
             parameter.enumValues.restrictedMode = true;
             parameter.enumValues.values = kScaleEnumValues;

@@ -187,7 +187,7 @@ protected:
             parameter.hints |= kParameterIsInteger;
             parameter.ranges.min = 0.0f;
             parameter.ranges.max = static_cast<float>(static_cast<int>(downspout::bassgen::ScaleId::count) - 1);
-            parameter.ranges.def = 0.0f;
+            parameter.ranges.def = static_cast<float>(static_cast<int>(downspout::bassgen::ScaleId::minor));
             break;
         case kParamGenre:
             parameter.name = "Genre";

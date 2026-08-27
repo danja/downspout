@@ -433,7 +433,7 @@ public:
     {
         values_.fill(0.0f);
         values_[kParamRootNote] = 36.0f;
-        values_[kParamScale] = 0.0f;
+        values_[kParamScale] = 2.0f;  // ScaleId::minor
         values_[kParamStyle] = 0.0f;
         values_[kParamFormShape] = 0.0f;
         values_[kParamChannel] = 1.0f;

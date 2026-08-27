@@ -157,7 +157,7 @@ protected:
         switch (index) {
         case kParamRootNote: initInteger(parameter, "Root Note", "root_note", 0.0f, 127.0f, 60.0f); break;
         case kParamScale:
-            initInteger(parameter, "Scale", "scale", 0.0f, static_cast<float>(static_cast<int>(downspout::melgen::ScaleId::count) - 1), 1.0f);
+            initInteger(parameter, "Scale", "scale", 0.0f, static_cast<float>(static_cast<int>(downspout::melgen::ScaleId::count) - 1), static_cast<float>(static_cast<int>(downspout::melgen::ScaleId::major)));
             break;
         case kParamChannel: initInteger(parameter, "Channel", "channel", 1.0f, 16.0f, 1.0f); break;
         case kParamLengthBeats:
