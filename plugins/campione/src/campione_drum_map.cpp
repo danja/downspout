@@ -469,6 +469,9 @@ static std::unordered_map<int, float> scoreAcoustic(const sp_profile_t& p)
         // Dominant partial in kick range; low salience expected due to pitch sweep
         if (dp_freq > 28 && dp_freq < 130 && dp_sal < 0.55) ks += 0.20f;
         else if (dp_freq > 28 && dp_freq < 130)              ks += 0.10f;
+        // Very high salience at low frequency + very low flatness = tonal kick fundamental.
+        // Distinguishes kick from floor tom: toms have richer harmonics → lower salience.
+        if (dp_freq > 40 && dp_freq < 110 && dp_sal > 0.85 && flatness < 0.06) ks += 0.25f;
         // Large attack-tail centroid delta: beater transient >> decaying fundamental
         if (atcd > 200) ks += 0.15f;
         else if (atcd > 100) ks += 0.08f;
@@ -487,6 +490,10 @@ static std::unordered_map<int, float> scoreAcoustic(const sp_profile_t& p)
         if (sub_bass < 0.30) ss += 0.15f;
         if (eff_dur > 0.04 && eff_dur < 0.55) ss += 0.20f;
         if (tcentr < 0.35) ss += 0.10f;
+        // Room/bleed snare: body resonance at 150–400 Hz + significant high-end noise.
+        // Short eff_dur (<0.60s) distinguishes from open hi-hat sustain.
+        if (dp_freq > 150 && dp_freq < 400 && high_end > 0.25
+                && sub_bass < 0.08 && eff_dur < 0.60) ss += 0.40f;
         s[38] += ss;
         s[40] += ss * 0.80f;
     }
@@ -569,6 +576,13 @@ static std::unordered_map<int, float> scoreAcoustic(const sp_profile_t& p)
         if (eff_dur > 0.12 && eff_dur < 1.8) ts += 0.20f;
         if (dp_freq > 55 && dp_freq < 360 && dp_sal > 0.28) ts += 0.25f;
         if (sub_bass < 0.42) ts += 0.10f;   // less sub-bass than kick
+        // Very high salience + very low flatness at low frequency = kick fundamental, not tom.
+        // Toms have richer harmonic content → lower dominant partial salience.
+        if (dp_sal > 0.85 && flatness < 0.06 && dp_freq < 110) ts -= 0.40f;
+        // Significant high-end energy is inconsistent with closed-body toms.
+        // Snare noise and cymbal content both show high_end > 0.20.
+        if (high_end > 0.20) ts -= 0.40f;
+        if (ts < 0.0f) ts = 0.0f;
 
         if (ts > 0.0f) {
             // Distribute by dominant partial; fall back to equal when unknown
@@ -652,6 +666,23 @@ static std::vector<DrumAssignment> solveFromScores(
             a.evidence   = gmNoteName(cands[0].first);
         }
         return {a};
+    }
+
+    // Loop-slicing mode: many zones likely represent repeated hits (kick, snare, hat).
+    // Hungarian enforces uniqueness — only 1 zone per GM note — which is wrong here.
+    // Instead use argmax: each zone independently picks its best-scoring note.
+    // Threshold: more zones than a standard kit (16) implies loop slices.
+    if (n > 16) {
+        std::vector<DrumAssignment> results(static_cast<std::size_t>(n));
+        for (int zi = 0; zi < n; ++zi) {
+            const auto& cands = zoneScores[static_cast<std::size_t>(zi)];
+            if (!cands.empty() && cands[0].second >= 0.30f) {
+                results[static_cast<std::size_t>(zi)].gmNote     = cands[0].first;
+                results[static_cast<std::size_t>(zi)].confidence = cands[0].second;
+                results[static_cast<std::size_t>(zi)].evidence   = gmNoteName(cands[0].first);
+            }
+        }
+        return results;
     }
 
     // Collect union of candidate notes across all zones.
@@ -794,6 +825,105 @@ std::vector<DrumAssignment> assignDrumNotes(const std::vector<SampleZone>& zones
     }
 
     return solveFromScores(blended);
+}
+
+std::string drumMapReport(const std::vector<SampleZone>& zones)
+{
+    std::string out;
+    char buf[512];
+
+    for (std::size_t zi = 0; zi < zones.size(); ++zi) {
+        const auto& z = zones[zi];
+        std::snprintf(buf, sizeof(buf), "\n── Zone %zu: %s ──\n",
+                      zi, z.sourcePath.empty() ? "(no path)" : z.sourcePath.c_str());
+        out += buf;
+
+        auto fname = scoreFilename(z.sourcePath);
+        if (fname.empty()) {
+            out += "  filename: no tokens matched\n";
+        } else {
+            out += "  filename scores:";
+            for (std::size_t i = 0; i < std::min(fname.size(), std::size_t(5)); ++i) {
+                std::snprintf(buf, sizeof(buf), "  %s=%.2f",
+                              gmNoteName(fname[i].first), fname[i].second);
+                out += buf;
+            }
+            out += "\n";
+        }
+
+        if (z.data.empty()) {
+            out += "  no audio data — filename-only\n";
+            continue;
+        }
+
+        const int frames = static_cast<int>(z.data.size()) / std::max(1, z.channelCount);
+        std::vector<std::vector<float>> ch(z.channelCount, std::vector<float>(frames));
+        for (int c = 0; c < z.channelCount; ++c)
+            for (int i = 0; i < frames; ++i)
+                ch[static_cast<std::size_t>(c)][static_cast<std::size_t>(i)] =
+                    z.data[static_cast<std::size_t>(i * z.channelCount + c)];
+        std::vector<const float*> ptrs(z.channelCount);
+        for (int c = 0; c < z.channelCount; ++c)
+            ptrs[static_cast<std::size_t>(c)] = ch[static_cast<std::size_t>(c)].data();
+
+        const sp_profile_t p = sp_analyse(
+            ptrs.data(), z.channelCount,
+            static_cast<std::size_t>(frames), z.sampleRate, nullptr);
+
+        double sub_bass = p.band_energy[0] + p.band_energy[1];
+        double low_mid  = p.band_energy[2] + p.band_energy[3];
+        double mid_high = p.band_energy[4] + p.band_energy[5];
+        double high_end = p.band_energy[6] + p.band_energy[7];
+        double flatness = p.frame_stat[6].defined ? p.frame_stat[6].mean : 0.5;
+
+        std::snprintf(buf, sizeof(buf),
+            "  frames=%d  silent=%d  dur=%.3fs  eff_dur=%.3fs  tcentr=%.3f\n"
+            "  sub_bass=%.3f  low_mid=%.3f  mid_high=%.3f  high_end=%.3f\n"
+            "  flatness=%.3f  dp_freq=%.1fHz  dp_sal=%.3f  atcd=%.1f  r2=%.3f\n",
+            frames, (int)p.silent,
+            p.duration_seconds, p.effective_duration_seconds,
+            p.temporal_centroid_normalised,
+            sub_bass, low_mid, mid_high, high_end,
+            flatness,
+            p.valid[33] ? p.dominant_partial_frequency : 0.0,
+            p.valid[34] ? p.dominant_partial_salience : 0.0,
+            p.valid[30] ? p.attack_tail_centroid_delta : 0.0,
+            p.valid[7]  ? p.decay_fit_r2 : 0.5);
+        out += buf;
+
+        const auto acoustic = scoreAcoustic(p);
+        if (acoustic.empty()) {
+            out += "  acoustic: (silent — no scores)\n";
+        } else {
+            std::vector<std::pair<int,float>> sorted(acoustic.begin(), acoustic.end());
+            std::sort(sorted.begin(), sorted.end(),
+                      [](const auto& a, const auto& b){ return a.second > b.second; });
+            out += "  acoustic top-5:";
+            for (std::size_t i = 0; i < std::min(sorted.size(), std::size_t(5)); ++i) {
+                std::snprintf(buf, sizeof(buf), "  %s=%.3f",
+                              gmNoteName(sorted[i].first), sorted[i].second);
+                out += buf;
+            }
+            out += "\n";
+
+            // Build blended scores (same as assignDrumNotes)
+            std::unordered_map<int, float> combined;
+            for (const auto& kv : fname)    combined[kv.first] += 0.40f * kv.second;
+            for (const auto& kv : acoustic) combined[kv.first] += 0.60f * kv.second;
+            std::vector<std::pair<int,float>> blended(combined.begin(), combined.end());
+            std::sort(blended.begin(), blended.end(),
+                      [](const auto& a, const auto& b){ return a.second > b.second; });
+            out += "  blended top-5:";
+            for (std::size_t i = 0; i < std::min(blended.size(), std::size_t(5)); ++i) {
+                std::snprintf(buf, sizeof(buf), "  %s=%.3f%s",
+                              gmNoteName(blended[i].first), blended[i].second,
+                              blended[i].second >= 0.30f ? "" : " <THRESH");
+                out += buf;
+            }
+            out += "\n";
+        }
+    }
+    return out;
 }
 
 } // namespace downspout::campione

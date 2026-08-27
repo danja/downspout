@@ -61,4 +61,9 @@ if(BUILD_TESTING)
     )
     target_link_libraries(downspout_campione_core_tests PRIVATE downspout_campione_core)
     add_test(NAME downspout_campione_core_tests COMMAND downspout_campione_core_tests)
+
+    add_executable(campione_diag_drum_map
+        tests/diag_drum_map.cpp
+    )
+    target_link_libraries(campione_diag_drum_map PRIVATE downspout_campione_core)
 endif()

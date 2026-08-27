@@ -28,4 +28,8 @@ std::vector<DrumAssignment> assignDrumNotes(const std::vector<std::string>& sour
 // Convenience overload: extracts sourcePath from each SampleZone.
 std::vector<DrumAssignment> assignDrumNotes(const std::vector<SampleZone>& zones);
 
+// Returns a human-readable diagnostic report for each zone: descriptor values,
+// per-note acoustic scores, filename scores, and blended result.
+std::string drumMapReport(const std::vector<SampleZone>& zones);
+
 } // namespace downspout::campione

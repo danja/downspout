@@ -5,14 +5,15 @@ All 10 previously-failing tests now pass. Pre-existing unrelated failure:
 
 ## Campione
 
-The drum sound recognition part of plugins/campione doesn't find any matches when tested on samples lifted from a drum loop 
+~~The drum sound recognition part of plugins/campione doesn't find any matches when tested on samples lifted from a drum loop~~ Fixed: three-part acoustic fix + loop-slicing mode.
 
-~/Music/samples/loops/Drum\ Loops/KSMB1_0_SandmanBreak_Original_CD.wav
+- Kick vs Low Floor Tom: added high-salience/low-flatness bonus to kick scorer; added matching penalty to tom scorer (very high dp_sal + low flatness + dp_freq < 110 Hz = kick, not tom)
+- Snare vs Low-Mid Tom: added room/bleed snare rule (dp_freq 150–400 Hz + high_end > 0.25 + sub_bass < 0.08 + eff_dur < 0.60s); added high_end penalty to tom scorer (high_end > 0.20 indicates noise, not a closed-body tom)
+- Loop-slicing mode: when n > 16 zones, use argmax instead of Hungarian so multiple slices can share the same GM note. Result on Sandman Break: 55/56 slices assigned (was 10/56); kicks → MIDI 36, snares → MIDI 38, cymbals → MIDI 49.
 
-~~Create a helper system for Campione in JS using third_party/freesound-js to obtain drum samples to run the sound recognition algorithms over.~~ Done: `scripts/campione-freesound-helper.js`. Downloads 5 samples per drum category (kick/snare/hihat/crash/ride/tom/clap) from Freesound into `tests/freesound-samples/`, then loads each through the Campione MCP server and reports recognition accuracy per category. Run with `--download` to fetch samples, `--test` to test against a running Campione instance.
+~~Create a helper system for Campione in JS using third_party/freesound-js to obtain drum samples to run the sound recognition algorithms over.~~ Done: `scripts/campione-freesound-helper.js`.
 
-
-Ensure the operations supported by the UI are also covered by MCP, and vice versa.
+~~Ensure the operations supported by the UI are also covered by MCP, and vice versa.~~ Done: added `import_wavetable`, `reorder_zone`, `preview_zone` to MCP; added "Clear All" to UI context menu; registered all state keys in `initState()`.
 
 ## Rift
 
