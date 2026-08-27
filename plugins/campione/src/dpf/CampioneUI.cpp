@@ -191,6 +191,25 @@ protected:
             rebuildFromZonesState(data);
             if (selectedZone_ >= static_cast<int>(zones_.size()))
                 selectedZone_ = -1;
+            if (pendingDrumDialog_) {
+                pendingDrumDialog_ = false;
+                drumReportScrollOffset_ = 0;
+                drumReportAssignments_.resize(zones_.size());
+                for (std::size_t i = 0; i < zones_.size(); ++i) {
+                    const int oldNote = (i < preDrumMapZones_.size())
+                                        ? preDrumMapZones_[i].rootNote : -1;
+                    const int newNote = zones_[i].rootNote;
+                    auto& a = drumReportAssignments_[i];
+                    if (newNote != oldNote && newNote >= 0) {
+                        a.gmNote     = newNote;
+                        a.confidence = 1.0f;
+                        a.evidence   = downspout::campione::gmNoteName(newNote);
+                    } else {
+                        a = {};  // gmNote = -1: unassigned / unchanged
+                    }
+                }
+                dialogMode_ = kDialogDrumReport;
+            }
             repaint();
             return;
         }
@@ -415,7 +434,20 @@ protected:
         if (dialogMode_ != kDialogNone) {
             if (!ev.press) return false;
             if (dialogOkBtn_.contains(px, py))     { confirmDialog(); return true; }
-            if (dialogCancelBtn_.contains(px, py)) { dialogMode_ = kDialogNone; repaint(); return true; }
+            if (dialogCancelBtn_.contains(px, py)) {
+                if (dialogMode_ == kDialogDrumReport) {
+                    // DSP already applied; revert by pushing back the pre-map zones.
+                    for (std::size_t i = 0; i < preDrumMapZones_.size() && i < zones_.size(); ++i) {
+                        zones_[i].rootNote  = preDrumMapZones_[i].rootNote;
+                        zones_[i].rangeLow  = preDrumMapZones_[i].rangeLow;
+                        zones_[i].rangeHigh = preDrumMapZones_[i].rangeHigh;
+                        pushZoneUpdate(static_cast<int>(i));
+                    }
+                    preDrumMapZones_.clear();
+                    drumReportAssignments_.clear();
+                }
+                dialogMode_ = kDialogNone; repaint(); return true;
+            }
             getWindow().focus();  // re-assert keyboard focus on any click inside dialog
             return true; // swallow all other clicks
         }
@@ -712,10 +744,13 @@ protected:
 
             // Drum: delegate full acoustic drum mapping to DSP (has audio data).
             // Filename-only analysis in the UI gives 0 matches for slice files.
+            // Snapshot zones so Cancel can revert; flag triggers dialog on kParamZonesVersion bump.
             if (drumBtn_.contains(px, py)) {
                 if (zones_.empty()) { showStatus("No zones to assign"); return true; }
+                preDrumMapZones_  = zones_;
+                pendingDrumDialog_ = true;
                 setState(kStateKeyMapDrum, "");
-                showStatus("Drum map applied");
+                showStatus("Analyzing drums\xe2\x80\xa6");
                 return true;
             }
 
@@ -2320,15 +2355,11 @@ private:
             }
             break;
         case kDialogDrumReport: {
+            // DSP already applied assignments; pushZoneUpdate confirms UI/DSP sync.
             int assigned = 0;
             for (std::size_t zi = 0; zi < zones_.size() && zi < drumReportAssignments_.size(); ++zi) {
                 const auto& a = drumReportAssignments_[zi];
-                if (a.gmNote >= 0) {
-                    zones_[zi].rootNote  = a.gmNote;
-                    zones_[zi].rangeLow  = a.gmNote;
-                    zones_[zi].rangeHigh = a.gmNote;
-                    ++assigned;
-                }
+                if (a.gmNote >= 0) ++assigned;
                 pushZoneUpdate(zi);
             }
             char sb[64];
@@ -2336,6 +2367,7 @@ private:
                           assigned, static_cast<int>(zones_.size()));
             showStatus(sb);
             drumReportAssignments_.clear();
+            preDrumMapZones_.clear();
             break;
         }
         default: break;
@@ -2669,6 +2701,8 @@ private:
     Rect        dialogCancelBtn_ {};
     // Drum report dialog
     std::vector<downspout::campione::DrumAssignment> drumReportAssignments_;
+    std::vector<ZoneEntry>                           preDrumMapZones_;
+    bool pendingDrumDialog_      = false;
     int  drumReportScrollOffset_ = 0;
     Rect drumReportOkBtn_        {};
     Rect drumReportCancelBtn_    {};

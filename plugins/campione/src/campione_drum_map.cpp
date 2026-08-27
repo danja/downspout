@@ -260,13 +260,6 @@ static const GmNoteName kGmNoteNames[] = {
     {80,"Mute Triangle"}, {81,"Open Triangle"},
 };
 
-const char* gmNoteName(int note)
-{
-    for (const auto& e : kGmNoteNames)
-        if (e.note == note) return e.name;
-    return "Unknown";
-}
-
 // ── scoring ────────────────────────────────────────────────────────────────────
 
 static std::unordered_map<int, float> rawScores(const std::vector<std::string>& tokens)
@@ -741,6 +734,13 @@ static std::vector<DrumAssignment> solveFromScores(
 } // namespace
 
 // ── public API ────────────────────────────────────────────────────────────────
+
+const char* gmNoteName(int note)
+{
+    for (const auto& e : kGmNoteNames)
+        if (e.note == note) return e.name;
+    return "Unknown";
+}
 
 std::vector<std::pair<int, float>> scoreFilename(const std::string& sourcePath)
 {
