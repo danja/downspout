@@ -2,11 +2,15 @@
 
 ## Producer Control Bus
 
-Read /home/danny/github/downspout/docs/producer-control-bus.md and see what might need tweaking/implementing in the plugins to make this more intuitive and useful in /home/danny/github/transmission
+~~Read /home/danny/github/downspout/docs/producer-control-bus.md and see what might need tweaking/implementing in the plugins to make this more intuitive and useful in /home/danny/github/transmission~~
+
+Assessment: contract is well-defined. Remaining gaps:
+- Bassops CC 34/35 overlay not active (needs `DISTRHO_PLUGIN_WANT_MIDI_INPUT 1` in its DistrhoPluginInfo.h and MIDI processing wired in the plugin)
+- Transmission should be able to read bus participation from each plugin's `profile.ttl` using `trn:busRole`, `trn:ccMapping`, and `trn:ccGate` — verify these are populated correctly in all bus-participant profiles (Mixgen, T-Mix, Loopdelay, Lightverb, Bassops)
 
 ## Campione
 
-High priority : it forgets its zones between loads.
+High priority : it forgets its zones between loads. (May be fixed — verify.)
 
 ~~The drum sound recognition part of plugins/campione doesn't find any matches when tested on samples lifted from a drum loop~~ Fixed: three-part acoustic fix + loop-slicing mode.
 
@@ -24,7 +28,7 @@ Simplify UI, make sounds more varied.
 
 ## Lightverb
 
-Remove the SIGNAL FLOW block - if it is only labels
+~~Remove the SIGNAL FLOW block - if it is only labels~~ Done: removed block, shifted remaining sections up 82px, reduced window height 650→568.
 Think about lightweight additions: spatial? Presets?
 
 ## Floozy
@@ -35,13 +39,15 @@ assignments, the generators will not follow. Consider exposing CC number paramet
 on the receiver side, or adding a note to the UI that CC numbers must match
 Conductor's settings.
 
-### Pending — Conductor CC channel collision note
+### ~~Pending — Conductor CC channel collision note~~
 
-The BassGen "MIDI Follow" system (Note On response for drum triggering) and the
+~~The BassGen "MIDI Follow" system (Note On response for drum triggering) and the
 "Conductor" system (CC response) operate on different MIDI message types, so they
 can coexist on the same channel. However, the UI should make this clearer — consider
 a tooltip or panel note explaining that Follow Ch and Conductor Ch serve different
-purposes and can differ.
+purposes and can differ.~~
+
+Done: section labels now read "MIDI Follow · note-on triggers" and "Conductor · CC 20–24 from Mixgen".
 
 ## Newer plugins needing evaluation
 

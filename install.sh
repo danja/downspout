@@ -99,6 +99,9 @@ fi
 
 echo "Installing to $vst3_dir"
 cmake --install "$build_dir" --prefix "$vst3_dir"
+# cmake install(DIRECTORY) does not preserve execute bits; set them so hosts
+# (Carla, REAPER, Ardour) can dlopen the shared libraries.
+find "$vst3_dir" -name "*.so" -exec chmod +x {} \;
 
 if compgen -G "$vst3_dir/*.vst3" > /dev/null; then
   echo "Installed VST3 bundles:"

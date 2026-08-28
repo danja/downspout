@@ -541,7 +541,7 @@ private:
 
         // MIDI Follow group
         cy += 4.0f;
-        drawSectionLabel(sx, cy, "MIDI Follow");
+        drawSectionLabel(sx, cy, "MIDI Follow · note-on triggers");
         cy += 14.0f;
         selectorRects_[5] = {sx, cy, sw, selectorH};
         drawSelector(kSelectors[5], selectorRects_[5], static_cast<int>(std::lround(values_[kSelectors[5].index])));
@@ -549,7 +549,7 @@ private:
 
         // Conductor group
         cy += 4.0f;
-        drawSectionLabel(sx, cy, "Conductor");
+        drawSectionLabel(sx, cy, "Conductor · CC 20–24 from Mixgen");
         cy += 14.0f;
         selectorRects_[6] = {sx, cy, sw, selectorH};
         drawSelector(kSelectors[6], selectorRects_[6], static_cast<int>(std::lround(values_[kSelectors[6].index])));
