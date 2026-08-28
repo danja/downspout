@@ -39,12 +39,14 @@ DrumGen now has section label "Conductor · CC 21–24 from Mixgen" to match Bas
 
 ## Gremlin
 
-Simplify UI, make sounds more varied.
+~~Make sounds more varied.~~ Done: exposed two previously hidden parameters in the slider blocks — `Pitch Spread` (P.Sprd) in the Source block (audibly widens voice intervals, most noticeable in Ring/Vapor modes) and `Chaos Rate` (C.Rate) in the Time/Space block (controls how fast the chaos attractors evolve). Each block now shows 9 sliders instead of 8. Block subtitles updated to hint at the new controls.
+
+Simplify UI — left open pending user design direction on which controls to hide/merge.
 
 ## Lightverb
 
 ~~Remove the SIGNAL FLOW block - if it is only labels~~ Done: removed block, shifted remaining sections up 82px, reduced window height 650→568.
-Think about lightweight additions: spatial? Presets?
+~~Think about lightweight additions: spatial? Presets?~~ Done: added PRESETS section (window height 568→638) with 5 one-click presets — Room, Hall, Plate, Shimmer, Spring — each sets Space/Decay/Damping/PreDelay/Width/Mix via `commitParameter`. Spatial (L/R pre-delay offset) noted as future addition using existing `preDelayLeft`/`preDelayRight` State fields.
 
 ## Floozy
 

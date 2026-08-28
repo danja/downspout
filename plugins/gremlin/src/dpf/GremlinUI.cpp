@@ -84,7 +84,10 @@ constexpr std::array<SliderDef, 9> kPrimarySliderDefs = {{
     {6, kParamStatusStart + 6, "Fold"},
     {11, kParamStatusStart + 11, "Tone"},
     {16, kParamStatusStart + 16, "Level"},
-    {kInvalidParam, kInvalidParam, ""},
+    // pitchSpread (hidden): widens voice intervals, most audible in Ring/Vapor modes
+    {kParamInputHiddenStart + 2u,
+     kParamStatusStart + static_cast<uint32_t>(downspout::gremlin::kLiveParamCount) + 2u,
+     "P.Sprd"},
 }};
 
 constexpr std::array<SliderDef, 9> kDelaySliderDefs = {{
@@ -96,7 +99,10 @@ constexpr std::array<SliderDef, 9> kDelaySliderDefs = {{
     {13, kParamStatusStart + 13, "Space"},
     {14, kParamStatusStart + 14, "Atk"},
     {15, kParamStatusStart + 15, "Rel"},
-    {kInvalidParam, kInvalidParam, ""},
+    // chaosRate (hidden): controls how fast the chaos attractors evolve
+    {kParamInputHiddenStart + 6u,
+     kParamStatusStart + static_cast<uint32_t>(downspout::gremlin::kLiveParamCount) + 6u,
+     "C.Rate"},
 }};
 
 constexpr std::array<ButtonDef, kModeCount> kModeButtons = {{
@@ -470,22 +476,22 @@ private:
                         sourceW,
                         blockH,
                         "Source",
-                        "top row",
+                        "top row · P.Sprd = pitch variety",
                         kPrimarySliderDefs.data(),
-                        8,
+                        9,
                         sliderIndex,
                         103,
                         190,
                         157);
-        sliderIndex += 8;
+        sliderIndex += 9;
         drawSliderBlock(x + macroW + sourceW + gap * 2.0f,
                         y,
                         spaceW,
                         blockH,
                         "Time / Space",
-                        "middle row",
+                        "middle row · C.Rate = chaos speed",
                         kDelaySliderDefs.data(),
-                        8,
+                        9,
                         sliderIndex,
                         111,
                         157,
