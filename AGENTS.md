@@ -14,6 +14,7 @@
 - On a fresh CMake build directory, do not launch the build command until configure has finished. In this repo, starting `cmake --build` too early regularly races cache generation and fails with `Error: could not load cache`.
 - Log mistakes in MISTAKES.md (what happened, root cause, prevention).
 - Periodically review docs/todo.md and revise as necessary.
+- **`docs/scales.md` is the primary reference for all scale-related work** — canonical ordering, per-plugin coverage, naming conventions, and the append-only rule. Consult it before adding, renaming, or reordering scales in any plugin.
 
 ## Repository shape
 
