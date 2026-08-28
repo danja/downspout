@@ -110,15 +110,24 @@ void testTransportHelpers()
 
 void testScaleIdsStayAppendOnly()
 {
-    assert(SCALE_BEBOP_MINOR == 17);
-    assert(SCALE_PHRYGIAN == 18);
-    assert(SCALE_LOCRIAN == 19);
-    assert(SCALE_PHRYGIAN_DOMINANT == 20);
-    assert(SCALE_COUNT == 21);
+    // Ordinals are serialised in host state — any insertion breaks saved projects.
+    // When adding scales, append before SCALE_COUNT and update these pins.
+    assert(SCALE_CHROMATIC         == 0);
+    assert(SCALE_MAJOR             == 1);
+    assert(SCALE_PHRYGIAN          == 7);
+    assert(SCALE_LOCRIAN           == 10);
+    assert(SCALE_PHRYGIAN_DOMINANT == 11);
+    assert(SCALE_BLUES             == 16);
+    assert(SCALE_WHOLE_TONE        == 17);
+    assert(SCALE_ALTERED           == 18);
+    assert(SCALE_BEBOP_DOMINANT    == 21);
+    assert(SCALE_BEBOP_MAJOR       == 22);
+    assert(SCALE_BEBOP_MINOR       == 23);
+    assert(SCALE_COUNT             == 24);
 
     Controls controls = defaultControls();
     controls.scale = 999;
-    assert(clampControls(controls).scale == SCALE_PHRYGIAN_DOMINANT);
+    assert(clampControls(controls).scale == SCALE_BEBOP_MINOR);  // clamps to COUNT-1
 }
 
 void testStoppedTransportPassThrough()

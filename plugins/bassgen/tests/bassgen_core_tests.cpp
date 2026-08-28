@@ -442,16 +442,24 @@ void testJazzApproachAndEnclosureNotesTargetChordTones() {
     assert(relativePitchClass(nextBarRoot->note, controls.rootNote) == 0);
 }
 
-void testJazzScaleIdsAreAppended() {
-    assert(static_cast<int>(ScaleId::minor) == 0);
-    assert(static_cast<int>(ScaleId::wholeTone) == 13);
-    assert(static_cast<int>(ScaleId::altered) == 14);
-    assert(static_cast<int>(ScaleId::halfWholeDiminished) == 15);
-    assert(static_cast<int>(ScaleId::wholeHalfDiminished) == 16);
-    assert(static_cast<int>(ScaleId::bebopDominant) == 17);
-    assert(static_cast<int>(ScaleId::bebopMajor) == 18);
-    assert(static_cast<int>(ScaleId::bebopMinor) == 19);
-    assert(static_cast<int>(ScaleId::count) == 20);
+void testScaleIdsAreAppendOnly() {
+    // Ordinals are serialised in host state — any insertion breaks saved projects.
+    // When adding scales, append before count and update these pins.
+    assert(static_cast<int>(ScaleId::major)               == 0);
+    assert(static_cast<int>(ScaleId::ionian)              == 1);
+    assert(static_cast<int>(ScaleId::minor)               == 2);
+    assert(static_cast<int>(ScaleId::harmonicMinor)       == 3);
+    assert(static_cast<int>(ScaleId::melodicMinor)        == 4);
+    assert(static_cast<int>(ScaleId::neapolitanMajor)     == 11);
+    assert(static_cast<int>(ScaleId::neapolitanMinor)     == 12);
+    assert(static_cast<int>(ScaleId::wholeTone)           == 16);
+    assert(static_cast<int>(ScaleId::altered)             == 17);
+    assert(static_cast<int>(ScaleId::halfWholeDiminished) == 18);
+    assert(static_cast<int>(ScaleId::wholeHalfDiminished) == 19);
+    assert(static_cast<int>(ScaleId::bebopDominant)       == 20);
+    assert(static_cast<int>(ScaleId::bebopMajor)          == 21);
+    assert(static_cast<int>(ScaleId::bebopMinor)          == 22);
+    assert(static_cast<int>(ScaleId::count)               == 23);
 }
 
 void testFugueGenreIsAppendedAndAnswersAtDominant() {
@@ -1132,7 +1140,7 @@ int main() {
     testColorInfluencesNonJazzGenres();
     testJazzStrongBeatsTargetChordTones();
     testJazzApproachAndEnclosureNotesTargetChordTones();
-    testJazzScaleIdsAreAppended();
+    testScaleIdsAreAppendOnly();
     testFugueGenreIsAppendedAndAnswersAtDominant();
     testRockGenrePinsBeatAnchors();
     testMoroderGenreUsesRepetitiveBrightPulse();

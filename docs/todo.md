@@ -15,7 +15,7 @@ What does the "+ auto -" control do?
 
 Make the row of controls starting with Normalise more visibly noticeable with color, and have the buttons blink when clicked. Add a Random button to this row which will reorder the zones randomly.
 
-~~High priority : it forgets its zones between loads.~~ Code analysis shows the persistence path is correct: `zonesInitialized_` guards prevent host from overwriting live zones, autosave via `kStateKeyDataDir` fires with `markInitialized=false` so host state still wins, and `restoreZones` reloads WAV files from `sourcePath`. Needs runtime verification in Carla/REAPER.
+High priority : Campione still forgets its zones. The patch that is visible in the UI shouldbe autosaved and be loaded when the plugin is re-initialised. Right now if the is a set of zones, Reaper  is closed and reopened, the  zones are gone. Previous thoughts : Code analysis shows the persistence path is correct: `zonesInitialized_` guards prevent host from overwriting live zones, autosave via `kStateKeyDataDir` fires with `markInitialized=false` so host state still wins, and `restoreZones` reloads WAV files from `sourcePath`. Needs runtime verification in Carla/REAPER.
 
 ~~The drum sound recognition part of plugins/campione doesn't find any matches when tested on samples lifted from a drum loop~~ Fixed: three-part acoustic fix + loop-slicing mode.
 
