@@ -769,6 +769,7 @@ protected:
                 preDrumMapZones_  = zones_;
                 pendingDrumDialog_ = true;
                 setState(kStateKeyMapDrum, "1");
+                flashBtn(kFlashDrum);
                 showStatus("Analyzing drums\xe2\x80\xa6");
                 return true;
             }
@@ -788,6 +789,7 @@ protected:
                         pushZoneUpdate(static_cast<std::size_t>(zi));
                     }
                 }
+                flashBtn(kFlashSpread);
                 repaint();
                 return true;
             }
@@ -1713,33 +1715,44 @@ private:
                 Clock::now() - flashedBtnAt_).count();
             const bool flashActive = (flashedBtn_ != kFlashNone && flashAge < 200);
 
-            // drawActionBtn: colored teal style, brightens briefly when flashing
-            auto drawActionBtn = [&](Rect& out, const char* label, int btnId) {
+            // drawActionBtn: theme 0=teal (zone ops), 1=amber (drum), 2=blue (spread)
+            auto drawActionBtn = [&](Rect& out, const char* label, int btnId, int theme) {
                 out = { bx, ay, btnW, kActionH };
                 const bool lit = flashActive && (flashedBtn_ == btnId);
+                struct { int bgR,bgG,bgB, stR,stG,stB, txR,txG,txB; } c;
+                if (theme == 1) {       // amber — drum analysis
+                    c = lit ? decltype(c){90, 65, 22, 210, 155, 65, 255, 228, 145}
+                            : decltype(c){55, 38, 12, 130,  95, 35, 215, 175, 100};
+                } else if (theme == 2) { // blue — keyboard spread
+                    c = lit ? decltype(c){35, 58,108,  95, 170,230, 195, 230, 255}
+                            : decltype(c){18, 32, 62,  50, 105,165, 135, 195, 240};
+                } else {                // teal — zone edits (default)
+                    c = lit ? decltype(c){38, 88, 80,  80, 190,170, 200, 255, 240}
+                            : decltype(c){18, 55, 52,  45, 120,110, 110, 215, 195};
+                }
                 beginPath();
-                fillColor(lit ? 38 : 18, lit ? 88 : 55, lit ? 80 : 52, 240);
+                fillColor(c.bgR, c.bgG, c.bgB, 240);
                 roundedRect(out.x, out.y, out.w, out.h, 4.0f);
                 fill();
                 closePath();
                 beginPath();
-                strokeColor(lit ? 80 : 45, lit ? 190 : 120, lit ? 170 : 110, lit ? 255 : 200);
+                strokeColor(c.stR, c.stG, c.stB, lit ? 255 : 200);
                 strokeWidth(lit ? 1.5f : 1.0f);
                 roundedRect(out.x, out.y, out.w, out.h, 4.0f);
                 stroke();
                 closePath();
                 fontSize(9.0f);
                 textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-                fillColor(lit ? 200 : 110, lit ? 255 : 215, lit ? 240 : 195, 255);
+                fillColor(c.txR, c.txG, c.txB, 255);
                 text(out.x + out.w * 0.5f, out.y + out.h * 0.5f, label, nullptr);
                 bx += btnW + gap;
             };
 
-            drawActionBtn(waveNormBtn_, "Normalize", kFlashNorm);
-            drawActionBtn(waveTrimBtn_, "Trim",      kFlashTrim);
-            drawActionBtn(waveFadeBtn_, "Fade",      kFlashFade);
-            drawActionBtn(waveRevBtn_,  "Reverse",   kFlashRev);
-            drawActionBtn(waveRandBtn_, "Shuffle",   kFlashRand);
+            drawActionBtn(waveNormBtn_, "Normalize", kFlashNorm, 0);
+            drawActionBtn(waveTrimBtn_, "Trim",      kFlashTrim, 0);
+            drawActionBtn(waveFadeBtn_, "Fade",      kFlashFade, 0);
+            drawActionBtn(waveRevBtn_,  "Reverse",   kFlashRev,  0);
+            drawActionBtn(waveRandBtn_, "Shuffle",   kFlashRand, 0);
 
             // Slice controls: [−][N][+]  [Slice ▸]
             {
@@ -1770,13 +1783,13 @@ private:
                 drawSpinBtn(waveSliceIncBtn_, bx, "+");
                 bx += spinW + gap;
                 // Slice trigger button
-                drawActionBtn(waveSliceBtn_, "Slice \xe2\x96\xb8");
+                drawActionBtn(waveSliceBtn_, "Slice \xe2\x96\xb8", kFlashNone, 0);
             }
 
             // Zone-layout buttons (operate on all zones)
             bx += gap;
-            drawActionBtn(drumBtn_,   "Drum");
-            drawActionBtn(spreadBtn_, "Spread");
+            drawActionBtn(drumBtn_,   "Drum",   kFlashDrum,   1);
+            drawActionBtn(spreadBtn_, "Spread", kFlashSpread, 2);
         }
 
         // ADSR + filter row (bottom 50px of waveform panel)
@@ -2746,7 +2759,7 @@ private:
     Rect waveRevBtn_   {};
     Rect waveRandBtn_  {};
     // Flash state: which action button was last clicked and when
-    enum { kFlashNone=0, kFlashNorm, kFlashTrim, kFlashFade, kFlashRev, kFlashRand };
+    enum { kFlashNone=0, kFlashNorm, kFlashTrim, kFlashFade, kFlashRev, kFlashRand, kFlashDrum, kFlashSpread };
     int flashedBtn_ = kFlashNone;
     std::chrono::steady_clock::time_point flashedBtnAt_;
     Rect waveSliceBtn_     {};
