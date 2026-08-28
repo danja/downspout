@@ -7,6 +7,42 @@
 namespace downspout::harmonic_atlas {
 namespace {
 
+struct ScaleDef { const int* intervals; int count; };
+constexpr int kScaleMajor[]               = {0, 2, 4, 5, 7, 9, 11};
+constexpr int kScaleIonian[]              = {0, 2, 4, 5, 7, 9, 11};
+constexpr int kScaleMinor[]               = {0, 2, 3, 5, 7, 8, 10};
+constexpr int kScaleHarmonicMinor[]       = {0, 2, 3, 5, 7, 8, 11};
+constexpr int kScaleMelodicMinor[]        = {0, 2, 3, 5, 7, 9, 11};
+constexpr int kScaleDorian[]              = {0, 2, 3, 5, 7, 9, 10};
+constexpr int kScalePhrygian[]            = {0, 1, 3, 5, 7, 8, 10};
+constexpr int kScaleLydian[]              = {0, 2, 4, 6, 7, 9, 11};
+constexpr int kScaleMixolydian[]          = {0, 2, 4, 5, 7, 9, 10};
+constexpr int kScaleLocrian[]             = {0, 1, 3, 5, 6, 8, 10};
+constexpr int kScalePhrygianDominant[]    = {0, 1, 4, 5, 7, 8, 10};
+constexpr int kScaleNeapolitanMajor[]     = {0, 1, 4, 5, 7, 9, 11};
+constexpr int kScaleNeapolitanMinor[]     = {0, 1, 3, 5, 7, 8, 10};
+constexpr int kScalePentMajor[]           = {0, 2, 4, 7, 9};
+constexpr int kScalePentMinor[]           = {0, 3, 5, 7, 10};
+constexpr int kScaleBlues[]               = {0, 3, 5, 6, 7, 10};
+constexpr int kScaleWholeTone[]           = {0, 2, 4, 6, 8, 10};
+constexpr int kScaleAltered[]             = {0, 1, 3, 4, 6, 8, 10};
+constexpr int kScaleHalfWholeDim[]        = {0, 1, 3, 4, 6, 7, 9, 10};
+constexpr int kScaleWholeHalfDim[]        = {0, 2, 3, 5, 6, 8, 9, 11};
+constexpr int kScaleBebopDominant[]       = {0, 2, 4, 5, 7, 9, 10, 11};
+constexpr int kScaleBebopMajor[]          = {0, 2, 4, 5, 7, 8, 9, 11};
+constexpr int kScaleBebopMinor[]          = {0, 2, 3, 4, 5, 7, 9, 10};
+constexpr ScaleDef kScaleDefs[] = {
+    {kScaleMajor, 7}, {kScaleIonian, 7}, {kScaleMinor, 7},
+    {kScaleHarmonicMinor, 7}, {kScaleMelodicMinor, 7}, {kScaleDorian, 7},
+    {kScalePhrygian, 7}, {kScaleLydian, 7}, {kScaleMixolydian, 7},
+    {kScaleLocrian, 7}, {kScalePhrygianDominant, 7},
+    {kScaleNeapolitanMajor, 7}, {kScaleNeapolitanMinor, 7},
+    {kScalePentMajor, 5}, {kScalePentMinor, 5}, {kScaleBlues, 6},
+    {kScaleWholeTone, 6}, {kScaleAltered, 7},
+    {kScaleHalfWholeDim, 8}, {kScaleWholeHalfDim, 8},
+    {kScaleBebopDominant, 8}, {kScaleBebopMajor, 8}, {kScaleBebopMinor, 8},
+};
+
 int value(const std::array<float, kParameterCount>& p, const Param id) noexcept
 {
     return static_cast<int>(std::lround(
@@ -134,7 +170,12 @@ MidiBlock process(State& state,
             && downspout::generative::randomUnit(value(parameters, kSeed), chord + 311)
                 < unit(parameters, kScaleNotes)
             && state.activeCount < static_cast<int>(state.activeNotes.size())) {
-            const int note = std::clamp(60 + root + (minor ? 2 : 9), 0, 127);
+            const int scaleId = std::clamp(value(parameters, kScale), 0, 22);
+            const auto& sc = kScaleDefs[scaleId];
+            const int degree = downspout::generative::randomInt(
+                static_cast<std::uint64_t>(value(parameters, kSeed)),
+                static_cast<std::uint64_t>(chord + 399), 0, sc.count - 1);
+            const int note = std::clamp(60 + root + sc.intervals[degree], 0, 127);
             state.activeNotes[static_cast<std::size_t>(state.activeCount++)] = note;
             result.push(frame, downspout::generative::status(true, channel),
                         static_cast<std::uint8_t>(note), 62);

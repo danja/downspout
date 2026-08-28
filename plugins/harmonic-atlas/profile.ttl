@@ -46,4 +46,9 @@ dsp:harmonic-atlas a trn:PluginProfile ;
         trn:ccRole "Gate" ;
         rdfs:comment "Optional ownership gate: acquires/releases Conductor control."
     ] ;
+    trn:parameter [
+        trn:symbol "scale" ;
+        rdfs:label "Scale" ;
+        rdfs:comment "Selects the scale (0-22) used to draw colour notes added above the chord. Follows the canonical Downspout scale ordering."
+    ] ;
     rdfs:comment "Conductor channel is configurable in the UI. CC 21 (density) has no direct mapping — Harmonic Atlas generates block chords, not individual-note density. See docs/producer-control-bus.md." .

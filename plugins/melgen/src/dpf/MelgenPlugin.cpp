@@ -39,6 +39,7 @@ enum ParameterIndex : uint32_t {
     kParamActionRhythm,
     kParamFollow,
     kParamColor,
+    kParamConductorChannel,
     kParameterCount
 };
 
@@ -189,6 +190,7 @@ protected:
         case kParamVary: initFloat(parameter, "Vary", "vary", 0.0f, 100.0f, 0.0f); break;
         case kParamFollow: initFloat(parameter, "Follow", "follow", 0.0f, 1.0f, 0.0f); break;
         case kParamColor: initFloat(parameter, "Color", "color", 0.0f, 1.0f, 0.5f); break;
+        case kParamConductorChannel: initInteger(parameter, "Conductor Ch", "conductor_ch", 0.0f, 16.0f, 0.0f); break;
         case kParamActionNew:
         case kParamActionNotes:
         case kParamActionRhythm:
@@ -243,6 +245,7 @@ protected:
         case kParamVary: return controls_.vary * 100.0f;
         case kParamFollow: return controls_.follow;
         case kParamColor: return controls_.color;
+        case kParamConductorChannel: return static_cast<float>(conductorChannel_);
         case kParamActionNew:
         case kParamActionNotes:
         case kParamActionRhythm:
@@ -277,6 +280,7 @@ protected:
         case kParamVary: controls_.vary = value / 100.0f; break;
         case kParamFollow: controls_.follow = value; break;
         case kParamColor: controls_.color = value; break;
+        case kParamConductorChannel: conductorChannel_ = static_cast<int>(value); break;
         case kParamActionNew: if (value > 0.5f) ++controls_.actionNew; break;
         case kParamActionNotes: if (value > 0.5f) ++controls_.actionNotes; break;
         case kParamActionRhythm: if (value > 0.5f) ++controls_.actionRhythm; break;
@@ -335,6 +339,36 @@ protected:
         std::fill_n(outputs[0], frames, 0.0f);
         std::fill_n(outputs[1], frames, 0.0f);
 
+        const int condCh = conductorChannel_;
+        if (condCh > 0) {
+            for (uint32_t i = 0; i < midiEventCount; ++i) {
+                const auto& ev = midiEvents[i];
+                if (ev.size >= 3 && (ev.data[0] & 0xf0) == 0xb0 && (ev.data[0] & 0x0f) == condCh - 1) {
+                    const auto cc  = ev.data[1];
+                    const auto val = ev.data[2];
+                    switch (cc) {
+                    case 20:
+                        controls_.contour = static_cast<downspout::melgen::ContourId>(std::clamp(val / 22, 0, 5));
+                        break;
+                    case 21:
+                        controls_.scale = static_cast<downspout::melgen::ScaleId>(std::clamp(val * 23 / 128, 0, 22));
+                        break;
+                    case 22:
+                        controls_.density = val / 127.0f;
+                        break;
+                    case 23:
+                        controls_.vary = val / 127.0f;
+                        break;
+                    case 24:
+                        if (val == 127) ++controls_.actionNew;
+                        break;
+                    default: break;
+                    }
+                }
+            }
+            controls_ = downspout::melgen::clampControls(controls_);
+        }
+
         std::array<CoreInputMidiEvent, downspout::melgen::kMaxInputMidiEvents> inputEvents {};
         const bool followEnabled = controls_.follow > 0.001f;
         const uint32_t inputCount = followEnabled && midiEvents != nullptr
@@ -361,6 +395,7 @@ protected:
 private:
     CoreControls controls_ {};
     CoreEngineState engine_ {};
+    int conductorChannel_ = 0;
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MelgenPlugin)
 };

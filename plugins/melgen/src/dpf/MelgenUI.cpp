@@ -36,6 +36,7 @@ enum ParameterIndex : uint32_t {
     kParamActionRhythm,
     kParamFollow,
     kParamColor,
+    kParamConductorChannel,
     kParameterCount
 };
 
@@ -95,6 +96,11 @@ constexpr const char* kChannelNames[] = {
     "9", "10", "11", "12", "13", "14", "15", "16"
 };
 
+constexpr const char* kCondChNames[] = {
+    "Off", "1", "2", "3", "4", "5", "6", "7", "8",
+    "9", "10", "11", "12", "13", "14", "15", "16"
+};
+
 constexpr std::array<SliderDef, 16> kSliders = {{
     {kParamRootNote, "Root", 0.0f, 127.0f, true},
     {kParamRegister, "Register", 0.0f, 4.0f, true},
@@ -120,13 +126,14 @@ constexpr std::array<SliderGroup, 3> kSliderGroups = {{
     {"Pattern", 13, 3},
 }};
 
-constexpr std::array<SelectorDef, 6> kSelectors = {{
+constexpr std::array<SelectorDef, 7> kSelectors = {{
     {kParamScale, "Scale", kScaleNames, 23},
     {kParamPeriod, "Period", kPeriodNames, 6},
     {kParamContour, "Contour", kContourNames, 6},
     {kParamAnswer, "Answer", kAnswerNames, 6},
     {kParamSubdivision, "Grid", kSubdivisionNames, 4},
     {kParamChannel, "Channel", kChannelNames, 16},
+    {kParamConductorChannel, "Conductor ch", kCondChNames, 17},
 }};
 
 constexpr std::array<ButtonDef, 3> kButtons = {{
@@ -190,6 +197,7 @@ public:
         values_[kParamCadence] = 0.55f;
         values_[kParamSeed] = 1.0f;
         values_[kParamVary] = 0.0f;
+        values_[kParamConductorChannel] = 0.0f;
 
        #ifdef DGL_NO_SHARED_RESOURCES
         createFontFromFile("sans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");

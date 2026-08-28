@@ -11,6 +11,36 @@ dsp:melgen a trn:PluginProfile ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/melgen/> ;
     trn:role trn:MidiGenerator ;
-    trn:accepts trn:Midi ;
+    trn:accepts trn:Midi, trn:ControlMidi ;
     trn:produces trn:Midi, trn:MelodyMidi ;
-    trn:requires trn:HostTransport .
+    trn:requires trn:HostTransport ;
+    trn:busRole trn:BusReceiver ;
+    trn:ccMapping [
+        trn:ccNumber 20 ;
+        trn:ccRole "Scene" ;
+        trn:targetParameter "contour" ;
+        rdfs:comment "Maps scene (0-127) to melodic contour shape (0-5: Wander/Flat/Rise/Fall/Arch/InvArch)."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 21 ;
+        trn:ccRole "Instrument" ;
+        trn:targetParameter "scale" ;
+        rdfs:comment "Maps value (0-127) to scale selection (0-22)."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 22 ;
+        trn:ccRole "Energy" ;
+        trn:targetParameter "density" ;
+        rdfs:comment "Overrides note density (0-1)."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 23 ;
+        trn:ccRole "Mutation" ;
+        trn:targetParameter "vary" ;
+        rdfs:comment "Overrides variation amount (0-1 internally, 0-100 in UI)."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 24 ;
+        trn:ccRole "Reset" ;
+        rdfs:comment "Value 127 triggers a new pattern generation."
+    ] .
