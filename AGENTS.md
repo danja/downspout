@@ -4,6 +4,7 @@
 ## Working rules
 - API keys are sacred. They must not be shared.
 - Do not run any `git` operations unless the user explicitly approves them.
+- Use the Read tool to read files, not `sed`/`cat`/`head`/`tail` via Bash. Bash tool calls require per-call user approval; Read does not.
 - Keep DSP/domain logic separate from framework glue.
 - Prefer portable C++ for shared logic; isolate DPF-, OS-, and format-specific code behind thin wrappers.
 - Preserve the behavior of the source LV2 plugins before attempting UI or feature redesign.
