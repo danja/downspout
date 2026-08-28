@@ -68,6 +68,34 @@ protected:
     {
         std::fill_n(outputs[0], frames, 0.0f);
         std::fill_n(outputs[1], frames, 0.0f);
+
+        // Apply Conductor CC overrides before processing (CC 20–24 on configured channel)
+        const int condCh = static_cast<int>(std::lround(parameters_[kConductorChannel]));
+        if (condCh > 0) {
+            for (std::uint32_t i = 0; i < midiEventCount; ++i) {
+                const auto& ev = midiEvents[i];
+                if (ev.size >= 3 && (ev.data[0] & 0xf0) == 0xb0 && (ev.data[0] & 0x0f) == condCh - 1) {
+                    const auto cc  = ev.data[1];
+                    const auto val = ev.data[2];
+                    switch (cc) {
+                    case 20: // Scene → movement style (0=Tonal,1=Modal,2=Chromatic,3=Neo-Riemannian)
+                        parameters_[kStyle] = std::clamp(static_cast<float>(val / 32), 0.0f, 3.0f);
+                        break;
+                    case 22: // Energy → tension (0–1)
+                        parameters_[kTension] = val / 127.0f;
+                        break;
+                    case 23: // Mutation → inversion range (0–3)
+                        parameters_[kInversionRange] = std::clamp(static_cast<float>(val / 32), 0.0f, 3.0f);
+                        break;
+                    case 24: // Reset → discard current harmonic position
+                        if (val == 127) reset(state_);
+                        break;
+                    default: break;
+                    }
+                }
+            }
+        }
+
         std::array<downspout::generative::MidiEvent, 512> input {};
         const auto count = std::min<std::uint32_t>(midiEventCount, input.size());
         for (std::uint32_t i = 0; i < count; ++i) {

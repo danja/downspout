@@ -11,6 +11,7 @@ dsp:mixgen a trn:PluginProfile ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/mixgen/> ;
     trn:role trn:MidiGenerator, trn:Controller, trn:AudioEffect ;
+    trn:busRole trn:BusProducer ;
     trn:accepts trn:Audio ;
     trn:produces trn:Audio, trn:ControlMidi ;
     trn:requires trn:HostTransport ;

@@ -35,6 +35,7 @@ enum StateIndex : std::uint32_t {
     kStateWavetableImport,   // UI sends source WAV path → DSP converts + appends zone
     kStateZoneClear,         // UI sends "" → DSP clears all zones
     kStateMapDrum,           // UI sends "" → DSP runs full acoustic drum map + applies assignments
+    kStateZoneShuffle,       // UI sends "1" → DSP randomises zone order
     kStateCount
 };
 
@@ -57,6 +58,7 @@ inline constexpr const char* kStateKeyZonePreview      = "zone_preview";
 inline constexpr const char* kStateKeyWavetableImport  = "wavetable_import";
 inline constexpr const char* kStateKeyZoneClear        = "zone_clear";
 inline constexpr const char* kStateKeyMapDrum          = "map_drum";
+inline constexpr const char* kStateKeyZoneShuffle      = "zone_shuffle";
 
 inline constexpr const char* kDefaultDataDir        = "/.vst3/campione-data";
 

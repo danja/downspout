@@ -20,6 +20,7 @@
 #include <ctime>
 #include <memory>
 #include <mutex>
+#include <random>
 #include <string>
 #include <sys/stat.h>
 #include <utility>
@@ -73,6 +74,8 @@ using downspout::campione::kStateKeyZoneClear;
 using downspout::campione::kStateZoneClear;
 using downspout::campione::kStateKeyMapDrum;
 using downspout::campione::kStateMapDrum;
+using downspout::campione::kStateKeyZoneShuffle;
+using downspout::campione::kStateZoneShuffle;
 using downspout::campione::kDefaultDataDir;
 using downspout::campione::kStateParameters;
 using downspout::campione::kStateZoneFade;
@@ -412,6 +415,12 @@ protected:
             state.hints        = 0;
             state.defaultValue = "";
             break;
+        case kStateZoneShuffle:
+            state.key          = kStateKeyZoneShuffle;
+            state.label        = "Shuffle Zones";
+            state.hints        = 0;
+            state.defaultValue = "";
+            break;
         }
     }
 
@@ -604,6 +613,12 @@ protected:
             return;
         }
 
+        if (std::strcmp(key, kStateKeyZoneShuffle) == 0 && value && value[0] != '\0')
+        {
+            doZoneShuffle();
+            return;
+        }
+
         if (std::strcmp(key, kStateKeyPatchSave) == 0)
         {
             // "auto" sentinel (or empty) → auto-generate path; otherwise use explicit path
@@ -648,7 +663,7 @@ protected:
             return;
         }
 
-        if (std::strcmp(key, kStateKeyZoneClear) == 0)
+        if (std::strcmp(key, kStateKeyZoneClear) == 0 && value && value[0] != '\0')
         {
             std::lock_guard<std::mutex> lk(zoneMtx_);
             zonesInitialized_ = true;
@@ -659,7 +674,7 @@ protected:
             return;
         }
 
-        if (std::strcmp(key, kStateKeyMapDrum) == 0)
+        if (std::strcmp(key, kStateKeyMapDrum) == 0 && value && value[0] != '\0')
         {
             std::lock_guard<std::mutex> lk(zoneMtx_);
             const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
@@ -855,6 +870,41 @@ private:
         newZones->insert(newZones->begin() + insertAt, std::move(moved));
 
         // Redistribute sorted keyboard ranges to zones in their new display order.
+        for (int i = 0; i < n; ++i) {
+            (*newZones)[static_cast<std::size_t>(i)].rangeLow  = ranges[static_cast<std::size_t>(i)].first;
+            (*newZones)[static_cast<std::size_t>(i)].rangeHigh = ranges[static_cast<std::size_t>(i)].second;
+        }
+
+        std::atomic_store_explicit(&zones_,
+                                   std::shared_ptr<const ZoneVec>(std::move(newZones)),
+                                   std::memory_order_release);
+        notifyZonesChanged(true);
+    }
+
+    void doZoneShuffle()
+    {
+        std::lock_guard<std::mutex> lk(zoneMtx_);
+        zonesInitialized_ = true;
+        const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+        if (!existing || existing->size() < 2) return;
+        const int n = static_cast<int>(existing->size());
+
+        // Preserve sorted keyboard ranges; shuffle only the sample assignments.
+        std::vector<std::pair<int,int>> ranges;
+        ranges.reserve(static_cast<std::size_t>(n));
+        for (const auto& z : *existing)
+            ranges.push_back({z.rangeLow, z.rangeHigh});
+        std::sort(ranges.begin(), ranges.end());
+
+        auto newZones = std::make_shared<ZoneVec>(*existing);
+        // Fisher-Yates shuffle using stdlib random.
+        static thread_local std::mt19937 rng{std::random_device{}()};
+        for (int i = n - 1; i > 0; --i) {
+            std::uniform_int_distribution<int> dist(0, i);
+            int j = dist(rng);
+            if (i != j) std::swap((*newZones)[static_cast<std::size_t>(i)],
+                                   (*newZones)[static_cast<std::size_t>(j)]);
+        }
         for (int i = 0; i < n; ++i) {
             (*newZones)[static_cast<std::size_t>(i)].rangeLow  = ranges[static_cast<std::size_t>(i)].first;
             (*newZones)[static_cast<std::size_t>(i)].rangeHigh = ranges[static_cast<std::size_t>(i)].second;

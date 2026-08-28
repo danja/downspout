@@ -43,26 +43,36 @@ private:
         drawSlider(kVoiceCount, 38, 448, 264, "Chord voices", "", "Maximum chord-note count.", 0);
         drawPercentSlider(kScaleNotes, 310, 448, 276, "Colour-note chance", "Chance of adding an in-scale colour note.");
 
-        drawSection(614, 104, 322, 231, "INPUT & ROUTING", "optional MIDI guidance");
+        drawSection(614, 104, 322, 300, "INPUT & ROUTING", "optional MIDI guidance");
         drawToggle(kFollowInput, 628, 137, 294, "Follow incoming pitch classes",
                    "Use the most recent incoming note as the harmonic root.");
         drawPitchClassSlider(kRoot, 628, 187, 294, "Fallback root",
                              "Root used when input following is disabled or no note has arrived.");
         drawChannelSlider(kChannel, 628, 243, 142, "Output", "MIDI output channel.");
         drawSlider(kSeed, 778, 243, 144, "Seed", "", "Right-click to restore the default seed.", 0);
+        {
+            static constexpr const char* kCondChNames[] = {
+                "Off", "1", "2", "3", "4", "5", "6", "7", "8",
+                "9", "10", "11", "12", "13", "14", "15", "16"
+            };
+            drawChoice(kConductorChannel, 628, 301, 294, "Conductor ch",
+                       kCondChNames, 17,
+                       "Receive Conductor CC 20 (scene\xe2\x86\x92style), 22 (energy\xe2\x86\x92tension), "
+                       "23 (mutation\xe2\x86\x92inversion), 24 (reset) on this MIDI channel.");
+        }
 
-        drawSection(614, 348, 322, 234, "NOW PLAYING", "read-only processor state");
+        drawSection(614, 418, 322, 234, "NOW PLAYING", "read-only processor state");
         const int root = static_cast<int>(std::lround(value(kStatusRoot)));
         char rootText[32] {};
         std::snprintf(rootText, sizeof(rootText), "%s  ·  step %d",
                       pitchClassName(root), static_cast<int>(std::lround(value(kStatusChord))));
-        drawReadout(628, 382, 294, 58, "Current harmonic position", rootText);
+        drawReadout(628, 452, 294, 58, "Current harmonic position", rootText);
         const std::int64_t chord = static_cast<std::int64_t>(std::llround(value(kStatusChord)));
         const bool minor = static_cast<int>(std::lround(value(kStyle))) == 1
             || downspout::generative::randomUnit(
                 static_cast<std::uint64_t>(std::lround(value(kSeed))), chord + 71)
                 < value(kTension) * 0.45f;
-        drawKeyboard(628, 458, 294, 94, root, minor,
+        drawKeyboard(628, 528, 294, 94, root, minor,
                      static_cast<int>(std::lround(value(kVoiceCount))),
                      value(kTension));
 

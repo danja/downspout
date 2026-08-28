@@ -11,6 +11,7 @@ dsp:loopdelay a trn:PluginProfile ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/loopdelay/> ;
     trn:role trn:AudioEffect ;
+    trn:busRole trn:BusReceiver ;
     trn:accepts trn:Audio, trn:ControlMidi ;
     trn:produces trn:Audio ;
     trn:requires trn:HostTransport ;

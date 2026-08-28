@@ -25,6 +25,7 @@ enum Param : std::uint32_t {
     kRoot,
     kChannel,
     kSeed,
+    kConductorChannel,
     kStatusRoot,
     kStatusChord,
     kParameterCount
@@ -43,6 +44,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs {{
     {"root", "Root pitch class", 0, 11, 0, true},
     {"channel", "MIDI channel", 1, 16, 1, true},
     {"seed", "Seed", 1, 65535, 1701, true},
+    {"conductor_ch", "Conductor Ch", 0, 16, 0, true},
     {"status_root", "Effective root", 0, 11, 0, true, true},
     {"status_chord", "Chord index", 0, 4096, 0, true, true},
 }};

@@ -11,7 +11,39 @@ dsp:harmonic-atlas a trn:PluginProfile ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/harmonic_atlas/> ;
     trn:role trn:MidiGenerator ;
+    trn:busRole trn:BusReceiver ;
     trn:accepts trn:Midi, trn:ControlMidi ;
     trn:produces trn:Midi, trn:HarmonyMidi ;
     trn:requires trn:HostTransport ;
-    trn:recommendedBefore dsp:canticle .
+    trn:recommendedBefore dsp:canticle ;
+
+    ## Producer Control Bus CC input
+    trn:ccMapping [
+        trn:ccNumber 20 ;
+        trn:ccRole "Scene" ;
+        trn:targetParameter "style" ;
+        rdfs:comment "Maps scene value to movement language: 0→Tonal, 32→Modal, 64→Chromatic, 96→Neo-Riemannian."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 22 ;
+        trn:ccRole "Energy" ;
+        trn:targetParameter "tension" ;
+        rdfs:comment "Overrides harmonic tension (0–1)."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 23 ;
+        trn:ccRole "Mutation" ;
+        trn:targetParameter "inversion_range" ;
+        rdfs:comment "Overrides voicing spread (0–3)."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 24 ;
+        trn:ccRole "Reset" ;
+        rdfs:comment "Value 127 resets harmonic position to the next chord boundary."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 19 ;
+        trn:ccRole "Gate" ;
+        rdfs:comment "Optional ownership gate: acquires/releases Conductor control."
+    ] ;
+    rdfs:comment "Conductor channel is configurable in the UI. CC 21 (density) has no direct mapping — Harmonic Atlas generates block chords, not individual-note density. See docs/producer-control-bus.md." .

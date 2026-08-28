@@ -11,6 +11,7 @@ dsp:lightverb a trn:PluginProfile ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/lightverb/> ;
     trn:role trn:AudioEffect ;
+    trn:busRole trn:BusReceiver ;
     trn:accepts trn:Audio, trn:ControlMidi ;
     trn:produces trn:Audio ;
     trn:recommendedAfter dsp:loopdelay ;

@@ -11,5 +11,20 @@ dsp:t-mix a trn:PluginProfile ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/t_mix/> ;
     trn:role trn:AudioMixer ;
-    trn:accepts trn:Audio ;
-    trn:produces trn:Audio .
+    trn:busRole trn:BusReceiver ;
+    trn:accepts trn:Audio, trn:ControlMidi ;
+    trn:produces trn:Audio ;
+
+    ## Producer Control Bus CC input — strip gains (one CC per MIDI channel)
+    trn:ccMapping [
+        trn:ccNumber 20 ;
+        trn:ccRole "Strip gain" ;
+        trn:targetParameter "level" ;
+        rdfs:comment "CC 20 on channels 1–8 overrides the gain for strips 1–8 respectively."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 19 ;
+        trn:ccRole "Gate" ;
+        rdfs:comment "Optional ownership gate: acquires/releases control of CC 20 on all channels."
+    ] ;
+    rdfs:comment "Strip gain overrides are temporary; releasing the producer restores panel values. See docs/producer-control-bus.md." .

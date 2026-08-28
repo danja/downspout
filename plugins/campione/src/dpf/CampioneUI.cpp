@@ -51,6 +51,7 @@ using downspout::campione::kStateKeyZonePreview;
 using downspout::campione::kStateKeyWavetableImport;
 using downspout::campione::kStateKeyZoneClear;
 using downspout::campione::kStateKeyMapDrum;
+using downspout::campione::kStateKeyZoneShuffle;
 using downspout::campione::kDefaultDataDir;
 
 struct Rect {
@@ -355,8 +356,11 @@ protected:
             }
         }
 
-        // Rate-limit animation repaints (recording timer, status flash, dialog).
-        if (recording_ || !statusMsg_.empty() || dialogMode_ != kDialogNone) {
+        // Rate-limit animation repaints (recording timer, status flash, dialog, btn flash).
+        const bool btnFlashing = (flashedBtn_ != kFlashNone &&
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - flashedBtnAt_).count() < 200);
+        if (recording_ || !statusMsg_.empty() || dialogMode_ != kDialogNone || btnFlashing) {
             using Clock = std::chrono::steady_clock;
             const auto now = Clock::now();
             const auto ms  = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -708,24 +712,39 @@ protected:
         if (selectedZone_ >= 0 && selectedZone_ < static_cast<int>(zones_.size())) {
             const int si = selectedZone_;
             char buf[64];
+            auto flashBtn = [&](int id) {
+                flashedBtn_ = id;
+                flashedBtnAt_ = std::chrono::steady_clock::now();
+                repaint();
+            };
             if (waveNormBtn_.contains(px, py)) {
                 std::snprintf(buf, sizeof(buf), "%d", si);
                 setState(kStateKeyZoneNormalize, buf);
+                flashBtn(kFlashNorm);
                 return true;
             }
             if (waveTrimBtn_.contains(px, py)) {
                 std::snprintf(buf, sizeof(buf), "%d|-60", si);
                 setState(kStateKeyZoneTrim, buf);
+                flashBtn(kFlashTrim);
                 return true;
             }
             if (waveFadeBtn_.contains(px, py)) {
                 std::snprintf(buf, sizeof(buf), "%d|10|10", si);
                 setState(kStateKeyZoneFade, buf);
+                flashBtn(kFlashFade);
                 return true;
             }
             if (waveRevBtn_.contains(px, py)) {
                 std::snprintf(buf, sizeof(buf), "%d", si);
                 setState(kStateKeyZoneReverse, buf);
+                flashBtn(kFlashRev);
+                return true;
+            }
+            if (waveRandBtn_.contains(px, py)) {
+                if (zones_.size() < 2) { showStatus("Need at least 2 zones to shuffle"); return true; }
+                setState(kStateKeyZoneShuffle, "1");
+                flashBtn(kFlashRand);
                 return true;
             }
             if (waveSliceBtn_.contains(px, py)) {
@@ -749,7 +768,7 @@ protected:
                 if (zones_.empty()) { showStatus("No zones to assign"); return true; }
                 preDrumMapZones_  = zones_;
                 pendingDrumDialog_ = true;
-                setState(kStateKeyMapDrum, "");
+                setState(kStateKeyMapDrum, "1");
                 showStatus("Analyzing drums\xe2\x80\xa6");
                 return true;
             }
@@ -1680,7 +1699,7 @@ private:
             text(waveRect_.x + 6.0f, waveRect_.y + 4.0f, basename(z.path).c_str(), nullptr);
         }
 
-        // Action bar (Normalize / Trim / Fade / Reverse)
+        // Action bar (Normalize / Trim / Fade / Reverse / Shuffle)
         {
             constexpr float kActionH = 16.0f;
             // Place action bar above the ADSR row, leaving 52px at bottom for ADSR/filter
@@ -1689,30 +1708,38 @@ private:
             const float gap  = 6.0f;
             float bx = waveRect_.x + 6.0f;
 
-            auto drawActionBtn = [&](Rect& out, const char* label) {
+            using Clock = std::chrono::steady_clock;
+            const auto flashAge = std::chrono::duration_cast<std::chrono::milliseconds>(
+                Clock::now() - flashedBtnAt_).count();
+            const bool flashActive = (flashedBtn_ != kFlashNone && flashAge < 200);
+
+            // drawActionBtn: colored teal style, brightens briefly when flashing
+            auto drawActionBtn = [&](Rect& out, const char* label, int btnId) {
                 out = { bx, ay, btnW, kActionH };
+                const bool lit = flashActive && (flashedBtn_ == btnId);
                 beginPath();
-                fillColor(28, 44, 56, 240);
+                fillColor(lit ? 38 : 18, lit ? 88 : 55, lit ? 80 : 52, 240);
                 roundedRect(out.x, out.y, out.w, out.h, 4.0f);
                 fill();
                 closePath();
                 beginPath();
-                strokeColor(60, 88, 108, 180);
-                strokeWidth(1.0f);
+                strokeColor(lit ? 80 : 45, lit ? 190 : 120, lit ? 170 : 110, lit ? 255 : 200);
+                strokeWidth(lit ? 1.5f : 1.0f);
                 roundedRect(out.x, out.y, out.w, out.h, 4.0f);
                 stroke();
                 closePath();
                 fontSize(9.0f);
                 textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-                fillColor(180, 200, 215, 255);
+                fillColor(lit ? 200 : 110, lit ? 255 : 215, lit ? 240 : 195, 255);
                 text(out.x + out.w * 0.5f, out.y + out.h * 0.5f, label, nullptr);
                 bx += btnW + gap;
             };
 
-            drawActionBtn(waveNormBtn_, "Normalize");
-            drawActionBtn(waveTrimBtn_, "Trim");
-            drawActionBtn(waveFadeBtn_, "Fade");
-            drawActionBtn(waveRevBtn_,  "Reverse");
+            drawActionBtn(waveNormBtn_, "Normalize", kFlashNorm);
+            drawActionBtn(waveTrimBtn_, "Trim",      kFlashTrim);
+            drawActionBtn(waveFadeBtn_, "Fade",      kFlashFade);
+            drawActionBtn(waveRevBtn_,  "Reverse",   kFlashRev);
+            drawActionBtn(waveRandBtn_, "Shuffle",   kFlashRand);
 
             // Slice controls: [−][N][+]  [Slice ▸]
             {
@@ -2226,7 +2253,7 @@ private:
         case 7: // separator — never reached
             break;
         case 8: // Clear All
-            setState(kStateKeyZoneClear, "");
+            setState(kStateKeyZoneClear, "1");
             zones_.clear();
             selectedZone_ = -1;
             repaint();
@@ -2717,6 +2744,11 @@ private:
     Rect waveTrimBtn_  {};
     Rect waveFadeBtn_  {};
     Rect waveRevBtn_   {};
+    Rect waveRandBtn_  {};
+    // Flash state: which action button was last clicked and when
+    enum { kFlashNone=0, kFlashNorm, kFlashTrim, kFlashFade, kFlashRev, kFlashRand };
+    int flashedBtn_ = kFlashNone;
+    std::chrono::steady_clock::time_point flashedBtnAt_;
     Rect waveSliceBtn_     {};
     Rect waveSliceDecBtn_  {};
     Rect waveSliceCountRect_{};
