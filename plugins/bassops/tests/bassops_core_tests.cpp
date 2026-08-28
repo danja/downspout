@@ -44,10 +44,12 @@ void testSerializationRoundTrip()
     assert(std::fabs(result->cutoffHz  - 400.0f) < 1e-3f);
 }
 
-void testDeserializeInvalidReturnsNullopt()
+void testDeserializeToleratesUnknownKeys()
 {
+    // Unknown keys are skipped for forward compatibility
     const auto result = deserializeParameters("version=1\nunknownKey=1.0\n");
-    assert(!result.has_value());
+    assert(result.has_value());
+    assert(std::fabs(result->duckDepth - 80.0f) < 1e-3f);  // default preserved
 }
 
 // Silence in => silence out (after FIR ramp-up)
@@ -69,7 +71,7 @@ void testSilencePassThrough()
     audio.outL     = outL.data();
     audio.outR     = outR.data();
 
-    processBlock(state, Parameters{}, kFrames, 48000.0, audio);
+    processBlock(state, Parameters{}, BusParameters{}, kFrames, 48000.0, audio);
 
     for (std::uint32_t i = 0; i < kFrames; ++i) {
         assert(std::fabs(outL[i]) < 1e-6f);
@@ -104,7 +106,7 @@ void testNoDuckingWithNoSidechain()
     p.duckDepth = 100.0f;
     p.cutoffHz  = 5000.0f;  // high cutoff: most signal passes through mid
 
-    processBlock(state, p, kFrames, 48000.0, audio);
+    processBlock(state, p, BusParameters{}, kFrames, 48000.0, audio);
 
     // After FIR settles, output should be non-zero (no sidechain = no ducking)
     // For L==R, side=0 and mid=L; with high cutoff, LP(mid) ≈ mid
@@ -144,7 +146,7 @@ void testDuckingReducesLevel()
     p.releaseMs = 2000.0f;
     p.cutoffHz  = 5000.0f;
 
-    processBlock(state, p, kFrames, 48000.0, audio);
+    processBlock(state, p, BusParameters{}, kFrames, 48000.0, audio);
 
     // After FIR and envelope settle, output should be significantly below input (0.5)
     float sumLate = 0.0f;
@@ -162,7 +164,7 @@ int main()
 {
     testClampParameters();
     testSerializationRoundTrip();
-    testDeserializeInvalidReturnsNullopt();
+    testDeserializeToleratesUnknownKeys();
     testSilencePassThrough();
     testNoDuckingWithNoSidechain();
     testDuckingReducesLevel();

@@ -5,12 +5,13 @@
 ~~Read /home/danny/github/downspout/docs/producer-control-bus.md and see what might need tweaking/implementing in the plugins to make this more intuitive and useful in /home/danny/github/transmission~~
 
 Assessment: contract is well-defined. Remaining gaps:
-- Bassops CC 34/35 overlay not active (needs `DISTRHO_PLUGIN_WANT_MIDI_INPUT 1` in its DistrhoPluginInfo.h and MIDI processing wired in the plugin)
+- ~~Bassops CC 34/35 overlay not active~~ Done: `DISTRHO_PLUGIN_WANT_MIDI_INPUT 1` added, `handleMidi()`, `effectiveDuckDepth()`, `effectiveWet()` wired in engine, bus section added to UI, `trn:ControlMidi` added to profile.ttl
 - Transmission should be able to read bus participation from each plugin's `profile.ttl` using `trn:busRole`, `trn:ccMapping`, and `trn:ccGate` — verify these are populated correctly in all bus-participant profiles (Mixgen, T-Mix, Loopdelay, Lightverb, Bassops)
+- Profile TTL gaps still to address: add `trn:busRole trn:BusProducer` to Mixgen; add `trn:busRole trn:BusReceiver` + CC 20-27 mappings to T-Mix; add `trn:busRole trn:BusReceiver` to Loopdelay and Lightverb profile.ttl files
 
 ## Campione
 
-High priority : it forgets its zones between loads. (May be fixed — verify.)
+~~High priority : it forgets its zones between loads.~~ Code analysis shows the persistence path is correct: `zonesInitialized_` guards prevent host from overwriting live zones, autosave via `kStateKeyDataDir` fires with `markInitialized=false` so host state still wins, and `restoreZones` reloads WAV files from `sourcePath`. Needs runtime verification in Carla/REAPER.
 
 ~~The drum sound recognition part of plugins/campione doesn't find any matches when tested on samples lifted from a drum loop~~ Fixed: three-part acoustic fix + loop-slicing mode.
 
@@ -51,16 +52,6 @@ Done: section labels now read "MIDI Follow · note-on triggers" and "Conductor �
 
 ## Newer plugins needing evaluation
 
-* ambo
-* arpgen
-* conductor
-* drift
-* guardian
-* harmonic-atlas
-* mnemosyne
-* mosaic
-* oracle
-* orbit
-* polymeter
-* resonance-garden
-* tuney-vst
+All 13 have full implementations: real engine, real UI (GenerativePanelUI), profile.ttl, no stubs or TODOs. UI sizes vary (83–751 lines) but all render real controls. Remaining work is **runtime and screenshot review** per the UI screenshot review criteria in CLAUDE.md — not code completion.
+
+Plugins checked: ambo, arpgen, conductor, drift, guardian, harmonic-atlas, mnemosyne, mosaic, oracle, orbit, polymeter, resonance-garden, tuney-vst.

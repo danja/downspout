@@ -97,8 +97,53 @@ void activate(EngineState& state)
     state.meters           = {};
 }
 
+void handleMidi(EngineState& state, const BusParameters& bus, const MidiControlEvent& ev)
+{
+    if (!bus.midiEnabled || ev.size < 3) return;
+
+    const std::uint8_t status  = ev.data[0] & 0xF0u;
+    const int          channel = (ev.data[0] & 0x0Fu) + 1;  // 1-16
+
+    if (status != 0xB0u) return;  // only CC messages
+
+    if (bus.controlChannel != 0 && channel != bus.controlChannel) return;
+
+    const std::uint8_t cc  = ev.data[1];
+    const std::uint8_t val = ev.data[2];
+
+    if (cc == kProducerLifecycleCC) {
+        state.bus.producerActive = (val >= 64);
+        if (!state.bus.producerActive) {
+            state.bus.duckMidiActive = false;
+            state.bus.wetMidiActive  = false;
+        }
+        return;
+    }
+
+    if (bus.requireGate && !state.bus.producerActive) return;
+
+    if (cc == kDuckDepthCC) {
+        state.bus.duckMidiActive = true;
+        state.bus.duckMidiValue  = val / 127.0f * 100.0f;
+    } else if (cc == kWetCC) {
+        state.bus.wetMidiActive = true;
+        state.bus.wetMidiValue  = val / 127.0f * 100.0f;
+    }
+}
+
+float effectiveDuckDepth(const EngineState& state, const Parameters& p) noexcept
+{
+    return state.bus.duckMidiActive ? state.bus.duckMidiValue : p.duckDepth;
+}
+
+float effectiveWet(const EngineState& state, const Parameters& p) noexcept
+{
+    return state.bus.wetMidiActive ? state.bus.wetMidiValue : p.wet;
+}
+
 void processBlock(EngineState& state,
                   const Parameters& rawParameters,
+                  const BusParameters& /*busParams*/,
                   std::uint32_t nframes,
                   double sampleRate,
                   const AudioBlock& audio)
@@ -116,8 +161,8 @@ void processBlock(EngineState& state,
 
     const float attackCoeff  = 1.0f - std::exp(-1.0f / (sr * p.attackMs  * 0.001f));
     const float releaseCoeff = 1.0f - std::exp(-1.0f / (sr * p.releaseMs * 0.001f));
-    const float duckScale    = p.duckDepth * 0.01f;
-    const float wetScale     = p.wet * 0.01f;
+    const float duckScale    = effectiveDuckDepth(state, p) * 0.01f;
+    const float wetScale     = effectiveWet(state, p) * 0.01f;
     const float dryScale     = 1.0f - wetScale;
 
     // Precompute waveshaper coefficients (avoid per-sample exp)

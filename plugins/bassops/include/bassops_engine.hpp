@@ -15,10 +15,26 @@ struct AudioBlock {
     float* outR = nullptr;
 };
 
+struct BusParameters {
+    bool midiEnabled    = false;
+    int  controlChannel = 0;   // 0=Omni, 1-16
+    bool requireGate    = false;
+};
+
+void handleMidi(EngineState& state,
+                const BusParameters& busParams,
+                const MidiControlEvent& ev);
+
+[[nodiscard]] float effectiveDuckDepth(const EngineState& state,
+                                        const Parameters& params) noexcept;
+[[nodiscard]] float effectiveWet(const EngineState& state,
+                                  const Parameters& params) noexcept;
+
 [[nodiscard]] Parameters clampParameters(const Parameters& raw);
 void activate(EngineState& state);
 void processBlock(EngineState& state,
                   const Parameters& parameters,
+                  const BusParameters& busParams,
                   std::uint32_t nframes,
                   double sampleRate,
                   const AudioBlock& audio);

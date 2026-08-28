@@ -72,7 +72,8 @@ std::optional<Parameters> deserializeParameters(const std::string& text)
         } else if (key == "wet" && parseFloat(value, fv)) {
             p.wet = fv;
         } else {
-            return std::nullopt;
+            // skip unknown keys for forward compatibility
+            continue;
         }
     }
     return clampParameters(p);

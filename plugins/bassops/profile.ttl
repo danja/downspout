@@ -20,12 +20,8 @@ reported to the host.""" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/bassops/> ;
     trn:role trn:AudioEffect ;
-    trn:accepts trn:Audio, trn:AudioSidechain ;
+    trn:accepts trn:Audio, trn:AudioSidechain, trn:ControlMidi ;
     trn:produces trn:Audio ;
-
-    ## Bus participation — MIDI input not yet enabled in the build.
-    ## CC 34/35 are reserved for Bassops; enable DISTRHO_PLUGIN_WANT_MIDI_INPUT
-    ## and add trn:accepts trn:ControlMidi when wired.
     trn:busRole trn:BusReceiver ;
 
     trn:ccMapping [

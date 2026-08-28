@@ -9,6 +9,25 @@ namespace downspout::bassops {
 inline constexpr std::uint32_t kFirOrder = 128;
 inline constexpr std::uint32_t kFirTaps  = kFirOrder + 1;
 
+// Producer Control Bus MIDI CC contract
+inline constexpr std::uint8_t kProducerLifecycleCC = 19;
+inline constexpr std::uint8_t kDuckDepthCC         = 34;
+inline constexpr std::uint8_t kWetCC               = 35;
+
+struct MidiControlEvent {
+    std::uint32_t frame = 0;
+    std::uint8_t  size  = 0;
+    std::uint8_t  data[3] {};
+};
+
+struct BusMidiState {
+    bool  producerActive = false;
+    bool  duckMidiActive = false;
+    bool  wetMidiActive  = false;
+    float duckMidiValue  = 0.0f;    // 0-100 %
+    float wetMidiValue   = 100.0f;  // 0-100 %
+};
+
 struct Parameters {
     float duckDepth = 80.0f;   // 0-100 %
     float attackMs  = 10.0f;   // 1-500 ms
@@ -47,9 +66,10 @@ struct Meters {
 };
 
 struct EngineState {
-    EnvFollower env {};
-    FirBank     fir {};
-    Meters      meters {};
+    EnvFollower  env {};
+    FirBank      fir {};
+    Meters       meters {};
+    BusMidiState bus {};
 };
 
 }  // namespace downspout::bassops
