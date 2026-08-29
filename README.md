@@ -11,10 +11,11 @@ Demo -
 * [Jack's Dream](https://youtu.be/Rd-ACU0JUdo) 
 * [Another example](https://www.youtube.com/watch?v=DrAHdaJolyc) 
 
-See also : 
+### See also : 
 
-* [flues](https://github.com/danja/flues) earlier LV2 plugins and Web Audio toys
 * [Transmission](https://danja.github.io/transmission/) Generative Audio Workstation
+* [Valis](https://danja.github.io/valis) Virtual Analog LLM Integrated System
+* [Flues](https://github.com/danja/flues) earlier LV2 plugins and Web Audio toys
 
 ## Install From Releases
 
