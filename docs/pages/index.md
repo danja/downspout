@@ -6,7 +6,7 @@ description: Screenshots and short notes for the Downspout VST3 plugin set.
 
 <section class="home-hero">
   <p class="kicker">Downspout</p>
-  <h2>Transport-aware VST3 tools for generated parts, gated movement, and playable disruption.</h2>
+  <h2>VST3 tools for generated parts, gated movement, and playable disruption.</h2>
   <p>
     These plugins are all experimental, mostly work in progress, with various levels of success for their intended purposes.
 <ul>
