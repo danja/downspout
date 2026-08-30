@@ -11,7 +11,11 @@ description: Screenshots and short notes for the Downspout VST3 plugin set.
     These plugins are all experimental, mostly work in progress, with various levels of success for their intended purposes.
 <ul>
     <li>Demo - <a href="https://youtu.be/Rd-ACU0JUdo">Jack's Dream</a></li>
-    <li>See also - <a href="https://danja.github.io/transmission/">Transmission</a> Generative Audio Workstation</li>
+    </ul>
+    <h4>See also :</h4>
+<ul>
+    <li><a href="https://danja.github.io/transmission/">Transmission</a> Generative Audio Workstation</li>
+      <li><a href="https://danja.github.io/valis">Valis</a> Virtual Analog LLM Integrated System</li>
        <li><a href="https://github.com/danja/flues">Flues</a> earlier LV2 plugins and Web Audio toys</li>
     </ul>
   </p>
