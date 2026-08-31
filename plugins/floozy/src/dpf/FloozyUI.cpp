@@ -13,6 +13,7 @@ START_NAMESPACE_DISTRHO
 namespace {
 
 using downspout::floozy::ParamId;
+using downspout::floozy::kBodyTypeNames;
 using downspout::floozy::kInterfaceTypeNames;
 using downspout::floozy::kParameterCount;
 using downspout::floozy::kParameterSpecs;
@@ -52,7 +53,7 @@ struct SectionDef {
 constexpr std::array<SectionDef, 5> kSections = {{
     {"Source", {219, 132, 84}, {{{24, "External"}, {0, "Algorithm"}, {1, "Param 1"}, {2, "Param 2"}, {3, "Tone"}, {4, "Noise"}, {5, "DC"}}}, 7},
     {"Shape", {92, 178, 164}, {{{6, "Attack"}, {7, "Release"}, {8, "Interface"}, {9, "Intensity"}, {22, "Gain"}, {0, ""}, {0, ""}}}, 5},
-    {"Body", {126, 153, 221}, {{{10, "Tuning"}, {11, "Ratio"}, {12, "D1 FB"}, {13, "D2 FB"}, {14, "Cross FB"}, {0, ""}, {0, ""}}}, 5},
+    {"Body", {126, 153, 221}, {{{25, "Body type"}, {10, "Tuning"}, {11, "Ratio"}, {12, "D1 FB"}, {13, "D2 FB"}, {14, "Cross FB"}, {0, ""}}}, 6},
     {"Filter/Mod", {181, 137, 216}, {{{15, "Cutoff"}, {16, "Q"}, {17, "Shape"}, {18, "LFO"}, {19, "Mod Mix"}, {0, ""}, {0, ""}}}, 5},
     {"Space", {211, 165, 82}, {{{20, "Size"}, {21, "Level"}, {23, "Voices"}, {0, ""}, {0, ""}, {0, ""}, {0, ""}}}, 3},
 }};
@@ -75,8 +76,13 @@ std::string formatValue(const std::uint32_t parameter, const float value)
     char buffer[64];
     if (parameter == static_cast<std::uint32_t>(ParamId::sourceAlgorithm))
     {
-        const int index = std::clamp(static_cast<int>(std::lround(value)), 0, 6);
+        const int index = std::clamp(static_cast<int>(std::lround(value)), 0, 7);
         std::snprintf(buffer, sizeof(buffer), "%s", kSourceAlgorithmNames[static_cast<std::size_t>(index)]);
+    }
+    else if (parameter == static_cast<std::uint32_t>(ParamId::bodyType))
+    {
+        const int index = std::clamp(static_cast<int>(std::lround(value)), 0, 6);
+        std::snprintf(buffer, sizeof(buffer), "%s", kBodyTypeNames[static_cast<std::size_t>(index)]);
     }
     else if (parameter == static_cast<std::uint32_t>(ParamId::interfaceType))
     {
@@ -102,7 +108,8 @@ std::string formatValue(const std::uint32_t parameter, const float value)
 bool isDropdownParameter(const std::uint32_t parameter)
 {
     return parameter == static_cast<std::uint32_t>(ParamId::sourceAlgorithm) ||
-           parameter == static_cast<std::uint32_t>(ParamId::interfaceType);
+           parameter == static_cast<std::uint32_t>(ParamId::interfaceType) ||
+           parameter == static_cast<std::uint32_t>(ParamId::bodyType);
 }
 
 std::size_t dropdownItemCount(const std::uint32_t parameter)
@@ -111,6 +118,8 @@ std::size_t dropdownItemCount(const std::uint32_t parameter)
         return kSourceAlgorithmNames.size();
     if (parameter == static_cast<std::uint32_t>(ParamId::interfaceType))
         return kInterfaceTypeNames.size();
+    if (parameter == static_cast<std::uint32_t>(ParamId::bodyType))
+        return kBodyTypeNames.size();
     return 0;
 }
 
@@ -120,6 +129,8 @@ const char* dropdownItemName(const std::uint32_t parameter, const std::size_t in
         return kSourceAlgorithmNames[index];
     if (parameter == static_cast<std::uint32_t>(ParamId::interfaceType))
         return kInterfaceTypeNames[index];
+    if (parameter == static_cast<std::uint32_t>(ParamId::bodyType))
+        return kBodyTypeNames[index];
     return "";
 }
 
@@ -399,7 +410,7 @@ private:
     std::string labelForControl(const ControlDef& control) const
     {
         const int algorithm = std::clamp(
-            static_cast<int>(std::lround(values_[static_cast<std::size_t>(ParamId::sourceAlgorithm)])), 0, 6);
+            static_cast<int>(std::lround(values_[static_cast<std::size_t>(ParamId::sourceAlgorithm)])), 0, 7);
 
         if (control.parameter == static_cast<std::uint32_t>(ParamId::sourceParam1))
             return kSourceAlgorithmParamNames[static_cast<std::size_t>(algorithm)][0];

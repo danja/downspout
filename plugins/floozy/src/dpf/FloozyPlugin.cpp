@@ -13,6 +13,7 @@ namespace {
 
 using downspout::floozy::FloozyEngine;
 using downspout::floozy::MidiMessage;
+using downspout::floozy::kBodyTypeNames;
 using downspout::floozy::kInterfaceTypeNames;
 using downspout::floozy::kParameterCount;
 using downspout::floozy::kParameterSpecs;
@@ -26,6 +27,17 @@ ParameterEnumerationValue kSourceEnumValues[] = {
     {4.0f, kSourceAlgorithmNames[4]},
     {5.0f, kSourceAlgorithmNames[5]},
     {6.0f, kSourceAlgorithmNames[6]},
+    {7.0f, kSourceAlgorithmNames[7]},
+};
+
+ParameterEnumerationValue kBodyTypeEnumValues[] = {
+    {0.0f, kBodyTypeNames[0]},
+    {1.0f, kBodyTypeNames[1]},
+    {2.0f, kBodyTypeNames[2]},
+    {3.0f, kBodyTypeNames[3]},
+    {4.0f, kBodyTypeNames[4]},
+    {5.0f, kBodyTypeNames[5]},
+    {6.0f, kBodyTypeNames[6]},
 };
 
 ParameterEnumerationValue kInterfaceEnumValues[] = {
@@ -139,6 +151,13 @@ protected:
             parameter.enumValues.count = static_cast<uint8_t>(std::size(kInterfaceEnumValues));
             parameter.enumValues.restrictedMode = true;
             parameter.enumValues.values = kInterfaceEnumValues;
+            parameter.enumValues.deleteLater = false;
+        }
+        else if (index == static_cast<uint32_t>(downspout::floozy::ParamId::bodyType))
+        {
+            parameter.enumValues.count = static_cast<uint8_t>(std::size(kBodyTypeEnumValues));
+            parameter.enumValues.restrictedMode = true;
+            parameter.enumValues.values = kBodyTypeEnumValues;
             parameter.enumValues.deleteLater = false;
         }
     }

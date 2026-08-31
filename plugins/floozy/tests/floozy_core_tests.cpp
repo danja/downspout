@@ -130,7 +130,8 @@ void defaultsAndClamping()
             "floozy integer parameter should round");
 
     engine.setParameter(ParamId::sourceAlgorithm, 99.0f);
-    require(std::fabs(engine.getParameter(ParamId::sourceAlgorithm) - 6.0f) < 1.0e-6f,
+    require(std::fabs(engine.getParameter(ParamId::sourceAlgorithm) -
+                      kParameterSpecs[static_cast<std::size_t>(ParamId::sourceAlgorithm)].maximum) < 1.0e-6f,
             "floozy integer parameter should clamp high");
 
     engine.setParameter(ParamId::sourceLevel, -1.0f);

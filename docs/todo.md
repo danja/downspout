@@ -1,8 +1,5 @@
 # Downspout TODO
 
-## Conductor
-
-All melodic/harmonic generators now have Conductor support (CC 20–24, configurable channel): **BassGen** (CC 21–24), **DrumGen** (CC 21–24), **Ground** (CC 20–24), **Harmonic Atlas** (CC 20, 22, 23, 24), **MelGen** (CC 20→contour, 21→scale, 22→density, 23→vary, 24→new pattern).
 
 ## Gremlin
 

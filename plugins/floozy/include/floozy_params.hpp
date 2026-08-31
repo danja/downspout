@@ -32,9 +32,10 @@ enum class ParamId : std::uint32_t {
     masterGain,
     numVoices,
     externalLevel,
+    bodyType,
 };
 
-inline constexpr std::size_t kParameterCount = 25;
+inline constexpr std::size_t kParameterCount = 26;
 
 struct ParamSpec {
     const char* symbol;
@@ -46,7 +47,7 @@ struct ParamSpec {
 };
 
 inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
-    {"source_algorithm", "Source Algorithm", 0.0f, 6.0f, 3.0f, true},
+    {"source_algorithm", "Source Algorithm", 0.0f, 7.0f, 3.0f, true},
     {"source_param_1", "Source Param 1", 0.0f, 1.0f, 0.55f, false},
     {"source_param_2", "Source Param 2", 0.0f, 1.0f, 0.50f, false},
     {"source_level", "Source Level", 0.0f, 1.0f, 0.50f, false},
@@ -71,9 +72,10 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"master_gain", "Master Gain", 0.0f, 1.0f, 0.80f, false},
     {"num_voices", "Num Voices", 1.0f, 8.0f, 4.0f, true},
     {"external_level", "External Level", 0.0f, 1.0f, 0.80f, false},
+    {"body_type", "Body Type", 0.0f, 6.0f, 0.0f, true},
 }};
 
-inline constexpr std::array<const char*, 7> kSourceAlgorithmNames = {{
+inline constexpr std::array<const char*, 8> kSourceAlgorithmNames = {{
     "Dirichlet Pulse",
     "DSF Single",
     "DSF Double",
@@ -81,9 +83,10 @@ inline constexpr std::array<const char*, 7> kSourceAlgorithmNames = {{
     "Tanh Saw",
     "PAF",
     "Modified FM",
+    "None",
 }};
 
-inline constexpr std::array<std::array<const char*, 2>, 7> kSourceAlgorithmParamNames = {{
+inline constexpr std::array<std::array<const char*, 2>, 8> kSourceAlgorithmParamNames = {{
     {{"Harmonics", "Tilt"}},
     {{"Decay", "Ratio"}},
     {{"Decay", "Ratio"}},
@@ -91,6 +94,7 @@ inline constexpr std::array<std::array<const char*, 2>, 7> kSourceAlgorithmParam
     {{"Drive", "Blend"}},
     {{"Ratio", "Bandwidth"}},
     {{"Index", "Ratio"}},
+    {{"—", "—"}},
 }};
 
 inline constexpr std::array<const char*, 13> kInterfaceTypeNames = {{
@@ -107,6 +111,16 @@ inline constexpr std::array<const char*, 13> kInterfaceTypeNames = {{
     "Quantum",
     "Plasma",
     "Tube",
+}};
+
+inline constexpr std::array<const char*, 7> kBodyTypeNames = {{
+    "Delays",
+    "Beam",
+    "Marimba",
+    "Drumhead",
+    "Membrane",
+    "Plate",
+    "String",
 }};
 
 } // namespace downspout::floozy

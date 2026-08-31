@@ -90,8 +90,10 @@ public:
 
     void sync(const FloozyParams& params)
     {
-        algorithm_ = static_cast<flues::disyn::AlgorithmType>(
-            static_cast<int>(std::round(std::clamp(params.values[0], 0.0f, 6.0f))));
+        const int algo = static_cast<int>(std::round(std::clamp(params.values[0], 0.0f, 7.0f)));
+        none_ = (algo == 7);
+        if (!none_)
+            algorithm_ = static_cast<flues::disyn::AlgorithmType>(algo);
         param1_ = clampUnit(params.values[1]);
         param2_ = clampUnit(params.values[2]);
         toneLevel_ = clampUnit(params.values[3]);
@@ -101,8 +103,11 @@ public:
 
     float process(const float frequency)
     {
-        const auto out = oscillator_.process(algorithm_, std::max(1.0f, frequency), param1_, param2_);
-        const float osc = (out.primary * 0.75f + out.secondary * 0.25f) * toneLevel_;
+        float osc = 0.0f;
+        if (!none_) {
+            const auto out = oscillator_.process(algorithm_, std::max(1.0f, frequency), param1_, param2_);
+            osc = (out.primary * 0.75f + out.secondary * 0.25f) * toneLevel_;
+        }
         const float noise = rng_.uniformSignedFloat() * noiseLevel_;
         const float dcBlocked = dcBlock(osc + noise + dcLevel_);
         return sanitizeAudio(dcBlocked);
@@ -120,6 +125,7 @@ private:
     flues::disyn::OscillatorModule oscillator_;
     flues::pm::Random rng_ {0x710020u};
     flues::disyn::AlgorithmType algorithm_ = flues::disyn::AlgorithmType::TANH_SQUARE;
+    bool none_ = false;
     float param1_ = 0.55f;
     float param2_ = 0.50f;
     float toneLevel_ = 0.50f;
@@ -170,6 +176,8 @@ public:
     {
         interfaceType_ = std::clamp(
             static_cast<int>(std::lround(params.values[static_cast<std::size_t>(ParamId::interfaceType)])), 0, 12);
+        bodyType_ = std::clamp(
+            static_cast<int>(std::lround(params.values[static_cast<std::size_t>(ParamId::bodyType)])), 0, 6);
         intensity_ = clampUnit(params.values[static_cast<std::size_t>(ParamId::interfaceIntensity)]);
         tuneSemitones_ = quantizedTuneSemitone(params.values[static_cast<std::size_t>(ParamId::tuning)]);
         ratioControl_ = clampUnit(params.values[static_cast<std::size_t>(ParamId::ratio)]);
@@ -346,6 +354,84 @@ private:
             break;
         }
 
+        // Body-type resonator structure: overrides frequency ratios and Q with
+        // physics-informed values for each resonator class.
+        if (bodyType_ != 0) {
+            const float stretch = (ratioControl_ - 0.5f) * 0.45f;
+            switch (bodyType_) {
+            case 1: // Beam — Euler-Bernoulli clamped-free, modes at 1 : 6.267
+                profile.ratio1 = 1.0f;
+                profile.ratio2 = 6.267f + stretch * 3.0f;
+                profile.feedback1 = 0.97f;
+                profile.feedback2 = 0.92f;
+                profile.damping = 0.030f + (1.0f - intensity_) * 0.060f;
+                profile.cross = 0.02f;
+                profile.transientDecay = 0.9985f;
+                profile.outputGain = 4.5f;
+                break;
+            case 2: // Marimba — bar undercut to 4th harmonic, modes at 1 : 4
+                profile.ratio1 = 1.0f;
+                profile.ratio2 = 4.0f + stretch * 1.2f;
+                profile.feedback1 = 0.93f;
+                profile.feedback2 = 0.85f;
+                profile.damping = 0.10f + (1.0f - intensity_) * 0.14f;
+                profile.cross = 0.04f;
+                profile.transientDecay = 0.9940f;
+                profile.outputGain = 5.5f;
+                break;
+            case 3: // Drumhead — circular membrane Bessel zeros, modes at 1 : 2.295
+                profile.ratio1 = 1.0f;
+                profile.ratio2 = 2.295f + stretch * 0.8f;
+                profile.feedback1 = 0.82f;
+                profile.feedback2 = 0.75f;
+                profile.cross = 0.16f;
+                profile.damping = 0.18f + (1.0f - intensity_) * 0.16f;
+                profile.mix1 = 0.55f;
+                profile.mix2 = 0.45f;
+                profile.transientDecay = 0.9880f;
+                profile.outputGain = 9.0f;
+                break;
+            case 4: // Membrane — rectangular membrane, modes at 1 : √2
+                profile.ratio1 = 1.0f;
+                profile.ratio2 = 1.414f + stretch * 0.6f;
+                profile.feedback1 = 0.80f;
+                profile.feedback2 = 0.74f;
+                profile.cross = 0.13f;
+                profile.damping = 0.16f + (1.0f - intensity_) * 0.18f;
+                profile.mix1 = 0.52f;
+                profile.mix2 = 0.48f;
+                profile.transientDecay = 0.9870f;
+                profile.outputGain = 9.5f;
+                break;
+            case 5: // Plate — Kirchhoff plate, dense coupled modes
+                profile.ratio1 = 1.0f;
+                profile.ratio2 = 1.27f + stretch * 0.5f;
+                profile.feedback1 = 0.88f;
+                profile.feedback2 = 0.85f;
+                profile.cross = 0.22f + intensity_ * 0.12f;
+                profile.damping = 0.07f + (1.0f - intensity_) * 0.10f;
+                profile.mix1 = 0.50f;
+                profile.mix2 = 0.50f;
+                profile.transientDecay = 0.9960f;
+                profile.outputGain = 6.5f;
+                break;
+            case 6: // String — ideal harmonic series, modes at 1 : 2
+                profile.ratio1 = 1.0f;
+                profile.ratio2 = 2.0f + stretch * 0.4f;
+                profile.feedback1 = 0.98f;
+                profile.feedback2 = 0.93f;
+                profile.damping = 0.015f + (1.0f - intensity_) * 0.040f;
+                profile.cross = 0.02f;
+                profile.mix1 = 0.85f;
+                profile.mix2 = 0.15f;
+                profile.transientDecay = 0.9920f;
+                profile.outputGain = 3.5f;
+                break;
+            default:
+                break;
+            }
+        }
+
         const float feedback1Boost = std::pow(std::max(0.0f, (feedback1Control_ - 0.50f) / 0.50f), 1.35f);
         const float feedback2Boost = std::pow(std::max(0.0f, (feedback2Control_ - 0.10f) / 0.90f), 1.25f);
         const float resonance = std::max({feedback1Boost, feedback2Boost, crossFeedbackControl_ * 0.85f});
@@ -475,6 +561,7 @@ private:
     float currentFeedback2_ = 0.0f;
     float currentCross_ = 0.0f;
     int interfaceType_ = 2;
+    int bodyType_ = 0;
     int tuneSemitones_ = 0;
     float intensity_ = 0.5f;
     float ratioControl_ = 0.5f;
