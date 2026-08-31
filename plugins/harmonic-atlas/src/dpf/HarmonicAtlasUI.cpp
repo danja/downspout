@@ -1,9 +1,20 @@
 #include "generative_panel_ui.hpp"
 #include "harmonic_atlas_core.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 START_NAMESPACE_DISTRHO
+
+static constexpr const char* kScaleNames[] {
+    "Major", "Ionian", "Minor", "Harm Minor", "Mel Minor",
+    "Dorian", "Phrygian", "Lydian", "Mixolydian", "Locrian",
+    "Phryg Dom", "Neo Major", "Neo Minor",
+    "Pent Major", "Pent Minor", "Blues",
+    "Whole Tone", "Altered", "Half-Whole Dim",
+    "Whole-Half Dim", "Bebop Dom", "Bebop Major", "Bebop Minor"
+};
+static constexpr int kScaleCount = 23;
 
 class HarmonicAtlasUI : public GenerativePanelUI {
 public:
@@ -15,6 +26,106 @@ public:
             downspout::harmonic_atlas::kParameterCount, 104, 188, 206) {}
 
 private:
+    Box scaleRect_ {};
+    bool scaleOpen_ = false;
+
+    static constexpr float kDropItemH = 24.0f;
+    static constexpr int kDropMaxRows = 12;
+
+    int dropColumns() const noexcept
+    {
+        return std::max(1, (kScaleCount + kDropMaxRows - 1) / kDropMaxRows);
+    }
+
+    int dropRows() const noexcept
+    {
+        const int cols = dropColumns();
+        return (kScaleCount + cols - 1) / cols;
+    }
+
+    Box dropMenuRect() const noexcept
+    {
+        const int cols = dropColumns();
+        const int rows = dropRows();
+        const float itemW = std::max(scaleRect_.w / static_cast<float>(cols), 158.0f);
+        const float menuW = itemW * static_cast<float>(cols);
+        const float menuH = static_cast<float>(rows) * kDropItemH;
+        const float wW = static_cast<float>(getWidth());
+        const float wH = static_cast<float>(getHeight());
+        const float margin = 14.0f;
+        const float menuX = std::clamp(scaleRect_.x, margin, std::max(margin, wW - margin - menuW));
+        float menuY = scaleRect_.y + scaleRect_.h + 6.0f;
+        if (menuY + menuH > wH - margin)
+            menuY = scaleRect_.y - menuH - 6.0f;
+        menuY = std::clamp(menuY, margin, std::max(margin, wH - margin - menuH));
+        return {menuX, menuY, menuW, menuH};
+    }
+
+    void drawScaleSelector(const float x, const float y, const float w)
+    {
+        using namespace downspout::harmonic_atlas;
+        const int val = std::clamp(static_cast<int>(std::lround(value(kScale))), 0, kScaleCount - 1);
+
+        beginPath();
+        fillColor(38, 45, 52, 255);
+        roundedRect(x, y, w, 51.0f, 5.0f);
+        fill();
+
+        fillColor(205, 214, 210, 255);
+        fontSize(11.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        text(x + 10.0f, y + 7.0f, "Colour-note scale", nullptr);
+
+        fillColor(220, 226, 222, 255);
+        fontSize(15.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        text(x + 10.0f, y + 35.0f, kScaleNames[val], nullptr);
+
+        fontSize(16.0f);
+        textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
+        fillColor(117, 133, 149, 255);
+        text(x + w - 10.0f, y + 35.0f, scaleOpen_ ? "˄" : "˅", nullptr);
+
+        scaleRect_ = {x, y, w, 51.0f};
+    }
+
+    void drawScaleDropdownMenu()
+    {
+        using namespace downspout::harmonic_atlas;
+        const int selected = std::clamp(static_cast<int>(std::lround(value(kScale))), 0, kScaleCount - 1);
+        const Box menu = dropMenuRect();
+        const int cols = dropColumns();
+        const int rows = dropRows();
+        const float itemW = menu.w / static_cast<float>(cols);
+
+        beginPath();
+        roundedRect(menu.x, menu.y, menu.w, menu.h, 14.0f);
+        fillColor(22, 28, 36, 248);
+        fill();
+        strokeColor(93, 112, 134, 220);
+        strokeWidth(1.0f);
+        stroke();
+        closePath();
+
+        for (int i = 0; i < kScaleCount; ++i) {
+            const int col = i / rows;
+            const int row = i % rows;
+            const float ix = menu.x + static_cast<float>(col) * itemW;
+            const float iy = menu.y + static_cast<float>(row) * kDropItemH;
+            if (i == selected) {
+                beginPath();
+                roundedRect(ix + 4.0f, iy + 3.0f, itemW - 8.0f, kDropItemH - 6.0f, 10.0f);
+                fillColor(accentR(), accentG(), accentB(), 200);
+                fill();
+                closePath();
+            }
+            fontSize(cols > 1 ? 11.0f : 12.0f);
+            textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+            fillColor(236, 240, 243, 255);
+            text(ix + 14.0f, iy + kDropItemH * 0.5f + 1.0f, kScaleNames[i], nullptr);
+        }
+    }
+
     void onNanoDisplay() override
     {
         using namespace downspout::harmonic_atlas;
@@ -24,22 +135,13 @@ private:
         static constexpr const char* inversions[] {
             "Close", "Spread", "Drop", "Open"
         };
-        static constexpr const char* scaleNames[] {
-            "Major", "Ionian", "Minor", "Harm Minor", "Mel Minor",
-            "Dorian", "Phrygian", "Lydian", "Mixolydian", "Locrian",
-            "Phryg Dom", "Neo Major", "Neo Minor",
-            "Pent Major", "Pent Minor", "Blues",
-            "Whole Tone", "Altered", "Half-Whole Dim",
-            "Whole-Half Dim", "Bebop Dom", "Bebop Major", "Bebop Minor"
-        };
 
         beginPanel();
 
         drawSection(24, 104, 576, 240, "HARMONY", "what changes, and how often");
         drawChoice(kStyle, 38, 136, 548, "Movement language", movements, 4,
                    "Select the harmonic movement family.");
-        drawChoice(kScale, 38, 193, 548, "Colour-note scale", scaleNames, 23,
-                   "Scale used to select colour notes added above the chord.");
+        drawScaleSelector(38, 193, 548);
         drawSlider(kRhythmBars, 38, 253, 264, "Chord every", " bars",
                    "How many bars each chord lasts.", 0);
         drawSlider(kCadenceBars, 310, 253, 276, "Cadence every", " bars",
@@ -87,6 +189,67 @@ private:
                      value(kTension));
 
         endPanel();
+
+        if (scaleOpen_)
+            drawScaleDropdownMenu();
+    }
+
+    bool onMouse(const MouseEvent& ev) override
+    {
+        const float x = static_cast<float>(ev.pos.getX());
+        const float y = static_cast<float>(ev.pos.getY());
+
+        if (ev.press && ev.button == 1 && scaleOpen_) {
+            if (scaleRect_.contains(x, y)) {
+                scaleOpen_ = false;
+                repaint();
+                return true;
+            }
+            const Box menu = dropMenuRect();
+            if (menu.contains(x, y)) {
+                const int cols = dropColumns();
+                const int rows = dropRows();
+                const float itemW = menu.w / static_cast<float>(cols);
+                const int col = std::clamp(static_cast<int>((x - menu.x) / itemW), 0, cols - 1);
+                const int row = std::clamp(static_cast<int>((y - menu.y) / kDropItemH), 0, rows - 1);
+                const int item = col * rows + row;
+                if (item < kScaleCount)
+                    commitParameter(downspout::harmonic_atlas::kScale, static_cast<float>(item));
+                scaleOpen_ = false;
+                repaint();
+                return true;
+            }
+            scaleOpen_ = false;
+            repaint();
+        }
+
+        if (ev.button == 1 && ev.press && !scaleOpen_ && scaleRect_.contains(x, y)) {
+            scaleOpen_ = true;
+            repaint();
+            return true;
+        }
+
+        return handleMouse(ev);
+    }
+
+    bool onScroll(const ScrollEvent& ev) override
+    {
+        const float x = static_cast<float>(ev.pos.getX());
+        const float y = static_cast<float>(ev.pos.getY());
+
+        if (scaleRect_.contains(x, y)) {
+            if (scaleOpen_) {
+                scaleOpen_ = false;
+                repaint();
+            } else {
+                using namespace downspout::harmonic_atlas;
+                const int current = std::clamp(static_cast<int>(std::lround(value(kScale))), 0, kScaleCount - 1);
+                const int delta = ev.delta.getY() > 0.0f ? -1 : 1;
+                commitParameter(kScale, static_cast<float>(std::clamp(current + delta, 0, kScaleCount - 1)));
+            }
+            return true;
+        }
+        return false;
     }
 
     void drawKeyboard(const float x,
