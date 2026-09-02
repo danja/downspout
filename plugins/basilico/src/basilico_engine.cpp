@@ -523,16 +523,16 @@ public:
                                       ? oscillator(wave, detunePhase_) * detuneLevel * profile.oscMix
                                       : 0.0f;
 
+        const float harmonicMult = params_.values[static_cast<std::size_t>(ParamId::harmonic)];
+        const float harmonicLevel = params_.values[static_cast<std::size_t>(ParamId::harmonicLevel)];
+        const float harmonicSig = std::sin(phase_ * kTwoPi * harmonicMult) * harmonicLevel;
+
         advancePhase(phase_, currentFrequency_);
         advancePhase(subPhase_, currentFrequency_ * 0.5f);
         const float detuneRatio = detuneOffsetCents > 0.001f
                                       ? std::pow(2.0f, detuneOffsetCents / 1200.0f)
                                       : 1.0f;
         advancePhase(detunePhase_, currentFrequency_ * detuneRatio);
-
-        const float harmonicMult = params_.values[static_cast<std::size_t>(ParamId::harmonic)];
-        const float harmonicLevel = params_.values[static_cast<std::size_t>(ParamId::harmonicLevel)];
-        const float harmonicSig = std::sin(phase_ * kTwoPi * harmonicMult) * harmonicLevel;
 
         const float subLevel = params_.values[static_cast<std::size_t>(ParamId::subLevel)];
         const float wobbleSubMix = params_.values[static_cast<std::size_t>(ParamId::wobbleSubMix)];
@@ -654,9 +654,10 @@ private:
 
     float transientTone(const ModelProfile& profile) const
     {
+        const float punchScale = params_.values[static_cast<std::size_t>(ParamId::punch)];
         const float bite = params_.values[static_cast<std::size_t>(ParamId::bite)] * profile.biteAmount;
-        const float click = (phase_ < 0.5f ? 1.0f : -1.0f) * punch_ * bite * 0.22f;
-        const float finger = std::sin(phase_ * kTwoPi * 7.0f) * punch_ * bite * 0.08f;
+        const float click = (phase_ < 0.5f ? 1.0f : -1.0f) * punch_ * punchScale * bite * 0.22f;
+        const float finger = std::sin(phase_ * kTwoPi * 7.0f) * punch_ * punchScale * bite * 0.08f;
         return sanitizeAudio(click + finger);
     }
 
