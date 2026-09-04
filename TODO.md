@@ -12,6 +12,10 @@ Floozy has no Conductor integration yet (physical modelling synth). If added, av
 
 Capture screenshot: run `scripts/capture-plugin-screenshots.sh worms` and review UI at full resolution before first release.
 
+## Chipper
+
+New plugin. Stereo audio in/out. Processes to sound like 1980s vieo game, chiptunes. Features bitwise quantization, jitter noise, aliasing.
+
 ## Evaluate Manually in Reaper
 
 * ambo
