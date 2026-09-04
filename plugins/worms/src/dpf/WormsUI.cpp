@@ -214,11 +214,12 @@ private:
         // ── Navigation ──────────────────────────────────────────────────
         // Dropdowns for Root, Reg, Midi Ch, Cond Ch; choices for Step, Length
         const float navY = 100.0f;
-        drawSection(24, navY, W-48, 70, "NAVIGATION");
-
-        // Row 1: Root, Reg, Step, Length (y=navY+18)
-        const float r1y = navY + 18.0f;
         const float selH = 48.0f;
+        const float cpad = 30.0f;   // section title → first control row
+        drawSection(24, navY, W-48, cpad + selH + 10.0f, "NAVIGATION");
+
+        // Row 1: Root, Reg, Step, Length
+        const float r1y = navY + cpad;
         drawSelector(kSelRoot, 38,  r1y, 130, selH);
         drawSelector(kSelReg,  176, r1y, 130, selH);
         drawChoice(kParamStepSize, 314, r1y, 160, "Step", kStepSizeNames, 4,
@@ -229,9 +230,12 @@ private:
         drawSelector(kSelCond,  738, r1y, 124, selH);
 
         // ── Worm Rules (2 columns of 3) ─────────────────────────────────
-        const float rulesY = navY + 78.0f;
-        const float ruleH  = rulesY + 6.0f * 53.0f + 12.0f + 36.0f;
-        drawSection(24, rulesY, W-48, ruleH - rulesY, "WORM RULES",
+        const float rulesY   = navY + cpad + selH + 18.0f;
+        const float ruleRowH = 53.0f;
+        const float ruleRows = 3.0f;
+        const float actH     = 38.0f;
+        const float ruleSecH = cpad + ruleRows * ruleRowH + actH + 8.0f;
+        drawSection(24, rulesY, W-48, ruleSecH, "WORM RULES",
                     "Given incoming direction, choose turn: L120 / L60 / Fwd / R60 / R120");
 
         const float colW = (W - 76.0f) * 0.5f - 4.0f;
@@ -239,26 +243,26 @@ private:
             const int   col = d / 3;
             const int   row = d % 3;
             const float rx  = 38.0f + static_cast<float>(col) * (colW + 8.0f);
-            const float ry  = rulesY + 14.0f + static_cast<float>(row) * 53.0f;
+            const float ry  = rulesY + cpad + static_cast<float>(row) * ruleRowH;
             drawChoice(static_cast<uint32_t>(kParamRule0 + d),
                        rx, ry, colW, ruleLabel(d), kTurnNames, 5,
                        "Turn rule for this incoming direction.");
         }
 
         // Action buttons below rules
-        const float actY = rulesY + 14.0f + 3.0f * 53.0f + 8.0f;
+        const float actY = rulesY + cpad + ruleRows * ruleRowH + 8.0f;
         drawAction(kParamActionRandomize, 38,  actY, 140, 30,
                    "Randomize", "Randomize all six worm rules.");
         drawAction(kParamActionMutate,    186, actY, 140, 30,
                    "Mutate",    "Mutate one random worm rule.");
 
         // ── Generation + Quantize ───────────────────────────────────────
-        const float genY  = actY + 38.0f;
-        const float genH  = 90.0f;
+        const float genY  = rulesY + ruleSecH + 8.0f;
+        const float genH  = cpad + selH + 8.0f;
         const float genW  = W - 48.0f - (value(kParamQuantize) >= 0.5f ? 230.0f : 160.0f);
         drawSection(24, genY, genW, genH, "GENERATION");
 
-        const float ctrlY = genY + 18.0f;
+        const float ctrlY = genY + cpad;
         const float ctrlW = (genW - 28.0f) * 0.25f;
         drawPercentSlider(kParamDensity,  38,                  ctrlY, ctrlW, "Density",
                           "Note vs rest probability at each step.");
@@ -276,7 +280,7 @@ private:
         drawToggle(kParamQuantize, qx+8, ctrlY, qw-16, "Scale quantize",
                    "Snap Tonnetz pitch classes to the selected scale.");
         if (value(kParamQuantize) >= 0.5f) {
-            const float sy = ctrlY + 46.0f;
+            const float sy = ctrlY + 32.0f;
             drawSelector(kSelScale, qx+8, sy, qw-16, selH - 10.0f);
         }
 
