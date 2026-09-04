@@ -18,6 +18,8 @@ enum ParameterIndex : uint32_t {
     kParamOutputGain,
     kParamCCBitDepth,
     kParamCCRateDiv,
+    kParamCCJitter,
+    kParamCCMix,
     kParamCCChannel,
     kParameterCount
 };
@@ -29,20 +31,30 @@ constexpr const char* kStateMix        = "mix";
 constexpr const char* kStateOutputGain = "output_gain";
 constexpr const char* kStateCCBitDepth = "cc_bit_depth";
 constexpr const char* kStateCCRateDiv  = "cc_rate_div";
+constexpr const char* kStateCCJitter   = "cc_jitter";
+constexpr const char* kStateCCMix      = "cc_mix";
 constexpr const char* kStateCCChannel  = "cc_channel";
 
-constexpr uint32_t kStateCount = 8;
+constexpr uint32_t kStateCount = 10;
 
-// Map a 7-bit CC value (0–127) to bit depth (1–16).
 float ccToBitDepth(uint8_t v) noexcept
 {
     return 1.0f + std::round(static_cast<float>(v) / 127.0f * 15.0f);
 }
 
-// Map a 7-bit CC value (0–127) to rate divisor (1–64).
 float ccToRateDiv(uint8_t v) noexcept
 {
     return 1.0f + std::round(static_cast<float>(v) / 127.0f * 63.0f);
+}
+
+float ccToJitter(uint8_t v) noexcept
+{
+    return static_cast<float>(v) / 127.0f;
+}
+
+float ccToMix(uint8_t v) noexcept
+{
+    return static_cast<float>(v) / 127.0f * 100.0f;
 }
 
 }  // namespace
@@ -82,7 +94,6 @@ protected:
 
     void initParameter(uint32_t index, Parameter& parameter) override
     {
-        // Non-automatable: REAPER Write/Latch mode would permanently override values.
         parameter.hints = 0;
         switch (index) {
         case kParamBitDepth:
@@ -124,6 +135,18 @@ protected:
             parameter.hints  = kParameterIsInteger;
             parameter.ranges = { 0.0f, 127.0f, downspout::chipper::kDefaultCCRateDiv };
             break;
+        case kParamCCJitter:
+            parameter.name   = "CC Jitter";
+            parameter.symbol = "cc_jitter";
+            parameter.hints  = kParameterIsInteger;
+            parameter.ranges = { 0.0f, 127.0f, downspout::chipper::kDefaultCCJitter };
+            break;
+        case kParamCCMix:
+            parameter.name   = "CC Mix";
+            parameter.symbol = "cc_mix";
+            parameter.hints  = kParameterIsInteger;
+            parameter.ranges = { 0.0f, 127.0f, downspout::chipper::kDefaultCCMix };
+            break;
         case kParamCCChannel:
             parameter.name   = "CC Channel";
             parameter.symbol = "cc_channel";
@@ -137,14 +160,16 @@ protected:
     {
         struct Info { const char* key; const char* label; const char* def; };
         static constexpr Info kInfo[kStateCount] = {
-            { kStateBitDepth,   "Bit Depth",   "8" },
-            { kStateRateDiv,    "Rate Div",    "8" },
-            { kStateJitter,     "Jitter",      "0" },
+            { kStateBitDepth,   "Bit Depth",   "8"   },
+            { kStateRateDiv,    "Rate Div",    "8"   },
+            { kStateJitter,     "Jitter",      "0"   },
             { kStateMix,        "Mix",         "100" },
-            { kStateOutputGain, "Output Gain", "0" },
-            { kStateCCBitDepth, "CC Bit Depth","1" },
-            { kStateCCRateDiv,  "CC Rate Div", "2" },
-            { kStateCCChannel,  "CC Channel",  "1" },
+            { kStateOutputGain, "Output Gain", "0"   },
+            { kStateCCBitDepth, "CC Bit Depth","1"   },
+            { kStateCCRateDiv,  "CC Rate Div", "2"   },
+            { kStateCCJitter,   "CC Jitter",   "3"   },
+            { kStateCCMix,      "CC Mix",      "4"   },
+            { kStateCCChannel,  "CC Channel",  "1"   },
         };
         if (index < kStateCount) {
             state.key          = kInfo[index].key;
@@ -164,12 +189,14 @@ protected:
         case kParamOutputGain: return params_.outputGain;
         case kParamCCBitDepth: return params_.ccBitDepth;
         case kParamCCRateDiv:  return params_.ccRateDiv;
+        case kParamCCJitter:   return params_.ccJitter;
+        case kParamCCMix:      return params_.ccMix;
         case kParamCCChannel:  return params_.ccChannel;
         default: return 0.0f;
         }
     }
 
-    void setParameterValue(uint32_t, float) override {}  // driven through setState
+    void setParameterValue(uint32_t, float) override {}
 
     void setState(const char* key, const char* value) override
     {
@@ -182,6 +209,8 @@ protected:
         else if (std::strcmp(key, kStateOutputGain) == 0) { params_.outputGain = f(); }
         else if (std::strcmp(key, kStateCCBitDepth) == 0) { params_.ccBitDepth = f(); }
         else if (std::strcmp(key, kStateCCRateDiv)  == 0) { params_.ccRateDiv  = f(); }
+        else if (std::strcmp(key, kStateCCJitter)   == 0) { params_.ccJitter   = f(); }
+        else if (std::strcmp(key, kStateCCMix)      == 0) { params_.ccMix      = f(); }
         else if (std::strcmp(key, kStateCCChannel)  == 0) { params_.ccChannel  = f(); }
         params_ = downspout::chipper::clampParameters(params_);
     }
@@ -191,6 +220,8 @@ protected:
         engine_             = downspout::chipper::EngineState{};
         ccBitDepthOverride_ = -1.0f;
         ccRateDivOverride_  = -1.0f;
+        ccJitterOverride_   = -1.0f;
+        ccMixOverride_      = -1.0f;
     }
 
     void run(const float** inputs, float** outputs, uint32_t frames,
@@ -198,13 +229,15 @@ protected:
     {
         const int ccBitDepthNum = static_cast<int>(params_.ccBitDepth);
         const int ccRateDivNum  = static_cast<int>(params_.ccRateDiv);
+        const int ccJitterNum   = static_cast<int>(params_.ccJitter);
+        const int ccMixNum      = static_cast<int>(params_.ccMix);
         const int ccCh          = static_cast<int>(params_.ccChannel);
 
         for (uint32_t i = 0; i < midiEventCount; ++i) {
             const auto& ev = midiEvents[i];
             if (ev.size < 3) continue;
             const uint8_t status = ev.data[0];
-            if ((status & 0xF0) != 0xB0) continue;  // not CC
+            if ((status & 0xF0) != 0xB0) continue;
             if ((status & 0x0F) + 1 != ccCh) continue;
 
             const uint8_t evCC  = ev.data[1];
@@ -212,19 +245,25 @@ protected:
 
             if (ccBitDepthNum > 0 && evCC == static_cast<uint8_t>(ccBitDepthNum))
                 ccBitDepthOverride_ = ccToBitDepth(evVal);
-            if (ccRateDivNum > 0 && evCC == static_cast<uint8_t>(ccRateDivNum))
-                ccRateDivOverride_ = ccToRateDiv(evVal);
+            if (ccRateDivNum  > 0 && evCC == static_cast<uint8_t>(ccRateDivNum))
+                ccRateDivOverride_  = ccToRateDiv(evVal);
+            if (ccJitterNum   > 0 && evCC == static_cast<uint8_t>(ccJitterNum))
+                ccJitterOverride_   = ccToJitter(evVal);
+            if (ccMixNum      > 0 && evCC == static_cast<uint8_t>(ccMixNum))
+                ccMixOverride_      = ccToMix(evVal);
         }
 
-        // Clear override when CC is disabled
         if (ccBitDepthNum == 0) ccBitDepthOverride_ = -1.0f;
         if (ccRateDivNum  == 0) ccRateDivOverride_  = -1.0f;
+        if (ccJitterNum   == 0) ccJitterOverride_   = -1.0f;
+        if (ccMixNum      == 0) ccMixOverride_      = -1.0f;
 
-        const float effectiveBitDepth = (ccBitDepthOverride_ >= 0.0f) ? ccBitDepthOverride_ : params_.bitDepth;
-        const float effectiveRateDiv  = (ccRateDivOverride_  >= 0.0f) ? ccRateDivOverride_  : params_.rateDiv;
-
-        downspout::chipper::processBlock(engine_, params_, frames, inputs, outputs,
-                                         effectiveBitDepth, effectiveRateDiv);
+        downspout::chipper::processBlock(
+            engine_, params_, frames, inputs, outputs,
+            ccBitDepthOverride_ >= 0.0f ? ccBitDepthOverride_ : params_.bitDepth,
+            ccRateDivOverride_  >= 0.0f ? ccRateDivOverride_  : params_.rateDiv,
+            ccJitterOverride_   >= 0.0f ? ccJitterOverride_   : params_.jitter,
+            ccMixOverride_      >= 0.0f ? ccMixOverride_      : params_.mix);
     }
 
 private:
@@ -232,6 +271,8 @@ private:
     downspout::chipper::EngineState engine_ {};
     float ccBitDepthOverride_ = -1.0f;
     float ccRateDivOverride_  = -1.0f;
+    float ccJitterOverride_   = -1.0f;
+    float ccMixOverride_      = -1.0f;
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ChipperPlugin)
 };

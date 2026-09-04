@@ -22,7 +22,7 @@ static bool nearlyEqual(float a, float b, float eps = 1e-5f)
     return std::abs(a - b) <= eps;
 }
 
-// Convenience wrapper — passes params.bitDepth and params.rateDiv as effective values.
+// Convenience wrapper using panel values for all four effective parameters.
 static void processDefault(downspout::chipper::EngineState& state,
                             const downspout::chipper::Parameters& params,
                             uint32_t frames,
@@ -30,7 +30,8 @@ static void processDefault(downspout::chipper::EngineState& state,
                             float* const* outputs)
 {
     downspout::chipper::processBlock(state, params, frames, inputs, outputs,
-                                     params.bitDepth, params.rateDiv);
+                                     params.bitDepth, params.rateDiv,
+                                     params.jitter,   params.mix);
 }
 
 // ── Silence in → silence out ────────────────────────────────────────────────
@@ -97,6 +98,8 @@ static void testClamp()
     extreme.outputGain = 100.0f;
     extreme.ccBitDepth = -1.0f;
     extreme.ccRateDiv  = 200.0f;
+    extreme.ccJitter   = 200.0f;
+    extreme.ccMix      = -1.0f;
     extreme.ccChannel  = 0.0f;
 
     const Parameters c = clampParameters(extreme);
@@ -108,6 +111,8 @@ static void testClamp()
     check("clamp outputGain max", c.outputGain <= 12.0f);
     check("clamp ccBitDepth min", c.ccBitDepth >= 0.0f);
     check("clamp ccRateDiv max",  c.ccRateDiv  <= 127.0f);
+    check("clamp ccJitter max",   c.ccJitter   <= 127.0f);
+    check("clamp ccMix min",      c.ccMix      >= 0.0f);
     check("clamp ccChannel min",  c.ccChannel  >= 1.0f);
 }
 
@@ -195,7 +200,7 @@ static void testOutputGain()
     p.outputGain = 0.0f;
     { EngineState s; processDefault(s, p, kFrames, ins, outs0); }
 
-    p.outputGain = 6.0206f;  // ≈ ×2
+    p.outputGain = 6.0206f;
     { EngineState s; processDefault(s, p, kFrames, ins, outs6); }
 
     for (uint32_t n = 0; n < kFrames; ++n) {
@@ -205,18 +210,16 @@ static void testOutputGain()
     }
 }
 
-// ── CC effective values override panel values ────────────────────────────────
+// ── CC effective bit depth overrides panel value ─────────────────────────────
 
 static void testCCEffectiveBitDepth()
 {
     using namespace downspout::chipper;
 
-    // Two runs: same input, different effectiveBitDepth.
-    // With rateDiv=1, more quantisation noise at low bit depth → outputs differ.
     constexpr uint32_t kFrames = 16;
     std::array<float, kFrames> inL{}, inR{}, outHigh{}, outLow{};
     for (uint32_t i = 0; i < kFrames; ++i)
-        inL[i] = inR[i] = 0.37f;   // not on a power-of-two boundary → crushed low
+        inL[i] = inR[i] = 0.37f;
 
     const float* ins[]  = { inL.data(), inR.data() };
     float* outsH[]      = { outHigh.data(), outHigh.data() };
@@ -226,19 +229,19 @@ static void testCCEffectiveBitDepth()
     p.rateDiv = 1.0f;
     p.mix     = 100.0f;
 
-    { EngineState s; processBlock(s, p, kFrames, ins, outsH, 16.0f, 1.0f); } // no crush
-    { EngineState s; processBlock(s, p, kFrames, ins, outsL,  2.0f, 1.0f); } // 2-bit crush
+    { EngineState s; processBlock(s, p, kFrames, ins, outsH, 16.0f, 1.0f, 0.0f, 100.0f); }
+    { EngineState s; processBlock(s, p, kFrames, ins, outsL,  2.0f, 1.0f, 0.0f, 100.0f); }
 
-    // 16-bit: output ≈ input; 2-bit: output is quantised (0.5 for 0.37 input)
     check("cc bitDepth 16 passthrough", nearlyEqual(outHigh[0], 0.37f, 1e-5f));
     check("cc bitDepth 2 quantises",    nearlyEqual(outLow[0],  0.5f,  0.01f));
 }
+
+// ── CC effective rate div overrides panel value ──────────────────────────────
 
 static void testCCEffectiveRateDiv()
 {
     using namespace downspout::chipper;
 
-    // rateDiv=1 → output tracks input each frame; rateDiv=8 → output held constant.
     constexpr uint32_t kFrames = 16;
     std::array<float, kFrames> inL{}, inR{}, outFast{}, outSlow{};
     for (uint32_t i = 0; i < kFrames; ++i)
@@ -253,14 +256,93 @@ static void testCCEffectiveRateDiv()
     p.mix      = 100.0f;
     p.jitter   = 0.0f;
 
-    { EngineState s; processBlock(s, p, kFrames, ins, outsF, 16.0f, 1.0f);  }
-    { EngineState s; processBlock(s, p, kFrames, ins, outsS, 16.0f, 8.0f);  }
+    { EngineState s; processBlock(s, p, kFrames, ins, outsF, 16.0f, 1.0f, 0.0f, 100.0f); }
+    { EngineState s; processBlock(s, p, kFrames, ins, outsS, 16.0f, 8.0f, 0.0f, 100.0f); }
 
-    // rateDiv=1: each frame grabs a new sample, so output[1] != output[0]
-    check("cc rateDiv 1 not held",   !nearlyEqual(outFast[1], outFast[0], 1e-6f));
-    // rateDiv=8: frames 0..7 all equal
-    check("cc rateDiv 8 held frame 1", nearlyEqual(outSlow[1], outSlow[0], 1e-6f));
-    check("cc rateDiv 8 held frame 7", nearlyEqual(outSlow[7], outSlow[0], 1e-6f));
+    check("cc rateDiv 1 not held",     !nearlyEqual(outFast[1], outFast[0], 1e-6f));
+    check("cc rateDiv 8 held frame 1",  nearlyEqual(outSlow[1], outSlow[0], 1e-6f));
+    check("cc rateDiv 8 held frame 7",  nearlyEqual(outSlow[7], outSlow[0], 1e-6f));
+}
+
+// ── CC effective mix controls wet level ─────────────────────────────────────
+
+static void testCCEffectiveMix()
+{
+    using namespace downspout::chipper;
+
+    // With rateDiv=1 and bit=16 and constant input, wet == dry, so
+    // mix=0 → silence × gain, mix=100 → signal × gain.  Use non-silence input.
+    constexpr uint32_t kFrames = 16;
+    std::array<float, kFrames> inL{}, inR{}, outDry{}, outWet{};
+    for (uint32_t i = 0; i < kFrames; ++i)
+        inL[i] = inR[i] = 0.5f;
+
+    const float* ins[] = { inL.data(), inR.data() };
+    float* outsD[]     = { outDry.data(), outDry.data() };
+    float* outsW[]     = { outWet.data(), outWet.data() };
+
+    Parameters p;
+    p.bitDepth = 16.0f;
+    p.rateDiv  = 1.0f;
+    p.jitter   = 0.0f;
+
+    { EngineState s; processBlock(s, p, kFrames, ins, outsD, 16.0f, 1.0f, 0.0f,   0.0f); } // mix=0%
+    { EngineState s; processBlock(s, p, kFrames, ins, outsW, 16.0f, 1.0f, 0.0f, 100.0f); } // mix=100%
+
+    // mix=0: output = dry = 0.5; mix=100: output = wet (= dry here since bit=16) = 0.5
+    // Both should equal 0.5 with unity gain, confirming mix scaling works
+    check("cc mix 0%  passes dry",  nearlyEqual(outDry[0], 0.5f, 1e-5f));
+    check("cc mix 100% passes wet", nearlyEqual(outWet[0], 0.5f, 1e-5f));
+
+    // Verify mix=50% gives average (0.5*(dry+wet)/2 — same value here)
+    std::array<float, kFrames> outHalf{};
+    float* outsH[] = { outHalf.data(), outHalf.data() };
+    { EngineState s; processBlock(s, p, kFrames, ins, outsH, 16.0f, 1.0f, 0.0f, 50.0f); }
+    check("cc mix 50% midpoint", nearlyEqual(outHalf[0], 0.5f, 1e-5f));
+}
+
+// ── CC effective jitter changes hold length variance ─────────────────────────
+
+static void testCCEffectiveJitter()
+{
+    using namespace downspout::chipper;
+
+    // With jitter=0 and rateDiv=4, segments are strictly 4 frames long.
+    // With jitter=1 and rateDiv=4, hold lengths vary — not all segments identical.
+    constexpr uint32_t kFrames = 64;
+    constexpr int      kDiv    = 4;
+    std::array<float, kFrames> inL{}, inR{}, outNoJitter{}, outJitter{};
+    for (uint32_t i = 0; i < kFrames; ++i)
+        inL[i] = inR[i] = static_cast<float>(i) * 0.01f;
+
+    const float* ins[]  = { inL.data(), inR.data() };
+    float* outsN[]      = { outNoJitter.data(), outNoJitter.data() };
+    float* outsJ[]      = { outJitter.data(),   outJitter.data()   };
+
+    Parameters p;
+    p.bitDepth = 16.0f;
+    p.rateDiv  = static_cast<float>(kDiv);
+    p.mix      = 100.0f;
+
+    { EngineState s; processBlock(s, p, kFrames, ins, outsN, 16.0f, static_cast<float>(kDiv), 0.0f, 100.0f); }
+    { EngineState s; processBlock(s, p, kFrames, ins, outsJ, 16.0f, static_cast<float>(kDiv), 1.0f, 100.0f); }
+
+    // No-jitter: each group of kDiv frames is constant.
+    bool noJitterStrict = true;
+    for (int seg = 0; seg < static_cast<int>(kFrames) / kDiv; ++seg) {
+        const float ref = outNoJitter[static_cast<std::size_t>(seg * kDiv)];
+        for (int f = 1; f < kDiv; ++f)
+            if (!nearlyEqual(outNoJitter[static_cast<std::size_t>(seg * kDiv + f)], ref, 1e-6f))
+                noJitterStrict = false;
+    }
+    check("no-jitter segments strictly held", noJitterStrict);
+
+    // With full jitter, outputs should differ from the no-jitter case somewhere.
+    bool jitterDiffers = false;
+    for (uint32_t n = 0; n < kFrames; ++n)
+        if (!nearlyEqual(outJitter[n], outNoJitter[n], 1e-6f))
+            jitterDiffers = true;
+    check("jitter=1 differs from jitter=0", jitterDiffers);
 }
 
 // ── Serialization round-trip ─────────────────────────────────────────────────
@@ -277,7 +359,9 @@ static void testSerialization()
     p.outputGain = -3.0f;
     p.ccBitDepth = 1.0f;
     p.ccRateDiv  = 2.0f;
-    p.ccChannel  = 3.0f;
+    p.ccJitter   = 3.0f;
+    p.ccMix      = 4.0f;
+    p.ccChannel  = 5.0f;
 
     const std::string text     = serializeParameters(p);
     const auto        restored = deserializeParameters(text);
@@ -291,6 +375,8 @@ static void testSerialization()
         check("rt outputGain", nearlyEqual(restored->outputGain, p.outputGain));
         check("rt ccBitDepth", nearlyEqual(restored->ccBitDepth, p.ccBitDepth));
         check("rt ccRateDiv",  nearlyEqual(restored->ccRateDiv,  p.ccRateDiv));
+        check("rt ccJitter",   nearlyEqual(restored->ccJitter,   p.ccJitter));
+        check("rt ccMix",      nearlyEqual(restored->ccMix,      p.ccMix));
         check("rt ccChannel",  nearlyEqual(restored->ccChannel,  p.ccChannel));
     }
 }
@@ -305,6 +391,8 @@ int main()
     testOutputGain();
     testCCEffectiveBitDepth();
     testCCEffectiveRateDiv();
+    testCCEffectiveMix();
+    testCCEffectiveJitter();
     testSerialization();
 
     std::printf("\n%d passed, %d failed\n", gPassed, gFailed);

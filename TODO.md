@@ -1,5 +1,8 @@
 # Downspout TODO
 
+## Chipper
+
+First implementation done (core DSP, tests, DPF wrapper, UI). All four Drift lanes wired: CC 1=Bit Depth, CC 2=Rate Div, CC 3=Jitter, CC 4=Mix. Screenshot capture and host validation still pending.
 
 ## Gremlin
 

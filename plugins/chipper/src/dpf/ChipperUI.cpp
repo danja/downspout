@@ -21,6 +21,8 @@ enum ParameterIndex : uint32_t {
     kParamOutputGain,
     kParamCCBitDepth,
     kParamCCRateDiv,
+    kParamCCJitter,
+    kParamCCMix,
     kParamCCChannel,
     kParameterCount
 };
@@ -48,9 +50,11 @@ constexpr std::array<SliderDef, 5> kMainSliders = {{
     { kParamOutputGain, "Output Gain",-12.0f, 12.0f, false, "output_gain" },
 }};
 
-constexpr std::array<SliderDef, 3> kCCSliders = {{
+constexpr std::array<SliderDef, 5> kCCSliders = {{
     { kParamCCBitDepth, "CC Bit Depth", 0.0f, 127.0f, true, "cc_bit_depth" },
     { kParamCCRateDiv,  "CC Rate Div",  0.0f, 127.0f, true, "cc_rate_div"  },
+    { kParamCCJitter,   "CC Jitter",    0.0f, 127.0f, true, "cc_jitter"    },
+    { kParamCCMix,      "CC Mix",       0.0f, 127.0f, true, "cc_mix"       },
     { kParamCCChannel,  "CC Channel",   1.0f,  16.0f, true, "cc_channel"   },
 }};
 
@@ -94,6 +98,11 @@ constexpr std::array<SliderDef, 3> kCCSliders = {{
     return buf;
 }
 
+[[nodiscard]] bool isCCOff(const SliderDef& def, float v)
+{
+    return def.index != kParamCCChannel && static_cast<int>(std::lround(v)) == 0;
+}
+
 // Layout constants
 constexpr float kPad      = 16.0f;
 constexpr float kDivX     = 448.0f;   // x where CC column starts
@@ -116,6 +125,8 @@ public:
         values_[kParamOutputGain] = 0.0f;
         values_[kParamCCBitDepth] = 1.0f;
         values_[kParamCCRateDiv]  = 2.0f;
+        values_[kParamCCJitter]   = 3.0f;
+        values_[kParamCCMix]      = 4.0f;
         values_[kParamCCChannel]  = 1.0f;
 
        #ifdef DGL_NO_SHARED_RESOURCES
@@ -139,6 +150,8 @@ protected:
         else if (std::strcmp(key, "output_gain") == 0) { values_[kParamOutputGain] = fv; }
         else if (std::strcmp(key, "cc_bit_depth")== 0) { values_[kParamCCBitDepth] = fv; }
         else if (std::strcmp(key, "cc_rate_div") == 0) { values_[kParamCCRateDiv]  = fv; }
+        else if (std::strcmp(key, "cc_jitter")   == 0) { values_[kParamCCJitter]   = fv; }
+        else if (std::strcmp(key, "cc_mix")      == 0) { values_[kParamCCMix]      = fv; }
         else if (std::strcmp(key, "cc_channel")  == 0) { values_[kParamCCChannel]  = fv; }
         repaint();
     }
@@ -356,8 +369,7 @@ private:
                 closePath();
             }
 
-            const bool isOff = (def.index != kParamCCChannel)
-                             && (static_cast<int>(std::lround(values_[def.index])) == 0);
+            const bool isOff = isCCOff(def, values_[def.index]);
             const uint8_t dimAlpha = isOff ? 80 : 255;
 
             fontSize(12.0f);
@@ -392,7 +404,7 @@ private:
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fillColor(60, 80, 60, 255);
         text(kCCX, hintY, "Route Drift MIDI out \xe2\x86\x92 Chipper MIDI in.", nullptr);
-        text(kCCX, hintY + 14.0f, "CC 0 = off. Default: CC 1 = Bit Depth, CC 2 = Rate Div.", nullptr);
+        text(kCCX, hintY + 14.0f, "CC 0 = off.  Defaults: 1=Bit Depth  2=Rate Div  3=Jitter  4=Mix", nullptr);
     }
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ChipperUI)

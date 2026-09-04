@@ -33,11 +33,13 @@ Input → Sample-and-Hold (Rate Div, Jitter) → Bit Quantise (Bit Depth) → Dr
 | Output Gain  | −12 to +12 dB | 0 dB    | Post-processing level trim                                              |
 | CC Bit Depth | 0–127         | 1       | MIDI CC# that overrides Bit Depth in real time (0 = off); default = Drift lane 1 |
 | CC Rate Div  | 0–127         | 2       | MIDI CC# that overrides Rate Div in real time (0 = off); default = Drift lane 2  |
-| CC Channel   | 1–16          | 1       | MIDI channel for CC Bit Depth and CC Rate Div                           |
+| CC Jitter    | 0–127         | 3       | MIDI CC# that overrides Jitter in real time (0 = off); default = Drift lane 3    |
+| CC Mix       | 0–127         | 4       | MIDI CC# that overrides Mix in real time (0 = off); default = Drift lane 4       |
+| CC Channel   | 1–16          | 1       | MIDI channel for all four CC overrides                                  |
 
 ### Drift routing
 
-Route Drift's MIDI output to Chipper's MIDI input. With default settings (CC 1 → Bit Depth, CC 2 → Rate Div, channel 1), Drift's first two lanes sweep the lo-fi character in sync with host transport. CC 0 disables the override for that parameter, restoring the panel value.
+Route Drift's MIDI output to Chipper's MIDI input. With default settings, all four Drift lanes map directly: CC 1 → Bit Depth, CC 2 → Rate Div, CC 3 → Jitter, CC 4 → Mix. CC 0 disables the override for that parameter, restoring the panel value. Each CC value (0–127) is mapped to the full parameter range: bit depth 1–16, rate divisor 1–64, jitter 0–100 %, mix 0–100 %.
 
 ### DSP notes
 
