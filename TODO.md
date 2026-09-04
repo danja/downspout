@@ -8,10 +8,6 @@ Simplify UI — left open pending user design direction on which controls to hid
 
 Floozy has no Conductor integration yet (physical modelling synth). If added, avoid hardcoding CC numbers — expose them as parameters or document they must match Conductor's panel settings (default CC 20–24).
 
-## ToneWorm
-
-Capture screenshot: run `scripts/capture-plugin-screenshots.sh worms` and review UI at full resolution before first release.
-
 ## Chipper
 
 New plugin. Stereo audio in/out. Processes to sound like 1980s vieo game, chiptunes. Features bitwise quantization, jitter noise, aliasing.
