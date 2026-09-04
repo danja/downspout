@@ -2,7 +2,7 @@
 
 ## P-Mix
 
-Add a slider labelled Duck. P-Mix will monitor the input level of audio channels 3 and 4 (integrated a bit) and depending on the level modify the probability of quitening or increasing the level of the main signal in channels 1 & 2.  
+Add a slider labelled Oppose. The idea is for when other channels are busy, the P-Mix channel will be quieter and vice versa. To do this P-Mix will monitor the input level of audio channels 3 and 4 (integrated a bit) and depending on the level and the Oppose setting modify the probability of quitening or increasing the level of the main signal in channels 1 & 2.  
 
 ## Gremlin
 
