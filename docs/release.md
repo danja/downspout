@@ -58,6 +58,7 @@ downspout-<version>-<platform>-vst3.zip
 ├── resonance_garden.vst3/
 ├── orbit.vst3/
 ├── guardian.vst3/
+├── chipper.vst3/
 ├── LICENSE
 └── README.md
 ```

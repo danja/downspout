@@ -109,6 +109,7 @@ The repository currently installs forty-one real wrapper targets:
 - `orbit.vst3` with UI
 - `guardian.vst3` with UI
 - `skream.vst3` with UI
+- `chipper.vst3` with UI
 - `worms.vst3` with UI
 
 The next install-related validation is host-side confirmation that all bundles behave correctly in `Release` builds.

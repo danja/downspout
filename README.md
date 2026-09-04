@@ -109,6 +109,7 @@ installed bundle.
 | [Orbit](plugins/orbit/README.md) | `orbit.vst3` | Audio effect | Seeded transport-aware stereo trajectories, distance filtering, and conservative Doppler. |
 | [Guardian](plugins/guardian/README.md) | `guardian.vst3` | Safety effect | DC removal, look-ahead limiting, true-peak protection, and latched diagnostics. |
 | [Skream](plugins/skream/README.md) | `skream.vst3` | Audio effect | Scream filter: SVF lowpass/highpass with ADAA2 feedback saturation for dubstep growl. Ten presets, MIDI CC control via Drift. |
+| [Chipper](plugins/chipper/README.md) | `chipper.vst3` | Audio effect | 1980s video game lo-fi processor: bitwise quantization, sample-rate reduction, and clock jitter. |
 | [ToneWorm](plugins/worms/README.md) | `worms.vst3` | MIDI generator | Paterson's Worm Tonnetz melody generator with six directional rules, scale quantization, Conductor CC, and Randomize/Mutate actions. |
 
 ## Architecture

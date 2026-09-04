@@ -194,6 +194,7 @@ Progress as of 2026-05-27:
   instrument/MIDI generator with portable mapping, tuning, free-time
   scheduling, synthesis, versioned text state, deterministic tests, and a DPF UI;
 - `campione` now exists as an original multi-zone sampler instrument with per-note MIDI mapping, WAV file loading, audio recording with auto-pitch detection, pitch-shift gap fill, zero-crossing loop snap, crossfade looping, deterministic core, and a first VST3 wrapper target with UI via vendored DPF;
+- `chipper` now exists as an original stereo lo-fi processor with bitwise quantization, sample-rate reduction via sample-and-hold, clock jitter, dry/wet mix, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `install.sh` exists as the intended build/install entrypoint for local VST deployment.
 
 Current main gap:
@@ -209,7 +210,7 @@ Current main gap:
   `xoxolo.vst3`, `syrinx.vst3`, `tuney_vst.vst3`, `harmonic_atlas.vst3`,
   `conductor.vst3`, `drift.vst3`, `mnemosyne.vst3`, `polymeter.vst3`,
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
-  `guardian.vst3`, `campione.vst3`, and `skream.vst3` bundles.
+  `guardian.vst3`, `campione.vst3`, `skream.vst3`, and `chipper.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of

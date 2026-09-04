@@ -58,6 +58,7 @@ option(DOWNSPOUT_BUILD_MIDISCRIBE "Configure the Midiscribe MIDI capture target"
 option(DOWNSPOUT_BUILD_CAMPIONE "Configure the Campione sampler target" ON)
 option(DOWNSPOUT_BUILD_BASSOPS "Configure the Bassops ducker/MS-EQ effect target" ON)
 option(DOWNSPOUT_BUILD_DAMIANO "Configure the Damiano stereo distortion target" ON)
+option(DOWNSPOUT_BUILD_CHIPPER "Configure the Chipper lo-fi bit-crush target" ON)
 option(DOWNSPOUT_BUILD_SKREAM "Configure the Skream scream filter target" ON)
 option(DOWNSPOUT_BUILD_WORMS "Configure the ToneWorm Tonnetz MIDI generator target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
@@ -302,6 +303,10 @@ endif()
 
 if(DOWNSPOUT_BUILD_DAMIANO)
     add_subdirectory(plugins/damiano)
+endif()
+
+if(DOWNSPOUT_BUILD_CHIPPER)
+    add_subdirectory(plugins/chipper)
 endif()
 
 if(DOWNSPOUT_BUILD_SKREAM)

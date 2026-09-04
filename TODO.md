@@ -10,7 +10,7 @@ Floozy has no Conductor integration yet (physical modelling synth). If added, av
 
 ## Chipper
 
-New plugin. Stereo audio in/out. Processes to sound like 1980s vieo game, chiptunes. Features bitwise quantization, jitter noise, aliasing.
+First implementation done (core DSP, tests, DPF wrapper, UI). Screenshot capture and host validation still pending.
 
 ## Evaluate Manually in Reaper
 

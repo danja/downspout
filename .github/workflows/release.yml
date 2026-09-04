@@ -234,6 +234,7 @@ jobs:
             echo "- resonance_garden.vst3"
             echo "- orbit.vst3"
             echo "- guardian.vst3"
+            echo "- chipper.vst3"
             echo "- skream.vst3"
             echo "- worms.vst3"
             echo
