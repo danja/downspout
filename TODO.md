@@ -1,8 +1,8 @@
 # Downspout TODO
 
-## Chipper
+## MelGen
 
-First implementation done (core DSP, tests, DPF wrapper, UI). All four Drift lanes wired: CC 1=Bit Depth, CC 2=Rate Div, CC 3=Jitter, CC 4=Mix. Screenshot capture and host validation still pending.
+The Conductor in channel isn't properly labeled and most of the list of numbers isn't visible when clicked.
 
 ## Gremlin
 
@@ -10,11 +10,7 @@ Simplify UI — left open pending user design direction on which controls to hid
 
 ## Floozy
 
-Floozy has no Conductor integration yet (physical modelling synth). If added, avoid hardcoding CC numbers — expose them as parameters or document they must match Conductor's panel settings (default CC 20–24).
-
-## Chipper
-
-First implementation done (core DSP, tests, DPF wrapper, UI). Screenshot capture and host validation still pending.
+Floozy has no Conductor integration yet (physical modelling synth). Default CC numbers as Conductor's panel settings (default CC 20–24).
 
 ## Evaluate Manually in Reaper
 
