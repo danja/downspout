@@ -1,7 +1,6 @@
 #include "chipper_core.hpp"
 
 #include <algorithm>
-#include <charconv>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -21,6 +20,9 @@ Parameters clampParameters(const Parameters& p) noexcept
     out.jitter     = safe(out.jitter,     0.0f,   1.0f,  0.0f);
     out.mix        = safe(out.mix,        0.0f, 100.0f, 100.0f);
     out.outputGain = safe(out.outputGain, -12.0f, 12.0f,  0.0f);
+    out.ccBitDepth = std::round(safe(out.ccBitDepth, 0.0f, 127.0f, kDefaultCCBitDepth));
+    out.ccRateDiv  = std::round(safe(out.ccRateDiv,  0.0f, 127.0f, kDefaultCCRateDiv));
+    out.ccChannel  = std::round(safe(out.ccChannel,  1.0f,  16.0f,  1.0f));
     return out;
 }
 
@@ -37,10 +39,8 @@ uint32_t xorshift32(uint32_t& state) noexcept
 float quantizeSample(float sample, int bitDepth) noexcept
 {
     if (bitDepth >= 16) return sample;
-    // levels = 2^(bitDepth-1): number of steps per half-range
     const float levels = static_cast<float>(1 << (bitDepth - 1));
-    const float q = std::round(sample * levels) / levels;
-    return std::clamp(q, -1.0f, 1.0f);
+    return std::clamp(std::round(sample * levels) / levels, -1.0f, 1.0f);
 }
 
 bool parseFloat(std::string_view text, float& value)
@@ -73,15 +73,16 @@ void processBlock(EngineState&        state,
                   const Parameters&   params,
                   uint32_t            frames,
                   const float* const* inputs,
-                  float* const*       outputs) noexcept
+                  float* const*       outputs,
+                  float               effectiveBitDepth,
+                  float               effectiveRateDiv) noexcept
 {
     const auto cp       = clampParameters(params);
-    const int  bitDepth = static_cast<int>(cp.bitDepth);
-    const int  rateDiv  = static_cast<int>(cp.rateDiv);
+    const int  bitDepth = static_cast<int>(std::round(std::clamp(effectiveBitDepth, 1.0f, 16.0f)));
+    const int  rateDiv  = static_cast<int>(std::round(std::clamp(effectiveRateDiv,  1.0f, 64.0f)));
     const float mixFrac = cp.mix * 0.01f;
     const float gain    = std::pow(10.0f, cp.outputGain / 20.0f);
 
-    // Max jitter offset: ±floor(jitter * rateDiv / 2) frames
     const int jitterMax = (cp.jitter > 0.0f)
         ? static_cast<int>(std::floor(cp.jitter * static_cast<float>(rateDiv) * 0.5f))
         : 0;
@@ -117,7 +118,10 @@ std::string serializeParameters(const Parameters& p)
            "rate_div="    + std::to_string(p.rateDiv)    + "\n"
            "jitter="      + std::to_string(p.jitter)     + "\n"
            "mix="         + std::to_string(p.mix)        + "\n"
-           "output_gain=" + std::to_string(p.outputGain) + "\n";
+           "output_gain=" + std::to_string(p.outputGain) + "\n"
+           "cc_bit_depth=" + std::to_string(p.ccBitDepth) + "\n"
+           "cc_rate_div="  + std::to_string(p.ccRateDiv)  + "\n"
+           "cc_channel="  + std::to_string(p.ccChannel)  + "\n";
 }
 
 std::optional<Parameters> deserializeParameters(const std::string& text)
@@ -130,13 +134,15 @@ std::optional<Parameters> deserializeParameters(const std::string& text)
         const std::string_view key   = line.substr(0, sep);
         const std::string_view value = line.substr(sep + 1);
         float v = 0.0f;
-        if (key == "version") {
-            continue;
-        } else if (key == "bit_depth"   && parseFloat(value, v)) { p.bitDepth   = v; }
-        else if   (key == "rate_div"    && parseFloat(value, v)) { p.rateDiv    = v; }
-        else if   (key == "jitter"      && parseFloat(value, v)) { p.jitter     = v; }
-        else if   (key == "mix"         && parseFloat(value, v)) { p.mix        = v; }
-        else if   (key == "output_gain" && parseFloat(value, v)) { p.outputGain = v; }
+        if      (key == "version")      { continue; }
+        else if (key == "bit_depth"    && parseFloat(value, v)) { p.bitDepth   = v; }
+        else if (key == "rate_div"     && parseFloat(value, v)) { p.rateDiv    = v; }
+        else if (key == "jitter"       && parseFloat(value, v)) { p.jitter     = v; }
+        else if (key == "mix"          && parseFloat(value, v)) { p.mix        = v; }
+        else if (key == "output_gain"  && parseFloat(value, v)) { p.outputGain = v; }
+        else if (key == "cc_bit_depth" && parseFloat(value, v)) { p.ccBitDepth = v; }
+        else if (key == "cc_rate_div"  && parseFloat(value, v)) { p.ccRateDiv  = v; }
+        else if (key == "cc_channel"   && parseFloat(value, v)) { p.ccChannel  = v; }
         else { return std::nullopt; }
     }
     return clampParameters(p);

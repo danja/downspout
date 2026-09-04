@@ -12,31 +12,18 @@ START_NAMESPACE_DISTRHO
 
 namespace {
 
+// Must match ChipperPlugin.cpp exactly — indices are stable across saves.
 enum ParameterIndex : uint32_t {
     kParamBitDepth = 0,
     kParamRateDiv,
     kParamJitter,
     kParamMix,
     kParamOutputGain,
+    kParamCCBitDepth,
+    kParamCCRateDiv,
+    kParamCCChannel,
     kParameterCount
 };
-
-struct SliderDef {
-    uint32_t    index;
-    const char* label;
-    const char* unit;
-    float       min, max;
-    bool        integer;
-    const char* stateKey;
-};
-
-constexpr std::array<SliderDef, 5> kSliders = {{
-    { kParamBitDepth,   "Bit Depth",   "bit", 1.0f,   16.0f, true,  "bit_depth"   },
-    { kParamRateDiv,    "Rate Div",    "×",   1.0f,   64.0f, true,  "rate_div"    },
-    { kParamJitter,     "Jitter",      "%",   0.0f,    1.0f, false, "jitter"      },
-    { kParamMix,        "Mix",         "%",   0.0f,  100.0f, false, "mix"         },
-    { kParamOutputGain, "Output Gain", "dB", -12.0f,  12.0f, false, "output_gain" },
-}};
 
 struct Rect {
     float x, y, w, h;
@@ -45,29 +32,75 @@ struct Rect {
     }
 };
 
+struct SliderDef {
+    uint32_t    index;
+    const char* label;
+    float       min, max;
+    bool        integer;
+    const char* stateKey;
+};
+
+constexpr std::array<SliderDef, 5> kMainSliders = {{
+    { kParamBitDepth,   "Bit Depth",   1.0f,  16.0f, true,  "bit_depth"   },
+    { kParamRateDiv,    "Rate Div",    1.0f,  64.0f, true,  "rate_div"    },
+    { kParamJitter,     "Jitter",      0.0f,   1.0f, false, "jitter"      },
+    { kParamMix,        "Mix",         0.0f, 100.0f, false, "mix"         },
+    { kParamOutputGain, "Output Gain",-12.0f, 12.0f, false, "output_gain" },
+}};
+
+constexpr std::array<SliderDef, 3> kCCSliders = {{
+    { kParamCCBitDepth, "CC Bit Depth", 0.0f, 127.0f, true, "cc_bit_depth" },
+    { kParamCCRateDiv,  "CC Rate Div",  0.0f, 127.0f, true, "cc_rate_div"  },
+    { kParamCCChannel,  "CC Channel",   1.0f,  16.0f, true, "cc_channel"   },
+}};
+
 [[nodiscard]] float clampf(float v, float lo, float hi) noexcept
 {
     return std::max(lo, std::min(v, hi));
 }
 
-[[nodiscard]] std::string formatValue(const SliderDef& def, float v)
+[[nodiscard]] std::string formatMain(const SliderDef& def, float v)
 {
-    char buf[32];
-    if (def.index == kParamBitDepth) {
+    char buf[40];
+    switch (def.index) {
+    case kParamBitDepth: {
         const int bits   = static_cast<int>(std::lround(v));
         const int levels = (bits >= 16) ? 32767 : (1 << (bits - 1));
-        std::snprintf(buf, sizeof(buf), "%d-bit  (%d levels)", bits, levels);
-    } else if (def.index == kParamRateDiv) {
-        std::snprintf(buf, sizeof(buf), "sr/%d", static_cast<int>(std::lround(v)));
-    } else if (def.index == kParamJitter) {
+        std::snprintf(buf, sizeof(buf), "%d-bit (%d levels)", bits, levels);
+        break;
+    }
+    case kParamRateDiv:
+        std::snprintf(buf, sizeof(buf), "sr\xc3\xb7%d", static_cast<int>(std::lround(v)));
+        break;
+    case kParamJitter:
         std::snprintf(buf, sizeof(buf), "%.0f%%", v * 100.0f);
-    } else if (def.index == kParamOutputGain) {
+        break;
+    case kParamOutputGain:
         std::snprintf(buf, sizeof(buf), "%+.1f dB", v);
-    } else {
+        break;
+    default:
         std::snprintf(buf, sizeof(buf), "%.0f%%", v);
+        break;
     }
     return buf;
 }
+
+[[nodiscard]] std::string formatCC(const SliderDef& def, float v)
+{
+    char buf[24];
+    if (def.index != kParamCCChannel && static_cast<int>(std::lround(v)) == 0)
+        return "off";
+    std::snprintf(buf, sizeof(buf), "%d", static_cast<int>(std::lround(v)));
+    return buf;
+}
+
+// Layout constants
+constexpr float kPad      = 16.0f;
+constexpr float kDivX     = 448.0f;   // x where CC column starts
+constexpr float kMainX    = kPad;
+constexpr float kCCX      = kDivX + 12.0f;
+constexpr float kRowH     = 62.0f;
+constexpr float kSlidersY = 76.0f;
 
 }  // namespace
 
@@ -81,6 +114,9 @@ public:
         values_[kParamJitter]     = 0.0f;
         values_[kParamMix]        = 100.0f;
         values_[kParamOutputGain] = 0.0f;
+        values_[kParamCCBitDepth] = 1.0f;
+        values_[kParamCCRateDiv]  = 2.0f;
+        values_[kParamCCChannel]  = 1.0f;
 
        #ifdef DGL_NO_SHARED_RESOURCES
         createFontFromFile("sans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
@@ -95,17 +131,15 @@ protected:
     void stateChanged(const char* key, const char* value) override
     {
         if (!value) return;
-        if (std::strcmp(key, "bit_depth") == 0) {
-            values_[kParamBitDepth]   = static_cast<float>(std::atof(value));
-        } else if (std::strcmp(key, "rate_div") == 0) {
-            values_[kParamRateDiv]    = static_cast<float>(std::atof(value));
-        } else if (std::strcmp(key, "jitter") == 0) {
-            values_[kParamJitter]     = static_cast<float>(std::atof(value));
-        } else if (std::strcmp(key, "mix") == 0) {
-            values_[kParamMix]        = static_cast<float>(std::atof(value));
-        } else if (std::strcmp(key, "output_gain") == 0) {
-            values_[kParamOutputGain] = static_cast<float>(std::atof(value));
-        }
+        const float fv = static_cast<float>(std::atof(value));
+        if      (std::strcmp(key, "bit_depth")   == 0) { values_[kParamBitDepth]   = fv; }
+        else if (std::strcmp(key, "rate_div")    == 0) { values_[kParamRateDiv]    = fv; }
+        else if (std::strcmp(key, "jitter")      == 0) { values_[kParamJitter]     = fv; }
+        else if (std::strcmp(key, "mix")         == 0) { values_[kParamMix]        = fv; }
+        else if (std::strcmp(key, "output_gain") == 0) { values_[kParamOutputGain] = fv; }
+        else if (std::strcmp(key, "cc_bit_depth")== 0) { values_[kParamCCBitDepth] = fv; }
+        else if (std::strcmp(key, "cc_rate_div") == 0) { values_[kParamCCRateDiv]  = fv; }
+        else if (std::strcmp(key, "cc_channel")  == 0) { values_[kParamCCChannel]  = fv; }
         repaint();
     }
 
@@ -115,7 +149,9 @@ protected:
         const float H = static_cast<float>(getHeight());
         drawBackground(W, H);
         drawHeader(W);
-        drawSliders(W);
+        drawDivider(H);
+        drawMainSliders();
+        drawCCSection(W);
     }
 
     bool onMouse(const MouseEvent& ev) override
@@ -124,13 +160,21 @@ protected:
         const float mx = static_cast<float>(ev.pos.getX());
         const float my = static_cast<float>(ev.pos.getY());
         if (!ev.press) {
-            dragSlider_ = -1;
+            dragMain_ = -1;
+            dragCC_   = -1;
             return false;
         }
-        for (int s = 0; s < static_cast<int>(kSliders.size()); ++s) {
-            if (sliderTrackRect(s).contains(mx, my)) {
-                dragSlider_ = s;
-                updateSliderFromX(s, mx);
+        for (int s = 0; s < static_cast<int>(kMainSliders.size()); ++s) {
+            if (mainTrack(s).contains(mx, my)) {
+                dragMain_ = s;
+                updateMain(s, mx);
+                return true;
+            }
+        }
+        for (int s = 0; s < static_cast<int>(kCCSliders.size()); ++s) {
+            if (ccTrack(s).contains(mx, my)) {
+                dragCC_ = s;
+                updateCC(s, mx);
                 return true;
             }
         }
@@ -139,36 +183,54 @@ protected:
 
     bool onMotion(const MotionEvent& ev) override
     {
-        if (dragSlider_ < 0) return false;
-        updateSliderFromX(dragSlider_, static_cast<float>(ev.pos.getX()));
-        return true;
+        const float mx = static_cast<float>(ev.pos.getX());
+        if (dragMain_ >= 0) { updateMain(dragMain_, mx); return true; }
+        if (dragCC_   >= 0) { updateCC(dragCC_,   mx); return true; }
+        return false;
     }
 
 private:
     std::array<float, kParameterCount> values_ {};
-    int dragSlider_ = -1;
+    int dragMain_ = -1;
+    int dragCC_   = -1;
 
-    static constexpr float kPad     = 20.0f;
-    static constexpr float kSliderX = 30.0f;
-    static constexpr float kRowH    = 62.0f;
-    static constexpr float kSliderY0 = 74.0f;
-
-    [[nodiscard]] Rect sliderTrackRect(int s) const noexcept
+    // Main slider track: left column, full width up to divider
+    [[nodiscard]] Rect mainTrack(int s) const noexcept
     {
-        const float W = static_cast<float>(getWidth());
-        const float top = kSliderY0 + s * kRowH;
-        return {kSliderX, top + 22.0f, W - kSliderX - kPad, 14.0f};
+        const float trackW = kDivX - kMainX - kPad;
+        return { kMainX, kSlidersY + s * kRowH + 22.0f, trackW, 14.0f };
     }
 
-    void updateSliderFromX(int s, float mx)
+    // CC slider track: right column
+    [[nodiscard]] Rect ccTrack(int s) const noexcept
     {
-        const SliderDef& def = kSliders[static_cast<std::size_t>(s)];
-        const Rect tr        = sliderTrackRect(s);
+        const float W      = static_cast<float>(getWidth());
+        const float trackW = W - kCCX - kPad;
+        return { kCCX, kSlidersY + s * kRowH + 22.0f, trackW, 14.0f };
+    }
+
+    void updateMain(int s, float mx)
+    {
+        const SliderDef& def = kMainSliders[static_cast<std::size_t>(s)];
+        const Rect tr        = mainTrack(s);
         const float t        = clampf((mx - tr.x) / tr.w, 0.0f, 1.0f);
         float v              = def.min + t * (def.max - def.min);
         if (def.integer) v   = std::round(v);
         char buf[32];
         std::snprintf(buf, sizeof(buf), "%.6g", v);
+        setState(def.stateKey, buf);
+        values_[def.index] = v;
+        repaint();
+    }
+
+    void updateCC(int s, float mx)
+    {
+        const SliderDef& def = kCCSliders[static_cast<std::size_t>(s)];
+        const Rect tr        = ccTrack(s);
+        const float t        = clampf((mx - tr.x) / tr.w, 0.0f, 1.0f);
+        float v              = std::round(def.min + t * (def.max - def.min));
+        char buf[16];
+        std::snprintf(buf, sizeof(buf), "%.0f", v);
         setState(def.stateKey, buf);
         values_[def.index] = v;
         repaint();
@@ -199,7 +261,8 @@ private:
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         fillColor(110, 130, 100, 255);
-        text(kPad + 145.0f, 27.0f, "1980s video game \xe2\x80\x94 bit crush \xc2\xb7 sample-rate reduction \xc2\xb7 clock jitter", nullptr);
+        text(kPad + 148.0f, 27.0f,
+             "1980s video game \xe2\x80\x94 bit crush \xc2\xb7 rate reduction \xc2\xb7 jitter \xc2\xb7 Drift CC", nullptr);
 
         beginPath();
         strokeColor(40, 60, 40, 255);
@@ -209,25 +272,40 @@ private:
         stroke();
         closePath();
 
+        // Column headers
         fontSize(9.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(70, 90, 70, 255);
-        text(kPad, 62.0f, "PARAMETERS", nullptr);
+        fillColor(70, 100, 70, 255);
+        text(kMainX, 62.0f, "PARAMETERS", nullptr);
+        text(kCCX, 62.0f, "DRIFT CC ROUTING", nullptr);
     }
 
-    void drawSliders(float W)
+    void drawDivider(float H)
     {
-        for (int s = 0; s < static_cast<int>(kSliders.size()); ++s) {
-            const SliderDef& def = kSliders[static_cast<std::size_t>(s)];
-            const Rect tr        = sliderTrackRect(s);
+        beginPath();
+        strokeColor(32, 44, 32, 255);
+        strokeWidth(1.0f);
+        moveTo(kDivX, 58.0f);
+        lineTo(kDivX, H);
+        stroke();
+        closePath();
+    }
+
+    void drawMainSliders()
+    {
+        const float trackW = kDivX - kMainX - kPad;
+
+        for (int s = 0; s < static_cast<int>(kMainSliders.size()); ++s) {
+            const SliderDef& def = kMainSliders[static_cast<std::size_t>(s)];
+            const Rect tr        = mainTrack(s);
             const float labelY   = tr.y - 18.0f;
 
             if (s > 0) {
                 beginPath();
-                strokeColor(28, 34, 28, 255);
+                strokeColor(28, 36, 28, 255);
                 strokeWidth(1.0f);
-                moveTo(kSliderX, tr.y - 26.0f);
-                lineTo(W - kPad, tr.y - 26.0f);
+                moveTo(kMainX, tr.y - 26.0f);
+                lineTo(kMainX + trackW, tr.y - 26.0f);
                 stroke();
                 closePath();
             }
@@ -235,12 +313,12 @@ private:
             fontSize(12.0f);
             textAlign(ALIGN_LEFT | ALIGN_TOP);
             fillColor(180, 210, 170, 255);
-            text(kSliderX, labelY, def.label, nullptr);
+            text(kMainX, labelY, def.label, nullptr);
 
             fontSize(11.0f);
             textAlign(ALIGN_RIGHT | ALIGN_TOP);
             fillColor(80, 210, 100, 255);
-            text(W - kPad, labelY, formatValue(def, values_[def.index]).c_str(), nullptr);
+            text(kMainX + trackW, labelY, formatMain(def, values_[def.index]).c_str(), nullptr);
 
             beginPath();
             roundedRect(tr.x, tr.y, tr.w, tr.h, 7.0f);
@@ -248,8 +326,7 @@ private:
             fill();
             closePath();
 
-            const float norm = clampf((values_[def.index] - def.min) / (def.max - def.min),
-                                      0.0f, 1.0f);
+            const float norm = clampf((values_[def.index] - def.min) / (def.max - def.min), 0.0f, 1.0f);
             if (norm > 0.0f) {
                 beginPath();
                 roundedRect(tr.x, tr.y, std::max(tr.h, tr.w * norm), tr.h, 7.0f);
@@ -258,6 +335,64 @@ private:
                 closePath();
             }
         }
+    }
+
+    void drawCCSection(float W)
+    {
+        const float trackW = W - kCCX - kPad;
+
+        for (int s = 0; s < static_cast<int>(kCCSliders.size()); ++s) {
+            const SliderDef& def = kCCSliders[static_cast<std::size_t>(s)];
+            const Rect tr        = ccTrack(s);
+            const float labelY   = tr.y - 18.0f;
+
+            if (s > 0) {
+                beginPath();
+                strokeColor(28, 36, 28, 255);
+                strokeWidth(1.0f);
+                moveTo(kCCX, tr.y - 26.0f);
+                lineTo(kCCX + trackW, tr.y - 26.0f);
+                stroke();
+                closePath();
+            }
+
+            const bool isOff = (def.index != kParamCCChannel)
+                             && (static_cast<int>(std::lround(values_[def.index])) == 0);
+            const uint8_t dimAlpha = isOff ? 80 : 255;
+
+            fontSize(12.0f);
+            textAlign(ALIGN_LEFT | ALIGN_TOP);
+            fillColor(160, 190, 150, dimAlpha);
+            text(kCCX, labelY, def.label, nullptr);
+
+            fontSize(11.0f);
+            textAlign(ALIGN_RIGHT | ALIGN_TOP);
+            fillColor(isOff ? 80 : 60, isOff ? 100 : 200, isOff ? 70 : 90, dimAlpha);
+            text(kCCX + trackW, labelY, formatCC(def, values_[def.index]).c_str(), nullptr);
+
+            beginPath();
+            roundedRect(tr.x, tr.y, tr.w, tr.h, 7.0f);
+            fillColor(26, 34, 26, 255);
+            fill();
+            closePath();
+
+            const float norm = clampf((values_[def.index] - def.min) / (def.max - def.min), 0.0f, 1.0f);
+            if (norm > 0.0f && !isOff) {
+                beginPath();
+                roundedRect(tr.x, tr.y, std::max(tr.h, tr.w * norm), tr.h, 7.0f);
+                fillColor(40, 150, 60, 255);
+                fill();
+                closePath();
+            }
+        }
+
+        // Usage hint below CC sliders
+        const float hintY = kSlidersY + kCCSliders.size() * kRowH + 8.0f;
+        fontSize(9.5f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fillColor(60, 80, 60, 255);
+        text(kCCX, hintY, "Route Drift MIDI out \xe2\x86\x92 Chipper MIDI in.", nullptr);
+        text(kCCX, hintY + 14.0f, "CC 0 = off. Default: CC 1 = Bit Depth, CC 2 = Rate Div.", nullptr);
     }
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ChipperUI)

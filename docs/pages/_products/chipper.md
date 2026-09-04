@@ -24,13 +24,20 @@ Input → Sample-and-Hold (Rate Div, Jitter) → Bit Quantise (Bit Depth) → Dr
 
 ### Parameters
 
-| Parameter   | Range      | Default | Notes                                                                   |
-|-------------|------------|---------|-------------------------------------------------------------------------|
-| Bit Depth   | 1–16 bits  | 8       | Quantisation resolution; 16 = no reduction; 8 ≈ original Game Boy DAC  |
-| Rate Div    | 1–64       | 8       | Hold every Nth input sample; 1 = no reduction; sr/8 ≈ 6 kHz at 48 kHz |
-| Jitter      | 0–100 %    | 0 %     | Fraction of Rate Div randomised per hold cycle; 0 = deterministic       |
-| Mix         | 0–100 %    | 100 %   | Dry/wet blend; 0 % passes input unchanged                               |
-| Output Gain | −12 to +12 dB | 0 dB | Post-processing level trim                                             |
+| Parameter    | Range         | Default | Notes                                                                   |
+|--------------|---------------|---------|-------------------------------------------------------------------------|
+| Bit Depth    | 1–16 bits     | 8       | Quantisation resolution; 16 = no reduction; 8 ≈ original Game Boy DAC  |
+| Rate Div     | 1–64          | 8       | Hold every Nth input sample; 1 = no reduction; sr/8 ≈ 6 kHz at 48 kHz |
+| Jitter       | 0–100 %       | 0 %     | Fraction of Rate Div randomised per hold cycle; 0 = deterministic       |
+| Mix          | 0–100 %       | 100 %   | Dry/wet blend; 0 % passes input unchanged                               |
+| Output Gain  | −12 to +12 dB | 0 dB    | Post-processing level trim                                              |
+| CC Bit Depth | 0–127         | 1       | MIDI CC# that overrides Bit Depth in real time (0 = off); default = Drift lane 1 |
+| CC Rate Div  | 0–127         | 2       | MIDI CC# that overrides Rate Div in real time (0 = off); default = Drift lane 2  |
+| CC Channel   | 1–16          | 1       | MIDI channel for CC Bit Depth and CC Rate Div                           |
+
+### Drift routing
+
+Route Drift's MIDI output to Chipper's MIDI input. With default settings (CC 1 → Bit Depth, CC 2 → Rate Div, channel 1), Drift's first two lanes sweep the lo-fi character in sync with host transport. CC 0 disables the override for that parameter, restoring the panel value.
 
 ### DSP notes
 
