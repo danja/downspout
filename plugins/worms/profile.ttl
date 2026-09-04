@@ -1,0 +1,17 @@
+@prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
+@prefix doap: <http://usefulinc.com/ns/doap#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<https://danja.github.io/downspout/plugins/worms>
+    a lv2:Plugin ;
+    doap:name "ToneWorm" ;
+    doap:shortdesc "Paterson's Worm Tonnetz MIDI generator" ;
+    doap:description """Transport-synchronized MIDI generator.
+Navigates a Tonnetz pitch lattice using Paterson's Worm rules.
+Supports Conductor integration and scale quantization.""" ;
+    lv2:minorVersion 1 ;
+    lv2:microVersion 0 ;
+    doap:maintainer [
+        doap:name "danja" ;
+        doap:homepage <https://danja.github.io/downspout/>
+    ] .

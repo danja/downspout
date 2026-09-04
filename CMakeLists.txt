@@ -59,6 +59,7 @@ option(DOWNSPOUT_BUILD_CAMPIONE "Configure the Campione sampler target" ON)
 option(DOWNSPOUT_BUILD_BASSOPS "Configure the Bassops ducker/MS-EQ effect target" ON)
 option(DOWNSPOUT_BUILD_DAMIANO "Configure the Damiano stereo distortion target" ON)
 option(DOWNSPOUT_BUILD_SKREAM "Configure the Skream scream filter target" ON)
+option(DOWNSPOUT_BUILD_WORMS "Configure the ToneWorm Tonnetz MIDI generator target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 option(DOWNSPOUT_BUILD_SCREENSHOT_APPS "Build DPF standalone apps for documentation screenshots" OFF)
 
@@ -93,6 +94,10 @@ add_subdirectory(src/common/sampleprofile)
 
 if(DOWNSPOUT_BUILD_BASSGEN)
     add_subdirectory(plugins/bassgen)
+endif()
+
+if(DOWNSPOUT_BUILD_WORMS)
+    add_subdirectory(plugins/worms)
 endif()
 
 if(DOWNSPOUT_BUILD_BUBBLES)
