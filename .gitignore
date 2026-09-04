@@ -1,5 +1,6 @@
 .env
 build_syrinx_test
+build_worms_dpf
 tests/freesound-samples/peaks
 # .codex
 

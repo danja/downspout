@@ -181,15 +181,14 @@ protected:
             return String(serializeControls(controlsFromParams(params_.data())).c_str());
         if (std::string_view(key) == "pattern")
             return String(serializePattern(engine_.pattern).c_str());
-        return {};
+        return String();
     }
 
     void activate() override
     {
-        using namespace downspout::worms;
-        BlockResult dummy;
-        const Controls c = clampControls(controlsFromParams(params_.data()));
-        activate(engine_, c);
+        const downspout::worms::Controls c =
+            downspout::worms::clampControls(controlsFromParams(params_.data()));
+        downspout::worms::activate(engine_, c);
     }
 
     void deactivate() override
