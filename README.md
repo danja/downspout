@@ -68,7 +68,7 @@ installed bundle.
 | Plugin | Bundle | Type | Notes |
 | --- | --- | --- | --- |
 | [bassgen](plugins/bassgen/README.md) | `bassgen.vst3` | MIDI generator | Transport-aware bass generator with persistent pattern state, style modes, and MIDI follow/dodge controls. |
-| [p-mix](plugins/p-mix/README.md) | `p_mix.vst3` | Audio effect | Transport-aware probabilistic stereo gate/mix effect. |
+| [p-mix](plugins/p-mix/README.md) | `p_mix.vst3` | Audio effect | Transport-aware probabilistic stereo gate/mix effect. Oppose slider: inputs 3–4 sidechain reduces audible bias when busy. |
 | [e-mix](plugins/e-mix/README.md) | `e_mix.vst3` | Audio effect | Transport-aware Euclidean stereo gate with redesigned UI. |
 | [m-mix](plugins/m-mix/README.md) | `m_mix.vst3` | MIDI effect | Transport-aware MIDI gate combining `p-mix` transitions with `e-mix` Euclidean blocks. |
 | [t-mix](plugins/t-mix/README.md) | `t_mix.vst3` | Audio mixer | Eight mono input strips with level, pan, mute, solo, metering, and stereo master output. |
@@ -109,6 +109,7 @@ installed bundle.
 | [Orbit](plugins/orbit/README.md) | `orbit.vst3` | Audio effect | Seeded transport-aware stereo trajectories, distance filtering, and conservative Doppler. |
 | [Guardian](plugins/guardian/README.md) | `guardian.vst3` | Safety effect | DC removal, look-ahead limiting, true-peak protection, and latched diagnostics. |
 | [Skream](plugins/skream/README.md) | `skream.vst3` | Audio effect | Scream filter: SVF lowpass/highpass with ADAA2 feedback saturation for dubstep growl. Ten presets, MIDI CC control via Drift. |
+| [ToneWorm](plugins/worms/README.md) | `worms.vst3` | MIDI generator | Paterson's Worm Tonnetz melody generator with six directional rules, scale quantization, Conductor CC, and Randomize/Mutate actions. |
 
 ## Architecture
 

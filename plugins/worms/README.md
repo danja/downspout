@@ -4,7 +4,7 @@ Transport-synchronized MIDI generator using Paterson's Worm navigation on a Tonn
 
 ## Status
 
-Phase 1 (portable core) complete. Phase 2 (DPF wrapper) complete. Phase 3 (UI) complete. Pending: integration into release scripts, screenshot capture.
+All implementation phases complete. Included in install.sh and release packages. Screenshot capture pending.
 
 ## Concept
 

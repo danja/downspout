@@ -19,6 +19,7 @@ struct Parameters {
     float bias = 50.0f;
     float mute = 0.0f;
     float seed = 0.0f;  // normalized [0,1]; 0 = not yet generated
+    float oppose = 0.0f; // 0–100: reduce bias when sidechain (inputs 3&4) is loud
 };
 
 struct TransportSnapshot {
@@ -38,6 +39,7 @@ struct EngineState {
     float fadeStep = 0.0f;
     std::uint32_t fadeRemaining = 0;
     std::uint32_t rngState = 0x12345678u;
+    float sidechainLevel = 0.0f; // smoothed RMS of sidechain inputs
 };
 
 struct Boundary {

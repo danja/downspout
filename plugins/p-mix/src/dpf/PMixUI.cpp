@@ -20,6 +20,7 @@ enum ParameterIndex : uint32_t {
     kParamBias,
     kParamMute,
     kParamSeed,
+    kParamOppose,
     kParameterCount
 };
 
@@ -49,13 +50,14 @@ struct ButtonDef {
     const char* label;
 };
 
-constexpr std::array<SliderDef, 6> kSliders = {{
+constexpr std::array<SliderDef, 7> kSliders = {{
     {kParamGranularity, "Granularity", "Decision window in bars", 1.0f, 32.0f, true},
     {kParamMaintain, "Maintain", "Keep the current state", 0.0f, 100.0f, true},
     {kParamFade, "Fade", "Crossfade to next state", 0.0f, 100.0f, true},
     {kParamCut, "Cut", "Hard switch to next state", 0.0f, 100.0f, true},
     {kParamFadeDurMax, "Fade Dur Max", "Longest fade fraction", 0.125f, 1.0f, false},
     {kParamBias, "Bias", "Target audible ratio", 0.0f, 100.0f, true},
+    {kParamOppose, "Oppose", "Quieter when sidechain is busy", 0.0f, 100.0f, true},
 }};
 
 constexpr ButtonDef kMuteButton {kParamMute, "Mute Output"};
@@ -70,7 +72,7 @@ constexpr ButtonDef kMuteButton {kParamMute, "Mute Output"};
     char buf[64];
     if (def.index == kParamFadeDurMax) {
         std::snprintf(buf, sizeof(buf), "%.3f", value);
-    } else if (def.index == kParamBias || def.index == kParamMaintain || def.index == kParamFade || def.index == kParamCut) {
+    } else if (def.index == kParamBias || def.index == kParamMaintain || def.index == kParamFade || def.index == kParamCut || def.index == kParamOppose) {
         std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::lround(value)));
     } else {
         std::snprintf(buf, sizeof(buf), "%d", static_cast<int>(std::lround(value)));
@@ -473,8 +475,10 @@ private:
         text(x + 14.0f, y + 58.0f, "immediately for a quick check.", nullptr);
         text(x + 14.0f, y + 80.0f, "Maintain, Fade, and Cut", nullptr);
         text(x + 14.0f, y + 98.0f, "work as relative weights.", nullptr);
-        text(x + 14.0f, y + 120.0f, "Bias sets how often the", nullptr);
-        text(x + 14.0f, y + 138.0f, "track should stay audible.", nullptr);
+        text(x + 14.0f, y + 120.0f, "Bias: target audible ratio.", nullptr);
+        text(x + 14.0f, y + 138.0f, "Oppose: route other channels", nullptr);
+        text(x + 14.0f, y + 156.0f, "to inputs 3&4; this track gets", nullptr);
+        text(x + 14.0f, y + 174.0f, "quieter when they are busy.", nullptr);
     }
 
     void updateSliderFromPosition(int sliderIndex, float mouseX)

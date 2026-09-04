@@ -19,6 +19,7 @@ enum ParameterIndex : uint32_t {
     kParamBias,
     kParamMute,
     kParamSeed,
+    kParamOppose,
     kParameterCount
 };
 
@@ -118,8 +119,14 @@ protected:
 
         if (index < 2)
             port.groupId = kPortGroupStereo;
-        port.name = String(input ? "Input " : "Output ") + String(static_cast<int>(index + 1));
-        port.symbol = String(input ? "in_" : "out_") + String(static_cast<int>(index + 1));
+
+        if (input && index >= 2) {
+            port.name   = index == 2 ? String("Sidechain L") : String("Sidechain R");
+            port.symbol = index == 2 ? String("sidechain_l") : String("sidechain_r");
+        } else {
+            port.name   = String(input ? "Input " : "Output ") + String(static_cast<int>(index + 1));
+            port.symbol = String(input ? "in_" : "out_") + String(static_cast<int>(index + 1));
+        }
     }
 
     void initParameter(uint32_t index, Parameter& parameter) override
@@ -191,6 +198,14 @@ protected:
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = 0.0f;
             break;
+        case kParamOppose:
+            parameter.name = "Oppose";
+            parameter.symbol = "oppose";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 100.0f;
+            parameter.ranges.def = 0.0f;
+            break;
         }
     }
 
@@ -217,6 +232,7 @@ protected:
         case kParamBias: return parameters_.bias;
         case kParamMute: return parameters_.mute;
         case kParamSeed: return parameters_.seed;
+        case kParamOppose: return parameters_.oppose;
         default: return 0.0f;
         }
     }
@@ -233,6 +249,7 @@ protected:
         case kParamBias: parameters_.bias = value; break;
         case kParamMute: parameters_.mute = value; break;
         case kParamSeed: parameters_.seed = value; break;
+        case kParamOppose: parameters_.oppose = value; break;
         }
 
         parameters_ = downspout::pmix::clampParameters(parameters_);
@@ -282,6 +299,8 @@ protected:
         audio.inputs = safeInputs;
         audio.outputs = safeOutputs;
         audio.channelCount = kWrapperChannelCount;
+        audio.sidechain[0] = (DISTRHO_PLUGIN_NUM_INPUTS > 2) ? inputs[2] : nullptr;
+        audio.sidechain[1] = (DISTRHO_PLUGIN_NUM_INPUTS > 3) ? inputs[3] : nullptr;
 
         downspout::pmix::processBlock(engineState_,
                                       parameters_,

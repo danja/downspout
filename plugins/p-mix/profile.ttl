@@ -6,11 +6,13 @@
 
 dsp:p-mix a trn:PluginProfile ;
     rdfs:label "P-Mix" ;
-    rdfs:comment "Transport-aware probabilistic stereo gate that creates evolving switching and rhythmic dropouts." ;
+    rdfs:comment "Transport-aware probabilistic stereo gate that creates evolving switching and rhythmic dropouts. Inputs 1-2: main stereo. Inputs 3-4: sidechain for Oppose." ;
     trn:bundleName "p_mix.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/p_mix/> ;
     trn:role trn:AudioEffect ;
     trn:accepts trn:Audio ;
     trn:produces trn:Audio ;
-    trn:requires trn:HostTransport .
+    trn:requires trn:HostTransport ;
+    trn:parameter [ rdfs:label "Oppose" ; trn:symbol "oppose" ; trn:range "0–100" ;
+                    rdfs:comment "Reduce audible bias proportionally to sidechain (inputs 3-4) RMS level." ] .

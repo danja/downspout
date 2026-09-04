@@ -25,14 +25,16 @@ ToneWorm should be receptive to signals from plugins like Conductor and may be u
 ### Phase 3 — UI ✓ COMPLETE
 - `plugins/worms/src/dpf/WormsUI.cpp` — GenerativePanelUI subclass with 6 rule choice grids
 
-### Phase 4 — Build Integration ☐ PENDING
-- install.sh, scripts/package-release.sh, .github/workflows/release.yml
-- docs/pages/_products/worms.md
-- scripts/capture-plugin-screenshots.sh
-- docs/summary.md, docs/plan.md, README.md
+### Phase 4 — Build Integration ✓ COMPLETE
+- install.sh — DOWNSPOUT_BUILD_WORMS=ON added
+- scripts/package-release.sh — cmake flag + worms.vst3 in required_bundles
+- .github/workflows/release.yml — worms.vst3 in release notes
+- scripts/capture-plugin-screenshots.sh — worms:worms entry added
+- docs/pages/_products/worms.md — created
+- docs/summary.md, README.md, docs/install.md — ToneWorm added
 
 ### Phase 5 — Documentation & Screenshot ☐ PENDING
-- Screenshot capture and visual review
+- Screenshot capture and visual review (requires build + xvfb-run)
 
 ---
 

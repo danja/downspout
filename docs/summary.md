@@ -74,6 +74,10 @@ value until **Release MIDI** is pressed.
 It supports optional CC 19 gating, per-chain MIDI channel filtering, and MIDI
 through to the next effect.
 
+### ToneWorm (`worms.vst3`)
+
+Transport-locked MIDI melody generator that navigates a Tonnetz pitch lattice using Paterson's Worm algorithm. Six directional rules (each choosing from L120, L60, Straight, R60, R120) determine how the worm moves through pitch space, producing melodic lines with scale quantization, configurable register, and loop-boundary variation. Set **Conductor Ch** to receive CC 21–24 (density, velocity, vary, mutate). Route MIDI output to MelGen or any instrument. Randomize and Mutate actions make new rule configurations quickly.
+
 ### Lightverb (`lightverb.vst3`)
 
 Fixed-cost stereo feedback-delay-network reverb that favors low CPU use over
@@ -120,7 +124,7 @@ transient gain multipliers while preserving manual faders as the saved balance.
 
 ### P-Mix (`p_mix.vst3`)
 
-Transport-aware probabilistic stereo gate/mix processor. It creates evolving channel switching and rhythmic dropouts, useful for motion in loops, percussion, or textures.
+Transport-aware probabilistic stereo gate/mix processor. It creates evolving channel switching and rhythmic dropouts, useful for motion in loops, percussion, or textures. The **Oppose** slider uses a sidechain signal on inputs 3–4: when those inputs are loud, P-Mix tends to go quieter, and vice versa.
 
 ### E-Mix (`e_mix.vst3`)
 

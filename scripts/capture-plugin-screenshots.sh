@@ -64,6 +64,7 @@ plugins=(
   "midiscribe:midiscribe"
   "damiano:damiano"
   "skream:skream"
+  "worms:worms"
   )
 
 

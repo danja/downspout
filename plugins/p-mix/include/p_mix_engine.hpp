@@ -11,6 +11,7 @@ struct AudioBlock {
     std::array<const float*, kMaxChannels> inputs {};
     std::array<float*, kMaxChannels> outputs {};
     std::uint32_t channelCount = kMaxChannels;
+    const float* sidechain[2] = {};  // optional sidechain inputs (inputs 3 & 4)
 };
 
 [[nodiscard]] Parameters clampParameters(const Parameters& raw);

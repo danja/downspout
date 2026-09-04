@@ -43,7 +43,7 @@ std::vector<std::string_view> split(std::string_view text, char delimiter) {
 }  // namespace
 
 std::string serializeParameters(const Parameters& parameters) {
-    return "version=3\n"
+    return "version=4\n"
            "granularity=" + std::to_string(parameters.granularity) + "\n"
            "maintain=" + std::to_string(parameters.maintain) + "\n"
            "fade=" + std::to_string(parameters.fade) + "\n"
@@ -51,7 +51,8 @@ std::string serializeParameters(const Parameters& parameters) {
            "fadeDurMax=" + std::to_string(parameters.fadeDurMax) + "\n"
            "bias=" + std::to_string(parameters.bias) + "\n"
            "mute=" + std::to_string(parameters.mute) + "\n"
-           "seed=" + std::to_string(parameters.seed) + "\n";
+           "seed=" + std::to_string(parameters.seed) + "\n"
+           "oppose=" + std::to_string(parameters.oppose) + "\n";
 }
 
 std::optional<Parameters> deserializeParameters(const std::string& text) {
@@ -86,9 +87,10 @@ std::optional<Parameters> deserializeParameters(const std::string& text) {
             parameters.mute = floatValue;
         } else if (key == "seed" && parseFloat(value, floatValue)) {
             parameters.seed = floatValue;
-        } else {
-            return std::nullopt;
+        } else if (key == "oppose" && parseFloat(value, floatValue)) {
+            parameters.oppose = floatValue;
         }
+        // unknown keys silently skipped for forward compatibility
     }
 
     return clampParameters(parameters);

@@ -60,7 +60,8 @@ void applyTransition(EngineState& state,
                      float fade,
                      float cut,
                      float fadeDurMax,
-                     float bias) {
+                     float bias,
+                     float oppose) {
     if (granularity <= 0 || (bar % granularity) != 0 || state.fadeRemaining > 0) {
         return;
     }
@@ -90,7 +91,8 @@ void applyTransition(EngineState& state,
         return;
     }
 
-    const float biasNorm = clampf(bias * 0.01f, 0.0f, 1.0f);
+    const float effectiveBias = bias * (1.0f - clampf(oppose * 0.01f, 0.0f, 1.0f) * clampf(state.sidechainLevel, 0.0f, 1.0f));
+    const float biasNorm = clampf(effectiveBias * 0.01f, 0.0f, 1.0f);
     const float target = (randFloat(state.rngState) < biasNorm) ? 1.0f : 0.0f;
 
     if (r < (pMaintain + pFade)) {
@@ -147,6 +149,7 @@ Parameters clampParameters(const Parameters& raw) {
     parameters.bias = clampf(parameters.bias, 0.0f, 100.0f);
     parameters.mute = static_cast<float>(clampi(static_cast<int>(std::lround(parameters.mute)), 0, 1));
     parameters.seed = clampf(parameters.seed, 0.0f, 1.0f);
+    parameters.oppose = clampf(parameters.oppose, 0.0f, 100.0f);
     return parameters;
 }
 
@@ -186,6 +189,27 @@ void processBlock(EngineState& state,
         framesPerBar = framesPerBeat * transport.beatsPerBar;
     }
 
+    // Update sidechain level (leaky integrator, ~1 second time constant)
+    {
+        float sidechainEnergy = 0.0f;
+        int sidechainChannels = 0;
+        for (int sc = 0; sc < 2; ++sc) {
+            if (audio.sidechain[sc]) {
+                ++sidechainChannels;
+                for (std::uint32_t f = 0; f < nframes; ++f) {
+                    const float s = audio.sidechain[sc][f];
+                    sidechainEnergy += s * s;
+                }
+            }
+        }
+        if (sidechainChannels > 0) {
+            const float blockRMS = std::sqrt(sidechainEnergy / static_cast<float>(sidechainChannels * nframes));
+            const float alpha = static_cast<float>(nframes) /
+                                (static_cast<float>(sampleRate) + static_cast<float>(nframes));
+            state.sidechainLevel += alpha * (blockRMS - state.sidechainLevel);
+        }
+    }
+
     BoundaryList boundaries {};
     const int boundaryCount = collectBoundaries(boundaries, transport, nframes, framesPerBar);
     int boundaryIndex = 0;
@@ -200,7 +224,8 @@ void processBlock(EngineState& state,
                             parameters.fade,
                             parameters.cut,
                             parameters.fadeDurMax,
-                            parameters.bias);
+                            parameters.bias,
+                            parameters.oppose);
             ++boundaryIndex;
         }
 
