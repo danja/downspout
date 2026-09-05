@@ -55,7 +55,7 @@ constexpr std::array<SectionDef, 5> kSections = {{
     {"Shape", {92, 178, 164}, {{{6, "Attack"}, {7, "Release"}, {8, "Interface"}, {9, "Intensity"}, {22, "Gain"}, {0, ""}, {0, ""}}}, 5},
     {"Body", {126, 153, 221}, {{{25, "Body type"}, {10, "Tuning"}, {11, "Ratio"}, {12, "D1 FB"}, {13, "D2 FB"}, {14, "Cross FB"}, {0, ""}}}, 6},
     {"Filter/Mod", {181, 137, 216}, {{{15, "Cutoff"}, {16, "Q"}, {17, "Shape"}, {18, "LFO"}, {19, "Mod Mix"}, {0, ""}, {0, ""}}}, 5},
-    {"Space", {211, 165, 82}, {{{20, "Size"}, {21, "Level"}, {23, "Voices"}, {0, ""}, {0, ""}, {0, ""}, {0, ""}}}, 3},
+    {"Space", {211, 165, 82}, {{{20, "Size"}, {21, "Level"}, {23, "Voices"}, {26, "Cond Ch"}, {0, ""}, {0, ""}, {0, ""}}}, 4},
 }};
 
 float clampf(const float value, const float minimum, const float maximum)
@@ -97,6 +97,14 @@ std::string formatValue(const std::uint32_t parameter, const float value)
     else if (parameter == static_cast<std::uint32_t>(ParamId::numVoices))
     {
         std::snprintf(buffer, sizeof(buffer), "%d", static_cast<int>(std::lround(value)));
+    }
+    else if (parameter == static_cast<std::uint32_t>(ParamId::conductorChannel))
+    {
+        const int ch = static_cast<int>(std::lround(value));
+        if (ch <= 0)
+            std::snprintf(buffer, sizeof(buffer), "Off");
+        else
+            std::snprintf(buffer, sizeof(buffer), "Ch %d", ch);
     }
     else
     {

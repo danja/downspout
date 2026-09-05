@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdint>
 
 START_NAMESPACE_DISTRHO
@@ -164,12 +165,17 @@ protected:
 
     float getParameterValue(const uint32_t index) const override
     {
+        if (index == static_cast<uint32_t>(downspout::floozy::ParamId::conductorChannel))
+            return static_cast<float>(conductorChannel_);
         return engine_.getParameter(index);
     }
 
     void setParameterValue(const uint32_t index, const float value) override
     {
-        engine_.setParameter(index, value);
+        if (index == static_cast<uint32_t>(downspout::floozy::ParamId::conductorChannel))
+            conductorChannel_ = std::max(0, std::min(16, static_cast<int>(std::lround(value))));
+        else
+            engine_.setParameter(index, value);
     }
 
     void activate() override
@@ -188,6 +194,27 @@ protected:
              const MidiEvent* midiEvents,
              const uint32_t midiEventCount) override
     {
+        if (conductorChannel_ > 0 && midiEvents != nullptr) {
+            const int ch = conductorChannel_ - 1;
+            for (uint32_t i = 0; i < midiEventCount; ++i) {
+                const auto& ev = midiEvents[i];
+                if (ev.size >= 3 && (ev.data[0] & 0xf0) == 0xb0 && (ev.data[0] & 0x0f) == ch) {
+                    const uint8_t cc  = ev.data[1];
+                    const uint8_t val = ev.data[2];
+                    using PI = downspout::floozy::ParamId;
+                    switch (cc) {
+                    case 20: engine_.setParameter(PI::bodyType,
+                                 static_cast<float>((val * 7) / 128)); break;
+                    case 21: engine_.setParameter(PI::sourceLevel,  val / 127.0f); break;
+                    case 22: engine_.setParameter(PI::masterGain,   val / 127.0f); break;
+                    case 23: engine_.setParameter(PI::interfaceIntensity, val / 127.0f); break;
+                    case 24: if (val >= 64) engine_.reset(); break;
+                    default: break;
+                    }
+                }
+            }
+        }
+
         std::array<MidiMessage, 256> stackMessages {};
         std::uint32_t messageCount = 0;
         for (std::uint32_t i = 0; i < midiEventCount && messageCount < stackMessages.size(); ++i)
@@ -199,6 +226,7 @@ protected:
 
 private:
     FloozyEngine engine_;
+    int conductorChannel_ = 0;
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FloozyPlugin)
 };

@@ -12,4 +12,38 @@ dsp:floozy a trn:PluginProfile ;
     foaf:homepage <https://danja.github.io/downspout/plugins/floozy/> ;
     trn:role trn:Instrument ;
     trn:accepts trn:Midi, trn:Audio ;
-    trn:produces trn:Audio .
+    trn:produces trn:Audio ;
+
+    ## Conductor CC input — enable by setting conductor_ch (1–16) to match Conductor's output channel
+    trn:conductorChannelParam "conductor_ch" ;
+    trn:ccMapping [
+        trn:ccNumber 20 ;
+        trn:ccRole "Scene" ;
+        trn:targetParameter "body_type" ;
+        rdfs:comment "0–127 → body type index (0–6, Delays/Beam/Marimba/Drumhead/Membrane/Plate/String)."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 21 ;
+        trn:ccRole "Density" ;
+        trn:targetParameter "source_level" ;
+        rdfs:comment "0–127 → 0.0–1.0 source excitation level."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 22 ;
+        trn:ccRole "Energy" ;
+        trn:targetParameter "master_gain" ;
+        rdfs:comment "0–127 → 0.0–1.0 master output gain."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 23 ;
+        trn:ccRole "Mutation" ;
+        trn:targetParameter "interface_intensity" ;
+        rdfs:comment "0–127 → 0.0–1.0 interface excitation intensity."
+    ] ;
+    trn:ccMapping [
+        trn:ccNumber 24 ;
+        trn:ccRole "Reset" ;
+        trn:targetParameter "reset" ;
+        trn:ccTriggerValue 64 ;
+        rdfs:comment "Value >= 64 resets all voices."
+    ] .

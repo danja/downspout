@@ -1,16 +1,8 @@
 # Downspout TODO
 
-## MelGen
+## Campione
 
-The Conductor in channel isn't properly labeled and most of the list of numbers isn't visible when clicked.
-
-## Gremlin
-
-Simplify UI — some controls can be hidden and/or merged to simplify the UI. At the same time the DSP needs to be made more lightweight, so making things disabled by default might be a good approach. This is an experimental plugin, so best guess on this design is fine.
-
-## Floozy
-
-Floozy has no Conductor integration yet (physical modelling synth). Default CC numbers as Conductor's panel settings (default CC 20–24).
+Implement REX2 support using VelociLoops (`~/github/VelociLoops`). Feasibility assessed: viable, ~100 lines of wrapper in `campione_sample_loader.cpp`, add `loadRex2Zones()` that iterates slices via `vl_get_slice_info()` / `vl_decode_slice()` and populates `SampleZone` entries. Link `velociloops_static` in CMakeLists.txt.
 
 ## Evaluate Manually in Reaper
 

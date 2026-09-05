@@ -445,10 +445,6 @@ private:
     void drawSelector(const SelectorDef& def, const Rect& rect)
     {
         const int item = std::max(0, std::min(static_cast<int>(std::lround(values_[def.index])), def.count - 1));
-        fontSize(11.0f);
-        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(139, 152, 153, 255);
-        text(rect.x + 12.0f, rect.y + rect.h * 0.5f + 1.0f, def.label, nullptr);
 
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 6.0f);
@@ -458,6 +454,11 @@ private:
         strokeWidth(1.0f);
         stroke();
         closePath();
+
+        fontSize(11.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        fillColor(139, 152, 153, 255);
+        text(rect.x + 12.0f, rect.y + rect.h * 0.5f + 1.0f, def.label, nullptr);
 
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
@@ -489,7 +490,11 @@ private:
         const Rect base = selectorRects_[selectorIndex];
         const float itemH = 28.0f;
         const float menuH = static_cast<float>(def.count) * itemH;
-        const Rect menu {base.x, base.y + base.h + 4.0f, base.w, menuH};
+        const float winH = static_cast<float>(getHeight());
+        const float menuY = (base.y + base.h + 4.0f + menuH > winH)
+                            ? base.y - menuH - 4.0f
+                            : base.y + base.h + 4.0f;
+        const Rect menu {base.x, menuY, base.w, menuH};
         menuRects_[selectorIndex] = menu;
 
         beginPath();
@@ -525,7 +530,12 @@ private:
         const SelectorDef& def = kSelectors[openSelector_];
         const Rect base = selectorRects_[openSelector_];
         const float itemH = 28.0f;
-        const Rect menu {base.x, base.y + base.h + 4.0f, base.w, static_cast<float>(def.count) * itemH};
+        const float menuH = static_cast<float>(def.count) * itemH;
+        const float winH = static_cast<float>(getHeight());
+        const float menuY = (base.y + base.h + 4.0f + menuH > winH)
+                            ? base.y - menuH - 4.0f
+                            : base.y + base.h + 4.0f;
+        const Rect menu {base.x, menuY, base.w, menuH};
         if (!menu.contains(x, y)) {
             return false;
         }
