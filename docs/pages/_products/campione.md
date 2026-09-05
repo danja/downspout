@@ -5,7 +5,7 @@ bundle: campione.vst3
 kind: Instrument
 role: Multi-zone sampler
 screenshot: /assets/plugins/campione.png
-summary: Multi-zone sampler with per-note MIDI mapping, WAV file loading, audio recording with auto-pitch detection, pitch-shift gap fill, zero-crossing loop snap, crossfade looping, per-zone ADSR/filter/pan, beat slicing, and an embedded MCP server.
+summary: Multi-zone sampler with per-note MIDI mapping, WAV loading, REX2 slice import, Serum wavetable auto-detection, audio recording with auto-pitch detection, pitch-shift gap fill, zero-crossing loop snap, crossfade looping, per-zone ADSR/filter/pan, beat slicing, and an embedded MCP server.
 ---
 
 ## Opinion
@@ -29,6 +29,14 @@ note and tune the zone into the mapping automatically.
 
 WAV file loading uses standard RIFF/WAVE PCM and 32-bit float formats. Zones
 can be reloaded, replaced, or cleared without restarting the host.
+
+REX2 files (`.rx2`) can be loaded directly via the Load button. Each slice
+becomes a separate zone mapped to a consecutive MIDI note starting at C1 (36),
+ready for triggering individual hits or reconstructing the loop at any tempo.
+
+Serum/clm wavetable WAVs are detected automatically by the presence of a `clm`
+chunk. When found, only the first cycle is extracted and saved as a tuned,
+looping zone — no separate Import step needed.
 
 Beat slicing splits a zone into equal or transient-detected sub-zones mapped to
 consecutive MIDI notes, suitable for drum loop playback and remixing.
@@ -68,7 +76,7 @@ See [plugins/campione/docs/mcp.md](https://github.com/danja/downspout/blob/main/
 
 Full implementation with core sampler engine, per-note MIDI mapping,
 crossfade looping, zero-crossing snap, pitch-shift gap fill, WAV loading,
-audio recording with auto-pitch detection, per-zone ADSR envelope, biquad
-filter, stereo pan, beat slicing, wave editing (normalize, trim, fade,
-reverse), patch save/load (Turtle RDF), waveform display with loop point
-handles, and embedded MCP server.
+REX2 slice import, Serum/clm wavetable auto-detection, audio recording with
+auto-pitch detection, per-zone ADSR envelope, biquad filter, stereo pan,
+beat slicing, wave editing (normalize, trim, fade, reverse), patch save/load
+(Turtle RDF), waveform display with loop point handles, and embedded MCP server.

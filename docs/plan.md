@@ -193,7 +193,7 @@ Progress as of 2026-05-27:
 - `tuney-vst` now ports Tuney 0.3.39's text-to-music core as a focused-typing
   instrument/MIDI generator with portable mapping, tuning, free-time
   scheduling, synthesis, versioned text state, deterministic tests, and a DPF UI;
-- `campione` now exists as an original multi-zone sampler instrument with per-note MIDI mapping, WAV file loading, audio recording with auto-pitch detection, pitch-shift gap fill, zero-crossing loop snap, crossfade looping, deterministic core, and a first VST3 wrapper target with UI via vendored DPF;
+- `campione` now exists as an original multi-zone sampler instrument with per-note MIDI mapping, WAV file loading, REX2 slice import (via VelociLoops), Serum/clm wavetable auto-detection, audio recording with auto-pitch detection, pitch-shift gap fill, zero-crossing loop snap, crossfade looping, deterministic core, and a first VST3 wrapper target with UI via vendored DPF;
 - `chipper` now exists as an original stereo lo-fi processor with bitwise quantization, sample-rate reduction via sample-and-hold, clock jitter, dry/wet mix, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `install.sh` exists as the intended build/install entrypoint for local VST deployment.
 
