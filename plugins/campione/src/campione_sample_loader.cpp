@@ -8,6 +8,10 @@
 #include <fstream>
 #include <vector>
 
+#ifdef CAMPIONE_HAS_VELOCILOOPS
+#include "velociloops.h"
+#endif
+
 namespace downspout::campione {
 namespace {
 
@@ -405,6 +409,94 @@ ZoneLoadResult importWavetableZone(const std::string& srcPath, const std::string
 
     result.zone.sourcePath = outPath;
     return result;
+}
+
+bool wavHasClmChunk(const std::string& path)
+{
+    std::ifstream file(path, std::ios::binary);
+    if (!file) return false;
+    char riff[4]{}, wave[4]{};
+    std::uint32_t riffSize = 0;
+    if (!readBytes(file, riff, 4) || !readU32FromFile(file, riffSize) || !readBytes(file, wave, 4))
+        return false;
+    if (std::strncmp(riff, "RIFF", 4) != 0 || std::strncmp(wave, "WAVE", 4) != 0)
+        return false;
+    while (file) {
+        char chunkId[4]{};
+        std::uint32_t chunkSize = 0;
+        if (!readBytes(file, chunkId, 4) || !readU32FromFile(file, chunkSize)) break;
+        if (std::strncmp(chunkId, "clm ", 4) == 0) return true;
+        file.seekg(static_cast<std::streamoff>(chunkSize + (chunkSize & 1u)), std::ios::cur);
+    }
+    return false;
+}
+
+std::string loadRex2Zones(const std::string& path, std::vector<SampleZone>& zones)
+{
+#ifndef CAMPIONE_HAS_VELOCILOOPS
+    (void)path; (void)zones;
+    return "REX2 support not compiled in (VelociLoops not found at configure time)";
+#else
+    VLError err = VL_OK;
+    VLFile f = vl_open(path.c_str(), &err);
+    if (!f)
+        return std::string("Could not open REX2 file: ") + vl_error_string(err);
+
+    VLFileInfo info {};
+    if (vl_get_info(f, &info) != VL_OK) {
+        vl_close(f);
+        return "Could not read REX2 file metadata";
+    }
+
+    const int sr       = info.sample_rate > 0 ? info.sample_rate : 44100;
+    const int channels = (info.channels == 2) ? 2 : 1;
+    int midiNote = 36; // C1, standard REX slice base
+
+    for (int32_t i = 0; i < info.slice_count; ++i) {
+        VLSliceInfo si {};
+        if (vl_get_slice_info(f, i, &si) != VL_OK) { ++midiNote; continue; }
+        if ((si.flags & VL_SLICE_FLAG_MUTED) != 0)  { ++midiNote; continue; }
+
+        const int32_t nFrames = vl_get_slice_frame_count(f, i);
+        if (nFrames <= 0) { ++midiNote; continue; }
+
+        std::vector<float> L(static_cast<std::size_t>(nFrames));
+        std::vector<float> R(channels == 2 ? static_cast<std::size_t>(nFrames) : 0u);
+        int32_t written = 0;
+        const VLError de = vl_decode_slice(f, i,
+            L.data(),
+            channels == 2 ? R.data() : nullptr,
+            0, nFrames, &written);
+        if (de != VL_OK || written <= 0) { ++midiNote; continue; }
+
+        SampleZone zone;
+        zone.rootNote     = std::clamp(midiNote, 0, 127);
+        zone.rangeLow     = zone.rootNote;
+        zone.rangeHigh    = zone.rootNote;
+        zone.sampleRate   = static_cast<double>(sr);
+        zone.channelCount = channels;
+        zone.sourcePath   = path;
+
+        if (channels == 2) {
+            zone.data.resize(static_cast<std::size_t>(written) * 2u);
+            for (int32_t fr = 0; fr < written; ++fr) {
+                zone.data[static_cast<std::size_t>(fr) * 2u]      = L[static_cast<std::size_t>(fr)];
+                zone.data[static_cast<std::size_t>(fr) * 2u + 1u] = R[static_cast<std::size_t>(fr)];
+            }
+        } else {
+            zone.data.assign(L.begin(), L.begin() + written);
+        }
+
+        zones.push_back(std::move(zone));
+        ++midiNote;
+    }
+
+    vl_close(f);
+
+    if (zones.empty())
+        return "No usable slices found in REX2 file";
+    return "";
+#endif
 }
 
 }  // namespace downspout::campione

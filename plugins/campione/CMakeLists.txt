@@ -16,6 +16,10 @@ target_include_directories(downspout_campione_core PUBLIC
     "${PROJECT_SOURCE_DIR}/third_party/nlohmann"
 )
 target_link_libraries(downspout_campione_core PUBLIC pthread)
+if(DOWNSPOUT_HAVE_VELOCILOOPS)
+    target_link_libraries(downspout_campione_core PUBLIC velociloops_static)
+    target_compile_definitions(downspout_campione_core PUBLIC CAMPIONE_HAS_VELOCILOOPS=1)
+endif()
 # Force SSL out of cpp-httplib: -U beats any earlier define (incl. PCH)
 target_compile_options(downspout_campione_core PRIVATE
     -UCPPHTTPLIB_OPENSSL_SUPPORT

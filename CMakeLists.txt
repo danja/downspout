@@ -91,6 +91,22 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
     add_subdirectory("${DOWNSPOUT_DPF_DIR}" third_party/DPF)
 endif()
 
+# VelociLoops: REX2 support for Campione. Not vendored; discovered from a
+# caller-supplied path or the sibling checkout at ~/github/VelociLoops.
+set(DOWNSPOUT_VELOCILOOPS_DIR "" CACHE PATH "Path to VelociLoops source tree (enables REX2 in Campione)")
+if(NOT DOWNSPOUT_VELOCILOOPS_DIR AND EXISTS "$ENV{HOME}/github/VelociLoops/CMakeLists.txt")
+    set(DOWNSPOUT_VELOCILOOPS_DIR "$ENV{HOME}/github/VelociLoops")
+endif()
+if(DOWNSPOUT_VELOCILOOPS_DIR AND EXISTS "${DOWNSPOUT_VELOCILOOPS_DIR}/CMakeLists.txt")
+    set(VELOCILOOPS_ENABLE_SHARED  OFF CACHE BOOL "" FORCE)
+    set(VELOCILOOPS_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+    set(VELOCILOOPS_ENABLE_DEMO    OFF CACHE BOOL "" FORCE)
+    add_subdirectory("${DOWNSPOUT_VELOCILOOPS_DIR}" third_party/VelociLoops EXCLUDE_FROM_ALL)
+    set(DOWNSPOUT_HAVE_VELOCILOOPS ON)
+else()
+    set(DOWNSPOUT_HAVE_VELOCILOOPS OFF)
+endif()
+
 add_subdirectory(src/common/sampleprofile)
 
 if(DOWNSPOUT_BUILD_BASSGEN)

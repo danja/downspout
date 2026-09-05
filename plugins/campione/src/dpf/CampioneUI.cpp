@@ -48,7 +48,6 @@ using downspout::campione::kStateKeyPatchSave;
 using downspout::campione::kStateKeyPatchLoad;
 using downspout::campione::kStateKeyDataDir;
 using downspout::campione::kStateKeyZonePreview;
-using downspout::campione::kStateKeyWavetableImport;
 using downspout::campione::kStateKeyZoneClear;
 using downspout::campione::kStateKeyMapDrum;
 using downspout::campione::kStateKeyZoneShuffle;
@@ -338,9 +337,7 @@ protected:
                 paths    = std::move(filePickerPaths_);
                 fallback = filePickerFallback_;
             }
-            const bool isImport = filePickerIsImport_;
-            filePickerIsImport_ = false;
-            const char* stateKey = isImport ? kStateKeyWavetableImport : kStateKeyZoneLoad;
+            const char* stateKey = kStateKeyZoneLoad;
             if (fallback) {
                 requestStateFile(stateKey);
                 showStatus("Loading file…");
@@ -507,7 +504,6 @@ protected:
             if (!filePickerDone_.load(std::memory_order_acquire)) return true;
             filePickerDone_.store(false, std::memory_order_release);
             if (filePickerThread_.joinable()) filePickerThread_.join();
-            filePickerIsImport_ = false;
             filePickerThread_ = std::thread([this]() {
                 std::vector<std::string> paths;
                 bool needFallback = false;
@@ -525,8 +521,12 @@ protected:
                 if (!needFallback) {
                     FILE* pipe = ::popen(
                         "zenity --file-selection --multiple"
-                        " --title='Load WAV Files'"
+                        " --title='Load Audio Files'"
+#ifdef CAMPIONE_HAS_VELOCILOOPS
+                        " --file-filter='Audio files | *.wav *.WAV *.rx2 *.RX2'"
+#else
                         " --file-filter='WAV files | *.wav *.WAV'"
+#endif
                         " 2>/dev/null", "r");
                     if (pipe) {
                         char buf[4096];
@@ -614,60 +614,6 @@ protected:
             setParameterValue(kParamRecording, recording_ ? 1.0f : 0.0f);
             editParameter(kParamRecording, false);
             repaint();
-            return true;
-        }
-
-        // Import wavetable: pick WAV(s), convert first frame of each, append as zones
-        if (importBtn_.contains(px, py)) {
-            if (!filePickerDone_.load(std::memory_order_acquire)) return true;
-            filePickerDone_.store(false, std::memory_order_release);
-            if (filePickerThread_.joinable()) filePickerThread_.join();
-            filePickerIsImport_ = true;
-            filePickerThread_ = std::thread([this]() {
-                std::vector<std::string> paths;
-                bool needFallback = false;
-#ifdef __linux__
-                FILE* check = ::popen("which zenity >/dev/null 2>&1", "r");
-                if (check) {
-                    needFallback = (::pclose(check) != 0);
-                } else {
-                    needFallback = true;
-                }
-                if (!needFallback) {
-                    FILE* pipe = ::popen(
-                        "zenity --file-selection --multiple"
-                        " --title='Import Wavetable(s)'"
-                        " --file-filter='WAV files | *.wav *.WAV'"
-                        " 2>/dev/null", "r");
-                    if (pipe) {
-                        char buf[4096];
-                        std::string all;
-                        while (std::fgets(buf, sizeof(buf), pipe))
-                            all += buf;
-                        ::pclose(pipe);
-                        while (!all.empty() && (all.back() == '\n' || all.back() == '\r'))
-                            all.pop_back();
-                        std::size_t pos = 0;
-                        while (pos <= all.size()) {
-                            const std::size_t sep = all.find('|', pos);
-                            const std::string p = all.substr(pos, sep == std::string::npos
-                                                                  ? std::string::npos : sep - pos);
-                            if (!p.empty()) paths.push_back(p);
-                            if (sep == std::string::npos) break;
-                            pos = sep + 1;
-                        }
-                    }
-                }
-#else
-                needFallback = true;
-#endif
-                {
-                    std::lock_guard<std::mutex> lk(filePickerMtx_);
-                    filePickerPaths_    = std::move(paths);
-                    filePickerFallback_ = needFallback;
-                }
-                filePickerDone_.store(true, std::memory_order_release);
-            });
             return true;
         }
 
@@ -2001,10 +1947,10 @@ private:
         float bx = kPad;
 
         loadBtn_ = { bx, fy + 16.0f, kBtnW, kBtnH };
-        if (!filePickerDone_.load(std::memory_order_relaxed) && !filePickerIsImport_)
+        if (!filePickerDone_.load(std::memory_order_relaxed))
             drawButton(loadBtn_, "Loading…", 110, 80, 20);
         else
-            drawButton(loadBtn_, "Load WAV(s)", 51, 64, 74);
+            drawButton(loadBtn_, "Load", 51, 64, 74);
         bx += kBtnW + kBtnGap;
 
         recBtn_ = { bx, fy + 16.0f, kBtnW, kBtnH };
@@ -2023,10 +1969,6 @@ private:
         } else {
             drawButton(recBtn_, "\xe2\x97\x8f  Record", 80, 36, 36);
         }
-        bx += kBtnW + kBtnGap;
-
-        importBtn_ = { bx, fy + 16.0f, kBtnW, kBtnH };
-        drawButton(importBtn_, "Import WT", 46, 68, 58);
         bx += kBtnW + kBtnGap;
 
         savePatchBtn_ = { bx, fy + 16.0f, kBtnW, kBtnH };
@@ -2110,8 +2052,7 @@ private:
     {
         constexpr float kItemH = 22.0f, kSepH = 8.0f, kMenuW = 130.0f, kPadX = 10.0f;
         static const ContextItem items[] = {
-            { "Load WAV",   false },
-            { "Import WT",  false },
+            { "Load",       false },
             { nullptr,      true  },
             { "Record",     false },
             { nullptr,      true  },
@@ -2169,8 +2110,7 @@ private:
     {
         constexpr float kItemH = 22.0f, kSepH = 8.0f, kMenuW = 130.0f;
         static const ContextItem items[] = {
-            { "Load WAV",   false },
-            { "Import WT",  false },
+            { "Load",       false },
             { nullptr,      true  },
             { "Record",     false },
             { nullptr,      true  },
@@ -2217,25 +2157,16 @@ private:
     void executeContextItem(int idx)
     {
         switch (idx) {
-        case 0: // Load WAV
+        case 0: // Load
             if (filePickerDone_.load(std::memory_order_acquire)) {
                 filePickerDone_.store(false, std::memory_order_release);
                 if (filePickerThread_.joinable()) filePickerThread_.join();
-                filePickerIsImport_ = false;
                 triggerZenityOrFallback(kStateKeyZoneLoad);
             }
             break;
-        case 1: // Import WT
-            if (filePickerDone_.load(std::memory_order_acquire)) {
-                filePickerDone_.store(false, std::memory_order_release);
-                if (filePickerThread_.joinable()) filePickerThread_.join();
-                filePickerIsImport_ = true;
-                triggerZenityOrFallback(kStateKeyWavetableImport);
-            }
+        case 1: // separator — never reached
             break;
-        case 2: // separator — never reached
-            break;
-        case 3: // Record
+        case 2: // Record
             recording_ = !recording_;
             if (recording_) recordStart_ = std::chrono::steady_clock::now();
             editParameter(kParamRecording, true);
@@ -2243,9 +2174,9 @@ private:
             editParameter(kParamRecording, false);
             repaint();
             break;
-        case 4: // separator
+        case 3: // separator
             break;
-        case 5: { // Save Patch
+        case 4: { // Save Patch
             std::time_t t = std::time(nullptr);
             char tbuf[32];
             std::strftime(tbuf, sizeof(tbuf), "patch_%Y%m%d_%H%M%S.ttl", std::localtime(&t));
@@ -2255,7 +2186,7 @@ private:
             repaint();
             break;
         }
-        case 6: { // Load Patch
+        case 5: { // Load Patch
             FileBrowserOptions opts;
             opts.startDir = dataDir_.empty() ? nullptr : dataDir_.c_str();
             opts.title    = "Load Patch";
@@ -2263,21 +2194,21 @@ private:
             openFileBrowser(opts);
             break;
         }
-        case 7: // separator — never reached
+        case 6: // separator — never reached
             break;
-        case 8: // Clear All
+        case 7: // Clear All
             setState(kStateKeyZoneClear, "1");
             zones_.clear();
             selectedZone_ = -1;
             repaint();
             break;
-        case 9: // Settings
+        case 8: // Settings
             dialogText_ = dataDir_;
             dialogMode_ = kDialogSettings;
             getWindow().focus();
             repaint();
             break;
-        case 10: { // MCP Toggle
+        case 9: { // MCP Toggle
             const float newVal = values_[kParamMcpEnabled] >= 0.5f ? 0.0f : 1.0f;
             values_[kParamMcpEnabled] = newVal;
             editParameter(kParamMcpEnabled, true);
@@ -2293,8 +2224,7 @@ private:
     // Shared zenity/fallback file picker launcher used by buttons and context menu.
     void triggerZenityOrFallback(const char* stateKey)
     {
-        const bool isImport = (stateKey == kStateKeyWavetableImport);
-        filePickerThread_ = std::thread([this, isImport, stateKeyStr = std::string(stateKey)]() {
+        filePickerThread_ = std::thread([this, stateKeyStr = std::string(stateKey)]() {
             std::vector<std::string> paths;
             bool needFallback = false;
 #ifdef __linux__
@@ -2305,7 +2235,15 @@ private:
                 needFallback = true;
             }
             if (!needFallback) {
-                FILE* pipe = ::popen("zenity --file-selection --multiple --file-filter='WAV files (*.wav)|*.wav' --separator='\\n' 2>/dev/null", "r");
+                FILE* pipe = ::popen(
+                    "zenity --file-selection --multiple"
+                    " --title='Load Audio Files'"
+#ifdef CAMPIONE_HAS_VELOCILOOPS
+                    " --file-filter='Audio files | *.wav *.WAV *.rx2 *.RX2'"
+#else
+                    " --file-filter='WAV files | *.wav *.WAV'"
+#endif
+                    " --separator='\\n' 2>/dev/null", "r");
                 if (pipe) {
                     char buf[4096];
                     while (std::fgets(buf, sizeof(buf), pipe)) {
@@ -2321,7 +2259,6 @@ private:
 #else
             needFallback = true;
 #endif
-            (void)isImport;
             {
                 std::lock_guard<std::mutex> lk(filePickerMtx_);
                 filePickerPaths_    = std::move(paths);
@@ -2768,7 +2705,6 @@ private:
     Rect waveSliceIncBtn_  {};
     Rect drumBtn_          {};
     Rect spreadBtn_        {};
-    Rect importBtn_        {};
     int  sliceCount_ = 0;   // 0 = auto-detect, >0 = explicit slice count
     // ADSR/filter drag sliders (built during draw, hit-tested in onMouse)
     Rect adsrAttackSlider_  {};
@@ -2798,7 +2734,6 @@ private:
     std::mutex               filePickerMtx_;
     std::vector<std::string> filePickerPaths_;
     bool                     filePickerFallback_ = false;
-    bool                     filePickerIsImport_ = false;
 
     int              selectedZone_   = -1;
     int              previewZoneIdx_ = -1;  // zone currently playing via Play button (-1 = none)

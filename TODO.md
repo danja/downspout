@@ -1,8 +1,12 @@
 # Downspout TODO
 
-## Campione
+## Look and Feel
 
-Implement REX2 support using VelociLoops (`~/github/VelociLoops`). Feasibility assessed: viable, ~100 lines of wrapper in `campione_sample_loader.cpp`, add `loadRex2Zones()` that iterates slices via `vl_get_slice_info()` / `vl_decode_slice()` and populates `SampleZone` entries. Link `velociloops_static` in CMakeLists.txt.
+It is desirable to give all the downspout plugins a consistent look as well as /home/danny/github/valis and /home/danny/github/transmission
+
+These use different frameworks but presumably a small custom component lib could be used with both DPF and JUCE. Investigate how this might be done.
+
+The Look & Feel should have both a light and dark theme. The light theme should resemble Cold War era electronic test equipment, quite minimal and brutal but intuitive. The dark theme will simply be the inverse.
 
 ## Evaluate Manually in Reaper
 

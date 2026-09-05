@@ -1,6 +1,7 @@
 #include "campione_core_types.hpp"
 #include "campione_engine.hpp"
 #include "campione_pitch_utils.hpp"
+#include "campione_sample_loader.hpp"
 #include "campione_serialization.hpp"
 
 #include <cassert>
@@ -216,6 +217,15 @@ static void testEmptyZonesDeserialization()
     std::puts("PASS: empty zones deserialization");
 }
 
+static void testLoadRex2ZonesMissingFile()
+{
+    std::vector<SampleZone> zones;
+    const std::string err = loadRex2Zones("/nonexistent/path/to/file.rx2", zones);
+    assert(!err.empty() && "loadRex2Zones must return error for missing file");
+    assert(zones.empty() && "no zones should be added on failure");
+    std::puts("PASS: loadRex2Zones returns error for missing file");
+}
+
 static void testMidiChannelFilter()
 {
     const std::vector<SampleZone> zones = { makeToneZone(60, 0, 127, 44100.0, 1024) };
@@ -246,6 +256,7 @@ int main()
     testParamsSerializationRoundTrip();
     testEmptyZonesDeserialization();
     testMidiChannelFilter();
+    testLoadRex2ZonesMissingFile();
 
     std::puts("All campione core tests passed.");
     return 0;

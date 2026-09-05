@@ -1012,7 +1012,49 @@ private:
     // Returns empty string on success, error message on failure.
     std::string appendZone(const std::string& path)
     {
-        // Load WAV outside the lock (slow I/O).
+        // Detect extension (lowercase last 4 chars) to dispatch REX2 vs WAV.
+        std::string ext = path.size() >= 4 ? path.substr(path.size() - 4) : "";
+        for (auto& c : ext) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+
+        if (ext == ".rx2") {
+#ifdef CAMPIONE_HAS_VELOCILOOPS
+            std::vector<CoreSampleZone> rex2Zones;
+            const std::string err = downspout::campione::loadRex2Zones(path, rex2Zones);
+            if (!err.empty()) return err;
+
+            std::lock_guard<std::mutex> lk(zoneMtx_);
+            zonesInitialized_ = true;
+            const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+            auto newZones = std::make_shared<ZoneVec>(existing ? *existing : ZoneVec{});
+            for (auto& z : rex2Zones)
+                newZones->push_back(std::move(z));
+            std::atomic_store_explicit(&zones_,
+                                       std::shared_ptr<const ZoneVec>(std::move(newZones)),
+                                       std::memory_order_release);
+            return {};
+#else
+            return "REX2 support not compiled in (VelociLoops not found at configure time)";
+#endif
+        }
+
+        // Wavetable WAV: has Serum/clm chunk → extract first cycle, save _wt.wav
+        if (downspout::campione::wavHasClmChunk(path)) {
+            const std::string dir = recordingOutputDir_.empty() ? defaultDataDir() : recordingOutputDir_;
+            ::mkdir(dir.c_str(), 0755);
+            auto result = downspout::campione::importWavetableZone(path, dir);
+            if (!result.error.empty()) return result.error;
+            std::lock_guard<std::mutex> lk(zoneMtx_);
+            zonesInitialized_ = true;
+            const auto existing = std::atomic_load_explicit(&zones_, std::memory_order_acquire);
+            auto newZones = std::make_shared<ZoneVec>(existing ? *existing : ZoneVec{});
+            newZones->push_back(std::move(result.zone));
+            std::atomic_store_explicit(&zones_,
+                                       std::shared_ptr<const ZoneVec>(std::move(newZones)),
+                                       std::memory_order_release);
+            return {};
+        }
+
+        // Regular WAV — load outside the lock (slow I/O).
         auto result = downspout::campione::loadWavZone(path);
         if (!result.error.empty()) return result.error;
 
