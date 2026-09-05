@@ -1,0 +1,15 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:chipper a trn:PluginProfile ;
+    rdfs:label "Chipper" ;
+    rdfs:comment "Stereo bitcrusher with MIDI-CC-controllable bit depth (1–16 bits), sample-rate divisor (1–64×), jitter, dry/wet mix, and output gain." ;
+    trn:bundleName "chipper.vst3" ;
+    trn:vendor "danja" ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio, trn:ControlMidi ;
+    trn:produces trn:Audio ;
+    trn:caution "Aggressive bit-depth and rate-divisor settings can produce sharp high-frequency artefacts at high mix levels." .

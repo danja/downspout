@@ -1,0 +1,14 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:flues-synth-driver a trn:PluginProfile ;
+    rdfs:label "FlueSynthDriver" ;
+    rdfs:comment "MIDI CC driver for the Flues physical-model vocal synthesizer. Translates plugin parameters into MIDI CC messages covering the Disyn oscillator algorithm, noise/DC source mix, interface type, formants (F1–F4), vocal modes (nasal, sing, shout, fry), envelope, pitch tuning, delay, and filter feedback." ;
+    trn:bundleName "flues_synth_driver.vst3" ;
+    trn:vendor "danja" ;
+    trn:role trn:MidiProcessor, trn:Controller ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Midi, trn:ControlMidi .

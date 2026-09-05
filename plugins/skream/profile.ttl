@@ -1,0 +1,15 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:skream a trn:PluginProfile ;
+    rdfs:label "Skream" ;
+    rdfs:comment "Stereo distortion using an SVF filter and ADAA2-antialiased tanh feedback loop, ported from the Scream LV2 plugin. Controls: input gain, cutoff, scream (HP feedback), resonance, mix, output gain, and harmonic-locking track amount. Cutoff and scream accept MIDI CC modulation." ;
+    trn:bundleName "skream.vst3" ;
+    trn:vendor "danja" ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio, trn:ControlMidi ;
+    trn:produces trn:Audio ;
+    trn:caution "High resonance and scream settings can produce self-oscillation; place Guardian downstream in autonomous patches." .
