@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include <algorithm>
 #include <array>
@@ -7,6 +8,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -349,6 +352,8 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+
     std::array<float, kParameterCount> values_ {};
     std::array<int, std::size(kButtons)> actionCounters_ {};
     std::array<Rect, std::size(kSliders)> sliderRects_ {};
@@ -359,6 +364,9 @@ private:
 
     static constexpr float kSelectorItemHeight = 24.0f;
     static constexpr int kSelectorMenuMaxRows = 12;
+
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
 
     void updateLayout(float width, float height)
     {
@@ -419,13 +427,13 @@ private:
     void drawBackground(float width, float height)
     {
         beginPath();
-        fillColor(17, 21, 27, 255);
+        fc(t_.background);
         rect(0.0f, 0.0f, width, height);
         fill();
         closePath();
 
         beginPath();
-        fillColor(27, 35, 45, 255);
+        fc(t_.surface);
         rect(0.0f, 0.0f, width, height * 0.28f);
         fill();
         closePath();
@@ -434,18 +442,18 @@ private:
     void drawHeader(float x, float y, float w, float h)
     {
         beginPath();
-        roundedRect(x, y, w, h, 18.0f);
-        fillColor(31, 42, 55, 230);
+        roundedRect(x, y, w, h, laf::kRadiusPanel);
+        fc(t_.panel.withAlpha(230));
         fill();
         closePath();
 
         fontSize(28.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(238, 241, 244, 255);
+        fc(t_.textPrimary);
         text(x + 20.0f, y + 16.0f, "BassGen", nullptr);
 
-        fontSize(13.0f);
-        fillColor(154, 169, 183, 255);
+        fontSize(laf::kFontSizeLabel);
+        fc(t_.textDim);
         text(x + 22.0f, y + 48.0f,
              DOWNSPOUT_PLUGIN_VERSION_STRING "  |  Transport-synced bassline generator",
              nullptr);
@@ -454,14 +462,14 @@ private:
     void drawSliderPanel(float x, float y, float w, float h)
     {
         beginPath();
-        roundedRect(x, y, w, h, 18.0f);
-        fillColor(24, 29, 37, 250);
+        roundedRect(x, y, w, h, laf::kRadiusPanel);
+        fc(t_.panel.withAlpha(250));
         fill();
         closePath();
 
-        fontSize(15.0f);
+        fontSize(laf::kFontSizeTitle);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(224, 228, 232, 255);
+        fc(t_.textPrimary);
         text(x + 20.0f, y + 18.0f, "Shape", nullptr);
 
         const float innerX = x + 20.0f;
@@ -484,43 +492,43 @@ private:
 
     void drawSlider(const SliderDef& def, const Rect& rect, float value, bool active)
     {
-        fontSize(13.0f);
+        fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(154, 169, 183, 255);
+        fc(t_.textPrimary);
         text(rect.x, rect.y - 18.0f, def.label, nullptr);
 
         const std::string valueText = formatSliderValue(def.index, value);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(223, 230, 236, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w, rect.y - 18.0f, valueText.c_str(), nullptr);
 
         beginPath();
-        roundedRect(rect.x, rect.y, rect.w, rect.h, 10.0f);
-        fillColor(42, 50, 62, 255);
+        roundedRect(rect.x, rect.y, rect.w, rect.h, laf::kRadiusSmall);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
         const float t = (value - def.min) / (def.max - def.min);
         beginPath();
-        roundedRect(rect.x, rect.y, rect.w * clampf(t, 0.0f, 1.0f), rect.h, 10.0f);
-        fillColor(active ? 225 : 195, active ? 123 : 90, 73, 255);
+        roundedRect(rect.x, rect.y, rect.w * clampf(t, 0.0f, 1.0f), rect.h, laf::kRadiusSmall);
+        fc(active ? t_.accent : t_.accent.darker(40));
         fill();
         closePath();
     }
 
     void drawSectionLabel(float x, float cy, const char* label)
     {
-        fontSize(11.0f);
+        fontSize(laf::kFontSizeSmall);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(120, 135, 150, 255);
+        fc(t_.textDim);
         text(x, cy + 1.0f, label, nullptr);
     }
 
     void drawRightPanel(float x, float y, float w, float h, float selectorH, float buttonH)
     {
         beginPath();
-        roundedRect(x, y, w, h, 18.0f);
-        fillColor(24, 29, 37, 250);
+        roundedRect(x, y, w, h, laf::kRadiusPanel);
+        fc(t_.panel.withAlpha(250));
         fill();
         closePath();
 
@@ -573,44 +581,45 @@ private:
     void drawSelector(const SelectorDef& def, const Rect& rect, int value)
     {
         beginPath();
-        roundedRect(rect.x, rect.y, rect.w, rect.h, 16.0f);
-        fillColor(34, 43, 55, 255);
+        roundedRect(rect.x, rect.y, rect.w, rect.h, laf::kRadiusPanel);
+        fc(t_.surface);
         fill();
         closePath();
 
-        fontSize(12.0f);
+        fontSize(laf::kFontSizeTitle);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(152, 166, 181, 255);
+        fc(t_.textDim);
         text(rect.x + 16.0f, rect.y + 12.0f, def.label, nullptr);
 
-        fontSize(19.0f);
-        fillColor(235, 239, 242, 255);
-        text(rect.x + 16.0f, rect.y + rect.h * 0.65f, def.items[clampi(value, 0, def.count - 1)], nullptr);
+        fontSize(14.0f);
+        textAlign(ALIGN_LEFT | ALIGN_BOTTOM);
+        fc(t_.textPrimary);
+        text(rect.x + 16.0f, rect.y + rect.h - 7.0f, def.items[clampi(value, 0, def.count - 1)], nullptr);
 
         fontSize(20.0f);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
-        fillColor(117, 133, 149, 255);
+        fc(t_.textDim);
         text(rect.x + rect.w - 18.0f, rect.y + rect.h * 0.5f + 1.0f, openSelector_ == static_cast<int>(&def - kSelectors) ? "˄" : "˅", nullptr);
     }
 
     void drawButton(const ButtonDef& def, const Rect& rect)
     {
         beginPath();
-        roundedRect(rect.x, rect.y, rect.w, rect.h, 16.0f);
-        fillColor(76, 96, 120, 255);
+        roundedRect(rect.x, rect.y, rect.w, rect.h, laf::kRadiusPanel);
+        fc(t_.buttonFace);
         fill();
         closePath();
 
         beginPath();
-        roundedRect(rect.x + 1.0f, rect.y + 1.0f, rect.w - 2.0f, rect.h - 2.0f, 15.0f);
-        strokeColor(165, 186, 209, 110);
+        roundedRect(rect.x + 1.0f, rect.y + 1.0f, rect.w - 2.0f, rect.h - 2.0f, laf::kRadiusPanel);
+        sc(t_.bezel.withAlpha(110));
         strokeWidth(1.0f);
         stroke();
         closePath();
 
         fontSize(rect.w < 76.0f ? 14.0f : 17.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(240, 244, 247, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f, def.label, nullptr);
     }
 
@@ -650,10 +659,10 @@ private:
         const float itemW = menuRect.w / static_cast<float>(columns);
 
         beginPath();
-        roundedRect(menuRect.x, menuRect.y, menuRect.w, menuRect.h, 14.0f);
-        fillColor(22, 28, 36, 248);
+        roundedRect(menuRect.x, menuRect.y, menuRect.w, menuRect.h, laf::kRadiusPanel);
+        fc(t_.panel.withAlpha(248));
         fill();
-        strokeColor(93, 112, 134, 220);
+        sc(t_.border.withAlpha(220));
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -665,15 +674,15 @@ private:
             const float rowY = menuRect.y + static_cast<float>(row) * kSelectorItemHeight;
             if (i == selected) {
                 beginPath();
-                roundedRect(itemX + 4.0f, rowY + 3.0f, itemW - 8.0f, kSelectorItemHeight - 6.0f, 10.0f);
-                fillColor(74, 96, 122, 255);
+                roundedRect(itemX + 4.0f, rowY + 3.0f, itemW - 8.0f, kSelectorItemHeight - 6.0f, laf::kRadiusSmall);
+                fc(t_.accent.withAlpha(180));
                 fill();
                 closePath();
             }
 
-            fontSize(columns > 1 ? 11.0f : 12.0f);
+            fontSize(columns > 1 ? 11.0f : laf::kFontSizeTitle);
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-            fillColor(236, 240, 243, 255);
+            fc(t_.textPrimary);
             text(itemX + 14.0f, rowY + kSelectorItemHeight * 0.5f + 1.0f, def.items[i], nullptr);
         }
     }
