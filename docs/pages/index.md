@@ -10,6 +10,7 @@ description: Screenshots and short notes for the Downspout VST3 plugin set.
   <p>
     These plugins are all experimental, mostly work in progress, with various levels of success for their intended purposes.
 <ul>
+<li><a href="https://github.com/danja/downspout/releases">Releases</a></li>
     <li>Demo - <a href="https://youtu.be/Rd-ACU0JUdo">Jack's Dream</a></li>
     </ul>
     <h4>See also :</h4>

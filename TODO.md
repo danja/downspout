@@ -6,7 +6,7 @@ The Conductor in channel isn't properly labeled and most of the list of numbers 
 
 ## Gremlin
 
-Simplify UI — left open pending user design direction on which controls to hide/merge.
+Simplify UI — some controls can be hidden and/or merged to simplify the UI. At the same time the DSP needs to be made more lightweight, so making things disabled by default might be a good approach. This is an experimental plugin, so best guess on this design is fine.
 
 ## Floozy
 
