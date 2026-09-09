@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "orchid_engine.hpp"
 #include "orchid_params.hpp"
@@ -10,6 +11,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -308,6 +311,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     std::array<Rect, kSliders.size()> sliderRects_ {};
     int scaleDropdownOpen_ = -1;
@@ -356,19 +363,19 @@ private:
     void drawBackground(const float width, const float height)
     {
         beginPath();
-        fillColor(15, 18, 22, 255);
+        fc(t_.background);
         rect(0.0f, 0.0f, width, height);
         fill();
         closePath();
 
         beginPath();
-        fillColor(25, 33, 36, 255);
+        fc(t_.panel);
         rect(0.0f, 0.0f, width, height * 0.32f);
         fill();
         closePath();
 
         beginPath();
-        fillColor(91, 122, 116, 24);
+        fc(t_.border.withAlpha(24));
         rect(width - 365.0f, 0.0f, 365.0f, height);
         fill();
         closePath();
@@ -378,17 +385,17 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 14.0f);
-        fillColor(26, 34, 39, 245);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(32.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(239, 242, 238, 255);
+        fc(t_.textPrimary);
         text(x + 20.0f, y + 14.0f, "Orchid", nullptr);
 
         fontSize(13.0f);
-        fillColor(161, 174, 174, 255);
+        fc(t_.textDim);
         text(x + 22.0f, y + 53.0f, "Voiced freeze effect with transport-timed holds", nullptr);
 
         drawStatusCard(x + w - 456.0f, y + 14.0f, 134.0f, h - 28.0f, "State", stateName(), stateColorR(), stateColorG(), stateColorB());
@@ -408,7 +415,7 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 10.0f);
-        fillColor(17, 22, 27, 255);
+        fc(t_.background);
         fill();
         strokeColor(r, g, b, 150);
         strokeWidth(1.0f);
@@ -417,11 +424,11 @@ private:
 
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(139, 153, 156, 255);
+        fc(t_.textDim);
         text(x + 12.0f, y + 10.0f, label, nullptr);
 
         fontSize(18.0f);
-        fillColor(232, 237, 232, 255);
+        fc(t_.textPrimary);
         text(x + 12.0f, y + 34.0f, value, nullptr);
     }
 
@@ -429,13 +436,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 14.0f);
-        fillColor(22, 28, 34, 248);
+        fc(t_.panel.withAlpha(248));
         fill();
         closePath();
 
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(229, 234, 234, 255);
+        fc(t_.textPrimary);
         text(x + 18.0f, y + 16.0f, "Controls", nullptr);
 
         const float colGap = 28.0f;
@@ -459,11 +466,11 @@ private:
 
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(226, 232, 232, 255);
+        fc(t_.textPrimary);
         text(rect.x, rect.y - 31.0f, slider.label, nullptr);
 
         fontSize(10.0f);
-        fillColor(130, 144, 148, 255);
+        fc(t_.textDim);
         text(rect.x, rect.y - 14.0f, slider.hint, nullptr);
 
         const std::string valueText = formatValue(slider, value);
@@ -474,7 +481,7 @@ private:
 
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 8.0f);
-        fillColor(37, 45, 52, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
@@ -486,7 +493,7 @@ private:
 
         beginPath();
         circle(rect.x + rect.w * t, rect.y + rect.h * 0.5f, active ? 8.0f : 7.0f);
-        fillColor(241, 244, 235, 255);
+        fc(t_.textPrimary);
         fill();
         strokeColor(77, 154, 147, 230);
         strokeWidth(1.4f);
@@ -498,13 +505,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 14.0f);
-        fillColor(22, 28, 34, 248);
+        fc(t_.panel.withAlpha(248));
         fill();
         closePath();
 
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(229, 234, 234, 255);
+        fc(t_.textPrimary);
         text(x + 18.0f, y + 16.0f, "Detector", nullptr);
 
         drawScope(x + 24.0f, y + 58.0f, w - 48.0f, 190.0f);
@@ -520,9 +527,9 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 12.0f);
-        fillColor(16, 22, 27, 255);
+        fc(t_.background);
         fill();
-        strokeColor(60, 76, 82, 150);
+        sc(t_.border.withAlpha(150));
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -532,7 +539,7 @@ private:
             beginPath();
             moveTo(x + 12.0f, yy);
             lineTo(x + w - 12.0f, yy);
-            strokeColor(43, 56, 62, 130);
+            sc(t_.controlTrack.withAlpha(130));
             strokeWidth(1.0f);
             stroke();
             closePath();
@@ -566,11 +573,11 @@ private:
 
         fontSize(34.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(236, 240, 236, 235);
+        fc(t_.textPrimary.withAlpha(235));
         text(x + w * 0.5f, y + h * 0.48f, pitchText().c_str(), nullptr);
 
         fontSize(12.0f);
-        fillColor(144, 157, 160, 255);
+        fc(t_.textDim);
         text(x + w * 0.5f, y + h * 0.72f, stateName(), nullptr);
     }
 
@@ -587,18 +594,18 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(144, 157, 160, 255);
+        fc(t_.textDim);
         text(x, y - 18.0f, label, nullptr);
 
         char buf[32];
         std::snprintf(buf, sizeof(buf), "%.0f%%", clamped * 100.0f);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(203, 208, 204, 255);
+        fc(t_.textPrimary);
         text(x + w, y - 18.0f, buf, nullptr);
 
         beginPath();
         roundedRect(x, y, w, 14.0f, 7.0f);
-        fillColor(38, 46, 53, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
@@ -613,9 +620,9 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 12.0f);
-        fillColor(17, 22, 27, 255);
+        fc(t_.background);
         fill();
-        strokeColor(63, 78, 84, 150);
+        sc(t_.border.withAlpha(150));
         strokeWidth(1.0f);
         stroke();
         closePath();

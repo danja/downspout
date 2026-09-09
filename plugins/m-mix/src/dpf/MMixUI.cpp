@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include <algorithm>
 #include <array>
@@ -7,6 +8,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -233,6 +236,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     std::array<Rect, kSliders.size()> sliderRects_ {};
     std::array<Rect, kToggles.size()> toggleRects_ {};
@@ -242,13 +249,13 @@ private:
     {
         beginPath();
         rect(0.0f, 0.0f, width, height);
-        fillColor(13, 17, 22, 255);
+        fc(t_.background);
         fill();
         closePath();
 
         beginPath();
         rect(0.0f, 0.0f, width, 156.0f);
-        fillColor(24, 36, 43, 255);
+        fc(t_.panel);
         fill();
         closePath();
 
@@ -263,17 +270,17 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 16.0f);
-        fillColor(18, 26, 32, 242);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(30.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(241, 244, 245, 255);
+        fc(t_.textPrimary);
         text(x + 22.0f, y + 15.0f, "M-Mix", nullptr);
 
         fontSize(13.0f);
-        fillColor(161, 177, 185, 255);
+        fc(t_.textDim);
         text(x + 24.0f, y + 50.0f,
              DOWNSPOUT_PLUGIN_VERSION_STRING "  |  MIDI pass/block pipeline with Euclidean timing and probabilistic transitions",
              nullptr);
@@ -321,13 +328,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 16.0f);
-        fillColor(18, 23, 29, 248);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(232, 236, 238, 255);
+        fc(t_.textPrimary);
         text(x + 20.0f, y + 18.0f, title, nullptr);
     }
 
@@ -338,17 +345,17 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(169, 182, 189, 255);
+        fc(t_.textDim);
         text(rect.x, rect.y - 22.0f, def.label, nullptr);
 
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(234, 237, 239, 255);
+        fc(t_.textPrimary);
         const std::string valueText = formatValue(def, value);
         text(rect.x + rect.w, rect.y - 22.0f, valueText.c_str(), nullptr);
 
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 9.0f);
-        fillColor(39, 46, 52, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
@@ -361,7 +368,7 @@ private:
 
         fontSize(10.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(111, 127, 136, 255);
+        fc(t_.textDim);
         text(rect.x, rect.y + 22.0f, def.hint, nullptr);
     }
 
@@ -382,7 +389,7 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(236, 239, 240, 255);
+        fc(t_.textPrimary);
         text(rect.x + 13.0f, rect.y + rect.h * 0.5f + 1.0f, def.label, nullptr);
 
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
@@ -401,7 +408,7 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(151, 166, 174, 255);
+        fc(t_.textDim);
         text(x, y - 24.0f, "Euclidean pass blocks", nullptr);
 
         for (int i = 0; i < visible; ++i) {
@@ -424,12 +431,12 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(151, 166, 174, 255);
+        fc(t_.textDim);
         text(x, y - 24.0f, "Probabilistic transition weights", nullptr);
 
         beginPath();
         roundedRect(x, y, w, h, h * 0.5f);
-        fillColor(39, 46, 52, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
@@ -441,7 +448,7 @@ private:
 
         beginPath();
         rect(x + maintainW, y, fadeW, h);
-        fillColor(220, 157, 73, 255);
+        fc(t_.accent);
         fill();
         closePath();
 
@@ -467,7 +474,7 @@ private:
     {
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(224, 228, 230, 255);
+        fc(t_.textPrimary);
         text(x, y, label, nullptr);
 
         char buf[32];
@@ -478,7 +485,7 @@ private:
 
         beginPath();
         roundedRect(x, y + 20.0f, w, 11.0f, 6.0f);
-        fillColor(39, 46, 52, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
@@ -493,17 +500,17 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 12.0f);
-        fillColor(13, 18, 23, 255);
+        fc(t_.background);
         fill();
         closePath();
 
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(231, 235, 237, 255);
+        fc(t_.textPrimary);
         text(x + 14.0f, y + 14.0f, values_[kParamMute] >= 0.5f ? "Output muted" : "Pipeline active", nullptr);
 
         fontSize(12.0f);
-        fillColor(146, 161, 169, 255);
+        fc(t_.textDim);
         const std::string fadeMode = values_[kParamVelocityFades] >= 0.5f
             ? "Fades scale note-on velocity."
             : "Fades act as pass/block only.";

@@ -28,10 +28,12 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
     target_include_directories(sidecar PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
+        "${PROJECT_SOURCE_DIR}/include"
     )
     target_include_directories(sidecar-ui PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
+        "${PROJECT_SOURCE_DIR}/include"
     )
 
     install(DIRECTORY "${PROJECT_BINARY_DIR}/bin/sidecar.vst3"

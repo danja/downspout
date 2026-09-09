@@ -1,4 +1,5 @@
 #include "generative_panel_ui.hpp"
+#include "downspout/look_and_feel.hpp"
 #include "mixgen_core.hpp"
 
 #include <array>
@@ -6,6 +7,8 @@
 #include <cstdio>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 class MixgenUI : public GenerativePanelUI {
 public:
@@ -17,6 +20,10 @@ public:
             downspout::mixgen::kParameterCount, 105, 196, 216) {}
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     void onNanoDisplay() override
     {
         using namespace downspout::mixgen;
@@ -102,7 +109,7 @@ private:
             const float rowY = y + lane * rowHeight;
             char label[16] {};
             std::snprintf(label, sizeof(label), "CH %d", lane + 1);
-            fillColor(192, 204, 207, 255);
+            fc(t_.textPrimary);
             fontSize(11.0f);
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
             text(x, rowY + rowHeight * 0.5f, label, nullptr);

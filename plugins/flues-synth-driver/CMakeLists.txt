@@ -19,6 +19,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
     target_include_directories(flues_synth_driver PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
+        "${PROJECT_SOURCE_DIR}/include"
     )
 
     install(DIRECTORY "${PROJECT_BINARY_DIR}/bin/flues_synth_driver.vst3"

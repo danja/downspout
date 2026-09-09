@@ -1,9 +1,12 @@
 #include "generative_panel_ui.hpp"
+#include "downspout/look_and_feel.hpp"
 #include "conductor_core.hpp"
 
 #include <cmath>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 class ConductorUI : public GenerativePanelUI {
 public:
@@ -15,6 +18,10 @@ public:
             downspout::conductor::kParameterCount, 220, 154, 78) {}
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     int pendingSection_ = -1;
 
     void parameterChanged(uint32_t index, float v) override
@@ -80,7 +87,7 @@ private:
             std::snprintf(remaining, sizeof(remaining), "→ jumping to %s at next bar", sections[pendingSection_]);
         else
             std::snprintf(remaining, sizeof(remaining), "%s · %d bars remaining", sections[current], barsLeft);
-        fillColor(205, 212, 208, 255);
+        fc(t_.textPrimary);
         fontSize(11);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         text(38, 190, remaining, nullptr);

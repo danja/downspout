@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "paunchlad_params.hpp"
 
@@ -8,6 +9,8 @@
 #include <cstdio>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -194,6 +197,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     std::array<Rect, kCellCount> padRects_ {};
     std::array<Rect, kSliders.size()> sliderRects_ {};
@@ -214,13 +221,13 @@ private:
     {
         beginPath();
         rect(0.0f, 0.0f, width, height);
-        fillColor(12, 10, 9, 255);
+        fc(t_.background);
         fill();
         closePath();
 
         beginPath();
         rect(0.0f, 0.0f, width, 100.0f);
-        fillColor(32, 24, 18, 255);
+        fc(t_.meterOff);
         fill();
         closePath();
     }
@@ -229,7 +236,7 @@ private:
     {
         fontSize(34.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(249, 239, 218, 255);
+        fc(t_.textPrimary);
         text(28.0f, 22.0f, "PaunchLad", nullptr);
 
         fontSize(13.0f);
@@ -244,7 +251,7 @@ private:
                       static_cast<int>(std::lround(values_[kParamStatusMode])) + 1);
         fontSize(12.0f);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(236, 225, 205, 255);
+        fc(t_.textPrimary);
         text(width - 28.0f, 40.0f, buffer, nullptr);
     }
 
@@ -331,9 +338,9 @@ private:
 
         beginPath();
         roundedRect(x, y, w, h, 8.0f);
-        fillColor(23, 20, 17, 245);
+        fc(t_.panel);
         fill();
-        strokeColor(75, 58, 40, 255);
+        sc(t_.textDisabled);
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -367,24 +374,24 @@ private:
 
         fontSize(10.0f);
         textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(221, 205, 176, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y, slider.label, nullptr);
 
         beginPath();
         roundedRect(trackX, trackY, 10.0f, trackH, 5.0f);
-        fillColor(44, 37, 31, 255);
+        fc(t_.panel);
         fill();
         closePath();
 
         beginPath();
         roundedRect(trackX, trackY + trackH * (1.0f - norm), 10.0f, trackH * norm, 5.0f);
-        fillColor(221, 151, 66, 245);
+        fc(t_.accent.withAlpha(245));
         fill();
         closePath();
 
         beginPath();
         roundedRect(rect.x + 4.0f, trackY + trackH * (1.0f - norm) - 5.0f, rect.w - 8.0f, 10.0f, 5.0f);
-        fillColor(249, 240, 217, 255);
+        fc(t_.textPrimary);
         fill();
         closePath();
 
@@ -422,7 +429,7 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(249, 238, 218, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 1.0f, label, nullptr);
     }
 

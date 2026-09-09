@@ -1,10 +1,13 @@
 #include "generative_panel_ui.hpp"
+#include "downspout/look_and_feel.hpp"
 #include "harmonic_atlas_core.hpp"
 
 #include <algorithm>
 #include <cmath>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 static constexpr const char* kScaleNames[] {
     "Major", "Ionian", "Minor", "Harm Minor", "Mel Minor",
@@ -26,6 +29,10 @@ public:
             downspout::harmonic_atlas::kParameterCount, 104, 188, 206) {}
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     Box scaleRect_ {};
     bool scaleOpen_ = false;
 
@@ -67,23 +74,23 @@ private:
         const int val = std::clamp(static_cast<int>(std::lround(value(kScale))), 0, kScaleCount - 1);
 
         beginPath();
-        fillColor(38, 45, 52, 255);
+        fc(t_.controlTrack);
         roundedRect(x, y, w, 51.0f, 5.0f);
         fill();
 
-        fillColor(205, 214, 210, 255);
+        fc(t_.textPrimary);
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         text(x + 10.0f, y + 7.0f, "Colour-note scale", nullptr);
 
-        fillColor(220, 226, 222, 255);
+        fc(t_.textPrimary);
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         text(x + 10.0f, y + 35.0f, kScaleNames[val], nullptr);
 
         fontSize(16.0f);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
-        fillColor(117, 133, 149, 255);
+        fc(t_.textDim);
         text(x + w - 10.0f, y + 35.0f, scaleOpen_ ? "˄" : "˅", nullptr);
 
         scaleRect_ = {x, y, w, 51.0f};
@@ -100,9 +107,9 @@ private:
 
         beginPath();
         roundedRect(menu.x, menu.y, menu.w, menu.h, 14.0f);
-        fillColor(22, 28, 36, 248);
+        fc(t_.panel.withAlpha(248));
         fill();
-        strokeColor(93, 112, 134, 220);
+        sc(t_.border.withAlpha(220));
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -121,7 +128,7 @@ private:
             }
             fontSize(cols > 1 ? 11.0f : 12.0f);
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-            fillColor(236, 240, 243, 255);
+            fc(t_.textPrimary);
             text(ix + 14.0f, iy + kDropItemH * 0.5f + 1.0f, kScaleNames[i], nullptr);
         }
     }

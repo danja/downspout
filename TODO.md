@@ -1,5 +1,9 @@
 # Downspout TODO
 
+## New Instrument Plugin : Moka
+
+Moka will be a 2-channel midi synth plugin based on physical/modal synthesis that will emulate hit objects : xylophone, glockenspiel, woodblocks, glass bowl, metal sheet etc. It will include a set of presets plus a set of around 10 parameter controls (decide what will be most suitable).
+
 ## Look and Feel
 
 It is desirable to give all the downspout plugins a consistent look as well as /home/danny/github/valis and /home/danny/github/transmission

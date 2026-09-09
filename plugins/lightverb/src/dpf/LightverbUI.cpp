@@ -1,11 +1,18 @@
 #include "generative_panel_ui.hpp"
+#include "downspout/look_and_feel.hpp"
 #include "lightverb_core.hpp"
 #include <cmath>
 #include <cstdio>
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 class LightverbUI final:public GenerativePanelUI{
 public:LightverbUI():GenerativePanelUI("Lightverb","Fast stereo space for Transmission · fixed-cost FDN · CC 32 mix / CC 33 space",downspout::lightverb::kParameterSpecs.data(),downspout::lightverb::kParameterCount,231,184,92){}
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
  void onNanoDisplay()override{using namespace downspout::lightverb;beginPanel();
   drawSection(24,102,612,204,"SPACE","four delay lines; the same small workload at every setting");drawPercentSlider(kSpace,38,136,282,"Space","Changes the virtual room scale without adding processing cost.");drawSlider(kDecaySeconds,334,136,288,"Decay"," s","Time for the reverberant tail to fall by roughly 60 dB.",2);drawPercentSlider(kDamping,38,198,282,"Damping","Absorbs high frequencies in the tail; higher values sound darker.");drawSlider(kPreDelayMs,334,198,288,"Pre-delay"," ms","Separates the dry attack from the reverb onset.",0);
   drawSection(652,102,404,204,"BLEND","insert-friendly defaults; set Wet mix to 100% on a send");drawPercentSlider(kWidth,666,136,180,"Stereo width","Narrows or spreads the reverberant field.");drawPercentSlider(kMix,860,136,182,"Wet mix","Dry at 0%; effect-only at 100% for an auxiliary send.");drawSlider(kOutputDb,666,198,376,"Output trim"," dB","Level-match Lightverb with the next effect, normally Guardian.",1);

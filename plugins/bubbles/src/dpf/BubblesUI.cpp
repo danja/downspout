@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include <algorithm>
 #include <array>
@@ -6,6 +7,8 @@
 #include <cstdio>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -274,6 +277,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     int dragIndex_ = -1;
 
@@ -352,7 +359,7 @@ private:
     {
         beginPath();
         rect(0.0f, 0.0f, W, H);
-        fillColor(15, 30, 48, 255);
+        fc(t_.panel);
         fill();
         closePath();
     }
@@ -361,7 +368,7 @@ private:
     {
         beginPath();
         rect(0.0f, 0.0f, W, 44.0f);
-        fillColor(22, 43, 66, 255);
+        fc(t_.surface);
         fill();
         closePath();
 
@@ -389,7 +396,7 @@ private:
             if (active)
                 fillColor(0, 188, 212, 255);
             else
-                fillColor(28, 56, 82, 255);
+                fc(t_.border);
             fill();
             closePath();
 
@@ -405,9 +412,9 @@ private:
             fontSize(11.0f);
             textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
             if (active)
-                fillColor(15, 30, 48, 255);
+                fc(t_.panel);
             else
-                fillColor(130, 170, 195, 255);
+                fc(t_.textDim);
             text(r.x + r.w * 0.5f, r.y + r.h * 0.5f, kModeNames[m], nullptr);
         }
     }
@@ -426,7 +433,7 @@ private:
 
             beginPath();
             roundedRect(cx + 4.0f, cy + 4.0f, kColW - 8.0f, kRowH - 8.0f, 6.0f);
-            fillColor(22, 43, 66, 255);
+            fc(t_.surface);
             fill();
             closePath();
 
@@ -438,13 +445,13 @@ private:
             char buf[24];
             std::snprintf(buf, sizeof(buf), "%.2f", val);
             textAlign(ALIGN_RIGHT | ALIGN_TOP);
-            fillColor(220, 240, 250, 255);
+            fc(t_.textPrimary);
             text(cx + kColW - 10.0f, cy + 14.0f, buf, nullptr);
 
             Rect track = sliderTrackRect(s);
             beginPath();
             roundedRect(track.x, track.y, track.w, track.h, track.h * 0.5f);
-            fillColor(25, 55, 80, 255);
+            fc(t_.border);
             fill();
             closePath();
 
@@ -476,7 +483,7 @@ private:
         // Panel background
         beginPath();
         roundedRect(10.0f, kLfoTop, 860.0f, kLfoH, 6.0f);
-        fillColor(22, 43, 66, 255);
+        fc(t_.surface);
         fill();
         closePath();
 
@@ -489,7 +496,7 @@ private:
         // Row 1: Target buttons
         fontSize(10.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(80, 120, 150, 255);
+        fc(t_.border);
         text(76.0f, kLfoRow1 + kLfoBtnH * 0.5f, "Target", nullptr);
 
         for (int t = 0; t < 7; ++t) {
@@ -500,7 +507,7 @@ private:
             if (active)
                 fillColor(0, 160, 200, 255);
             else
-                fillColor(28, 56, 82, 255);
+                fc(t_.border);
             fill();
             closePath();
             fontSize(10.0f);
@@ -512,7 +519,7 @@ private:
         // Row 2: Shape buttons
         fontSize(10.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(80, 120, 150, 255);
+        fc(t_.border);
         text(76.0f, kLfoRow2 + kLfoBtnH * 0.5f, "Shape", nullptr);
 
         for (int s = 0; s < 5; ++s) {
@@ -523,7 +530,7 @@ private:
             if (active)
                 fillColor(0, 160, 200, 255);
             else
-                fillColor(28, 56, 82, 255);
+                fc(t_.border);
             fill();
             closePath();
             fontSize(10.0f);
@@ -540,7 +547,7 @@ private:
             if (syncOn)
                 fillColor(0, 188, 90, 255);
             else
-                fillColor(28, 56, 82, 255);
+                fc(t_.border);
             fill();
             closePath();
             fontSize(10.0f);
@@ -563,19 +570,19 @@ private:
             if (active)
                 fillColor(0, 160, 200, 255);
             else if (syncOn)
-                fillColor(28, 56, 82, 255);
+                fc(t_.border);
             else
-                fillColor(20, 40, 58, 255);
+                fc(t_.surface);
             fill();
             closePath();
             fontSize(9.0f);
             textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
             if (active)
-                fillColor(15, 30, 48, 255);
+                fc(t_.panel);
             else if (syncOn)
-                fillColor(130, 170, 195, 255);
+                fc(t_.textDim);
             else
-                fillColor(60, 90, 110, 255);
+                fc(t_.buttonFace);
             text(r.x + r.w * 0.5f, r.y + r.h * 0.5f, kLfoDivNames[d], nullptr);
         }
 
@@ -607,7 +614,7 @@ private:
         {
             fontSize(10.0f);
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-            fillColor(80, 120, 150, 255);
+            fc(t_.border);
             text(310.0f, kLfoRow3 + 7.0f, "Depth", nullptr);
 
             Rect tr = lfoDepthSliderRect();

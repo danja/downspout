@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include <algorithm>
 #include <array>
@@ -7,6 +8,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -327,6 +330,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     std::array<Rect, std::size(kSliders)> sliderRects_ {};
     std::array<Rect, std::size(kSelectors)> selectorRects_ {};
@@ -377,13 +384,13 @@ private:
     void drawBackground(const float width, const float height)
     {
         beginPath();
-        fillColor(17, 21, 27, 255);
+        fc(t_.background);
         rect(0.0f, 0.0f, width, height);
         fill();
         closePath();
 
         beginPath();
-        fillColor(27, 35, 45, 255);
+        fc(t_.panel);
         rect(0.0f, 0.0f, width, height * 0.28f);
         fill();
         closePath();
@@ -393,17 +400,17 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 18.0f);
-        fillColor(31, 42, 55, 230);
+        fc(t_.panel.withAlpha(230));
         fill();
         closePath();
 
         fontSize(28.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(238, 241, 244, 255);
+        fc(t_.textPrimary);
         text(x + 20.0f, y + 16.0f, "Cadence", nullptr);
 
         fontSize(13.0f);
-        fillColor(154, 169, 183, 255);
+        fc(t_.textDim);
         text(x + 22.0f, y + 48.0f, "Transport-synced MIDI harmonizer", nullptr);
 
         drawStatusPill(x + w - 404.0f, y + 16.0f, 140.0f, 30.0f, values_[kParamStatusReady] >= 0.5f ? "Ready" : "Learning",
@@ -444,13 +451,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 18.0f);
-        fillColor(24, 29, 37, 250);
+        fc(t_.panel.withAlpha(250));
         fill();
         closePath();
 
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(224, 228, 232, 255);
+        fc(t_.textPrimary);
         text(x + 20.0f, y + 18.0f, "Shape", nullptr);
 
         for (std::size_t i = 0; i < std::size(kSliders); ++i) {
@@ -462,17 +469,17 @@ private:
     {
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(154, 169, 183, 255);
+        fc(t_.textDim);
         text(rect.x, rect.y - 18.0f, def.label, nullptr);
 
         const std::string valueText = formatSliderValue(def.index, value);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(223, 230, 236, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w, rect.y - 18.0f, valueText.c_str(), nullptr);
 
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 10.0f);
-        fillColor(42, 50, 62, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
@@ -489,13 +496,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 18.0f);
-        fillColor(24, 29, 37, 250);
+        fc(t_.panel.withAlpha(250));
         fill();
         closePath();
 
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(224, 228, 232, 255);
+        fc(t_.textPrimary);
         text(x + 20.0f, y + 18.0f, "Setup", nullptr);
 
         for (std::size_t i = 0; i < std::size(kSelectors); ++i) {
@@ -504,7 +511,7 @@ private:
 
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(224, 228, 232, 255);
+        fc(t_.textPrimary);
         text(x + 20.0f, buttonRects_[0].y - 28.0f, "Actions", nullptr);
         drawButton(kButtons[0], buttonRects_[0]);
     }
@@ -513,22 +520,22 @@ private:
     {
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 14.0f);
-        fillColor(34, 43, 55, 255);
+        fc(t_.surface);
         fill();
         closePath();
 
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(152, 166, 181, 255);
+        fc(t_.textDim);
         text(rect.x + 16.0f, rect.y + 8.0f, def.label, nullptr);
 
         fontSize(18.0f);
-        fillColor(235, 239, 242, 255);
+        fc(t_.textPrimary);
         text(rect.x + 16.0f, rect.y + 28.0f, def.items[clampi(value, 0, def.count - 1)], nullptr);
 
         fontSize(18.0f);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
-        fillColor(117, 133, 149, 255);
+        fc(t_.textDim);
         text(rect.x + rect.w - 18.0f, rect.y + rect.h * 0.5f + 1.0f, openSelector_ == selectorIndex ? "^" : "v", nullptr);
     }
 
@@ -543,14 +550,14 @@ private:
 
         beginPath();
         roundedRect(rect.x + 1.0f, rect.y + 1.0f, rect.w - 2.0f, rect.h - 2.0f, 15.0f);
-        strokeColor(165, 186, 209, 110);
+        sc(t_.textDim.withAlpha(110));
         strokeWidth(1.0f);
         stroke();
         closePath();
 
         fontSize(16.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(240, 244, 247, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f, def.label, nullptr);
     }
 
@@ -591,9 +598,9 @@ private:
 
         beginPath();
         roundedRect(menuRect.x, menuRect.y, menuRect.w, menuRect.h, 14.0f);
-        fillColor(22, 28, 36, 248);
+        fc(t_.panel.withAlpha(248));
         fill();
-        strokeColor(93, 112, 134, 220);
+        sc(t_.border.withAlpha(220));
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -606,14 +613,14 @@ private:
             if (i == selected) {
                 beginPath();
                 roundedRect(itemX + 4.0f, rowY + 3.0f, columnW - 8.0f, kSelectorItemHeight - 6.0f, 10.0f);
-                fillColor(74, 96, 122, 255);
+                fc(t_.buttonFace);
                 fill();
                 closePath();
             }
 
             fontSize(columns > 1 ? 11.0f : 12.0f);
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-            fillColor(236, 240, 243, 255);
+            fc(t_.textPrimary);
             text(itemX + 14.0f, rowY + kSelectorItemHeight * 0.5f + 1.0f, def.items[i], nullptr);
         }
     }

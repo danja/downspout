@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "floozy_params.hpp"
 
@@ -9,6 +10,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -286,6 +289,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     std::array<Rect, kParameterCount> controlRects_ {};
     int activeParameter_ = -1;
@@ -295,13 +302,13 @@ private:
     void drawBackground(const float width, const float height)
     {
         beginPath();
-        fillColor(12, 14, 15, 255);
+        fc(t_.background);
         rect(0.0f, 0.0f, width, height);
         fill();
         closePath();
 
         beginPath();
-        fillColor(29, 33, 33, 255);
+        fc(t_.panel);
         rect(0.0f, 0.0f, width, 116.0f);
         fill();
         closePath();
@@ -311,16 +318,16 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 7.0f);
-        fillColor(18, 22, 22, 238);
+        fc(t_.panel);
         fill();
-        strokeColor(52, 60, 60, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         stroke();
         closePath();
 
         fontSize(32.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(238, 241, 237, 255);
+        fc(t_.textPrimary);
         text(x + 22.0f, y + 14.0f, "Floozy", nullptr);
 
         const int numVoices = static_cast<int>(
@@ -329,12 +336,12 @@ private:
         std::snprintf(subtitle, sizeof(subtitle),
                       "%d voice hybrid physical/modulation synth", numVoices);
         fontSize(13.0f);
-        fillColor(155, 166, 164, 255);
+        fc(t_.textDim);
         text(x + 170.0f, y + 27.0f, subtitle, nullptr);
 
         fontSize(12.0f);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(204, 214, 210, 255);
+        fc(t_.textPrimary);
         text(x + w - 22.0f, y + 29.0f, "MIDI in | stereo I/O", nullptr);
     }
 
@@ -343,9 +350,9 @@ private:
         const SectionDef& section = kSections[index];
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 7.0f);
-        fillColor(18, 22, 23, 238);
+        fc(t_.panel);
         fill();
-        strokeColor(46, 54, 55, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -358,7 +365,7 @@ private:
 
         fontSize(17.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(232, 237, 233, 255);
+        fc(t_.textPrimary);
         text(rect.x + 14.0f, rect.y + 33.0f, section.title, nullptr);
 
         const float startY = rect.y + 78.0f;
@@ -387,7 +394,7 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(213, 220, 217, 255);
+        fc(t_.textPrimary);
         text(rect.x, rect.y, label.c_str(), nullptr);
 
         fontSize(10.5f);
@@ -398,7 +405,7 @@ private:
         const float barY = rect.y + 23.0f;
         beginPath();
         roundedRect(rect.x, barY, rect.w, 12.0f, 6.0f);
-        fillColor(38, 44, 45, 255);
+        fc(t_.surface);
         fill();
         closePath();
 
@@ -410,7 +417,7 @@ private:
 
         beginPath();
         roundedRect(rect.x + rect.w * norm - 5.0f, barY - 4.0f, 10.0f, 20.0f, 5.0f);
-        fillColor(237, 242, 238, 255);
+        fc(t_.textPrimary);
         fill();
         closePath();
     }
@@ -433,7 +440,7 @@ private:
     {
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(213, 220, 217, 255);
+        fc(t_.textPrimary);
         text(rect.x, rect.y, label, nullptr);
 
         const Rect box {rect.x, rect.y + 21.0f, rect.w, 25.0f};
@@ -449,7 +456,7 @@ private:
 
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(234, 239, 235, 255);
+        fc(t_.textPrimary);
         text(box.x + 10.0f, box.y + box.h * 0.5f + 1.0f, formatValue(parameter, values_[parameter]).c_str(), nullptr);
 
         beginPath();
@@ -481,9 +488,9 @@ private:
 
         beginPath();
         roundedRect(menu.x, menu.y, menu.w, menu.h, 7.0f);
-        fillColor(13, 17, 18, 248);
+        fc(t_.panel);
         fill();
-        strokeColor(75, 88, 88, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -496,7 +503,7 @@ private:
             {
                 beginPath();
                 rect(menu.x + 4.0f, y + 3.0f, menu.w - 8.0f, 20.0f);
-                fillColor(58, 89, 88, 235);
+                fc(t_.border.withAlpha(235));
                 fill();
                 closePath();
             }

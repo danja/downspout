@@ -1,4 +1,5 @@
 #include "generative_panel_ui.hpp"
+#include "downspout/look_and_feel.hpp"
 #include "loopdelay_core.hpp"
 
 #include <algorithm>
@@ -6,6 +7,8 @@
 #include <cstdio>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 class LoopdelayUI : public GenerativePanelUI {
 public:
@@ -17,6 +20,10 @@ public:
             downspout::loopdelay::kParameterCount, 111, 204, 167) {}
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     void onNanoDisplay() override
     {
         using namespace downspout::loopdelay;

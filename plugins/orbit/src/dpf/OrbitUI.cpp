@@ -1,9 +1,12 @@
 #include "generative_panel_ui.hpp"
+#include "downspout/look_and_feel.hpp"
 #include "orbit_core.hpp"
 
 #include <cmath>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 class OrbitUI : public GenerativePanelUI {
 public:
@@ -15,6 +18,10 @@ public:
             downspout::orbit::kParameterCount, 102, 164, 220) {}
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     void onNanoDisplay() override
     {
         using namespace downspout::orbit;
@@ -56,11 +63,11 @@ private:
         using namespace downspout::orbit;
         const int mode = std::clamp(static_cast<int>(std::lround(value(kTrajectory))), 0, 3);
         beginPath();
-        fillColor(17, 22, 27, 255);
+        fc(t_.background);
         roundedRect(x, y, w, h, 7);
         fill();
 
-        strokeColor(65, 75, 84, 255);
+        sc(t_.border);
         strokeWidth(1);
         beginPath();
         moveTo(x + w * 0.5f, y + 18);
@@ -112,7 +119,7 @@ private:
             pathY = pan * std::sqrt(std::max(0.0f, 1.0f - pan * pan));
         const float dotY = y + h * 0.5f - pathY * h * 0.36f;
         beginPath();
-        fillColor(239, 242, 238, 255);
+        fc(t_.textPrimary);
         circle(dotX, dotY, 9);
         fill();
         beginPath();
@@ -121,7 +128,7 @@ private:
         circle(dotX, dotY, 12.0f + distance * 5.0f);
         stroke();
 
-        fillColor(130, 143, 151, 255);
+        fc(t_.textDim);
         fontSize(10);
         textAlign(ALIGN_LEFT | ALIGN_BOTTOM);
         text(x + 12, y + h - 9, "LEFT", nullptr);

@@ -27,10 +27,12 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
     target_include_directories(t_mix PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
+        "${PROJECT_SOURCE_DIR}/include"
     )
     target_include_directories(t_mix-ui PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
+        "${PROJECT_SOURCE_DIR}/include"
     )
 
     install(DIRECTORY "${PROJECT_BINARY_DIR}/bin/t_mix.vst3"

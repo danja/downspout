@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 #include "tuney_vst_engine.hpp"
 
 #include <algorithm>
@@ -7,6 +8,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 struct Rect { float x, y, w, h; bool contains(float px, float py) const { return px >= x && px <= x + w && py >= y && py <= y + h; } };
@@ -155,6 +158,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     void drawButton(const Rect& r, const char* label, Color color)
     {
         beginPath(); roundedRect(r.x, r.y, r.w, r.h, 9); fillColor(color); fill();

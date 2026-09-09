@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include <algorithm>
 #include <array>
@@ -9,6 +10,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -203,6 +206,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     int dragMain_ = -1;
     int dragCC_   = -1;
@@ -252,7 +259,7 @@ private:
     void drawBackground(float W, float H)
     {
         beginPath();
-        fillColor(14, 16, 22, 255);
+        fc(t_.background);
         rect(0, 0, W, H);
         fill();
         closePath();
@@ -261,7 +268,7 @@ private:
     void drawHeader(float W)
     {
         beginPath();
-        fillColor(22, 24, 34, 255);
+        fc(t_.panel);
         rect(0, 0, W, 58.0f);
         fill();
         closePath();
@@ -278,7 +285,7 @@ private:
              "1980s video game \xe2\x80\x94 bit crush \xc2\xb7 rate reduction \xc2\xb7 jitter \xc2\xb7 Drift CC", nullptr);
 
         beginPath();
-        strokeColor(40, 60, 40, 255);
+        sc(t_.controlTrack);
         strokeWidth(1.0f);
         moveTo(0, 58.0f);
         lineTo(W, 58.0f);
@@ -288,7 +295,7 @@ private:
         // Column headers
         fontSize(9.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(70, 100, 70, 255);
+        fc(t_.border);
         text(kMainX, 62.0f, "PARAMETERS", nullptr);
         text(kCCX, 62.0f, "DRIFT CC ROUTING", nullptr);
     }
@@ -296,7 +303,7 @@ private:
     void drawDivider(float H)
     {
         beginPath();
-        strokeColor(32, 44, 32, 255);
+        sc(t_.panel);
         strokeWidth(1.0f);
         moveTo(kDivX, 58.0f);
         lineTo(kDivX, H);
@@ -315,7 +322,7 @@ private:
 
             if (s > 0) {
                 beginPath();
-                strokeColor(28, 36, 28, 255);
+                sc(t_.panel);
                 strokeWidth(1.0f);
                 moveTo(kMainX, tr.y - 26.0f);
                 lineTo(kMainX + trackW, tr.y - 26.0f);
@@ -325,7 +332,7 @@ private:
 
             fontSize(12.0f);
             textAlign(ALIGN_LEFT | ALIGN_TOP);
-            fillColor(180, 210, 170, 255);
+            fc(t_.textDim);
             text(kMainX, labelY, def.label, nullptr);
 
             fontSize(11.0f);
@@ -335,7 +342,7 @@ private:
 
             beginPath();
             roundedRect(tr.x, tr.y, tr.w, tr.h, 7.0f);
-            fillColor(30, 38, 30, 255);
+            fc(t_.panel);
             fill();
             closePath();
 
@@ -361,7 +368,7 @@ private:
 
             if (s > 0) {
                 beginPath();
-                strokeColor(28, 36, 28, 255);
+                sc(t_.panel);
                 strokeWidth(1.0f);
                 moveTo(kCCX, tr.y - 26.0f);
                 lineTo(kCCX + trackW, tr.y - 26.0f);
@@ -384,7 +391,7 @@ private:
 
             beginPath();
             roundedRect(tr.x, tr.y, tr.w, tr.h, 7.0f);
-            fillColor(26, 34, 26, 255);
+            fc(t_.panel);
             fill();
             closePath();
 
@@ -402,7 +409,7 @@ private:
         const float hintY = kSlidersY + kCCSliders.size() * kRowH + 8.0f;
         fontSize(9.5f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(60, 80, 60, 255);
+        fc(t_.textDisabled);
         text(kCCX, hintY, "Route Drift MIDI out \xe2\x86\x92 Chipper MIDI in.", nullptr);
         text(kCCX, hintY + 14.0f, "CC 0 = off.  Defaults: 1=Bit Depth  2=Rate Div  3=Jitter  4=Mix", nullptr);
     }

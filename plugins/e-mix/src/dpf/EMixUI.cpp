@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "e_mix_engine.hpp"
 
@@ -9,6 +10,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -302,6 +305,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     std::array<Rect, kSliders.size()> sliderRects_ {};
     int draggingSlider_ = -1;
@@ -329,13 +336,13 @@ private:
     void drawBackground(const float width, const float height)
     {
         beginPath();
-        fillColor(12, 18, 26, 255);
+        fc(t_.background);
         rect(0.0f, 0.0f, width, height);
         fill();
         closePath();
 
         beginPath();
-        fillColor(18, 33, 40, 255);
+        fc(t_.panel);
         rect(0.0f, 0.0f, width, height * 0.38f);
         fill();
         closePath();
@@ -351,17 +358,17 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 8.0f);
-        fillColor(16, 24, 33, 228);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(34.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(239, 242, 246, 255);
+        fc(t_.textPrimary);
         text(x + 24.0f, y + 18.0f, "E-Mix", nullptr);
 
         fontSize(14.0f);
-        fillColor(155, 172, 183, 255);
+        fc(t_.textDim);
         text(x + 26.0f,
              y + 58.0f,
              "Euclidean transport gate with visible block timing and fade shape",
@@ -393,12 +400,12 @@ private:
 
         fontSize(16.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(229, 234, 239, 255);
+        fc(t_.textPrimary);
         text(x, y, "Pattern Controls", nullptr);
 
         beginPath();
         rect(x + w + 14.0f, y, 1.0f, h);
-        fillColor(57, 71, 82, 255);
+        fc(t_.border);
         fill();
         closePath();
 
@@ -419,16 +426,16 @@ private:
 
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(227, 231, 235, 255);
+        fc(t_.textPrimary);
         text(rect.x, rect.y - 34.0f, def.label, nullptr);
 
         fontSize(11.0f);
-        fillColor(122, 139, 151, 255);
+        fc(t_.textDim);
         text(rect.x, rect.y - 16.0f, def.hint, nullptr);
 
         const std::string rangeText = controlRangeText(def, parameters);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(103, 119, 132, 255);
+        fc(t_.border);
         text(rect.x + rect.w, rect.y - 16.0f, rangeText.c_str(), nullptr);
 
         const std::string valueText = formatValue(def.index, parameters);
@@ -438,7 +445,7 @@ private:
 
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 8.0f);
-        fillColor(37, 49, 60, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
@@ -451,7 +458,7 @@ private:
 
         beginPath();
         circle(rect.x + rect.w * t, rect.y + rect.h * 0.5f, 8.0f);
-        fillColor(248, 237, 226, 255);
+        fc(t_.textPrimary);
         fill();
         closePath();
     }
@@ -469,13 +476,13 @@ private:
     {
         fontSize(16.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(229, 234, 239, 255);
+        fc(t_.textPrimary);
         text(x, y, "Cycle Summary", nullptr);
 
         const float top = y + 34.0f;
         beginPath();
         roundedRect(x, top, w, h - 34.0f, 8.0f);
-        fillColor(15, 24, 33, 210);
+        fc(t_.panel);
         fill();
         closePath();
 
@@ -495,11 +502,11 @@ private:
     {
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(108, 126, 138, 255);
+        fc(t_.textDim);
         text(x, y, label, nullptr);
 
         fontSize(16.0f);
-        fillColor(239, 242, 245, 255);
+        fc(t_.textPrimary);
         text(x, y + 14.0f, value, nullptr);
     }
 
@@ -507,18 +514,18 @@ private:
     {
         fontSize(16.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(229, 234, 239, 255);
+        fc(t_.textPrimary);
         text(x, y, "Cycle Pattern", nullptr);
 
         const float top = y + 34.0f;
         beginPath();
         roundedRect(x, top, w, h - 34.0f, 8.0f);
-        fillColor(15, 24, 33, 210);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(12.0f);
-        fillColor(144, 160, 171, 255);
+        fc(t_.textDim);
         const std::string summary = formatInteger(parameters.steps) + " active / "
                                   + formatInteger(parameters.division) + " total";
         text(x + 18.0f, top + 14.0f, summary.c_str(), nullptr);
@@ -551,7 +558,7 @@ private:
             if (active)
                 fillColor(205, 123, 71, 255);
             else
-                fillColor(55, 70, 83, 255);
+                fc(t_.border);
             fill();
             closePath();
         }
@@ -564,7 +571,7 @@ private:
 
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(115, 132, 144, 255);
+        fc(t_.textDim);
         text(stripX, stripY + blockH + 10.0f, "Cycle start", nullptr);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
         const std::string blockCount = formatInteger(parameters.division) + " blocks";
@@ -581,7 +588,7 @@ private:
 
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(141, 158, 169, 255);
+        fc(t_.textDim);
         text(x + 20.0f, y + 1.0f, label, nullptr);
     }
 
@@ -589,13 +596,13 @@ private:
     {
         fontSize(16.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(229, 234, 239, 255);
+        fc(t_.textPrimary);
         text(x, y, "Active Block Envelope", nullptr);
 
         const float top = y + 34.0f;
         beginPath();
         roundedRect(x, top, w, h - 34.0f, 8.0f);
-        fillColor(15, 24, 33, 210);
+        fc(t_.panel);
         fill();
         closePath();
 
@@ -606,7 +613,7 @@ private:
 
         beginPath();
         roundedRect(plotX, plotY, plotW, plotH, 8.0f);
-        fillColor(20, 30, 39, 255);
+        fc(t_.panel);
         fill();
         closePath();
 
@@ -615,7 +622,7 @@ private:
             beginPath();
             moveTo(plotX, gy);
             lineTo(plotX + plotW, gy);
-            strokeColor(39, 50, 61, 255);
+            sc(t_.controlTrack);
             strokeWidth(1.0f);
             stroke();
             closePath();
@@ -651,7 +658,7 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(141, 158, 169, 255);
+        fc(t_.textDim);
         text(x + 18.0f, top + h - 78.0f, formatBars(blockBars).c_str(), nullptr);
         const std::string peakText = "Peak " + formatPercent(peakGain(parameters));
         text(x + 18.0f + w * 0.34f, top + h - 78.0f, peakText.c_str(), nullptr);

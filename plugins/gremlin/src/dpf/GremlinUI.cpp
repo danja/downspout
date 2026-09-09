@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "gremlin_dpf_shared.hpp"
 #include "gremlin_params.hpp"
@@ -10,6 +11,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -307,6 +310,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kGremlinParameterCount> values_ {};
     std::array<bool, kGremlinParameterCount> touched_ {};
     std::array<SliderDef, 36> sliderDefs_ {};
@@ -321,19 +328,19 @@ private:
     void drawBackground(const float width, const float height)
     {
         beginPath();
-        fillColor(11, 14, 18, 255);
+        fc(t_.background);
         rect(0.0f, 0.0f, width, height);
         fill();
         closePath();
 
         beginPath();
-        fillColor(27, 32, 39, 255);
+        fc(t_.panel);
         rect(0.0f, 0.0f, width, height * 0.28f);
         fill();
         closePath();
 
         beginPath();
-        fillColor(210, 146, 72, 20);
+        fc(t_.accent.withAlpha(20));
         roundedRect(width - 320.0f, 34.0f, 270.0f, 250.0f, 44.0f);
         fill();
         closePath();
@@ -343,23 +350,23 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 18.0f);
-        fillColor(19, 24, 31, 238);
+        fc(t_.panel);
         fill();
         closePath();
 
         beginPath();
         roundedRect(x, y, w, 4.0f, 2.0f);
-        fillColor(229, 162, 81, 255);
+        fc(t_.accent);
         fill();
         closePath();
 
         fontSize(30.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(243, 245, 247, 255);
+        fc(t_.textPrimary);
         text(x + 22.0f, y + 14.0f, "Gremlin", nullptr);
 
         fontSize(13.0f);
-        fillColor(163, 170, 181, 255);
+        fc(t_.textDim);
         text(x + 24.0f, y + 50.0f, "Chaotic malfunction instrument and gesture-driven glitch box", nullptr);
 
         const std::string modeLabel = formatMode(displayValue(kParamStatusStart, 0));
@@ -369,7 +376,7 @@ private:
         const float activity = displayValue(kParamStatusActivity, kParamStatusActivity);
         beginPath();
         roundedRect(x + w - 290.0f, y + 54.0f, 266.0f, 14.0f, 7.0f);
-        fillColor(32, 39, 48, 255);
+        fc(t_.surface);
         fill();
         closePath();
 
@@ -417,13 +424,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 18.0f);
-        fillColor(18, 22, 28, 238);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(176, 183, 192, 255);
+        fc(t_.textDim);
         text(x + 18.0f, y + 14.0f, title, nullptr);
 
         const float innerX = x + 18.0f;
@@ -513,7 +520,7 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 8.0f);
-        fillColor(18, 22, 28, 242);
+        fc(t_.panel);
         fill();
         closePath();
 
@@ -525,12 +532,12 @@ private:
 
         fontSize(14.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(232, 236, 240, 255);
+        fc(t_.textPrimary);
         text(x + 16.0f, y + 14.0f, title, nullptr);
 
         fontSize(10.0f);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(133, 143, 154, 255);
+        fc(t_.textDim);
         text(x + w - 16.0f, y + 18.0f, subtitle, nullptr);
 
         const float innerX = x + 16.0f;
@@ -561,18 +568,18 @@ private:
 
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 6.0f);
-        fillColor(27, 32, 39, 235);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(9.0f);
         textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(224, 228, 232, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + 8.0f, def.label, nullptr);
 
         beginPath();
         roundedRect(rect.x + rect.w * 0.5f - 4.0f, top, 8.0f, trackHeight, 4.0f);
-        fillColor(38, 45, 56, 255);
+        fc(t_.buttonFace);
         fill();
         closePath();
 
@@ -594,7 +601,7 @@ private:
         const std::string label = formatPercent(value);
         fontSize(9.0f);
         textAlign(ALIGN_CENTER | ALIGN_BOTTOM);
-        fillColor(153, 163, 175, 255);
+        fc(t_.textDim);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h - 8.0f, label.c_str(), nullptr);
     }
 
@@ -622,13 +629,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, 70.0f, 8.0f);
-        fillColor(18, 22, 28, 240);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(176, 183, 192, 255);
+        fc(t_.textDim);
         text(x + 18.0f, y + 12.0f, "Hold Pads", nullptr);
 
         const float gap = 10.0f;

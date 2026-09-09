@@ -10,7 +10,8 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
     target_link_libraries(harmonic_atlas-dsp PUBLIC downspout_harmonic_atlas_core)
     target_link_libraries(harmonic_atlas-ui PUBLIC downspout_harmonic_atlas_core)
     target_include_directories(harmonic_atlas PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include"
-        "${PROJECT_SOURCE_DIR}/plugins/generative-common/include" "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf")
+        "${PROJECT_SOURCE_DIR}/plugins/generative-common/include" "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
+    "${PROJECT_SOURCE_DIR}/include")
     target_include_directories(harmonic_atlas-ui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include"
         "${PROJECT_SOURCE_DIR}/plugins/generative-common/include" "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf")
     install(DIRECTORY "${PROJECT_BINARY_DIR}/bin/harmonic_atlas.vst3" DESTINATION "." OPTIONAL)

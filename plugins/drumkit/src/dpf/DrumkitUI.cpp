@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "drumkit_params.hpp"
 
@@ -9,6 +10,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -355,6 +358,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     std::array<Rect, kInstrumentCount> stripRects_ {};
     std::array<Rect, kInstrumentCount> muteRects_ {};
@@ -376,19 +383,19 @@ private:
     void drawBackground(const float width, const float height)
     {
         beginPath();
-        fillColor(13, 15, 17, 255);
+        fc(t_.background);
         rect(0.0f, 0.0f, width, height);
         fill();
         closePath();
 
         beginPath();
-        fillColor(31, 35, 38, 255);
+        fc(t_.surface);
         rect(0.0f, 0.0f, width, 436.0f);
         fill();
         closePath();
 
         beginPath();
-        fillColor(78, 126, 133, 26);
+        fc(t_.border.withAlpha(26));
         rect(0.0f, 436.0f, width, height - 436.0f);
         fill();
         closePath();
@@ -398,17 +405,17 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 7.0f);
-        fillColor(18, 22, 25, 238);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(31.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(238, 241, 239, 255);
+        fc(t_.textPrimary);
         text(x + 22.0f, y + 15.0f, "DrumKit", nullptr);
 
         fontSize(13.0f);
-        fillColor(159, 169, 171, 255);
+        fc(t_.textDim);
         text(x + 194.0f, y + 24.0f, "MIDI notes 36, 39, 40, 41, 42, 45, 46, 50, 51, 52, 53", nullptr);
 
         drawLegend(x + w - 242.0f, y + 19.0f, 214.0f, 34.0f);
@@ -418,13 +425,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 7.0f);
-        fillColor(38, 45, 48, 255);
+        fc(t_.surface);
         fill();
         closePath();
 
         fontSize(12.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(209, 218, 216, 255);
+        fc(t_.textPrimary);
         text(x + w * 0.5f, y + h * 0.5f + 1.0f, "select strip | drag level | toggle M", nullptr);
     }
 
@@ -470,7 +477,7 @@ private:
         char noteText[12];
         std::snprintf(noteText, sizeof(noteText), "%u", static_cast<unsigned>(kInstrumentSpecs[index].midiNote));
         fontSize(10.0f);
-        fillColor(132, 143, 145, 255);
+        fc(t_.textDim);
         text(rect.x + rect.w * 0.5f, rect.y + 48.0f, noteText, nullptr);
 
         const Rect meter {rect.x + rect.w * 0.5f - 8.0f, rect.y + 76.0f, 16.0f, 122.0f};
@@ -499,7 +506,7 @@ private:
 
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 6.0f);
-        fillColor(9, 11, 12, 255);
+        fc(t_.background);
         fill();
         closePath();
 
@@ -532,13 +539,13 @@ private:
         if (lit && !muted)
             fillColor(color.r, color.g, color.b, 240);
         else
-            fillColor(26, 31, 33, 255);
+            fc(t_.panel);
         fill();
 
         if (lit && !muted) {
             beginPath();
             circle(cx - r * 0.28f, cy - r * 0.38f, r * 0.32f);
-            fillColor(255, 255, 255, 90);
+            fc(t_.textPrimary.withAlpha(90));
             fill();
         }
     }
@@ -570,12 +577,12 @@ private:
 
         beginPath();
         circle(cx, cy, r);
-        fillColor(22, 28, 31, 255);
+        fc(t_.panel);
         fill();
 
         beginPath();
         arc(cx, cy, r - 2.0f, kStartAng, kStartAng + kSweep, CW);
-        strokeColor(37, 43, 45, 255);
+        sc(t_.controlTrack);
         strokeWidth(2.5f);
         stroke();
 
@@ -612,7 +619,7 @@ private:
 
         fontSize(17.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(232, 237, 235, 255);
+        fc(t_.textPrimary);
         text(x + 18.0f, y + 17.0f, kInstrumentSpecs[index].name, nullptr);
 
         char noteText[48];
@@ -638,11 +645,11 @@ private:
 
         fontSize(17.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(232, 237, 235, 255);
+        fc(t_.textPrimary);
         text(x + 18.0f, y + 17.0f, "Master Bus", nullptr);
 
         fontSize(12.0f);
-        fillColor(148, 158, 160, 255);
+        fc(t_.textDim);
         text(x + 18.0f, y + 42.0f, "fixed pan stage, crush, drive, reverb, output", nullptr);
 
         const Color color {118, 180, 174};
@@ -661,9 +668,9 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 7.0f);
-        fillColor(18, 22, 24, 238);
+        fc(t_.panel);
         fill();
-        strokeColor(48, 56, 58, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -677,7 +684,7 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(210, 217, 215, 255);
+        fc(t_.textPrimary);
         text(rect.x, rect.y - 2.0f, control.label, nullptr);
 
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
@@ -687,7 +694,7 @@ private:
         const float barY = rect.y + 20.0f;
         beginPath();
         roundedRect(rect.x, barY, rect.w, 12.0f, 6.0f);
-        fillColor(37, 43, 45, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
@@ -699,7 +706,7 @@ private:
 
         beginPath();
         roundedRect(rect.x + rect.w * norm - 5.0f, barY - 4.0f, 10.0f, 20.0f, 5.0f);
-        fillColor(236, 241, 238, 255);
+        fc(t_.textPrimary);
         fill();
         closePath();
     }

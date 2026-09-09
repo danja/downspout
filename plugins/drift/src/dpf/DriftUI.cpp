@@ -1,9 +1,12 @@
 #include "generative_panel_ui.hpp"
+#include "downspout/look_and_feel.hpp"
 #include "drift_core.hpp"
 
 #include <cmath>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 class DriftUI : public GenerativePanelUI {
 public:
@@ -15,6 +18,10 @@ public:
             downspout::drift::kParameterCount, 117, 190, 134) {}
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     void onNanoDisplay() override
     {
         using namespace downspout::drift;
@@ -27,7 +34,7 @@ private:
         char status[48] {};
         std::snprintf(status, sizeof(status), "%d events this block",
                       static_cast<int>(std::lround(value(kStatusEvents))));
-        fillColor(176, 185, 180, 255);
+        fc(t_.textDim);
         fontSize(11);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         text(102, 116, status, nullptr);

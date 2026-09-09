@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include <algorithm>
 #include <array>
@@ -8,6 +9,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -211,6 +214,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     std::array<Rect, kSliders.size()> sliderRects_ {};
     Rect muteButtonRect_ {};
@@ -220,13 +227,13 @@ private:
     void drawBackground(const float width, const float height)
     {
         beginPath();
-        fillColor(10, 16, 24, 255);
+        fc(t_.background);
         rect(0.0f, 0.0f, width, height);
         fill();
         closePath();
 
         beginPath();
-        fillColor(19, 37, 51, 255);
+        fc(t_.panel);
         rect(0.0f, 0.0f, width, height * 0.32f);
         fill();
         closePath();
@@ -242,17 +249,17 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 20.0f);
-        fillColor(18, 28, 39, 235);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(30.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(239, 242, 245, 255);
+        fc(t_.textPrimary);
         text(x + 22.0f, y + 16.0f, "P-Mix", nullptr);
 
         fontSize(13.0f);
-        fillColor(151, 168, 183, 255);
+        fc(t_.textDim);
         text(x + 24.0f, y + 50.0f,
              DOWNSPOUT_PLUGIN_VERSION_STRING "  |  Probabilistic transport-locked mixer",
              nullptr);
@@ -262,13 +269,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 20.0f);
-        fillColor(17, 23, 31, 248);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(228, 232, 236, 255);
+        fc(t_.textPrimary);
         text(x + 22.0f, y + 18.0f, "Control Surface", nullptr);
 
         const float innerX = x + 22.0f;
@@ -313,7 +320,7 @@ private:
 
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(240, 243, 246, 255);
+        fc(t_.textPrimary);
         text(rect.x + 14.0f, rect.y + rect.h * 0.5f + 1.0f, def.label, nullptr);
 
         fontSize(12.0f);
@@ -329,21 +336,21 @@ private:
     {
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(161, 175, 187, 255);
+        fc(t_.textDim);
         text(rect.x, rect.y - 24.0f, def.label, nullptr);
 
         fontSize(11.0f);
-        fillColor(113, 130, 145, 255);
+        fc(t_.textDim);
         text(rect.x, rect.y + 26.0f, def.hint, nullptr);
 
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(233, 236, 239, 255);
+        fc(t_.textPrimary);
         const std::string valueText = formatValue(def, value);
         text(rect.x + rect.w, rect.y - 24.0f, valueText.c_str(), nullptr);
 
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 10.0f);
-        fillColor(40, 49, 61, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
@@ -359,13 +366,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 20.0f);
-        fillColor(19, 26, 36, 248);
+        fc(t_.panel.withAlpha(248));
         fill();
         closePath();
 
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(228, 232, 236, 255);
+        fc(t_.textPrimary);
         text(x + 20.0f, y + 18.0f, "Behavior", nullptr);
 
         const float weightsY = y + 58.0f;
@@ -378,7 +385,7 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, h * 0.5f);
-        fillColor(34, 43, 55, 255);
+        fc(t_.surface);
         fill();
         closePath();
 
@@ -395,7 +402,7 @@ private:
 
         beginPath();
         rect(x + maintainW, y, fadeW, h);
-        fillColor(217, 162, 70, 255);
+        fc(t_.accent);
         fill();
         closePath();
 
@@ -407,7 +414,7 @@ private:
 
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(146, 161, 176, 255);
+        fc(t_.textDim);
         text(x, y - 18.0f, "Transition weighting", nullptr);
     }
 
@@ -425,7 +432,7 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(154, 169, 183, 255);
+        fc(t_.textDim);
         const std::string cycleText = "Transitions every " + std::to_string(static_cast<int>(std::lround(values_[kParamGranularity]))) + " bar(s)";
         text(x, y + 170.0f, cycleText.c_str(), nullptr);
     }
@@ -434,7 +441,7 @@ private:
     {
         beginPath();
         roundedRect(x, y + 18.0f, w, 12.0f, 6.0f);
-        fillColor(36, 44, 55, 255);
+        fc(t_.buttonFace);
         fill();
         closePath();
 
@@ -446,7 +453,7 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(221, 227, 232, 255);
+        fc(t_.textPrimary);
         text(x, y, label, nullptr);
 
         char buf[32];
@@ -460,17 +467,17 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 16.0f);
-        fillColor(14, 20, 27, 255);
+        fc(t_.background);
         fill();
         closePath();
 
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(229, 233, 237, 255);
+        fc(t_.textPrimary);
         text(x + 14.0f, y + 14.0f, "Use on running transport.", nullptr);
 
         fontSize(12.0f);
-        fillColor(148, 163, 178, 255);
+        fc(t_.textDim);
         text(x + 14.0f, y + 40.0f, "Mute Output forces silence", nullptr);
         text(x + 14.0f, y + 58.0f, "immediately for a quick check.", nullptr);
         text(x + 14.0f, y + 80.0f, "Maintain, Fade, and Cut", nullptr);
@@ -532,7 +539,7 @@ private:
     {
         beginPath();
         roundedRect(r.x, r.y, r.w, r.h, 8.0f);
-        fillColor(28, 48, 68, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
@@ -545,7 +552,7 @@ private:
 
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(200, 220, 240, 255);
+        fc(t_.textPrimary);
         text(r.x + 14.0f, r.y + r.h * 0.5f + 1.0f, "Seed", nullptr);
 
         const auto s = static_cast<uint32_t>(values_[kParamSeed] * static_cast<float>(0xFFFFFFFFu));

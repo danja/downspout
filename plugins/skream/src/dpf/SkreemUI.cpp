@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "skream_core.hpp"
 #include "skream_presets.hpp"
@@ -12,6 +13,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -213,6 +216,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_{};
     int  currentPreset_ = 0;
     bool dropdownOpen_  = false;
@@ -304,7 +311,7 @@ private:
     void drawBackground(float W, float H)
     {
         beginPath();
-        fillColor(18, 18, 22, 255);
+        fc(t_.background);
         rect(0, 0, W, H);
         fill();
         closePath();
@@ -313,7 +320,7 @@ private:
     void drawHeader(float W)
     {
         beginPath();
-        fillColor(28, 28, 36, 255);
+        fc(t_.panel);
         rect(0, 0, W, 50.0f);
         fill();
         closePath();
@@ -325,11 +332,11 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(130, 130, 120, 255);
+        fc(t_.textDim);
         text(kPad + 110.0f, 25.0f, "scream filter  |  MIDI CC via Drift", nullptr);
 
         beginPath();
-        strokeColor(60, 60, 70, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         moveTo(0, 50.0f); lineTo(W, 50.0f);
         stroke();
@@ -338,7 +345,7 @@ private:
         // Section labels
         fontSize(10.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(100, 100, 95, 255);
+        fc(t_.border);
         text(kPad, 54.0f, "PARAMETER", nullptr);
         text(kSliderX, 54.0f, "VALUE", nullptr);
 
@@ -351,12 +358,12 @@ private:
 
         beginPath();
         roundedRect(r.x, r.y, r.w, r.h, 5.0f);
-        fillColor(38, 38, 52, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
         beginPath();
-        strokeColor(80, 80, 100, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         roundedRect(r.x, r.y, r.w, r.h, 5.0f);
         stroke();
@@ -364,12 +371,12 @@ private:
 
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(200, 200, 190, 255);
+        fc(t_.textPrimary);
         text(r.x + 8.0f, r.y + r.h * 0.5f,
              downspout::skream::kPresets[currentPreset_].name, nullptr);
 
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
-        fillColor(160, 160, 150, 255);
+        fc(t_.textDim);
         text(r.x + r.w - 8.0f, r.y + r.h * 0.5f, dropdownOpen_ ? "\xe2\x96\xb2" : "\xe2\x96\xbc", nullptr);
     }
 
@@ -382,12 +389,12 @@ private:
 
         beginPath();
         rect(btn.x, listTop, btn.w, listH);
-        fillColor(28, 28, 40, 245);
+        fc(t_.panel);
         fill();
         closePath();
 
         beginPath();
-        strokeColor(80, 80, 100, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         rect(btn.x, listTop, btn.w, listH);
         stroke();
@@ -400,7 +407,7 @@ private:
             if (active) {
                 beginPath();
                 rect(btn.x, iy, btn.w, 24.0f);
-                fillColor(200, 80, 35, 200);
+                fc(t_.warning.withAlpha(200));
                 fill();
                 closePath();
             }
@@ -421,7 +428,7 @@ private:
 
             if (s > 0) {
                 beginPath();
-                strokeColor(35, 35, 42, 255);
+                sc(t_.surface);
                 strokeWidth(1.0f);
                 moveTo(kPad, tr.y - 24.0f); lineTo(W - kPad, tr.y - 24.0f);
                 stroke();
@@ -430,17 +437,17 @@ private:
 
             fontSize(12.0f);
             textAlign(ALIGN_LEFT | ALIGN_TOP);
-            fillColor(190, 190, 180, 255);
+            fc(t_.textPrimary);
             text(kPad, labelY, def.label, nullptr);
 
             fontSize(11.0f);
             textAlign(ALIGN_RIGHT | ALIGN_TOP);
-            fillColor(220, 160, 60, 255);
+            fc(t_.accent);
             text(W - kPad, labelY, formatSliderValue(def, values_[def.index]).c_str(), nullptr);
 
             beginPath();
             roundedRect(tr.x, tr.y, tr.w, tr.h, 7.0f);
-            fillColor(40, 40, 50, 255);
+            fc(t_.surface);
             fill();
             closePath();
 
@@ -460,7 +467,7 @@ private:
         // Divider
         const float divY = kCCTop - 16.0f;
         beginPath();
-        strokeColor(50, 50, 62, 255);
+        sc(t_.controlTrack);
         strokeWidth(1.0f);
         moveTo(kPad, divY); lineTo(W - kPad, divY);
         stroke();
@@ -468,7 +475,7 @@ private:
 
         fontSize(10.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(100, 100, 95, 255);
+        fc(t_.border);
         text(kPad, divY + 3.0f, "MIDI CC  (0 = off, controlled by Drift)", nullptr);
 
         for (int s = 0; s < static_cast<int>(kCCSliders.size()); ++s) {
@@ -478,7 +485,7 @@ private:
 
             fontSize(11.0f);
             textAlign(ALIGN_LEFT | ALIGN_TOP);
-            fillColor(160, 160, 150, 255);
+            fc(t_.textDim);
             text(kPad, labelY, def.label, nullptr);
 
             fontSize(11.0f);
@@ -488,7 +495,7 @@ private:
 
             beginPath();
             roundedRect(tr.x, tr.y, tr.w, tr.h, 7.0f);
-            fillColor(32, 32, 42, 255);
+            fc(t_.surface);
             fill();
             closePath();
 

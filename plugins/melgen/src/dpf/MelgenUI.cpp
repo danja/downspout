@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include <algorithm>
 #include <array>
@@ -7,6 +8,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -285,6 +288,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     std::array<Rect, kSliders.size()> sliderRects_ {};
     std::array<Rect, kSelectors.size()> selectorRects_ {};
@@ -296,13 +303,13 @@ private:
     void drawBackground(float width, float height)
     {
         beginPath();
-        fillColor(12, 15, 18, 255);
+        fc(t_.background);
         rect(0.0f, 0.0f, width, height);
         fill();
         closePath();
 
         beginPath();
-        fillColor(24, 32, 34, 255);
+        fc(t_.panel);
         rect(0.0f, 0.0f, width, 112.0f);
         fill();
         closePath();
@@ -312,17 +319,17 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 7.0f);
-        fillColor(18, 24, 27, 244);
+        fc(t_.panel.withAlpha(244));
         fill();
         closePath();
 
         fontSize(32.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(239, 242, 238, 255);
+        fc(t_.textPrimary);
         text(x + 22.0f, y + 18.0f, "MelGen", nullptr);
 
         fontSize(13.0f);
-        fillColor(154, 170, 170, 255);
+        fc(t_.textDim);
         text(x + 176.0f, y + 30.0f, "phrase-aware MIDI melody generator with period structure", nullptr);
     }
 
@@ -330,9 +337,9 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 7.0f);
-        fillColor(18, 22, 25, 238);
+        fc(t_.panel);
         fill();
-        strokeColor(47, 57, 59, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -343,7 +350,7 @@ private:
         drawPanel(x, y, w, h);
         fontSize(16.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(230, 235, 231, 255);
+        fc(t_.textPrimary);
         text(x + 18.0f, y + 16.0f, "Line Controls", nullptr);
 
         const float innerX = x + 18.0f;
@@ -360,7 +367,7 @@ private:
     {
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(139, 152, 153, 255);
+        fc(t_.textDim);
         text(x, y, group.title, nullptr);
 
         const float gap = 10.0f;
@@ -380,7 +387,7 @@ private:
         drawPanel(x, y, w, h);
         fontSize(16.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(230, 235, 231, 255);
+        fc(t_.textPrimary);
         text(x + 18.0f, y + 16.0f, "Phrase Structure", nullptr);
 
         float rowY = y + 62.0f;
@@ -408,7 +415,7 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(207, 216, 213, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y, def.label, nullptr);
 
         textAlign(ALIGN_CENTER | ALIGN_TOP);
@@ -425,7 +432,7 @@ private:
 
         beginPath();
         roundedRect(trackX, trackY, trackW, trackH, 6.0f);
-        fillColor(37, 44, 47, 255);
+        fc(t_.surface);
         fill();
         closePath();
 
@@ -437,7 +444,7 @@ private:
 
         beginPath();
         roundedRect(rect.x + 10.0f, knobY - 5.0f, rect.w - 20.0f, 10.0f, 5.0f);
-        fillColor(236, 241, 237, 255);
+        fc(t_.textPrimary);
         fill();
         closePath();
     }
@@ -448,7 +455,7 @@ private:
 
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 6.0f);
-        fillColor(31, 38, 41, 255);
+        fc(t_.surface);
         fill();
         strokeColor(openSelector_ >= 0 && kSelectors[openSelector_].index == def.index ? 111 : 57, 185, 169, 220);
         strokeWidth(1.0f);
@@ -457,12 +464,12 @@ private:
 
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(139, 152, 153, 255);
+        fc(t_.textDim);
         text(rect.x + 12.0f, rect.y + rect.h * 0.5f + 1.0f, def.label, nullptr);
 
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(229, 234, 231, 255);
+        fc(t_.textPrimary);
         text(rect.x + 112.0f, rect.y + rect.h * 0.5f + 1.0f, def.items[item], nullptr);
     }
 
@@ -470,13 +477,13 @@ private:
     {
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 7.0f);
-        fillColor(76, 129, 124, 255);
+        fc(t_.buttonFace);
         fill();
         closePath();
 
         fontSize(13.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(242, 246, 243, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 1.0f, def.label, nullptr);
     }
 
@@ -499,7 +506,7 @@ private:
 
         beginPath();
         roundedRect(menu.x, menu.y, menu.w, menu.h, 7.0f);
-        fillColor(17, 22, 24, 252);
+        fc(t_.panel);
         fill();
         strokeColor(88, 165, 153, 255);
         strokeWidth(1.0f);
@@ -517,7 +524,7 @@ private:
             }
             fontSize(12.0f);
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-            fillColor(225, 232, 229, 255);
+            fc(t_.textPrimary);
             text(menu.x + 10.0f, rowY + itemH * 0.5f + 1.0f, def.items[i], nullptr);
         }
     }

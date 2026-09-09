@@ -1,9 +1,12 @@
 #include "generative_panel_ui.hpp"
+#include "downspout/look_and_feel.hpp"
 #include "guardian_core.hpp"
 
 #include <cmath>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 class GuardianUI : public GenerativePanelUI {
 public:
@@ -15,6 +18,10 @@ public:
             downspout::guardian::kParameterCount, 230, 112, 94) {}
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     void onNanoDisplay() override
     {
         using namespace downspout::guardian;
@@ -87,7 +94,7 @@ private:
 
         // Background
         beginPath();
-        fillColor(13, 17, 21, 255);
+        fc(t_.background);
         roundedRect(x, y, w, h, 5);
         fill();
 
@@ -96,7 +103,7 @@ private:
         const float maxDb =  6.0f;
         const float rangeDb = maxDb - minDb;
 
-        fillColor(80, 90, 98, 255);
+        fc(t_.border);
         fontSize(9.0f);
         textAlign(ALIGN_CENTER | ALIGN_TOP);
         text(x + w * 0.5f, y + 4.0f, "INPUT →", nullptr);
@@ -110,7 +117,7 @@ private:
 
         // 0 dB reference lines
         beginPath();
-        strokeColor(45, 55, 63, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         moveTo(dbToX(0.0f), y);
         lineTo(dbToX(0.0f), y + h);
@@ -132,7 +139,7 @@ private:
 
         // Unity gain diagonal (grey dashed look — draw as series of short segments)
         beginPath();
-        strokeColor(55, 65, 73, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         const int steps = 40;
         for (int i = 0; i < steps; ++i) {
@@ -201,17 +208,17 @@ private:
     {
         using namespace downspout::guardian;
         beginPath();
-        fillColor(18, 23, 28, 255);
+        fc(t_.background);
         roundedRect(x, y, w, h, 4);
         fill();
-        fillColor(131, 143, 151, 255);
+        fc(t_.textDim);
         fontSize(9.5f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         text(x + 8.0f, y + h * 0.5f, "GR", nullptr);
         const float reduction = std::clamp(value(kStatusReduction), 0.0f, 48.0f);
         const float tw = w - 60.0f;
         beginPath();
-        fillColor(30, 37, 44, 255);
+        fc(t_.surface);
         roundedRect(x + 28.0f, y + 6.0f, tw, h - 12.0f, 3);
         fill();
         beginPath();
@@ -220,7 +227,7 @@ private:
         fill();
         char buf[24] {};
         std::snprintf(buf, sizeof(buf), "%.1f dB", reduction);
-        fillColor(200, 210, 205, 255);
+        fc(t_.textPrimary);
         fontSize(10.0f);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
         text(x + w - 4.0f, y + h * 0.5f, buf, nullptr);
@@ -230,10 +237,10 @@ private:
     {
         using namespace downspout::guardian;
         beginPath();
-        fillColor(18, 23, 28, 255);
+        fc(t_.background);
         roundedRect(x, y, w, h, 4);
         fill();
-        fillColor(131, 143, 151, 255);
+        fc(t_.textDim);
         fontSize(9.5f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         text(x + 8.0f, y + h * 0.5f, "TP", nullptr);
@@ -242,7 +249,7 @@ private:
         const float normal = (db + 120.0f) / 126.0f;
         const float tw = w - 60.0f;
         beginPath();
-        fillColor(30, 37, 44, 255);
+        fc(t_.surface);
         roundedRect(x + 28.0f, y + 6.0f, tw, h - 12.0f, 3);
         fill();
         beginPath();
@@ -252,7 +259,7 @@ private:
         fill();
         char buf[28] {};
         std::snprintf(buf, sizeof(buf), "%.1f dBFS", db);
-        fillColor(200, 210, 205, 255);
+        fc(t_.textPrimary);
         fontSize(10.0f);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
         text(x + w - 4.0f, y + h * 0.5f, buf, nullptr);
@@ -261,7 +268,7 @@ private:
     void drawNeutralLamp(const float x, const float y, const float w, const char* label, const bool on)
     {
         beginPath();
-        fillColor(25, 31, 37, 255);
+        fc(t_.panel);
         roundedRect(x, y, w, 37, 5);
         fill();
         beginPath();

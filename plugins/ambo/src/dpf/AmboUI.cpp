@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "ambo_engine.hpp"
 #include "ambo_params.hpp"
@@ -10,6 +11,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -332,6 +335,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     std::array<Rect, kUtilityParamOrder.size()> sliderRects_ {};
     std::array<Rect, downspout::ambo::kChainCount> chainRects_ {};
@@ -377,19 +384,19 @@ private:
     void drawBackground(float width, float height)
     {
         beginPath();
-        fillColor(13, 17, 22, 255);
+        fc(t_.background);
         rect(0.0f, 0.0f, width, height);
         fill();
         closePath();
 
         beginPath();
-        fillColor(21, 29, 35, 255);
+        fc(t_.panel);
         rect(0.0f, 0.0f, width, height * 0.34f);
         fill();
         closePath();
 
         beginPath();
-        fillColor(51, 102, 99, 30);
+        fc(t_.border.withAlpha(30));
         rect(width - 340.0f, 0.0f, 340.0f, height);
         fill();
         closePath();
@@ -399,17 +406,17 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 18.0f);
-        fillColor(26, 35, 45, 240);
+        fc(t_.panel.withAlpha(240));
         fill();
         closePath();
 
         fontSize(31.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(239, 242, 245, 255);
+        fc(t_.textPrimary);
         text(x + 20.0f, y + 15.0f, "Ambo", nullptr);
 
         fontSize(13.0f);
-        fillColor(160, 174, 184, 255);
+        fc(t_.textDim);
         text(x + 22.0f, y + 53.0f, "Ambient module chain with time smear, spectral haze, shimmer, delay, tape, drive, and feedback", nullptr);
 
     }
@@ -418,13 +425,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 18.0f);
-        fillColor(22, 28, 36, 248);
+        fc(t_.panel.withAlpha(248));
         fill();
         closePath();
 
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(230, 235, 239, 255);
+        fc(t_.textPrimary);
         text(x + 18.0f, y + 15.0f, "Chain", nullptr);
 
         const int activeChain = clampi(static_cast<int>(std::lround(values_[kParamChain])),
@@ -471,9 +478,9 @@ private:
 
             beginPath();
             roundedRect(cellX, laneY, cellW, cellH, 14.0f);
-            fillColor(27, 38, 44, 255);
+            fc(t_.surface);
             fill();
-            strokeColor(80, 111, 113, 150);
+            sc(t_.border.withAlpha(150));
             strokeWidth(1.0f);
             stroke();
             closePath();
@@ -483,7 +490,7 @@ private:
             const float handleY = controlBottom - (controlBottom - controlTop) * level;
             beginPath();
             roundedRect(cellX + cellW * 0.5f - 3.0f, controlTop, 6.0f, controlBottom - controlTop, 3.0f);
-            fillColor(42, 57, 63, 255);
+            fc(t_.controlTrack);
             fill();
             closePath();
 
@@ -498,17 +505,17 @@ private:
 
             fontSize(11.0f);
             textAlign(ALIGN_LEFT | ALIGN_TOP);
-            fillColor(132, 148, 154, 255);
+            fc(t_.textDim);
             const std::string indexText = std::to_string(module + 1);
             text(cellX + 12.0f, laneY + 10.0f, indexText.c_str(), nullptr);
 
             fontSize(16.0f);
-            fillColor(229, 237, 234, 255);
+            fc(t_.textPrimary);
             text(cellX + 12.0f, laneY + 32.0f, parameterShortName(order[module]), nullptr);
 
             fontSize(11.0f);
             textAlign(ALIGN_RIGHT | ALIGN_TOP);
-            fillColor(188, 210, 201, 255);
+            fc(t_.textDim);
             char buf[16];
             std::snprintf(buf, sizeof(buf), "%.0f%%", level * 100.0f);
             text(cellX + cellW - 12.0f, laneY + 10.0f, buf, nullptr);
@@ -519,13 +526,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 18.0f);
-        fillColor(22, 28, 36, 248);
+        fc(t_.panel.withAlpha(248));
         fill();
         closePath();
 
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(230, 235, 239, 255);
+        fc(t_.textPrimary);
         text(x + 18.0f, y + 16.0f, "Feedback / Mix / Output", nullptr);
 
         const float rowH = 92.0f;
@@ -551,11 +558,11 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(225, 230, 234, 255);
+        fc(t_.textPrimary);
         text(rect.x, rect.y - 27.0f, slider.label, nullptr);
 
         fontSize(10.0f);
-        fillColor(125, 140, 150, 255);
+        fc(t_.textDim);
         text(rect.x, rect.y - 12.0f, slider.hint, nullptr);
 
         const std::string valueText = formatValue(slider, value);
@@ -566,7 +573,7 @@ private:
 
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 7.0f);
-        fillColor(36, 45, 53, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
@@ -590,7 +597,7 @@ private:
 
         beginPath();
         circle(handleX, rect.y + rect.h * 0.5f, knobRadius);
-        fillColor(241, 244, 238, 255);
+        fc(t_.textPrimary);
         fill();
         closePath();
     }
@@ -599,13 +606,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 18.0f);
-        fillColor(22, 28, 36, 248);
+        fc(t_.panel.withAlpha(248));
         fill();
         closePath();
 
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(230, 235, 239, 255);
+        fc(t_.textPrimary);
         text(x + 18.0f, y + 16.0f, "Mix / Feedback XY", nullptr);
 
         fieldRect_ = {x + 24.0f, y + 66.0f, w - 48.0f, h - 120.0f};
@@ -619,7 +626,7 @@ private:
 
         beginPath();
         roundedRect(fieldRect_.x, fieldRect_.y, fieldRect_.w, fieldRect_.h, 14.0f);
-        fillColor(17, 23, 29, 255);
+        fc(t_.background);
         fill();
         strokeColor(draggingField_ ? 122 : 72, draggingField_ ? 210 : 111, draggingField_ ? 187 : 122, draggingField_ ? 230 : 140);
         strokeWidth(draggingField_ ? 2.0f : 1.0f);
@@ -633,7 +640,7 @@ private:
             beginPath();
             moveTo(tx, fieldRect_.y + 10.0f);
             lineTo(tx, fieldRect_.y + fieldRect_.h - 10.0f);
-            strokeColor(46, 60, 68, 120);
+            sc(t_.border.withAlpha(120));
             strokeWidth(1.0f);
             stroke();
             closePath();
@@ -641,7 +648,7 @@ private:
             beginPath();
             moveTo(fieldRect_.x + 10.0f, ty);
             lineTo(fieldRect_.x + fieldRect_.w - 10.0f, ty);
-            strokeColor(46, 60, 68, 120);
+            sc(t_.border.withAlpha(120));
             strokeWidth(1.0f);
             stroke();
             closePath();
@@ -652,14 +659,14 @@ private:
         lineTo(px, fieldRect_.y + fieldRect_.h - 10.0f);
         moveTo(fieldRect_.x + 10.0f, py);
         lineTo(fieldRect_.x + fieldRect_.w - 10.0f, py);
-        strokeColor(188, 212, 204, 120);
+        sc(t_.textPrimary.withAlpha(120));
         strokeWidth(1.0f);
         stroke();
         closePath();
 
         beginPath();
         circle(px, py, draggingField_ ? 12.0f : 10.0f);
-        fillColor(228, 235, 221, 245);
+        fc(t_.textPrimary.withAlpha(245));
         fill();
         strokeColor(92, 188, 170, 240);
         strokeWidth(2.0f);
@@ -668,7 +675,7 @@ private:
 
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(138, 153, 161, 255);
+        fc(t_.textDim);
         text(fieldRect_.x, fieldRect_.y + fieldRect_.h + 12.0f, "X: Mix", nullptr);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
         text(fieldRect_.x + fieldRect_.w, fieldRect_.y + fieldRect_.h + 12.0f, "Y: Feedback", nullptr);
