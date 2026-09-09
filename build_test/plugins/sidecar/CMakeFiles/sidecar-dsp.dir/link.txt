@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsidecar-dsp.a "CMakeFiles/sidecar-dsp.dir/src/dpf/SidecarPlugin.cpp.o"
+/usr/bin/ranlib libsidecar-dsp.a

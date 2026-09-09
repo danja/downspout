@@ -1,0 +1,2 @@
+/usr/bin/ar qc libm_mix-ui.a "CMakeFiles/m_mix-ui.dir/src/dpf/MMixUI.cpp.o"
+/usr/bin/ranlib libm_mix-ui.a

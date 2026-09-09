@@ -1,0 +1,2 @@
+/usr/bin/ar qc libxoxolo-ui.a "CMakeFiles/xoxolo-ui.dir/src/dpf/XoxoloUI.cpp.o"
+/usr/bin/ranlib libxoxolo-ui.a

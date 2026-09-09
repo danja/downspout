@@ -1,0 +1,2 @@
+/usr/bin/ar qc libtuney_vst-ui.a "CMakeFiles/tuney_vst-ui.dir/src/dpf/TuneyVstUI.cpp.o"
+/usr/bin/ranlib libtuney_vst-ui.a

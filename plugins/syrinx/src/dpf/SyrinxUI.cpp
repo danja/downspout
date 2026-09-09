@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "syrinx_params.hpp"
 #include "syrinx_engine.hpp"
@@ -11,6 +12,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -305,6 +308,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount>    values_{};
     std::array<Rect, kVoiceControlCount>  controlRects_{};
     std::array<Rect, kMasterControlCount> masterRects_{};
@@ -322,23 +329,23 @@ private:
 
     void drawBackground(float W, float H)
     {
-        beginPath(); fillColor(13, 15, 17, 255); rect(0, 0, W, H); fill(); closePath();
+        beginPath(); fc(t_.background); rect(0, 0, W, H); fill(); closePath();
     }
 
     void drawHeader(float x, float y, float w, float h)
     {
         beginPath(); roundedRect(x, y, w, h, 7.0f);
-        fillColor(18, 22, 25, 245); fill();
-        strokeColor(42, 52, 55, 255); strokeWidth(1.0f); stroke();
+        fc(t_.panel); fill();
+        sc(t_.border); strokeWidth(1.0f); stroke();
         closePath();
 
         // Plugin name
         fontSize(30.0f); textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(238, 241, 239, 255);
+        fc(t_.textPrimary);
         text(x + 22.0f, y + h * 0.5f, "Syrinx", nullptr);
 
         // Subtitle
-        fontSize(12.0f); fillColor(90, 120, 118, 200);
+        fontSize(12.0f); fc(t_.border.withAlpha(200));
         text(x + 150.0f, y + h * 0.5f, "Mindlin-Laje avian vocal model · chromatic MIDI", nullptr);
 
         const Color& col  = kPresetColors[static_cast<std::size_t>(selectedPreset_)];
@@ -371,9 +378,9 @@ private:
         // Randomize button
         randomizeRect_ = { x + w - 188.0f, y + 10.0f, 166.0f, h - 20.0f };
         beginPath(); roundedRect(randomizeRect_.x, randomizeRect_.y, randomizeRect_.w, randomizeRect_.h, 6.0f);
-        fillColor(38, 86, 66, 255); fill(); closePath();
+        fc(t_.controlTrack); fill(); closePath();
         fontSize(13.0f); textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(175, 225, 195, 255);
+        fc(t_.textDim);
         text(randomizeRect_.x + randomizeRect_.w * 0.5f, randomizeRect_.y + randomizeRect_.h * 0.5f,
              "RANDOMIZE", nullptr);
     }
@@ -387,7 +394,7 @@ private:
         const float listH = static_cast<float>(kPresetCount) * kDropdownItemH + 6.0f;
 
         beginPath(); roundedRect(listX, listY, listW, listH, 7.0f);
-        fillColor(18, 22, 25, 252); fill();
+        fc(t_.panel); fill();
         strokeColor(selCol.r, selCol.g, selCol.b, 180); strokeWidth(1.5f); stroke(); closePath();
 
         for (std::size_t i = 0; i < kPresetCount; ++i) {
@@ -438,7 +445,7 @@ private:
             beginPath();
             moveTo(startX, sepY);
             lineTo(startX + voiceRowW, sepY);
-            strokeColor(42, 52, 56, 160); strokeWidth(1.0f); stroke(); closePath();
+            sc(t_.border.withAlpha(160)); strokeWidth(1.0f); stroke(); closePath();
         }
 
         // Voice sliders — rows 1-3
@@ -468,7 +475,7 @@ private:
         beginPath();
         moveTo(divX, y + 12.0f);
         lineTo(divX, y + h - 12.0f);
-        strokeColor(52, 62, 66, 200); strokeWidth(1.0f); stroke(); closePath();
+        sc(t_.border.withAlpha(200)); strokeWidth(1.0f); stroke(); closePath();
 
         // Master sliders (span full height)
         const float masterStartX = startX + voiceRowW + kMasterGap;
@@ -507,7 +514,7 @@ private:
 
         // Track background
         beginPath(); roundedRect(trackX, trackY, kTrackW, tH, 6.0f);
-        fillColor(28, 33, 36, 255); fill(); closePath();
+        fc(t_.panel); fill(); closePath();
 
         // Filled portion (bottom up to thumb)
         if (fillH > 3.0f) {

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_orchid_core.a CMakeFiles/downspout_orchid_core.dir/src/orchid_engine.cpp.o CMakeFiles/downspout_orchid_core.dir/src/orchid_serialization.cpp.o
+/usr/bin/ranlib libdownspout_orchid_core.a

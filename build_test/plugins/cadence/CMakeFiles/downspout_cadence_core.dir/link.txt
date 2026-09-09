@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_cadence_core.a CMakeFiles/downspout_cadence_core.dir/src/cadence_ai_state.cpp.o CMakeFiles/downspout_cadence_core.dir/src/cadence_comping.cpp.o CMakeFiles/downspout_cadence_core.dir/src/cadence_engine.cpp.o CMakeFiles/downspout_cadence_core.dir/src/cadence_harmony.cpp.o CMakeFiles/downspout_cadence_core.dir/src/cadence_serialization.cpp.o CMakeFiles/downspout_cadence_core.dir/src/cadence_transport.cpp.o CMakeFiles/downspout_cadence_core.dir/src/cadence_variation.cpp.o
+/usr/bin/ranlib libdownspout_cadence_core.a

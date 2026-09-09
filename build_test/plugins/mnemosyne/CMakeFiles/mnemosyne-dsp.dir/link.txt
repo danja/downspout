@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmnemosyne-dsp.a "CMakeFiles/mnemosyne-dsp.dir/src/dpf/MnemosynePlugin.cpp.o"
+/usr/bin/ranlib libmnemosyne-dsp.a

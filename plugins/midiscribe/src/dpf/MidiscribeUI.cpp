@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 #include "midiscribe_params.hpp"
 
 #include <array>
@@ -7,6 +8,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 using namespace downspout::midiscribe;
 
@@ -101,6 +104,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParamCount> values_ {};
     std::string exportPath_ { kDefaultExportPath };
     bool awaitingFile_ = false;
@@ -129,7 +136,7 @@ private:
     void drawBackground(float w, float h)
     {
         beginPath();
-        fillColor(10, 16, 24, 255);
+        fc(t_.background);
         rect(0.0f, 0.0f, w, h);
         fill();
         closePath();
@@ -138,14 +145,14 @@ private:
     void drawHeader(float w)
     {
         beginPath();
-        fillColor(19, 37, 51, 255);
+        fc(t_.panel);
         rect(0.0f, 0.0f, w, 56.0f);
         fill();
         closePath();
 
         fontSize(21.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(239, 242, 245, 255);
+        fc(t_.textPrimary);
         text(20.0f, 28.0f, "MIDISCRIBE", nullptr);
 
         fontSize(12.0f);
@@ -159,13 +166,13 @@ private:
         constexpr float y = 56.0f, h = 48.0f, pad = 20.0f;
 
         beginPath();
-        fillColor(12, 20, 30, 255);
+        fc(t_.background);
         rect(0.0f, y, w, h);
         fill();
         closePath();
 
         beginPath();
-        strokeColor(28, 48, 66, 255);
+        sc(t_.controlTrack);
         strokeWidth(1.0f);
         moveTo(0.0f, y);
         lineTo(w, y);
@@ -185,7 +192,7 @@ private:
         std::snprintf(bpmBuf, sizeof(bpmBuf), "%.1f BPM", bpm());
         fontSize(13.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(130, 170, 195, 255);
+        fc(t_.textDim);
         text(w * 0.5f, y + h * 0.5f, bpmBuf, nullptr);
 
         // Playing indicator (right)
@@ -237,7 +244,7 @@ private:
 
         fontSize(14.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(235, 225, 225, 255);
+        fc(t_.textPrimary);
         text(dotX + 14.0f, dotY, isArmed ? "STOP" : "RECORD", nullptr);
 
         // Write / Save button
@@ -247,7 +254,7 @@ private:
 
         beginPath();
         roundedRect(writeRect_.x, writeRect_.y, writeRect_.w, writeRect_.h, 6.0f);
-        fillColor(16, 34, 22, 255);
+        fc(t_.background);
         fill();
         strokeColor(55, 150, 75, 255);
         strokeWidth(1.5f);
@@ -275,16 +282,16 @@ private:
         // Path display
         beginPath();
         roundedRect(pad, boxY, pathW, boxH, 4.0f);
-        fillColor(12, 22, 32, 255);
+        fc(t_.background);
         fill();
-        strokeColor(36, 64, 84, 255);
+        sc(t_.controlTrack);
         strokeWidth(1.0f);
         stroke();
         closePath();
 
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(150, 185, 205, 255);
+        fc(t_.textDim);
         save();
         scissor(pad + 4.0f, boxY, pathW - 8.0f, boxH);
         text(pad + 8.0f, midY, exportPath_.c_str(), nullptr);
@@ -295,9 +302,9 @@ private:
 
         beginPath();
         roundedRect(browseRect_.x, browseRect_.y, browseRect_.w, browseRect_.h, 4.0f);
-        fillColor(20, 38, 52, 255);
+        fc(t_.surface);
         fill();
-        strokeColor(55, 95, 130, 255);
+        sc(t_.buttonFace);
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -317,7 +324,7 @@ private:
 
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(110, 140, 160, 255);
+        fc(t_.textDim);
         text(pad, midY, "WINDOW", nullptr);
 
         constexpr float btnW = 52.0f, btnH = 28.0f, gap = 6.0f;
@@ -352,12 +359,12 @@ private:
             + static_cast<float>(kCaptureBeatCount) * (btnW + gap) - gap + 8.0f;
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(90, 120, 140, 255);
+        fc(t_.border);
         text(suffixX, midY, "beats", nullptr);
 
         // Bottom separator
         beginPath();
-        strokeColor(22, 40, 56, 255);
+        sc(t_.surface);
         strokeWidth(1.0f);
         moveTo(0.0f, static_cast<float>(getHeight()) - 1.0f);
         lineTo(w, static_cast<float>(getHeight()) - 1.0f);

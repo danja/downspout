@@ -1,0 +1,2 @@
+/usr/bin/ar qc libfloozy.a CMakeFiles/floozy.dir/_dpf_empty.c.o
+/usr/bin/ranlib libfloozy.a

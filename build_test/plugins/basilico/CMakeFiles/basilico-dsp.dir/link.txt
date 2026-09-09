@@ -1,0 +1,2 @@
+/usr/bin/ar qc libbasilico-dsp.a "CMakeFiles/basilico-dsp.dir/src/dpf/BasilicoPlugin.cpp.o"
+/usr/bin/ranlib libbasilico-dsp.a

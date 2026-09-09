@@ -1,9 +1,12 @@
 #include "generative_panel_ui.hpp"
+#include "downspout/look_and_feel.hpp"
 #include "resonance_garden_core.hpp"
 
 #include <cmath>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 class ResonanceGardenUI : public GenerativePanelUI {
 public:
@@ -15,6 +18,10 @@ public:
             downspout::resonance_garden::kParameterCount, 102, 190, 126) {}
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     void onNanoDisplay() override
     {
         using namespace downspout::resonance_garden;
@@ -71,7 +78,7 @@ private:
             textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
             text(cx, cy, pitchClassName(root + i), nullptr);
         }
-        fillColor(130, 143, 151, 255);
+        fc(t_.textDim);
         fontSize(11);
         textAlign(ALIGN_CENTER | ALIGN_BOTTOM);
         text(x + w * 0.5f, y + h - 8, active > 0 ? "MIDI / fallback voices active" : "Waiting for audio excitation", nullptr);

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libpaunchlad-dsp.a "CMakeFiles/paunchlad-dsp.dir/src/dpf/PaunchLadPlugin.cpp.o"
+/usr/bin/ranlib libpaunchlad-dsp.a

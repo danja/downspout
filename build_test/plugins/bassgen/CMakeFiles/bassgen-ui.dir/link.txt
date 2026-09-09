@@ -1,0 +1,2 @@
+/usr/bin/ar qc libbassgen-ui.a "CMakeFiles/bassgen-ui.dir/src/dpf/BassgenUI.cpp.o"
+/usr/bin/ranlib libbassgen-ui.a

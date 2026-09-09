@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_gremlin_driver_core.a CMakeFiles/downspout_gremlin_driver_core.dir/src/gremlin_driver_processor.cpp.o
+/usr/bin/ranlib libdownspout_gremlin_driver_core.a

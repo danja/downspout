@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdrumkit.a CMakeFiles/drumkit.dir/_dpf_empty.c.o
+/usr/bin/ranlib libdrumkit.a

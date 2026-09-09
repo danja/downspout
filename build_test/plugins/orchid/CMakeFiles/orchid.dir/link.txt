@@ -1,0 +1,2 @@
+/usr/bin/ar qc liborchid.a CMakeFiles/orchid.dir/_dpf_empty.c.o
+/usr/bin/ranlib liborchid.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_drumkit_core.a CMakeFiles/downspout_drumkit_core.dir/src/drumkit_engine.cpp.o
+/usr/bin/ranlib libdownspout_drumkit_core.a

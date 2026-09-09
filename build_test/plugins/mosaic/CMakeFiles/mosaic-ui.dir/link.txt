@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmosaic-ui.a "CMakeFiles/mosaic-ui.dir/src/dpf/MosaicUI.cpp.o"
+/usr/bin/ranlib libmosaic-ui.a

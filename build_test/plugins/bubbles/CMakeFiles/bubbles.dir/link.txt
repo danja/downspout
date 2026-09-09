@@ -1,0 +1,2 @@
+/usr/bin/ar qc libbubbles.a CMakeFiles/bubbles.dir/_dpf_empty.c.o
+/usr/bin/ranlib libbubbles.a

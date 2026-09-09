@@ -1,0 +1,2 @@
+/usr/bin/ar qc libconductor-ui.a "CMakeFiles/conductor-ui.dir/src/dpf/ConductorUI.cpp.o"
+/usr/bin/ranlib libconductor-ui.a

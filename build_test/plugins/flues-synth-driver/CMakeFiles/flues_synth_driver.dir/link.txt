@@ -1,0 +1,2 @@
+/usr/bin/ar qc libflues_synth_driver.a CMakeFiles/flues_synth_driver.dir/_dpf_empty.c.o
+/usr/bin/ranlib libflues_synth_driver.a

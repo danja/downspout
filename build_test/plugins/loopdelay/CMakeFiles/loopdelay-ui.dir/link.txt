@@ -1,0 +1,2 @@
+/usr/bin/ar qc libloopdelay-ui.a "CMakeFiles/loopdelay-ui.dir/src/dpf/LoopdelayUI.cpp.o"
+/usr/bin/ranlib libloopdelay-ui.a

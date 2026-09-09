@@ -1,9 +1,12 @@
 #include "generative_panel_ui.hpp"
+#include "downspout/look_and_feel.hpp"
 #include "oracle_core.hpp"
 
 #include <cmath>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 class OracleUI : public GenerativePanelUI {
 public:
@@ -15,6 +18,10 @@ public:
             downspout::oracle::kParameterCount, 90, 182, 214) {}
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     void onNanoDisplay() override
     {
         using namespace downspout::oracle;
@@ -65,7 +72,7 @@ private:
     {
         using namespace downspout::oracle;
         beginPath();
-        fillColor(18, 23, 28, 255);
+        fc(t_.background);
         roundedRect(x, y, w, h, 6);
         fill();
         const float level = std::clamp(value(kStatusLevel), 0.0f, 1.0f);
@@ -81,7 +88,7 @@ private:
                         (w - 26) / 24.0f, bh, 2);
             fill();
         }
-        fillColor(130, 144, 153, 255);
+        fc(t_.textDim);
         fontSize(10);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         text(x + 10, y + 8, "LOW", nullptr);

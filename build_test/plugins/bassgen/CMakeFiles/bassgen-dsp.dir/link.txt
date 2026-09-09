@@ -1,0 +1,2 @@
+/usr/bin/ar qc libbassgen-dsp.a "CMakeFiles/bassgen-dsp.dir/src/dpf/BassgenPlugin.cpp.o"
+/usr/bin/ranlib libbassgen-dsp.a

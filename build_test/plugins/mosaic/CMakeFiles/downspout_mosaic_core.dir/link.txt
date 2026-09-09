@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_mosaic_core.a CMakeFiles/downspout_mosaic_core.dir/src/mosaic_core.cpp.o
+/usr/bin/ranlib libdownspout_mosaic_core.a

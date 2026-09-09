@@ -1,0 +1,2 @@
+/usr/bin/ar qc liborbit-dsp.a "CMakeFiles/orbit-dsp.dir/src/dpf/OrbitPlugin.cpp.o"
+/usr/bin/ranlib liborbit-dsp.a

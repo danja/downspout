@@ -1,0 +1,2 @@
+/usr/bin/ar qc libloopdelay-dsp.a "CMakeFiles/loopdelay-dsp.dir/src/dpf/LoopdelayPlugin.cpp.o"
+/usr/bin/ranlib libloopdelay-dsp.a

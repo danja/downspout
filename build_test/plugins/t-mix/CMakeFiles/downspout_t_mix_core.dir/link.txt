@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_t_mix_core.a CMakeFiles/downspout_t_mix_core.dir/src/t_mix_engine.cpp.o CMakeFiles/downspout_t_mix_core.dir/src/t_mix_serialization.cpp.o
+/usr/bin/ranlib libdownspout_t_mix_core.a

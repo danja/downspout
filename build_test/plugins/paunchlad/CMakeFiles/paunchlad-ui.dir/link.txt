@@ -1,0 +1,2 @@
+/usr/bin/ar qc libpaunchlad-ui.a "CMakeFiles/paunchlad-ui.dir/src/dpf/PaunchLadUI.cpp.o"
+/usr/bin/ranlib libpaunchlad-ui.a

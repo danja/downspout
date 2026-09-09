@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmidiscribe-dsp.a "CMakeFiles/midiscribe-dsp.dir/src/dpf/MidiscribePlugin.cpp.o"
+/usr/bin/ranlib libmidiscribe-dsp.a

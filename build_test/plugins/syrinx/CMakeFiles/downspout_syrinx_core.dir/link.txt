@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_syrinx_core.a CMakeFiles/downspout_syrinx_core.dir/src/syrinx_engine.cpp.o
+/usr/bin/ranlib libdownspout_syrinx_core.a

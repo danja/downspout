@@ -1,0 +1,2 @@
+/usr/bin/ar qc librift.a CMakeFiles/rift.dir/_dpf_empty.c.o
+/usr/bin/ranlib librift.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcampione.a CMakeFiles/campione.dir/_dpf_empty.c.o
+/usr/bin/ranlib libcampione.a

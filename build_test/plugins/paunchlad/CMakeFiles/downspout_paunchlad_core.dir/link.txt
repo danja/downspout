@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_paunchlad_core.a CMakeFiles/downspout_paunchlad_core.dir/src/paunchlad_processor.cpp.o
+/usr/bin/ranlib libdownspout_paunchlad_core.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc liblightverb-ui.a "CMakeFiles/lightverb-ui.dir/src/dpf/LightverbUI.cpp.o"
+/usr/bin/ranlib liblightverb-ui.a

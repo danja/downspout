@@ -1,0 +1,2 @@
+/usr/bin/ar qc libgremlin_driver-ui.a "CMakeFiles/gremlin_driver-ui.dir/src/dpf/GremlinDriverUI.cpp.o"
+/usr/bin/ranlib libgremlin_driver-ui.a

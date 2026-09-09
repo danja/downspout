@@ -1,0 +1,2 @@
+/usr/bin/ar qc libgremlin_driver-dsp.a "CMakeFiles/gremlin_driver-dsp.dir/src/dpf/GremlinDriverPlugin.cpp.o"
+/usr/bin/ranlib libgremlin_driver-dsp.a

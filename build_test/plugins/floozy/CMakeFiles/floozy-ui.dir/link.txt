@@ -1,0 +1,2 @@
+/usr/bin/ar qc libfloozy-ui.a "CMakeFiles/floozy-ui.dir/src/dpf/FloozyUI.cpp.o"
+/usr/bin/ranlib libfloozy-ui.a

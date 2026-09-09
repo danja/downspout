@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmidiscribe-ui.a "CMakeFiles/midiscribe-ui.dir/src/dpf/MidiscribeUI.cpp.o"
+/usr/bin/ranlib libmidiscribe-ui.a

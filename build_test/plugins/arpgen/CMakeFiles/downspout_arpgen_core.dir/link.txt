@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_arpgen_core.a CMakeFiles/downspout_arpgen_core.dir/src/arpgen_core.cpp.o
+/usr/bin/ranlib libdownspout_arpgen_core.a

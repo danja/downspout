@@ -1,0 +1,2 @@
+/usr/bin/ar qc libxoxolo-dsp.a "CMakeFiles/xoxolo-dsp.dir/src/dpf/XoxoloPlugin.cpp.o"
+/usr/bin/ranlib libxoxolo-dsp.a

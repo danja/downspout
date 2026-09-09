@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_loopdelay_core.a CMakeFiles/downspout_loopdelay_core.dir/src/loopdelay_core.cpp.o CMakeFiles/downspout_loopdelay_core.dir/src/loopdelay_serialization.cpp.o
+/usr/bin/ranlib libdownspout_loopdelay_core.a

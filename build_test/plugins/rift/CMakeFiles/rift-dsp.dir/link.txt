@@ -1,0 +1,2 @@
+/usr/bin/ar qc librift-dsp.a "CMakeFiles/rift-dsp.dir/src/dpf/RiftPlugin.cpp.o"
+/usr/bin/ranlib librift-dsp.a

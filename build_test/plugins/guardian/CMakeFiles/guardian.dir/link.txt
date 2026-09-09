@@ -1,0 +1,2 @@
+/usr/bin/ar qc libguardian.a CMakeFiles/guardian.dir/_dpf_empty.c.o
+/usr/bin/ranlib libguardian.a

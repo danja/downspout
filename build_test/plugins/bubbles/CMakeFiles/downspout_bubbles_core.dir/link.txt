@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_bubbles_core.a CMakeFiles/downspout_bubbles_core.dir/src/bubbles_engine.cpp.o CMakeFiles/downspout_bubbles_core.dir/src/bubbles_serialization.cpp.o
+/usr/bin/ranlib libdownspout_bubbles_core.a

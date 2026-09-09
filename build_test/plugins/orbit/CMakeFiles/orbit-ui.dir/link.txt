@@ -1,0 +1,2 @@
+/usr/bin/ar qc liborbit-ui.a "CMakeFiles/orbit-ui.dir/src/dpf/OrbitUI.cpp.o"
+/usr/bin/ranlib liborbit-ui.a

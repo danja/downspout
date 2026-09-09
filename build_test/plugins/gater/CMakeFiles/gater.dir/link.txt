@@ -1,0 +1,2 @@
+/usr/bin/ar qc libgater.a CMakeFiles/gater.dir/_dpf_empty.c.o
+/usr/bin/ranlib libgater.a

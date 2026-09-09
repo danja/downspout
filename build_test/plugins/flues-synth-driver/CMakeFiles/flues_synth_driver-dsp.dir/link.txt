@@ -1,0 +1,2 @@
+/usr/bin/ar qc libflues_synth_driver-dsp.a "CMakeFiles/flues_synth_driver-dsp.dir/src/dpf/FlueSynthDriverPlugin.cpp.o"
+/usr/bin/ranlib libflues_synth_driver-dsp.a

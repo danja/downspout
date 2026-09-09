@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_polymeter_core.a CMakeFiles/downspout_polymeter_core.dir/src/polymeter_core.cpp.o
+/usr/bin/ranlib libdownspout_polymeter_core.a

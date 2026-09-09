@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include <algorithm>
 #include <array>
@@ -7,6 +8,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -243,6 +246,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     std::array<Rect,  kSliders.size()> sliderRects_ {};
     Rect busMidiToggleRect_ {};
@@ -255,29 +262,29 @@ private:
 
     void drawBackground(float W, float H)
     {
-        beginPath(); fillColor(9, 13, 19, 255); rect(0, 0, W, H); fill(); closePath();
-        beginPath(); fillColor(17, 30, 44, 255); rect(0, 0, W, H * 0.22f); fill(); closePath();
+        beginPath(); fc(t_.background); rect(0, 0, W, H); fill(); closePath();
+        beginPath(); fc(t_.panel); rect(0, 0, W, H * 0.22f); fill(); closePath();
     }
 
     void drawHeader(float x, float y, float w, float h)
     {
-        beginPath(); roundedRect(x, y, w, h, 16.0f); fillColor(15, 23, 33, 240); fill(); closePath();
+        beginPath(); roundedRect(x, y, w, h, 16.0f); fc(t_.panel); fill(); closePath();
 
         fontSize(26.0f); textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(232, 238, 245, 255);
+        fc(t_.textPrimary);
         text(x + 18.0f, y + h * 0.38f, "Bassops", nullptr);
 
-        fontSize(11.0f); fillColor(130, 152, 172, 255);
+        fontSize(11.0f); fc(t_.textDim);
         text(x + 20.0f, y + h * 0.76f,
              DOWNSPOUT_PLUGIN_VERSION_STRING "  |  Sidechain ducker + mid/side EQ  |  CC 34 duck · CC 35 wet · CC 19 gate", nullptr);
     }
 
     void drawSliderPanel(float x, float y, float w, float h)
     {
-        beginPath(); roundedRect(x, y, w, h, 16.0f); fillColor(14, 20, 28, 248); fill(); closePath();
+        beginPath(); roundedRect(x, y, w, h, 16.0f); fc(t_.panel); fill(); closePath();
 
         fontSize(12.0f); textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(210, 220, 230, 255);
+        fc(t_.textPrimary);
         text(x + 16.0f, y + 14.0f, "Controls", nullptr);
 
         const float innerX = x + 14.0f;
@@ -300,7 +307,7 @@ private:
         const float trackX = x + (w - trackW) * 0.5f;
 
         fontSize(11.0f); textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(150, 168, 184, 255);
+        fc(t_.textDim);
         std::string lbl(def.label);
         const auto nl = lbl.find('\n');
         if (nl != std::string::npos) {
@@ -313,7 +320,7 @@ private:
         const float trackTop = y + 28.0f;
         const float trackH   = h - 54.0f;
         beginPath(); roundedRect(trackX, trackTop, trackW, trackH, trackW * 0.5f);
-        fillColor(30, 40, 52, 255); fill(); closePath();
+        fc(t_.surface); fill(); closePath();
 
         const float t     = toNorm(def, value);
         const float fillH = std::max(trackW, trackH * t);
@@ -323,20 +330,20 @@ private:
         fill(); closePath();
 
         fontSize(9.0f); textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(120, 136, 150, 180);
+        fc(t_.textDim.withAlpha(180));
         text(trackX + trackW * 0.5f, trackTop + 4.0f, def.unit, nullptr);
 
         fontSize(11.0f); textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(225, 232, 240, 255);
+        fc(t_.textPrimary);
         text(x + w * 0.5f, trackTop + trackH + 6.0f, fmtSlider(def, value).c_str(), nullptr);
     }
 
     void drawMeterPanel(float x, float y, float w, float h)
     {
-        beginPath(); roundedRect(x, y, w, h, 16.0f); fillColor(11, 17, 25, 248); fill(); closePath();
+        beginPath(); roundedRect(x, y, w, h, 16.0f); fc(t_.panel); fill(); closePath();
 
         fontSize(12.0f); textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(210, 220, 230, 255);
+        fc(t_.textPrimary);
         text(x + 16.0f, y + 14.0f, "Ducker", nullptr);
 
         const float innerX = x + 14.0f;
@@ -361,11 +368,11 @@ private:
         const float barH   = h - 44.0f;
 
         fontSize(11.0f); textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(190, 205, 218, 255);
+        fc(t_.textPrimary);
         text(x + w * 0.5f, y + 2.0f, def.label, nullptr);
 
         beginPath(); roundedRect(barX, barTop, barW, barH, barW * 0.5f);
-        fillColor(25, 33, 43, 255); fill(); closePath();
+        fc(t_.panel); fill(); closePath();
 
         const float fillFrac = meterFill(def, value);
         if (fillFrac > 0.0f) {
@@ -381,7 +388,7 @@ private:
 
         if (!def.isInverted) {
             const float tickY = barTop;
-            beginPath(); strokeColor(180, 180, 180, 60); strokeWidth(1.0f);
+            beginPath(); sc(t_.textDim.withAlpha(60)); strokeWidth(1.0f);
             moveTo(barX - 2.0f, tickY); lineTo(barX + barW + 2.0f, tickY);
             stroke(); closePath();
         }
@@ -402,12 +409,12 @@ private:
         constexpr Tick ticks[] = {{0.0f},{-6.0f},{-12.0f},{-24.0f},{-48.0f}};
 
         fontSize(8.0f); textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
-        fillColor(80, 100, 118, 200);
+        fc(t_.buttonFace.withAlpha(200));
 
         for (const Tick& t : ticks) {
             const float frac = (t.dB + 60.0f) / 60.0f;
             const float ty   = barTop + barH * (1.0f - frac);
-            beginPath(); strokeColor(50, 65, 80, 160); strokeWidth(1.0f);
+            beginPath(); sc(t_.border.withAlpha(160)); strokeWidth(1.0f);
             moveTo(x, ty); lineTo(x + 6.0f, ty); stroke(); closePath();
             char buf[8]; std::snprintf(buf, sizeof(buf), "%d", static_cast<int>(t.dB));
             text(x - 1.0f, ty, buf, nullptr);
@@ -417,10 +424,10 @@ private:
     void drawBusPanel(float bx, float by, float bw, float bh)
     {
         beginPath(); roundedRect(bx, by, bw, bh, 12.0f);
-        fillColor(12, 18, 26, 248); fill(); closePath();
+        fc(t_.panel); fill(); closePath();
 
         fontSize(10.0f); textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(90, 115, 140, 220);
+        fc(t_.border.withAlpha(220));
         text(bx + 14.0f, by + 8.0f,
              "PRODUCER CONTROL BUS  ·  CC 19 lifecycle  ·  CC 34 duck depth  ·  CC 35 wet", nullptr);
 
@@ -443,7 +450,7 @@ private:
         std::snprintf(liveText, sizeof(liveText), "duck %.0f%%  wet %.0f%%",
                       values_[kParamStatusDuckDepth], values_[kParamStatusWet]);
         fontSize(10.0f); textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(130, 152, 172, 200);
+        fc(t_.textDim.withAlpha(200));
         text(bx + bw - 14.0f, by + 8.0f, liveText, nullptr);
     }
 
@@ -453,8 +460,8 @@ private:
         const float boxY  = y + 2.0f;
 
         beginPath(); roundedRect(x, boxY, boxSz, boxSz, 3.0f);
-        fillColor(22, 32, 44, 255); fill();
-        strokeColor(55, 75, 95, 200); strokeWidth(1.0f); stroke();
+        fc(t_.panel); fill();
+        sc(t_.border.withAlpha(200)); strokeWidth(1.0f); stroke();
         closePath();
 
         if (on) {
@@ -485,16 +492,16 @@ private:
         rect = {x, y, w, boxH + 14.0f};
 
         beginPath(); roundedRect(x, y, w, boxH, 4.0f);
-        fillColor(22, 32, 44, 255); fill();
-        strokeColor(55, 75, 95, 200); strokeWidth(1.0f); stroke();
+        fc(t_.panel); fill();
+        sc(t_.border.withAlpha(200)); strokeWidth(1.0f); stroke();
         closePath();
 
         fontSize(11.0f); textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(200, 215, 228, 255);
+        fc(t_.textPrimary);
         text(x + w * 0.5f, y + boxH * 0.5f, label, nullptr);
 
         fontSize(8.5f); textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(75, 95, 115, 180);
+        fc(t_.buttonFace.withAlpha(180));
         text(x + w * 0.5f, y + boxH + 2.0f, "scroll", nullptr);
     }
 
@@ -504,8 +511,8 @@ private:
         rect = {x, y, w, h};
 
         beginPath(); roundedRect(x, y, w, h, 4.0f);
-        fillColor(35, 50, 68, 255); fill();
-        strokeColor(70, 100, 130, 180); strokeWidth(1.0f); stroke();
+        fc(t_.controlTrack); fill();
+        sc(t_.buttonFace.withAlpha(180)); strokeWidth(1.0f); stroke();
         closePath();
 
         fontSize(11.0f); textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
@@ -524,7 +531,7 @@ private:
         if (on)
             fillColor(r, g, b, 255);
         else
-            fillColor(28, 38, 50, 255);
+            fc(t_.surface);
         fill(); closePath();
 
         if (on) {
@@ -533,7 +540,7 @@ private:
         }
 
         fontSize(8.5f); textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(100, 120, 140, 200);
+        fc(t_.border.withAlpha(200));
         text(cx, cy + sz * 0.5f + 2.0f, label, nullptr);
     }
 

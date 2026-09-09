@@ -1,0 +1,2 @@
+/usr/bin/ar qc libarpgen-ui.a "CMakeFiles/arpgen-ui.dir/src/dpf/ArpgenUI.cpp.o"
+/usr/bin/ranlib libarpgen-ui.a

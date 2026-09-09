@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdrift.a CMakeFiles/drift.dir/_dpf_empty.c.o
+/usr/bin/ranlib libdrift.a

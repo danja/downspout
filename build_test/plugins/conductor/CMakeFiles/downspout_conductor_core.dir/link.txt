@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_conductor_core.a CMakeFiles/downspout_conductor_core.dir/src/conductor_core.cpp.o
+/usr/bin/ranlib libdownspout_conductor_core.a

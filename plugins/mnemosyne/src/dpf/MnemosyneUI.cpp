@@ -1,4 +1,5 @@
 #include "generative_panel_ui.hpp"
+#include "downspout/look_and_feel.hpp"
 #include "mnemosyne_core.hpp"
 
 #include <cmath>
@@ -6,6 +7,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 class MnemosyneUI : public GenerativePanelUI {
 public:
@@ -17,6 +20,10 @@ public:
             downspout::mnemosyne::kParameterCount, 176, 132, 202) {}
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     void onNanoDisplay() override
     {
         using namespace downspout::mnemosyne;
@@ -48,7 +55,7 @@ private:
             std::snprintf(status, sizeof(status), "Play MIDI while transport runs to capture the first phrase.");
         else
             std::snprintf(status, sizeof(status), "%d phrases stored · %d events in the phrase being captured", phraseCount, captured);
-        fillColor(153, 164, 172, 255);
+        fc(t_.textDim);
         fontSize(11);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         text(38, 204, status, nullptr);

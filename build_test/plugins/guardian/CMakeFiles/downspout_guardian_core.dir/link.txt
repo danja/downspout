@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_guardian_core.a CMakeFiles/downspout_guardian_core.dir/src/guardian_core.cpp.o
+/usr/bin/ranlib libdownspout_guardian_core.a

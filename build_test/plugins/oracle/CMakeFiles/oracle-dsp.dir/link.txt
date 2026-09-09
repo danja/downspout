@@ -1,0 +1,2 @@
+/usr/bin/ar qc liboracle-dsp.a "CMakeFiles/oracle-dsp.dir/src/dpf/OraclePlugin.cpp.o"
+/usr/bin/ranlib liboracle-dsp.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmidiscribe.a CMakeFiles/midiscribe.dir/_dpf_empty.c.o
+/usr/bin/ranlib libmidiscribe.a

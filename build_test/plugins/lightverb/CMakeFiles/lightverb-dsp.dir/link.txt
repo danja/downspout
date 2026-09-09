@@ -1,0 +1,2 @@
+/usr/bin/ar qc liblightverb-dsp.a "CMakeFiles/lightverb-dsp.dir/src/dpf/LightverbPlugin.cpp.o"
+/usr/bin/ranlib liblightverb-dsp.a

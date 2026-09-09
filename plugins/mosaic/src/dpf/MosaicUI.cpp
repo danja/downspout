@@ -1,4 +1,5 @@
 #include "generative_panel_ui.hpp"
+#include "downspout/look_and_feel.hpp"
 #include "mosaic_core.hpp"
 
 #include <array>
@@ -7,6 +8,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 class MosaicUI : public GenerativePanelUI {
 public:
@@ -18,6 +21,10 @@ public:
             downspout::mosaic::kParameterCount, 220, 166, 84) {}
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     static constexpr std::array<const char*, 4> kStateKeys {
         "sample_1", "sample_2", "sample_3", "sample_4"
     };
@@ -85,7 +92,7 @@ private:
         fill();
         char heading[20] {};
         std::snprintf(heading, sizeof(heading), "SLOT %d", slot + 1);
-        fillColor(220, 226, 222, 255);
+        fc(t_.textPrimary);
         fontSize(11);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         text(x + 10, y + 8, heading, nullptr);
@@ -109,11 +116,11 @@ private:
     {
         using namespace downspout::mosaic;
         beginPath();
-        fillColor(18, 23, 28, 255);
+        fc(t_.background);
         roundedRect(x, y, w, h, 6);
         fill();
         beginPath();
-        strokeColor(100, 112, 121, 255);
+        sc(t_.border);
         strokeWidth(1.2f);
         for (int i = 0; i <= 120; ++i) {
             const float t = static_cast<float>(i) / 120.0f;
@@ -139,10 +146,10 @@ private:
         stroke();
         const float grain = std::clamp(value(kGrainSize) / 0.25f, 0.01f, 1.0f) * sliceW;
         beginPath();
-        fillColor(238, 240, 234, 155);
+        fc(t_.textPrimary.withAlpha(155));
         roundedRect(x + 10, y + h - 28, std::max(3.0f, grain), 7, 3);
         fill();
-        fillColor(132, 144, 152, 255);
+        fc(t_.textDim);
         fontSize(10);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         text(x + 12, y + 10, "SELECTED SLICE", nullptr);

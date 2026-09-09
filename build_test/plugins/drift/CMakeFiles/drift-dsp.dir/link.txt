@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdrift-dsp.a "CMakeFiles/drift-dsp.dir/src/dpf/DriftPlugin.cpp.o"
+/usr/bin/ranlib libdrift-dsp.a

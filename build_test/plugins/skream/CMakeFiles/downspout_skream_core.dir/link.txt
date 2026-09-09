@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_skream_core.a CMakeFiles/downspout_skream_core.dir/src/skream_engine.cpp.o CMakeFiles/downspout_skream_core.dir/src/skream_serialization.cpp.o
+/usr/bin/ranlib libdownspout_skream_core.a

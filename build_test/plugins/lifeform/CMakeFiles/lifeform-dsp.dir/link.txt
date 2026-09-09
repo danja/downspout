@@ -1,0 +1,2 @@
+/usr/bin/ar qc liblifeform-dsp.a "CMakeFiles/lifeform-dsp.dir/src/dpf/LifeformPlugin.cpp.o"
+/usr/bin/ranlib liblifeform-dsp.a

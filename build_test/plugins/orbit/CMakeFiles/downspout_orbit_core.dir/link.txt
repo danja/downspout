@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_orbit_core.a CMakeFiles/downspout_orbit_core.dir/src/orbit_core.cpp.o
+/usr/bin/ranlib libdownspout_orbit_core.a

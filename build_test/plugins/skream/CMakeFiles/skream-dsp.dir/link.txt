@@ -1,0 +1,2 @@
+/usr/bin/ar qc libskream-dsp.a "CMakeFiles/skream-dsp.dir/src/dpf/SkreemPlugin.cpp.o"
+/usr/bin/ranlib libskream-dsp.a

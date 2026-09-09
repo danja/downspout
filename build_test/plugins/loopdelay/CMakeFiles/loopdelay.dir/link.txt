@@ -1,0 +1,2 @@
+/usr/bin/ar qc libloopdelay.a CMakeFiles/loopdelay.dir/_dpf_empty.c.o
+/usr/bin/ranlib libloopdelay.a

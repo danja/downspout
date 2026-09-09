@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmosaic-dsp.a "CMakeFiles/mosaic-dsp.dir/src/dpf/MosaicPlugin.cpp.o"
+/usr/bin/ranlib libmosaic-dsp.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_bassops_core.a CMakeFiles/downspout_bassops_core.dir/src/bassops_engine.cpp.o CMakeFiles/downspout_bassops_core.dir/src/bassops_serialization.cpp.o
+/usr/bin/ranlib libdownspout_bassops_core.a

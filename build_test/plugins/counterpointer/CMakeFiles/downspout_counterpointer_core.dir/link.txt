@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_counterpointer_core.a CMakeFiles/downspout_counterpointer_core.dir/src/counterpointer_engine.cpp.o CMakeFiles/downspout_counterpointer_core.dir/src/counterpointer_serialization.cpp.o CMakeFiles/downspout_counterpointer_core.dir/src/counterpointer_transport.cpp.o
+/usr/bin/ranlib libdownspout_counterpointer_core.a

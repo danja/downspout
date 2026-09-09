@@ -1,0 +1,2 @@
+/usr/bin/ar qc libbassops-ui.a "CMakeFiles/bassops-ui.dir/src/dpf/BassopsUI.cpp.o"
+/usr/bin/ranlib libbassops-ui.a

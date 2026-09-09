@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_tuney_vst_core.a CMakeFiles/downspout_tuney_vst_core.dir/src/tuney_vst_engine.cpp.o
+/usr/bin/ranlib libdownspout_tuney_vst_core.a

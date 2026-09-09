@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcanticle-dsp.a "CMakeFiles/canticle-dsp.dir/src/dpf/CanticlePlugin.cpp.o"
+/usr/bin/ranlib libcanticle-dsp.a

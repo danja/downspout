@@ -1,0 +1,2 @@
+/usr/bin/ar qc libtuney_vst.a CMakeFiles/tuney_vst.dir/_dpf_empty.c.o
+/usr/bin/ranlib libtuney_vst.a

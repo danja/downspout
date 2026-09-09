@@ -1,0 +1,2 @@
+/usr/bin/ar qc libbasilico-ui.a "CMakeFiles/basilico-ui.dir/src/dpf/BasilicoUI.cpp.o"
+/usr/bin/ranlib libbasilico-ui.a

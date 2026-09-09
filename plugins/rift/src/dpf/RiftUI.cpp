@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "rift_engine.hpp"
 #include "rift_params.hpp"
@@ -12,6 +13,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -460,6 +463,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     std::array<Rect, kSliders.size()> sliderRects_ {};
     std::array<Rect, kButtons.size()> buttonRects_ {};
@@ -515,13 +522,13 @@ private:
     void drawBackground(const float width, const float height)
     {
         beginPath();
-        fillColor(11, 16, 24, 255);
+        fc(t_.background);
         rect(0.0f, 0.0f, width, height);
         fill();
         closePath();
 
         beginPath();
-        fillColor(20, 29, 38, 255);
+        fc(t_.panel);
         rect(0.0f, 0.0f, width, height * 0.36f);
         fill();
         closePath();
@@ -537,13 +544,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 8.0f);
-        fillColor(16, 23, 31, 232);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(34.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(240, 242, 246, 255);
+        fc(t_.textPrimary);
         text(x + 24.0f, y + 18.0f, "Rift", nullptr);
 
         const ActionType liveAction = currentAction();
@@ -574,7 +581,7 @@ private:
 
         fontSize(16.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(228, 233, 238, 255);
+        fc(t_.textPrimary);
         text(x, y, "Performance Controls", nullptr);
 
         const float buttonY = y + 24.0f;
@@ -606,7 +613,7 @@ private:
     {
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(227, 232, 236, 255);
+        fc(t_.textPrimary);
         text(x, y - 18.0f, "Source", nullptr);
 
         const float gap = 8.0f;
@@ -644,25 +651,25 @@ private:
 
         beginPath();
         roundedRect(sampleLoadRect_.x, sampleLoadRect_.y, sampleLoadRect_.w, sampleLoadRect_.h, 8.0f);
-        fillColor(51, 64, 74, 255);
+        fc(t_.border);
         fill();
         closePath();
 
         beginPath();
         roundedRect(sampleLoadRect_.x, sampleLoadRect_.y, sampleLoadRect_.w, sampleLoadRect_.h, 8.0f);
-        strokeColor(142, 158, 168, 160);
+        sc(t_.textDim.withAlpha(160));
         strokeWidth(1.0f);
         stroke();
         closePath();
 
         fontSize(12.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(239, 243, 246, 255);
+        fc(t_.textPrimary);
         text(sampleLoadRect_.x + sampleLoadRect_.w * 0.5f, y + h * 0.5f + 1.0f, "Load WAV", nullptr);
 
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(143, 158, 169, 255);
+        fc(t_.textDim);
         const std::string label = basenameForPath(samplePath_);
         text(x + 126.0f, y + h * 0.5f + 1.0f, label.c_str(), nullptr);
     }
@@ -687,7 +694,7 @@ private:
 
         fontSize(13.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(246, 247, 249, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 1.0f, def.label, nullptr);
     }
 
@@ -697,11 +704,11 @@ private:
 
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(227, 232, 236, 255);
+        fc(t_.textPrimary);
         text(rect.x, rect.y - 22.0f, def.label, nullptr);
 
         fontSize(11.0f);
-        fillColor(118, 134, 145, 255);
+        fc(t_.textDim);
         text(rect.x, rect.y - 8.0f, def.hint, nullptr);
 
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
@@ -711,7 +718,7 @@ private:
 
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 8.0f);
-        fillColor(37, 48, 58, 255);
+        fc(t_.buttonFace);
         fill();
         closePath();
 
@@ -724,7 +731,7 @@ private:
 
         beginPath();
         circle(rect.x + rect.w * t, rect.y + rect.h * 0.5f, 7.0f);
-        fillColor(248, 239, 229, 255);
+        fc(t_.textPrimary);
         fill();
         closePath();
     }
@@ -744,13 +751,13 @@ private:
     {
         fontSize(16.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(228, 233, 238, 255);
+        fc(t_.textPrimary);
         text(x, y, "Live Summary", nullptr);
 
         const float top = y + 30.0f;
         beginPath();
         roundedRect(x, top, w, h - 30.0f, 8.0f);
-        fillColor(15, 23, 31, 212);
+        fc(t_.panel);
         fill();
         closePath();
 
@@ -775,11 +782,11 @@ private:
     {
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(108, 125, 137, 255);
+        fc(t_.textDim);
         text(x, y, label, nullptr);
 
         fontSize(16.0f);
-        fillColor(239, 242, 245, 255);
+        fc(t_.textPrimary);
         text(x, y + 14.0f, value, nullptr);
     }
 
@@ -789,18 +796,18 @@ private:
 
         fontSize(16.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(228, 233, 238, 255);
+        fc(t_.textPrimary);
         text(x, y, "Sequence", nullptr);
 
         const float top = y + 30.0f;
         beginPath();
         roundedRect(x, top, w, h - 30.0f, 8.0f);
-        fillColor(15, 23, 31, 212);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(12.0f);
-        fillColor(140, 156, 168, 255);
+        fc(t_.textDim);
         text(x + 18.0f, top + 14.0f, "Pick a recipe, then click cells to write repeatable edits", nullptr);
 
         const float stripX = x + 18.0f;
@@ -857,7 +864,7 @@ private:
 
         beginPath();
         rect(stripX, stripY - 8.0f, 2.0f, blockH + 16.0f);
-        fillColor(244, 245, 246, 255);
+        fc(t_.textPrimary);
         fill();
         closePath();
 
@@ -891,7 +898,7 @@ private:
 
             fontSize(10.0f);
             textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-            fillColor(241, 243, 246, 255);
+            fc(t_.textPrimary);
             text(bx + buttonW * 0.5f, y + 13.0f, kSequenceCellKindNames[static_cast<std::size_t>(kind)], nullptr);
         }
     }
@@ -900,13 +907,13 @@ private:
     {
         fontSize(16.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(228, 233, 238, 255);
+        fc(t_.textPrimary);
         text(x, y, "Action Bias", nullptr);
 
         const float top = y + 30.0f;
         beginPath();
         roundedRect(x, top, w, h - 30.0f, 8.0f);
-        fillColor(15, 23, 31, 212);
+        fc(t_.panel);
         fill();
         closePath();
 
@@ -942,7 +949,7 @@ private:
 
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(119, 135, 146, 255);
+        fc(t_.textDim);
         text(x + 18.0f, top + h - 62.0f, "Density decides if a block mutates at all. These bars show the split once it does.", nullptr);
     }
 
@@ -953,17 +960,17 @@ private:
 
         fontSize(16.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(228, 233, 238, 255);
+        fc(t_.textPrimary);
         text(x, y, "Modes", nullptr);
 
         fontSize(11.0f);
-        fillColor(119, 135, 146, 255);
+        fc(t_.textDim);
         text(x + 62.0f, y + 3.0f, "quick parameter recipes for useful failure states", nullptr);
 
         const float top = y + 26.0f;
         beginPath();
         roundedRect(x, top, w, h - 26.0f, 8.0f);
-        fillColor(15, 23, 31, 212);
+        fc(t_.panel);
         fill();
         closePath();
 
@@ -1001,11 +1008,11 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(241, 243, 246, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + 6.0f, preset.label, nullptr);
 
         fontSize(10.0f);
-        fillColor(166, 178, 188, 255);
+        fc(t_.textDim);
         text(rect.x + rect.w * 0.5f, rect.y + 18.0f, preset.detail, nullptr);
     }
 
@@ -1013,18 +1020,18 @@ private:
     {
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(219, 224, 229, 255);
+        fc(t_.textPrimary);
         text(x, y, label, nullptr);
 
         char buf[32];
         std::snprintf(buf, sizeof(buf), "%.0f%%", weight * 100.0f);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(154, 170, 181, 255);
+        fc(t_.textDim);
         text(x + w, y, buf, nullptr);
 
         beginPath();
         roundedRect(x, y + 16.0f, w, 12.0f, 6.0f);
-        fillColor(36, 47, 58, 255);
+        fc(t_.buttonFace);
         fill();
         closePath();
 

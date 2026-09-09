@@ -1,0 +1,2 @@
+/usr/bin/ar qc libvelociloops_static.a CMakeFiles/velociloops_static.dir/src/velociloops.cpp.o
+/usr/bin/ranlib libvelociloops_static.a

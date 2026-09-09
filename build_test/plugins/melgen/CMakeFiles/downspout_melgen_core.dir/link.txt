@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_melgen_core.a CMakeFiles/downspout_melgen_core.dir/src/melgen_engine.cpp.o CMakeFiles/downspout_melgen_core.dir/src/melgen_pattern.cpp.o CMakeFiles/downspout_melgen_core.dir/src/melgen_serialization.cpp.o CMakeFiles/downspout_melgen_core.dir/src/melgen_state.cpp.o CMakeFiles/downspout_melgen_core.dir/src/melgen_transport.cpp.o CMakeFiles/downspout_melgen_core.dir/src/melgen_variation.cpp.o
+/usr/bin/ranlib libdownspout_melgen_core.a

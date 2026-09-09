@@ -1,0 +1,2 @@
+/usr/bin/ar qc liblifeform-ui.a "CMakeFiles/lifeform-ui.dir/src/dpf/LifeformUI.cpp.o"
+/usr/bin/ranlib liblifeform-ui.a

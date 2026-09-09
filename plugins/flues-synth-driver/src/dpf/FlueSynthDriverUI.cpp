@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "flues_synth_driver_params.hpp"
 
@@ -11,6 +12,8 @@
 #include <vector>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -243,6 +246,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, static_cast<std::size_t>(kParamCount)> values_ {};
 
     std::vector<Rect>     knobRects_ {};
@@ -361,8 +368,8 @@ private:
 
         // Panel
         beginPath(); roundedRect(dr.x, dr.y, dr.w, dr.h, 10.0f);
-        fillColor(14, 18, 26, 252); fill();
-        strokeColor(80, 100, 130, 180); strokeWidth(1.2f); stroke(); closePath();
+        fc(t_.panel); fill();
+        sc(t_.buttonFace.withAlpha(180)); strokeWidth(1.2f); stroke(); closePath();
 
         // Items (scissor to panel)
         const int firstVis = static_cast<int>(dropScrollOff_ / kDropItemH);
@@ -389,7 +396,7 @@ private:
             const float sbH = dr.h * dr.h / (static_cast<float>(count) * kDropItemH);
             const float sbY = dr.y + dropScrollOff_ / (static_cast<float>(count) * kDropItemH) * dr.h;
             beginPath(); roundedRect(dr.x + dr.w - 5.0f, sbY, 3.0f, sbH, 1.5f);
-            fillColor(90, 120, 160, 160); fill(); closePath();
+            fc(t_.border.withAlpha(160)); fill(); closePath();
         }
     }
 
@@ -403,22 +410,22 @@ private:
 
     void drawBackground(float W, float H)
     {
-        beginPath(); fillColor(8, 12, 18, 255);
+        beginPath(); fc(t_.background);
         rect(0, 0, W, H); fill(); closePath();
     }
 
     void drawHeader(float x, float y, float w, float h)
     {
         beginPath(); roundedRect(x, y, w, h, 14.0f);
-        fillColor(16, 21, 30, 245); fill(); closePath();
+        fc(t_.panel); fill(); closePath();
         beginPath(); roundedRect(x, y, w, 3.0f, 2.0f);
         fillColor(78, 155, 220, 255); fill(); closePath();
 
         fontSize(20.0f); textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(235, 240, 248, 255);
+        fc(t_.textPrimary);
         text(x + 14.0f, y + h * 0.5f - 7.0f, "FlueSynth Driver", nullptr);
 
-        fontSize(10.5f); fillColor(120, 138, 160, 255);
+        fontSize(10.5f); fc(t_.textDim);
         text(x + 14.0f, y + h * 0.5f + 11.0f,
              "MIDI controller for an external flues-synth instance", nullptr);
 
@@ -438,7 +445,7 @@ private:
     void drawRoutingBar(float x, float y, float w, float h)
     {
         beginPath(); roundedRect(x, y, w, h, 12.0f);
-        fillColor(16, 21, 30, 240); fill(); closePath();
+        fc(t_.panel); fill(); closePath();
 
         const float ih = h - 10.0f;   // item height within bar
         const float iy = y + 5.0f;    // item top y
@@ -679,7 +686,7 @@ private:
                    const char* title, int r, int g, int b)
     {
         beginPath(); roundedRect(x, y, w, h, 14.0f);
-        fillColor(16, 21, 30, 238); fill();
+        fc(t_.panel); fill();
         strokeColor(r, g, b, 38); strokeWidth(1.0f); stroke(); closePath();
         beginPath(); roundedRect(x, y, w, 3.0f, 2.0f);
         fillColor(r, g, b, 195); fill(); closePath();
@@ -700,7 +707,7 @@ private:
         const float norm = clampf((val - k.min) / (k.max - k.min + 1e-6f), 0.0f, 1.0f);
 
         beginPath(); roundedRect(rect.x, rect.y, rect.w, rect.h, 9.0f);
-        fillColor(22, 28, 38, 255); fill(); closePath();
+        fc(t_.panel); fill(); closePath();
 
         const float tx = rect.x + rect.w * 0.35f;
         const float tw = rect.w * 0.30f;
@@ -714,11 +721,11 @@ private:
         fillColor(r, g, b, 200); fill(); closePath();
 
         fontSize(9.5f); textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(200, 210, 220, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + 4.0f, k.label, nullptr);
 
         fontSize(9.0f); textAlign(ALIGN_CENTER | ALIGN_BOTTOM);
-        fillColor(155, 168, 182, 255);
+        fc(t_.textDim);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h - 4.0f,
              fmtValue(k.param, val).c_str(), nullptr);
 
@@ -762,7 +769,7 @@ private:
         strokeColor(r, g, b, 135); strokeWidth(1.0f); stroke(); closePath();
 
         fontSize(10.5f); textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(228, 232, 240, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 1.0f,
              currentLabel, nullptr);
 

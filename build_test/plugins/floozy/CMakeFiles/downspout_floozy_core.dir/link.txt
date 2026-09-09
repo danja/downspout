@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_floozy_core.a CMakeFiles/downspout_floozy_core.dir/src/floozy_engine.cpp.o
+/usr/bin/ranlib libdownspout_floozy_core.a

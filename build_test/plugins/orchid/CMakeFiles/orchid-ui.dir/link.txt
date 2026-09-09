@@ -1,0 +1,2 @@
+/usr/bin/ar qc liborchid-ui.a "CMakeFiles/orchid-ui.dir/src/dpf/OrchidUI.cpp.o"
+/usr/bin/ranlib liborchid-ui.a

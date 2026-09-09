@@ -1,0 +1,2 @@
+/usr/bin/ar qc libworms-dsp.a "CMakeFiles/worms-dsp.dir/src/dpf/WormsPlugin.cpp.o"
+/usr/bin/ranlib libworms-dsp.a

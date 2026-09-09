@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_bassgen_core.a CMakeFiles/downspout_bassgen_core.dir/src/bassgen_engine.cpp.o CMakeFiles/downspout_bassgen_core.dir/src/bassgen_pattern.cpp.o CMakeFiles/downspout_bassgen_core.dir/src/bassgen_serialization.cpp.o CMakeFiles/downspout_bassgen_core.dir/src/bassgen_state.cpp.o CMakeFiles/downspout_bassgen_core.dir/src/bassgen_transport.cpp.o CMakeFiles/downspout_bassgen_core.dir/src/bassgen_variation.cpp.o
+/usr/bin/ranlib libdownspout_bassgen_core.a

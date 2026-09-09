@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_sampleprofile.a CMakeFiles/downspout_sampleprofile.dir/sampleprofile.cpp.o
+/usr/bin/ranlib libdownspout_sampleprofile.a

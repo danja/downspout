@@ -1,0 +1,2 @@
+/usr/bin/ar qc libambo.a CMakeFiles/ambo.dir/_dpf_empty.c.o
+/usr/bin/ranlib libambo.a

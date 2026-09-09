@@ -27,6 +27,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/include/flues/pm"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
+        "${PROJECT_SOURCE_DIR}/include"
     )
 
     install(DIRECTORY "${PROJECT_BINARY_DIR}/bin/floozy.vst3"

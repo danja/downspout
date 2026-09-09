@@ -1,0 +1,2 @@
+/usr/bin/ar qc libground-dsp.a "CMakeFiles/ground-dsp.dir/src/dpf/GroundPlugin.cpp.o"
+/usr/bin/ranlib libground-dsp.a

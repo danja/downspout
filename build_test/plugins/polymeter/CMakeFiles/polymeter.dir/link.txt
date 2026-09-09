@@ -1,0 +1,2 @@
+/usr/bin/ar qc libpolymeter.a CMakeFiles/polymeter.dir/_dpf_empty.c.o
+/usr/bin/ranlib libpolymeter.a

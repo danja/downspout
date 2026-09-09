@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdrift-ui.a "CMakeFiles/drift-ui.dir/src/dpf/DriftUI.cpp.o"
+/usr/bin/ranlib libdrift-ui.a

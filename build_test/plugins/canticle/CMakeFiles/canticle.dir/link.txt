@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcanticle.a CMakeFiles/canticle.dir/_dpf_empty.c.o
+/usr/bin/ranlib libcanticle.a

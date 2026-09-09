@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcampione-ui.a "CMakeFiles/campione-ui.dir/src/dpf/CampioneUI.cpp.o"
+/usr/bin/ranlib libcampione-ui.a

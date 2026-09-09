@@ -1,9 +1,12 @@
 #include "generative_panel_ui.hpp"
+#include "downspout/look_and_feel.hpp"
 #include "polymeter_core.hpp"
 
 #include <cmath>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 class PolymeterUI : public GenerativePanelUI {
 public:
@@ -15,6 +18,10 @@ public:
             downspout::polymeter::kParameterCount, 226, 118, 92) {}
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     void onNanoDisplay() override
     {
         using namespace downspout::polymeter;
@@ -27,7 +34,7 @@ private:
         std::snprintf(status, sizeof(status), "Step %d · %d events this block",
                       static_cast<int>(std::lround(value(kStatusStep))),
                       static_cast<int>(std::lround(value(kStatusEvents))));
-        fillColor(176, 185, 180, 255);
+        fc(t_.textDim);
         fontSize(11);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         text(96, 116, status, nullptr);
@@ -81,11 +88,11 @@ private:
             const bool hit = pulses > 0 && (rotated * pulses) % length < pulses;
             beginPath();
             if (i == current)
-                fillColor(238, 238, 232, 255);
+                fc(t_.textPrimary);
             else if (hit)
                 fillColor(accentR(), accentG(), accentB(), 230);
             else
-                fillColor(49, 57, 64, 255);
+                fc(t_.border);
             roundedRect(x + i * cell + 1, y, std::max(2.0f, cell - 2), h, 2);
             fill();
         }

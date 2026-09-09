@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_oracle_core.a CMakeFiles/downspout_oracle_core.dir/src/oracle_core.cpp.o
+/usr/bin/ranlib libdownspout_oracle_core.a

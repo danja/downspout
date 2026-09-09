@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "lifeform_params.hpp"
 
@@ -8,6 +9,8 @@
 #include <cstdio>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -230,6 +233,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     std::array<bool, kParameterCount> touched_ {};
     std::array<Rect, kCellCount> padRects_ {};
@@ -256,13 +263,13 @@ private:
     {
         beginPath();
         rect(0.0f, 0.0f, width, height);
-        fillColor(8, 14, 11, 255);
+        fc(t_.background);
         fill();
         closePath();
 
         beginPath();
         rect(0.0f, 0.0f, width, 96.0f);
-        fillColor(16, 31, 24, 255);
+        fc(t_.panel);
         fill();
         closePath();
     }
@@ -271,11 +278,11 @@ private:
     {
         fontSize(34.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(235, 250, 230, 255);
+        fc(t_.textPrimary);
         text(28.0f, 22.0f, "Lifeform", nullptr);
 
         fontSize(13.0f);
-        fillColor(158, 194, 170, 255);
+        fc(t_.textDim);
         text(190.0f, 37.0f, "Conway cells breathing MIDI notes one beat at a time", nullptr);
 
         char buffer[96];
@@ -286,7 +293,7 @@ private:
                       static_cast<int>(std::lround(values_[kParamStatusGeneration])));
         fontSize(12.0f);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(214, 232, 214, 255);
+        fc(t_.textPrimary);
         text(width - 28.0f, 38.0f, buffer, nullptr);
     }
 
@@ -351,7 +358,7 @@ private:
         {
             beginPath();
             circle(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f, 5.0f);
-            fillColor(245, 252, 230, 220);
+            fc(t_.textPrimary.withAlpha(220));
             fill();
             closePath();
         }
@@ -366,9 +373,9 @@ private:
 
         beginPath();
         roundedRect(x, y, w, h, 8.0f);
-        fillColor(14, 24, 19, 245);
+        fc(t_.panel);
         fill();
-        strokeColor(51, 83, 62, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -394,21 +401,21 @@ private:
             selectorRects_[i] = rect;
             fontSize(11.0f);
             textAlign(ALIGN_LEFT | ALIGN_TOP);
-            fillColor(157, 188, 166, 255);
+            fc(t_.textDim);
             text(rect.x, rect.y, kSelectorLabels[i], nullptr);
 
             beginPath();
             roundedRect(rect.x, rect.y + 21.0f, rect.w, 35.0f, 6.0f);
-            fillColor(28, 44, 35, 255);
+            fc(t_.surface);
             fill();
-            strokeColor(77, 118, 88, 255);
+            sc(t_.border);
             strokeWidth(1.0f);
             stroke();
             closePath();
 
             fontSize(11.0f);
             textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-            fillColor(232, 246, 226, 255);
+            fc(t_.textPrimary);
             text(rect.x + rect.w * 0.5f, rect.y + 39.0f, selectorName(kSelectorParams[i], values_[kSelectorParams[i]]), nullptr);
         }
     }
@@ -433,12 +440,12 @@ private:
 
         fontSize(10.0f);
         textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(204, 224, 202, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y, slider.label, nullptr);
 
         beginPath();
         roundedRect(trackX, trackY, 10.0f, trackH, 5.0f);
-        fillColor(34, 48, 39, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
@@ -450,7 +457,7 @@ private:
 
         beginPath();
         roundedRect(rect.x + 4.0f, trackY + trackH * (1.0f - norm) - 5.0f, rect.w - 8.0f, 10.0f, 5.0f);
-        fillColor(237, 249, 227, 255);
+        fc(t_.textPrimary);
         fill();
         closePath();
 
@@ -498,7 +505,7 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(236, 248, 228, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 1.0f, label, nullptr);
     }
 

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcounterpointer-dsp.a "CMakeFiles/counterpointer-dsp.dir/src/dpf/CounterpointerPlugin.cpp.o"
+/usr/bin/ranlib libcounterpointer-dsp.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libe_mix.a CMakeFiles/e_mix.dir/_dpf_empty.c.o
+/usr/bin/ranlib libe_mix.a

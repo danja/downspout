@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "luma_params.hpp"
 
@@ -8,6 +9,8 @@
 #include <cstdio>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -218,6 +221,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     std::array<bool, kParameterCount> touched_ {};
     std::array<Rect, kCellCount> padRects_ {};
@@ -241,13 +248,13 @@ private:
     {
         beginPath();
         rect(0.0f, 0.0f, width, height);
-        fillColor(11, 13, 15, 255);
+        fc(t_.background);
         fill();
         closePath();
 
         beginPath();
         rect(0.0f, 0.0f, width, 96.0f);
-        fillColor(20, 25, 29, 255);
+        fc(t_.panel);
         fill();
         closePath();
     }
@@ -256,11 +263,11 @@ private:
     {
         fontSize(34.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(240, 245, 240, 255);
+        fc(t_.textPrimary);
         text(28.0f, 22.0f, "Luma", nullptr);
 
         fontSize(13.0f);
-        fillColor(163, 174, 176, 255);
+        fc(t_.textDim);
         text(136.0f, 37.0f, "Launchpad pad agents for bass, chords, melody, and drum sparks", nullptr);
 
         char buffer[96];
@@ -271,7 +278,7 @@ private:
                       static_cast<int>(std::lround(values_[kParamStatusStep])));
         fontSize(12.0f);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(216, 225, 218, 255);
+        fc(t_.textPrimary);
         text(width - 28.0f, 38.0f, buffer, nullptr);
     }
 
@@ -342,9 +349,9 @@ private:
 
         beginPath();
         roundedRect(x, y, w, h, 8.0f);
-        fillColor(18, 22, 25, 245);
+        fc(t_.panel);
         fill();
-        strokeColor(50, 61, 66, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -371,21 +378,21 @@ private:
 
             fontSize(11.0f);
             textAlign(ALIGN_LEFT | ALIGN_TOP);
-            fillColor(167, 178, 179, 255);
+            fc(t_.textDim);
             text(rect.x, rect.y, kSelectorLabels[i], nullptr);
 
             beginPath();
             roundedRect(rect.x, rect.y + 21.0f, rect.w, 35.0f, 6.0f);
-            fillColor(31, 38, 42, 255);
+            fc(t_.surface);
             fill();
-            strokeColor(77, 99, 105, 255);
+            sc(t_.border);
             strokeWidth(1.0f);
             stroke();
             closePath();
 
             fontSize(12.0f);
             textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-            fillColor(238, 243, 238, 255);
+            fc(t_.textPrimary);
             text(rect.x + rect.w * 0.5f,
                  rect.y + 39.0f,
                  selectorName(kSelectorParams[i], values_[kSelectorParams[i]]),
@@ -414,12 +421,12 @@ private:
 
         fontSize(11.0f);
         textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(201, 211, 209, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y, slider.label, nullptr);
 
         beginPath();
         roundedRect(trackX, trackY, 10.0f, trackH, 5.0f);
-        fillColor(36, 43, 47, 255);
+        fc(t_.surface);
         fill();
         closePath();
 
@@ -431,7 +438,7 @@ private:
 
         beginPath();
         roundedRect(rect.x + 5.0f, trackY + trackH * (1.0f - norm) - 5.0f, rect.w - 10.0f, 10.0f, 5.0f);
-        fillColor(238, 244, 238, 255);
+        fc(t_.textPrimary);
         fill();
         closePath();
 
@@ -482,7 +489,7 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(239, 244, 238, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 1.0f, label, nullptr);
     }
 

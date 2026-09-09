@@ -1,0 +1,2 @@
+/usr/bin/ar qc libpolymeter-dsp.a "CMakeFiles/polymeter-dsp.dir/src/dpf/PolymeterPlugin.cpp.o"
+/usr/bin/ranlib libpolymeter-dsp.a

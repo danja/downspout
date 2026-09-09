@@ -1,0 +1,2 @@
+/usr/bin/ar qc libambo-ui.a "CMakeFiles/ambo-ui.dir/src/dpf/AmboUI.cpp.o"
+/usr/bin/ranlib libambo-ui.a

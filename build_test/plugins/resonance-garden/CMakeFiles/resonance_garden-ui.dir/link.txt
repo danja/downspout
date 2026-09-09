@@ -1,0 +1,2 @@
+/usr/bin/ar qc libresonance_garden-ui.a "CMakeFiles/resonance_garden-ui.dir/src/dpf/ResonanceGardenUI.cpp.o"
+/usr/bin/ranlib libresonance_garden-ui.a

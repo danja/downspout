@@ -1,0 +1,2 @@
+/usr/bin/ar qc libgater-ui.a "CMakeFiles/gater-ui.dir/src/dpf/GaterUI.cpp.o"
+/usr/bin/ranlib libgater-ui.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libworms-ui.a "CMakeFiles/worms-ui.dir/src/dpf/WormsUI.cpp.o"
+/usr/bin/ranlib libworms-ui.a

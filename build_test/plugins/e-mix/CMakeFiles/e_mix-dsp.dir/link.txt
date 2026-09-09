@@ -1,0 +1,2 @@
+/usr/bin/ar qc libe_mix-dsp.a "CMakeFiles/e_mix-dsp.dir/src/dpf/EMixPlugin.cpp.o"
+/usr/bin/ranlib libe_mix-dsp.a

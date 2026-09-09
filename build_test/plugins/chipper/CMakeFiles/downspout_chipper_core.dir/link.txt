@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_chipper_core.a CMakeFiles/downspout_chipper_core.dir/src/chipper_core.cpp.o
+/usr/bin/ranlib libdownspout_chipper_core.a

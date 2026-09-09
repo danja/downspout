@@ -1,0 +1,2 @@
+/usr/bin/ar qc libbassops-dsp.a "CMakeFiles/bassops-dsp.dir/src/dpf/BassopsPlugin.cpp.o"
+/usr/bin/ranlib libbassops-dsp.a

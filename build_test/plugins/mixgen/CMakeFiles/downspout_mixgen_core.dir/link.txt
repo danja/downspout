@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_mixgen_core.a CMakeFiles/downspout_mixgen_core.dir/src/mixgen_core.cpp.o
+/usr/bin/ranlib libdownspout_mixgen_core.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libambo-dsp.a "CMakeFiles/ambo-dsp.dir/src/dpf/AmboPlugin.cpp.o"
+/usr/bin/ranlib libambo-dsp.a

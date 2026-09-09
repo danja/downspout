@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_drift_core.a CMakeFiles/downspout_drift_core.dir/src/drift_core.cpp.o
+/usr/bin/ranlib libdownspout_drift_core.a

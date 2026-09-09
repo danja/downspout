@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdrumgen.a CMakeFiles/drumgen.dir/_dpf_empty.c.o
+/usr/bin/ranlib libdrumgen.a

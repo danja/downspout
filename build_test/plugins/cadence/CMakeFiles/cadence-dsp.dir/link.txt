@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcadence-dsp.a "CMakeFiles/cadence-dsp.dir/src/dpf/CadencePlugin.cpp.o"
+/usr/bin/ranlib libcadence-dsp.a

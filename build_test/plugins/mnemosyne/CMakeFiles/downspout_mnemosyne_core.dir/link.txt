@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_mnemosyne_core.a CMakeFiles/downspout_mnemosyne_core.dir/src/mnemosyne_core.cpp.o
+/usr/bin/ranlib libdownspout_mnemosyne_core.a

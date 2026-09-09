@@ -1,0 +1,2 @@
+/usr/bin/ar qc libpolymeter-ui.a "CMakeFiles/polymeter-ui.dir/src/dpf/PolymeterUI.cpp.o"
+/usr/bin/ranlib libpolymeter-ui.a

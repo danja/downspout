@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "xoxolo_engine.hpp"
 #include "xoxolo_generator.hpp"
@@ -14,6 +15,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -323,6 +326,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, downspout::xoxolo::kParameterCount> values_ {};
     downspout::xoxolo::PatternState pattern_ {};
     std::array<std::array<Rect, downspout::xoxolo::kMaxSteps>, downspout::xoxolo::kLaneCount> cellRects_ {};
@@ -350,7 +357,7 @@ private:
     {
         beginPath();
         rect(0.0f, 0.0f, width, height);
-        fillColor(14, 16, 18, 255);
+        fc(t_.background);
         fill();
         closePath();
     }
@@ -359,23 +366,23 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 8.0f);
-        fillColor(27, 31, 35, 255);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(25.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(238, 241, 242, 255);
+        fc(t_.textPrimary);
         text(x + 16.0f, y + h * 0.5f - 3.0f, "Xoxolo", nullptr);
 
         fontSize(12.0f);
-        fillColor(156, 168, 174, 255);
+        fc(t_.textDim);
         text(x + 122.0f, y + h * 0.5f - 2.0f, "simple MIDI drum pattern editor", nullptr);
 
         char stepsText[48];
         std::snprintf(stepsText, sizeof(stepsText), "%d steps", pattern_.totalSteps);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
-        fillColor(202, 211, 216, 255);
+        fc(t_.textPrimary);
         text(x + w - 16.0f, y + h * 0.5f - 2.0f, stepsText, nullptr);
     }
 
@@ -434,13 +441,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 6.0f);
-        fillColor(26, 30, 34, 255);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(207, 216, 220, 255);
+        fc(t_.textPrimary);
         text(x + 9.0f,
              y + h * 0.5f,
              downspout::xoxolo::laneSpecsForPreset(pattern_.notePreset)[static_cast<std::size_t>(lane)].name,
@@ -486,12 +493,12 @@ private:
         std::snprintf(textValue, sizeof(textValue), "%d", note);
         fontSize(12.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(224, 231, 234, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.42f, rect.y + rect.h * 0.5f, textValue, nullptr);
 
         fontSize(11.0f);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
-        fillColor(140, 153, 160, 255);
+        fc(t_.textDim);
         text(rect.x + rect.w - 7.0f, rect.y + rect.h * 0.5f, open ? "^" : "v", nullptr);
     }
 
@@ -499,13 +506,13 @@ private:
     {
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 6.0f);
-        fillColor(54, 65, 75, 255);
+        fc(t_.border);
         fill();
         closePath();
 
         fontSize(13.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(235, 240, 242, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f, ">", nullptr);
     }
 
@@ -539,9 +546,9 @@ private:
 
         beginPath();
         roundedRect(menu.x, menu.y, menu.w, menu.h, 8.0f);
-        fillColor(18, 23, 27, 248);
+        fc(t_.panel);
         fill();
-        strokeColor(83, 96, 106, 230);
+        sc(t_.border.withAlpha(230));
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -556,12 +563,12 @@ private:
             if (note == selected) {
                 beginPath();
                 roundedRect(itemX + 3.0f, itemY + 3.0f, kNoteMenuItemWidth - 6.0f, kNoteMenuItemHeight - 6.0f, 5.0f);
-                fillColor(224, 117, 76, 230);
+                fc(t_.accent.withAlpha(230));
                 fill();
                 closePath();
-                fillColor(255, 249, 245, 255);
+                fc(t_.textPrimary);
             } else {
-                fillColor(192, 203, 209, 255);
+                fc(t_.textPrimary);
             }
 
             char label[8];
@@ -574,7 +581,7 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 8.0f);
-        fillColor(24, 29, 33, 255);
+        fc(t_.panel);
         fill();
         closePath();
 
@@ -592,7 +599,7 @@ private:
 
         fontSize(14.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(226, 232, 235, 255);
+        fc(t_.textPrimary);
         text(x + 14.0f, y + 16.0f, "Pattern", nullptr);
 
         drawSelector(presetRect_,
@@ -619,14 +626,14 @@ private:
         beginPath();
         moveTo(x + 14.0f, dividerY);
         lineTo(x + w - 14.0f, dividerY);
-        strokeColor(56, 65, 71, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         stroke();
         closePath();
 
         fontSize(14.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(226, 232, 235, 255);
+        fc(t_.textPrimary);
         text(x + 14.0f, dividerY + 12.0f, "Generate", nullptr);
 
         drawSelector(styleRect_,
@@ -642,19 +649,19 @@ private:
     {
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 7.0f);
-        fillColor(35, 42, 48, 255);
+        fc(t_.surface);
         fill();
         closePath();
 
         fontSize(10.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(146, 158, 164, 255);
+        fc(t_.textDim);
         text(rect.x + 10.0f, rect.y + 7.0f, label, nullptr);
         fontSize(14.0f);
-        fillColor(229, 235, 238, 255);
+        fc(t_.textPrimary);
         text(rect.x + 10.0f, rect.y + 25.0f, value, nullptr);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
-        fillColor(131, 145, 153, 255);
+        fc(t_.textDim);
         text(rect.x + rect.w - 10.0f, rect.y + rect.h * 0.5f, open ? "^" : "v", nullptr);
     }
 
@@ -669,7 +676,7 @@ private:
 
         fontSize(14.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(245, 239, 236, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f, label, nullptr);
     }
 
@@ -680,16 +687,16 @@ private:
 
         fontSize(10.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(146, 158, 164, 255);
+        fc(t_.textDim);
         text(rect.x, rect.y + 2.0f, label, nullptr);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(202, 211, 216, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w, rect.y + 2.0f, valueText, nullptr);
 
         const float trackY = rect.y + 27.0f;
         beginPath();
         roundedRect(rect.x, trackY, rect.w, 8.0f, 4.0f);
-        fillColor(39, 47, 53, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
@@ -724,9 +731,9 @@ private:
         const Rect menu = styleMenuRect();
         beginPath();
         roundedRect(menu.x, menu.y, menu.w, menu.h, 7.0f);
-        fillColor(18, 23, 27, 252);
+        fc(t_.panel);
         fill();
-        strokeColor(83, 96, 106, 230);
+        sc(t_.border.withAlpha(230));
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -743,7 +750,7 @@ private:
                 fill();
                 closePath();
             }
-            fillColor(224, 231, 234, 255);
+            fc(t_.textPrimary);
             text(menu.x + 9.0f,
                  itemY + itemHeight * 0.5f,
                  downspout::xoxolo::generationStyleName(style),
@@ -869,9 +876,9 @@ private:
 
         beginPath();
         roundedRect(menu.x, menu.y, menu.w, menu.h, 7.0f);
-        fillColor(18, 23, 27, 252);
+        fc(t_.panel);
         fill();
-        strokeColor(83, 96, 106, 230);
+        sc(t_.border.withAlpha(230));
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -891,7 +898,7 @@ private:
                 closePath();
             }
             char label[16] {};
-            fillColor(224, 231, 234, 255);
+            fc(t_.textPrimary);
             text(itemX + 9.0f,
                  itemY + itemHeight * 0.5f,
                  patternMenuItemName(index, label, sizeof(label)),

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_resonance_garden_core.a CMakeFiles/downspout_resonance_garden_core.dir/src/resonance_garden_core.cpp.o
+/usr/bin/ranlib libdownspout_resonance_garden_core.a

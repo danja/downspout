@@ -1,0 +1,2 @@
+/usr/bin/ar qc libskream-ui.a "CMakeFiles/skream-ui.dir/src/dpf/SkreemUI.cpp.o"
+/usr/bin/ranlib libskream-ui.a

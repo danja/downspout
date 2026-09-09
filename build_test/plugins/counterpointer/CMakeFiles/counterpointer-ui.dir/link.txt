@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcounterpointer-ui.a "CMakeFiles/counterpointer-ui.dir/src/dpf/CounterpointerUI.cpp.o"
+/usr/bin/ranlib libcounterpointer-ui.a

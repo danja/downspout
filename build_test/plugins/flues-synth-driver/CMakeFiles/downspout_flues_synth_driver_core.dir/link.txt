@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_flues_synth_driver_core.a CMakeFiles/downspout_flues_synth_driver_core.dir/src/flues_synth_driver_processor.cpp.o
+/usr/bin/ranlib libdownspout_flues_synth_driver_core.a

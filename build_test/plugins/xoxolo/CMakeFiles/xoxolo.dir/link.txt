@@ -1,0 +1,2 @@
+/usr/bin/ar qc libxoxolo.a CMakeFiles/xoxolo.dir/_dpf_empty.c.o
+/usr/bin/ranlib libxoxolo.a

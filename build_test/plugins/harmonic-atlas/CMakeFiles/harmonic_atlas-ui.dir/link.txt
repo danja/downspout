@@ -1,0 +1,2 @@
+/usr/bin/ar qc libharmonic_atlas-ui.a "CMakeFiles/harmonic_atlas-ui.dir/src/dpf/HarmonicAtlasUI.cpp.o"
+/usr/bin/ranlib libharmonic_atlas-ui.a

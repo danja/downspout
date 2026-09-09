@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_gater_core.a CMakeFiles/downspout_gater_core.dir/src/gater_engine.cpp.o
+/usr/bin/ranlib libdownspout_gater_core.a

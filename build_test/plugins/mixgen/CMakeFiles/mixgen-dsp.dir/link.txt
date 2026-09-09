@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmixgen-dsp.a "CMakeFiles/mixgen-dsp.dir/src/dpf/MixgenPlugin.cpp.o"
+/usr/bin/ranlib libmixgen-dsp.a

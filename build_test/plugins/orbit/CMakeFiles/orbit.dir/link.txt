@@ -1,0 +1,2 @@
+/usr/bin/ar qc liborbit.a CMakeFiles/orbit.dir/_dpf_empty.c.o
+/usr/bin/ranlib liborbit.a

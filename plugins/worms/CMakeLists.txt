@@ -32,6 +32,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
         "${CMAKE_SOURCE_DIR}/plugins/generative-common/include"
+        "${PROJECT_SOURCE_DIR}/include"
     )
 
     install(DIRECTORY "${PROJECT_BINARY_DIR}/bin/worms.vst3"

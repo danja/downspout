@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcadence-ui.a "CMakeFiles/cadence-ui.dir/src/dpf/CadenceUI.cpp.o"
+/usr/bin/ranlib libcadence-ui.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libe_mix-ui.a "CMakeFiles/e_mix-ui.dir/src/dpf/EMixUI.cpp.o"
+/usr/bin/ranlib libe_mix-ui.a

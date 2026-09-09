@@ -1,0 +1,2 @@
+/usr/bin/ar qc libt_mix-dsp.a "CMakeFiles/t_mix-dsp.dir/src/dpf/TMixPlugin.cpp.o"
+/usr/bin/ranlib libt_mix-dsp.a

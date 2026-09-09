@@ -1,0 +1,2 @@
+/usr/bin/ar qc libluma-ui.a "CMakeFiles/luma-ui.dir/src/dpf/LumaUI.cpp.o"
+/usr/bin/ranlib libluma-ui.a

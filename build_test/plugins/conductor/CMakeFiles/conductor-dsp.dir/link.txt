@@ -1,0 +1,2 @@
+/usr/bin/ar qc libconductor-dsp.a "CMakeFiles/conductor-dsp.dir/src/dpf/ConductorPlugin.cpp.o"
+/usr/bin/ranlib libconductor-dsp.a

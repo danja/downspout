@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdrumkit-dsp.a "CMakeFiles/drumkit-dsp.dir/src/dpf/DrumkitPlugin.cpp.o"
+/usr/bin/ranlib libdrumkit-dsp.a

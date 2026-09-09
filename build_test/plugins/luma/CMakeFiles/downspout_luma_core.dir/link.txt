@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_luma_core.a CMakeFiles/downspout_luma_core.dir/src/luma_processor.cpp.o
+/usr/bin/ranlib libdownspout_luma_core.a

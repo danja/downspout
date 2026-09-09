@@ -1,0 +1,2 @@
+/usr/bin/ar qc libpaunchlad.a CMakeFiles/paunchlad.dir/_dpf_empty.c.o
+/usr/bin/ranlib libpaunchlad.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_harmonic_atlas_core.a CMakeFiles/downspout_harmonic_atlas_core.dir/src/harmonic_atlas_core.cpp.o
+/usr/bin/ranlib libdownspout_harmonic_atlas_core.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libskream.a CMakeFiles/skream.dir/_dpf_empty.c.o
+/usr/bin/ranlib libskream.a

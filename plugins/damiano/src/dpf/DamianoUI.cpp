@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include <algorithm>
 #include <array>
@@ -9,6 +10,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -184,6 +187,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     int   currentMode_ = 1;  // default kModeTanh; updated via stateChanged
     int   dragSlider_  = -1;
@@ -227,7 +234,7 @@ private:
     void drawBackground(float W, float H)
     {
         beginPath();
-        fillColor(18, 18, 22, 255);
+        fc(t_.background);
         rect(0, 0, W, H);
         fill();
         closePath();
@@ -236,23 +243,23 @@ private:
     void drawHeader(float W)
     {
         beginPath();
-        fillColor(28, 28, 36, 255);
+        fc(t_.panel);
         rect(0, 0, W, 50.0f);
         fill();
         closePath();
 
         fontSize(22.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(230, 115, 26, 255);
+        fc(t_.warning);
         text(kPad, 25.0f, "DAMIANO", nullptr);
 
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(130, 130, 120, 255);
+        fc(t_.textDim);
         text(kPad + 140.0f, 25.0f, "stereo distortion  |  MIDI CC via Drift", nullptr);
 
         beginPath();
-        strokeColor(60, 60, 70, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         moveTo(0, 50.0f);
         lineTo(W, 50.0f);
@@ -261,7 +268,7 @@ private:
 
         fontSize(10.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(100, 100, 95, 255);
+        fc(t_.border);
         text(kPad, 54.0f, "MODE", nullptr);
         text(kSliderX, 54.0f, "PARAMETERS", nullptr);
     }
@@ -275,18 +282,18 @@ private:
             beginPath();
             roundedRect(r.x, r.y, r.w, r.h, 5.0f);
             if (active)
-                fillColor(200, 100, 24, 255);
+                fc(t_.warning);
             else
-                fillColor(38, 38, 48, 255);
+                fc(t_.surface);
             fill();
             closePath();
 
             fontSize(12.0f);
             textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
             if (active)
-                fillColor(15, 15, 18, 255);
+                fc(t_.background);
             else
-                fillColor(200, 200, 190, 255);
+                fc(t_.textPrimary);
             text(r.x + r.w * 0.5f, r.y + r.h * 0.5f,
                  kModeNames[static_cast<std::size_t>(m)], nullptr);
         }
@@ -306,7 +313,7 @@ private:
 
             if (s > 0) {
                 beginPath();
-                strokeColor(35, 35, 42, 255);
+                sc(t_.surface);
                 strokeWidth(1.0f);
                 moveTo(kSliderX, tr.y - 26.0f);
                 lineTo(W - kPad, tr.y - 26.0f);

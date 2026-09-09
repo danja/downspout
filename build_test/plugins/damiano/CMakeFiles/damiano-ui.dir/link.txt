@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdamiano-ui.a "CMakeFiles/damiano-ui.dir/src/dpf/DamianoUI.cpp.o"
+/usr/bin/ranlib libdamiano-ui.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmosaic.a CMakeFiles/mosaic.dir/_dpf_empty.c.o
+/usr/bin/ranlib libmosaic.a

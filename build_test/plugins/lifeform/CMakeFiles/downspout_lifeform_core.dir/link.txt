@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_lifeform_core.a CMakeFiles/downspout_lifeform_core.dir/src/lifeform_processor.cpp.o
+/usr/bin/ranlib libdownspout_lifeform_core.a

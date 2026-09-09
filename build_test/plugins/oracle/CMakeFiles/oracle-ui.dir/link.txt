@@ -1,0 +1,2 @@
+/usr/bin/ar qc liboracle-ui.a "CMakeFiles/oracle-ui.dir/src/dpf/OracleUI.cpp.o"
+/usr/bin/ranlib liboracle-ui.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libbubbles-ui.a "CMakeFiles/bubbles-ui.dir/src/dpf/BubblesUI.cpp.o"
+/usr/bin/ranlib libbubbles-ui.a

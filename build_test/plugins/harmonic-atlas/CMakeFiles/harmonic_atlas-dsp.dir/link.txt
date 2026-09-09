@@ -1,0 +1,2 @@
+/usr/bin/ar qc libharmonic_atlas-dsp.a "CMakeFiles/harmonic_atlas-dsp.dir/src/dpf/HarmonicAtlasPlugin.cpp.o"
+/usr/bin/ranlib libharmonic_atlas-dsp.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libm_mix-dsp.a "CMakeFiles/m_mix-dsp.dir/src/dpf/MMixPlugin.cpp.o"
+/usr/bin/ranlib libm_mix-dsp.a

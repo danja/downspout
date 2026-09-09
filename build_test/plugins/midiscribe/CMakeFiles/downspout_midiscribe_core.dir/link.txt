@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_midiscribe_core.a CMakeFiles/downspout_midiscribe_core.dir/src/midiscribe_core.cpp.o
+/usr/bin/ranlib libdownspout_midiscribe_core.a

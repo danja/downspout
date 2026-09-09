@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmnemosyne-ui.a "CMakeFiles/mnemosyne-ui.dir/src/dpf/MnemosyneUI.cpp.o"
+/usr/bin/ranlib libmnemosyne-ui.a

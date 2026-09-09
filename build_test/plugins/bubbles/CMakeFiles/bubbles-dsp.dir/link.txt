@@ -1,0 +1,2 @@
+/usr/bin/ar qc libbubbles-dsp.a "CMakeFiles/bubbles-dsp.dir/src/dpf/BubblesPlugin.cpp.o"
+/usr/bin/ranlib libbubbles-dsp.a

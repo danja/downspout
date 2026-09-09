@@ -1,0 +1,2 @@
+/usr/bin/ar qc libguardian-dsp.a "CMakeFiles/guardian-dsp.dir/src/dpf/GuardianPlugin.cpp.o"
+/usr/bin/ranlib libguardian-dsp.a

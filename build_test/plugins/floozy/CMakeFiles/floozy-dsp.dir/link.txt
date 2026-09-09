@@ -1,0 +1,2 @@
+/usr/bin/ar qc libfloozy-dsp.a "CMakeFiles/floozy-dsp.dir/src/dpf/FloozyPlugin.cpp.o"
+/usr/bin/ranlib libfloozy-dsp.a

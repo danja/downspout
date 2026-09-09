@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_basilico_core.a CMakeFiles/downspout_basilico_core.dir/src/basilico_engine.cpp.o CMakeFiles/downspout_basilico_core.dir/src/basilico_flanger.cpp.o CMakeFiles/downspout_basilico_core.dir/src/basilico_modulation.cpp.o
+/usr/bin/ranlib libdownspout_basilico_core.a

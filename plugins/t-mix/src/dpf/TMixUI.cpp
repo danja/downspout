@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "t_mix_params.hpp"
 
@@ -8,6 +9,8 @@
 #include <cstdio>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -203,6 +206,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     std::array<Rect, kInputChannelCount> levelRects_ {};
     std::array<Rect, kInputChannelCount> panRects_ {};
@@ -218,13 +225,13 @@ private:
     {
         beginPath();
         rect(0.0f, 0.0f, width, height);
-        fillColor(8, 12, 17, 255);
+        fc(t_.background);
         fill();
         closePath();
 
         beginPath();
         rect(0.0f, 0.0f, width, 88.0f);
-        fillColor(18, 31, 39, 255);
+        fc(t_.panel);
         fill();
         closePath();
     }
@@ -233,17 +240,17 @@ private:
     {
         fontSize(30.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(239, 243, 242, 255);
+        fc(t_.textPrimary);
         text(26.0f, 17.0f, "T-Mix", nullptr);
 
         fontSize(12.0f);
-        fillColor(135, 158, 164, 255);
+        fc(t_.textDim);
         text(27.0f, 56.0f,
              DOWNSPOUT_PLUGIN_VERSION_STRING "  |  Eight mono inputs to stereo",
              nullptr);
 
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
-        fillColor(104, 135, 142, 255);
+        fc(t_.textDim);
         text(width - 26.0f, 43.0f, "PRODUCER BUS CC19 + CC20-27 / MIDI THRU", nullptr);
     }
 
@@ -270,7 +277,7 @@ private:
         std::snprintf(label, sizeof(label), "CH %u", channel + 1);
         fontSize(14.0f);
         textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(209, 219, 218, 255);
+        fc(t_.textPrimary);
         text(strip.x + strip.w * 0.5f, strip.y + 14.0f, label, nullptr);
 
         const Rect meter {strip.x + 18.0f, strip.y + 42.0f, strip.w - 36.0f, 12.0f};
@@ -300,7 +307,7 @@ private:
         drawPanel(strip, true);
         fontSize(14.0f);
         textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(229, 221, 192, 255);
+        fc(t_.textPrimary);
         text(strip.x + strip.w * 0.5f, strip.y + 14.0f, "MASTER", nullptr);
 
         drawProducerStatus({strip.x + 14.0f, strip.y + 43.0f, strip.w - 28.0f, 24.0f});
@@ -351,7 +358,7 @@ private:
     {
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 2.0f);
-        fillColor(7, 10, 13, 255);
+        fc(t_.background);
         fill();
         beginPath();
         roundedRect(rect.x, rect.y, std::max(1.0f, rect.w * clampf(gain, 0.0f, 1.0f)), rect.h, 2.0f);
@@ -366,12 +373,12 @@ private:
                       static_cast<int>(std::lround(values_[kParamProducerSlew])));
         fontSize(9.5f);
         textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(126, 154, 163, 255);
+        fc(t_.textDim);
         text(rect.x + rect.w * 0.5f, rect.y, value, nullptr);
         const float trackY = rect.y + 21.0f;
         beginPath();
         roundedRect(rect.x, trackY, rect.w, 5.0f, 2.0f);
-        fillColor(7, 10, 13, 255);
+        fc(t_.background);
         fill();
         beginPath();
         roundedRect(rect.x, trackY, std::max(2.0f, rect.w * values_[kParamProducerSlew] / 500.0f), 5.0f, 2.0f);
@@ -383,7 +390,7 @@ private:
     {
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 4.0f);
-        fillColor(5, 8, 11, 255);
+        fc(t_.background);
         fill();
         closePath();
 
@@ -395,7 +402,7 @@ private:
             if (unit > 0.9f)
                 fillColor(224, 82, 65, 255);
             else if (unit > 0.72f)
-                fillColor(224, 174, 62, 255);
+                fc(t_.accent);
             else
                 fillColor(65, 188, 128, 255);
             fill();
@@ -410,9 +417,9 @@ private:
         const float radius = 22.0f;
         beginPath();
         circle(cx, cy, radius);
-        fillColor(34, 46, 52, 255);
+        fc(t_.controlTrack);
         fill();
-        strokeColor(72, 98, 104, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -428,7 +435,7 @@ private:
 
         fontSize(10.0f);
         textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(122, 146, 150, 255);
+        fc(t_.textDim);
         text(cx, rect.y + 57.0f, "PAN", nullptr);
     }
 
@@ -437,7 +444,7 @@ private:
         const float cx = rect.x + rect.w * 0.5f;
         beginPath();
         roundedRect(cx - 4.0f, rect.y, 8.0f, rect.h, 4.0f);
-        fillColor(5, 8, 11, 255);
+        fc(t_.background);
         fill();
         closePath();
 
@@ -456,7 +463,7 @@ private:
             std::snprintf(value, sizeof(value), "%+.1f dB", decibels);
         fontSize(10.0f);
         textAlign(ALIGN_CENTER | ALIGN_BOTTOM);
-        fillColor(144, 160, 163, 255);
+        fc(t_.textDim);
         text(cx, rect.y - 8.0f, value, nullptr);
     }
 
@@ -469,7 +476,7 @@ private:
         else if (active)
             fillColor(179, 65, 65, 255);
         else
-            fillColor(31, 42, 47, 255);
+            fc(t_.surface);
         fill();
         closePath();
 

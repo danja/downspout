@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_ambo_core.a CMakeFiles/downspout_ambo_core.dir/src/ambo_engine.cpp.o CMakeFiles/downspout_ambo_core.dir/src/ambo_serialization.cpp.o
+/usr/bin/ranlib libdownspout_ambo_core.a

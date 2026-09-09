@@ -1,0 +1,2 @@
+/usr/bin/ar qc libchipper-ui.a "CMakeFiles/chipper-ui.dir/src/dpf/ChipperUI.cpp.o"
+/usr/bin/ranlib libchipper-ui.a

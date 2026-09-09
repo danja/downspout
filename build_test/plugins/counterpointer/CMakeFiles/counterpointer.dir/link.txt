@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcounterpointer.a CMakeFiles/counterpointer.dir/_dpf_empty.c.o
+/usr/bin/ranlib libcounterpointer.a

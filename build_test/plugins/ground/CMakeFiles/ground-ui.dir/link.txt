@@ -1,0 +1,2 @@
+/usr/bin/ar qc libground-ui.a "CMakeFiles/ground-ui.dir/src/dpf/GroundUI.cpp.o"
+/usr/bin/ranlib libground-ui.a

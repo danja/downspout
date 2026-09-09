@@ -1,0 +1,2 @@
+/usr/bin/ar qc libgater-dsp.a "CMakeFiles/gater-dsp.dir/src/dpf/GaterPlugin.cpp.o"
+/usr/bin/ranlib libgater-dsp.a

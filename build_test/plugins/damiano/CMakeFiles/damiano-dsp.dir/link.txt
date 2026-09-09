@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdamiano-dsp.a "CMakeFiles/damiano-dsp.dir/src/dpf/DamianoPlugin.cpp.o"
+/usr/bin/ranlib libdamiano-dsp.a

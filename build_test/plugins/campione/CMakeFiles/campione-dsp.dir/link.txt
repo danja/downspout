@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcampione-dsp.a "CMakeFiles/campione-dsp.dir/src/dpf/CampionePlugin.cpp.o"
+/usr/bin/ranlib libcampione-dsp.a

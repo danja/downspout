@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include <algorithm>
 #include <array>
@@ -7,6 +8,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -275,6 +278,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     std::array<Rect, std::size(kSliders)> sliderRects_ {};
     std::array<Rect, std::size(kSelectors)> selectorRects_ {};
@@ -286,13 +293,13 @@ private:
     void drawBackground(const float width, const float height)
     {
         beginPath();
-        fillColor(16, 19, 24, 255);
+        fc(t_.background);
         rect(0.0f, 0.0f, width, height);
         fill();
         closePath();
 
         beginPath();
-        fillColor(25, 31, 38, 255);
+        fc(t_.panel);
         rect(0.0f, 0.0f, width, height * 0.30f);
         fill();
         closePath();
@@ -302,17 +309,17 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 18.0f);
-        fillColor(32, 41, 50, 232);
+        fc(t_.surface.withAlpha(232));
         fill();
         closePath();
 
         fontSize(28.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(238, 242, 245, 255);
+        fc(t_.textPrimary);
         text(x + 20.0f, y + 15.0f, "Sidecar", nullptr);
 
         fontSize(13.0f);
-        fillColor(153, 168, 181, 255);
+        fc(t_.textDim);
         text(x + 22.0f, y + 48.0f, "AI-ready phrase player", nullptr);
 
         drawStatusPill(x + w - 328.0f, y + 16.0f, 144.0f, 30.0f,
@@ -379,7 +386,7 @@ private:
 
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(225, 230, 235, 255);
+        fc(t_.textPrimary);
         text(x + 20.0f, y + 18.0f, "Phrase", nullptr);
 
         const float innerX = x + 20.0f;
@@ -404,7 +411,7 @@ private:
 
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(225, 230, 235, 255);
+        fc(t_.textPrimary);
         text(x + 20.0f, y + 18.0f, "Request", nullptr);
 
         const float selectorH = 42.0f;
@@ -436,7 +443,7 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 18.0f);
-        fillColor(23, 28, 35, 250);
+        fc(t_.panel.withAlpha(250));
         fill();
         closePath();
     }
@@ -445,17 +452,17 @@ private:
     {
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(153, 168, 181, 255);
+        fc(t_.textDim);
         text(rect.x, rect.y - 18.0f, def.label, nullptr);
 
         const std::string valueText = formatSliderValue(def, value);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(225, 230, 235, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w, rect.y - 18.0f, valueText.c_str(), nullptr);
 
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 10.0f);
-        fillColor(42, 50, 61, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
@@ -471,22 +478,22 @@ private:
     {
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 14.0f);
-        fillColor(34, 43, 53, 255);
+        fc(t_.surface);
         fill();
         closePath();
 
         fontSize(10.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(152, 166, 181, 255);
+        fc(t_.textDim);
         text(rect.x + 14.0f, rect.y + 8.0f, def.label, nullptr);
 
         fontSize(14.0f);
-        fillColor(236, 240, 243, 255);
+        fc(t_.textPrimary);
         text(rect.x + 14.0f, rect.y + 27.0f, def.items[clampi(value, 0, def.count - 1)], nullptr);
 
         fontSize(17.0f);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
-        fillColor(117, 133, 149, 255);
+        fc(t_.textDim);
         text(rect.x + rect.w - 16.0f, rect.y + rect.h * 0.5f + 1.0f, ">", nullptr);
     }
 
@@ -502,14 +509,14 @@ private:
 
         beginPath();
         roundedRect(rect.x + 1.0f, rect.y + 1.0f, rect.w - 2.0f, rect.h - 2.0f, 14.0f);
-        strokeColor(164, 186, 208, 112);
+        sc(t_.textDim.withAlpha(112));
         strokeWidth(1.0f);
         stroke();
         closePath();
 
         fontSize(14.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(241, 244, 247, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 1.0f, def.label, nullptr);
     }
 

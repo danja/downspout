@@ -1,0 +1,2 @@
+/usr/bin/ar qc liborchid-dsp.a "CMakeFiles/orchid-dsp.dir/src/dpf/OrchidPlugin.cpp.o"
+/usr/bin/ranlib liborchid-dsp.a

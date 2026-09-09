@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "basilico_params.hpp"
 
@@ -9,6 +10,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -283,6 +286,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     std::array<float, kParameterCount> values_ {};
     std::array<Rect, kParameterCount> controlRects_ {};
     int activeParameter_ = -1;
@@ -292,13 +299,13 @@ private:
     void drawBackground(const float width, const float height)
     {
         beginPath();
-        fillColor(12, 15, 14, 255);
+        fc(t_.background);
         rect(0.0f, 0.0f, width, height);
         fill();
         closePath();
 
         beginPath();
-        fillColor(28, 34, 31, 255);
+        fc(t_.panel);
         rect(0.0f, 0.0f, width, 112.0f);
         fill();
         closePath();
@@ -308,25 +315,25 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 7.0f);
-        fillColor(18, 23, 21, 240);
+        fc(t_.panel.withAlpha(240));
         fill();
-        strokeColor(51, 62, 57, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         stroke();
         closePath();
 
         fontSize(32.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(239, 243, 237, 255);
+        fc(t_.textPrimary);
         text(x + 22.0f, y + 13.0f, "Basilico", nullptr);
 
         fontSize(13.0f);
-        fillColor(157, 169, 162, 255);
+        fc(t_.textDim);
         text(x + 180.0f, y + 27.0f, "upright, electric, dub, acid, industrial, reese, hoover bass", nullptr);
 
         fontSize(12.0f);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fillColor(210, 219, 212, 255);
+        fc(t_.textPrimary);
         text(x + w - 22.0f, y + 29.0f, "MIDI in | stereo out", nullptr);
     }
 
@@ -335,9 +342,9 @@ private:
         const SectionDef& section = kSections[index];
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 7.0f);
-        fillColor(18, 22, 21, 240);
+        fc(t_.panel.withAlpha(240));
         fill();
-        strokeColor(45, 55, 51, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -350,7 +357,7 @@ private:
 
         fontSize(17.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(233, 238, 233, 255);
+        fc(t_.textPrimary);
         text(rect.x + 14.0f, rect.y + 33.0f, section.title, nullptr);
 
         const float startY = rect.y + 78.0f;
@@ -378,7 +385,7 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(213, 220, 215, 255);
+        fc(t_.textPrimary);
         text(rect.x, rect.y, control.label, nullptr);
 
         fontSize(11.0f);
@@ -389,7 +396,7 @@ private:
         const float barY = rect.y + 23.0f;
         beginPath();
         roundedRect(rect.x, barY, rect.w, 12.0f, 6.0f);
-        fillColor(38, 45, 42, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
@@ -401,7 +408,7 @@ private:
 
         beginPath();
         roundedRect(rect.x + rect.w * norm - 5.0f, barY - 4.0f, 10.0f, 20.0f, 5.0f);
-        fillColor(238, 242, 237, 255);
+        fc(t_.textPrimary);
         fill();
         closePath();
     }
@@ -410,7 +417,7 @@ private:
     {
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(213, 220, 215, 255);
+        fc(t_.textPrimary);
         text(rect.x, rect.y, control.label, nullptr);
 
         const Rect box {rect.x, rect.y + 21.0f, rect.w, 25.0f};
@@ -426,7 +433,7 @@ private:
 
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(235, 240, 235, 255);
+        fc(t_.textPrimary);
         text(box.x + 10.0f, box.y + box.h * 0.5f + 1.0f, formatValue(control.parameter, values_[control.parameter]).c_str(), nullptr);
 
         beginPath();
@@ -472,9 +479,9 @@ private:
 
         beginPath();
         roundedRect(menu.x, menu.y, menu.w, menu.h, 7.0f);
-        fillColor(13, 17, 16, 248);
+        fc(t_.panel);
         fill();
-        strokeColor(76, 91, 84, 255);
+        sc(t_.border);
         strokeWidth(1.0f);
         stroke();
         closePath();
@@ -487,7 +494,7 @@ private:
             {
                 beginPath();
                 rect(menu.x + 4.0f, y + 3.0f, menu.w - 8.0f, 20.0f);
-                fillColor(54, 91, 73, 235);
+                fc(t_.border.withAlpha(235));
                 fill();
                 closePath();
             }

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmelgen-ui.a "CMakeFiles/melgen-ui.dir/src/dpf/MelgenUI.cpp.o"
+/usr/bin/ranlib libmelgen-ui.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libguardian-ui.a "CMakeFiles/guardian-ui.dir/src/dpf/GuardianUI.cpp.o"
+/usr/bin/ranlib libguardian-ui.a

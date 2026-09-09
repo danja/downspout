@@ -1,4 +1,5 @@
 #include "generative_panel_ui.hpp"
+#include "downspout/look_and_feel.hpp"
 #include "worms_params.hpp"
 
 #include <algorithm>
@@ -6,6 +7,8 @@
 #include <cstdio>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 using namespace downspout::worms;
@@ -88,6 +91,10 @@ public:
     {}
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     // ── State ─────────────────────────────────────────────────────────────────
     Rect selRects_[kSelCount] {};
     int  openSel_ = -1;
@@ -128,7 +135,7 @@ private:
         const bool    open = (openSel_ == si);
 
         beginPath();
-        fillColor(30, 37, 45, 255);
+        fc(t_.surface);
         roundedRect(x, y, w, h, 8.0f);
         fill();
         if (open) {
@@ -139,17 +146,17 @@ private:
             stroke();
         }
 
-        fillColor(140, 152, 163, 255);
+        fc(t_.textDim);
         fontSize(10.5f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         text(x+10.0f, y+7.0f, def.label, nullptr);
 
-        fillColor(228, 234, 230, 255);
+        fc(t_.textPrimary);
         fontSize(13.5f);
         textAlign(ALIGN_LEFT | ALIGN_BOTTOM);
         text(x+10.0f, y+h-8.0f, def.items[cur], nullptr);
 
-        fillColor(110, 124, 136, 255);
+        fc(t_.textDim);
         fontSize(14.0f);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
         text(x+w-10.0f, y+h*0.5f+1.0f, open ? "\xe2\x86\x91" : "\xe2\x86\x93", nullptr);
@@ -165,11 +172,11 @@ private:
         const float   itemW = mr.w / static_cast<float>(cols);
 
         beginPath();
-        fillColor(22, 28, 37, 250);
+        fc(t_.panel.withAlpha(250));
         roundedRect(mr.x, mr.y, mr.w, mr.h, 10.0f);
         fill();
         beginPath();
-        strokeColor(88, 104, 122, 220);
+        sc(t_.border.withAlpha(220));
         strokeWidth(1.0f);
         roundedRect(mr.x+0.5f, mr.y+0.5f, mr.w-1.0f, mr.h-1.0f, 10.0f);
         stroke();
@@ -188,7 +195,7 @@ private:
             }
             fontSize(cols > 1 ? 10.5f : 12.0f);
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-            fillColor(232, 238, 234, 255);
+            fc(t_.textPrimary);
             text(ix+11.0f, iy+kItemH*0.5f+1.0f, def.items[i], nullptr);
         }
     }

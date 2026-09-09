@@ -1,0 +1,2 @@
+/usr/bin/ar qc libgremlin_driver.a CMakeFiles/gremlin_driver.dir/_dpf_empty.c.o
+/usr/bin/ranlib libgremlin_driver.a

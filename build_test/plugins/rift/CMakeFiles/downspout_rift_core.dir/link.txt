@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_rift_core.a CMakeFiles/downspout_rift_core.dir/src/rift_engine.cpp.o CMakeFiles/downspout_rift_core.dir/src/rift_sample_loader.cpp.o CMakeFiles/downspout_rift_core.dir/src/rift_serialization.cpp.o
+/usr/bin/ranlib libdownspout_rift_core.a

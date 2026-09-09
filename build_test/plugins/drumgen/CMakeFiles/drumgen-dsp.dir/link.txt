@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdrumgen-dsp.a "CMakeFiles/drumgen-dsp.dir/src/dpf/DrumgenPlugin.cpp.o"
+/usr/bin/ranlib libdrumgen-dsp.a

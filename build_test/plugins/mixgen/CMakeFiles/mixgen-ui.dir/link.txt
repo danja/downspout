@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmixgen-ui.a "CMakeFiles/mixgen-ui.dir/src/dpf/MixgenUI.cpp.o"
+/usr/bin/ranlib libmixgen-ui.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_damiano_core.a CMakeFiles/downspout_damiano_core.dir/src/damiano_engine.cpp.o CMakeFiles/downspout_damiano_core.dir/src/damiano_serialization.cpp.o
+/usr/bin/ranlib libdownspout_damiano_core.a

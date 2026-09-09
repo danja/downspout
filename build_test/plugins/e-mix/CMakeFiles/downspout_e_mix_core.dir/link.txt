@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_e_mix_core.a CMakeFiles/downspout_e_mix_core.dir/src/e_mix_engine.cpp.o CMakeFiles/downspout_e_mix_core.dir/src/e_mix_serialization.cpp.o
+/usr/bin/ranlib libdownspout_e_mix_core.a

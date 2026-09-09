@@ -1,0 +1,2 @@
+/usr/bin/ar qc libground.a CMakeFiles/ground.dir/_dpf_empty.c.o
+/usr/bin/ranlib libground.a

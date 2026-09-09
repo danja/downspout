@@ -1,0 +1,2 @@
+/usr/bin/ar qc librift-ui.a "CMakeFiles/rift-ui.dir/src/dpf/RiftUI.cpp.o"
+/usr/bin/ranlib librift-ui.a

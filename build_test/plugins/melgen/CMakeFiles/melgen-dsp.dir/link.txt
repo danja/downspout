@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmelgen-dsp.a "CMakeFiles/melgen-dsp.dir/src/dpf/MelgenPlugin.cpp.o"
+/usr/bin/ranlib libmelgen-dsp.a

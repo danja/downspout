@@ -1,0 +1,2 @@
+/usr/bin/ar qc libchipper-dsp.a "CMakeFiles/chipper-dsp.dir/src/dpf/ChipperPlugin.cpp.o"
+/usr/bin/ranlib libchipper-dsp.a

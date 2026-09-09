@@ -1,0 +1,2 @@
+/usr/bin/ar qc libarpgen.a CMakeFiles/arpgen.dir/_dpf_empty.c.o
+/usr/bin/ranlib libarpgen.a

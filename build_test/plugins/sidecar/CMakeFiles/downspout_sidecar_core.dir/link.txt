@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_sidecar_core.a CMakeFiles/downspout_sidecar_core.dir/src/sidecar_engine.cpp.o CMakeFiles/downspout_sidecar_core.dir/src/sidecar_protocol.cpp.o CMakeFiles/downspout_sidecar_core.dir/src/sidecar_serialization.cpp.o
+/usr/bin/ranlib libdownspout_sidecar_core.a

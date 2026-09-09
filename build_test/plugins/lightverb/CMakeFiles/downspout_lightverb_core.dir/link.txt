@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_lightverb_core.a CMakeFiles/downspout_lightverb_core.dir/src/lightverb_core.cpp.o CMakeFiles/downspout_lightverb_core.dir/src/lightverb_serialization.cpp.o
+/usr/bin/ranlib libdownspout_lightverb_core.a

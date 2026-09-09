@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_canticle_core.a CMakeFiles/downspout_canticle_core.dir/src/canticle_engine.cpp.o
+/usr/bin/ranlib libdownspout_canticle_core.a

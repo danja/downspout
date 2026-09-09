@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsyrinx-ui.a "CMakeFiles/syrinx-ui.dir/src/dpf/SyrinxUI.cpp.o"
+/usr/bin/ranlib libsyrinx-ui.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_worms_core.a CMakeFiles/downspout_worms_core.dir/src/worms_engine.cpp.o CMakeFiles/downspout_worms_core.dir/src/worms_pattern.cpp.o CMakeFiles/downspout_worms_core.dir/src/worms_serialization.cpp.o CMakeFiles/downspout_worms_core.dir/src/worms_tonnetz.cpp.o
+/usr/bin/ranlib libdownspout_worms_core.a

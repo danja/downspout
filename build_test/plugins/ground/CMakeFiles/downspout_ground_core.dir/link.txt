@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_ground_core.a CMakeFiles/downspout_ground_core.dir/src/ground_ai_state.cpp.o CMakeFiles/downspout_ground_core.dir/src/ground_engine.cpp.o CMakeFiles/downspout_ground_core.dir/src/ground_pattern.cpp.o CMakeFiles/downspout_ground_core.dir/src/ground_serialization.cpp.o CMakeFiles/downspout_ground_core.dir/src/ground_variation.cpp.o
+/usr/bin/ranlib libdownspout_ground_core.a

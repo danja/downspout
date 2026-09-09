@@ -1,0 +1,2 @@
+/usr/bin/ar qc libm_mix.a CMakeFiles/m_mix.dir/_dpf_empty.c.o
+/usr/bin/ranlib libm_mix.a

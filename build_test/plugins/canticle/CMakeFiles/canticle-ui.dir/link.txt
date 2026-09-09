@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcanticle-ui.a "CMakeFiles/canticle-ui.dir/src/dpf/CanticleUI.cpp.o"
+/usr/bin/ranlib libcanticle-ui.a

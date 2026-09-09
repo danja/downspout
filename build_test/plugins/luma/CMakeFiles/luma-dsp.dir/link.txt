@@ -1,0 +1,2 @@
+/usr/bin/ar qc libluma-dsp.a "CMakeFiles/luma-dsp.dir/src/dpf/LumaPlugin.cpp.o"
+/usr/bin/ranlib libluma-dsp.a

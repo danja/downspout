@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsyrinx.a CMakeFiles/syrinx.dir/_dpf_empty.c.o
+/usr/bin/ranlib libsyrinx.a

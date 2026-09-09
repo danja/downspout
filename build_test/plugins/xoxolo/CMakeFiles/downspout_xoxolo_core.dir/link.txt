@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_xoxolo_core.a CMakeFiles/downspout_xoxolo_core.dir/src/xoxolo_engine.cpp.o CMakeFiles/downspout_xoxolo_core.dir/src/xoxolo_generator.cpp.o CMakeFiles/downspout_xoxolo_core.dir/src/xoxolo_serialization.cpp.o
+/usr/bin/ranlib libdownspout_xoxolo_core.a

@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "canticle_params.hpp"
 
@@ -9,6 +10,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -224,6 +227,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     struct ControlRect {
         int parameter = -1;
         Rect bounds {};
@@ -232,12 +239,12 @@ private:
     void drawBackground(const float width, const float height)
     {
         beginPath();
-        fillColor(27, 31, 34, 255);
+        fc(t_.panel);
         rect(0.0f, 0.0f, width, height);
         fill();
 
         beginPath();
-        fillColor(38, 44, 47, 255);
+        fc(t_.surface);
         rect(0.0f, 0.0f, width, 104.0f);
         fill();
     }
@@ -245,16 +252,16 @@ private:
     void drawHeader(const float x, const float y, const float w, const float h)
     {
         beginPath();
-        fillColor(225, 230, 222, 255);
+        fc(t_.textPrimary);
         fontSize(30.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         text(x, y + 3.0f, "Canticle", nullptr);
 
-        fillColor(165, 176, 170, 255);
+        fc(t_.textDim);
         fontSize(15.0f);
         text(x + 160.0f, y + 13.0f, "polyphonic keys, reed, pad, pluck, and glass", nullptr);
 
-        fillColor(116, 128, 124, 255);
+        fc(t_.textDim);
         fontSize(12.0f);
         text(x, y + h - 18.0f, "clear middle voice for Cadence chords, MelGen lines, and Counterpointer answers", nullptr);
     }
@@ -263,7 +270,7 @@ private:
     {
         const auto& section = kSections[index];
         beginPath();
-        fillColor(35, 40, 42, 255);
+        fc(t_.surface);
         roundedRect(rect.x, rect.y, rect.w, rect.h, 7.0f);
         fill();
 
@@ -272,7 +279,7 @@ private:
         roundedRect(rect.x, rect.y, rect.w, 42.0f, 7.0f);
         fill();
 
-        fillColor(20, 24, 25, 255);
+        fc(t_.panel);
         fontSize(16.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         text(rect.x + 14.0f, rect.y + 21.0f, section.title, nullptr);
@@ -289,7 +296,7 @@ private:
     void drawDropdownColumn(const Rect rect)
     {
         beginPath();
-        fillColor(35, 40, 42, 255);
+        fc(t_.surface);
         roundedRect(rect.x, rect.y, rect.w, rect.h, 7.0f);
         fill();
 
@@ -298,7 +305,7 @@ private:
         roundedRect(rect.x, rect.y, rect.w, 42.0f, 7.0f);
         fill();
 
-        fillColor(20, 24, 25, 255);
+        fc(t_.panel);
         fontSize(16.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         text(rect.x + 14.0f, rect.y + 21.0f, "Role", nullptr);
@@ -314,7 +321,7 @@ private:
 
     void drawDropdown(const DropdownDef& dropdown, const Rect rect, const bool open)
     {
-        fillColor(190, 198, 193, 255);
+        fc(t_.textDim);
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         text(rect.x, rect.y, dropdown.label, nullptr);
@@ -326,12 +333,12 @@ private:
         fill();
 
         const std::string value = formatValue(dropdown.parameter, values_[dropdown.parameter]);
-        fillColor(224, 226, 222, 255);
+        fc(t_.textPrimary);
         fontSize(14.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         text(box.x + 10.0f, box.y + box.h * 0.5f + 1.0f, value.c_str(), nullptr);
 
-        fillColor(154, 164, 159, 255);
+        fc(t_.textDim);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
         text(box.x + box.w - 10.0f, box.y + box.h * 0.5f, open ? "^" : "v", nullptr);
     }
@@ -347,7 +354,7 @@ private:
         const int selected = static_cast<int>(std::lround(values_[dropdown.parameter]));
 
         beginPath();
-        fillColor(23, 27, 29, 250);
+        fc(t_.panel.withAlpha(250));
         roundedRect(menu.x, menu.y, menu.w, menu.h, 6.0f);
         fill();
 
@@ -363,12 +370,12 @@ private:
             if (selected == static_cast<int>(i))
             {
                 beginPath();
-                fillColor(74, 57, 80, 255);
+                fc(t_.border);
                 roundedRect(menu.x + 4.0f, y + 3.0f, menu.w - 8.0f, 22.0f, 5.0f);
                 fill();
             }
 
-            fillColor(225, 228, 224, 255);
+            fc(t_.textPrimary);
             fontSize(13.0f);
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
             text(menu.x + 10.0f, y + 14.0f, dropdown.names[i], nullptr);
@@ -396,19 +403,19 @@ private:
     void drawSlider(const std::uint32_t parameter, const char* label, const Rect rect, const Color color)
     {
         const float normalized = normalizedValue(parameter, values_[parameter]);
-        fillColor(190, 198, 193, 255);
+        fc(t_.textDim);
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         text(rect.x, rect.y, label, nullptr);
 
         const std::string value = formatValue(parameter, values_[parameter]);
-        fillColor(128, 138, 134, 255);
+        fc(t_.textDim);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
         text(rect.x + rect.w, rect.y, value.c_str(), nullptr);
 
         const float trackY = rect.y + 27.0f;
         beginPath();
-        fillColor(24, 28, 30, 255);
+        fc(t_.panel);
         roundedRect(rect.x, trackY, rect.w, 13.0f, 4.0f);
         fill();
 

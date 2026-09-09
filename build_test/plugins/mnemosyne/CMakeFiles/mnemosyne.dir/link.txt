@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmnemosyne.a CMakeFiles/mnemosyne.dir/_dpf_empty.c.o
+/usr/bin/ranlib libmnemosyne.a

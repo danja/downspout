@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsidecar-ui.a "CMakeFiles/sidecar-ui.dir/src/dpf/SidecarUI.cpp.o"
+/usr/bin/ranlib libsidecar-ui.a

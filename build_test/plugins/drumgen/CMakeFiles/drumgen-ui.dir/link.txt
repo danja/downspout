@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdrumgen-ui.a "CMakeFiles/drumgen-ui.dir/src/dpf/DrumgenUI.cpp.o"
+/usr/bin/ranlib libdrumgen-ui.a

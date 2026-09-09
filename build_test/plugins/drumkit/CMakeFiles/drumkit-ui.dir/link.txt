@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdrumkit-ui.a "CMakeFiles/drumkit-ui.dir/src/dpf/DrumkitUI.cpp.o"
+/usr/bin/ranlib libdrumkit-ui.a

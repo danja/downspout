@@ -1,0 +1,2 @@
+/usr/bin/ar qc libresonance_garden-dsp.a "CMakeFiles/resonance_garden-dsp.dir/src/dpf/ResonanceGardenPlugin.cpp.o"
+/usr/bin/ranlib libresonance_garden-dsp.a

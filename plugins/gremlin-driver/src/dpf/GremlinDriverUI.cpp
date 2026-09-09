@@ -1,4 +1,5 @@
 #include "DistrhoUI.hpp"
+#include "downspout/look_and_feel.hpp"
 
 #include "gremlin_driver_dpf_shared.hpp"
 #include "gremlin_driver_params.hpp"
@@ -10,6 +11,8 @@
 #include <string>
 
 START_NAMESPACE_DISTRHO
+
+namespace laf = downspout::laf;
 
 namespace {
 
@@ -326,6 +329,10 @@ protected:
     }
 
 private:
+    const laf::Theme& t_ { laf::defaultTheme() };
+    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
+    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+
     static constexpr int kBpmSliderIndex = static_cast<int>(kLaneSliders.size() + kTriggerSliders.size());
 
     std::array<float, kGremlinDriverParameterCount> values_ {};
@@ -343,13 +350,13 @@ private:
     void drawBackground(const float width, const float height)
     {
         beginPath();
-        fillColor(9, 13, 18, 255);
+        fc(t_.background);
         rect(0.0f, 0.0f, width, height);
         fill();
         closePath();
 
         beginPath();
-        fillColor(23, 28, 36, 255);
+        fc(t_.panel);
         rect(0.0f, 0.0f, width, height * 0.33f);
         fill();
         closePath();
@@ -365,7 +372,7 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 20.0f);
-        fillColor(17, 22, 29, 238);
+        fc(t_.panel);
         fill();
         closePath();
 
@@ -377,11 +384,11 @@ private:
 
         fontSize(30.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(242, 245, 247, 255);
+        fc(t_.textPrimary);
         text(x + 22.0f, y + 14.0f, "GremlinDriver", nullptr);
 
         fontSize(13.0f);
-        fillColor(159, 168, 178, 255);
+        fc(t_.textDim);
         text(x + 24.0f, y + 52.0f, "Macro lanes, action triggers, and patch scrambles for feeding Gremlin", nullptr);
 
         drawPill(x + w - 286.0f, y + 18.0f, 132.0f, 28.0f,
@@ -415,13 +422,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 18.0f);
-        fillColor(17, 22, 29, 240);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(173, 181, 190, 255);
+        fc(t_.textDim);
         text(x + 18.0f, y + 14.0f, "Clock and Patch Flow", nullptr);
 
         clockRects_[0] = {x + 18.0f, y + 40.0f, 94.0f, 28.0f};
@@ -500,7 +507,7 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(246, 240, 236, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 1.0f, label, nullptr);
     }
 
@@ -516,7 +523,7 @@ private:
     {
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_BOTTOM);
-        fillColor(208, 214, 220, 255);
+        fc(t_.textPrimary);
         text(rect.x, rect.y - 6.0f, label, nullptr);
 
         beginPath();
@@ -535,7 +542,7 @@ private:
         const std::string valueLabel = formatBpm(value);
         fontSize(11.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(247, 248, 249, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 1.0f, valueLabel.c_str(), nullptr);
     }
 
@@ -549,13 +556,13 @@ private:
     {
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 12.0f);
-        fillColor(30, 38, 48, 255);
+        fc(t_.surface);
         fill();
         closePath();
 
         fontSize(10.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(162, 171, 181, 255);
+        fc(t_.textDim);
         text(rect.x + 12.0f, rect.y + 7.0f, label, nullptr);
 
         fontSize(10.0f);
@@ -566,7 +573,7 @@ private:
         const std::string valueLabel = formatBpm(value);
         fontSize(16.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(241, 244, 246, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 5.0f, valueLabel.c_str(), nullptr);
     }
 
@@ -583,13 +590,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 18.0f);
-        fillColor(17, 22, 29, 242);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(227, 231, 235, 255);
+        fc(t_.textPrimary);
         const std::string laneTitle = "Lane " + std::to_string(laneIndex + 1);
         text(x + 16.0f, y + 14.0f, laneTitle.c_str(), nullptr);
 
@@ -618,7 +625,7 @@ private:
         const float laneValue = values_[kParamStatusLaneStart + laneIndex];
         beginPath();
         roundedRect(x + 16.0f, y + h - 30.0f, w - 32.0f, 10.0f, 5.0f);
-        fillColor(35, 42, 52, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
@@ -633,7 +640,7 @@ private:
     {
         fontSize(10.0f);
         textAlign(ALIGN_LEFT | ALIGN_BOTTOM);
-        fillColor(147, 157, 169, 255);
+        fc(t_.textDim);
         text(rect.x, rect.y - 4.0f, label, nullptr);
 
         beginPath();
@@ -647,7 +654,7 @@ private:
 
         fontSize(11.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(231, 235, 239, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 1.0f, value.c_str(), nullptr);
     }
 
@@ -663,13 +670,13 @@ private:
 
         beginPath();
         roundedRect(rect.x, rect.y, rect.w, rect.h, 12.0f);
-        fillColor(27, 33, 43, 255);
+        fc(t_.panel);
         fill();
         closePath();
 
         beginPath();
         roundedRect(rect.x + 10.0f, rect.y + 24.0f, rect.w - 20.0f, rect.h - 46.0f, 6.0f);
-        fillColor(38, 45, 56, 255);
+        fc(t_.buttonFace);
         fill();
         closePath();
 
@@ -682,11 +689,11 @@ private:
 
         fontSize(10.0f);
         textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(224, 228, 232, 255);
+        fc(t_.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + 7.0f, binding.label, nullptr);
 
         const std::string label = binding.index == kParamBpm ? formatBpm(value) : formatPercent(normalized);
-        fillColor(151, 161, 172, 255);
+        fc(t_.textDim);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h - 16.0f, label.c_str(), nullptr);
     }
 
@@ -702,13 +709,13 @@ private:
     {
         beginPath();
         roundedRect(x, y, w, h, 18.0f);
-        fillColor(17, 22, 29, 242);
+        fc(t_.panel);
         fill();
         closePath();
 
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fillColor(227, 231, 235, 255);
+        fc(t_.textPrimary);
         const std::string title = "Trigger " + std::to_string(triggerIndex + 1);
         text(x + 16.0f, y + 14.0f, title.c_str(), nullptr);
 
@@ -724,7 +731,7 @@ private:
         const float flash = values_[kParamStatusTriggerStart + triggerIndex];
         beginPath();
         roundedRect(x + w - 90.0f, y + 98.0f, 58.0f, 58.0f, 14.0f);
-        fillColor(36, 43, 53, 255);
+        fc(t_.controlTrack);
         fill();
         closePath();
 
@@ -736,7 +743,7 @@ private:
 
         fontSize(11.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(240, 243, 246, 255);
+        fc(t_.textPrimary);
         text(x + w - 61.0f, y + 127.0f, "Fire", nullptr);
     }
 

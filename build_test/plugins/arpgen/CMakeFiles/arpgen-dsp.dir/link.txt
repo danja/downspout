@@ -1,0 +1,2 @@
+/usr/bin/ar qc libarpgen-dsp.a "CMakeFiles/arpgen-dsp.dir/src/dpf/ArpgenPlugin.cpp.o"
+/usr/bin/ranlib libarpgen-dsp.a

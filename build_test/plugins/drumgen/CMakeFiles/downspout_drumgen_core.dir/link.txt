@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdownspout_drumgen_core.a CMakeFiles/downspout_drumgen_core.dir/src/drumgen_engine.cpp.o CMakeFiles/downspout_drumgen_core.dir/src/drumgen_pattern.cpp.o CMakeFiles/downspout_drumgen_core.dir/src/drumgen_serialization.cpp.o CMakeFiles/downspout_drumgen_core.dir/src/drumgen_state.cpp.o CMakeFiles/downspout_drumgen_core.dir/src/drumgen_template.cpp.o CMakeFiles/downspout_drumgen_core.dir/src/drumgen_transport.cpp.o CMakeFiles/downspout_drumgen_core.dir/src/drumgen_variation.cpp.o
+/usr/bin/ranlib libdownspout_drumgen_core.a
