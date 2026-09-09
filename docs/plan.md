@@ -184,6 +184,7 @@ Progress as of 2026-05-27:
 - `floozy` now ports `flues/lv2/floozy-poly` as a corrected 8-voice hybrid physical/modulation synth with a portable core, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `basilico` now exists as an original monophonic bass instrument with upright, electric, dub, acid, and industrial models, tempo-aware wobble modulation, acid squelch, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `canticle` now exists as an original 12-voice polyphonic tonal instrument for keys, reed, pad, pluck, and glass roles, with deterministic tests and a first VST3 wrapper target with UI via vendored DPF;
+- `moka` now exists as an original stereo modal hit-object instrument (xylophone, glockenspiel, woodblock, glass bowl, metal sheet, tube) with eight controls, ten factory presets, selectable 1–12 voice polyphony defaulting to 4, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `luma` now exists as an original Launchpad-oriented MIDI performance generator with pad agents, LED feedback, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `paunchlad` now exists as an original Launchpad-oriented dub performance effect with echo throws, sirens, spring splashes, dropouts, chops, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `lifeform` now exists as an original Launchpad-oriented Conway Game of Life MIDI generator with one generation per beat, LED feedback, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
@@ -206,7 +207,7 @@ Current main gap:
   `rift.vst3`, `orchid.vst3`, `ambo.vst3`, `drumgen.vst3`, `drumkit.vst3`,
   `cadence.vst3`, `arpgen.vst3`, `counterpointer.vst3`, `sidecar.vst3`, `gremlin.vst3`,
   `gremlin_driver.vst3`, `ground.vst3`, `floozy.vst3`, `basilico.vst3`,
-  `canticle.vst3`, `luma.vst3`, `paunchlad.vst3`, `lifeform.vst3`, and
+  `canticle.vst3`, `moka.vst3`, `luma.vst3`, `paunchlad.vst3`, `lifeform.vst3`, and
   `xoxolo.vst3`, `syrinx.vst3`, `tuney_vst.vst3`, `harmonic_atlas.vst3`,
   `conductor.vst3`, `drift.vst3`, `mnemosyne.vst3`, `polymeter.vst3`,
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,

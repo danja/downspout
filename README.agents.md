@@ -73,6 +73,7 @@ Downspout is a suite of VST3 plugins for autonomous music generation and process
 | [Basilico](plugins/basilico/) | Monophonic bass instrument with upright, electric, dub, acid, and industrial models | [profile.ttl](plugins/basilico/profile.ttl) |
 | [DrumKit](plugins/drumkit/) | Stereo synthesised drum instrument and natural sound source | [profile.ttl](plugins/drumkit/profile.ttl) |
 | [Canticle](plugins/canticle/) | Twelve-voice keys, reed, pad, pluck, and glass instrument | [profile.ttl](plugins/canticle/profile.ttl) |
+| [Moka](plugins/moka/) | Modal hit-object instrument with selectable 1–12 voice polyphony | [profile.ttl](plugins/moka/profile.ttl) |
 | [Floozy](plugins/floozy/) | Eight-voice hybrid physical/modulation synthesizer | [profile.ttl](plugins/floozy/profile.ttl) |
 | [Gremlin](plugins/gremlin/) | Chaotic glitch instrument with scenes, macros, actions, and randomisation | [profile.ttl](plugins/gremlin/profile.ttl) |
 | [Mosaic](plugins/mosaic/) | Four-slot WAV sampler with deterministic slicing and autonomous triggering | [profile.ttl](plugins/mosaic/profile.ttl) |

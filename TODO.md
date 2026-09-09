@@ -2,7 +2,13 @@
 
 ## New Instrument Plugin : Moka
 
-Moka will be a 2-channel midi synth plugin based on physical/modal synthesis that will emulate hit objects : xylophone, glockenspiel, woodblocks, glass bowl, metal sheet etc. It will include a set of presets plus a set of around 10 parameter controls (decide what will be most suitable).
+Moka is implemented under `plugins/moka/` as a stereo modal hit-object
+synth (xylophone, glockenspiel, woodblock, glass bowl, metal sheet, tube)
+with eight controls (Instrument, Decay, Mallet, Tone, Spread, Position,
+Voices defaulting to 4, Level), ten factory presets, and the shared
+Cold War test-equipment look & feel with dark/light panel themes.
+
+Remaining: host validation in REAPER.
 
 ## Look and Feel
 

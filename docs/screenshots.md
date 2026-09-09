@@ -82,6 +82,7 @@ Current output filenames:
 - `floozy.png`
 - `basilico.png`
 - `canticle.png`
+- `moka.png`
 - `luma.png`
 - `paunchlad.png`
 - `lifeform.png`

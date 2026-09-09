@@ -93,6 +93,7 @@ installed bundle.
 | [basilico](plugins/basilico/README.md) | `basilico.vst3` | Instrument | Monophonic bass synth with Dub/Acid wobble, tempo sync, squelch, and upright/electric/industrial models. |
 | [campione](plugins/campione/README.md) | `campione.vst3` | Instrument | Campione — multi-zone sampler with WAV loading, REX2 slice import, wavetable auto-detection, recording, gap-fill pitch shift, and crossfade looping. |
 | [canticle](plugins/canticle/README.md) | `canticle.vst3` | Instrument | 12-voice keys, reed, pad, pluck, and glass synth for melody, counterpoint, and chords. |
+| [moka](plugins/moka/README.md) | `moka.vst3` | Instrument | Modal hit-object synth (xylophone, glockenspiel, woodblock, glass, metal, tube) with 8 controls, 10 presets, and selectable 1–12 voice polyphony. |
 | [tuney-vst](plugins/tuney-vst/README.md) | `tuney_vst.vst3` | Instrument/MIDI generator | Turns focused typing or stored text into microtonal synthesized audio and ordinary MIDI notes. |
 | [luma](plugins/luma/README.md) | `luma.vst3` | MIDI generator | Launchpad-oriented performance generator where lit pads become bass, chord, melody, and drum agents. |
 | [paunchlad](plugins/paunchlad/README.md) | `paunchlad.vst3` | Audio effect/instrument | Launchpad dub performance effect with echo throws, sirens, spring splashes, dropouts, and chops. |

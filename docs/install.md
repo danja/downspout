@@ -92,6 +92,7 @@ The repository currently installs forty-one real wrapper targets:
 - `floozy.vst3` with UI
 - `basilico.vst3` with UI
 - `canticle.vst3` with UI
+- `moka.vst3` with UI
 - `luma.vst3` with UI
 - `paunchlad.vst3` with UI
 - `lifeform.vst3` with UI

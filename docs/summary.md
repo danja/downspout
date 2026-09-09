@@ -106,6 +106,10 @@ Twelve-voice instrument covering keys, reed, pad, pluck, and glass timbres. Desi
 
 Eight-voice hybrid physical/modulation synthesizer derived from `floozy-poly`. Suitable for expressive leads, plucks, and unusual synthetic textures.
 
+### Moka (`moka.vst3`)
+
+Stereo modal hit-object synth with eight damped modes per voice, six instrument tables (xylophone, glockenspiel, woodblock, glass bowl, metal sheet, tube), selectable 1–12 voice polyphony defaulting to 4, and ten factory presets. Natural sound source for struck percussion and bell parts from DrumGen, Xoxolo, or authored MIDI.
+
 ### Gremlin (`gremlin.vst3`)
 
 Chaotic glitch instrument with performance scenes, live and hidden parameters, macros, momentary controls, randomization actions, delay-oriented behaviors, controller feedback, and a master trim. GremlinDriver is its intended automation companion.

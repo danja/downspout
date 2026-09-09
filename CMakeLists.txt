@@ -39,6 +39,7 @@ option(DOWNSPOUT_BUILD_GROUND "Configure the ground original MIDI target" ON)
 option(DOWNSPOUT_BUILD_FLOOZY "Configure the floozy port target" ON)
 option(DOWNSPOUT_BUILD_BASILICO "Configure the basilico bass instrument target" ON)
 option(DOWNSPOUT_BUILD_CANTICLE "Configure the canticle polyphonic instrument target" ON)
+option(DOWNSPOUT_BUILD_MOKA "Configure the moka modal hit-object instrument target" ON)
 option(DOWNSPOUT_BUILD_LUMA "Configure the luma Launchpad performance target" ON)
 option(DOWNSPOUT_BUILD_PAUNCHLAD "Configure the PaunchLad Launchpad dub effect target" ON)
 option(DOWNSPOUT_BUILD_LIFEFORM "Configure the Lifeform Launchpad Game of Life MIDI target" ON)
@@ -242,6 +243,10 @@ endif()
 
 if(DOWNSPOUT_BUILD_CANTICLE)
     add_subdirectory(plugins/canticle)
+endif()
+
+if(DOWNSPOUT_BUILD_MOKA)
+    add_subdirectory(plugins/moka)
 endif()
 
 if(DOWNSPOUT_BUILD_LUMA)
