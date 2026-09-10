@@ -53,8 +53,29 @@ struct SectionDef {
 
 constexpr std::array<SectionDef, 2> kSections = {{
     {"Body", {199, 145, 86}, {{{1, "Decay"}, {2, "Mallet"}, {3, "Tone"}, {7, "Level"}}}, 4},
-    {"Modal", {93, 158, 180}, {{{4, "Spread"}, {5, "Position"}, {6, "Voices"}}}, 3},
+    {"Modal", {93, 158, 180}, {{{4, "Spread"}, {5, "Position"}, {8, "Release"}, {9, "Width"}}}, 4},
 }};
+
+inline constexpr std::size_t kCustomPreset = kPresets.size();
+
+std::size_t matchPreset(const std::array<float, kParameterCount>& values)
+{
+    for (std::size_t p = 0; p < kPresets.size(); ++p)
+    {
+        bool match = true;
+        for (std::uint32_t i = 0; i < kParameterCount; ++i)
+        {
+            if (std::fabs(values[i] - kPresets[p].values[i]) > 1.0e-4f)
+            {
+                match = false;
+                break;
+            }
+        }
+        if (match)
+            return p;
+    }
+    return kCustomPreset;
+}
 
 float clampf(const float value, const float minimum, const float maximum)
 {
@@ -80,6 +101,14 @@ std::string formatValue(const std::uint32_t parameter, const float value)
     {
         std::snprintf(buffer, sizeof(buffer), "%d", static_cast<int>(std::lround(clampf(value, 1.0f, 12.0f))));
     }
+    else if (parameter == static_cast<std::uint32_t>(ParamId::release))
+    {
+        const float t60 = 0.03f * std::pow(50.0f, clampf(value, 0.0f, 1.0f));
+        if (t60 < 1.0f)
+            std::snprintf(buffer, sizeof(buffer), "%dms", static_cast<int>(std::lround(t60 * 1000.0f)));
+        else
+            std::snprintf(buffer, sizeof(buffer), "%.1fs", t60);
+    }
     else if (parameter == static_cast<std::uint32_t>(ParamId::decay))
     {
         std::snprintf(buffer, sizeof(buffer), "%d%%", static_cast<int>(std::lround(clampf(value, 0.0f, 1.0f) * 100.0f)));
@@ -100,6 +129,7 @@ public:
     {
         for (std::uint32_t i = 0; i < kParameterCount; ++i)
             values_[i] = kParameterSpecs[i].defaultValue;
+        presetIndex_ = matchPreset(values_);
 
        #ifdef DGL_NO_SHARED_RESOURCES
         createFontFromFile("sans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
@@ -114,6 +144,7 @@ protected:
         if (index < values_.size())
         {
             values_[index] = value;
+            presetIndex_ = matchPreset(values_);
             repaint();
         }
     }
@@ -150,11 +181,11 @@ protected:
             return false;
         }
 
-        if (openDropdown_ >= 0)
+        if (openDropdown_)
         {
             if (handleOpenDropdownClick(ev.pos.getX(), ev.pos.getY()))
                 return true;
-            openDropdown_ = -1;
+            openDropdown_ = false;
         }
 
         // Theme toggle lives in the status column.
@@ -170,7 +201,7 @@ protected:
             if (selectorRects_[i].contains(ev.pos.getX(), ev.pos.getY()))
             {
                 activeParameter_ = -1;
-                openDropdown_ = static_cast<int>(i);
+                openDropdown_ = true;
                 repaint();
                 return true;
             }
@@ -298,15 +329,35 @@ private:
         fc(t.panel);
         fontSize(16.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        text(rect.x + 14.0f, rect.y + 21.0f, "Role", nullptr);
+        text(rect.x + 14.0f, rect.y + 21.0f, "Sound", nullptr);
 
-        const float slotH = (rect.h - 64.0f) / 2.0f;
-        const Rect presetRect {rect.x + 14.0f, rect.y + 54.0f, rect.w - 28.0f, slotH - 12.0f};
-        const Rect instrumentRect {rect.x + 14.0f, rect.y + 54.0f + slotH, rect.w - 28.0f, slotH - 12.0f};
+        const Rect presetRect {rect.x + 14.0f, rect.y + 54.0f, rect.w - 28.0f, 90.0f};
         selectorRects_[0] = presetRect;
-        selectorRects_[1] = instrumentRect;
-        drawPresetBox(presetRect, openDropdown_ == 0);
-        drawInstrumentBox(instrumentRect, openDropdown_ == 1);
+        drawPresetBox(presetRect, openDropdown_);
+
+        // Read-only instrument readout: the preset menu above is the only
+        // place that changes the model, so the two can never disagree.
+        const float x = rect.x + 14.0f;
+        float y = rect.y + 170.0f;
+        fc(t.textDim);
+        fontSize(13.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        text(x, y, "Model", nullptr);
+        y += 22.0f;
+
+        const std::string model = formatValue(static_cast<std::uint32_t>(ParamId::instrument),
+                                              values_[static_cast<std::size_t>(ParamId::instrument)]);
+        fc(t.textPrimary);
+        fontSize(14.0f);
+        text(x, y, model.c_str(), nullptr);
+        y += 30.0f;
+
+        fc(t.textDim);
+        fontSize(12.0f);
+        text(x, y, "A preset sets all", nullptr);
+        text(x, y + 16.0f, "ten controls at once.", nullptr);
+        text(x, y + 36.0f, "Any tweak shows", nullptr);
+        text(x, y + 52.0f, "Custom above.", nullptr);
     }
 
     void drawStatusColumn(const Rect rect)
@@ -351,19 +402,20 @@ private:
         text(x + w - 10.0f, y + 16.0f, darkTheme_ ? "o-" : "-o", nullptr);
         y += 48.0f;
 
+        const Rect voicesRect {x, y, w, 64.0f};
+        drawSlider(static_cast<std::uint32_t>(ParamId::voices), "Voices", voicesRect, {132, 168, 104});
+        y += 76.0f;
+
         fc(t.textDim);
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        text(x, y, "Selecting a preset writes", nullptr);
-        text(x, y + 16.0f, "all eight controls.", nullptr);
-        y += 44.0f;
+        text(x, y, "Voices cap stealing:", nullptr);
+        text(x, y + 16.0f, "oldest note gives way.", nullptr);
+    }
 
-        char poly[64];
-        std::snprintf(poly, sizeof(poly), "Voices cap: %d / 12",
-                      static_cast<int>(std::lround(values_[static_cast<std::size_t>(ParamId::voices)])));
-        fc(t.textPrimary);
-        fontSize(13.0f);
-        text(x, y, poly, nullptr);
+    const char* presetLabel() const
+    {
+        return presetIndex_ < kPresets.size() ? kPresets[presetIndex_].name : "Custom";
     }
 
     void drawPresetBox(const Rect rect, const bool open)
@@ -383,33 +435,7 @@ private:
         fc(t.textPrimary);
         fontSize(14.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        text(box.x + 10.0f, box.y + box.h * 0.5f + 1.0f, kPresets[presetIndex_].name, nullptr);
-
-        fc(t.textDim);
-        textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
-        text(box.x + box.w - 10.0f, box.y + box.h * 0.5f, open ? "^" : "v", nullptr);
-    }
-
-    void drawInstrumentBox(const Rect rect, const bool open)
-    {
-        const auto& t = theme();
-        fc(t.textDim);
-        fontSize(13.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        text(rect.x, rect.y, "Instrument", nullptr);
-
-        const Rect box {rect.x, rect.y + 24.0f, rect.w, 30.0f};
-        beginPath();
-        fillColor(open ? 58 : 24, open ? 45 : 28, open ? 62 : 30, 255);
-        roundedRect(box.x, box.y, box.w, box.h, 5.0f);
-        fill();
-
-        const std::string value = formatValue(static_cast<std::uint32_t>(ParamId::instrument),
-                                              values_[static_cast<std::size_t>(ParamId::instrument)]);
-        fc(t.textPrimary);
-        fontSize(14.0f);
-        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        text(box.x + 10.0f, box.y + box.h * 0.5f + 1.0f, value.c_str(), nullptr);
+        text(box.x + 10.0f, box.y + box.h * 0.5f + 1.0f, presetLabel(), nullptr);
 
         fc(t.textDim);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
@@ -418,13 +444,12 @@ private:
 
     void drawOpenDropdown()
     {
-        if (openDropdown_ < 0)
+        if (!openDropdown_)
             return;
 
         const auto& t = theme();
-        const Rect base = selectorRects_[static_cast<std::size_t>(openDropdown_)];
-        const std::size_t count = openDropdown_ == 0 ? kPresets.size() : kInstrumentNames.size();
-        const Rect menu {base.x, base.y + 56.0f, base.w, 28.0f * static_cast<float>(count)};
+        const Rect base = selectorRects_[0];
+        const Rect menu {base.x, base.y + 56.0f, base.w, 28.0f * static_cast<float>(kPresets.size())};
 
         beginPath();
         fc(t.panel.withAlpha(250));
@@ -437,14 +462,10 @@ private:
         roundedRect(menu.x, menu.y, menu.w, menu.h, 6.0f);
         stroke();
 
-        const int selected = openDropdown_ == 0
-            ? static_cast<int>(presetIndex_)
-            : static_cast<int>(std::lround(values_[static_cast<std::size_t>(ParamId::instrument)]));
-
-        for (std::size_t i = 0; i < count; ++i)
+        for (std::size_t i = 0; i < kPresets.size(); ++i)
         {
             const float y = menu.y + static_cast<float>(i) * 28.0f;
-            if (selected == static_cast<int>(i))
+            if (presetIndex_ == i)
             {
                 beginPath();
                 fc(t.border);
@@ -455,34 +476,26 @@ private:
             fc(t.textPrimary);
             fontSize(13.0f);
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-            const char* label = openDropdown_ == 0 ? kPresets[i].name : kInstrumentNames[i];
-            text(menu.x + 10.0f, y + 14.0f, label, nullptr);
+            text(menu.x + 10.0f, y + 14.0f, kPresets[i].name, nullptr);
         }
     }
 
     bool handleOpenDropdownClick(const float x, const float y)
     {
-        const Rect base = selectorRects_[static_cast<std::size_t>(openDropdown_)];
+        const Rect base = selectorRects_[0];
         if (base.contains(x, y))
             return false;
 
-        const std::size_t count = openDropdown_ == 0 ? kPresets.size() : kInstrumentNames.size();
-        const Rect menu {base.x, base.y + 56.0f, base.w, 28.0f * static_cast<float>(count)};
+        const Rect menu {base.x, base.y + 56.0f, base.w, 28.0f * static_cast<float>(kPresets.size())};
         if (!menu.contains(x, y))
             return false;
 
-        const int item = std::clamp(static_cast<int>((y - menu.y) / 28.0f), 0, static_cast<int>(count) - 1);
-        if (openDropdown_ == 0)
-        {
-            presetIndex_ = static_cast<std::size_t>(item);
-            for (std::uint32_t p = 0; p < kParameterCount; ++p)
-                commitParameter(p, kPresets[presetIndex_].values[p]);
-        }
-        else
-        {
-            commitParameter(static_cast<std::uint32_t>(ParamId::instrument), static_cast<float>(item));
-        }
-        openDropdown_ = -1;
+        const int item = std::clamp(static_cast<int>((y - menu.y) / 28.0f), 0, static_cast<int>(kPresets.size()) - 1);
+        presetIndex_ = static_cast<std::size_t>(item);
+        for (std::uint32_t p = 0; p < kParameterCount; ++p)
+            commitParameterSilent(p, kPresets[presetIndex_].values[p]);
+        presetIndex_ = matchPreset(values_);
+        openDropdown_ = false;
         repaint();
         return true;
     }
@@ -537,6 +550,13 @@ private:
 
     void commitParameter(const std::uint32_t parameter, const float value)
     {
+        commitParameterSilent(parameter, value);
+        presetIndex_ = matchPreset(values_);
+        repaint();
+    }
+
+    void commitParameterSilent(const std::uint32_t parameter, const float value)
+    {
         values_[parameter] = value;
         setParameterValue(parameter, value);
         repaint();
@@ -544,11 +564,11 @@ private:
 
     std::array<float, kParameterCount> values_ {};
     std::array<ControlRect, 32> controlRects_ {};
-    std::array<Rect, 2> selectorRects_ {};
+    std::array<Rect, 1> selectorRects_ {};
     Rect themeRect_ {};
     std::size_t controlRectCount_ = 0;
     int activeParameter_ = -1;
-    int openDropdown_ = -1;
+    bool openDropdown_ = false;
     std::size_t presetIndex_ = 0;
     bool darkTheme_ = true;
 

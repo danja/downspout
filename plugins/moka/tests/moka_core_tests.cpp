@@ -97,6 +97,14 @@ void defaultsAndClamping()
     engine.setParameter(ParamId::instrument, 2.6f);
     require(std::fabs(engine.getParameter(ParamId::instrument) - 3.0f) < 1.0e-6f,
             "moka instrument should round");
+
+    require(std::fabs(engine.getParameter(ParamId::release) - 0.30f) < 1.0e-6f,
+            "moka release default mismatch");
+    require(std::fabs(engine.getParameter(ParamId::width) - 0.70f) < 1.0e-6f,
+            "moka width default mismatch");
+    engine.setParameter(ParamId::release, 4.0f);
+    require(std::fabs(engine.getParameter(ParamId::release) - 1.0f) < 1.0e-6f,
+            "moka release should clamp high");
 }
 
 void allModelsRender()
@@ -174,6 +182,57 @@ void allNotesOffReleasesChord()
     for (int i = 0; i < 144000 && engine.activeVoiceCount() > 0; ++i)
         (void)engine.processStereo();
     require(engine.activeVoiceCount() == 0, "moka all-notes-off should release the chord");
+}
+
+void releaseShapesRingOut()
+{
+    MokaEngine choked {48000.0f};
+    choked.setParameter(ParamId::instrument, 3.0f);
+    choked.setParameter(ParamId::release, 0.0f);
+    choked.noteOn(64, 100);
+    choked.noteOff(64);
+    for (int i = 0; i < 48000 && choked.activeVoiceCount() > 0; ++i)
+        (void)choked.processStereo();
+    require(choked.activeVoiceCount() == 0, "moka release=0 should choke quickly");
+
+    MokaEngine ringing {48000.0f};
+    ringing.setParameter(ParamId::instrument, 3.0f);
+    ringing.setParameter(ParamId::release, 1.0f);
+    ringing.noteOn(64, 100);
+    ringing.noteOff(64);
+    for (int i = 0; i < 24000; ++i)
+        (void)ringing.processStereo();
+    require(ringing.activeVoiceCount() == 1, "moka release=1 should still ring after 0.5 s");
+}
+
+void widthControlsStereoSpread()
+{
+    MokaEngine mono {48000.0f};
+    mono.setParameter(ParamId::width, 0.0f);
+    mono.noteOn(60, 108);
+    float diff = 0.0f;
+    float energy = 0.0f;
+    for (int i = 0; i < 4096; ++i)
+    {
+        const auto frame = mono.processStereo();
+        diff += std::fabs(frame.left - frame.right);
+        energy += std::fabs(frame.left) + std::fabs(frame.right);
+    }
+    require(energy > 0.01f, "moka mono voice should render");
+    require(diff < energy * 0.05f, "moka width=0 should collapse toward mono");
+
+    MokaEngine wide {48000.0f};
+    wide.setParameter(ParamId::width, 1.0f);
+    wide.noteOn(60, 108);
+    float wideDiff = 0.0f;
+    float wideEnergy = 0.0f;
+    for (int i = 0; i < 4096; ++i)
+    {
+        const auto frame = wide.processStereo();
+        wideDiff += std::fabs(frame.left - frame.right);
+        wideEnergy += std::fabs(frame.left) + std::fabs(frame.right);
+    }
+    require(wideDiff > wideEnergy * 0.005f, "moka width=1 should spread partials across channels");
 }
 
 void outputIsBounded()
@@ -271,6 +330,8 @@ int main()
     polyphonyIsSelectable();
     noteOffReleases();
     allNotesOffReleasesChord();
+    releaseShapesRingOut();
+    widthControlsStereoSpread();
     outputIsBounded();
     malletAddsBrightEdge();
     spreadAndPositionMorphSound();

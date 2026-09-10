@@ -18,9 +18,11 @@ enum class ParamId : std::uint32_t {
     position,
     voices,
     level,
+    release,
+    width,
 };
 
-inline constexpr std::size_t kParameterCount = 8;
+inline constexpr std::size_t kParameterCount = 10;
 inline constexpr std::size_t kMaxVoices = 12;
 inline constexpr std::size_t kModeCount = 8;
 
@@ -36,12 +38,14 @@ struct ParamSpec {
 inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"instrument", "Instrument", 0.0f, 5.0f, 0.0f, true},
     {"decay", "Decay", 0.0f, 1.0f, 0.55f, false},
-    {"mallet", "Mallet", 0.0f, 1.0f, 0.65f, false},
-    {"tone", "Tone", 0.0f, 1.0f, 0.60f, false},
+    {"mallet", "Mallet", 0.0f, 1.0f, 0.75f, false},
+    {"tone", "Tone", 0.0f, 1.0f, 0.65f, false},
     {"spread", "Spread", 0.0f, 1.0f, 0.30f, false},
     {"position", "Position", 0.0f, 1.0f, 0.45f, false},
     {"voices", "Voices", 1.0f, 12.0f, 4.0f, true},
     {"level", "Level", 0.0f, 1.0f, 0.70f, false},
+    {"release", "Release", 0.0f, 1.0f, 0.30f, false},
+    {"width", "Width", 0.0f, 1.0f, 0.70f, false},
 }};
 
 inline constexpr std::array<const char*, 6> kInstrumentNames = {{
@@ -152,18 +156,18 @@ struct Preset {
     std::array<float, kParameterCount> values;
 };
 
-// instrument, decay, mallet, tone, spread, position, voices, level
+// instrument, decay, mallet, tone, spread, position, voices, level, release, width
 inline constexpr std::array<Preset, 10> kPresets = {{
-    {"Xylophone", {0.0f, 0.55f, 0.75f, 0.65f, 0.30f, 0.45f, 4.0f, 0.70f}},
-    {"Glockenspiel", {1.0f, 0.70f, 0.85f, 0.80f, 0.30f, 0.40f, 4.0f, 0.62f}},
-    {"Temple Blocks", {2.0f, 0.45f, 0.70f, 0.55f, 0.35f, 0.30f, 4.0f, 0.75f}},
-    {"Glass Bowl", {3.0f, 0.85f, 0.30f, 0.70f, 0.15f, 0.60f, 4.0f, 0.66f}},
-    {"Frost Glass", {3.0f, 0.95f, 0.55f, 0.90f, 0.25f, 0.35f, 6.0f, 0.60f}},
-    {"Metal Sheet", {4.0f, 0.60f, 0.90f, 0.75f, 0.55f, 0.25f, 4.0f, 0.62f}},
-    {"Thunder Plate", {4.0f, 0.90f, 0.65f, 0.45f, 0.70f, 0.55f, 6.0f, 0.66f}},
-    {"Tube Flip-Flop", {5.0f, 0.55f, 0.25f, 0.50f, 0.30f, 0.55f, 4.0f, 0.74f}},
-    {"Dark Tube", {5.0f, 0.70f, 0.20f, 0.30f, 0.20f, 0.70f, 4.0f, 0.72f}},
-    {"Soft Xylo", {0.0f, 0.40f, 0.35f, 0.45f, 0.20f, 0.65f, 4.0f, 0.70f}},
+    {"Xylophone", {0.0f, 0.55f, 0.75f, 0.65f, 0.30f, 0.45f, 4.0f, 0.70f, 0.30f, 0.70f}},
+    {"Glockenspiel", {1.0f, 0.70f, 0.85f, 0.80f, 0.30f, 0.40f, 4.0f, 0.62f, 0.55f, 0.80f}},
+    {"Temple Blocks", {2.0f, 0.45f, 0.70f, 0.55f, 0.35f, 0.30f, 4.0f, 0.75f, 0.15f, 0.60f}},
+    {"Glass Bowl", {3.0f, 0.85f, 0.30f, 0.70f, 0.15f, 0.60f, 4.0f, 0.66f, 0.70f, 0.85f}},
+    {"Frost Glass", {3.0f, 0.95f, 0.55f, 0.90f, 0.25f, 0.35f, 6.0f, 0.60f, 0.80f, 0.90f}},
+    {"Metal Sheet", {4.0f, 0.60f, 0.90f, 0.75f, 0.55f, 0.25f, 4.0f, 0.62f, 0.45f, 0.85f}},
+    {"Thunder Plate", {4.0f, 0.90f, 0.65f, 0.45f, 0.70f, 0.55f, 6.0f, 0.66f, 0.65f, 0.90f}},
+    {"Tube Flip-Flop", {5.0f, 0.55f, 0.25f, 0.50f, 0.30f, 0.55f, 4.0f, 0.74f, 0.35f, 0.60f}},
+    {"Dark Tube", {5.0f, 0.70f, 0.20f, 0.30f, 0.20f, 0.70f, 4.0f, 0.72f, 0.45f, 0.55f}},
+    {"Soft Xylo", {0.0f, 0.40f, 0.35f, 0.45f, 0.20f, 0.65f, 4.0f, 0.70f, 0.25f, 0.65f}},
 }};
 
 } // namespace downspout::moka

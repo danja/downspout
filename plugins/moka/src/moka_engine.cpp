@@ -11,7 +11,6 @@ constexpr float kPi = 3.14159265358979323846f;
 constexpr float kTwoPi = kPi * 2.0f;
 constexpr float kOutputGain = 1.6f;
 constexpr float kMinT60 = 0.03f;
-constexpr float kReleaseT60 = 0.09f;
 constexpr float kSilenceEps = 0.00012f;
 
 float clampUnit(const float value)
@@ -29,6 +28,12 @@ float sanitizeAudio(const float value)
     if (!std::isfinite(value))
         return 0.0f;
     return std::tanh(std::clamp(value, -4.0f, 4.0f));
+}
+
+float releaseT60ForParam(const float value)
+{
+    // 30 ms choke up to a 1.5 s tail.
+    return 0.03f * std::pow(50.0f, clampUnit(value));
 }
 
 struct Params {
@@ -166,11 +171,13 @@ public:
 
         // Overall resonance time: 0.15x–3x around the model base.
         const float decayScale = 0.15f * std::pow(20.0f, clampUnit(decay));
-        const float stretch = 0.80f + 0.40f * clampUnit(spread);
+        // Spread stretches partials from near-harmonic (0.6x) to bell-like (1.5x).
+        const float stretch = 0.60f + 0.90f * clampUnit(spread);
         // Hard beater excites upper partials; soft beater stays near the hum.
         const float spectralSlope = (1.80f - 1.74f * clampUnit(mallet)) * 0.50f;
         // Strike position: edge (0) is bright and clangorous, centre (1) is round.
         const float edgeMix = 1.0f - clampUnit(position);
+        const float width = clampUnit(params.values[static_cast<std::size_t>(ParamId::width)]);
 
         XorShift32 rng {};
         rng.seed(static_cast<std::uint32_t>(midiNote * 131 + velocity * 17 + serial * 1013904223u));
@@ -192,9 +199,9 @@ public:
 
             float weight = entry.level * std::exp(-(ratio - 1.0f) * spectralSlope);
             // Centre strike damps partials proportionally to their distance
-            // from the fundamental; edge strike lets them ring.
-            weight /= 1.0f + (1.0f - edgeMix) * (ratio - 1.0f) * 0.45f;
-            weight *= 1.0f + edgeMix * std::min(ratio / 8.0f, 1.0f) * 0.6f;
+            // from the fundamental; edge strike lets them ring and adds bite.
+            weight /= 1.0f + (1.0f - edgeMix) * (ratio - 1.0f) * 1.10f;
+            weight *= 1.0f + edgeMix * std::min(ratio / 8.0f, 1.0f) * 0.90f;
             if (i == 0)
                 weight *= 1.0f + (1.0f - edgeMix) * 0.25f;
 
@@ -202,9 +209,11 @@ public:
             const float t60 = std::max(kMinT60, spec.baseT60 * decayScale * entry.decayMul);
             mode.decayCoeff = std::exp(-6.9077553f / (t60 * sampleRate_));
             // Alternate partials across the stereo field; higher partials wider.
+            // Width collapses everything toward centre when turned down.
             const float side = (i % 2 == 0) ? -1.0f : 1.0f;
-            mode.pan = std::clamp(side * 0.55f * std::min(ratio / 4.0f + 0.35f, 1.0f)
-                                      + (static_cast<float>((midiNote * 37 + i * 11) % 101) / 100.0f - 0.5f) * 0.10f,
+            mode.pan = std::clamp((side * 0.55f * std::min(ratio / 4.0f + 0.35f, 1.0f)
+                                       + (static_cast<float>((midiNote * 37 + i * 11) % 101) / 100.0f - 0.5f) * 0.10f)
+                                      * (0.05f + 0.95f * width),
                                   -0.85f, 0.85f);
         }
 
@@ -218,10 +227,15 @@ public:
         transientHp_.reset();
         toneFilterLeft_.reset();
         toneFilterRight_.reset();
+        releaseCoeff_ = modes_[0].decayCoeff;
         active_ = true;
     }
 
-    void release() { releasing_ = true; }
+    void release(const float releaseT60)
+    {
+        releasing_ = true;
+        releaseCoeff_ = std::exp(-6.9077553f / (std::max(kMinT60, releaseT60) * sampleRate_));
+    }
 
     StereoFrame process(const Params& params)
     {
@@ -244,9 +258,7 @@ public:
             mode.phase += mode.increment;
             if (mode.phase >= 1.0f)
                 mode.phase -= 1.0f;
-            const float coeff = releasing_
-                ? std::exp(-6.9077553f / (kReleaseT60 * sampleRate_))
-                : mode.decayCoeff;
+            const float coeff = releasing_ ? releaseCoeff_ : mode.decayCoeff;
             mode.amplitude *= coeff;
             const float sample = std::sin(kTwoPi * mode.phase) * mode.amplitude;
             peak = std::max(peak, std::fabs(mode.amplitude));
@@ -305,6 +317,7 @@ private:
     std::array<ModeState, kModeCount> modes_ {};
     bool releasing_ = false;
     bool active_ = false;
+    float releaseCoeff_ = 1.0f;
     int transientSamples_ = 0;
     int transientPosition_ = 0;
     float transientLevel_ = 0.0f;
@@ -404,16 +417,18 @@ public:
 
     void noteOff(const int midiNote)
     {
+        const float t60 = releaseT60ForParam(params_.values[static_cast<std::size_t>(ParamId::release)]);
         for (auto& voice : voices_)
             if (voice.active() && voice.note() == midiNote)
-                voice.release();
+                voice.release(t60);
     }
 
     void allNotesOff()
     {
+        const float t60 = releaseT60ForParam(params_.values[static_cast<std::size_t>(ParamId::release)]);
         for (auto& voice : voices_)
             if (voice.active())
-                voice.release();
+                voice.release(t60);
     }
 
     void handleMidi(const std::uint8_t* data, const std::uint32_t size)

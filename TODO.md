@@ -1,15 +1,5 @@
 # Downspout TODO
 
-## New Instrument Plugin : Moka
-
-Moka is implemented under `plugins/moka/` as a stereo modal hit-object
-synth (xylophone, glockenspiel, woodblock, glass bowl, metal sheet, tube)
-with eight controls (Instrument, Decay, Mallet, Tone, Spread, Position,
-Voices defaulting to 4, Level), ten factory presets, and the shared
-Cold War test-equipment look & feel with dark/light panel themes.
-
-Remaining: host validation in REAPER.
-
 ## Look and Feel
 
 It is desirable to give all the downspout plugins a consistent look as well as /home/danny/github/valis and /home/danny/github/transmission
@@ -26,6 +16,7 @@ The Look & Feel should have both a light and dark theme. The light theme should 
 * drift
 * harmonic-atlas
 * mnemosyne
+* moka
 * mosaic
 * oracle
 * orbit
