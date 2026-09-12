@@ -76,5 +76,8 @@ listening positions really do render different balances.
 
 ## Status
 
-Core DSP, tests and the VST3 target are complete and green. Panel screenshot
-capture and host validation in REAPER are pending.
+Core DSP, deterministic tests, the VST3 target and the catalogue screenshot are
+complete. Host validation in REAPER is pending; the panel has been reviewed
+against the repository's UI screenshot criteria and revised twice (a clipped
+Drive row, a firing diagram that never rendered, and two captions running off
+their panels).
