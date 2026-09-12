@@ -62,6 +62,12 @@ current Downspout plugins.
   excitation, feedback, filtering, modulation, and reverb.
 - `Gremlin`: a chaotic glitch synth with sound modes, scenes, fader macros,
   performance actions, hold pads, and MIDI LED feedback.
+- `Magneto`: a physically informed four-stroke engine. A phasor at `RPM/120`
+  Hz drives intake-valve, exhaust-valve, piston and ignition functions; each
+  cylinder is a digital waveguide whose feedback follows its valves and whose
+  length follows its piston; cylinders feed intake runners and extractors, and
+  the extractors feed a straight pipe, a four-element muffler and a tailpipe.
+  Intake, block vibration and tailpipe are mixed for a listening position.
 - `Canticle`: a 12-voice tonal synth for readable keys, reed, pad, pluck, and
   glass parts driven by melody, counterpoint, and harmony generators.
 

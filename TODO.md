@@ -1,5 +1,12 @@
 # Downspout TODO
 
+## Refactoring
+
+promotion of the shared OnePoleLowpass/DCBlocker/BiquadFilter duplicates into
+  include/downspout/dsp/. That refactor is worth doing but is a separate change and
+  CLAUDE.md requires approval before touching shared headers.
+  HANDLE WITH CARE
+  
 ## Look and Feel
 
 It is desirable to give all the downspout plugins a consistent look as well as /home/danny/github/valis and /home/danny/github/transmission
@@ -16,6 +23,7 @@ The Look & Feel should have both a light and dark theme. The light theme should 
 * drift
 * harmonic-atlas
 * mnemosyne
+* magneto
 * moka
 * mosaic
 * oracle

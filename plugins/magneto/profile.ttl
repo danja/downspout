@@ -1,0 +1,71 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+dsp:magneto a trn:PluginProfile ;
+    rdfs:label "Magneto" ;
+    rdfs:comment "Physically informed combustion engine sound generator: four-stroke cycle, per-cylinder digital waveguides, intake runners, extractors, muffler and tailpipe, driven by RPM and throttle." ;
+    trn:bundleName "magneto.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/magneto/> ;
+    trn:role trn:InstrumentPlugin ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Audio ;
+    trn:requires trn:HostTransport ;
+    trn:caution "Ignores MIDI notes; driven by RPM and throttle. Low Silencing with high Throttle is loud and bass-heavy." ;
+    trn:parameter [ rdfs:label "Cylinders" ; trn:symbol "cylinders" ; trn:range "1-12" ;
+                    rdfs:comment "Number of cylinders; firing rate is cylinders x engine cycle rate." ] ;
+    trn:parameter [ rdfs:label "Displacement" ; trn:symbol "displacement" ; trn:range "100-1200 cc" ;
+                    rdfs:comment "Swept volume per cylinder; sets the combustion chamber resonance." ] ;
+    trn:parameter [ rdfs:label "Compression" ; trn:symbol "compression" ; trn:range "6-14" ;
+                    rdfs:comment "Compression ratio; depth of the piston delay modulation." ] ;
+    trn:parameter [ rdfs:label "Ignition" ; trn:symbol "ignition" ; trn:range "2-100" ;
+                    rdfs:comment "Width of the explosion impulse as a fraction of the power half of the cycle." ] ;
+    trn:parameter [ rdfs:label "Growl" ; trn:symbol "asymmetry" ; trn:range "0-100" ;
+                    rdfs:comment "Cycle asymmetry: skews firing intervals for cross-plane V8 and big-twin lope." ] ;
+    trn:parameter [ rdfs:label "Block" ; trn:symbol "block_gain" ; trn:range "0-100" ;
+                    rdfs:comment "Level of chassis-borne engine block vibration." ] ;
+    trn:parameter [ rdfs:label "Intake Len" ; trn:symbol "intake_len" ; trn:range "0.05-1.50 m" ;
+                    rdfs:comment "Average intake runner length; runners are detuned +/-10% around it." ] ;
+    trn:parameter [ rdfs:label "Intake" ; trn:symbol "intake_gain" ; trn:range "0-100" ;
+                    rdfs:comment "Level of the summed intake runner free ends." ] ;
+    trn:parameter [ rdfs:label "Turbulence" ; trn:symbol "turbulence" ; trn:range "0-100" ;
+                    rdfs:comment "Aspiration noise injected at the intake valve." ] ;
+    trn:parameter [ rdfs:label "Extractor" ; trn:symbol "extractor_len" ; trn:range "0.10-1.50 m" ;
+                    rdfs:comment "Average extractor length between cylinder head and manifold." ] ;
+    trn:parameter [ rdfs:label "Pipe" ; trn:symbol "pipe_len" ; trn:range "0.20-4.00 m" ;
+                    rdfs:comment "Straight pipe length between manifold and muffler." ] ;
+    trn:parameter [ rdfs:label "Muffler" ; trn:symbol "muffler_len" ; trn:range "0.10-1.50 m" ;
+                    rdfs:comment "Average length of the four muffler elements; element delays are prime and pairwise coprime." ] ;
+    trn:parameter [ rdfs:label "Silencing" ; trn:symbol "muffler_action" ; trn:range "0-100" ;
+                    rdfs:comment "Muffler action: 0 is straight through, 100 is completely silent." ] ;
+    trn:parameter [ rdfs:label "Tailpipe" ; trn:symbol "outlet_len" ; trn:range "0.05-1.00 m" ;
+                    rdfs:comment "Outlet length after the muffler." ] ;
+    trn:parameter [ rdfs:label "Exhaust" ; trn:symbol "outlet_gain" ; trn:range "0-100" ;
+                    rdfs:comment "Level of the tailpipe output." ] ;
+    trn:parameter [ rdfs:label "Backfire" ; trn:symbol "backfire" ; trn:range "0-100" ;
+                    rdfs:comment "Probability of unburnt mixture igniting in the exhaust; only fires on overrun." ] ;
+    trn:parameter [ rdfs:label "RPM" ; trn:symbol "rpm" ; trn:range "400-9000 rpm" ;
+                    rdfs:comment "Crankshaft speed in Manual mode. MIDI CC 2." ] ;
+    trn:parameter [ rdfs:label "Throttle" ; trn:symbol "throttle" ; trn:range "0-100" ;
+                    rdfs:comment "Engine load: scales ignition energy and block vibration. MIDI CC 1 and CC 11." ] ;
+    trn:parameter [ rdfs:label "Speed Src" ; trn:symbol "rpm_source" ; trn:range "Manual, Host Sync" ;
+                    rdfs:comment "Manual follows the RPM parameter; Host Sync derives engine speed from host tempo." ] ;
+    trn:parameter [ rdfs:label "Sync Ratio" ; trn:symbol "sync_ratio" ; trn:range "1-16 cycles per beat" ;
+                    rdfs:comment "Engine cycles per host beat in Host Sync; target RPM is 2 x bpm x ratio." ] ;
+    trn:parameter [ rdfs:label "Idle" ; trn:symbol "idle_rpm" ; trn:range "400-1500 rpm" ;
+                    rdfs:comment "Speed held when the transport is stopped in Host Sync." ] ;
+    trn:parameter [ rdfs:label "Inertia" ; trn:symbol "inertia" ; trn:range "10-3000 ms" ;
+                    rdfs:comment "Flywheel: how quickly the engine reaches a new target speed." ] ;
+    trn:parameter [ rdfs:label "Seed" ; trn:symbol "seed" ; trn:range "1-9999" ;
+                    rdfs:comment "Seeds the turbulence and backfire random streams. Not automatable." ] ;
+    trn:parameter [ rdfs:label "MIDI Ctl" ; trn:symbol "midi_ch" ; trn:range "Off, 1-16, All" ;
+                    rdfs:comment "Channel filter for incoming controller messages. Notes are ignored." ] ;
+    trn:parameter [ rdfs:label "Listen" ; trn:symbol "listen" ; trn:range "Cabin, Front, Rear, Exterior" ;
+                    rdfs:comment "Vantage point: sets the balance and stereo placement of intake, block and exhaust." ] ;
+    trn:parameter [ rdfs:label "Width" ; trn:symbol "width" ; trn:range "0-100" ;
+                    rdfs:comment "Stereo spread of the three sources." ] ;
+    trn:parameter [ rdfs:label "Level" ; trn:symbol "level" ; trn:range "0-100" ;
+                    rdfs:comment "Output level." ] .

@@ -67,6 +67,7 @@ plugins=(
   "skream:skream"
   "chipper:chipper"
   "worms:worms"
+  "magneto:magneto"
   )
 
 

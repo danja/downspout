@@ -246,6 +246,7 @@ The release script currently expects these bundles:
 - `floozy.vst3`
 - `basilico.vst3`
 - `canticle.vst3`
+- `magneto.vst3`
 - `moka.vst3`
 - `luma.vst3`
 - `paunchlad.vst3`

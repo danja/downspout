@@ -42,6 +42,7 @@ downspout-<version>-<platform>-vst3.zip
 ├── floozy.vst3/
 ├── basilico.vst3/
 ├── canticle.vst3/
+├── magneto.vst3/
 ├── moka.vst3/
 ├── luma.vst3/
 ├── paunchlad.vst3/

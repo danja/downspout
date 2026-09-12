@@ -62,6 +62,7 @@ option(DOWNSPOUT_BUILD_DAMIANO "Configure the Damiano stereo distortion target" 
 option(DOWNSPOUT_BUILD_CHIPPER "Configure the Chipper lo-fi bit-crush target" ON)
 option(DOWNSPOUT_BUILD_SKREAM "Configure the Skream scream filter target" ON)
 option(DOWNSPOUT_BUILD_WORMS "Configure the ToneWorm Tonnetz MIDI generator target" ON)
+option(DOWNSPOUT_BUILD_MAGNETO "Configure the magneto engine sound generator target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 option(DOWNSPOUT_BUILD_SCREENSHOT_APPS "Build DPF standalone apps for documentation screenshots" OFF)
 
@@ -332,4 +333,8 @@ endif()
 
 if(DOWNSPOUT_BUILD_SKREAM)
     add_subdirectory(plugins/skream)
+endif()
+
+if(DOWNSPOUT_BUILD_MAGNETO)
+    add_subdirectory(plugins/magneto)
 endif()

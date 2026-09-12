@@ -106,6 +106,19 @@ Twelve-voice instrument covering keys, reed, pad, pluck, and glass timbres. Desi
 
 Eight-voice hybrid physical/modulation synthesizer derived from `floozy-poly`. Suitable for expressive leads, plucks, and unusual synthetic textures.
 
+### Magneto (`magneto.vst3`)
+
+Physically informed combustion engine generator. A four-stroke cycle drives
+per-cylinder digital waveguides feeding intake runners, extractors, a straight
+pipe, a four-element muffler and a tailpipe. Cylinders, displacement,
+compression, ignition width and **Growl** (uneven firing) set the machine;
+lengths in metres and **Silencing** set the pipework; **Backfire** fires only on
+overrun. RPM and Throttle are automatable and accept MIDI CC (1/11 throttle,
+2 RPM, 7 level), or **Speed source** can lock the engine cycle to host tempo and
+drop to idle when the transport stops. A **Listening position** — Cabin, Front,
+Rear or Exterior — mixes intake, engine-block vibration and exhaust to stereo.
+It ignores MIDI notes.
+
 ### Moka (`moka.vst3`)
 
 Stereo modal hit-object synth with eight damped modes per voice, six instrument tables (xylophone, glockenspiel, woodblock, glass bowl, metal sheet, tube), selectable 1–12 voice polyphony defaulting to 4, and ten factory presets. Natural sound source for struck percussion and bell parts from DrumGen, Xoxolo, or authored MIDI.
@@ -173,6 +186,8 @@ Launchpad dub performance effect/instrument. Pads trigger echo throws, spring sp
 - Glitch lead: GremlinDriver -> Gremlin, optionally followed by Rift or Ambo.
 - Breakdown atmosphere: Canticle/Floozy -> Orchid -> Ambo.
 - Live dub transitions: a drum or full-mix bus -> PaunchLad.
+- Vehicle and machine texture: Magneto -> Lightverb or Ambo for exterior space,
+  automating RPM and Throttle together; Guardian at the end of the chain.
 - Automatic arrangement: route instruments into T-Mix, then route Mixgen MIDI
   to T-Mix and tune Density, Depth, Variation, and Lane Spread.
 - Full producer bus: set Mixgen to Full bus and route one MIDI send to a chain

@@ -19,7 +19,7 @@ required_bundles=(
   paunchlad.vst3 lifeform.vst3 xoxolo.vst3 tuney_vst.vst3
   harmonic_atlas.vst3 conductor.vst3 drift.vst3 mnemosyne.vst3
   polymeter.vst3 oracle.vst3 mosaic.vst3 resonance_garden.vst3 orbit.vst3
-  guardian.vst3
+  guardian.vst3 magneto.vst3
 )
 if [[ "$sidecar_build" == "ON" ]]; then
   required_bundles=(
@@ -31,7 +31,7 @@ if [[ "$sidecar_build" == "ON" ]]; then
     moka.vst3 luma.vst3 paunchlad.vst3 lifeform.vst3 xoxolo.vst3 tuney_vst.vst3
     harmonic_atlas.vst3 conductor.vst3 drift.vst3 mnemosyne.vst3
     polymeter.vst3 oracle.vst3 mosaic.vst3 resonance_garden.vst3 orbit.vst3
-    guardian.vst3
+    guardian.vst3 magneto.vst3
   )
 fi
 
