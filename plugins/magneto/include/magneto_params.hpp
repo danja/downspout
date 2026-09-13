@@ -1,6 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 
@@ -93,7 +95,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"idle_rpm", "Idle", "rpm", 400.0f, 1500.0f, 800.0f, false, false},
     {"inertia", "Inertia", "ms", 10.0f, 3000.0f, 400.0f, false, false},
     {"seed", "Seed", "", 1.0f, 9999.0f, 1.0f, true, false},
-    {"midi_ch", "MIDI Ctl", "", 0.0f, 17.0f, 17.0f, true, false},
+    {"midi_ch", "MIDI In", "", 0.0f, 17.0f, 17.0f, true, false},
 
     {"listen", "Listen", "", 0.0f, 3.0f, 0.0f, true, false},
     {"width", "Width", "", 0.0f, 1.0f, 0.60f, false, false},
@@ -134,14 +136,91 @@ inline constexpr std::array<const char*, 18> kMidiChannelNames = {{
     "Ch 9", "Ch 10", "Ch 11", "Ch 12", "Ch 13", "Ch 14", "Ch 15", "Ch 16", "All",
 }};
 
+// ── MIDI note to engine speed ──────────────────────────────────────────────
+//
+// A note sets the crankshaft speed rather than gating a voice. The note is
+// transposed down two octaves first, which puts the usable playing range in a
+// comfortable part of the keyboard: C1 idles near 980 rpm, C2 sits at about
+// 1960, and C4 is at the redline. With four cylinders the firing rate then
+// lands on the pitch actually played, since firing = cylinders x cycle rate.
+
+inline constexpr int kNoteTransposeSemitones = -24;
+
+// Engine load for a note velocity, linear across the Throttle range so a note
+// and CC 1 at the same value mean the same thing.
+[[nodiscard]] inline float velocityToThrottle(const int velocity) noexcept
+{
+    const auto& spec = kParameterSpecs[static_cast<std::size_t>(ParamId::throttle)];
+    const float normalized = std::min(std::max(static_cast<float>(velocity), 0.0f), 127.0f) / 127.0f;
+    return spec.minimum + normalized * (spec.maximum - spec.minimum);
+}
+
+// Engine speed for a MIDI note, clamped to the RPM parameter's range.
+[[nodiscard]] inline float noteToRpm(const int note) noexcept
+{
+    const auto& rpmSpec = kParameterSpecs[static_cast<std::size_t>(ParamId::rpm)];
+    const float semitones = static_cast<float>(note + kNoteTransposeSemitones - 69);
+    const float hertz = 440.0f * std::exp2(semitones / 12.0f);
+    const float rpm = 120.0f * hertz;  // one engine cycle is two revolutions
+    return std::max(rpmSpec.minimum, std::min(rpm, rpmSpec.maximum));
+}
+
 // ── Fixed MIDI controller map ──────────────────────────────────────────────
 //
 // Downspout convention: incoming CC writes through to the host parameter so
 // automation lanes and the panel stay in agreement.
+//
+// CC 1-4 are deliberately the four most audible controls, because that is what
+// Drift's four lanes emit by default (see plugins/drift/include/drift_core.hpp,
+// lane CC defaults 1, 2, 3, 4). CC 5 and 6 continue the block for retargeted
+// lanes; CC 7 and 11 keep their conventional meanings.
 
-inline constexpr std::uint8_t kCcThrottle = 1;    // mod wheel
-inline constexpr std::uint8_t kCcRpm = 2;         // breath
-inline constexpr std::uint8_t kCcLevel = 7;       // channel volume
+inline constexpr std::uint8_t kCcThrottle = 1;      // mod wheel
+inline constexpr std::uint8_t kCcRpm = 2;           // breath
+inline constexpr std::uint8_t kCcSilencing = 3;
+inline constexpr std::uint8_t kCcGrowl = 4;
+inline constexpr std::uint8_t kCcPipe = 5;
+inline constexpr std::uint8_t kCcTurbulence = 6;
+inline constexpr std::uint8_t kCcLevel = 7;         // channel volume
 inline constexpr std::uint8_t kCcThrottleAlt = 11;  // expression
+
+struct ControllerMapping {
+    std::uint8_t controller;
+    ParamId target;
+    const char* label;
+};
+
+inline constexpr std::array<ControllerMapping, 8> kControllerMap = {{
+    {kCcThrottle, ParamId::throttle, "Throttle"},
+    {kCcRpm, ParamId::rpm, "RPM"},
+    {kCcSilencing, ParamId::mufflerAction, "Silencing"},
+    {kCcGrowl, ParamId::asymmetry, "Growl"},
+    {kCcPipe, ParamId::pipeLen, "Straight pipe"},
+    {kCcTurbulence, ParamId::turbulence, "Turbulence"},
+    {kCcLevel, ParamId::level, "Output"},
+    {kCcThrottleAlt, ParamId::throttle, "Throttle"},
+}};
+
+// Parameter a controller drives, if any.
+[[nodiscard]] inline bool controllerTarget(const std::uint8_t controller, ParamId& target) noexcept
+{
+    for (const ControllerMapping& mapping : kControllerMap)
+    {
+        if (mapping.controller == controller)
+        {
+            target = mapping.target;
+            return true;
+        }
+    }
+    return false;
+}
+
+// Spread a 0-127 controller value across the target parameter's full range.
+[[nodiscard]] inline float controllerToParameter(const ParamId target, const std::uint8_t value) noexcept
+{
+    const auto& spec = kParameterSpecs[static_cast<std::size_t>(target)];
+    const float normalized = static_cast<float>(value) / 127.0f;
+    return spec.minimum + normalized * (spec.maximum - spec.minimum);
+}
 
 }  // namespace downspout::magneto

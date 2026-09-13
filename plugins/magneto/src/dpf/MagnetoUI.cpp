@@ -478,8 +478,8 @@ private:
         const float colB = colA + columnW + 20.0f;
         const float colC = colB + columnW + 20.0f;
 
-        drawSlider(ParamId::rpm, "RPM", {colA, top, columnW, rowH}, kDriveAccent, !syncing());
-        drawSlider(ParamId::throttle, "Throttle  (CC 1 / 11)", {colA, top + rowH, columnW, rowH}, kDriveAccent);
+        drawSlider(ParamId::rpm, "RPM  (notes, CC 2)", {colA, top, columnW, rowH}, kDriveAccent, !syncing());
+        drawSlider(ParamId::throttle, "Throttle  (velocity, CC 1)", {colA, top + rowH, columnW, rowH}, kDriveAccent);
         drawSlider(ParamId::inertia, "Inertia (flywheel)", {colA, top + 2.0f * rowH, columnW, rowH}, kDriveAccent);
 
         drawStepper(ParamId::rpmSource, "Speed source", {colB, top, columnW, rowH}, kRpmSourceNames.data());
@@ -488,18 +488,25 @@ private:
         drawSlider(ParamId::idleRpm, "Idle rpm (stopped)", {colB, top + 2.0f * rowH, columnW, rowH},
                    kDriveAccent, syncing());
 
-        drawStepper(ParamId::midiCh, "MIDI control channel", {colC, top, columnW, rowH},
+        drawStepper(ParamId::midiCh, "MIDI in channel", {colC, top, columnW, rowH},
                     kMidiChannelNames.data());
         drawSlider(ParamId::seed, "Seed (backfire, turbulence)", {colC, top + rowH, columnW, rowH}, kDriveAccent);
 
         const auto& t = theme();
         fc(t.textDim);
-        fontSize(11.0f);
+        fontSize(10.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        text(colC, top + 2.0f * rowH + 4.0f,
+        text(colB, top + 2.0f * rowH + 32.0f,
              syncing() ? "Sync: locked to host tempo, idles when stopped."
-                       : "Manual: RPM from the panel, automation or CC 2.",
+                       : "Manual: RPM from the panel, automation, notes or CC.",
              nullptr);
+
+        // The controller map is fixed, so spell it out rather than making the
+        // user find it in the manual.
+        text(colC, top + 2.0f * rowH - 4.0f, "Notes set RPM, two octaves down;", nullptr);
+        text(colC, top + 2.0f * rowH + 9.0f, "velocity sets throttle.", nullptr);
+        text(colC, top + 2.0f * rowH + 22.0f, "CC 1 throttle  2 rpm  3 silencing  4 growl", nullptr);
+        text(colC, top + 2.0f * rowH + 35.0f, "5 pipe  6 turbulence  7 output  11 throttle", nullptr);
     }
 
     void drawTachometer(const Rect bounds)

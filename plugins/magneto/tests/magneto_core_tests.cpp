@@ -665,6 +665,156 @@ void testNoAllocationAfterActivate()
 
 // Regression: the listening-position weights were once computed and then never
 // applied, so all four vantages sounded identical. Levels, not just finiteness.
+// A note sets crankshaft speed, transposed down two octaves.
+void testNoteToRpm()
+{
+    const auto& rpmSpec = kParameterSpecs[static_cast<std::size_t>(ParamId::rpm)];
+
+    // A note two octaves below its nominal pitch: cycle frequency is
+    // noteHz / 4, and RPM is 120 x that.
+    const auto expected = [](const int note) {
+        return 120.0 * 440.0 * std::pow(2.0, (note - 24 - 69) / 12.0);
+    };
+
+    for (const int note : {24, 36, 48, 55, 60})
+        assert(std::fabs(static_cast<double>(noteToRpm(note)) - expected(note)) < 1.0);
+
+    // Concrete anchors: C1 idles, C2 cruises, C4 is at the redline.
+    assert(std::fabs(noteToRpm(24) - 980.0f) < 5.0f);
+    assert(std::fabs(noteToRpm(36) - 1961.0f) < 5.0f);
+    assert(std::fabs(noteToRpm(60) - 7844.0f) < 5.0f);
+
+    // Monotonic across the keyboard, and clamped rather than wild at the ends.
+    for (int note = 1; note < 128; ++note)
+        assert(noteToRpm(note) >= noteToRpm(note - 1));
+    assert(noteToRpm(0) == rpmSpec.minimum);
+    assert(noteToRpm(127) == rpmSpec.maximum);
+
+    // The whole declared RPM range is reachable from the keyboard.
+    assert(noteToRpm(12) > rpmSpec.minimum && noteToRpm(12) < 1000.0f);
+    assert(noteToRpm(63) == rpmSpec.maximum);
+
+    std::puts("PASS: testNoteToRpm");
+}
+
+// Velocity is engine load, on the same scale as CC 1.
+void testVelocityToThrottle()
+{
+    const auto& spec = kParameterSpecs[static_cast<std::size_t>(ParamId::throttle)];
+
+    assert(std::fabs(velocityToThrottle(0) - spec.minimum) < 1.0e-6f);
+    assert(std::fabs(velocityToThrottle(127) - spec.maximum) < 1.0e-6f);
+    assert(std::fabs(velocityToThrottle(64) - 64.0f / 127.0f) < 1.0e-4f);
+
+    for (int velocity = 1; velocity <= 127; ++velocity)
+        assert(velocityToThrottle(velocity) > velocityToThrottle(velocity - 1));
+
+    // Out-of-range input is clamped, not wrapped.
+    assert(velocityToThrottle(-5) == spec.minimum);
+    assert(velocityToThrottle(200) == spec.maximum);
+
+    // A note and CC 1 carrying the same value mean the same thing.
+    for (const int value : {0, 32, 64, 100, 127})
+    {
+        assert(std::fabs(velocityToThrottle(value)
+                         - controllerToParameter(ParamId::throttle, static_cast<std::uint8_t>(value)))
+               < 1.0e-6f);
+    }
+
+    // Soft and hard notes render audibly different engines.
+    const auto renderAt = [](const int velocity) {
+        auto state = makeEngine();
+        Parameters p;
+        p.rpm = noteToRpm(36);
+        p.throttle = velocityToThrottle(velocity);
+        p.inertia = 10.0f;
+        p.listen = 2.0f;
+        p = clampParameters(p);
+        const TransportSnapshot transport;
+        render(*state, p, transport, static_cast<std::size_t>(0.5 * kSampleRate));
+        return rms(render(*state, p, transport, static_cast<std::size_t>(0.5 * kSampleRate)));
+    };
+    assert(renderAt(110) > renderAt(30) * 1.5);
+
+    std::puts("PASS: testVelocityToThrottle");
+}
+
+// Drift's four lanes emit CC 1, 2, 3 and 4 on channel 1 by default
+// (plugins/drift/include/drift_core.hpp). Each must reach a parameter that
+// audibly changes the engine.
+void testDriftControllersReachSoundSettings()
+{
+    const std::array<std::pair<std::uint8_t, ParamId>, 4> driftDefaults = {{
+        {1, ParamId::throttle},
+        {2, ParamId::rpm},
+        {3, ParamId::mufflerAction},
+        {4, ParamId::asymmetry},
+    }};
+
+    for (const auto& [controller, expectedTarget] : driftDefaults)
+    {
+        ParamId target = ParamId::level;
+        assert(controllerTarget(controller, target));
+        assert(target == expectedTarget);
+
+        // The full controller range spans the full parameter range.
+        const auto& spec = kParameterSpecs[static_cast<std::size_t>(target)];
+        assert(std::fabs(controllerToParameter(target, 0) - spec.minimum) < 1.0e-4f);
+        assert(std::fabs(controllerToParameter(target, 127) - spec.maximum) < 1.0e-4f);
+        const float middle = controllerToParameter(target, 64);
+        assert(middle > spec.minimum && middle < spec.maximum);
+
+        // None of the four is a read-only status parameter or a patch setting.
+        assert(!spec.output);
+        assert(target != ParamId::seed);
+    }
+
+    // Unmapped controllers are ignored rather than hitting parameter zero.
+    ParamId unused = ParamId::level;
+    assert(!controllerTarget(0, unused));
+    assert(!controllerTarget(64, unused));
+    assert(!controllerTarget(120, unused));
+
+    // Each of the four moves the sound, not just a number.
+    const auto renderWith = [](const std::uint8_t controller, const std::uint8_t value) {
+        auto state = makeEngine();
+        Parameters p;
+        p.throttle = 0.5f;
+        p.rpm = 2600.0f;
+        p.inertia = 10.0f;
+        p.listen = 2.0f;
+        ParamId target = ParamId::level;
+        const bool mapped = controllerTarget(controller, target);
+        assert(mapped);
+        switch (target)
+        {
+        case ParamId::throttle: p.throttle = controllerToParameter(target, value); break;
+        case ParamId::rpm: p.rpm = controllerToParameter(target, value); break;
+        case ParamId::mufflerAction: p.mufflerAction = controllerToParameter(target, value); break;
+        case ParamId::asymmetry: p.asymmetry = controllerToParameter(target, value); break;
+        default: assert(false); break;
+        }
+        p = clampParameters(p);
+        const TransportSnapshot transport;
+        render(*state, p, transport, static_cast<std::size_t>(0.5 * kSampleRate));
+        return render(*state, p, transport, static_cast<std::size_t>(0.5 * kSampleRate));
+    };
+
+    for (const auto& [controller, expectedTarget] : driftDefaults)
+    {
+        (void) expectedTarget;
+        const auto low = renderWith(controller, 16);
+        const auto high = renderWith(controller, 112);
+        double difference = 0.0;
+        for (std::size_t i = 0; i < low.size(); ++i)
+            difference = std::max(difference, std::fabs(static_cast<double>(low[i] - high[i])));
+        assert(difference > 1.0e-3);
+        assert(allFinite(low, 2.0f) && allFinite(high, 2.0f));
+    }
+
+    std::puts("PASS: testDriftControllersReachSoundSettings");
+}
+
 void testListeningPositionsDiffer()
 {
     const auto atPosition = [](const int position, const float level) {
@@ -809,6 +959,9 @@ int main()
     testSerializeRoundtrip();
     testDeterministicAcrossBlockSizes();
     testNoAllocationAfterActivate();
+    testNoteToRpm();
+    testVelocityToThrottle();
+    testDriftControllersReachSoundSettings();
     testListeningPositionsDiffer();
     testMufflerActionSilences();
     std::puts("All Magneto core tests passed.");

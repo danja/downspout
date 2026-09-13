@@ -113,11 +113,15 @@ per-cylinder digital waveguides feeding intake runners, extractors, a straight
 pipe, a four-element muffler and a tailpipe. Cylinders, displacement,
 compression, ignition width and **Growl** (uneven firing) set the machine;
 lengths in metres and **Silencing** set the pipework; **Backfire** fires only on
-overrun. RPM and Throttle are automatable and accept MIDI CC (1/11 throttle,
-2 RPM, 7 level), or **Speed source** can lock the engine cycle to host tempo and
-drop to idle when the transport stops. A **Listening position** — Cabin, Front,
-Rear or Exterior — mixes intake, engine-block vibration and exhaust to stereo.
-It ignores MIDI notes.
+overrun. A MIDI note sets engine speed, transposed down two octaves, so it can
+be played from a keyboard, with velocity as engine load; note-off is ignored and
+the engine holds that speed.
+Controllers cover the rest — CC 1 throttle, 2 RPM, 3 silencing, 4 growl, 5 pipe,
+6 turbulence, 7 output — and the first four match Drift's default lane CCs, so
+Drift modulates it without configuration. Alternatively **Speed source** locks
+the engine cycle to host tempo and drops to idle when the transport stops. A
+**Listening position** — Cabin, Front, Rear or Exterior — mixes intake,
+engine-block vibration and exhaust to stereo.
 
 ### Moka (`moka.vst3`)
 
@@ -188,6 +192,8 @@ Launchpad dub performance effect/instrument. Pads trigger echo throws, spring sp
 - Live dub transitions: a drum or full-mix bus -> PaunchLad.
 - Vehicle and machine texture: Magneto -> Lightverb or Ambo for exterior space,
   automating RPM and Throttle together; Guardian at the end of the chain.
+- Hands-off engine modulation: Drift -> Magneto. Drift's four lanes default to
+  CC 1-4, which Magneto reads as Throttle, RPM, Silencing and Growl.
 - Automatic arrangement: route instruments into T-Mix, then route Mixgen MIDI
   to T-Mix and tune Density, Depth, Variation, and Lane Spread.
 - Full producer bus: set Mixgen to Full bus and route one MIDI send to a chain

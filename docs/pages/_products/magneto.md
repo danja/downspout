@@ -5,7 +5,7 @@ bundle: magneto.vst3
 kind: Instrument
 role: Combustion engine generator
 screenshot: /assets/plugins/magneto.png
-capabilities: [audio output, MIDI CC input, host transport]
+capabilities: [audio output, MIDI note and CC input, host transport]
 summary: Physically informed four-stroke engine — waveguide cylinders, intake runners, extractors, muffler and tailpipe — driven by RPM and throttle, with a selectable listening position.
 ---
 
@@ -36,6 +36,15 @@ their resonances never coincide, and then a tailpipe.
 Three signals leave the model — the intake runners, engine-block vibration, and
 the tailpipe — and the listening position mixes and places them.
 
+A MIDI note sets crankshaft speed rather than gating a voice, transposed down
+two octaves so the usable range sits comfortably on the keyboard: C1 idles near
+980 rpm, C2 cruises at about 1960, C4 reaches the limit. With four cylinders the
+firing rate lands on the pitch actually played, and velocity sets engine load.
+Controllers cover the rest:
+CC 1 throttle, 2 RPM, 3 silencing, 4 growl, 5 straight pipe, 6 turbulence,
+7 output, 11 throttle. The first four are the numbers Drift emits from its lanes
+by default, so Drift drives Magneto with no configuration.
+
 ### Parameters
 
 | Parameter | Range | Default | Notes |
@@ -44,23 +53,23 @@ the tailpipe — and the listening position mixes and places them.
 | Displacement | 100–1200 cc | 500 cc | Per cylinder; sets chamber resonance |
 | Compression | 6–14 :1 | 10 | Depth of the piston delay modulation |
 | Ignition | 2–100 % | 15 % | Width of the explosion impulse |
-| Growl | 0–100 % | 12 % | Uneven firing intervals — the V8 and big-twin lope |
+| Growl | 0–100 % | 12 % | Uneven firing intervals — the V8 and big-twin lope. CC 4 |
 | Intake runner | 0.05–1.50 m | 0.35 m | Average length; runners detuned ±10 % |
 | Turbulence | 0–100 % | 60 % | Aspiration noise at the intake valve |
 | Extractor | 0.10–1.50 m | 0.60 m | Head to manifold |
 | Straight pipe | 0.20–4.00 m | 1.80 m | Manifold to muffler |
 | Muffler | 0.10–1.50 m | 0.50 m | Average of four prime-length elements |
-| Silencing | 0–100 % | 60 % | 0 is straight through, 100 is silent |
+| Silencing | 0–100 % | 60 % | 0 is straight through, 100 is silent. CC 3 |
 | Tailpipe | 0.05–1.00 m | 0.25 m | Outlet after the muffler |
 | Backfire | 0–100 % | 20 % | Only fires on overrun; each one makes the next less likely |
-| RPM | 400–9000 | 850 | Manual mode. CC 2 |
-| Throttle | 0–100 % | 0 % | Ignition energy and block vibration. CC 1 / CC 11 |
+| RPM | 400–9000 | 850 | Manual mode. CC 2, or a MIDI note two octaves down |
+| Throttle | 0–100 % | 0 % | Ignition energy and block vibration. Note velocity, CC 1 / CC 11 |
 | Speed source | Manual, Host Sync | Manual | Sync derives engine speed from host tempo |
 | Sync ratio | 1–16 cycles/beat | 4 | Target RPM is 2 × bpm × ratio |
 | Idle | 400–1500 rpm | 800 | Held when the transport stops |
 | Inertia | 10–3000 ms | 400 ms | Flywheel |
 | Seed | 1–9999 | 1 | Turbulence and backfire streams |
-| MIDI Ctl | Off, 1–16, All | All | Controller channel filter; notes are ignored |
+| MIDI In | Off, 1–16, All | All | Channel filter for notes and controllers |
 | Listen | Cabin, Front, Rear, Exterior | Cabin | Balance and stereo placement of the three sources |
 | Intake / Block / Exhaust | 0–100 % | 50 / 35 / 80 % | Per-source levels |
 | Width, Output | 0–100 % | 60 / 75 % | Stereo spread and output level |

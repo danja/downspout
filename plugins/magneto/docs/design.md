@@ -108,6 +108,22 @@ reaches the tailpipe only after the manifold junction, pipe, muffler and outlet.
 `kIntakeMakeup`, `kBlockMakeup` and `kExhaustMakeup` put them on comparable
 footing. These are measured, not derived.
 
+**MIDI notes.** A plugin-level addition, and a deliberate departure from how a
+synth normally behaves: a note sets crankshaft speed instead of starting a
+voice, and note-off is ignored. The note is transposed by
+`kNoteTransposeSemitones = -24` before being read as a frequency and converted
+with `rpm = 120 x hz`. Two octaves is not arbitrary — with four cylinders the
+firing rate then equals the pitch played, since firing = cylinders x cycle rate,
+and the 400-9000 rpm range maps onto roughly C0 to D#4. Velocity sets Throttle
+on exactly the scale CC 1 uses, so the two controls cannot disagree about what a
+given value means.
+
+**Controller numbers.** CC 1-4 drive Throttle, RPM, Silencing and Growl because
+those are the CC numbers Drift's four lanes emit by default
+(`plugins/drift/include/drift_core.hpp`), so the pair works with no
+configuration. `kControllerMap` in `magneto_params.hpp` is the single source of
+truth, shared by the wrapper and the tests.
+
 **Transport sync.** A plugin-level addition. In Host Sync the engine cycle locks
 to tempo at a chosen number of cycles per beat, so `targetRpm = 2 * bpm * ratio`;
 when the transport is stopped or BBT is invalid it falls back to Idle. Either way

@@ -126,6 +126,41 @@ CC→control mapping:
 
 CC 20 (Scene) is not mapped — mode selection is a manual arrangement decision.
 
+## Magneto mapping
+
+Magneto is not a Conductor receiver. It takes ordinary controller and note
+messages on the channel chosen by its **MIDI in** parameter (`midi_ch`;
+0 = off, 1–16 = that channel only, 17 = all).
+
+Notes set crankshaft speed rather than gating a voice. The note is transposed
+down two octaves first, then read as a frequency and converted with
+`rpm = 120 x hz`, so C1 idles near 980 rpm, C2 sits near 1960, and C4 reaches
+the 9000 rpm limit. Velocity sets Throttle on the same scale as CC 1. With four cylinders the firing rate lands on the pitch
+actually played, since firing rate = cylinders x engine cycle rate. Note-off is
+ignored: the engine holds the last speed and load it was given and Inertia does
+the rest. Under *Host Sync* a note still sets Throttle but not RPM, which Sync
+owns.
+
+| CC | Magneto control | Notes |
+|----|-----------------|-------|
+| 1 | Throttle | Mod wheel. Ignition energy and block vibration |
+| 2 | RPM | Full 400–9000 rpm range |
+| 3 | Silencing | Muffler action, 0 straight through to 1 silent |
+| 4 | Growl | Cycle asymmetry |
+| 5 | Straight pipe | 0.20–4.00 m |
+| 6 | Turbulence | Aspiration noise |
+| 7 | Output | Channel volume |
+| 11 | Throttle | Expression, alias of CC 1 |
+
+CC 1–4 are deliberately the four most audible controls because those are the
+numbers [Drift](../plugins/drift/) emits from its four lanes by default, so
+routing Drift into Magneto modulates the engine without configuration. Retarget
+Drift's lane CCs to 5, 6 or 7 to reach the rest.
+
+A controller moves the engine but not the on-screen slider — DPF has no
+DSP-side path back to the panel. The tachometer reads the processor's live
+speed, so it stays truthful under MIDI, automation or tempo control.
+
 ## Behaviour when disabled
 
 When **Conductor Ch** = 0, all CC scanning is skipped and existing Note On follow/dodge

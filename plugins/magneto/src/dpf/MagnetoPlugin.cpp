@@ -273,8 +273,12 @@ protected:
     }
 
 private:
-    // Incoming CC is written through to host parameters so the panel, the
-    // automation lane and the controller never disagree about the value.
+    // Incoming CC and notes are written through to host parameters so the
+    // panel, the automation lane and the controller never disagree about the
+    // value. DPF has no DSP-side path for pushing a parameter change back to
+    // the host or panel, so the control does not move on screen; the live RPM
+    // readout comes from the output parameters instead, which is how the panel
+    // stays honest under MIDI control.
     void handleMidi(const MidiEvent* const events, const uint32_t count)
     {
         const int channelSetting = static_cast<int>(parameters_.midiCh + 0.5f);
@@ -288,48 +292,37 @@ private:
                 continue;
 
             const uint8_t status = event.data[0];
-            if ((status & 0xF0) != 0xB0)
+            const uint8_t kind = status & 0xF0;
+            if (kind != 0xB0 && kind != 0x90)
                 continue;
 
             const int channel = static_cast<int>(status & 0x0F) + 1;
             if (channelSetting <= 16 && channel != channelSetting)
                 continue;
 
-            applyController(event.data[1], event.data[2]);
+            if (kind == 0xB0)
+            {
+                applyController(event.data[1], event.data[2]);
+            }
+            else if (event.data[2] != 0)
+            {
+                // A note sets the crankshaft speed rather than gating a voice,
+                // so note-off is deliberately ignored: the engine holds the
+                // speed and load it was last given. Inertia does the rest.
+                setParameterValue(static_cast<uint32_t>(core::ParamId::rpm),
+                                  core::noteToRpm(static_cast<int>(event.data[1])));
+                setParameterValue(static_cast<uint32_t>(core::ParamId::throttle),
+                                  core::velocityToThrottle(static_cast<int>(event.data[2])));
+            }
         }
     }
 
     void applyController(const uint8_t controller, const uint8_t value)
     {
-        const float normalized = static_cast<float>(value) / 127.0f;
-
-        // DPF has no DSP-side path for pushing a parameter change back to the
-        // host or panel, so a CC moves the engine but not the on-screen
-        // control. The live RPM readout comes from the output parameters
-        // instead, which is how the panel stays honest under MIDI control.
-        const auto write = [this](const core::ParamId id, const float v) {
-            setParameterValue(static_cast<uint32_t>(id), v);
-        };
-
-        switch (controller)
-        {
-        case core::kCcThrottle:
-        case core::kCcThrottleAlt:
-            write(core::ParamId::throttle, normalized);
-            break;
-        case core::kCcRpm:
-        {
-            const core::ParamSpec& spec =
-                core::kParameterSpecs[static_cast<std::size_t>(core::ParamId::rpm)];
-            write(core::ParamId::rpm, spec.minimum + normalized * (spec.maximum - spec.minimum));
-            break;
-        }
-        case core::kCcLevel:
-            write(core::ParamId::level, normalized);
-            break;
-        default:
-            break;
-        }
+        core::ParamId target = core::ParamId::throttle;
+        if (!core::controllerTarget(controller, target))
+            return;
+        setParameterValue(static_cast<uint32_t>(target), core::controllerToParameter(target, value));
     }
 
     CoreParameters parameters_;
