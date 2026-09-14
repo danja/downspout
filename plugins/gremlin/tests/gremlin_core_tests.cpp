@@ -7,12 +7,26 @@
 
 namespace {
 
-struct ModeSignature {
-    float rms = 0.0f;
-    float zeroCrossRate = 0.0f;
-    float sideRatio = 0.0f;
+// Coarse half-octave log-magnitude fingerprint used to assert that the modes and
+// scenes stay audibly distinct. Comparing band shape rather than hand-weighted
+// scalars (rms/zero-crossings/roughness) keeps the check tied to timbre and
+// independent of the shipping parameter defaults, which are a product decision
+// and change more often than the synthesis paths do.
+constexpr std::size_t kBandCount = 16;
+constexpr float kLowestBandHz = 60.0f;
+constexpr std::size_t kAnalysisStart = 1024;
+constexpr float kMagnitudeFloor = 1.0e-9f;
+
+// Minimum spectral distance required between any two modes, and between the
+// musical and extreme scenes. Measured worst-case separation at the shipping
+// defaults is ~0.117 for modes and ~0.150 for the scene pair, so this leaves
+// roughly a 2x margin rather than sitting inside the metric's own scatter.
+constexpr float kModeSeparation = 0.06f;
+constexpr float kSceneSeparation = 0.06f;
+
+struct Signature {
+    std::array<float, kBandCount> bands {};
     float peak = 0.0f;
-    float roughness = 0.0f;
 };
 
 bool nearlyEqual(const float a, const float b, const float epsilon = 1.0e-5f)
@@ -48,38 +62,95 @@ bool containsMidi(const downspout::gremlin::MidiMessage* events,
     return false;
 }
 
-ModeSignature measureRenderedSignature(const std::array<float, 4096>& left, const std::array<float, 4096>& right)
+// Goertzel magnitude for one bin over the analysis window.
+double bandMagnitude(const std::array<float, 4096>& left,
+                     const std::array<float, 4096>& right,
+                     const double frequencyHz,
+                     const double sampleRate)
 {
-    ModeSignature signature {};
-    int crossings = 0;
-    int samples = 0;
-    float energy = 0.0f;
-    float side = 0.0f;
-    float roughness = 0.0f;
-    float previous = 0.0f;
-    for (std::size_t i = 1024; i < left.size(); ++i)
-    {
-        const float mono = 0.5f * (left[i] + right[i]);
-        if (samples > 0 && ((previous < 0.0f && mono >= 0.0f) || (previous > 0.0f && mono <= 0.0f)))
-            ++crossings;
-        if (samples > 0)
-            roughness += std::fabs(mono - previous);
-        previous = mono;
+    const std::size_t count = left.size() - kAnalysisStart;
+    const double omega = 2.0 * 3.14159265358979323846 * frequencyHz / sampleRate;
+    const double coeff = 2.0 * std::cos(omega);
 
-        energy += mono * mono;
-        side += std::fabs(left[i] - right[i]);
-        signature.peak = std::max(signature.peak, std::max(std::fabs(left[i]), std::fabs(right[i])));
-        ++samples;
+    double q1 = 0.0;
+    double q2 = 0.0;
+    for (std::size_t i = 0; i < count; ++i)
+    {
+        const double sample = 0.5 * (static_cast<double>(left[kAnalysisStart + i])
+                                   + static_cast<double>(right[kAnalysisStart + i]));
+        const double q0 = coeff * q1 - q2 + sample;
+        q2 = q1;
+        q1 = q0;
     }
 
-    signature.rms = samples > 0 ? std::sqrt(energy / static_cast<float>(samples)) : 0.0f;
-    signature.zeroCrossRate = samples > 0 ? static_cast<float>(crossings) / static_cast<float>(samples) : 0.0f;
-    signature.sideRatio = energy > 0.0f ? side / (std::sqrt(energy) * static_cast<float>(samples)) : 0.0f;
-    signature.roughness = samples > 0 ? roughness / static_cast<float>(samples) : 0.0f;
+    const double power = q1 * q1 + q2 * q2 - coeff * q1 * q2;
+    return std::sqrt(std::max(0.0, power)) / static_cast<double>(count);
+}
+
+Signature measureRenderedSignature(const std::array<float, 4096>& left,
+                                   const std::array<float, 4096>& right,
+                                   const double sampleRate = 48000.0)
+{
+    Signature signature {};
+
+    for (std::size_t i = kAnalysisStart; i < left.size(); ++i)
+        signature.peak = std::max(signature.peak, std::max(std::fabs(left[i]), std::fabs(right[i])));
+
+    for (std::size_t band = 0; band < kBandCount; ++band)
+    {
+        const double frequency = static_cast<double>(kLowestBandHz)
+                               * std::pow(2.0, static_cast<double>(band) * 0.5);
+        const double magnitude = frequency < sampleRate * 0.45
+                               ? bandMagnitude(left, right, frequency, sampleRate)
+                               : 0.0;
+        signature.bands[band] = static_cast<float>(std::log10(magnitude + kMagnitudeFloor));
+    }
+
     return signature;
 }
 
-ModeSignature renderModeSignature(const std::size_t mode)
+// Mean-removed cosine distance: 0 means identical band shape, larger means more
+// timbral difference. Removing the mean discards overall level so the check is
+// about spectrum rather than loudness.
+float spectralDistance(const Signature& a, const Signature& b)
+{
+    double meanA = 0.0;
+    double meanB = 0.0;
+    for (std::size_t i = 0; i < kBandCount; ++i)
+    {
+        meanA += a.bands[i];
+        meanB += b.bands[i];
+    }
+    meanA /= static_cast<double>(kBandCount);
+    meanB /= static_cast<double>(kBandCount);
+
+    double dot = 0.0;
+    double normA = 0.0;
+    double normB = 0.0;
+    for (std::size_t i = 0; i < kBandCount; ++i)
+    {
+        const double x = static_cast<double>(a.bands[i]) - meanA;
+        const double y = static_cast<double>(b.bands[i]) - meanB;
+        dot += x * y;
+        normA += x * x;
+        normB += y * y;
+    }
+
+    if (normA <= 0.0 || normB <= 0.0)
+        return 0.0f;
+
+    return static_cast<float>(1.0 - dot / std::sqrt(normA * normB));
+}
+
+void printSignature(const char* label, const std::size_t index, const Signature& signature)
+{
+    std::cerr << label << ' ' << index << " peak=" << signature.peak << " bands=[";
+    for (std::size_t i = 0; i < kBandCount; ++i)
+        std::cerr << signature.bands[i] << (i + 1 < kBandCount ? ", " : "");
+    std::cerr << "]\n";
+}
+
+Signature renderModeSignature(const std::size_t mode)
 {
     using downspout::gremlin::LiveParamId;
     using downspout::gremlin::MidiMessage;
@@ -102,7 +173,7 @@ ModeSignature renderModeSignature(const std::size_t mode)
     return measureRenderedSignature(left, right);
 }
 
-ModeSignature renderSceneSignature(const downspout::gremlin::SceneId scene)
+Signature renderSceneSignature(const downspout::gremlin::SceneId scene)
 {
     using downspout::gremlin::MidiMessage;
     using downspout::gremlin::Processor;
@@ -121,17 +192,6 @@ ModeSignature renderSceneSignature(const downspout::gremlin::SceneId scene)
     std::array<float, 4096> right {};
     processor.processBlock(left.data(), right.data(), static_cast<std::uint32_t>(left.size()), &noteOn, 1);
     return measureRenderedSignature(left, right);
-}
-
-float signatureDistance(const ModeSignature& a, const ModeSignature& b)
-{
-    const float rmsA = std::max(a.rms, 1.0e-6f);
-    const float rmsB = std::max(b.rms, 1.0e-6f);
-    return std::fabs(std::log(rmsA / rmsB)) * 0.35f
-         + std::fabs(a.zeroCrossRate - b.zeroCrossRate) * 2.2f
-         + std::fabs(a.sideRatio - b.sideRatio) * 1.4f
-         + std::fabs(a.peak - b.peak) * 0.35f
-         + std::fabs(a.roughness - b.roughness) * 18.0f;
 }
 
 }  // namespace
@@ -218,7 +278,7 @@ int main()
         require(modePeak > 0.005f, "gremlin mode should emit audio after note-on");
     }
 
-    std::array<ModeSignature, downspout::gremlin::kModeCount> signatures {};
+    std::array<Signature, downspout::gremlin::kModeCount> signatures {};
     for (std::size_t mode = 0; mode < downspout::gremlin::kModeCount; ++mode)
         signatures[mode] = renderModeSignature(mode);
 
@@ -230,35 +290,37 @@ int main()
         {
             if (mode == other)
                 continue;
-            const float distance = signatureDistance(signatures[mode], signatures[other]);
+            const float distance = spectralDistance(signatures[mode], signatures[other]);
             if (distance < nearest)
             {
                 nearest = distance;
                 nearestMode = other;
             }
         }
-        if (nearest <= 0.035f)
-            std::cerr << "nearest signature distance for mode " << mode << " was " << nearest
-                      << " against mode " << nearestMode << "\nmode " << mode
-                      << " rms=" << signatures[mode].rms
-                      << " zc=" << signatures[mode].zeroCrossRate
-                      << " side=" << signatures[mode].sideRatio
-                      << " peak=" << signatures[mode].peak
-                      << " rough=" << signatures[mode].roughness
-                      << "\nmode " << nearestMode
-                      << " rms=" << signatures[nearestMode].rms
-                      << " zc=" << signatures[nearestMode].zeroCrossRate
-                      << " side=" << signatures[nearestMode].sideRatio
-                      << " peak=" << signatures[nearestMode].peak
-                      << " rough=" << signatures[nearestMode].roughness << '\n';
-        require(nearest > 0.035f, "gremlin mode signatures should remain separated");
+        if (nearest <= kModeSeparation)
+        {
+            std::cerr << "nearest spectral distance for mode " << mode << " was " << nearest
+                      << " against mode " << nearestMode << " (threshold " << kModeSeparation << ")\n";
+            printSignature("mode", mode, signatures[mode]);
+            printSignature("mode", nearestMode, signatures[nearestMode]);
+        }
+        require(nearest > kModeSeparation, "gremlin mode signatures should remain separated");
     }
 
-    const ModeSignature musicalScene = renderSceneSignature(SceneId::melt);
-    const ModeSignature extremeScene = renderSceneSignature(SceneId::tunnel);
+    const Signature musicalScene = renderSceneSignature(SceneId::melt);
+    const Signature extremeScene = renderSceneSignature(SceneId::tunnel);
     require(musicalScene.peak > 0.005f, "gremlin musical scene should emit audio");
     require(extremeScene.peak > 0.005f, "gremlin extreme scene should emit audio");
-    require(signatureDistance(musicalScene, extremeScene) > 0.08f,
+
+    const float sceneDistance = spectralDistance(musicalScene, extremeScene);
+    if (sceneDistance <= kSceneSeparation)
+    {
+        std::cerr << "musical/extreme scene spectral distance was " << sceneDistance
+                  << " (threshold " << kSceneSeparation << ")\n";
+        printSignature("scene", 0, musicalScene);
+        printSignature("scene", 1, extremeScene);
+    }
+    require(sceneDistance > kSceneSeparation,
             "gremlin musical and extreme scenes should remain audibly separated");
 
     float monoOnly[128] {};
