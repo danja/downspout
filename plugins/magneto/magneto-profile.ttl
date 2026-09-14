@@ -1,0 +1,30 @@
+# A plugin profile — machine-readable facts about Magneto.
+#
+# Host this next to your plugin as profile.ttl and it can be read by this
+# catalogue and by anything else that speaks RDF. It is yours: edit it, version
+# it with the plugin, and it stays correct because you control it.
+#
+# The subject below is the plugin's homepage, which is what identifies it here.
+# If you would rather use your own namespace, change that one IRI and add
+#   foaf:homepage <https://danja.github.io/downspout/plugins/magneto/> ;
+# so the two can still be joined up.
+#
+# Terms: https://plugin-universe.com/ns   Guide: https://plugin-universe.com/about/profiles
+
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+
+<https://danja.github.io/downspout/plugins/magneto/>
+    a trn:PluginProfile ;
+    rdfs:label "Magneto" ;
+    rdfs:comment "Midi-driven internal combustion engine simulator" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/magneto/> ;
+    trn:format trn:VST3 ;
+    trn:role trn:AudioInstrument ;
+    trn:accepts trn:BassMidi, trn:Midi ;
+    trn:produces trn:Audio ;
+    pu:category <http://purl.org/stuff/plugin-universe/category/instrument> ;
+    pu:licenceId "MIT" .
