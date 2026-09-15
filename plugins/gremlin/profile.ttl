@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:gremlin a trn:PluginProfile ;
     rdfs:label "Gremlin" ;
@@ -14,4 +15,5 @@ dsp:gremlin a trn:PluginProfile ;
     trn:accepts trn:Midi ;
     trn:produces trn:Audio ;
     trn:companion dsp:gremlin-driver ;
-    trn:caution "Randomisation and delay-oriented behaviours can produce large level or density changes." .
+    trn:caution "Randomisation and delay-oriented behaviours can produce large level or density changes." ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

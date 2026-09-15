@@ -1,6 +1,7 @@
 @prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
 @prefix doap: <http://usefulinc.com/ns/doap#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 <https://danja.github.io/downspout/plugins/worms>
     a lv2:Plugin ;
@@ -14,4 +15,5 @@ Supports Conductor integration and scale quantization.""" ;
     doap:maintainer [
         doap:name "danja" ;
         doap:homepage <https://danja.github.io/downspout/>
-    ] .
+    ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

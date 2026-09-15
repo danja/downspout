@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:bassops a trn:PluginProfile ;
     rdfs:label "Bassops" ;
@@ -137,4 +138,5 @@ reported to the host.""" ;
         trn:readonly true
     ] ;
 
-    trn:caution "Introduces 64-sample linear-phase FIR latency; enable delay compensation in the host. Route a dry kick send to inputs 3-4 (AudioSidechain), not a processed bus, to avoid timing smear on the envelope follower. At Wet=100 and Side Shape=0 the output is mono; use the Wet control or raise Side Shape to restore stereo content." .
+    trn:caution "Introduces 64-sample linear-phase FIR latency; enable delay compensation in the host. Route a dry kick send to inputs 3-4 (AudioSidechain), not a processed bus, to avoid timing smear on the envelope follower. At Wet=100 and Side Shape=0 the output is mono; use the Wet control or raise Side Shape to restore stereo content." ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

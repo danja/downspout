@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:bassgen a trn:PluginProfile ;
     rdfs:label "BassGen" ;
@@ -49,4 +50,5 @@ Moroder mode produces short, bright, subdivided pulse lines.""" ;
     ] ;
 
     ## Follow/Dodge MIDI input — separate from Conductor; driven by Note On messages
-    rdfs:comment "Follow Ch and Follow Mode (Note On channel/note matching) coexist with Conductor Ch (CC channel) because they respond to different MIDI message types." .
+    rdfs:comment "Follow Ch and Follow Mode (Note On channel/note matching) coexist with Conductor Ch (CC channel) because they respond to different MIDI message types." ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

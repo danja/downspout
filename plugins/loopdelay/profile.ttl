@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:loopdelay a trn:PluginProfile ;
     rdfs:label "Loopdelay" ;
@@ -36,4 +37,5 @@ dsp:loopdelay a trn:PluginProfile ;
         trn:ccRole "Gate" ;
         rdfs:comment "Optional ownership gate: acquires/releases control of CC 30 and CC 31."
     ] ;
-    rdfs:comment "MIDI-through is transparent so downstream Lightverb or other processors remain reachable from the same producer send. See docs/producer-control-bus.md." .
+    rdfs:comment "MIDI-through is transparent so downstream Lightverb or other processors remain reachable from the same producer send. See docs/producer-control-bus.md." ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

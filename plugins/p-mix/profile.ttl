@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:p-mix a trn:PluginProfile ;
     rdfs:label "P-Mix" ;
@@ -15,4 +16,5 @@ dsp:p-mix a trn:PluginProfile ;
     trn:produces trn:Audio ;
     trn:requires trn:HostTransport ;
     trn:parameter [ rdfs:label "Oppose" ; trn:symbol "oppose" ; trn:range "0–100" ;
-                    rdfs:comment "Reduce audible bias proportionally to sidechain (inputs 3-4) RMS level." ] .
+                    rdfs:comment "Reduce audible bias proportionally to sidechain (inputs 3-4) RMS level." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

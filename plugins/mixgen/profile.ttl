@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:mixgen a trn:PluginProfile ;
     rdfs:label "Mixgen" ;
@@ -53,4 +54,5 @@ dsp:mixgen a trn:PluginProfile ;
         trn:ccRole "Gate" ;
         rdfs:comment "Acquires producer ownership of the control bus; stopping or disabling Mixgen releases it."
     ] ;
-    rdfs:comment "Routing profiles select T-Mix only, effects only, or the full bus. Each effect macro source lane, destination CC, output range, and inversion are configurable. See docs/producer-control-bus.md." .
+    rdfs:comment "Routing profiles select T-Mix only, effects only, or the full bus. Each effect macro source lane, destination CC, output range, and inversion are configurable. See docs/producer-control-bus.md." ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

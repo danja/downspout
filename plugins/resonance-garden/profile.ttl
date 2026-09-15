@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:resonance-garden a trn:PluginProfile ;
     rdfs:label "Resonance Garden" ;
@@ -14,4 +15,5 @@ dsp:resonance-garden a trn:PluginProfile ;
     trn:accepts trn:Audio, trn:Midi, trn:HarmonyMidi ;
     trn:produces trn:Audio ;
     trn:recommendedAfter dsp:oracle ;
-    trn:caution "High decay, excitation, and wet settings can accumulate energy; place Guardian downstream in autonomous patches." .
+    trn:caution "High decay, excitation, and wet settings can accumulate energy; place Guardian downstream in autonomous patches." ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

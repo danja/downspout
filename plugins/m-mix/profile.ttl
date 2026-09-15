@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:m-mix a trn:PluginProfile ;
     rdfs:label "M-Mix" ;
@@ -13,4 +14,5 @@ dsp:m-mix a trn:PluginProfile ;
     trn:role trn:MidiProcessor ;
     trn:accepts trn:Midi ;
     trn:produces trn:Midi ;
-    trn:requires trn:HostTransport .
+    trn:requires trn:HostTransport ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

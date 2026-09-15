@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:skream a trn:PluginProfile ;
     rdfs:label "Skream" ;
@@ -12,4 +13,5 @@ dsp:skream a trn:PluginProfile ;
     trn:role trn:AudioEffect ;
     trn:accepts trn:Audio, trn:ControlMidi ;
     trn:produces trn:Audio ;
-    trn:caution "High resonance and scream settings can produce self-oscillation; place Guardian downstream in autonomous patches." .
+    trn:caution "High resonance and scream settings can produce self-oscillation; place Guardian downstream in autonomous patches." ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

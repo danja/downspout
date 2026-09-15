@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:t-mix a trn:PluginProfile ;
     rdfs:label "T-Mix" ;
@@ -27,4 +28,5 @@ dsp:t-mix a trn:PluginProfile ;
         trn:ccRole "Gate" ;
         rdfs:comment "Optional ownership gate: acquires/releases control of CC 20 on all channels."
     ] ;
-    rdfs:comment "Strip gain overrides are temporary; releasing the producer restores panel values. See docs/producer-control-bus.md." .
+    rdfs:comment "Strip gain overrides are temporary; releasing the producer restores panel values. See docs/producer-control-bus.md." ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

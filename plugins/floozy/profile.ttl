@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:floozy a trn:PluginProfile ;
     rdfs:label "Floozy" ;
@@ -46,4 +47,5 @@ dsp:floozy a trn:PluginProfile ;
         trn:targetParameter "reset" ;
         trn:ccTriggerValue 64 ;
         rdfs:comment "Value >= 64 resets all voices."
-    ] .
+    ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:magneto a trn:PluginProfile ;
     rdfs:label "Magneto" ;
@@ -69,4 +70,5 @@ dsp:magneto a trn:PluginProfile ;
     trn:parameter [ rdfs:label "Width" ; trn:symbol "width" ; trn:range "0-100" ;
                     rdfs:comment "Stereo spread of the three sources." ] ;
     trn:parameter [ rdfs:label "Level" ; trn:symbol "level" ; trn:range "0-100" ;
-                    rdfs:comment "Output level." ] .
+                    rdfs:comment "Output level." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

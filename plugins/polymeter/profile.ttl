@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:polymeter a trn:PluginProfile ;
     rdfs:label "Polymeter" ;
@@ -13,4 +14,5 @@ dsp:polymeter a trn:PluginProfile ;
     trn:role trn:MidiGenerator ;
     trn:produces trn:Midi, trn:DrumMidi ;
     trn:requires trn:HostTransport ;
-    trn:recommendedBefore dsp:drumkit .
+    trn:recommendedBefore dsp:drumkit ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

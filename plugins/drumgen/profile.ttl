@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:drumgen a trn:PluginProfile ;
     rdfs:label "DrumGen" ;
@@ -47,4 +48,5 @@ or another drum instrument.""" ;
         trn:targetParameter "actionNew" ;
         trn:ccTriggerValue 127 ;
         rdfs:comment "Value 127 generates a fresh drum pattern."
-    ] .
+    ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

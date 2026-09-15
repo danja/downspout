@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:conductor a trn:PluginProfile ;
     rdfs:label "Conductor" ;
@@ -44,4 +45,5 @@ DrumGen, Ground, or Harmonic Atlas and set their Conductor Ch parameter to match
         trn:ccRole "Reset" ;
         trn:ccTriggerValue 127 ;
         rdfs:comment "Value 127 signals a hard pattern reset (fired on Intro and Coda boundaries)."
-    ] .
+    ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

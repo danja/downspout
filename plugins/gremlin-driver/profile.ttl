@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:gremlin-driver a trn:PluginProfile ;
     rdfs:label "GremlinDriver" ;
@@ -15,4 +16,5 @@ dsp:gremlin-driver a trn:PluginProfile ;
     trn:produces trn:Midi ;
     trn:requires trn:HostTransport ;
     trn:recommendedBefore dsp:gremlin ;
-    trn:companion dsp:gremlin .
+    trn:companion dsp:gremlin ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

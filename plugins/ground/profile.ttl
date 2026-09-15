@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:ground a trn:PluginProfile ;
     rdfs:label "Ground" ;
@@ -68,4 +69,5 @@ with the arrangement's energy peak automatically."""
   81–112 (Reprise) → Answer
   113–127 (Coda)   → Cadence
 This is the only Downspout generator that maps Conductor section vocabulary
-directly to its internal phrase role system.""" .
+directly to its internal phrase role system.""" ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

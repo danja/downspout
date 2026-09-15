@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:paunchlad a trn:PluginProfile ;
     rdfs:label "PaunchLad" ;
@@ -13,4 +14,5 @@ dsp:paunchlad a trn:PluginProfile ;
     trn:role trn:AudioEffect, trn:PerformanceInstrument ;
     trn:accepts trn:Audio, trn:Midi ;
     trn:produces trn:Audio ;
-    trn:requires trn:Launchpad .
+    trn:requires trn:Launchpad ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

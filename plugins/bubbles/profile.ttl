@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:bubbles a trn:PluginProfile ;
     rdfs:label "Bubbles" ;
@@ -12,4 +13,5 @@ dsp:bubbles a trn:PluginProfile ;
     foaf:homepage <https://danja.github.io/downspout/plugins/bubbles/> ;
     trn:role trn:InstrumentPlugin ;
     trn:accepts trn:Midi ;
-    trn:produces trn:Audio .
+    trn:produces trn:Audio ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

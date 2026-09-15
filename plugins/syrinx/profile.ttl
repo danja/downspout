@@ -3,6 +3,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
 
 dsp:syrinx a trn:PluginProfile ;
     rdfs:label "Syrinx" ;
@@ -15,4 +16,5 @@ dsp:syrinx a trn:PluginProfile ;
     trn:produces trn:Audio ;
     trn:genre "Ambient", "Electronic", "Nature", "Dance" ;
     trn:recommendedAfter dsp:melgen ;
-    trn:caution "Ten presets share one MIDI channel; select a preset via the Selected Preset master parameter before connecting multiple Syrinx instances." .
+    trn:caution "Ten presets share one MIDI channel; select a preset via the Selected Preset master parameter before connecting multiple Syrinx instances." ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .
