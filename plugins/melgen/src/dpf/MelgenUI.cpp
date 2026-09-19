@@ -81,6 +81,21 @@ struct SliderGroup {
     std::size_t count;
 };
 
+struct Accent {
+    int r;
+    int g;
+    int b;
+};
+
+// Two section accents, mirroring how plugins/magneto colour-codes each panel
+// header rather than leaving every panel the same neutral surface.
+constexpr Accent kLineAccent {94, 158, 143};        // cold teal — line controls
+constexpr Accent kStructureAccent {176, 122, 62};   // warm amber — phrase structure
+
+// Above this item count, a dropdown menu is split into two columns so it
+// never has to render as a single column taller than the plugin window.
+constexpr int kMenuTwoColumnThreshold = 12;
+
 constexpr const char* kScaleNames[] = {
     "Major", "Ionian", "Minor", "Harm Minor", "Mel Minor",
     "Dorian", "Phrygian", "Lydian", "Mixolydian", "Locrian",
@@ -245,6 +260,12 @@ protected:
             return false;
         }
 
+        if (themeRect_.contains(x, y)) {
+            darkTheme_ = !darkTheme_;
+            repaint();
+            return true;
+        }
+
         if (openSelector_ >= 0) {
             if (handleSelectorMenu(x, y)) {
                 return true;
@@ -288,7 +309,7 @@ protected:
     }
 
 private:
-    const laf::Theme& t_ { laf::defaultTheme() };
+    [[nodiscard]] const laf::Theme& theme() const { return darkTheme_ ? laf::kDarkTheme : laf::kLightTheme; }
     void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
     void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
 
@@ -297,19 +318,22 @@ private:
     std::array<Rect, kSelectors.size()> selectorRects_ {};
     std::array<Rect, kButtons.size()> buttonRects_ {};
     std::array<Rect, kSelectors.size()> menuRects_ {};
+    Rect themeRect_ {};
     int draggingSlider_ = -1;
     int openSelector_ = -1;
+    bool darkTheme_ = true;
 
     void drawBackground(float width, float height)
     {
+        const auto& t = theme();
         beginPath();
-        fc(t_.background);
+        fc(t.background);
         rect(0.0f, 0.0f, width, height);
         fill();
         closePath();
 
         beginPath();
-        fc(t_.panel);
+        fc(t.panel);
         rect(0.0f, 0.0f, width, 112.0f);
         fill();
         closePath();
@@ -317,41 +341,67 @@ private:
 
     void drawHeader(float x, float y, float w, float h)
     {
+        const auto& t = theme();
         beginPath();
         roundedRect(x, y, w, h, 7.0f);
-        fc(t_.panel.withAlpha(244));
+        fc(t.panel.withAlpha(244));
         fill();
         closePath();
 
         fontSize(32.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fc(t_.textPrimary);
+        fc(t.textPrimary);
         text(x + 22.0f, y + 18.0f, "MelGen", nullptr);
 
         fontSize(13.0f);
-        fc(t_.textDim);
+        fc(t.textDim);
         text(x + 176.0f, y + 30.0f, "phrase-aware MIDI melody generator with period structure", nullptr);
+
+        themeRect_ = {x + w - 74.0f, y + 4.0f, 74.0f, 26.0f};
+        beginPath();
+        fc(t.buttonFace);
+        roundedRect(themeRect_.x, themeRect_.y, themeRect_.w, themeRect_.h, laf::kRadiusSmall);
+        fill();
+        closePath();
+        fc(t.textDim);
+        fontSize(11.0f);
+        textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+        text(themeRect_.x + themeRect_.w * 0.5f, themeRect_.y + themeRect_.h * 0.5f,
+             darkTheme_ ? "DARK" : "LIGHT", nullptr);
     }
 
-    void drawPanel(float x, float y, float w, float h)
+    void drawPanel(float x, float y, float w, float h, const char* title, const Accent& accent)
     {
+        const auto& t = theme();
         beginPath();
         roundedRect(x, y, w, h, 7.0f);
-        fc(t_.panel);
+        fc(t.surface);
         fill();
-        sc(t_.border);
+        sc(t.border);
         strokeWidth(1.0f);
         stroke();
         closePath();
+
+        beginPath();
+        fillColor(accent.r, accent.g, accent.b, 255);
+        roundedRect(x, y, w, 32.0f, 7.0f);
+        fill();
+        closePath();
+        beginPath();
+        fillColor(accent.r, accent.g, accent.b, 255);
+        rect(x, y + 20.0f, w, 12.0f);
+        fill();
+        closePath();
+
+        fillColor(250, 248, 242, 255);
+        fontSize(14.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        text(x + 14.0f, y + 16.0f, title, nullptr);
     }
 
     void drawSliders(float x, float y, float w, float h)
     {
-        drawPanel(x, y, w, h);
-        fontSize(16.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fc(t_.textPrimary);
-        text(x + 18.0f, y + 16.0f, "Line Controls", nullptr);
+        drawPanel(x, y, w, h, "LINE CONTROLS", kLineAccent);
 
         const float innerX = x + 18.0f;
         const float innerW = w - 36.0f;
@@ -365,9 +415,10 @@ private:
 
     void drawSliderGroup(const SliderGroup& group, float x, float y, float w, float h)
     {
+        const auto& t = theme();
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fc(t_.textDim);
+        fc(t.textDim);
         text(x, y, group.title, nullptr);
 
         const float gap = 10.0f;
@@ -378,17 +429,13 @@ private:
             const std::size_t sliderIndex = group.first + offset;
             const Rect rect {x + static_cast<float>(offset) * (cellW + gap), cellY, cellW, cellH};
             sliderRects_[sliderIndex] = rect;
-            drawSlider(kSliders[sliderIndex], rect);
+            drawSlider(kSliders[sliderIndex], rect, kLineAccent);
         }
     }
 
     void drawStructurePanel(float x, float y, float w, float h)
     {
-        drawPanel(x, y, w, h);
-        fontSize(16.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fc(t_.textPrimary);
-        text(x + 18.0f, y + 16.0f, "Phrase Structure", nullptr);
+        drawPanel(x, y, w, h, "PHRASE STRUCTURE", kStructureAccent);
 
         float rowY = y + 62.0f;
         for (std::size_t i = 0; i < kSelectors.size(); ++i) {
@@ -407,19 +454,20 @@ private:
         }
     }
 
-    void drawSlider(const SliderDef& def, const Rect& rect)
+    void drawSlider(const SliderDef& def, const Rect& rect, const Accent& accent)
     {
+        const auto& t = theme();
         const float value = values_[def.index];
         const float norm = clampf((value - def.min) / (def.max - def.min), 0.0f, 1.0f);
         const std::string textValue = formatValue(def, value);
 
         fontSize(12.0f);
         textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fc(t_.textPrimary);
+        fc(t.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y, def.label, nullptr);
 
         textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(140, 204, 188, 255);
+        fillColor(accent.r, accent.g, accent.b, 255);
         text(rect.x + rect.w * 0.5f, rect.y + 17.0f, textValue.c_str(), nullptr);
 
         const float trackW = 12.0f;
@@ -432,59 +480,100 @@ private:
 
         beginPath();
         roundedRect(trackX, trackY, trackW, trackH, 6.0f);
-        fc(t_.surface);
+        fc(t.controlTrack);
         fill();
         closePath();
 
         beginPath();
         roundedRect(trackX, fillY, trackW, fillH, 6.0f);
-        fillColor(100, 184, 166, 235);
+        fillColor(accent.r, accent.g, accent.b, 235);
         fill();
         closePath();
 
         beginPath();
         roundedRect(rect.x + 10.0f, knobY - 5.0f, rect.w - 20.0f, 10.0f, 5.0f);
-        fc(t_.textPrimary);
+        fc(t.textPrimary);
         fill();
         closePath();
     }
 
     void drawSelector(const SelectorDef& def, const Rect& rect)
     {
+        const auto& t = theme();
         const int item = std::max(0, std::min(static_cast<int>(std::lround(values_[def.index])), def.count - 1));
+        const bool open = openSelector_ >= 0 && kSelectors[openSelector_].index == def.index;
 
         beginPath();
-        roundedRect(rect.x, rect.y, rect.w, rect.h, 6.0f);
-        fc(t_.surface);
+        roundedRect(rect.x, rect.y, rect.w, rect.h, laf::kRadiusSmall);
+        fc(t.surface);
         fill();
-        strokeColor(openSelector_ >= 0 && kSelectors[openSelector_].index == def.index ? 111 : 57, 185, 169, 220);
+        strokeColor(kStructureAccent.r, kStructureAccent.g, kStructureAccent.b, open ? 220 : 140);
         strokeWidth(1.0f);
         stroke();
         closePath();
 
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fc(t_.textDim);
+        fc(t.textDim);
         text(rect.x + 12.0f, rect.y + rect.h * 0.5f + 1.0f, def.label, nullptr);
 
         fontSize(13.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fc(t_.textPrimary);
+        fc(t.textPrimary);
         text(rect.x + 112.0f, rect.y + rect.h * 0.5f + 1.0f, def.items[item], nullptr);
     }
 
     void drawButton(const ButtonDef& def, const Rect& rect)
     {
+        const auto& t = theme();
         beginPath();
-        roundedRect(rect.x, rect.y, rect.w, rect.h, 7.0f);
-        fc(t_.buttonFace);
+        roundedRect(rect.x, rect.y, rect.w, rect.h, laf::kRadiusSmall);
+        fc(t.buttonFace);
         fill();
+        sc(t.border);
+        strokeWidth(1.0f);
+        stroke();
         closePath();
 
         fontSize(13.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fc(t_.textPrimary);
+        fc(t.textPrimary);
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 1.0f, def.label, nullptr);
+    }
+
+    struct MenuLayout {
+        Rect bounds;
+        int columns;
+        int rows;
+        float itemH;
+    };
+
+    // A single-column menu tall enough to fall off both the bottom and the
+    // top of the window (the 23-item Scale list did this) is split into two
+    // columns instead, so it always fits within the plugin window.
+    [[nodiscard]] MenuLayout computeMenuLayout(int selectorIndex) const
+    {
+        const SelectorDef& def = kSelectors[selectorIndex];
+        const Rect& base = selectorRects_[selectorIndex];
+        const float itemH = 26.0f;
+        const float winH = static_cast<float>(getHeight());
+
+        int columns = 1;
+        int rows = def.count;
+        float menuH = static_cast<float>(rows) * itemH;
+        const bool fitsBelow = base.y + base.h + 4.0f + menuH <= winH;
+        const bool fitsAbove = base.y - menuH - 4.0f >= 0.0f;
+
+        if (!fitsBelow && !fitsAbove && def.count > kMenuTwoColumnThreshold) {
+            columns = 2;
+            rows = (def.count + 1) / 2;
+            menuH = static_cast<float>(rows) * itemH;
+        }
+
+        const float menuY = (base.y + base.h + 4.0f + menuH > winH)
+                            ? std::max(4.0f, base.y - menuH - 4.0f)
+                            : base.y + base.h + 4.0f;
+        return {{base.x, menuY, base.w, menuH}, columns, rows, itemH};
     }
 
     void drawSelectorMenu(int selectorIndex)
@@ -493,39 +582,48 @@ private:
             return;
         }
 
+        const auto& t = theme();
         const SelectorDef& def = kSelectors[selectorIndex];
-        const Rect base = selectorRects_[selectorIndex];
-        const float itemH = 28.0f;
-        const float menuH = static_cast<float>(def.count) * itemH;
-        const float winH = static_cast<float>(getHeight());
-        const float menuY = (base.y + base.h + 4.0f + menuH > winH)
-                            ? base.y - menuH - 4.0f
-                            : base.y + base.h + 4.0f;
-        const Rect menu {base.x, menuY, base.w, menuH};
+        const MenuLayout layout = computeMenuLayout(selectorIndex);
+        const Rect& menu = layout.bounds;
         menuRects_[selectorIndex] = menu;
 
         beginPath();
         roundedRect(menu.x, menu.y, menu.w, menu.h, 7.0f);
-        fc(t_.panel);
+        fc(t.panel);
         fill();
-        strokeColor(88, 165, 153, 255);
+        strokeColor(kStructureAccent.r, kStructureAccent.g, kStructureAccent.b, 255);
         strokeWidth(1.0f);
         stroke();
         closePath();
 
+        const float colW = menu.w / static_cast<float>(layout.columns);
+        const int selected = static_cast<int>(std::lround(values_[def.index]));
         for (int i = 0; i < def.count; ++i) {
-            const float rowY = menu.y + static_cast<float>(i) * itemH;
-            if (i == static_cast<int>(std::lround(values_[def.index]))) {
+            const int col = i / layout.rows;
+            const int row = i % layout.rows;
+            const float itemX = menu.x + static_cast<float>(col) * colW;
+            const float rowY = menu.y + static_cast<float>(row) * layout.itemH;
+            if (i == selected) {
                 beginPath();
-                rect(menu.x + 2.0f, rowY + 2.0f, menu.w - 4.0f, itemH - 4.0f);
-                fillColor(77, 135, 127, 180);
+                rect(itemX + 2.0f, rowY + 2.0f, colW - 4.0f, layout.itemH - 4.0f);
+                fc(t.selection);
                 fill();
                 closePath();
             }
-            fontSize(12.0f);
+            fontSize(layout.columns > 1 ? 11.0f : 12.0f);
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-            fc(t_.textPrimary);
-            text(menu.x + 10.0f, rowY + itemH * 0.5f + 1.0f, def.items[i], nullptr);
+            fc(t.textPrimary);
+            text(itemX + 9.0f, rowY + layout.itemH * 0.5f + 1.0f, def.items[i], nullptr);
+        }
+
+        if (layout.columns > 1) {
+            beginPath();
+            sc(t.border);
+            strokeWidth(1.0f);
+            moveTo(menu.x + colW, menu.y + 2.0f);
+            lineTo(menu.x + colW, menu.y + menu.h - 2.0f);
+            stroke();
         }
     }
 
@@ -535,21 +633,22 @@ private:
             return false;
         }
         const SelectorDef& def = kSelectors[openSelector_];
-        const Rect base = selectorRects_[openSelector_];
-        const float itemH = 28.0f;
-        const float menuH = static_cast<float>(def.count) * itemH;
-        const float winH = static_cast<float>(getHeight());
-        const float menuY = (base.y + base.h + 4.0f + menuH > winH)
-                            ? base.y - menuH - 4.0f
-                            : base.y + base.h + 4.0f;
-        const Rect menu {base.x, menuY, base.w, menuH};
+        const MenuLayout layout = computeMenuLayout(openSelector_);
+        const Rect& menu = layout.bounds;
         if (!menu.contains(x, y)) {
             return false;
         }
 
-        const int item = std::max(0, std::min(def.count - 1, static_cast<int>((y - menu.y) / itemH)));
-        commit(def.index, static_cast<float>(item));
+        const float colW = menu.w / static_cast<float>(layout.columns);
+        const int col = std::max(0, std::min(layout.columns - 1, static_cast<int>((x - menu.x) / colW)));
+        const int row = std::max(0, std::min(layout.rows - 1, static_cast<int>((y - menu.y) / layout.itemH)));
+        const int item = col * layout.rows + row;
         openSelector_ = -1;
+        if (item < def.count) {
+            commit(def.index, static_cast<float>(item));
+        } else {
+            repaint();
+        }
         return true;
     }
 
