@@ -1,5 +1,7 @@
 # Downspout TODO
 
+* check builds for warning messages. Any that can be resolved in the local codebase should be 
+
 ## Refactoring
 
 promotion of the shared OnePoleLowpass/DCBlocker/BiquadFilter duplicates into
