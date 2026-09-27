@@ -1,0 +1,38 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:primefold a trn:PluginProfile ;
+    rdfs:label "Primefold" ;
+    rdfs:comment "Prime-harmonic feedback pitch shifter: direct 2x/3x/5x voices, non-prime harmonics via recirculation, bounded loop with explicit feedback delay. Reports feedforward latency; loop latency is uncompensated." ;
+    trn:bundleName "primefold.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/primefold/> ;
+    trn:role trn:AudioEffectPlugin ;
+    trn:accepts trn:Audio, trn:Midi ;
+    trn:produces trn:Audio ;
+    trn:caution "High Feedback with all voice levels at maximum is loud and bright; Damp darkens each recirculation pass. Composites arrive late by k x (grain + 256) samples." ;
+    trn:parameter [ rdfs:label "Dry" ; trn:symbol "dry" ; trn:range "0-100" ;
+                    rdfs:comment "Dry level into the mix; delayed by one grain to align with the voices." ] ;
+    trn:parameter [ rdfs:label "2x" ; trn:symbol "lvl2" ; trn:range "0-100" ;
+                    rdfs:comment "Direct 2x prime voice level; recirculated once it also supplies 4x." ] ;
+    trn:parameter [ rdfs:label "3x" ; trn:symbol "lvl3" ; trn:range "0-100" ;
+                    rdfs:comment "Direct 3x prime voice level; with 2x it supplies 6x." ] ;
+    trn:parameter [ rdfs:label "5x" ; trn:symbol "lvl5" ; trn:range "0-100" ;
+                    rdfs:comment "Direct 5x prime voice level; with 2x/3x it supplies 10x/15x." ] ;
+    trn:parameter [ rdfs:label "Feedback" ; trn:symbol "feedback" ; trn:range "0-90" ;
+                    rdfs:comment "Global recirculation gain, 1/sqrt(3) fan-in normalized. MIDI CC 1." ] ;
+    trn:parameter [ rdfs:label "Damp" ; trn:symbol "damp" ; trn:range "0-100" ;
+                    rdfs:comment "Per-pass loop low-pass; doubles as brightness control." ] ;
+    trn:parameter [ rdfs:label "Grain" ; trn:symbol "grain" ; trn:range "512, 1024, 2048" ;
+                    rdfs:comment "Nominal voice reciprocation depth in samples; reported latency is grain + 104, dry carries grain / 2." ] ;
+    trn:parameter [ rdfs:label "Mix" ; trn:symbol "mix" ; trn:range "0-100" ;
+                    rdfs:comment "Dry/wet crossfade. MIDI CC 2." ] ;
+    trn:parameter [ rdfs:label "Width" ; trn:symbol "width" ; trn:range "0-100" ;
+                    rdfs:comment "Mid/side stereo spread, gain-neutral." ] ;
+    trn:parameter [ rdfs:label "Level" ; trn:symbol "level" ; trn:range "0-100" ;
+                    rdfs:comment "Output level. MIDI CC 7." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

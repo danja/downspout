@@ -1,5 +1,19 @@
 # Mistakes log
 
+- 2026-09-27: First `primefold` pitch-shifter cut used a dual-tap sawtooth
+  delay line with a full-cycle raised-cosine crossfade (DAFX textbook shape).
+  It measured ~1.85x/2.70x/4.41x instead of 2x/3x/5x on a 220 Hz sine, and the
+  error is content-dependent (reference glide of W/2 per half cycle), so it
+  cannot be calibrated out. Narrowing the fade to the wrap instants removed
+  the drag but exposed the W-sample discontinuity as HF hash (+1200 cents of
+  spurious zero crossings). Root cause: assuming the textbook topology without
+  measuring shift accuracy first. Prevention: for any new pitch/time DSP,
+  write the ratio-accuracy probe (zero-crossing or correlation estimate
+  against a sine) before wiring the effect — the shipped design is a
+  single-tap SOLA voice (exact ratio between correlation-matched jump-backs,
+  verified 440/660/1109 Hz for a 220 Hz input) because that probe failed fast
+  on the crossfade variant.
+
 - 2026-09-09: `pkill -f "<pattern>"` hung the persistent shell session because
   the pattern also matched the shell's own command line. Prefer `kill <pid>`
   after resolving PIDs with `ps`, or use patterns that cannot match the

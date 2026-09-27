@@ -83,6 +83,7 @@ Current output filenames:
 - `basilico.png`
 - `canticle.png`
 - `magneto.png`
+- `primefold.png`
 - `moka.png`
 - `luma.png`
 - `paunchlad.png`

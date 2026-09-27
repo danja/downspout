@@ -68,6 +68,7 @@ plugins=(
   "chipper:chipper"
   "worms:worms"
   "magneto:magneto"
+  "primefold:primefold"
   )
 
 

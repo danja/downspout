@@ -112,6 +112,7 @@ installed bundle.
 | [Skream](plugins/skream/README.md) | `skream.vst3` | Audio effect | Scream filter: SVF lowpass/highpass with ADAA2 feedback saturation for dubstep growl. Ten presets, MIDI CC control via Drift. |
 | [Chipper](plugins/chipper/README.md) | `chipper.vst3` | Audio effect | 1980s video game lo-fi processor: bitwise quantization, sample-rate reduction, and clock jitter. |
 | [magneto](plugins/magneto/README.md) | `magneto.vst3` | Instrument | Physically informed combustion engine generator: four-stroke cycle, waveguide cylinders, intake runners, extractors, muffler and tailpipe. RPM follows notes (two octaves down), CC, automation or host tempo. |
+| [Primefold](plugins/primefold/README.md) | `primefold.vst3` | Audio effect | Prime-harmonic feedback pitch shifter: direct 2x/3x/5x voices, composites via recirculation, bounded loop with explicit delay. |
 | [ToneWorm](plugins/worms/README.md) | `worms.vst3` | MIDI generator | Paterson's Worm Tonnetz melody generator with six directional rules, scale quantization, Conductor CC, and Randomize/Mutate actions. |
 
 ## Architecture
