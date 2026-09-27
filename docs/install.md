@@ -113,6 +113,8 @@ The repository currently installs forty-one real wrapper targets:
 - `chipper.vst3` with UI
 - `worms.vst3` with UI
 - `magneto.vst3` with UI
+- `primefold.vst3` with UI
+- `quefrency.vst3` with UI
 
 The next install-related validation is host-side confirmation that all bundles behave correctly in `Release` builds.
 

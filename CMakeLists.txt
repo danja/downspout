@@ -64,6 +64,7 @@ option(DOWNSPOUT_BUILD_SKREAM "Configure the Skream scream filter target" ON)
 option(DOWNSPOUT_BUILD_WORMS "Configure the ToneWorm Tonnetz MIDI generator target" ON)
 option(DOWNSPOUT_BUILD_MAGNETO "Configure the magneto engine sound generator target" ON)
 option(DOWNSPOUT_BUILD_PRIMEFOLD "Configure the primefold prime-harmonic shifter target" ON)
+option(DOWNSPOUT_BUILD_QUEFRENCY "Configure the quefrency cepstral shifter target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 option(DOWNSPOUT_BUILD_SCREENSHOT_APPS "Build DPF standalone apps for documentation screenshots" OFF)
 
@@ -342,4 +343,8 @@ endif()
 
 if(DOWNSPOUT_BUILD_PRIMEFOLD)
     add_subdirectory(plugins/primefold)
+endif()
+
+if(DOWNSPOUT_BUILD_QUEFRENCY)
+    add_subdirectory(plugins/quefrency)
 endif()

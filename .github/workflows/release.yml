@@ -220,6 +220,7 @@ jobs:
             echo "- canticle.vst3"
             echo "- magneto.vst3"
             echo "- primefold.vst3"
+            echo "- quefrency.vst3"
             echo "- moka.vst3"
             echo "- luma.vst3"
             echo "- paunchlad.vst3"

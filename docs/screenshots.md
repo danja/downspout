@@ -84,6 +84,7 @@ Current output filenames:
 - `canticle.png`
 - `magneto.png`
 - `primefold.png`
+- `quefrency.png`
 - `moka.png`
 - `luma.png`
 - `paunchlad.png`

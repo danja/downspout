@@ -69,6 +69,7 @@ plugins=(
   "worms:worms"
   "magneto:magneto"
   "primefold:primefold"
+  "quefrency:quefrency"
   )
 
 

@@ -1,0 +1,41 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:quefrency a trn:PluginProfile ;
+    rdfs:label "Quefrency" ;
+    rdfs:comment "Cepstral formant and harmonic shifter: the input is separated through the cepstrum into a formant envelope and a harmonic structure, shifted and reshaped independently, and multiplied back together. Latency is 2047 frames at 50 kHz and below, 4095 above, and is reported to the host." ;
+    trn:bundleName "quefrency.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/quefrency/> ;
+    trn:role trn:AudioEffectPlugin ;
+    trn:accepts trn:Audio, trn:Midi ;
+    trn:produces trn:Audio ;
+    trn:caution "Transients smear when pitch or frequency shift is set, as with any phase vocoder. Lifter must sit below the shortest pitch period or harmonics leak into the envelope." ;
+    trn:caution "A controller's value is not shown on the panel and is not saved; it holds until the host's own value for that parameter next changes." ;
+    trn:parameter [ rdfs:label "Formant shift" ; trn:symbol "formant_shift" ; trn:range "-12 to +12 st" ;
+                    rdfs:comment "Envelope frequency axis warp. MIDI CC 70." ] ;
+    trn:parameter [ rdfs:label "Formant depth" ; trn:symbol "formant_depth" ; trn:range "0-200 %" ;
+                    rdfs:comment "Envelope contrast: 0 flattens, 200 exaggerates. MIDI CC 71." ] ;
+    trn:parameter [ rdfs:label "Formant tilt" ; trn:symbol "formant_tilt" ; trn:range "-6 to +6 dB/oct" ;
+                    rdfs:comment "Envelope tilt about 1 kHz. MIDI CC 72." ] ;
+    trn:parameter [ rdfs:label "Pitch shift" ; trn:symbol "pitch_shift" ; trn:range "-24 to +24 st" ;
+                    rdfs:comment "Excitation peak ratio. MIDI CC 73." ] ;
+    trn:parameter [ rdfs:label "Pitch fine" ; trn:symbol "pitch_fine" ; trn:range "-100 to +100 cent" ;
+                    rdfs:comment "Excitation peak ratio trim. MIDI CC 74." ] ;
+    trn:parameter [ rdfs:label "Freq shift" ; trn:symbol "freq_shift" ; trn:range "-1000 to +1000 Hz" ;
+                    rdfs:comment "Excitation peak offset, inharmonic. MIDI CC 75." ] ;
+    trn:parameter [ rdfs:label "Harmonic depth" ; trn:symbol "harmonic_depth" ; trn:range "0-200 %" ;
+                    rdfs:comment "High-quefrency contrast: 0 breathy, 200 buzzy. MIDI CC 76." ] ;
+    trn:parameter [ rdfs:label "Lifter" ; trn:symbol "lifter" ; trn:range "0.5-5 ms" ;
+                    rdfs:comment "Cepstral split point. MIDI CC 77." ] ;
+    trn:parameter [ rdfs:label "Estimator" ; trn:symbol "estimator" ; trn:range "Cepstral, True envelope" ;
+                    rdfs:comment "Envelope estimator. MIDI CC 78." ] ;
+    trn:parameter [ rdfs:label "Mix" ; trn:symbol "mix" ; trn:range "0-100" ;
+                    rdfs:comment "Dry/wet; dry is delayed to match. MIDI CC 79." ] ;
+    trn:parameter [ rdfs:label "Output" ; trn:symbol "output" ; trn:range "-24 to +12 dB" ;
+                    rdfs:comment "Output gain. MIDI CC 80." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

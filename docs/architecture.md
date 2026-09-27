@@ -247,6 +247,8 @@ The release script currently expects these bundles:
 - `basilico.vst3`
 - `canticle.vst3`
 - `magneto.vst3`
+- `primefold.vst3`
+- `quefrency.vst3`
 - `moka.vst3`
 - `luma.vst3`
 - `paunchlad.vst3`

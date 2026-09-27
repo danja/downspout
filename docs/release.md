@@ -43,6 +43,8 @@ downspout-<version>-<platform>-vst3.zip
 ├── basilico.vst3/
 ├── canticle.vst3/
 ├── magneto.vst3/
+├── primefold.vst3/
+├── quefrency.vst3/
 ├── moka.vst3/
 ├── luma.vst3/
 ├── paunchlad.vst3/
