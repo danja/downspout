@@ -29,6 +29,7 @@ struct Parameters {
     float channel     = 10.0f; // 1-16 response channel in Notes mode
     float baseNote    = 38.0f; // drums: ghost voice anchor; notes: scale root
     float passInput   = 1.0f;  // 0-1 forward incoming MIDI to the output
+    float audioThru   = 0.0f;  // 0-1 pass incoming audio to the output (default off)
     float seed        = 7.0f;  // 1-65535 deterministic pattern stream
     float ccSensitivity = kDefaultCCSensitivity; // 0-127 CC# (0 = off)
     float ccDensity     = kDefaultCCDensity;

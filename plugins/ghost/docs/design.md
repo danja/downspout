@@ -52,7 +52,8 @@ so the first ghost after play lands correctly. Pending note-offs flush at the
 top of the next block regardless.
 
 **Routing CCs are consumed.** CC 1–4 on the CC channel never reach the output;
-everything else is forwarded when Pass MIDI is on.
+everything else is forwarded when Pass MIDI is on. **Audio Thru** (off by
+default) copies the sanitised input to the output for inline monitoring.
 
 ## Visual acceptance
 

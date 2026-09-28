@@ -1,7 +1,7 @@
 # Spliff
 
-`spliff.vst3` — adaptive transient processor, a downspout-style clone of
-Oeksound Spiff (see `docs/reference/spiff manual.html`).
+`spliff.vst3` — adaptive transient processor, a downspout-style approximation of
+Oeksound Spiff.
 
 Unlike a conventional transient shaper (attack/sustain gain envelope), Spliff
 detects transients per frequency band and applies dynamic cuts or boosts only

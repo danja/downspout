@@ -18,10 +18,11 @@ push past 40 % and it starts to flam, which is a feature on sparse material.
 
 ## Functionality
 
-Ghost listens to incoming audio (passed through untouched) and inserts MIDI
+Ghost listens to incoming audio and inserts MIDI
 note events quantised to the transport 16th grid. Onset accents jump to the
 next slot; quieter fills land on off-16th slots with probability Density, only
-while audio is present. Drums mode voices kick 36 on the quarter and ghost
+while audio is present. The audio output stays silent unless Audio Thru is
+switched on. Drums mode voices kick 36 on the quarter and ghost
 snare 38 off it, always on channel 10; Notes mode walks a pentatonic-minor
 ladder from Base Note on the selected channel.
 
@@ -37,6 +38,7 @@ ladder from Base Note on the selected channel.
 | Channel      | 1–16          | 10      | Response channel in Notes mode                                           |
 | Base Note    | 0–127         | 38      | Voice anchor (drums) / scale root (notes)                                |
 | Pass MIDI    | off/on        | on      | Forward incoming MIDI to the output                                      |
+| Audio Thru   | off/on        | off     | Pass incoming audio to the output (monitoring)                           |
 | Seed         | 1–65535       | 7       | Deterministic fill/voice stream                                          |
 | CC Channel   | 1–16          | 1       | MIDI channel for all four CC overrides                                   |
 

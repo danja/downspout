@@ -65,6 +65,7 @@ Parameters clampParameters(const Parameters& p) noexcept
     out.channel     = std::round(safe(out.channel, 1.0f, 16.0f, 10.0f));
     out.baseNote    = std::round(safe(out.baseNote, 0.0f, 127.0f, 38.0f));
     out.passInput   = std::round(safe(out.passInput, 0.0f, 1.0f, 1.0f));
+    out.audioThru   = std::round(safe(out.audioThru, 0.0f, 1.0f, 0.0f));
     out.seed        = std::round(safe(out.seed, 1.0f, 65535.0f, 7.0f));
     out.ccSensitivity = std::round(safe(out.ccSensitivity, 0.0f, 127.0f, kDefaultCCSensitivity));
     out.ccDensity     = std::round(safe(out.ccDensity,     0.0f, 127.0f, kDefaultCCDensity));
@@ -96,6 +97,7 @@ MidiBlock processBlock(EngineState&        state,
 {
     const Parameters cp = clampParameters(params);
     const float sens = std::clamp(effectiveSensitivity, 0.0f, 1.0f);
+    const bool audioThru = cp.audioThru > 0.5f;
     const float dens = std::clamp(effectiveDensity, 0.0f, 1.0f);
     const float vel  = std::clamp(effectiveVelocity, 1.0f, 127.0f);
     const float drag = std::clamp(effectiveDrag, 0.0f, 1.0f);
@@ -201,8 +203,8 @@ MidiBlock processBlock(EngineState&        state,
         float b = (inputs && inputs[1]) ? inputs[1][f] : 0.0f;
         if (!std::isfinite(a)) { a = 0.0f; ++state.faults; }
         if (!std::isfinite(b)) { b = 0.0f; ++state.faults; }
-        if (outputs && outputs[0]) outputs[0][f] = a;
-        if (outputs && outputs[1]) outputs[1][f] = b;
+        if (outputs && outputs[0]) outputs[0][f] = audioThru ? a : 0.0f;
+        if (outputs && outputs[1]) outputs[1][f] = audioThru ? b : 0.0f;
 
         const float mono = 0.5f * (a + b);
         const float mag = std::fabs(mono);
@@ -262,6 +264,7 @@ std::string serializeParameters(const Parameters& p)
            "channel=" + std::to_string(cp.channel) + "\n"
            "base_note=" + std::to_string(cp.baseNote) + "\n"
            "pass_input=" + std::to_string(cp.passInput) + "\n"
+           "audio_thru=" + std::to_string(cp.audioThru) + "\n"
            "seed=" + std::to_string(cp.seed) + "\n"
            "cc_sensitivity=" + std::to_string(cp.ccSensitivity) + "\n"
            "cc_density=" + std::to_string(cp.ccDensity) + "\n"
@@ -289,6 +292,7 @@ std::optional<Parameters> deserializeParameters(const std::string& text)
         else if (key == "channel"        && parseFloat(value, v)) { p.channel = v; }
         else if (key == "base_note"      && parseFloat(value, v)) { p.baseNote = v; }
         else if (key == "pass_input"     && parseFloat(value, v)) { p.passInput = v; }
+        else if (key == "audio_thru"      && parseFloat(value, v)) { p.audioThru = v; }
         else if (key == "seed"           && parseFloat(value, v)) { p.seed = v; }
         else if (key == "cc_sensitivity" && parseFloat(value, v)) { p.ccSensitivity = v; }
         else if (key == "cc_density"     && parseFloat(value, v)) { p.ccDensity = v; }

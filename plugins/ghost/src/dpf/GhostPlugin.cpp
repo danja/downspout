@@ -28,6 +28,7 @@ enum ParameterIndex : uint32_t {
     kParamCCVelocity,
     kParamCCDrag,
     kParamCCChannel,
+    kParamAudioThru,
     kParameterCount
 };
 
@@ -45,8 +46,9 @@ constexpr const char* kStateCCDensity     = "cc_density";
 constexpr const char* kStateCCVelocity    = "cc_velocity";
 constexpr const char* kStateCCDrag        = "cc_drag";
 constexpr const char* kStateCCChannel     = "cc_channel";
+constexpr const char* kStateAudioThru      = "audio_thru";
 
-constexpr uint32_t kStateCount = 14;
+constexpr uint32_t kStateCount = 15;
 
 float ccToUnit(uint8_t v) noexcept { return static_cast<float>(v) / 127.0f; }
 float ccToVelocity(uint8_t v) noexcept { return std::max(1.0f, std::round(static_cast<float>(v))); }
@@ -119,6 +121,7 @@ protected:
         case kParamCCVelocity:    parameter.name = "CC Velocity"; parameter.symbol = "cc_velocity"; parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 127.0f, downspout::ghost::kDefaultCCVelocity }; break;
         case kParamCCDrag:        parameter.name = "CC Drag";     parameter.symbol = "cc_drag";     parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 127.0f, downspout::ghost::kDefaultCCDrag }; break;
         case kParamCCChannel:     parameter.name = "CC Channel";  parameter.symbol = "cc_channel";  parameter.hints = kParameterIsInteger; parameter.ranges = { 1.0f, 16.0f, 1.0f }; break;
+        case kParamAudioThru:     parameter.name = "Audio Thru";  parameter.symbol = "audio_thru";  parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 1.0f, 0.0f }; break;
         }
     }
 
@@ -140,6 +143,7 @@ protected:
             { kStateCCVelocity,    "CC Velocity",   "3"    },
             { kStateCCDrag,        "CC Drag",       "4"    },
             { kStateCCChannel,     "CC Channel",    "1"    },
+            { kStateAudioThru,     "Audio Thru",    "0"    },
         };
         if (index < kStateCount) {
             state.key          = kInfo[index].key;
@@ -166,6 +170,7 @@ protected:
         case kParamCCVelocity:    return params_.ccVelocity;
         case kParamCCDrag:        return params_.ccDrag;
         case kParamCCChannel:     return params_.ccChannel;
+        case kParamAudioThru:     return params_.audioThru;
         default: return 0.0f;
         }
     }
@@ -190,6 +195,7 @@ protected:
         else if (std::strcmp(key, kStateCCVelocity)    == 0) { params_.ccVelocity = f(); }
         else if (std::strcmp(key, kStateCCDrag)        == 0) { params_.ccDrag = f(); }
         else if (std::strcmp(key, kStateCCChannel)     == 0) { params_.ccChannel = f(); }
+        else if (std::strcmp(key, kStateAudioThru)      == 0) { params_.audioThru = f(); }
         params_ = downspout::ghost::clampParameters(params_);
     }
 

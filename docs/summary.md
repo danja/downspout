@@ -90,8 +90,8 @@ behavior as Loopdelay.
 
 ### Ghost (`ghost.vst3`)
 
-Audio-triggered ghost-note generator. It listens to incoming audio (passed
-through untouched) and inserts MIDI ghosts quantised to the transport 16th
+Audio-triggered ghost-note generator. It listens to incoming audio (output
+silent unless Audio Thru is on) and inserts MIDI ghosts quantised to the transport 16th
 grid: onset accents jump to the next slot while quieter fills land on
 off-16th slots with probability Density, pushed late by Drag. Drums mode
 voices kick 36 and ghost snare 38 on MIDI channel 10; Notes mode walks a

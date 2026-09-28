@@ -12,8 +12,9 @@ name promises.
 
 ## Using it
 
-Ghost is an inline tap: stereo audio passes through untouched (sanitised) and
-incoming MIDI passes through unless consumed as routing CCs.
+Ghost is an inline tap: incoming MIDI passes through unless consumed as
+routing CCs, and the audio output is silent unless **Audio Thru** is switched
+on (sanitised passthrough for monitoring the source while ghosts play).
 
 **The four musical controls** (INBOX TBD resolution — these are the four Drift
 lanes, CC 1–4 by default):

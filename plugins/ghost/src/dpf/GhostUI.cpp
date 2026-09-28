@@ -31,6 +31,7 @@ enum ParameterIndex : uint32_t {
     kParamCCVelocity,
     kParamCCDrag,
     kParamCCChannel,
+    kParamAudioThru,
     kParameterCount
 };
 
@@ -221,6 +222,7 @@ public:
         values_[kParamChannel]     = 10.0f;
         values_[kParamBaseNote]    = 38.0f;
         values_[kParamPassInput]   = 1.0f;
+        values_[kParamAudioThru]   = 0.0f;
         values_[kParamSeed]        = 7.0f;
         values_[kParamCCSensitivity] = 1.0f;
         values_[kParamCCDensity]     = 2.0f;
@@ -250,6 +252,7 @@ protected:
         else if (std::strcmp(key, "channel")       == 0) { values_[kParamChannel] = fv; }
         else if (std::strcmp(key, "base_note")     == 0) { values_[kParamBaseNote] = fv; }
         else if (std::strcmp(key, "pass_input")    == 0) { values_[kParamPassInput] = fv; }
+        else if (std::strcmp(key, "audio_thru")    == 0) { values_[kParamAudioThru] = fv; }
         else if (std::strcmp(key, "seed")          == 0) { values_[kParamSeed] = fv; }
         else if (std::strcmp(key, "cc_sensitivity")== 0) { values_[kParamCCSensitivity] = fv; }
         else if (std::strcmp(key, "cc_density")    == 0) { values_[kParamCCDensity] = fv; }
@@ -324,9 +327,14 @@ protected:
             commitParam(kParamMode, "mode", t < 0.5f ? 0.0f : 1.0f);
             return true;
         }
-        if (switchAt(mx, my) >= 0) {
+        if (switchAt(mx, my) == 0) {
             commitParam(kParamPassInput, "pass_input",
                         values_[kParamPassInput] >= 0.5f ? 0.0f : 1.0f);
+            return true;
+        }
+        if (switchAt(mx, my) == 1) {
+            commitParam(kParamAudioThru, "audio_thru",
+                        values_[kParamAudioThru] >= 0.5f ? 0.0f : 1.0f);
             return true;
         }
         if (const DropDef* def = dropHeaderAt(mx, my)) {
@@ -406,7 +414,8 @@ private:
         return { kCCX, kSlidersY, W - kCCX - kPad, 0.0f };
     }
 
-    // Left column row order: 4 sliders, Mode segment, 2 dropdowns, Pass switch, Seed slider.
+    // Left column row order: 4 sliders, Mode segment, 2 dropdowns,
+    // Pass + Audio switches, Seed slider.
     [[nodiscard]] float mainRowY(int row) const noexcept
     {
         float y = kSlidersY;
@@ -414,13 +423,13 @@ private:
             if (r < 4) y += kSliderH;
             else if (r == 4) y += kSegH;
             else if (r <= 6) y += kDropH;
-            else if (r == 7) y += kSwitchH;
+            else if (r <= 8) y += kSwitchH;
             else y += kSliderH;
         }
         return y;
     }
 
-    [[nodiscard]] int mainSliderRow(int s) const noexcept { return s < 4 ? s : 8; }
+    [[nodiscard]] int mainSliderRow(int s) const noexcept { return s < 4 ? s : 9; }
 
     [[nodiscard]] Rect mainTrack(int s) const noexcept
     {
@@ -445,15 +454,17 @@ private:
         return { kMainX, mainRowY(5 + d) + 20.0f, trackW, 22.0f };
     }
 
-    [[nodiscard]] Rect switchBox() const noexcept
+    [[nodiscard]] Rect switchBox(int which) const noexcept
     {
         const float trackW = kDivX - kMainX - kPad;
-        return { kMainX, mainRowY(7), trackW, kSwitchH };
+        return { kMainX, mainRowY(7 + which), trackW, kSwitchH };
     }
 
     [[nodiscard]] int switchAt(float mx, float my) const noexcept
     {
-        return switchBox().contains(mx, my) ? 0 : -1;
+        if (switchBox(0).contains(mx, my)) return 0;
+        if (switchBox(1).contains(mx, my)) return 1;
+        return -1;
     }
 
     [[nodiscard]] Rect ccDropBox(int d) const noexcept
@@ -758,14 +769,20 @@ private:
             drawDropBox(box, current);
         }
 
-        // Pass MIDI: toggle switch.
-        {
-            const Rect row = switchBox();
-            const bool on = values_[kParamPassInput] >= 0.5f;
+        // Pass MIDI + Audio Thru: toggle switches.
+        struct SwitchRow { uint32_t index; const char* label; };
+        constexpr std::array<SwitchRow, 2> kSwitches = {{
+            { kParamPassInput, "Pass MIDI"  },
+            { kParamAudioThru, "Audio Thru" },
+        }};
+        for (int i = 0; i < 2; ++i) {
+            const auto& sw = kSwitches[static_cast<std::size_t>(i)];
+            const Rect row = switchBox(i);
+            const bool on = values_[sw.index] >= 0.5f;
             fontSize(12.0f);
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
             fc(t.textDim);
-            text(kMainX, row.y + row.h * 0.5f, "Pass MIDI", nullptr);
+            text(kMainX, row.y + row.h * 0.5f, sw.label, nullptr);
             fontSize(11.0f);
             textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
             fc(t.textPrimary);
@@ -856,9 +873,9 @@ private:
         fontSize(9.5f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fc(t.textDisabled);
-        text(kMainX, mainRowY(8) + kSliderH + 10.0f,
+        text(kMainX, mainRowY(9) + kSliderH + 10.0f,
              "Needs running transport: ghosts quantise to 16ths.", nullptr);
-        text(kMainX, mainRowY(8) + kSliderH + 24.0f,
+        text(kMainX, mainRowY(9) + kSliderH + 24.0f,
              "Drag pushes ghosts late inside their slot.", nullptr);
     }
 

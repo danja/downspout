@@ -58,7 +58,7 @@ static std::uint32_t countNoteOns(const MidiBlock& block)
     return n;
 }
 
-// Silence in, transport running -> no ghosts, audio passes through clean.
+// Silence in, transport running -> no ghosts, silence out.
 static void testSilenceNoGhosts()
 {
     Block b;
@@ -67,13 +67,43 @@ static void testSilenceNoGhosts()
     Parameters p;
     const MidiBlock out = run(b, s, p, playing());
     check("silence emits no note-ons", countNoteOns(out) == 0);
-    for (std::uint32_t i = 0; i < Block::kFrames; ++i) {
-        if (b.outL[i] != 0.0f || b.outR[i] != 0.0f) {
-            check("silence passes through as silence", false);
-            return;
-        }
-    }
-    check("silence passes through as silence", true);
+    bool silent = true;
+    for (std::uint32_t i = 0; i < Block::kFrames && silent; ++i)
+        silent = b.outL[i] == 0.0f && b.outR[i] == 0.0f;
+    check("silence in gives silence out", silent);
+}
+
+// Audio output is silent by default, even with loud input.
+static void testAudioThruDefaultOff()
+{
+    Block b;
+    for (auto& v : b.inL) v = 0.5f;
+    for (auto& v : b.inR) v = -0.5f;
+    EngineState s;
+    resetState(s);
+    Parameters p;
+    run(b, s, p, playing());
+    bool silent = true;
+    for (std::uint32_t i = 0; i < Block::kFrames && silent; ++i)
+        silent = b.outL[i] == 0.0f && b.outR[i] == 0.0f;
+    check("audio thru defaults to silent output", silent);
+}
+
+// Audio Thru on passes input audio to the output.
+static void testAudioThruOn()
+{
+    Block b;
+    for (std::uint32_t i = 0; i < Block::kFrames; ++i)
+        b.inL[i] = b.inR[i] = 0.3f * std::sin(2.0f * 3.14159f * static_cast<float>(i) / 32.0f);
+    EngineState s;
+    resetState(s);
+    Parameters p;
+    p.audioThru = 1.0f;
+    run(b, s, p, playing());
+    bool same = true;
+    for (std::uint32_t i = 0; i < Block::kFrames && same; ++i)
+        same = b.outL[i] == b.inL[i] && b.outR[i] == b.inR[i];
+    check("audio thru passes input when on", same);
 }
 
 // Stopped transport -> never emits, even on loud impulses.
@@ -266,6 +296,7 @@ static void testNonFiniteSanitised()
     EngineState s;
     resetState(s);
     Parameters p;
+    p.audioThru = 1.0f;  // thru on: sanitisation is what keeps outputs finite
     const MidiBlock out = run(b, s, p, playing());
     (void)out;
     check("non-finite inputs counted", s.faults == 2);
@@ -283,6 +314,7 @@ static void testClamp()
     extreme.mode = 7.0f;
     extreme.channel = 99.0f;
     extreme.baseNote = -4.0f;
+    extreme.audioThru = 7.0f;
     extreme.seed = 0.0f;
     extreme.ccChannel = 0.0f;
     const Parameters c = clampParameters(extreme);
@@ -293,6 +325,7 @@ static void testClamp()
     check("clamp mode", c.mode <= 1.0f);
     check("clamp channel", c.channel <= 16.0f);
     check("clamp baseNote", c.baseNote >= 0.0f);
+    check("clamp audioThru", c.audioThru <= 1.0f);
     check("clamp seed", c.seed >= 1.0f);
     check("clamp ccChannel", c.ccChannel >= 1.0f);
 }
@@ -307,6 +340,7 @@ static void testSerialization()
     p.mode = 1.0f;
     p.channel = 5.0f;
     p.baseNote = 60.0f;
+    p.audioThru = 1.0f;
     p.seed = 42.0f;
     const std::string text = serializeParameters(p);
     const auto restored = deserializeParameters(text);
@@ -320,6 +354,7 @@ static void testSerialization()
         check("rt mode", restored->mode == p.mode);
         check("rt channel", restored->channel == p.channel);
         check("rt baseNote", restored->baseNote == p.baseNote);
+        check("rt audioThru", restored->audioThru == p.audioThru);
         check("rt seed", restored->seed == p.seed);
     }
     check("garbage deserialises to nullopt", !deserializeParameters("nonsense\n").has_value());
@@ -328,6 +363,8 @@ static void testSerialization()
 int main()
 {
     testSilenceNoGhosts();
+    testAudioThruDefaultOff();
+    testAudioThruOn();
     testStoppedTransportSilent();
     testInvalidTransportSilent();
     testImpulseTriggersGhost();
