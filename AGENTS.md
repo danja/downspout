@@ -17,7 +17,7 @@
 - Periodically review TODO.md and revise as necessary.
 - **`docs/scales.md` is the primary reference for all scale-related work** — canonical ordering, per-plugin coverage, naming conventions, and the append-only rule. Consult it before adding, renaming, or reordering scales in any plugin.
 - periodically read INBOX.md and insert tasks as appropriate in TODO.md then clear out INBOX.md
-- All new plugins will have the basic look & feel of plugins/magneto with the choice of rotary knobs, sliders, x-y controls or novel editable components decided on a case-by-case basis
+- All new plugins will have the basic look & feel of plugins/magneto with the choice of switches, dropdown select lists, rotary knobs, sliders, x-y controls or novel editable components decided on a case-by-case basis
 
 ## Repository shape
 

@@ -56,7 +56,10 @@ everything else is forwarded when Pass MIDI is on.
 
 ## Visual acceptance
 
-Panel follows the chipper two-column layout with shared look-and-feel tokens.
+Panel follows the magneto color scheme: light test-equipment panel by default
+with a LIGHT/DARK header toggle, theme tokens throughout, an amber PARAMETERS
+strip and cold-steel DRIFT CC ROUTING strip, and accent fills for sliders,
+segments, switches and dropdown selections.
 The catalogue screenshot is captured and reviewed (mode label renamed from
 "Mode Dr/Nt" after first review); recapture with
 `scripts/capture-plugin-screenshots.sh ghost` after any UI change. Live onset
