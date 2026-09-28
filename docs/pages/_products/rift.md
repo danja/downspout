@@ -3,6 +3,7 @@ title: Rift
 order: 60
 bundle: rift.vst3
 kind: Audio effect
+category: processor
 role: Buffer disruption
 screenshot: /assets/plugins/rift.png
 summary: Transport-locked stereo buffer effect with live/sample modes, WAV loading, chop/stutter repeats, reverse, skip, smear, and pitch-slip actions.

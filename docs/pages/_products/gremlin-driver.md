@@ -3,6 +3,7 @@ title: Gremlin Driver
 order: 120
 bundle: gremlin_driver.vst3
 kind: MIDI effect
+category: midi
 role: Modulation sequencer
 screenshot: /assets/plugins/gremlin-driver.png
 summary: MIDI modulation and action sequencer with expanded lane shapes intended to drive Gremlin.

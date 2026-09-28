@@ -3,6 +3,7 @@ title: Syrinx
 order: 83
 bundle: syrinx.vst3
 kind: Instrument
+category: instrument
 role: Polyphonic birdsong synthesizer
 screenshot: /assets/plugins/syrinx.png
 summary: Polyphonic MIDI synthesizer based on the Mindlin-Laje biophysical avian syrinx model, with 10 bird-species presets, chromatic MIDI pitch mapping, and a vertical-slider NanoVG UI.

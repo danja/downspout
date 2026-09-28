@@ -3,6 +3,7 @@ title: PaunchLad
 order: 170
 bundle: paunchlad.vst3
 kind: Audio effect/instrument
+category: processor
 role: Launchpad dub effect
 screenshot: /assets/plugins/paunchlad.png
 summary: Launchpad dub performance effect with echo throws, sirens, spring splashes, dropouts, and chops.

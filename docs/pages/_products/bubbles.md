@@ -3,6 +3,7 @@ title: Bubbles
 order: 22
 bundle: bubbles.vst3
 kind: Instrument
+category: instrument
 role: Water sound generator
 screenshot: /assets/plugins/bubbles.png
 capabilities: [audio output, MIDI input, host transport]

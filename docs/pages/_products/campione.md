@@ -3,6 +3,7 @@ title: Campione
 order: 15
 bundle: campione.vst3
 kind: Instrument
+category: instrument
 role: Multi-zone sampler
 screenshot: /assets/plugins/campione.png
 summary: Multi-zone sampler with per-note MIDI mapping, WAV loading, REX2 slice import, Serum wavetable auto-detection, audio recording with auto-pitch detection, pitch-shift gap fill, zero-crossing loop snap, crossfade looping, per-zone ADSR/filter/pan, beat slicing, and an embedded MCP server.

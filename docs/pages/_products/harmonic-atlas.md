@@ -3,6 +3,7 @@ title: Harmonic Atlas
 order: 110
 bundle: harmonic_atlas.vst3
 kind: MIDI generator
+category: generative
 role: Autonomous harmony
 screenshot: /assets/plugins/harmonic-atlas.png
 capabilities: [MIDI output, host transport, autonomous harmony, deterministic seed]

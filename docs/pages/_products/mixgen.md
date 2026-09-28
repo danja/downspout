@@ -3,6 +3,7 @@ title: Mixgen
 order: 47
 bundle: mixgen.vst3
 kind: MIDI control generator
+category: generative
 role: Automatic producer for T-Mix
 screenshot: /assets/plugins/mixgen.png
 capabilities: [audio passthrough, MIDI CC output, host transport]

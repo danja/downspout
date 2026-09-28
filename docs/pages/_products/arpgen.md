@@ -3,6 +3,7 @@ title: Arpgen
 order: 95
 bundle: arpgen.vst3
 kind: MIDI effect
+category: midi
 role: Transport arpeggiator
 screenshot: /assets/plugins/arpgen.png
 summary: Meter-aware chord-capture and scale-derived arpeggiator with four traversal orders and triplet grids.

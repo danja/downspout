@@ -3,6 +3,7 @@ title: T-Mix
 order: 45
 bundle: t_mix.vst3
 kind: Audio mixer
+category: processor
 role: Eight-channel mixer
 screenshot: /assets/plugins/t-mix.png
 capabilities: [eight mono audio inputs, stereo output, MIDI CC input, producer gain status]

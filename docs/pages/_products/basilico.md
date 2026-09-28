@@ -3,6 +3,7 @@ title: Basilico
 order: 150
 bundle: basilico.vst3
 kind: Instrument
+category: instrument
 role: Bass synth
 screenshot: /assets/plugins/basilico.png
 summary: Monophonic bass instrument with tempo-synced wobble, acid squelch, and upright/electric/dub/acid/industrial tones.

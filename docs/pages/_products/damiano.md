@@ -3,6 +3,7 @@ title: Damiano
 order: 36
 bundle: damiano.vst3
 kind: Audio effect
+category: processor
 role: Stereo distortion
 screenshot: /assets/plugins/damiano.png
 summary: Six-mode stereo distortion with drive, tone shelf, wet/dry mix, output gain, and real-time MIDI CC override of drive from Drift or any CC source.

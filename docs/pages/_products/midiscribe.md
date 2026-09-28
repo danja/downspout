@@ -3,6 +3,9 @@ title: Midiscribe
 order: 200
 bundle: midiscribe.vst3
 kind: Utility
+category: midi
+role: MIDI capture
+screenshot: /assets/plugins/midiscribe.png
 summary: Non-destructive MIDI capture plugin that writes recorded events to a Standard MIDI File (.mid) on demand.
 ---
 

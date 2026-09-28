@@ -3,6 +3,7 @@ title: Gater
 order: 50
 bundle: gater.vst3
 kind: Audio effect
+category: processor
 role: MIDI-controlled switcher
 screenshot: /assets/plugins/gater.png
 summary: MIDI-controlled audio switcher routing one input to one of two outputs based on note input.

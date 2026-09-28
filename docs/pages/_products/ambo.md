@@ -3,6 +3,7 @@ title: Ambo
 order: 145
 bundle: ambo.vst3
 kind: Audio effect
+category: processor
 role: Ambient processor
 screenshot: /assets/plugins/ambo.png
 summary: Stereo ambient effect with rearrangeable time, spectral, tape, shimmer, delay, drive, and feedback stages.

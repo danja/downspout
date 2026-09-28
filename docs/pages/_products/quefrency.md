@@ -3,6 +3,7 @@ title: Quefrency
 order: 161
 bundle: quefrency.vst3
 kind: Audio effect
+category: processor
 role: Cepstral formant and harmonic shifter
 screenshot: /assets/plugins/quefrency.png
 capabilities: [audio input, audio output, MIDI CC input, reported latency]

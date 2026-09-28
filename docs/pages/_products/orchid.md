@@ -3,6 +3,7 @@ title: Orchid
 order: 65
 bundle: orchid.vst3
 kind: Audio effect
+category: processor
 role: Voiced freeze/hold
 screenshot: /assets/plugins/orchid.png
 summary: Transport-aware voiced freeze effect that captures stable pitched material and holds period-aligned loops on the host grid.

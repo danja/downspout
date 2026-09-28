@@ -3,6 +3,7 @@ title: M-Mix
 order: 40
 bundle: m_mix.vst3
 kind: MIDI effect
+category: midi
 role: MIDI gate
 screenshot: /assets/plugins/m-mix.png
 summary: MIDI gate combining probabilistic bar transitions with Euclidean block patterns.

@@ -3,6 +3,7 @@ title: Luma
 order: 160
 bundle: luma.vst3
 kind: MIDI generator
+category: generative
 role: Launchpad performance generator
 screenshot: /assets/plugins/luma.png
 summary: Launchpad-oriented performance generator where lit pads become bass, chord, melody, and drum agents.

@@ -3,6 +3,7 @@ title: Lifeform
 order: 180
 bundle: lifeform.vst3
 kind: MIDI generator
+category: generative
 role: Launchpad Game of Life sequencer
 screenshot: /assets/plugins/lifeform.png
 summary: Conway Game of Life MIDI generator where the Launchpad grid evolves one beat at a time.

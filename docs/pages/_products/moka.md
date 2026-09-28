@@ -3,6 +3,7 @@ title: Moka
 order: 156
 bundle: moka.vst3
 kind: Instrument
+category: instrument
 role: Modal hit-object synth
 screenshot: /assets/plugins/moka.png
 summary: Stereo modal synth for struck objects — xylophone, glockenspiel, woodblock, glass bowl, metal sheet, and tube — with ten controls and ten factory presets.

@@ -3,6 +3,7 @@ title: Canticle
 order: 155
 bundle: canticle.vst3
 kind: Instrument
+category: instrument
 role: Polyphonic tonal synth
 screenshot: /assets/plugins/canticle.png
 summary: 12-voice keys, reed, pad, pluck, and glass instrument for melody, counterpoint, and chord generators.

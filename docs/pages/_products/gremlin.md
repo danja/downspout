@@ -3,6 +3,7 @@ title: Gremlin
 order: 110
 bundle: gremlin.vst3
 kind: Instrument
+category: instrument
 role: Chaotic glitch synth
 screenshot: /assets/plugins/gremlin.png
 summary: Glitch instrument with six sound modes, scenes, fader-block macros, action triggers, hold pads, and MIDImix LED feedback.

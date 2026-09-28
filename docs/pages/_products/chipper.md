@@ -3,6 +3,7 @@ title: Chipper
 order: 38
 bundle: chipper.vst3
 kind: Audio effect
+category: processor
 role: Lo-fi bit crusher
 screenshot: /assets/plugins/chipper.png
 summary: 1980s video game lo-fi processor. Bitwise quantization (bit depth 1–16), sample-rate reduction via sample-and-hold (divisor 1–64), and randomised clock jitter for vintage digital harshness.

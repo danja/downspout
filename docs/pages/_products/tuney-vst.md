@@ -3,6 +3,7 @@ title: Tuney VST
 order: 158
 bundle: tuney_vst.vst3
 kind: Instrument / MIDI generator
+category: midi
 role: Text-to-music instrument
 screenshot: /assets/plugins/tuney-vst.png
 summary: Focused typing and stored text become microtonal synthesized audio and MIDI through configurable character maps, scales, tunings, and human timing.

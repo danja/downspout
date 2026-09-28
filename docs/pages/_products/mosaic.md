@@ -3,6 +3,7 @@ title: Mosaic
 order: 116
 bundle: mosaic.vst3
 kind: Sampler instrument
+category: instrument
 role: Generative sample variation
 screenshot: /assets/plugins/mosaic.png
 capabilities: [audio output, MIDI input, host transport, WAV sample state]

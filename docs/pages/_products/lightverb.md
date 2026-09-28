@@ -3,6 +3,7 @@ title: Lightverb
 order: 49
 bundle: lightverb.vst3
 kind: Audio effect
+category: processor
 role: Low-CPU stereo reverb
 screenshot: /assets/plugins/lightverb.png
 capabilities: [stereo audio, MIDI CC input, zero latency, auxiliary send]

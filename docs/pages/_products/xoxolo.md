@@ -3,6 +3,7 @@ title: Xoxolo
 order: 75
 bundle: xoxolo.vst3
 kind: MIDI generator
+category: generative
 role: Drum pattern editor
 screenshot: /assets/plugins/xoxolo.png
 summary: Simple x0x-style MIDI drum pattern editor with note-map presets, per-lane preview, and selectable 8-32 step patterns.

@@ -3,6 +3,7 @@ title: Loopdelay
 order: 48
 bundle: loopdelay.vst3
 kind: Audio effect
+category: processor
 role: Transport-synced delay and capture looper
 screenshot: /assets/plugins/loopdelay.png
 capabilities: [stereo audio, MIDI CC input, host transport, capture loop]

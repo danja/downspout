@@ -3,6 +3,7 @@ title: BassGen
 order: 10
 bundle: bassgen.vst3
 kind: MIDI generator
+category: generative
 role: Bassline generator
 screenshot: /assets/plugins/bassgen.png
 summary: Transport-synced bassline generator with style, scale, Moroder/Fugue/Jazz genres, variation, color, and MIDI follow/dodge controls.

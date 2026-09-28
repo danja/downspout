@@ -3,6 +3,7 @@ title: ToneWorm
 order: 115
 bundle: worms.vst3
 kind: MIDI generator
+category: generative
 role: Tonnetz melody generator
 screenshot: /assets/plugins/worms.png
 summary: Paterson's Worm navigates a Tonnetz pitch lattice, generating transport-locked melodies from six directional rules with scale quantization and Conductor CC control.

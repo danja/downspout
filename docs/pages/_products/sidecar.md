@@ -3,6 +3,7 @@ title: Sidecar
 order: 105
 bundle: sidecar.vst3
 kind: MIDI generator
+category: generative
 role: AI-ready phrase player
 screenshot: /assets/plugins/sidecar.png
 summary: MIDI phrase player for generated solo material with deterministic local generation and optional localhost coordinator requests.

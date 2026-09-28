@@ -20,16 +20,74 @@ description: Screenshots and short notes for the Downspout VST3 plugin set.
        <li><a href="https://github.com/danja/flues">Flues</a> earlier LV2 plugins and Web Audio toys</li>
     </ul>
   </p>
+  <nav class="section-nav" aria-label="Plugin types">
+    <a href="#generative">Generative</a>
+    <a href="#midi">MIDI</a>
+    <a href="#instrument">Instruments</a>
+    <a href="#processor">Processors</a>
+  </nav>
 </section>
 
-<section class="plugin-grid" aria-label="Plugins">
-  {% assign products = site.products | sort: "order" %}
-  {% for plugin in products %}
-    <a class="plugin-card" href="{{ plugin.url | relative_url }}">
-      <img src="{{ plugin.screenshot | relative_url }}" alt="{{ plugin.title }} plugin interface">
-      <span class="plugin-kind">{{ plugin.kind }}</span>
-      <strong>{{ plugin.title }}</strong>
-      <span>{{ plugin.summary }}</span>
-    </a>
-  {% endfor %}
+<section class="plugin-section" aria-label="Generative plugins" id="generative">
+  <h3>Generative</h3>
+  <p class="section-blurb">Sources of musical material: melody, bass, drum and harmony generators, plus audio-triggered MIDI.</p>
+  <div class="plugin-grid">
+    {% assign products = site.products | where: "category", "generative" | sort: "order" %}
+    {% for plugin in products %}
+      <a class="plugin-card" href="{{ plugin.url | relative_url }}">
+        <img src="{{ plugin.screenshot | relative_url }}" alt="{{ plugin.title }} plugin interface">
+        <span class="plugin-kind">{{ plugin.kind }}</span>
+        <strong>{{ plugin.title }}</strong>
+        <span>{{ plugin.summary }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="plugin-section" aria-label="MIDI plugins" id="midi">
+  <h3>MIDI</h3>
+  <p class="section-blurb">Processors, modulators and utilities for shaping MIDI before it reaches an instrument.</p>
+  <div class="plugin-grid">
+    {% assign products = site.products | where: "category", "midi" | sort: "order" %}
+    {% for plugin in products %}
+      <a class="plugin-card" href="{{ plugin.url | relative_url }}">
+        <img src="{{ plugin.screenshot | relative_url }}" alt="{{ plugin.title }} plugin interface">
+        <span class="plugin-kind">{{ plugin.kind }}</span>
+        <strong>{{ plugin.title }}</strong>
+        <span>{{ plugin.summary }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="plugin-section" aria-label="Instrument plugins" id="instrument">
+  <h3>Instruments</h3>
+  <p class="section-blurb">Playable sound sources: synths, samplers and physical models.</p>
+  <div class="plugin-grid">
+    {% assign products = site.products | where: "category", "instrument" | sort: "order" %}
+    {% for plugin in products %}
+      <a class="plugin-card" href="{{ plugin.url | relative_url }}">
+        <img src="{{ plugin.screenshot | relative_url }}" alt="{{ plugin.title }} plugin interface">
+        <span class="plugin-kind">{{ plugin.kind }}</span>
+        <strong>{{ plugin.title }}</strong>
+        <span>{{ plugin.summary }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="plugin-section" aria-label="Processor plugins" id="processor">
+  <h3>Processors</h3>
+  <p class="section-blurb">Audio effects, mixers and analyzers for shaping sound.</p>
+  <div class="plugin-grid">
+    {% assign products = site.products | where: "category", "processor" | sort: "order" %}
+    {% for plugin in products %}
+      <a class="plugin-card" href="{{ plugin.url | relative_url }}">
+        <img src="{{ plugin.screenshot | relative_url }}" alt="{{ plugin.title }} plugin interface">
+        <span class="plugin-kind">{{ plugin.kind }}</span>
+        <strong>{{ plugin.title }}</strong>
+        <span>{{ plugin.summary }}</span>
+      </a>
+    {% endfor %}
+  </div>
 </section>

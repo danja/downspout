@@ -3,6 +3,7 @@ title: Spliff
 order: 202
 bundle: spliff.vst3
 kind: Audio effect
+category: processor
 role: Adaptive transient processor
 screenshot: /assets/plugins/spliff.png
 capabilities: [audio input and output, MIDI CC input]
