@@ -17,8 +17,24 @@ These use different frameworks but presumably a small custom component lib could
 
 The Look & Feel should have both a light and dark theme. The light theme should resemble Cold War era electronic test equipment, quite minimal and brutal but intuitive. The dark theme will simply be the inverse.
 
+## New plugins (2026-09-28, implemented)
+
+* ghost (`ghost.vst3`, Audio/MIDI effect): listens to incoming audio, inserts
+  BBT-quantised (16th grid + drag) ghost drum beats on ch 10 or ghost notes on
+  a selectable channel. Four musical controls map to Drift CC 1–4
+  (Sensitivity, Density, Velocity, Drag). Core tests + VST3 + panel +
+  catalogue screenshot done. Still pending: REAPER host validation, live
+  onset metering (output status params), Division control.
+* spliff (`spliff.vst3`, Audio effect): Spiff-manner adaptive transient
+  processor (3-band detector, cut/boost, sensitivity, sharpness, decay +
+  LF/HF tilt, splits, mix/trim/delta/bypass, Drift CC 1–4). Core tests + VST3
+  + panel + catalogue screenshot done. Still pending: REAPER host validation,
+  M/S modes, parametric sensitivity bands, live reduction display.
+
 ## Evaluate Manually in Reaper
 
+* ghost
+* spliff
 * ambo
 * arpgen
 * conductor

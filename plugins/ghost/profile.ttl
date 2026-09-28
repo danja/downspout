@@ -1,0 +1,19 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:ghost a trn:PluginProfile ;
+    rdfs:label "Ghost" ;
+    rdfs:comment "Audio-triggered ghost-note generator: listens to incoming audio, quantises ghost hits to the transport 16th grid, and emits ghost drum beats on MIDI channel 10 or ghost notes on a selectable channel." ;
+    trn:bundleName "ghost.vst3" ;
+    trn:vendor "danja" ;
+    trn:role trn:MidiEffect ;
+    trn:accepts trn:Audio, trn:ControlMidi ;
+    trn:produces trn:Audio, trn:Midi ;
+    trn:requires trn:HostTransport ;
+    trn:caution "Ghosts only fire while the transport runs; with the transport stopped the plugin passes audio and MIDI through silently." ;
+    trn:recommendedAfter dsp:drift ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

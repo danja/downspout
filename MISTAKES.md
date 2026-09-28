@@ -1,5 +1,15 @@
 # Mistakes log
 
+- 2026-09-28: First `ghost` core quantised onset accents to the next 16th slot
+  but dropped any ghost whose frame fell outside the current block. At 120 bpm
+  a 16th is ~6000 frames while host blocks are 64-512, so nearly every ghost
+  with Drag > 0 was silently lost and the core tests caught it (impulse in,
+  nothing out). Root cause: thinking in musical time while emitting in block
+  time. Prevention: any transport-quantised MIDI emitter needs a schedule
+  queue in absolute quarters (due-check per block, drop on seek-past, evaporate
+  on stop) — implemented as `ScheduledGhost[8]` with the same bound as the
+  per-block emission cap.
+
 - 2026-09-27: First `primefold` pitch-shifter cut used a dual-tap sawtooth
   delay line with a full-cycle raised-cosine crossfade (DAFX textbook shape).
   It measured ~1.85x/2.70x/4.41x instead of 2x/3x/5x on a 220 Hz sine, and the

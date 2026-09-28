@@ -63,6 +63,8 @@ downspout-<version>-<platform>-vst3.zip
 ├── orbit.vst3/
 ├── guardian.vst3/
 ├── chipper.vst3/
+├── ghost.vst3/
+├── spliff.vst3/
 ├── LICENSE
 └── README.md
 ```

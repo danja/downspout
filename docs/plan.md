@@ -203,6 +203,8 @@ Progress as of 2026-05-27:
   engine speed, listening-position stereo mix, deterministic tests, and a first
   VST3 wrapper target with UI via vendored DPF;
 - `chipper` now exists as an original stereo lo-fi processor with bitwise quantization, sample-rate reduction via sample-and-hold, clock jitter, dry/wet mix, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
+- `ghost` now exists as an original audio-triggered ghost-note generator with BBT-quantised 16th-grid ghosts, drum (ch 10) and note modes, four Drift-CC feel controls, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
+- `spliff` now exists as a Spiff-manner adaptive transient processor with a 3-band detector, cut/boost modes, sensitivity, sharpness, decay with LF/HF tilt, mix/trim/delta/bypass, Drift-CC control, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `install.sh` exists as the intended build/install entrypoint for local VST deployment.
 
 Current main gap:
@@ -219,7 +221,7 @@ Current main gap:
   `conductor.vst3`, `drift.vst3`, `mnemosyne.vst3`, `polymeter.vst3`,
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
-  `magneto.vst3` bundles.
+  `magneto.vst3`, `ghost.vst3`, and `spliff.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of

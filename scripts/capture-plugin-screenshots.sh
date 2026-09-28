@@ -70,6 +70,8 @@ plugins=(
   "magneto:magneto"
   "primefold:primefold"
   "quefrency:quefrency"
+  "ghost:ghost"
+  "spliff:spliff"
   )
 
 

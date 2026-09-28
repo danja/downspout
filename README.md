@@ -115,6 +115,8 @@ installed bundle.
 | [Primefold](plugins/primefold/README.md) | `primefold.vst3` | Audio effect | Prime-harmonic feedback pitch shifter: direct 2x/3x/5x voices, composites via recirculation, bounded loop with explicit delay. |
 | [Quefrency](plugins/quefrency/README.md) | `quefrency.vst3` | Audio effect | Cepstral formant and harmonic shifter: envelope and excitation transformed independently; latency reported to the host. |
 | [ToneWorm](plugins/worms/README.md) | `worms.vst3` | MIDI generator | Paterson's Worm Tonnetz melody generator with six directional rules, scale quantization, Conductor CC, and Randomize/Mutate actions. |
+| [Ghost](plugins/ghost/README.md) | `ghost.vst3` | Audio/MIDI effect | Audio-triggered ghost-note generator: BBT-quantised ghost drums on ch 10 or notes on a selectable channel, driven by Drift CC 1–4. |
+| [Spliff](plugins/spliff/README.md) | `spliff.vst3` | Audio effect | Adaptive transient processor in the Spiff manner: per-band dynamic cuts or boosts only where transient energy lives. |
 
 ## Architecture
 

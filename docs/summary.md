@@ -88,6 +88,18 @@ range.
 It supports the same CC 19 lifecycle, channel isolation, and MIDI-through
 behavior as Loopdelay.
 
+### Ghost (`ghost.vst3`)
+
+Audio-triggered ghost-note generator. It listens to incoming audio (passed
+through untouched) and inserts MIDI ghosts quantised to the transport 16th
+grid: onset accents jump to the next slot while quieter fills land on
+off-16th slots with probability Density, pushed late by Drag. Drums mode
+voices kick 36 and ghost snare 38 on MIDI channel 10; Notes mode walks a
+pentatonic-minor ladder from Base Note on a selectable channel. Sensitivity,
+Density, Velocity and Drag read Drift CC 1-4 by default. Ghosts only fire
+while the transport runs. Natural partner: a dry drum bus into Ghost, with
+Ghost MIDI driving DrumKit layered under the original kit.
+
 ## Instruments
 
 ### DrumKit (`drumkit.vst3`)
@@ -182,6 +194,17 @@ Stereo ambient processor with four rearrangeable module chains. Its Time, Spectr
 
 Launchpad dub performance effect/instrument. Pads trigger echo throws, spring splashes, sirens, alarms, synthetic snare/crash/sub hits, lasers, thunder, rewind, bubbles, risers, horn effects, dropouts, chops, and freezes, with LED feedback and audio pass-through processing.
 
+### Spliff (`spliff.vst3`)
+
+Adaptive transient processor in the Spiff manner. A 3-band detector finds
+transient energy and applies dynamic cuts or boosts only there, leaving the
+rest of the spectrum intact. Cut tames clicks, mouth noise and harsh sticks
+(last in the chain); Boost lifts drums and piano attacks (early, before
+compression). Depth, Sensitivity, Decay and Mix read Drift CC 1-4 by default;
+Sharpness, Decay LF/HF tilt, band splits, Trim, Delta monitoring and Bypass
+complete the Spiff workflow. The detector is mono, so transients never shift
+the stereo image.
+
 ## Practical combinations
 
 - Techno rhythm: Xoxolo or DrumGen -> DrumKit -> E-Mix/P-Mix -> Rift for fills.
@@ -194,6 +217,10 @@ Launchpad dub performance effect/instrument. Pads trigger echo throws, spring sp
   automating RPM and Throttle together; Guardian at the end of the chain.
 - Hands-off engine modulation: Drift -> Magneto. Drift's four lanes default to
   CC 1-4, which Magneto reads as Throttle, RPM, Silencing and Growl.
+- Living drums: dry drum bus -> Ghost, Ghost MIDI -> DrumKit for the ghost
+  layer; Drift -> Ghost modulates Sensitivity, Density, Velocity and Drag.
+- De-click and lift: Spliff in Cut after vocals, in Boost before drums
+  compression; audition with Delta, compare with Bypass.
 - Automatic arrangement: route instruments into T-Mix, then route Mixgen MIDI
   to T-Mix and tune Density, Depth, Variation, and Lane Spread.
 - Full producer bus: set Mixgen to Full bus and route one MIDI send to a chain
