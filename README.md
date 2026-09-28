@@ -117,6 +117,7 @@ installed bundle.
 | [ToneWorm](plugins/worms/README.md) | `worms.vst3` | MIDI generator | Paterson's Worm Tonnetz melody generator with six directional rules, scale quantization, Conductor CC, and Randomize/Mutate actions. |
 | [Ghost](plugins/ghost/README.md) | `ghost.vst3` | Audio/MIDI effect | Audio-triggered ghost-note generator: BBT-quantised ghost drums on ch 10 or notes on a selectable channel, driven by Drift CC 1–4. |
 | [Spliff](plugins/spliff/README.md) | `spliff.vst3` | Audio effect | Adaptive transient processor in the Spiff manner: per-band dynamic cuts or boosts only where transient energy lives. |
+| [HelterSkelter](plugins/helterskelter/README.md) | `helterskelter.vst3` | Audio effect | Automatic wah pedal: resonant lowpass driven by the input envelope and/or a BBT-synced ADSR cycle, with Drift CC control. |
 
 ## Architecture
 

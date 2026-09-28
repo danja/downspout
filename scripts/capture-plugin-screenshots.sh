@@ -72,6 +72,7 @@ plugins=(
   "quefrency:quefrency"
   "ghost:ghost"
   "spliff:spliff"
+  "helterskelter:helterskelter"
   )
 
 

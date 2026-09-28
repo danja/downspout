@@ -1,0 +1,19 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:helterskelter a trn:PluginProfile ;
+    rdfs:label "HelterSkelter" ;
+    rdfs:comment "Automatic wah pedal: resonant lowpass whose cutoff follows the input envelope and/or a BBT-synced ADSR cycle, with Drift CC control." ;
+    trn:bundleName "helterskelter.vst3" ;
+    trn:vendor "danja" ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio, trn:ControlMidi ;
+    trn:produces trn:Audio ;
+    trn:requires trn:HostTransport ;
+    trn:caution "High Resonance with high Depth can produce loud ringing peaks; Trim defaults to unity and Bypass compares." ;
+    trn:recommendedAfter dsp:drift ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

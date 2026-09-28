@@ -9,30 +9,9 @@ promotion of the shared OnePoleLowpass/DCBlocker/BiquadFilter duplicates into
   CLAUDE.md requires approval before touching shared headers.
   HANDLE WITH CARE
   
-## Look and Feel
-
-It is desirable to give all the downspout plugins a consistent look as well as /home/danny/github/valis and /home/danny/github/transmission
-
-These use different frameworks but presumably a small custom component lib could be used with both DPF and JUCE. Investigate how this might be done.
-
-The Look & Feel should have both a light and dark theme. The light theme should resemble Cold War era electronic test equipment, quite minimal and brutal but intuitive. The dark theme will simply be the inverse.
-
-## New plugins (2026-09-28, implemented)
-
-* ghost (`ghost.vst3`, Audio/MIDI effect): listens to incoming audio, inserts
-  BBT-quantised (16th grid + drag) ghost drum beats on ch 10 or ghost notes on
-  a selectable channel. Four musical controls map to Drift CC 1–4
-  (Sensitivity, Density, Velocity, Drag). Core tests + VST3 + panel +
-  catalogue screenshot done. Still pending: REAPER host validation, live
-  onset metering (output status params), Division control.
-* spliff (`spliff.vst3`, Audio effect): Spiff-manner adaptive transient
-  processor (3-band detector, cut/boost, sensitivity, sharpness, decay +
-  LF/HF tilt, splits, mix/trim/delta/bypass, Drift CC 1–4). Core tests + VST3
-  + panel + catalogue screenshot done. Still pending: REAPER host validation,
-  M/S modes, parametric sensitivity bands, live reduction display.
-
 ## Evaluate Manually in Reaper
 
+* helterskelter
 * ghost
 * spliff
 * ambo
@@ -49,6 +28,7 @@ The Look & Feel should have both a light and dark theme. The light theme should 
 * polymeter
 * resonance-garden
 * tuney-vst
+* worms
 
 ## Recurring - check periodically
 

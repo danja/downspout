@@ -117,6 +117,7 @@ The repository currently installs forty-one real wrapper targets:
 - `quefrency.vst3` with UI
 - `ghost.vst3` with UI
 - `spliff.vst3` with UI
+- `helterskelter.vst3` with UI
 
 The next install-related validation is host-side confirmation that all bundles behave correctly in `Release` builds.
 

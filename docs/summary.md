@@ -194,6 +194,13 @@ Stereo ambient processor with four rearrangeable module chains. Its Time, Spectr
 
 Launchpad dub performance effect/instrument. Pads trigger echo throws, spring splashes, sirens, alarms, synthetic snare/crash/sub hits, lasers, thunder, rewind, bubbles, risers, horn effects, dropouts, chops, and freezes, with LED feedback and audio pass-through processing.
 
+### HelterSkelter (`helterskelter.vst3`)
+
+Automatic wah pedal. A resonant lowpass (Q 0.5–12) whose cutoff follows the
+input envelope like a touch-wah and/or a BBT-synced ADSR cycle (1, 2, 4 or 8
+beats, Gate Beats high, Invert for low-then-high); Blend takes whichever opens
+further. Sensitivity, Depth, Resonance and Mix read Drift CC 1-4 by default.
+
 ### Spliff (`spliff.vst3`)
 
 Adaptive transient processor in the Spiff manner. A 3-band detector finds
@@ -221,6 +228,8 @@ the stereo image.
   layer; Drift -> Ghost modulates Sensitivity, Density, Velocity and Drag.
 - De-click and lift: Spliff in Cut after vocals, in Boost before drums
   compression; audition with Delta, compare with Bypass.
+- Wah duties: HelterSkelter in Envelope after funk guitar, in BBT Blend on
+  pads; Drift -> HelterSkelter plays Sensitivity, Depth, Resonance and Mix.
 - Automatic arrangement: route instruments into T-Mix, then route Mixgen MIDI
   to T-Mix and tune Density, Depth, Variation, and Lane Spread.
 - Full producer bus: set Mixgen to Full bus and route one MIDI send to a chain
