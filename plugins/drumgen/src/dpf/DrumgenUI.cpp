@@ -502,7 +502,7 @@ private:
                 fontSize(11.0f);
                 textAlign(ALIGN_LEFT | ALIGN_TOP);
                 fillColor(180, 150, 220, 200);
-                text(x + 20.0f, cy, "Conductor \xc2\xb7 CC 21\xe2\x80\x9324 from Mixgen", nullptr);
+                text(x + 20.0f, cy, "Conductor \xc2\xb7 CC 21\xe2\x80\x93" "24 from Mixgen", nullptr);
                 cy += 14.0f;
             }
             selectorRects_[i] = {x + 20.0f, cy, w - 40.0f, 46.0f};

@@ -16,6 +16,13 @@ target_include_directories(downspout_campione_core PUBLIC
     "${PROJECT_SOURCE_DIR}/third_party/nlohmann"
 )
 target_link_libraries(downspout_campione_core PUBLIC pthread)
+if(WIN32)
+    # cpp-httplib requires the Windows 10 API set (CreateFile2, WSAPoll,
+    # inet_pton); MinGW defaults _WIN32_WINNT below that, which makes
+    # httplib.h fail outright. Winsock2 is needed at link time.
+    target_compile_definitions(downspout_campione_core PUBLIC _WIN32_WINNT=0x0A00)
+    target_link_libraries(downspout_campione_core PUBLIC ws2_32)
+endif()
 if(DOWNSPOUT_HAVE_VELOCILOOPS)
     target_link_libraries(downspout_campione_core PUBLIC velociloops_static)
     target_compile_definitions(downspout_campione_core PUBLIC CAMPIONE_HAS_VELOCILOOPS=1)
