@@ -18,11 +18,13 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <filesystem>
 #include <memory>
 #include <mutex>
 #include <random>
 #include <string>
 #include <sys/stat.h>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -90,6 +92,16 @@ using downspout::campione::kStateZoneDsp;
 
 // Default MCP port; increments up to +9 on conflict.
 constexpr int kMcpDefaultPort = 7220;
+
+// Portable "ensure directory exists": POSIX mkdir() takes a mode argument but
+// MinGW's takes none, so std::filesystem is used on all platforms instead.
+inline void ensureDirectoryExists(const char* path)
+{
+    if (path == nullptr || path[0] == '\0')
+        return;
+    std::error_code ec;
+    std::filesystem::create_directories(path, ec);
+}
 
 static std::string defaultDataDir()
 {
@@ -641,7 +653,7 @@ protected:
 
         if (std::strcmp(key, kStateKeyDataDir) == 0 && value && value[0] != '\0')
         {
-            ::mkdir(value, 0755);
+            ensureDirectoryExists(value);
             struct stat st{};
             if (::stat(value, &st) == 0 && S_ISDIR(st.st_mode))
                 recordingOutputDir_ = value;
@@ -698,7 +710,7 @@ protected:
         if (std::strcmp(key, kStateKeyWavetableImport) == 0 && value && value[0] != '\0')
         {
             const std::string dir = recordingOutputDir_.empty() ? defaultDataDir() : recordingOutputDir_;
-            ::mkdir(dir.c_str(), 0755);
+            ensureDirectoryExists(dir.c_str());
             auto result = downspout::campione::importWavetableZone(value, dir);
             if (!result.error.empty()) return;
 
@@ -993,7 +1005,7 @@ private:
                 const std::string dir = recordingOutputDir_.empty()
                     ? defaultDataDir()
                     : recordingOutputDir_;
-                ::mkdir(dir.c_str(), 0755);
+                ensureDirectoryExists(dir.c_str());
                 char fname[256];
                 std::snprintf(fname, sizeof(fname), "%s/slice_%lld_%d.wav",
                               dir.c_str(), static_cast<long long>(std::time(nullptr)), s);
@@ -1040,7 +1052,7 @@ private:
         // Wavetable WAV: has Serum/clm chunk → extract first cycle, save _wt.wav
         if (downspout::campione::wavHasClmChunk(path)) {
             const std::string dir = recordingOutputDir_.empty() ? defaultDataDir() : recordingOutputDir_;
-            ::mkdir(dir.c_str(), 0755);
+            ensureDirectoryExists(dir.c_str());
             auto result = downspout::campione::importWavetableZone(path, dir);
             if (!result.error.empty()) return result.error;
             std::lock_guard<std::mutex> lk(zoneMtx_);
@@ -1167,7 +1179,7 @@ private:
         std::string dir = recordingOutputDir_.empty()
                           ? defaultDataDir()
                           : recordingOutputDir_;
-        ::mkdir(dir.c_str(), 0755);
+        ensureDirectoryExists(dir.c_str());
 
         char fname[256];
         std::snprintf(fname, sizeof(fname), "%s/rec_%lld.wav",
@@ -1272,7 +1284,7 @@ private:
             const std::string dir = recordingOutputDir_.empty()
                 ? defaultDataDir()
                 : recordingOutputDir_;
-            ::mkdir(dir.c_str(), 0755);
+            ensureDirectoryExists(dir.c_str());
             char fname[256];
             std::snprintf(fname, sizeof(fname), "%s/patch_%lld.ttl",
                           dir.c_str(), static_cast<long long>(std::time(nullptr)));
@@ -1427,7 +1439,7 @@ private:
 
         api.importWavetable = [this](const std::string& path) -> std::string {
             const std::string dir = recordingOutputDir_.empty() ? defaultDataDir() : recordingOutputDir_;
-            ::mkdir(dir.c_str(), 0755);
+            ensureDirectoryExists(dir.c_str());
             auto result = downspout::campione::importWavetableZone(path, dir);
             if (!result.error.empty()) return result.error;
             std::lock_guard<std::mutex> lk(zoneMtx_);
