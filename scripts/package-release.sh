@@ -181,7 +181,7 @@ fi
 cmake -E make_directory "$dist_dir"
 cmake -E copy_directory "$staging_dir" "$package_dir"
 cmake -E copy "$repo_root/LICENSE" "$package_dir/LICENSE"
-cmake -E copy "$repo_root/README.md" "$package_dir/README.md"
+cmake -E copy "$repo_root/docs/release-README.md" "$package_dir/README.md"
 
 artifact_base="downspout-$version-$platform-vst3.zip"
 artifact_path="$dist_dir/$artifact_base"

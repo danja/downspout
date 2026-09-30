@@ -1,5 +1,46 @@
 # downspout
 
+## Install All Plugins (from [Releases](https://github.com/danja/downspout/releases))
+
+1. Download the zip for your platform from GitHub Releases:
+   - `downspout-<version>-linux-x86_64-vst3.zip`
+   - `downspout-<version>-macos-arm64-vst3.zip` (Apple Silicon)
+   - `downspout-<version>-macos-x86_64-vst3.zip` (Intel Mac)
+   - `downspout-<version>-windows-x86_64-vst3.zip`
+2. Unzip it. It contains one `.vst3` bundle per plugin.
+3. Copy **all** the `.vst3` bundles into your VST3 folder:
+
+**Linux** (`~/.vst3`):
+
+```bash
+mkdir -p ~/.vst3
+cp -r *.vst3 ~/.vst3/
+```
+
+**macOS** (`~/Library/Audio/Plug-Ins/VST3`, or `/Library/Audio/Plug-Ins/VST3` for all users):
+
+```bash
+mkdir -p ~/Library/Audio/Plug-Ins/VST3
+cp -r *.vst3 ~/Library/Audio/Plug-Ins/VST3/
+```
+
+**Windows** (`C:\Program Files\Common Files\VST3`, run PowerShell as Administrator):
+
+```powershell
+Copy-Item -Recurse -Force *.vst3 "C:\Program Files\Common Files\VST3\"
+```
+
+4. Restart your DAW or force a VST3 rescan.
+
+The macOS and Windows builds are currently untested, and those packages omit
+`sidecar.vst3`. macOS may quarantine unsigned downloads; if a plugin is
+blocked, run `xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/*.vst3`.
+
+See [docs/install.md](docs/install.md) and [docs/release.md](docs/release.md)
+for the local install and release packaging details.
+
+## About
+
 A bunch of mostly generative, algorithmic plugins based around DPF and VST3.
 
 The repository is organized around portable C++ cores, deterministic tests, thin
@@ -16,30 +57,6 @@ Demo -
 * [Transmission](https://danja.github.io/transmission/) Generative Audio Workstation
 * [Valis](https://danja.github.io/valis) Virtual Analog LLM Integrated System
 * [Flues](https://github.com/danja/flues) earlier LV2 plugins and Web Audio toys
-
-## Install From Releases
-
-Download the zip for your platform from GitHub Releases. The macOS and
-Windows builds are currently untested, and those packages omit `sidecar.vst3`:
-
-- `downspout-<version>-linux-x86_64-vst3.zip`
-- `downspout-<version>-macos-arm64-vst3.zip`
-- `downspout-<version>-macos-x86_64-vst3.zip`
-- `downspout-<version>-windows-x86_64-vst3.zip`
-
-Unpack it, then copy the `.vst3` bundles to your system VST3 folder. On Linux:
-
-```bash
-mkdir -p ~/.vst3
-cp -r *.vst3 ~/.vst3/
-```
-
-Typical VST3 install locations are `~/.vst3` on Linux,
-`~/Library/Audio/Plug-Ins/VST3` on macOS, and
-`C:\Program Files\Common Files\VST3` on Windows.
-
-See [docs/install.md](docs/install.md) and [docs/release.md](docs/release.md)
-for the local install and release packaging details.
 
 ## Build and Install
 

@@ -73,6 +73,10 @@ downspout-<version>-<platform>-vst3.zip
 `sidecar.vst3` is currently included only in the Linux package. The macOS and
 Windows packages omit it until those builds are proven.
 
+The packaged `README.md` is not the repository root README; it is copied from
+[release-README.md](release-README.md) and contains only per-platform install
+instructions.
+
 A matching `.sha256` file is published alongside each zip.
 
 ## Local release package
