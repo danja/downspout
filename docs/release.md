@@ -45,6 +45,7 @@ downspout-<version>-<platform>-vst3.zip
 ├── magneto.vst3/
 ├── primefold.vst3/
 ├── quefrency.vst3/
+├── keyframe.vst3/
 ├── moka.vst3/
 ├── luma.vst3/
 ├── paunchlad.vst3/

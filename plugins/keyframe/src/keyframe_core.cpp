@@ -10,22 +10,18 @@ namespace {
 
 constexpr std::int64_t kRingMask = kRingCapacity - 1;
 
-// Cubic B-spline kernel from the paper: coefficients are data-derived, so no
-// trig or table lookup at runtime. Filtering with a kernel whose transform
-// has a zero at Nyquist is what suppresses the noise-floor ripples that would
-// otherwise be reported as spurious extrema by a naive finite difference.
-constexpr float kSpline0 = 1.0f / 6.0f;
-constexpr float kSpline1 = 4.0f / 6.0f;
+// Quadratic B-spline kernel from the paper's derivative section. The kernel is
+// what gives the derivative estimate its zero at Nyquist, so no trig or table
+// lookup is needed at runtime.
+constexpr float kSpline0 = 1.0f / 2.0f;
 
-// Non-uniform cubic Hermite basis with zero tangents (paper eq. 11). Every
-// saved extremum has a zero derivative by construction, so T0 = T1 = 0 drops
-// the tangent terms and makes the spacing between keyframes drop out of the
-// interpolation entirely. The result is a smoothstep between two keyframe
-// values.
-[[nodiscard]] float smoothstep(const float t) noexcept
+// h10(t) from the paper's zero-tangent Hermite basis (eq. 8/11): the weight on
+// the *later* keyframe. h00 = 1 - h10. Both are 0 at t = 0 and 1 at t = 1, so
+// the weight rises from the earlier keyframe to the later one.
+[[nodiscard]] float hermiteLaterWeight(const float t) noexcept
 {
     const float t2 = t * t;
-    return t2 * (2.0f * t - 3.0f) + 1.0f;
+    return t2 * (3.0f - 2.0f * t);
 }
 
 [[nodiscard]] float clamped(const float value, const float lo, const float hi) noexcept
@@ -43,15 +39,18 @@ constexpr float kSpline1 = 4.0f / 6.0f;
     return state.kf[static_cast<std::size_t>(index & kRingMask)];
 }
 
-// Catmull-Rom evaluation of a 4-sample history at a fractional index in
-// [0, 1] measured from the third sample. Used to read the channel value at a
+// Cubic (Catmull-Rom) evaluation of the history at a fractional index.
+// `base` is the history index that t = 0 sits on, so t = 0 reads h[base] and
+// t = 1 reads h[base + 1], with the two outer samples taken either side.
+// Index k of the history holds sample n-k. Used to read the channel value at a
 // subsample extremum position (paper eq. 6).
-[[nodiscard]] float interpolateHistory(const std::array<float, 5>& h, const float t) noexcept
+[[nodiscard]] float interpolateHistory(const std::array<float, 6>& h, const std::size_t base,
+                                       const float t) noexcept
 {
-    const float p0 = h[0];
-    const float p1 = h[1];
-    const float p2 = h[2];
-    const float p3 = h[3];
+    const float p0 = h[base - 1];
+    const float p1 = h[base];
+    const float p2 = h[base + 1];
+    const float p3 = h[base + 2];
     const float a = 2.0f * p1;
     const float b = p2 - p0;
     const float c = 2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3;
@@ -80,19 +79,21 @@ void pushKeyframe(EngineState& state, const double pos, const float l, const flo
 // The paper analyses one signal. We analyse the mid channel so both channels
 // share one sparse time base and the stereo image survives the stretch; the
 // keyframe values are then read per channel at the same subsample position.
+//
+// History index k holds sample n-k, so hist[0] is x[n-5] and hist[5] is x[n].
 void analyseSample(EngineState& state, const float l, const float r, const float epsilon)
 {
     const float mid = 0.5f * (l + r);
 
-    for (std::size_t i = 0; i < 4; ++i)
+    for (std::size_t i = 0; i < 5; ++i)
     {
         state.histL[i] = state.histL[i + 1];
         state.histR[i] = state.histR[i + 1];
         state.histM[i] = state.histM[i + 1];
     }
-    state.histL[4] = l;
-    state.histR[4] = r;
-    state.histM[4] = mid;
+    state.histL[5] = l;
+    state.histR[5] = r;
+    state.histM[5] = mid;
 
     const double n = state.inputIndex;
     state.inputIndex += 1.0;
@@ -105,47 +106,84 @@ void analyseSample(EngineState& state, const float l, const float r, const float
         state.vPrev = mid;
         state.haveDerivative = true;
         pushKeyframe(state, 0.0, l, r);
-        return;
     }
-
-    // Bandlimited derivative from the current four samples. This is the
-    // "derivative by windowing the derivative of a windowed kernel" step of
-    // §2.1, evaluated with the paper's data-derived coefficients.
-    const float d = kSpline1 * (state.histM[3] - state.histM[2])
-                  + kSpline0 * (state.histM[4] - state.histM[2]);
-    const int sign = (d > 0.0f) - (d < 0.0f);
-
-    if (state.dPrevSign != 0 && sign != 0 && sign != state.dPrevSign
-        && std::fabs(mid - state.vPrev) > epsilon)
+    else
     {
-        // Reverse linear interpolation of the derivative to find the
-        // subsample index where it crosses zero (paper eq. 4/5).
-        const float a = std::fabs(state.dPrev);
-        const float b = std::fabs(d);
-        const float sum = a + b;
-        const float alpha = sum > 0.0f ? a / sum : 0.5f;
-        const double nm = (n - 1.0) + alpha;
-        const float vl = interpolateHistory(state.histL, alpha);
-        const float vr = interpolateHistory(state.histR, alpha);
+        // Bandlimited derivative of §2.1: the quadratic B-spline kernel
+        // [1, 2, 1]/4 is applied to the signal and the result differenced,
+        // giving a three-tap FIR with a zero at Nyquist. Centred on sample n-1,
+        // which is (x[n-2] - x[n])/2 = (hist[3] - hist[5])/2. Centring it on
+        // n-1 rather than n keeps the zero crossing between samples n-2 and
+        // n-1, which is where the position formula below places it.
+        const float d = kSpline0 * (state.histM[3] - state.histM[5]);
 
-        // Extrema positions must be strictly increasing for the window search.
-        if (nm > ringAt(state, state.kfWrite - 1).pos)
-            pushKeyframe(state, nm, vl, vr);
-        state.vPrev = mid;
+        // The derivative passes through exactly zero at every extremum, so its
+        // sign goes positive -> zero -> negative over three samples. Testing the
+        // raw sign would therefore miss every crossing, and the buffer would
+        // degenerate to block boundaries alone. Latch the last non-zero sign and
+        // treat any change of that latch as the crossing.
+        const int sign = (d > 0.0f) - (d < 0.0f);
+        const bool crossed = sign != 0 && state.dPrevSign != 0 && sign != state.dPrevSign;
+
+        if (crossed)
+        {
+            // Reverse linear interpolation of the derivative to find the
+            // subsample index where it crosses zero (paper eq. 4/5). The crossing
+            // lies between samples n-2 and n-1; alpha is the fraction of the way
+            // from n-2.
+            const float a = std::fabs(state.dPrev);
+            const float b = std::fabs(d);
+            const float sum = a + b;
+            const float alpha = sum > 0.0f ? std::clamp(a / sum, 0.0f, 1.0f) : 0.5f;
+            const double nm = (n - 2.0) + alpha;
+            const float vl = interpolateHistory(state.histL, 3, alpha);
+            const float vr = interpolateHistory(state.histR, 3, alpha);
+            const float vm = 0.5f * (vl + vr);
+
+            // The difference threshold of §2.2 is a deadband measured against
+            // the amplitude of the last saved keyframe. vPrev is advanced for
+            // every crossing, not only accepted ones: leaving it pointing at an
+            // older keyframe would make the same candidate fail the threshold
+            // and be reconsidered on every subsequent crossing.
+            if (std::fabs(vm - state.vPrev) > epsilon && nm > state.newestPos)
+            {
+                pushKeyframe(state, nm, vl, vr);
+                state.vPrev = vm;
+            }
+        }
+
+        state.dPrev = d;
+        // Keep the latched sign, not the instantaneous one, so the latch is only
+        // updated on a genuine non-zero sample.
+        if (sign != 0)
+            state.dPrevSign = sign;
     }
-
-    state.dPrev = d;
-    state.dPrevSign = sign;
 
     // Block-boundary keyframes: enforce a baseline uniform sample rate on the
     // sparse buffer so real-time analysis and playback can run one after the
-    // other (paper §2.7) and so a silent passage still yields windows.
+    // other (paper §2.7), and so a silent passage still yields windows. Only
+    // written when it is genuinely needed. If extrema already cover the instant
+    // there is nothing to enforce, and forcing one anyway would interpolate
+    // across the samples either side of a point where the signal is curving,
+    // which is exactly where it would distort the reconstruction.
     state.blockCounter += 1;
     if (state.blockCounter >= kAnalysisBlock)
     {
         state.blockCounter = 0;
-        if (n > ringAt(state, state.kfWrite - 1).pos)
+        // Only write the baseline keyframe when the signal has actually gone quiet
+        // since the last one. The threshold is a quarter of the block, so a
+        // forced keyframe never lands within ~128 samples of an extremum: two
+        // keyframes that close together force a near-vertical interpolation
+        // across whatever curvature lies between them, which is exactly where
+        // the reconstruction would kink.
+        if (n > state.newestPos + kAnalysisBlock * 0.25)
+        {
             pushKeyframe(state, n, l, r);
+            // The deadband reference has to follow the written keyframe, or the
+            // next crossing is measured against a stale amplitude and gets
+            // saved with a value that does not match its position.
+            state.vPrev = 0.5f * (l + r);
+        }
     }
 }
 
@@ -179,8 +217,10 @@ void updateWindow(const EngineState& state, std::int64_t& m, const double pos)
     const Keyframe& b = ringAt(state, m + 1);
     const double span = b.pos - a.pos;
     const float t = span > 1.0e-9 ? static_cast<float>((pos - a.pos) / span) : 0.0f;
-    const float w = smoothstep(clamped(t, 0.0f, 1.0f));
-    return right ? (a.r * (1.0f - w) + b.r * w) : (a.l * (1.0f - w) + b.l * w);
+    // h10 on the later keyframe, h00 on the earlier one.
+    const float wLater = hermiteLaterWeight(clamped(t, 0.0f, 1.0f));
+    const float wEarlier = 1.0f - wLater;
+    return right ? (a.r * wEarlier + b.r * wLater) : (a.l * wEarlier + b.l * wLater);
 }
 
 }  // namespace
@@ -286,12 +326,13 @@ void processBlock(EngineState& state,
         if (state.primed && state.kfWrite >= 2)
         {
             const double newest = newestPosition(state);
-            // The reference sits between a floor and a ceiling behind the write
-            // head. The ceiling keeps a constant minimum depth, which is what
-            // the reported latency and the dry delay are tied to. The floor
-            // bounds how far back a sustained slow-down may accumulate; past it
-            // the reference rides along and the engine loops what it holds.
-            const double refCeiling = std::max(0.0, newest - kLatencySamples);
+            // The reference advances from position 0 at the time rate, so at
+            // unity it tracks the write head exactly kLatencySamples behind it —
+            // that fixed offset is the reported latency and what the dry path is
+            // delayed by. Slowing down lets the gap widen, which is the whole
+            // point, so the only bound is a floor: past kMaxDepthSamples the
+            // reference rides along and the engine loops the material it holds
+            // rather than backing up without limit.
             const double refFloor = std::max(0.0, newest - kMaxDepthSamples);
 
             // The leash in samples: the time span of K keyframes ahead of the
@@ -307,26 +348,21 @@ void processBlock(EngineState& state,
                 // Frozen reference: the playhead keeps moving at the pitch rate
                 // and every splice pulls it back to the same point, so the
                 // passage sustains indefinitely.
-                state.refPos = std::clamp(state.refPos, refFloor, refCeiling);
+                state.refPos = std::max(state.refPos, refFloor);
             }
             else
             {
-                // The reference marks where playback should be, and is bounded
-                // between a floor and a ceiling behind the write head. The
-                // ceiling is what produces the fixed reported latency; the
-                // floor is what stops a sustained slow-down accumulating depth
-                // without bound, past which the engine loops what it holds.
-                state.refPos = std::clamp(state.refPos + tau, refFloor, refCeiling);
+                state.refPos = std::max(state.refPos + tau, refFloor);
             }
 
-            // The playhead runs free at the pitch rate. It is never clamped to
-            // the reference: the drift test and the ensuing splice are what pull
-            // it back, which is the algorithm's whole mechanism. Clamping it to
-            // a leash-derived limit instead would freeze it mid-drift and change
-            // the pitch. The only bound is the write head, so it can never read
-            // past what analysis has produced.
-            const double playLimit = std::max(newest - 1.0, state.refPos);
-            state.playPos = std::clamp(state.playPos, state.refPos, playLimit);
+            // The playhead runs free at the pitch rate and is bounded only by the write
+            // head. It must be allowed below the reference as well as above it:
+            // at a pitch rate under unity the playhead legitimately lags, and
+            // that negative drift is exactly what a splice later corrects. A
+            // clamp against the reference would pin it there and silently turn
+            // every pitch setting into the time setting.
+            const double playLimit = std::max(newest - 1.0, 0.0);
+            state.playPos = std::clamp(state.playPos, 0.0, playLimit);
 
             updateWindow(state, state.mPlay, state.playPos);
 

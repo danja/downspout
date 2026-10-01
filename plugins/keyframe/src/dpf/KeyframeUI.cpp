@@ -21,6 +21,7 @@ using downspout::keyframe::kParameterSpecs;
 using downspout::keyframe::ParamId;
 
 constexpr float kPi = 3.14159265358979323846f;
+constexpr float kSr = 48000.0f;
 
 struct Rect {
     float x = 0.0f;
@@ -520,16 +521,22 @@ private:
         drawSlider(ParamId::threshold, "Threshold (extremum floor)", {x, y, w, rowH}, kSpliceAccent);
         y += rowH;
 
-        drawKeyframeMeter({x, y, w, 96.0f});
-        y += 104.0f;
+        drawKeyframeMeter({x, y, w, 130.0f});
+        y += 138.0f;
 
         const auto& t = theme();
         fc(t.textDim);
         fontSize(10.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        text(x, y, "Density is measured live: tightly packed", nullptr);
+        text(x, y, "Density is measured live. Tightly packed", nullptr);
         text(x, y + 13.0f, "keyframes mean dense, bright content; wide", nullptr);
         text(x, y + 26.0f, "spacing means sparse or sustained.", nullptr);
+        text(x, y + 39.0f, "A higher threshold discards low-amplitude", nullptr);
+        text(x, y + 52.0f, "detail, which reads as a low-pass because", nullptr);
+        text(x, y + 65.0f, "high frequencies tend to be quieter.", nullptr);
+        text(x, y + 83.0f, "Analysis runs on the mid channel, so both", nullptr);
+        text(x, y + 96.0f, "sides share one sparse time base and the", nullptr);
+        text(x, y + 109.0f, "stereo image survives a splice.", nullptr);
     }
 
     // Keyframe density readout. A horizontal bar on a log-ish scale, because
@@ -580,8 +587,13 @@ private:
             stroke();
         }
 
-        // Below the meter, a strip of tick marks whose spacing is drawn from the
-        // live rate: the visual claim the algorithm is making about the signal.
+        // Below the meter, tick marks whose spacing is drawn from the live
+        // rate: the visual claim the algorithm is making about the signal.
+        // The rate is mapped logarithmically over the span the method cares
+        // about (about 20 to 2000 keyframes per second, i.e. a sparse bass note
+        // through to dense cymbal material) and clamped so the ticks stay
+        // resolvable on screen. A linear mapping would collapse every real
+        // reading into a solid line at the left edge.
         const float stripY = bounds.y + 46.0f;
         const float stripH = 40.0f;
         beginPath();
@@ -594,12 +606,15 @@ private:
         roundedRect(bounds.x, stripY, bounds.w, stripH, laf::kRadiusSmall);
         stroke();
 
-        const float spacing = clampf(rate / 24000.0f, 1.0f / 400.0f, 1.0f) * (bounds.w / 6.0f);
+        // Intervals between ticks, in samples, from one keyframe per sample up
+        // to one every 128 samples.
+        const float samplesPerKeyframe = clampf(kSr / std::max(rate, 1.0f), 1.0f, 128.0f);
+        const float spacing = (samplesPerKeyframe / 128.0f) * (bounds.w / 14.0f);
         for (float px = bounds.x + spacing * 0.5f; px < bounds.x + bounds.w; px += spacing)
         {
             beginPath();
-            fillColor(kSpliceAccent.r, kSpliceAccent.g, kSpliceAccent.b, 200);
-            circle(px, stripY + stripH * 0.5f, 1.6f);
+            fillColor(kSpliceAccent.r, kSpliceAccent.g, kSpliceAccent.b, 210);
+            circle(px, stripY + stripH * 0.5f, 1.8f);
             fill();
         }
 
@@ -639,6 +654,10 @@ private:
         text(x, y + 26.0f, "lengthens the crossfade but keeps its adaptation", nullptr);
         text(x, y + 39.0f, "to transients. Max Splice caps a long stretch", nullptr);
         text(x, y + 52.0f, "through sparse material.", nullptr);
+        text(x, y + 72.0f, "When the playhead reaches the end of its", nullptr);
+        text(x, y + 85.0f, "leash a splice pulls it back to the reference.", nullptr);
+        text(x, y + 98.0f, "Hold stops the reference instead, and the", nullptr);
+        text(x, y + 111.0f, "passage sustains indefinitely.", nullptr);
     }
 
     // The jogger and the dog: reference playhead fixed at the left of the bar,
@@ -726,9 +745,14 @@ private:
                       static_cast<int>(std::lround(value(ParamId::outLatency))));
         text(x, y, buffer, nullptr);
         text(x, y + 13.0f, "constant, dry path delayed to match.", nullptr);
-        text(x, y + 26.0f, "Sparse material stretches with audible repeats;", nullptr);
-        text(x, y + 39.0f, "dense layered material stretches cleanly.", nullptr);
-        text(x, y + 57.0f, "CC 1 time  2 pitch  7 output", nullptr);
+        text(x, y + 32.0f, "Time is a rate: 0.50x is half speed, so the", nullptr);
+        text(x, y + 45.0f, "output is twice as long. It stops at 1.00x", nullptr);
+        text(x, y + 58.0f, "because a live input cannot be read faster", nullptr);
+        text(x, y + 71.0f, "than it arrives.", nullptr);
+        text(x, y + 90.0f, "Pitch ratio is Pitch / Time. A long stretch", nullptr);
+        text(x, y + 103.0f, "through sparse material repeats audibly;", nullptr);
+        text(x, y + 116.0f, "dense layered material stretches cleanly.", nullptr);
+        text(x, y + 136.0f, "CC 1 time  2 pitch  7 output", nullptr);
     }
 
     std::array<float, kParameterCount> values_ {};

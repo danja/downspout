@@ -88,9 +88,11 @@ struct EngineState {
     // below it, so it is the write head in time terms.
     double newestPos = 0.0;
     double inputIndex = 0.0;
-    std::array<float, 5> histL {};  // x[n-4 .. n]
-    std::array<float, 5> histR {};
-    std::array<float, 5> histM {};
+    // Six samples of history per channel so the derivative kernel can reach
+    // samples n-2..n+1. Index k holds sample n-k.
+    std::array<float, 6> histL {};
+    std::array<float, 6> histR {};
+    std::array<float, 6> histM {};
     float dPrev = 0.0f;
     float vPrev = 0.0f;
     int dPrevSign = 0;

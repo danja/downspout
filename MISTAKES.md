@@ -53,3 +53,21 @@
   half-octave log-magnitude spectra with a mean-removed cosine distance, which
   separates every mode pair by ~2x the threshold and is stable across -O0..-O3
   and -ffast-math.
+
+## Measuring a spliced signal
+
+Zero-crossing counts and autocorrelation both misreport the pitch of a spliced
+signal: the output is phase-continuous within a segment but phase-discontinuous
+across a splice, and both methods read that discontinuity as signal. A Goertzel
+magnitude at a candidate frequency is the measurement that survives it.
+
+## Test probes that never advance the input pointer
+
+`processBlock` reads `inputs[0][0..nframes-1]` relative to the pointer it is
+given. A probe that passes `in.data()` for every block re-reads the first block
+of the buffer forever, which looks exactly like a broken engine: the sparse
+buffer fills with nothing but block-boundary keyframes, and the output is a
+uniformly sampled version of the input rather than a reconstruction of it.
+Several hours went into the core before the probe was suspect. Always offset the
+input pointer with the block, and sanity-check a probe against the raw input
+before believing what it says about the engine.

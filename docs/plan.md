@@ -206,6 +206,13 @@ Progress as of 2026-05-27:
 - `ghost` now exists as an original audio-triggered ghost-note generator with BBT-quantised 16th-grid ghosts, drum (ch 10) and note modes, four Drift-CC feel controls, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `spliff` now exists as a Spiff-manner adaptive transient processor with a 3-band detector, cut/boost modes, sensitivity, sharpness, decay with LF/HF tilt, mix/trim/delta/bypass, Drift-CC control, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `helterskelter` now exists as an automatic wah pedal with a resonant lowpass driven by the input envelope and/or a BBT-synced ADSR cycle, full ADSR, gate invert, Drift-CC control, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
+- `keyframe` now exists as an extrema-sampling time stretch after Nielsen's
+  DAFx26-26 method: bandlimited B-spline derivative analysis, difference
+  thresholding, subsample extrema location, a three-playhead sparse-domain
+  overlap-add engine whose crossfade length follows keyframe spacing, independent
+  time and pitch rates, reference hold, fixed reported latency with a matched dry
+  delay, deterministic tests, and a first VST3 wrapper target with UI via vendored
+  DPF;
 - `install.sh` exists as the intended build/install entrypoint for local VST deployment.
 
 Current main gap:
@@ -222,7 +229,8 @@ Current main gap:
   `conductor.vst3`, `drift.vst3`, `mnemosyne.vst3`, `polymeter.vst3`,
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
-  `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, and `helterskelter.vst3` bundles.
+  `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`, and
+  `keyframe.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of

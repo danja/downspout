@@ -219,6 +219,7 @@ jobs:
             echo "- basilico.vst3"
             echo "- canticle.vst3"
             echo "- magneto.vst3"
+            echo "- keyframe.vst3"
             echo "- primefold.vst3"
             echo "- quefrency.vst3"
             echo "- moka.vst3"

@@ -1,0 +1,37 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:keyframe a trn:PluginProfile ;
+    rdfs:label "Keyframe" ;
+    rdfs:comment "Extrema-sampling time stretch after Nielsen (DAFx26-26): the input is reduced to timestamped local extrema, and an overlap-add splice whose crossfade length follows keyframe spacing holds transients together with no transient detector anywhere in the signal path. Fixed reported latency of 8192 samples." ;
+    trn:bundleName "keyframe.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/keyframe/> ;
+    trn:role trn:AudioEffectPlugin ;
+    trn:accepts trn:Audio, trn:Midi ;
+    trn:produces trn:Audio ;
+    trn:caution "Time stops at 1.00x because a live input cannot be read faster than it arrives; the pitch ratio is Pitch divided by Time." ;
+    trn:caution "A sustained slow-down reaches an internal depth limit of 65536 samples, past which the engine loops the material it holds. That is audible as repeats, and is the same behaviour the source paper reports as a limitation of the method." ;
+    trn:parameter [ rdfs:label "Time" ; trn:symbol "time" ; trn:range "0.25-1.00x" ;
+                    rdfs:comment "Rate, not stretch factor: input samples consumed per output sample. MIDI CC 1." ] ;
+    trn:parameter [ rdfs:label "Pitch" ; trn:symbol "pitch" ; trn:range "0.25-4.00x" ;
+                    rdfs:comment "Playhead read rate, independent of Time. MIDI CC 2." ] ;
+    trn:parameter [ rdfs:label "Splice" ; trn:symbol "splice" ; trn:range "2-64" ;
+                    rdfs:comment "Leash length K in keyframes; the macro over splice duration." ] ;
+    trn:parameter [ rdfs:label "Threshold" ; trn:symbol "threshold" ; trn:range "-96 to -24 dB" ;
+                    rdfs:comment "Amplitude difference below which an extremum is discarded. -60 dB is the paper's recommendation." ] ;
+    trn:parameter [ rdfs:label "Max Splice" ; trn:symbol "max_splice" ; trn:range "20-500 ms" ;
+                    rdfs:comment "Ceiling on a single crossfade; stops long splices turning into audible repeats." ] ;
+    trn:parameter [ rdfs:label "Hold" ; trn:symbol "hold" ; trn:range "Off, On" ;
+                    rdfs:comment "Freeze the reference playhead; the passage sustains indefinitely." ] ;
+    trn:parameter [ rdfs:label "Mix" ; trn:symbol "mix" ; trn:range "0-100" ;
+                    rdfs:comment "Dry/wet crossfade. The dry path carries the reported latency so the two align." ] ;
+    trn:parameter [ rdfs:label "Width" ; trn:symbol "width" ; trn:range "0-100" ;
+                    rdfs:comment "Mid/side stereo spread, gain-neutral." ] ;
+    trn:parameter [ rdfs:label "Level" ; trn:symbol "level" ; trn:range "0-100" ;
+                    rdfs:comment "Output level. MIDI CC 7." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

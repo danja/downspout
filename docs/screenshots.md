@@ -85,6 +85,7 @@ Current output filenames:
 - `magneto.png`
 - `primefold.png`
 - `quefrency.png`
+- `keyframe.png`
 - `moka.png`
 - `luma.png`
 - `paunchlad.png`
