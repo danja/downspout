@@ -68,6 +68,7 @@ option(DOWNSPOUT_BUILD_SPLIFF "Configure the spliff transient processor target" 
 option(DOWNSPOUT_BUILD_HELTERSKELTER "Configure the helterskelter auto-wah target" ON)
 option(DOWNSPOUT_BUILD_PRIMEFOLD "Configure the primefold prime-harmonic shifter target" ON)
 option(DOWNSPOUT_BUILD_QUEFRENCY "Configure the quefrency cepstral shifter target" ON)
+option(DOWNSPOUT_BUILD_KEYFRAME "Configure the keyframe extrema time-stretch target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 option(DOWNSPOUT_BUILD_SCREENSHOT_APPS "Build DPF standalone apps for documentation screenshots" OFF)
 
@@ -362,4 +363,8 @@ endif()
 
 if(DOWNSPOUT_BUILD_QUEFRENCY)
     add_subdirectory(plugins/quefrency)
+endif()
+
+if(DOWNSPOUT_BUILD_KEYFRAME)
+    add_subdirectory(plugins/keyframe)
 endif()
