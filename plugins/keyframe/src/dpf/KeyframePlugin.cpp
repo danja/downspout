@@ -56,7 +56,7 @@ protected:
         return "Extrema-sampling time stretch: the input is reduced to timestamped "
                "local extrema, and an overlap-add splice whose crossfade length is "
                "decided by keyframe spacing holds transients together. Fixed reported "
-               "latency of 32768 samples.";
+               "latency of 8192 samples.";
     }
 
     const char* getMaker() const override { return "danja"; }
@@ -145,7 +145,7 @@ protected:
 
         switch (static_cast<core::ParamId>(index))
         {
-        case core::ParamId::outDensity: return core::keyframesPerSecond(engineState_);
+        case core::ParamId::outDensity: return core::keyframeDensityRatio(engineState_);
         case core::ParamId::outDrift: return core::playheadDrift(engineState_);
         case core::ParamId::outSplice: return core::spliceLamp(engineState_);
         case core::ParamId::outLatency:

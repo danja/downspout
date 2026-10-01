@@ -8,6 +8,23 @@ promotion of the shared OnePoleLowpass/DCBlocker/BiquadFilter duplicates into
   include/downspout/dsp/. That refactor is worth doing but is a separate change and
   CLAUDE.md requires approval before touching shared headers.
   HANDLE WITH CARE
+
+## keyframe display and density scaling
+
+* Density meter saturated by construction (fixed 2026-10-02): `log10(rate)/4.0`
+  pegged the bar at 10,000 kf/s against a 24,000 parameter max, and the host
+  clamped the output parameter on top, so the meter read stuck and the tick
+  strip froze. Fixed by reporting density as the paper's M/N (keyframes per
+  input sample), bounded to [0,1] and sample-rate independent; kf/s text was
+  dropped because the UI has no sample rate to scale it by.
+* Density smoothing was per-block, not per-second (fixed 2026-10-02): a fixed
+  0.02 coefficient converged 4x faster at 128-sample blocks than at 512. Now a
+  time-based coefficient (tau 0.15 s). The block-size-invariance test covers
+  audio only; test 14c pins the status path.
+* Leash diagram was static at unity rates because drift is genuinely ~0 there.
+  Added a splice halo around the playhead dot so the panel reads live during
+  crossfades. If it still reads dead at defaults, the diagram needs a rethink,
+  not another lamp.
   
 ## New Plugins (from DIM)
 
@@ -28,6 +45,7 @@ promotion of the shared OnePoleLowpass/DCBlocker/BiquadFilter duplicates into
 ## Evaluate Manually in Reaper
 
 * helterskelter
+* keyframe
 * ghost
 * spliff
 * ambo

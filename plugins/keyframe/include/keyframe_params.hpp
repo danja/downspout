@@ -59,7 +59,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"mix", "Mix", "", 0.0f, 1.0f, 0.60f, false, false},
     {"width", "Width", "", 0.0f, 1.0f, 0.60f, false, false},
     {"level", "Level", "", 0.0f, 1.0f, 0.75f, false, false},
-    {"out_density", "Keyframes", "kf/s", 0.0f, 24000.0f, 0.0f, false, true},
+    {"out_density", "Density", "", 0.0f, 1.0f, 0.0f, false, true},
     {"out_drift", "Playhead Drift", "kf", -64.0f, 64.0f, 0.0f, false, true},
     {"out_splice", "Splice Lamp", "", 0.0f, 1.0f, 0.0f, false, true},
     {"out_latency", "Latency", "spl", 0.0f, 65536.0f, 8192.0f, false, true},

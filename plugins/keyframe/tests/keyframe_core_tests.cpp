@@ -476,7 +476,8 @@ int main()
         CHECK(worst < 1.0e-6f, "output is block-size invariant");
     }
 
-    // 14. Status reporting tracks the engine.
+    // 14. Status reporting tracks the engine. Density is the paper's M/N ratio,
+    //     so it is bounded to [0, 1] whatever the sample rate or material.
     {
         auto st = std::make_unique<EngineState>();
         activate(*st, kSr);
@@ -487,9 +488,75 @@ int main()
         std::vector<float> outR;
         runBlock(*st, p, input, 0, input.size(), outL, outR);
         CHECK(keyframesPerSecond(*st) > 100.0f, "density readout is non-zero for real material");
+        const float ratio = keyframeDensityRatio(*st);
+        CHECK(ratio > 0.0f && ratio <= 1.0f, "density ratio is bounded to [0, 1]");
         CHECK(std::fabs(playheadDrift(*st)) <= 64.0f, "drift readout stays inside its range");
         CHECK(spliceLamp(*st) >= 0.0f && spliceLamp(*st) <= 1.0f, "splice lamp is normalised");
         CHECK(clipLamp(*st) >= 0.0f && clipLamp(*st) <= 1.0f, "clip lamp is normalised");
+    }
+
+    // 14b. Density scale is pinned at both extremes, so the meter cannot be
+    //      silently resaturated: sparse material reads low, maximally dense
+    //      material reads high, and neither end clips against a hidden ceiling.
+    {
+        auto runRatio = [](const std::vector<float>& input) {
+            auto st = std::make_unique<EngineState>();
+            activate(*st, kSr);
+            Parameters p;
+            std::vector<float> outL;
+            std::vector<float> outR;
+            runBlock(*st, p, input, 0, input.size(), outL, outR);
+            return keyframeDensityRatio(*st);
+        };
+
+        // Sparse: a quiet low sine produces few extrema per sample.
+        const float sparse = runRatio(makeSine(96000, 220.0));
+        CHECK(sparse > 0.0f && sparse < 0.05f, "sparse material reads a low density ratio");
+
+        // Dense: a 15 kHz sine flips the derivative nearly every other sample,
+        // which is close to the maximum keyframe rate of one per sample.
+        // (A sample-alternating square wave would seem denser, but the centered
+        // difference of two same-parity samples is exactly zero, so it produces
+        // no crossings at all — a property of the kernel, not a useful test.)
+        const float dense = runRatio(makeSine(48000, 15000.0));
+        CHECK(dense > 0.3f && dense <= 1.0f, "dense material reads a high density ratio");
+
+        CHECK(dense > 10.0f * sparse, "density scale separates sparse from dense material");
+    }
+
+    // 14c. Density smoothing is time-based, so the readout converges the same
+    //      way whatever the host buffer size is. (Audio output invariance is
+    //      covered in 13; this covers the status path, which a fixed
+    //      per-block coefficient would leave buffer-size dependent.)
+    {
+        const auto input = makeDenseProgram(96000);
+        Parameters p;
+
+        auto runChunked = [&](const std::size_t chunk) {
+            auto st = std::make_unique<EngineState>();
+            activate(*st, kSr);
+            std::vector<float> outL;
+            std::vector<float> outR;
+            std::vector<float> blockL(chunk);
+            std::vector<float> blockR(chunk);
+            float* outputs[2] = {blockL.data(), blockR.data()};
+            std::size_t done = 0;
+            while (done < input.size())
+            {
+                const std::size_t n = std::min(chunk, input.size() - done);
+                const float* inputs[2] = {input.data() + done, input.data() + done};
+                processBlock(*st, p, static_cast<std::uint32_t>(n), inputs, outputs);
+                outL.insert(outL.end(), blockL.begin(), blockL.begin() + n);
+                outR.insert(outR.end(), blockR.begin(), blockR.begin() + n);
+                done += n;
+            }
+            return keyframeDensityRatio(*st);
+        };
+
+        const float small = runChunked(128);
+        const float large = runChunked(2048);
+        CHECK(std::fabs(small - large) < 0.01f,
+              "density readout is independent of host buffer size");
     }
 
     // 15. Long-run boundedness: several seconds through the engine must not

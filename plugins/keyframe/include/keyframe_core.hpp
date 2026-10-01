@@ -122,7 +122,11 @@ struct EngineState {
     bool primed = false;
 
     // Status
-    float density = 0.0f;      // keyframes per second
+    // density is the paper's M/N: keyframes per input sample, inherently
+    // bounded to [0, 1] and independent of sample rate. A rate in kf/s would
+    // need a sample-rate-dependent ceiling the host cannot know; M/N cannot
+    // saturate the meter by construction.
+    float density = 0.0f;      // keyframes per input sample (M/N)
     float drift = 0.0f;       // keyframes between the two playheads
     float spliceLamp = 0.0f;
     std::uint64_t spliceCount = 0;
@@ -151,6 +155,7 @@ void processBlock(EngineState& state,
                   float* const* outputs) noexcept;
 
 [[nodiscard]] float keyframesPerSecond(const EngineState& state) noexcept;
+[[nodiscard]] float keyframeDensityRatio(const EngineState& state) noexcept;
 [[nodiscard]] float playheadDrift(const EngineState& state) noexcept;
 [[nodiscard]] float spliceLamp(const EngineState& state) noexcept;
 [[nodiscard]] std::uint64_t spliceCount(const EngineState& state) noexcept;

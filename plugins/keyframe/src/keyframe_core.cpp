@@ -456,12 +456,20 @@ void processBlock(EngineState& state,
         outR[n] = tripped ? 0.0f : clamped(oR, -1.2f, 1.2f);
     }
 
-    // Keyframe density, keyframes per second, smoothed.
+    // Keyframe density as M/N (keyframes per input sample), smoothed with a
+    // time-based coefficient so the readout converges at the same rate whatever
+    // the host buffer size is. A fixed per-block coefficient would converge 4x
+    // faster at 128-sample blocks than at 512, so the meter would read
+    // differently in different hosts for identical material.
     if (nframes > 0 && state.sampleRate > 0.0)
     {
-        const double added = static_cast<double>(state.kfWrite - kfBefore);
-        const double rate = added * state.sampleRate / static_cast<double>(nframes);
-        state.density += 0.02f * static_cast<float>(rate - state.density);
+        const double measured = static_cast<double>(state.kfWrite - kfBefore)
+                              / static_cast<double>(nframes);
+        constexpr double kTauSeconds = 0.15;
+        const double alpha = 1.0
+                           - std::exp(-static_cast<double>(nframes)
+                                      / (kTauSeconds * state.sampleRate));
+        state.density += static_cast<float>(alpha * (measured - state.density));
     }
     state.spliceLamp *= std::pow(0.9995f, static_cast<float>(nframes));
     state.clipLamp *= std::pow(0.9995f, static_cast<float>(nframes));
@@ -480,7 +488,11 @@ void processBlock(EngineState& state,
     }
 }
 
-float keyframesPerSecond(const EngineState& state) noexcept { return state.density; }
+float keyframesPerSecond(const EngineState& state) noexcept
+{
+    return state.density * static_cast<float>(state.sampleRate);
+}
+float keyframeDensityRatio(const EngineState& state) noexcept { return state.density; }
 float playheadDrift(const EngineState& state) noexcept { return state.drift; }
 float spliceLamp(const EngineState& state) noexcept { return state.spliceLamp; }
 std::uint64_t spliceCount(const EngineState& state) noexcept { return state.spliceCount; }

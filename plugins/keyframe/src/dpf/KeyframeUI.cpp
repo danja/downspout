@@ -21,7 +21,6 @@ using downspout::keyframe::kParameterSpecs;
 using downspout::keyframe::ParamId;
 
 constexpr float kPi = 3.14159265358979323846f;
-constexpr float kSr = 48000.0f;
 
 struct Rect {
     float x = 0.0f;
@@ -92,7 +91,7 @@ std::string formatValue(const std::uint32_t parameter, const float value)
         std::snprintf(buffer, sizeof(buffer), "%s", value > 0.5f ? "On" : "Off");
         break;
     case ParamId::outDensity:
-        std::snprintf(buffer, sizeof(buffer), "%.0f/s", value);
+        std::snprintf(buffer, sizeof(buffer), "%.1f%%", static_cast<double>(value) * 100.0);
         break;
     case ParamId::outDrift:
         std::snprintf(buffer, sizeof(buffer), "%+d kf", static_cast<int>(std::lround(value)));
@@ -539,22 +538,28 @@ private:
         text(x, y + 109.0f, "stereo image survives a splice.", nullptr);
     }
 
-    // Keyframe density readout. A horizontal bar on a log-ish scale, because
-    // the useful range spans two orders of magnitude between a bass note and
-    // a cymbal.
+    // Keyframe density readout. The bar shows the paper's M/N — keyframes per
+    // input sample — which is inherently bounded to [0, 1] and independent of
+    // sample rate, so it cannot saturate the way a kf/s scale with a fixed
+    // ceiling does. A bass note sits near the left; dense bright material sits
+    // further right; white noise would approach full scale.
     void drawKeyframeMeter(const Rect bounds)
     {
         const auto& t = theme();
-        const float rate = std::max(value(ParamId::outDensity), 0.0f);
-        const float norm = clampf(std::log10(std::max(rate, 1.0f)) / 4.0f, 0.0f, 1.0f);
+        const float ratio = clampf(value(ParamId::outDensity), 0.0f, 1.0f);
 
         fc(t.textDim);
         fontSize(12.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         text(bounds.x, bounds.y, "Keyframe density", nullptr);
 
-        char buffer[48];
-        std::snprintf(buffer, sizeof(buffer), "%.0f per second", static_cast<double>(rate));
+        char buffer[64];
+        if (ratio > 0.0005f)
+            std::snprintf(buffer, sizeof(buffer), "%.1f%%  1 per %.0f",
+                          static_cast<double>(ratio) * 100.0,
+                          static_cast<double>(1.0f / ratio));
+        else
+            std::snprintf(buffer, sizeof(buffer), "—");
         fc(t.textPrimary);
         textAlign(ALIGN_RIGHT | ALIGN_TOP);
         text(bounds.x + bounds.w, bounds.y, buffer, nullptr);
@@ -564,21 +569,22 @@ private:
         fc(t.controlTrack);
         roundedRect(bounds.x, trackY, bounds.w, 12.0f, 3.0f);
         fill();
-        if (norm > 0.002f)
+        if (ratio > 0.002f)
         {
             beginPath();
             fillColor(kSpliceAccent.r, kSpliceAccent.g, kSpliceAccent.b, 255);
-            roundedRect(bounds.x, trackY, bounds.w * norm, 12.0f, 3.0f);
+            roundedRect(bounds.x, trackY, bounds.w * ratio, 12.0f, 3.0f);
             fill();
         }
 
-        // Decade ticks at 1, 10, 100 and 1000 per second.
+        // Linear ticks at 0, 25, 50, 75 and 100%: the scale is linear because
+        // the quantity itself is bounded.
         fc(t.textDisabled);
         fontSize(9.0f);
         textAlign(ALIGN_CENTER | ALIGN_TOP);
-        for (const float decade : {0.0f, 0.25f, 0.5f, 0.75f})
+        for (const float quarter : {0.0f, 0.25f, 0.5f, 0.75f, 1.0f})
         {
-            const float px = bounds.x + bounds.w * decade;
+            const float px = bounds.x + bounds.w * quarter;
             beginPath();
             sc(t.border);
             strokeWidth(1.0f);
@@ -588,12 +594,10 @@ private:
         }
 
         // Below the meter, tick marks whose spacing is drawn from the live
-        // rate: the visual claim the algorithm is making about the signal.
-        // The rate is mapped logarithmically over the span the method cares
-        // about (about 20 to 2000 keyframes per second, i.e. a sparse bass note
-        // through to dense cymbal material) and clamped so the ticks stay
-        // resolvable on screen. A linear mapping would collapse every real
-        // reading into a solid line at the left edge.
+        // ratio: the visual claim the algorithm is making about the signal.
+        // Spacing is samples-per-keyframe mapped across the strip, with a
+        // minimum pixel gap so dense material reads as tight ticks rather than
+        // collapsing into a solid line.
         const float stripY = bounds.y + 46.0f;
         const float stripH = 40.0f;
         beginPath();
@@ -608,8 +612,9 @@ private:
 
         // Intervals between ticks, in samples, from one keyframe per sample up
         // to one every 128 samples.
-        const float samplesPerKeyframe = clampf(kSr / std::max(rate, 1.0f), 1.0f, 128.0f);
-        const float spacing = (samplesPerKeyframe / 128.0f) * (bounds.w / 14.0f);
+        const float samplesPerKeyframe = ratio > 1.0e-6f ? 1.0f / ratio : 128.0f;
+        const float clamped = clampf(samplesPerKeyframe, 1.0f, 128.0f);
+        const float spacing = std::max(8.0f, (clamped / 128.0f) * (bounds.w / 6.0f));
         for (float px = bounds.x + spacing * 0.5f; px < bounds.x + bounds.w; px += spacing)
         {
             beginPath();
@@ -662,6 +667,9 @@ private:
 
     // The jogger and the dog: reference playhead fixed at the left of the bar,
     // the audio playhead drawn at its live drift, the leash reaching K ahead.
+    // A splice halo around the playhead dot glows while a crossfade is running,
+    // so the panel reads live even at unity rates where drift sits at zero and
+    // the playhead never visibly moves.
     void drawLeashDiagram(const Rect bounds)
     {
         const auto& t = theme();
@@ -718,6 +726,19 @@ private:
         text(x0, bounds.y + 12.0f, "ref", nullptr);
         text(bounds.x + bounds.w - 12.0f, bounds.y + 12.0f, "+K", nullptr);
         text(px, bounds.y + bounds.h - 10.0f, "play", nullptr);
+
+        // Splice halo: glows around the playhead dot while a crossfade is
+        // running. This is the one part of the diagram that moves at unity
+        // rates, where drift is zero by design and the dot itself never moves.
+        const float lamp = clampf(value(ParamId::outSplice), 0.0f, 1.0f);
+        if (lamp > 0.02f)
+        {
+            beginPath();
+            fillColor(t.accent.r, t.accent.g, t.accent.b,
+                      static_cast<uchar>(40 + 60 * lamp));
+            circle(px, y, 10.0f);
+            fill();
+        }
     }
 
     void drawOutputPanel(const Rect bounds)
