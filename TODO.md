@@ -11,9 +11,11 @@ promotion of the shared OnePoleLowpass/DCBlocker/BiquadFilter duplicates into
   
 ## New Plugins (from DIM)
 
-* [ ] Treatment (`/farelo/task/t61f30fb095c3`) - new plugin. Simulates by physical
-  modelling residual treatment acoustic panel. Give it a handful of parameters
-  (also controllable via midi cc) and include a Randomise button
+* [x] Treatment (`/farelo/task/t61f30fb095c3`) - DONE. Mass-air-mass panel
+  absorber derived from real cavity / air gap / facing mass / flow resistivity,
+  with the impedance-match sweet spot, a seeded Randomise that preserves Amount
+  and Bypass, five Drift CC lanes, and a live absorption plot on the panel.
+  See `plugins/treatment/README.md` and `plugins/treatment/docs/design.md`.
 * [ ] combined vocoder and ring mod plugin (`/farelo/task/t12a6e84467ce`) - taking
   modulation on audio channels 3 & 4. Should accept midi cc for changing
   parameters. Same look & feel as magneto.

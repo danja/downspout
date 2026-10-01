@@ -212,6 +212,19 @@ Sharpness, Decay LF/HF tilt, band splits, Trim, Delta monitoring and Bypass
 complete the Spiff workflow. The detector is mono, so transients never shift
 the stereo image.
 
+### Treatment (`treatment.vst3`)
+
+Physically modelled acoustic treatment panel. A facing sheet of surface mass in
+front of a porous fill with an air gap to the wall, which is a mass-air-mass
+resonator: the resonance and the absorption come from `w0 = c*sqrt(rho0/(m*D))`
+and the impedance match at `r = rho0*c`, so the panel absorbs least when the
+fill is too open or too dense. Cavity and Air Gap are in mm, Facing Mass in
+kg/m2 and Flow Resist in Rayl/m; Amount scales the absorption itself, so 0 % is
+transparent rather than a mix. Read-only readouts report the derived resonance,
+Q, peak absorption and diffusion corner. A seeded Randomise builds a new panel
+while preserving Amount and Bypass, and CC 1-5 read Amount, Cavity, Air Gap,
+Facing Mass and Flow Resist by default.
+
 ## Practical combinations
 
 - Techno rhythm: Xoxolo or DrumGen -> DrumKit -> E-Mix/P-Mix -> Rift for fills.
@@ -230,6 +243,9 @@ the stereo image.
   compression; audition with Delta, compare with Bypass.
 - Wah duties: HelterSkelter in Envelope after funk guitar, in BBT Blend on
   pads; Drift -> HelterSkelter plays Sensitivity, Depth, Resonance and Mix.
+- Bus that sounds like the wrong room: Treatment on the mix or drum bus. Sweep
+  Air Gap to move the resonance down, then find the Flow Resist sweet spot by
+  ear; Drift -> Treatment drives the geometry on CC 1-5.
 - Automatic arrangement: route instruments into T-Mix, then route Mixgen MIDI
   to T-Mix and tune Density, Depth, Variation, and Lane Spread.
 - Full producer bus: set Mixgen to Full bus and route one MIDI send to a chain

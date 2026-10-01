@@ -135,6 +135,7 @@ installed bundle.
 | [Ghost](plugins/ghost/README.md) | `ghost.vst3` | Audio/MIDI effect | Audio-triggered ghost-note generator: BBT-quantised ghost drums on ch 10 or notes on a selectable channel, driven by Drift CC 1–4. |
 | [Spliff](plugins/spliff/README.md) | `spliff.vst3` | Audio effect | Adaptive transient processor in the Spiff manner: per-band dynamic cuts or boosts only where transient energy lives. |
 | [HelterSkelter](plugins/helterskelter/README.md) | `helterskelter.vst3` | Audio effect | Automatic wah pedal: resonant lowpass driven by the input envelope and/or a BBT-synced ADSR cycle, with Drift CC control. |
+| [Treatment](plugins/treatment/README.md) | `treatment.vst3` | Audio effect | Physically modelled acoustic treatment panel: a mass-air-mass absorber whose resonance and absorption come from real cavity, gap, facing mass and flow resistivity, with a seeded Randomise and five Drift CC lanes. |
 | [Keyframe](plugins/keyframe/README.md) | `keyframe.vst3` | Audio effect | Extrema-sampling time stretch after DAFx26: the input reduces to timestamped local extrema whose spacing drives the overlap-add splice length. No transient detector. |
 
 ## Architecture

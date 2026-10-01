@@ -10,6 +10,7 @@ namespace downspout::treatment {
 namespace {
 
 constexpr float kPi = 3.14159265358979323846f;
+constexpr double kPiDouble = 3.14159265358979323846;
 
 float safeValue(float v, float lo, float hi, float fallback) noexcept
 {
@@ -80,12 +81,16 @@ bool highShelfRBJ(float cornerHz, float q, float gainDb, double sampleRate,
     const float alpha = std::sin(w0) / (2.0f * q);
     const float beta = 2.0f * std::sqrt(amp) * alpha;
 
-    const float a0 = (amp + 1.0f) + (amp - 1.0f) * cosW0 + beta;
-    out.b0 = ((amp + 1.0f) + (amp - 1.0f) * cosW0 + beta) / a0;
-    out.b1 = (-2.0f * ((amp - 1.0f) + (amp + 1.0f) * cosW0)) / a0;
-    out.b2 = ((amp + 1.0f) + (amp - 1.0f) * cosW0 - beta) / a0;
+    // RBJ high shelf. Note the sign flip between the b and a groups on the
+    // (amp - 1) * cos term, and the amp factor on the numerator: both are
+    // load-bearing. Without them the shelf boosts the bottom end instead of
+    // cutting the top.
+    const float a0 = (amp + 1.0f) - (amp - 1.0f) * cosW0 + beta;
+    out.b0 = amp * ((amp + 1.0f) + (amp - 1.0f) * cosW0 + beta) / a0;
+    out.b1 = (-2.0f * amp * ((amp - 1.0f) + (amp + 1.0f) * cosW0)) / a0;
+    out.b2 = amp * ((amp + 1.0f) + (amp - 1.0f) * cosW0 - beta) / a0;
     out.a1 = (2.0f * ((amp - 1.0f) - (amp + 1.0f) * cosW0)) / a0;
-    out.a2 = ((amp + 1.0f) + (amp - 1.0f) * cosW0 - beta) / a0;
+    out.a2 = ((amp + 1.0f) - (amp - 1.0f) * cosW0 - beta) / a0;
 
     return std::isfinite(out.b0 + out.b1 + out.b2 + out.a1 + out.a2);
 }
@@ -212,7 +217,6 @@ void activate(EngineState& state) noexcept
 {
     state.notch.fill(BiquadState {});
     state.diffusion.fill(BiquadState {});
-    state.haveAmount = false;
 }
 
 Parameters randomiseParameters(const Parameters& raw) noexcept
@@ -236,6 +240,65 @@ Parameters randomiseParameters(const Parameters& raw) noexcept
     return clampParameters(out);
 }
 
+PanelResponse panelCoeffs(const Parameters& rawParams, const double sampleRate) noexcept
+{
+    const Parameters params = clampParameters(rawParams);
+    const PanelState panel = analysePanel(params);
+    const double sr = (sampleRate > 0.0) ? sampleRate : 48000.0;
+
+    const bool bypassed = params.bypass > 0.5f;
+    const float amount = bypassed ? 0.0f : std::clamp(params.amount * 0.01f, 0.0f, 1.0f);
+
+    // Amount scales the absorption coefficient itself rather than crossfading
+    // against the dry signal. Physically that is "less panel", and it keeps the
+    // response monotonic: Amount 0 is a bit-transparent filter, not a mix.
+    const float alpha = amount * panel.peakAbsorb;
+
+    // alpha is the fraction of energy absorbed at the resonance, so what gets
+    // through is (1 - alpha) and the notch is 20*log10 of that. A badly matched
+    // fill gives a shallower dip, not just a wider one.
+    const float notchDepthDb = std::clamp(
+        20.0f * std::log10(std::max(1.0f - alpha, 1.0e-3f)),
+        kMaxNotchDepthDb, 0.0f);
+
+    // Diffusion shelf: the fill keeps absorbing above its corner, where the
+    // panel resonance has already closed. Gentler than the notch because a
+    // backed fill never reaches alpha = 1 up there.
+    const float shelfDepthDb = std::clamp(
+        -6.0f * kFillShare * alpha,
+        kMaxNotchDepthDb, 0.0f);
+
+    PanelResponse response;
+    response.valid = peakingRBJ(panel.resonanceHz, panel.q, notchDepthDb, sr, response.notch)
+        && highShelfRBJ(panel.diffusionHz, kDiffusionQ, shelfDepthDb, sr, response.diffusion);
+    return response;
+}
+
+float transmissionAt(const PanelResponse& response, const double hz, const double sampleRate) noexcept
+{
+    if (!response.valid || sampleRate <= 0.0 || hz <= 0.0)
+        return 1.0f;
+
+    const double w = 2.0 * kPiDouble * hz / sampleRate;
+    const double cosW = std::cos(w);
+    const double sinW = std::sin(w);
+    const double z1Re = cosW, z1Im = -sinW;
+    const double z2Re = std::cos(2.0 * w), z2Im = -std::sin(2.0 * w);
+
+    const auto magnitude = [&](const BiquadCoeffs& c) {
+        const double numRe = c.b0 + c.b1 * z1Re + c.b2 * z2Re;
+        const double numIm = c.b1 * z1Im + c.b2 * z2Im;
+        const double denRe = 1.0 + c.a1 * z1Re + c.a2 * z2Re;
+        const double denIm = c.a1 * z1Im + c.a2 * z2Im;
+        const double num = std::sqrt(numRe * numRe + numIm * numIm);
+        const double den = std::sqrt(denRe * denRe + denIm * denIm);
+        return (den > 0.0) ? num / den : 1.0;
+    };
+
+    const double total = magnitude(response.notch) * magnitude(response.diffusion);
+    return static_cast<float>(std::clamp(total, 0.0, 1.0));
+}
+
 void processBlock(EngineState& state,
                   const Parameters& rawParams,
                   const std::uint32_t frames,
@@ -244,46 +307,16 @@ void processBlock(EngineState& state,
                   float* const* outputs) noexcept
 {
     const Parameters params = clampParameters(rawParams);
-    const PanelState panel = analysePanel(params);
     const double sr = (sampleRate > 0.0) ? sampleRate : 48000.0;
     state.sampleRate = sr;
 
-    const bool bypassed = params.bypass > 0.5f;
-    // Amount scales how much of the panel's absorption is applied. Bypass and
-    // Amount 0 both mean fully transparent, but the DSP keeps running either
-    // way so there is no click when toggling back.
-    const float targetAmount = bypassed ? 0.0f
-        : std::clamp(params.amount * 0.01f, 0.0f, 1.0f);
-
-    // Notch depth: the dip the panel puts in at its resonance. Scaled by
-    // Amount and by the impedance match, so an over- or under-damped fill
-    // absorbs less.
-    const float notchDepthDb = -std::clamp(
-        20.0f * std::log10(std::max(1.0f - targetAmount * panel.peakAbsorb, 1.0e-3f)),
-        kMaxNotchDepthDb, 0.0f);
-
-    // Diffusion shelf: the fill keeps absorbing above its corner, where the
-    // panel resonance has already closed.
-    const float shelfDepthDb = std::clamp(
-        -6.0f * kFillShare * targetAmount * panel.peakAbsorb,
-        kMaxNotchDepthDb, 0.0f);
-
-    BiquadCoeffs notchTarget {};
-    BiquadCoeffs shelfTarget {};
-    const bool haveNotch = peakingRBJ(panel.resonanceHz, panel.q, notchDepthDb, sr, notchTarget);
-    const bool haveShelf = highShelfRBJ(panel.diffusionHz, kDiffusionQ, shelfDepthDb, sr, shelfTarget);
+    const PanelResponse target = panelCoeffs(params, sr);
+    const bool haveNotch = target.valid;
+    const bool haveShelf = target.valid;
 
     const float coeffSmooth = smootherCoeff(0.005f, sr);
 
     for (std::uint32_t frame = 0; frame < frames; ++frame) {
-        // Smooth Amount so a CC sweep does not step the depth.
-        if (!state.haveAmount) {
-            state.amount = targetAmount;
-            state.haveAmount = true;
-        } else {
-            state.amount += (targetAmount - state.amount) * (1.0f - coeffSmooth);
-        }
-
         for (std::size_t channel = 0; channel < kAudioChannels; ++channel) {
             const float in = (inputs && inputs[channel])
                 ? inputs[channel][frame] : 0.0f;
@@ -292,43 +325,40 @@ void processBlock(EngineState& state,
             BiquadState& notch = state.notch[channel];
             if (haveNotch) {
                 if (!notch.haveCoeffs) {
-                    notch.coeffs = notchTarget;
+                    notch.coeffs = target.notch;
                     notch.haveCoeffs = true;
                 } else {
                     const float k = 1.0f - coeffSmooth;
-                    notch.coeffs.b0 += (notchTarget.b0 - notch.coeffs.b0) * k;
-                    notch.coeffs.b1 += (notchTarget.b1 - notch.coeffs.b1) * k;
-                    notch.coeffs.b2 += (notchTarget.b2 - notch.coeffs.b2) * k;
-                    notch.coeffs.a1 += (notchTarget.a1 - notch.coeffs.a1) * k;
-                    notch.coeffs.a2 += (notchTarget.a2 - notch.coeffs.a2) * k;
+                    notch.coeffs.b0 += (target.notch.b0 - notch.coeffs.b0) * k;
+                    notch.coeffs.b1 += (target.notch.b1 - notch.coeffs.b1) * k;
+                    notch.coeffs.b2 += (target.notch.b2 - notch.coeffs.b2) * k;
+                    notch.coeffs.a1 += (target.notch.a1 - notch.coeffs.a1) * k;
+                    notch.coeffs.a2 += (target.notch.a2 - notch.coeffs.a2) * k;
                 }
             }
 
             BiquadState& shelf = state.diffusion[channel];
             if (haveShelf) {
                 if (!shelf.haveCoeffs) {
-                    shelf.coeffs = shelfTarget;
+                    shelf.coeffs = target.diffusion;
                     shelf.haveCoeffs = true;
                 } else {
                     const float k = 1.0f - coeffSmooth;
-                    shelf.coeffs.b0 += (shelfTarget.b0 - shelf.coeffs.b0) * k;
-                    shelf.coeffs.b1 += (shelfTarget.b1 - shelf.coeffs.b1) * k;
-                    shelf.coeffs.b2 += (shelfTarget.b2 - shelf.coeffs.b2) * k;
-                    shelf.coeffs.a1 += (shelfTarget.a1 - shelf.coeffs.a1) * k;
-                    shelf.coeffs.a2 += (shelfTarget.a2 - shelf.coeffs.a2) * k;
+                    shelf.coeffs.b0 += (target.diffusion.b0 - shelf.coeffs.b0) * k;
+                    shelf.coeffs.b1 += (target.diffusion.b1 - shelf.coeffs.b1) * k;
+                    shelf.coeffs.b2 += (target.diffusion.b2 - shelf.coeffs.b2) * k;
+                    shelf.coeffs.a1 += (target.diffusion.a1 - shelf.coeffs.a1) * k;
+                    shelf.coeffs.a2 += (target.diffusion.a2 - shelf.coeffs.a2) * k;
                 }
             }
 
             float notched = 0.0f;
             runBiquad(notch, x, notched);
 
-            float diffused = 0.0f;
-            runBiquad(shelf, notched, diffused);
+            float treated = 0.0f;
+            runBiquad(shelf, notched, treated);
 
-            // Blend the treated signal with dry by the smoothed Amount, so the
-            // model's depth is the audible depth.
-            const float wet = std::clamp(state.amount, 0.0f, 1.0f);
-            float y = x * (1.0f - wet) + diffused * wet;
+            float y = treated;
             if (!std::isfinite(y))
                 y = 0.0f;
 

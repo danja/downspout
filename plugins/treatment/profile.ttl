@@ -1,0 +1,18 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:treatment a trn:PluginProfile ;
+    rdfs:label "Treatment" ;
+    rdfs:comment "Physically modelled residual acoustic treatment panel: a mass-air-mass absorber with a porous fill, derived from real panel geometry (cavity, air gap, facing mass, flow resistivity). Randomise builds a new panel; five CCs drive the geometry." ;
+    trn:bundleName "treatment.vst3" ;
+    trn:vendor "danja" ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio, trn:ControlMidi ;
+    trn:produces trn:Audio ;
+    trn:caution "Flow Resist has a sweet spot near 4.1 kRayl/m at the default 100 mm cavity: too open or too dense a fill absorbs much less. This is physical, not a bug. The plugin only ever attenuates." ;
+    trn:recommendedAfter dsp:drift ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

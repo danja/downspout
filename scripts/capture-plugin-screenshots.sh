@@ -73,6 +73,7 @@ plugins=(
   "ghost:ghost"
   "spliff:spliff"
   "helterskelter:helterskelter"
+  "treatment:treatment"
   "keyframe:keyframe"
   )
 

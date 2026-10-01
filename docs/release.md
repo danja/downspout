@@ -67,6 +67,7 @@ downspout-<version>-<platform>-vst3.zip
 ├── ghost.vst3/
 ├── spliff.vst3/
 ├── helterskelter.vst3/
+├── treatment.vst3/
 ├── LICENSE
 └── README.md
 ```

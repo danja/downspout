@@ -53,7 +53,7 @@ enum class ParamId : std::uint32_t {
     outDiffusion,
 };
 
-inline constexpr std::size_t kParameterCount = 18;
+inline constexpr std::size_t kParameterCount = 17;
 
 struct ParamSpec {
     const char* symbol;
@@ -106,7 +106,9 @@ inline constexpr float kFillShare = 0.55f;
 inline constexpr float kDiffusionQ = 0.7071f;   // Butterworth
 inline constexpr float kMinQ = 0.7f;
 inline constexpr float kMaxQ = 12.0f;
-inline constexpr float kMaxNotchDepthDb = 24.0f;  // shelf/notch magnitude ceiling
+// Deepest attenuation either stage may reach. Negative, because both the notch
+// and the shelf are always cuts: the panel absorbs, it never boosts.
+inline constexpr float kMaxNotchDepthDb = -24.0f;
 
 // ── Fixed MIDI controller map ──────────────────────────────────────────────
 //
@@ -135,7 +137,7 @@ inline constexpr std::array<ControllerMapping, 5> kControllerMap = {{
     {kCcResist, ParamId::resist, "Flow resist"},
 }};
 
-[[nodiscard]] inline std::uint32_t index(const ParamId id) noexcept
+[[nodiscard]] constexpr std::uint32_t index(const ParamId id) noexcept
 {
     return static_cast<std::uint32_t>(id);
 }

@@ -1,5 +1,38 @@
 # Mistakes log
 
+- 2026-10-01: `treatment`'s first RBJ high shelf was wrong twice over and both
+  faults produced filters that looked plausible. Missing the `amp` factor on the
+  numerator meant the shelf reached half its requested gain at Nyquist; then
+  using `+ (amp - 1) * cos` in the `a` group where the cookbook says `-` turned
+  the shelf inside out, so it *boosted* the bottom end by up to +13 dB and cut
+  the top. Root cause: transcribing cookbook coefficient blocks from memory
+  instead of checking the transfer function, in a class where "attenuate only"
+  was the design premise. Prevention: any biquad whose sign is not obvious gets
+  a magnitude-response check, and for a filter that must never boost, assert the
+  peak of the cascade response across the whole declared parameter space.
+  `worstCascadeDb` in the core tests does exactly that and found both faults;
+  `transmissionAt` is separately asserted to stay at or below 1.0.
+
+- 2026-10-01: Two `treatment` UI plotting bugs, from a sign error and from
+  clamping against the wrong spec table, and both survived review because the
+  render "looked fine". `plotYForDb` inverted its fraction, so the absorption
+  curve drew as a peak instead of a dip. `flowResistMatchPosition` clamped the
+  cavity depth against the *resistivity* minimum (1000) instead of the *cavity*
+  minimum (20), which pinned the impedance-match tick to the far left for every
+  panel. Root cause: reading the drawing code to check the geometry instead of
+  measuring it, and copying a `clampf(x, a.minimum, b.maximum)` without checking
+  which spec `a` came from. Prevention: derive a data plot's expected shape
+  numerically first and compare it against the rendered image at full
+  resolution, cropping the region of interest; in a helper that takes values from
+  two spec tables, name the source in the parameter.
+
+- 2026-10-01: The first `treatment` screenshot came out a uniform grey
+  760x580 PNG. The window existed and the app log was clean, but the default
+  1 s settle captured before the first repaint landed. Prevention: the
+  screenshot review step is not skippable — a blank capture is indistinguishable
+  from a broken plugin unless someone opens the PNG. A longer
+  `DOWNSPOUT_SCREENSHOT_SETTLE_SECONDS` fixed it.
+
 - 2026-09-28: First `ghost` core quantised onset accents to the next 16th slot
   but dropped any ghost whose frame fell outside the current block. At 120 bpm
   a 16th is ~6000 frames while host blocks are 64-512, so nearly every ghost

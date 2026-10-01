@@ -29,9 +29,6 @@ struct PanelState {
     float impedanceMatch = 0.0f; // 1.0 when r == rho0*c, the absorption optimum
 };
 
-// One-pole smoother coefficient: exp(-1 / (seconds * sampleRate)).
-[[nodiscard]] float smootherCoeff(float seconds, double sampleRate) noexcept;
-
 struct BiquadCoeffs {
     float b0 = 1.0f;
     float b1 = 0.0f;
@@ -39,6 +36,25 @@ struct BiquadCoeffs {
     float a1 = 0.0f;
     float a2 = 0.0f;
 };
+
+// One-pole smoother coefficient: exp(-1 / (seconds * sampleRate)).
+[[nodiscard]] float smootherCoeff(float seconds, double sampleRate) noexcept;
+
+// The panel's two biquad coefficients at a given configuration, exposed so the
+// panel can draw the response it is actually applying without re-deriving the
+// model or duplicating the coefficient maths.
+struct PanelResponse {
+    BiquadCoeffs notch {};
+    BiquadCoeffs diffusion {};
+    bool valid = false;
+};
+
+[[nodiscard]] PanelResponse panelCoeffs(const Parameters& p, double sampleRate) noexcept;
+
+// Magnitude of the panel's full two-section response at `hz`, linear. 1.0 is
+// transparent; less than 1.0 is absorption.
+[[nodiscard]] float transmissionAt(const PanelResponse& response, double hz, double sampleRate) noexcept;
+
 
 struct BiquadState {
     BiquadCoeffs coeffs {};
@@ -56,9 +72,6 @@ struct EngineState {
     std::array<BiquadState, kAudioChannels> notch {};
     // Fill diffusion shelf.
     std::array<BiquadState, kAudioChannels> diffusion {};
-    // Smoothed Amount, so a CC sweep does not step.
-    float amount = 1.0f;
-    bool haveAmount = false;
     double sampleRate = 0.0;
     // Serial counter bumped by Randomise so the wrapper can repaint.
     std::uint32_t randomiseSerial = 0;

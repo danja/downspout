@@ -206,6 +206,17 @@ Progress as of 2026-05-27:
 - `ghost` now exists as an original audio-triggered ghost-note generator with BBT-quantised 16th-grid ghosts, drum (ch 10) and note modes, four Drift-CC feel controls, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `spliff` now exists as a Spiff-manner adaptive transient processor with a 3-band detector, cut/boost modes, sensitivity, sharpness, decay with LF/HF tilt, mix/trim/delta/bypass, Drift-CC control, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `helterskelter` now exists as an automatic wah pedal with a resonant lowpass driven by the input envelope and/or a BBT-synced ADSR cycle, full ADSR, gate invert, Drift-CC control, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
+- `treatment` now exists as a physically modelled acoustic treatment panel: a
+  mass-air-mass absorber whose resonance follows `w0 = c*sqrt(rho0/(m*D))` and
+  whose absorption is maximal at the impedance optimum `r = rho0*c`, so the
+  panel has a real sweet spot rather than "more is better". Parameters are real
+  panel quantities in mm, kg/m2 and Rayl/m; a seeded Randomise trigger builds a
+  new plausible panel while preserving Amount and Bypass; five Drift-CC lanes
+  drive the geometry; read-only status parameters report the derived resonance,
+  peak absorption and fill diffusion corner; both biquad stages are cuts only
+  and the tests assert the cascade never boosts anywhere in the parameter
+  space; deterministic tests, and a first VST3 wrapper target with UI via
+  vendored DPF;
 - `keyframe` now exists as an extrema-sampling time stretch after Nielsen's
   DAFx26-26 method: bandlimited B-spline derivative analysis, difference
   thresholding, subsample extrema location, a three-playhead sparse-domain
@@ -229,8 +240,8 @@ Current main gap:
   `conductor.vst3`, `drift.vst3`, `mnemosyne.vst3`, `polymeter.vst3`,
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
-  `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`, and
-  `keyframe.vst3` bundles.
+  `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`,
+  `treatment.vst3`, and `keyframe.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of
