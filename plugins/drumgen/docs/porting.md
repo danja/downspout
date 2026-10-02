@@ -44,5 +44,19 @@ Current wrapper choice:
   control; Rock pins a harder kick/backbeat/hat signature in Auto style; Fugue
   strips the generated kit back to a sparse metrical pulse so it can sit under
   contrapuntal material without fills or crash-heavy behavior;
+- `Rumba`, `Samba`, and `Township Jive` are clave-led genres written on a 16th
+  grid (rumba 3-2 at `0,3,7,11,13`; samba 2-3 at `0,3,6,8,11,14`; township jive
+  reuses the rumba figure). These are the first genres whose figure is *written*
+  rather than expressed as per-lane velocity bias, so `applyClaveFigure` clears the
+  owned lanes and re-strikes them from the pattern. Resolving steps onto the 16th
+  grid keeps the figure intact at eighth and quarter resolutions, where a
+  beat/offbeat test would have collapsed it;
+- the pattern-generation lane velocities for these three genres remain in
+  `stepVelocity` so named non-Auto style modes (Reel, Waltz, Jig, Slip Jig, Diddley)
+  still work against them, but the written figure itself only applies in Auto;
+- genre enum values are append-only: `rumba=14`, `samba=15`, `townshipJive=16`,
+  `count=17`. The stability pins in `testFugueGenrePinsSparsePulse` cover this,
+  and inserting a genre anywhere but the end would silently reinterpret saved
+  host state;
 - the port preserves exact control/state behavior first and still leaves any
   preview-grid UI as follow-up work after host validation.

@@ -409,9 +409,13 @@ void testJazzGenrePinsSwingRideShape() {
 }
 
 void testFugueGenrePinsSparsePulse() {
+    // Enum values are frozen: new genres must be appended, never inserted.
     assert(static_cast<int>(GenreId::jazz) == 12);
     assert(static_cast<int>(GenreId::fugue) == 13);
-    assert(static_cast<int>(GenreId::count) == 14);
+    assert(static_cast<int>(GenreId::rumba) == 14);
+    assert(static_cast<int>(GenreId::samba) == 15);
+    assert(static_cast<int>(GenreId::townshipJive) == 16);
+    assert(static_cast<int>(GenreId::count) == 17);
 
     Controls controls;
     controls.seed = 933u;
@@ -583,6 +587,117 @@ void testStateSanitization() {
     variation.version = 99;
     const VariationState sanitizedVariation = sanitizeVariationState(variation);
     assert(sanitizedVariation.version == kVariationStateVersion);
+}
+
+void testLatinGenresPinClaveFigures() {
+    Controls controls;
+    controls.seed = 4242u;
+    controls.bars = 1;
+    controls.resolution = ResolutionId::sixteenth;
+    controls.styleMode = StyleModeId::autoMode;
+    controls.density = 0.70f;
+    controls.variation = 0.50f;
+    controls.fill = 0.0f;
+    controls.auxAmt = 0.90f;
+
+    // Rumba: 3-2 clave at 0,3,7,11,13.
+    controls.genre = GenreId::rumba;
+    PatternState rumba;
+    regeneratePattern(rumba, controls, ::downspout::Meter {}, false);
+    assert(hasHit(rumba, LaneId::clave, 0));
+    assert(hasHit(rumba, LaneId::clave, 3));
+    assert(hasHit(rumba, LaneId::clave, 7));
+    assert(hasHit(rumba, LaneId::clave, 11));
+    assert(hasHit(rumba, LaneId::clave, 13));
+    assert(countHits(rumba, LaneId::clave) == 5);
+    assert(hasHit(rumba, LaneId::kick, 0));
+
+    // Samba: 2-3 clave at 0,3,6,8,11,14.
+    controls.genre = GenreId::samba;
+    PatternState samba;
+    regeneratePattern(samba, controls, ::downspout::Meter {}, false);
+    assert(hasHit(samba, LaneId::clave, 0));
+    assert(hasHit(samba, LaneId::clave, 3));
+    assert(hasHit(samba, LaneId::clave, 6));
+    assert(hasHit(samba, LaneId::clave, 8));
+    assert(hasHit(samba, LaneId::clave, 11));
+    assert(hasHit(samba, LaneId::clave, 14));
+    assert(countHits(samba, LaneId::clave) == 6);
+
+    // Township jive has no clave of its own but borrows the rumba figure as
+    // its percussion spine.
+    controls.genre = GenreId::townshipJive;
+    PatternState jive;
+    regeneratePattern(jive, controls, ::downspout::Meter {}, false);
+    assert(hasHit(jive, LaneId::clave, 0));
+    assert(countHits(jive, LaneId::clave) == 5);
+
+    // Jive is a backbeat genre, unlike the clave genres: clap on 2 and 4.
+    assert(hasHit(jive, LaneId::clap, 4));
+    assert(hasHit(jive, LaneId::clap, 12));
+}
+
+void testClaveGenresSurviveEighthResolution() {
+    // The written clave is authored on a 16th grid; at eighth resolution the
+    // hits must still land, not vanish into the offbeat.
+    Controls controls;
+    controls.seed = 777u;
+    controls.bars = 1;
+    controls.resolution = ResolutionId::eighth;
+    controls.styleMode = StyleModeId::autoMode;
+    controls.density = 0.70f;
+    controls.variation = 0.50f;
+    controls.fill = 0.0f;
+    controls.auxAmt = 0.90f;
+    controls.genre = GenreId::samba;
+
+    PatternState pattern;
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, false);
+
+    assert(pattern.stepsPerBar == 8);
+    assert(countHits(pattern, LaneId::clave) > 0);
+}
+
+void testRefreshBarKeepsClaveFigure() {
+    // refreshBar rebuilds one bar from the stochastic pass and re-applies the
+    // signature. For the written-figure genres it must go through the clave
+    // overlay, otherwise the refreshed bar loses its clave and gains a
+    // backbeat it should not have.
+    Controls controls;
+    controls.seed = 31337u;
+    controls.bars = 2;
+    controls.resolution = ResolutionId::sixteenth;
+    controls.styleMode = StyleModeId::autoMode;
+    controls.density = 0.70f;
+    controls.variation = 0.50f;
+    controls.fill = 0.30f;
+    controls.auxAmt = 0.90f;
+    controls.genre = GenreId::samba;
+
+    PatternState pattern;
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, false);
+
+    const int before = countHits(pattern, LaneId::clave);
+    assert(before > 0);
+
+    refreshBar(pattern, controls, ::downspout::Meter {}, 0);
+
+    const int barStart = 0;
+    for (int slot : {0, 3, 6, 8, 11, 14}) {
+        assert(hasHit(pattern, LaneId::clave, barStart + slot));
+    }
+    // Neither bar may pick up a rock backbeat. cleanupPattern used to
+    // reinforce a snare backbeat on every genre after the clave overlay ran,
+    // which stamped one onto these clave grooves.
+    for (int bar = 0; bar < pattern.bars; ++bar) {
+        const int base = bar * pattern.stepsPerBar;
+        assert(!hasHit(pattern, LaneId::snare, base + 4));
+        assert(!hasHit(pattern, LaneId::snare, base + 12));
+        // The clave figure must still be present in the refreshed bar too.
+        for (int slot : {0, 3, 6, 8, 11, 14}) {
+            assert(hasHit(pattern, LaneId::clave, base + slot));
+        }
+    }
 }
 
 void testSerializationRoundTrip() {
@@ -840,6 +955,9 @@ int main() {
     testHipHopGenrePinsSparseBackbeat();
     testJazzGenrePinsSwingRideShape();
     testFugueGenrePinsSparsePulse();
+    testLatinGenresPinClaveFigures();
+    testClaveGenresSurviveEighthResolution();
+    testRefreshBarKeepsClaveFigure();
     testCrashCymbalsStaySparseByDefault();
     testRefreshBarKeepsOtherBars();
     testRefreshFillBarTargetsChosenBar();

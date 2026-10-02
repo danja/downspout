@@ -18,6 +18,9 @@ constexpr auto GENRE_DUB = GenreId::dub;
 constexpr auto GENRE_MOTORIK = GenreId::motorik;
 constexpr auto GENRE_BOSSA = GenreId::bossa;
 constexpr auto GENRE_AFRO = GenreId::afro;
+constexpr auto GENRE_RUMBA = GenreId::rumba;
+constexpr auto GENRE_SAMBA = GenreId::samba;
+constexpr auto GENRE_TOWNSHIP_JIVE = GenreId::townshipJive;
 
 [[nodiscard]] float clampf(float value, float minValue, float maxValue) {
     if (value < minValue) {

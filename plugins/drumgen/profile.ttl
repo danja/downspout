@@ -18,7 +18,7 @@ or another drum instrument.""" ;
     trn:produces trn:Midi, trn:DrumMidi ;
     trn:accepts trn:ControlMidi ;
     trn:requires trn:HostTransport ;
-    trn:genre "Breakbeat", "Amen", "Jungle", "Hip Hop", "Jazz", "Rock", "Dub", "Fugue" ;
+    trn:genre "Breakbeat", "Amen", "Jungle", "Hip Hop", "Jazz", "Rock", "Dub", "Fugue", "Rumba", "Samba", "Township Jive" ;
     trn:conductorChannelParam "conductor_ch" ;
     trn:recommendedBefore dsp:drumkit ;
     trn:caution "The stereo audio output is intentionally silent; connect MIDI output to an instrument." ;

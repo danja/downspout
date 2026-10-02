@@ -2,6 +2,8 @@
 
 #include "drumgen_rng.hpp"
 
+#include <algorithm>
+#include <array>
 #include <climits>
 #include <cmath>
 #include <cstring>
@@ -26,6 +28,17 @@ constexpr auto GENRE_JUNGLE = GenreId::jungle;
 constexpr auto GENRE_HIPHOP = GenreId::hipHop;
 constexpr auto GENRE_JAZZ = GenreId::jazz;
 constexpr auto GENRE_FUGUE = GenreId::fugue;
+constexpr auto GENRE_RUMBA = GenreId::rumba;
+constexpr auto GENRE_SAMBA = GenreId::samba;
+constexpr auto GENRE_TOWNSHIP_JIVE = GenreId::townshipJive;
+
+// Latin / township percussion family: clave-led, cowbell-and-clave driven,
+// no sustained backbeat snare. Shared by rumba, samba and township jive.
+[[nodiscard]] bool isClaveFamily(const GenreId genre) {
+    return genre == GENRE_BOSSA || genre == GENRE_AFRO ||
+           genre == GENRE_RUMBA || genre == GENRE_SAMBA ||
+           genre == GENRE_TOWNSHIP_JIVE;
+}
 
 constexpr auto RESOLUTION_8TH = ResolutionId::eighth;
 constexpr auto RESOLUTION_16TH = ResolutionId::sixteenth;
@@ -113,6 +126,47 @@ struct StylePulseInfo {
 
 [[nodiscard]] bool isBreakbeatFamily(const GenreId genre) {
     return genre == GENRE_BREAKBEAT || genre == GENRE_AMEN || genre == GENRE_JUNGLE;
+}
+
+// Steps are resolved onto a 16th grid within the bar so a written clave keeps
+// its shape at eighth and quarter resolutions instead of collapsing onto
+// whatever subIndex happens to be the offbeat. Triplets fold to their nearest
+// 16th, which is the best a 3-against-4 subdivision can do.
+[[nodiscard]] int sixteenthInBar(const int beatIndex, const int subIndex, const int stepsPerBeat) {
+    if (stepsPerBeat <= 0) {
+        return 0;
+    }
+    const int clampedSub = clampi(subIndex, 0, stepsPerBeat - 1);
+    return clampi((beatIndex * 4) + (clampedSub * 4) / stepsPerBeat, 0, 15);
+}
+
+[[nodiscard]] bool sixteenthInSet(const int sixteenth, const std::array<int, 16>& pattern) {
+    for (int step = 0; step < 16; ++step) {
+        if (pattern[static_cast<std::size_t>(step)] < 0) {
+            break;
+        }
+        if (pattern[static_cast<std::size_t>(step)] == sixteenth) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Written clave figures, in 16ths from the top of the bar. These match the
+// template library: rumba 3-2 (0,3,7,11,13), rumba 2-3 (3,5,8,11,15) and the
+// samba 2-3 clave (0,3,6,8,11,14). Township jive has no clave of its own; it
+// borrows the rumba 3-2 figure as its percussion spine.
+[[nodiscard]] bool claveFigureHit(const GenreId genre, const int sixteenth) {
+    switch (genre) {
+    case GENRE_RUMBA:
+        return sixteenthInSet(sixteenth, {0, 3, 7, 11, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1});
+    case GENRE_TOWNSHIP_JIVE:
+        return sixteenthInSet(sixteenth, {0, 3, 7, 11, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1});
+    case GENRE_SAMBA:
+        return sixteenthInSet(sixteenth, {0, 3, 6, 8, 11, 14, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1});
+    default:
+        return false;
+    }
 }
 
 [[nodiscard]] int quarterBeatStartStep(const PatternState& pattern, const int quarterSlot) {
@@ -843,6 +897,32 @@ struct StylePulseInfo {
             if (onQ2 && beatStart) return 0.58f;
             if (onQ3 && offbeat) return 0.38f;
             break;
+        case GENRE_RUMBA:
+            // Guaguancó tumbao: tumbao on beat 1, tumbao on the "&" of 2,
+            // plus the fifth-cut-off pickup into bar 2.
+            if (beatIndex == 0 && beatStart) return 0.84f;
+            if (onQ1 && offbeat) return 0.36f;
+            if (onQ2 && beatStart) return 0.60f;
+            if (onQ3 && offbeat) return 0.30f;
+            if (beatIndex == q3Beat && lateSub) return 0.14f + 0.16f * controls.variation;
+            break;
+        case GENRE_SAMBA:
+            // Samba no prato: surdo on 1 and the "&" of 2, with a low ghost
+            // under the 16th-note tamborim figure.
+            if (beatIndex == 0 && beatStart) return 0.86f;
+            if (onQ2 && beatStart) return 0.62f;
+            if (onQ1 && offbeat) return 0.26f;
+            if (onQ3 && offbeat) return 0.24f;
+            if (lateSub && (onQ1 || onQ3)) return 0.12f + 0.12f * controls.variation;
+            break;
+        case GENRE_TOWNSHIP_JIVE:
+            // Township jive: loping bass on 1 and 3 with an offbeat push, over
+            // a swung backbeat — closer to shuffle than to the clave genres.
+            if (beatIndex == 0 && beatStart) return 0.88f;
+            if (beatIndex == 2 && beatStart) return 0.66f;
+            if (offbeat && onQ2) return 0.28f;
+            if (offbeat && onQ3) return 0.22f;
+            break;
         case GENRE_ROCK:
         default:
             if (beatIndex == 0 && beatStart) return 0.98f;
@@ -861,6 +941,8 @@ struct StylePulseInfo {
             case GENRE_JUNGLE: return 0.88f + 0.10f * backbeat;
             case GENRE_HIPHOP: return 0.82f + 0.12f * backbeat;
             case GENRE_JAZZ: return 0.38f + 0.18f * backbeat;
+            case GENRE_SAMBA: return 0.30f + 0.14f * backbeat;
+            case GENRE_TOWNSHIP_JIVE: return 0.62f + 0.18f * backbeat;
             case GENRE_DISCO: return 0.76f + 0.18f * backbeat;
             case GENRE_ELECTRO: return 0.72f + 0.18f * backbeat;
             case GENRE_DUB: return 0.64f + 0.16f * backbeat;
@@ -883,6 +965,7 @@ struct StylePulseInfo {
             case GENRE_JUNGLE: return 0.10f + 0.14f * backbeat;
             case GENRE_HIPHOP: return 0.10f + 0.18f * backbeat;
             case GENRE_JAZZ: return 0.03f + 0.05f * backbeat;
+            case GENRE_SAMBA: return 0.04f + 0.06f * backbeat;
             case GENRE_DISCO: return 0.78f + 0.16f * backbeat;
             case GENRE_ELECTRO: return 0.52f + 0.20f * backbeat;
             case GENRE_DUB: return 0.18f + 0.14f * backbeat;
@@ -927,6 +1010,24 @@ struct StylePulseInfo {
         if (controls.genre == GENRE_HIPHOP) {
             if (subIndex == 0 || subIndex == 2) return 0.66f + 0.16f * hat;
             return 0.08f + 0.14f * hat * controls.variation;
+        }
+        if (controls.genre == GENRE_SAMBA) {
+            // Samba no prato rides on the 16ths, not the 8ths.
+            if (subIndex == 0 || subIndex == 2) return 0.72f + 0.16f * hat;
+            return 0.22f + 0.24f * hat * controls.density;
+        }
+        if (controls.genre == GENRE_TOWNSHIP_JIVE) {
+            // Swung 8ths: firm on the beat, lighter on the offbeat.
+            if (subIndex == 0) return 0.74f + 0.16f * hat;
+            if (isOffbeatStep(beatIndex * stepsPerBeat + subIndex, stepsPerBeat)) {
+                return 0.50f + 0.22f * hat;
+            }
+            return 0.10f + 0.14f * hat * controls.variation;
+        }
+        if (controls.genre == GENRE_RUMBA) {
+            // Rumba clave is in the clave/cowbell lanes; hats stay sparse.
+            if (beatStart) return 0.54f + 0.16f * hat;
+            return 0.06f + 0.10f * hat * controls.variation;
         }
         if (stepsPerBeat == 2) {
             return offbeat ? 0.66f + 0.20f * hat : 0.74f + 0.16f * hat;
@@ -1014,6 +1115,20 @@ struct StylePulseInfo {
         case GENRE_AFRO:
             if (offbeat || lateSub) return 0.14f + 0.20f * perc;
             break;
+        case GENRE_RUMBA:
+            // Guaguancó bell pattern on the 8ths, answering the clave.
+            if (beatStart) return 0.16f + 0.18f * perc;
+            if (offbeat) return 0.20f + 0.22f * perc;
+            break;
+        case GENRE_SAMBA:
+            // Partido alto tamborim figure, syncopated off the beat.
+            if (offbeat) return 0.22f + 0.22f * perc;
+            if (lateSub) return 0.12f + 0.16f * perc;
+            break;
+        case GENRE_TOWNSHIP_JIVE:
+            if (beatStart && (onQ1 || onQ2)) return 0.14f + 0.18f * perc;
+            if (offbeat && onQ3) return 0.10f + 0.14f * perc;
+            break;
         default:
             if (fillBar && beatIndex >= q2Beat && offbeat) return 0.06f + 0.16f * fill * perc;
             break;
@@ -1021,6 +1136,11 @@ struct StylePulseInfo {
         break;
 
     case LANE_CLAVE:
+        if (isClaveFamily(controls.genre)) {
+            if (claveFigureHit(controls.genre, sixteenthInBar(beatIndex, subIndex, stepsPerBeat))) {
+                return 0.22f + 0.18f * perc;
+            }
+        }
         switch (controls.genre) {
         case GENRE_BOSSA:
             if (beatIndex == 0 && beatStart) return 0.26f + 0.16f * perc;
@@ -1037,6 +1157,11 @@ struct StylePulseInfo {
         case GENRE_SHUFFLE:
             if (onQ1 && lateSub) return 0.10f + 0.14f * perc;
             if (onQ3 && offbeat) return 0.10f + 0.14f * perc;
+            break;
+        case GENRE_RUMBA:
+        case GENRE_SAMBA:
+        case GENRE_TOWNSHIP_JIVE:
+            // The clave figure above owns this lane; no fill-only fallback.
             break;
         default:
             if (fillBar && onQ3 && !beatStart) return 0.06f + 0.14f * fill * perc;
@@ -1151,7 +1276,10 @@ struct StylePulseInfo {
                 ? (0.16f + 0.42f * density * macro)
                 : (controls.genre == GENRE_JAZZ
                     ? (0.32f + 0.40f * density * macro)
-                    : (0.20f + 0.55f * density * macro))))) +
+                    : (controls.genre == GENRE_RUMBA
+                        // Rumba leaves the hats sparse and lets the bell carry it.
+                        ? (0.14f + 0.24f * density * macro)
+                        : (0.20f + 0.55f * density * macro)))))) +
             (stepsPerBar >= 16 ? 1.5f : 0.0f);
         break;
     case LANE_OPEN_HAT:
@@ -1173,14 +1301,14 @@ struct StylePulseInfo {
     case LANE_COWBELL:
         if (controls.genre == GENRE_DISCO || controls.genre == GENRE_MOTORIK) {
             desiredHits = 0.8f + 3.0f * density * macro;
-        } else if (controls.genre == GENRE_BOSSA || controls.genre == GENRE_AFRO) {
+        } else if (isClaveFamily(controls.genre)) {
             desiredHits = 0.8f + 2.4f * density * macro;
         } else {
             desiredHits = 0.2f + 1.0f * density * variation * macro;
         }
         break;
     case LANE_CLAVE:
-        if (controls.genre == GENRE_BOSSA || controls.genre == GENRE_AFRO) {
+        if (isClaveFamily(controls.genre)) {
             desiredHits = 0.8f + 2.0f * density * macro;
         } else if (controls.genre == GENRE_SHUFFLE) {
             desiredHits = 0.4f + 1.4f * density * macro;
@@ -1396,6 +1524,13 @@ void setStepHit(PatternState& pattern, int lane, int step, int velocity, std::ui
                              pattern.stepsPerBar - 1);
 }
 
+void clearSlotHit(PatternState& pattern,
+                  const int barStart,
+                  const int lane,
+                  const int slot) {
+    clearStepHit(pattern, lane, stepForSixteenthSlot(pattern, barStart, slot));
+}
+
 void setSlotHit(PatternState& pattern,
                 const int barStart,
                 const int lane,
@@ -1403,6 +1538,77 @@ void setSlotHit(PatternState& pattern,
                 const int velocity,
                 const std::uint8_t flags = 0) {
     setStepHit(pattern, lane, stepForSixteenthSlot(pattern, barStart, slot), velocity, flags);
+}
+
+void applyGenreSignatureToBar(PatternState& pattern, const Controls& controls, int barIndex);
+
+// The new genres carry a written groove rather than a velocity bias, so the
+// lanes that figure owns are cleared and re-struck from the pattern instead of
+// being unioned with whatever the stochastic pass happened to place. Without
+// this a rumba comes out with a rock backbeat and a crash on top of its clave.
+// Lanes not listed keep their stochastic treatment and still respond to
+// density and variation.
+[[nodiscard]] bool genreOwnsLane(const GenreId genre, const int lane) {
+    switch (genre) {
+    case GENRE_RUMBA:
+        // Tumbao, bell and clave; no snare backbeat at all. The bell is the
+        // timekeeper, which is why LANE_COWBELL is owned rather than stochastic.
+        return lane == LANE_KICK || lane == LANE_COWBELL || lane == LANE_CLAVE ||
+               lane == LANE_CLOSED_HAT || lane == LANE_SNARE || lane == LANE_CLAP ||
+               lane == LANE_CRASH || lane == LANE_BASH;
+    case GENRE_SAMBA:
+        return lane == LANE_KICK || lane == LANE_COWBELL || lane == LANE_CLAVE ||
+               lane == LANE_CLOSED_HAT || lane == LANE_SNARE || lane == LANE_CLAP ||
+               lane == LANE_CRASH || lane == LANE_BASH;
+    case GENRE_TOWNSHIP_JIVE:
+        return lane == LANE_KICK || lane == LANE_CLAP || lane == LANE_CLOSED_HAT ||
+               lane == LANE_CRASH || lane == LANE_CLAVE || lane == LANE_SNARE;
+    default:
+        return false;
+    }
+}
+
+void applyClaveFigureToBar(PatternState& pattern, const Controls& controls, const int barIndex) {
+    if (pattern.stepsPerBar <= 0 ||
+        barIndex < 0 ||
+        barIndex >= pattern.bars) {
+        return;
+    }
+
+    const int barStart = barIndex * pattern.stepsPerBar;
+    const int barEnd = clampi(barStart + pattern.stepsPerBar, 0, pattern.totalSteps);
+
+    for (int lane = 0; lane < kLaneCount; ++lane) {
+        if (!genreOwnsLane(controls.genre, lane)) {
+            continue;
+        }
+        for (int step = barStart; step < barEnd; ++step) {
+            clearStepHit(pattern, lane, step);
+        }
+    }
+
+    for (int slot = 0; slot < 16; ++slot) {
+        if (!claveFigureHit(controls.genre, slot)) {
+            continue;
+        }
+        const bool strong = slot == 0;
+        setSlotHit(pattern,
+                   barStart,
+                   LANE_CLAVE,
+                   slot,
+                   strong ? 108 : 92,
+                   strong ? STEP_FLAG_ACCENT : 0);
+    }
+
+    // Re-strike the rest of the figure after the clear above, so the groove
+    // survives the removal of the stochastic version.
+    applyGenreSignatureToBar(pattern, controls, barIndex);
+}
+
+void applyClaveFigure(PatternState& pattern, const Controls& controls) {
+    for (int bar = 0; bar < pattern.bars; ++bar) {
+        applyClaveFigureToBar(pattern, controls, bar);
+    }
 }
 
 void applyBackbeatBreakHats(PatternState& pattern,
@@ -1424,6 +1630,12 @@ void applyBackbeatBreakHats(PatternState& pattern,
         setSlotHit(pattern, barStart, LANE_OPEN_HAT, 11, openHatVelocity, 0);
         setSlotHit(pattern, barStart, LANE_OPEN_HAT, 15, openHatVelocity + 4, 0);
     }
+}
+
+// The written-figure genres are struck by applyClaveFigure, which owns the
+// autoMode check for them; it calls this per bar after clearing those lanes.
+[[nodiscard]] bool hasWrittenClaveGroove(const GenreId genre) {
+    return genre == GENRE_RUMBA || genre == GENRE_SAMBA || genre == GENRE_TOWNSHIP_JIVE;
 }
 
 void applyGenreSignatureToBar(PatternState& pattern, const Controls& controls, const int barIndex) {
@@ -1515,6 +1727,66 @@ void applyGenreSignatureToBar(PatternState& pattern, const Controls& controls, c
         setSlotHit(pattern, barStart, LANE_OPEN_HAT, 14, 60, 0);
         break;
 
+    case GENRE_RUMBA:
+        // Guaguancó tumbao with the 3-2 clave struck in the clave lane; the
+        // guiro-style bell carries the time on the 8ths.
+        setSlotHit(pattern, barStart, LANE_KICK, 0, 116, STEP_FLAG_ACCENT);
+        setSlotHit(pattern, barStart, LANE_KICK, 6, 92, 0);
+        setSlotHit(pattern, barStart, LANE_KICK, 10, 88, 0);
+        for (int slot = 0; slot < 16; slot += 2) {
+            setSlotHit(pattern,
+                       barStart,
+                       LANE_COWBELL,
+                       slot,
+                       (slot == 0 || slot == 6) ? 78 : 64,
+                       slot == 0 ? STEP_FLAG_ACCENT : 0);
+        }
+        // Sparse hat: the clave and the bell already fill the bar.
+        setSlotHit(pattern, barStart, LANE_CLOSED_HAT, 0, 82, 0);
+        setSlotHit(pattern, barStart, LANE_CLOSED_HAT, 8, 66, 0);
+        break;
+
+    case GENRE_SAMBA:
+        // Samba no prato: surdo on 1 and the "&" of 2, partido alto on the bell,
+        // tamborim in the clave lane.
+        setSlotHit(pattern, barStart, LANE_KICK, 0, 118, STEP_FLAG_ACCENT);
+        setSlotHit(pattern, barStart, LANE_KICK, 8, 100, 0);
+        for (int slot = 0; slot < 16; slot += 2) {
+            setSlotHit(pattern,
+                       barStart,
+                       LANE_COWBELL,
+                       slot,
+                       slot == 0 ? 80 : 62,
+                       slot == 0 ? STEP_FLAG_ACCENT : 0);
+        }
+        for (int slot = 0; slot < 16; slot += 4) {
+            setSlotHit(pattern, barStart, LANE_CLOSED_HAT, slot, 74 + (slot == 0 ? 8 : 0), 0);
+        }
+        break;
+
+    case GENRE_TOWNSHIP_JIVE:
+        // Loping two-beat with a swung backbeat and hand-clap on 2 and 4.
+        setSlotHit(pattern, barStart, LANE_KICK, 0, 120, STEP_FLAG_ACCENT);
+        setSlotHit(pattern, barStart, LANE_KICK, 8, 104, 0);
+        // Hand-clap carries the 2-and-4 rather than a snare rim. The stochastic pass
+        // already wrote snare on those steps, and cleanupPattern resolves
+        // snare/clap collisions in favour of the snare, so the snare is cleared
+        // first to make room for the written clap.
+        for (int slot = 0; slot < 16; slot += 2) {
+            setSlotHit(pattern,
+                       barStart,
+                       LANE_CLOSED_HAT,
+                       slot,
+                       (slot % 4) == 0 ? 82 : 58,
+                       0);
+        }
+        clearSlotHit(pattern, barStart, LANE_SNARE, 4);
+        clearSlotHit(pattern, barStart, LANE_SNARE, 12);
+        setSlotHit(pattern, barStart, LANE_CLAP, 4, 108, STEP_FLAG_ACCENT);
+        setSlotHit(pattern, barStart, LANE_CLAP, 12, 112, STEP_FLAG_ACCENT);
+        setSlotHit(pattern, barStart, LANE_CRASH, 0, 92, STEP_FLAG_ACCENT);
+        break;
+
     default:
         break;
     }
@@ -1572,11 +1844,20 @@ void applyDiddleyStyleOverlay(PatternState& pattern, const Controls& controls) {
 }
 
 void applyGenreSignature(PatternState& pattern, const Controls& controls) {
+    // The clave lane is re-struck unconditionally for the genres that have a
+    // written figure, so the figure holds even when a named style mode is
+    // selected and the rest of the signature overlay is skipped.
+    if (hasWrittenClaveGroove(controls.genre) && controls.styleMode == StyleModeId::autoMode) {
+        applyClaveFigure(pattern, controls);
+        return;
+    }
+
     if (controls.styleMode != StyleModeId::autoMode ||
         (!isBreakbeatFamily(controls.genre) &&
          controls.genre != GENRE_ROCK &&
          controls.genre != GENRE_HIPHOP &&
-         controls.genre != GENRE_JAZZ)) {
+         controls.genre != GENRE_JAZZ &&
+         !isClaveFamily(controls.genre))) {
         return;
     }
 
@@ -1672,6 +1953,9 @@ void applyFillOverlayToBar(PatternState& pattern,
         break;
     case GENRE_BOSSA:
     case GENRE_AFRO:
+    case GENRE_RUMBA:
+    case GENRE_SAMBA:
+    case GENRE_TOWNSHIP_JIVE:
         motif = (rng.nextFloat() < 0.65f) ? 2 : 3;
         break;
     default:
@@ -1900,7 +2184,7 @@ void cleanupPattern(PatternState& pattern, const Controls& controls) {
             }
         }
         if (cowbell.velocity > 0 && clave.velocity > 0) {
-            if (controls.genre == GENRE_BOSSA || controls.genre == GENRE_AFRO) {
+            if (isClaveFamily(controls.genre)) {
                 cowbell.velocity = 0;
                 cowbell.flags = 0;
             } else {
@@ -1957,7 +2241,14 @@ void cleanupPattern(PatternState& pattern, const Controls& controls) {
             }
         }
 
-        const bool needsBackbeat = controls.backbeatAmt > 0.30f && controls.styleMode != StyleModeId::diddley;
+        // The clave genres carry their percussion in the clave, bell and hand-clap
+        // lanes and have no snare backbeat, so this blanket reinforcement is
+        // skipped for them: applied after applyClaveFigureToBar, it would
+        // otherwise stamp a rock backbeat onto every clave groove.
+        const bool needsBackbeat = controls.backbeatAmt > 0.30f &&
+                                   controls.styleMode != StyleModeId::diddley &&
+                                   !isClaveFamily(controls.genre) &&
+                                   controls.genre != GENRE_TOWNSHIP_JIVE;
         if (needsBackbeat) {
             std::array<int, ::downspout::kMaxMeterGroups> backbeatBeats {};
             const int backbeatCount = collectAccentBeatsForStyle(controls.styleMode, pattern.meter, backbeatBeats);
@@ -2124,7 +2415,11 @@ void refreshBar(PatternState& pattern,
                              0x6D2B79F5u);
     }
 
-    applyGenreSignatureToBar(nextPattern, controls, clampedBar);
+    if (hasWrittenClaveGroove(controls.genre) && controls.styleMode == StyleModeId::autoMode) {
+        applyClaveFigureToBar(nextPattern, controls, clampedBar);
+    } else {
+        applyGenreSignatureToBar(nextPattern, controls, clampedBar);
+    }
     applyDiddleyStyleOverlay(nextPattern, controls);
     cleanupPattern(nextPattern, controls);
     pattern = nextPattern;

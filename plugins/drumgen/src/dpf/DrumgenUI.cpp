@@ -95,7 +95,8 @@ constexpr std::array<SliderDef, 11> kSliders = {{
 
 constexpr const char* kGenreNames[] = {
     "Rock", "Disco", "Shuffle", "Electro", "Dub", "Motorik", "Bossa", "Afro",
-    "Breakbeat", "Amen", "Jungle", "Hip Hop", "Jazz", "Fugue"
+    "Breakbeat", "Amen", "Jungle", "Hip Hop", "Jazz", "Fugue",
+    "Rumba", "Samba", "Township Jive"
 };
 
 constexpr const char* kStyleNames[] = {
@@ -126,7 +127,7 @@ constexpr const char* kConductorChNames[] = {
 };
 
 constexpr std::array<SelectorDef, 7> kSelectors = {{
-    {kParamGenre, "Genre", kGenreNames, 14, 0},
+    {kParamGenre, "Genre", kGenreNames, 17, 0},
     {kParamStyleMode, "Style", kStyleNames, 7, 0},
     {kParamKitMap, "Kit Map", kKitMapNames, 2, 0},
     {kParamResolution, "Resolution", kResolutionNames, 4, 0},

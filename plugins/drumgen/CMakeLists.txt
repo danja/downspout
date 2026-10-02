@@ -49,5 +49,12 @@ if(BUILD_TESTING)
         tests/drumgen_core_tests.cpp
     )
     target_link_libraries(downspout_drumgen_core_tests PRIVATE downspout_drumgen_core)
+    # Release builds define NDEBUG, which compiles every assert() in this file
+    # out. Without this the suite silently passes while testing nothing.
+    if(MSVC)
+        target_compile_options(downspout_drumgen_core_tests PRIVATE /UNDEBUG)
+    else()
+        target_compile_options(downspout_drumgen_core_tests PRIVATE -UNDEBUG)
+    endif()
     add_test(NAME downspout_drumgen_core_tests COMMAND downspout_drumgen_core_tests)
 endif()

@@ -32,6 +32,10 @@ enum class GenreId : std::int32_t {
     hipHop,
     jazz,
     fugue,
+    // Appended after fugue: existing integer values are frozen for host state.
+    rumba,
+    samba,
+    townshipJive,
     count
 };
 

@@ -37,6 +37,15 @@ Implementation status:
   Afro options. Fugue intentionally produces a sparse pulse rather than a full
   drum style. Rock now pins a harder kick/backbeat/hat signature in Auto style
   so it lands as a direct rock groove before variation and fills are added.
+- Rumba, Samba, and Township Jive were added as clave-led genres. In Auto style
+  each one strikes a written figure in the clave lane from a 16th grid: rumba uses
+  the 3-2 clave (`0,3,7,11,13`), samba the 2-3 (`0,3,6,8,11,14`), and township
+  jive borrows the rumba 3-2 figure as its percussion spine. Because these genres
+  carry a figure rather than a velocity bias, the lanes the figure owns are
+  cleared and re-struck instead of being unioned with the stochastic pass; lanes
+  it does not own (toms, open hat, and the bass-generation lanes) still respond to
+  density and variation. The clave grid is defined independently of resolution, so
+  the figure survives eighth- and quarter-note resolutions.
 
 Recommended next steps:
 
