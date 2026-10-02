@@ -474,6 +474,31 @@ write_template(LAT_DIR, "cumbia.dg-pattern", "Cumbia", LAT_SRC, "latin,colombian
     HAT:     {0: 80, 2: 80, 4: 80, 8: 80, 10: 80, 12: 80, 14: 80},
 })
 
+# --- African / township grooves -------------------------------------------
+
+# Guaguancó Tumbao  (the rumba engine: tumbao bass + bell + 3-2 rumba clave)
+write_template(OUT_DIR, "guaguanco-tumbao.dg-pattern", "Guaguancó Tumbao",
+               "Afro-Cuban Groove Reference", "latin,afro-cuban,rumba", "4/4",
+               "Guaguancó tumbao; the basic rumba engine, rumba 3-2 clave",
+               1, 4, 4, 4, 16, 16, {
+    KICK:    {0: STRONG, 6: 92, 10: 88},
+    COWBELL: {0: STRONG, 2: SOFT, 4: SOFT, 6: 78, 8: SOFT, 10: SOFT, 12: SOFT, 14: SOFT},
+    HAT:     {0: 82, 8: 66},
+    CLAVE:   {0: STRONG, 3: 92, 7: 92, 11: 92, 13: 92},
+})
+
+# Township Jive  (South African; loping two-beat with a hand-clap backbeat)
+write_template(OUT_DIR, "township-jive.dg-pattern", "Township Jive",
+               "South African Groove Reference", "africa,south-african,township,jive", "4/4",
+               "Township jive; loping two-beat, hand-clap on 2 and 4, rumba 3-2 spine",
+               1, 4, 4, 4, 16, 16, {
+    KICK:  {0: STRONG, 8: STRONG},
+    CLAP:  {4: STRONG, 12: STRONG},
+    HAT:   {0: 82, 2: 58, 4: 82, 6: 58, 8: 82, 10: 58, 12: 82, 14: 58},
+    CRASH: {0: 92},
+    CLAVE: {0: STRONG, 3: 92, 7: 92, 11: 92, 13: 92},
+})
+
 # =========================================================================
 # CLASSIC drum machine patterns
 # =========================================================================

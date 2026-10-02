@@ -246,6 +246,7 @@ jobs:
             echo "- spliff.vst3"
             echo "- helterskelter.vst3"
             echo "- treatment.vst3"
+            echo "- voxmod.vst3"
             echo
             echo "Sidecar is currently Linux-only and is omitted from macOS and Windows release assets."
             echo "macOS and Windows release builds are best-effort and do not block Linux publication."

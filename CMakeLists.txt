@@ -67,6 +67,7 @@ option(DOWNSPOUT_BUILD_GHOST "Configure the ghost audio-triggered MIDI target" O
 option(DOWNSPOUT_BUILD_SPLIFF "Configure the spliff transient processor target" ON)
 option(DOWNSPOUT_BUILD_HELTERSKELTER "Configure the helterskelter auto-wah target" ON)
 option(DOWNSPOUT_BUILD_TREATMENT "Configure the Treatment acoustic-panel target" ON)
+option(DOWNSPOUT_BUILD_VOXMOD "Configure the Voxmod vocoder/ring-mod target" ON)
 option(DOWNSPOUT_BUILD_PRIMEFOLD "Configure the primefold prime-harmonic shifter target" ON)
 option(DOWNSPOUT_BUILD_QUEFRENCY "Configure the quefrency cepstral shifter target" ON)
 option(DOWNSPOUT_BUILD_KEYFRAME "Configure the keyframe extrema time-stretch target" ON)
@@ -360,6 +361,10 @@ endif()
 
 if(DOWNSPOUT_BUILD_TREATMENT)
     add_subdirectory(plugins/treatment)
+endif()
+
+if(DOWNSPOUT_BUILD_VOXMOD)
+    add_subdirectory(plugins/voxmod)
 endif()
 
 if(DOWNSPOUT_BUILD_PRIMEFOLD)

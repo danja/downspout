@@ -33,14 +33,54 @@ promotion of the shared OnePoleLowpass/DCBlocker/BiquadFilter duplicates into
   with the impedance-match sweet spot, a seeded Randomise that preserves Amount
   and Bypass, five Drift CC lanes, and a live absorption plot on the panel.
   See `plugins/treatment/README.md` and `plugins/treatment/docs/design.md`.
-* [ ] combined vocoder and ring mod plugin (`/farelo/task/t12a6e84467ce`) - taking
-  modulation on audio channels 3 & 4. Should accept midi cc for changing
-  parameters. Same look & feel as magneto.
+* [x] combined vocoder and ring mod plugin (`/farelo/task/t12a6e84467ce`) - DONE as
+  `voxmod`. Four inputs: 1/2 are the analysed carrier, 3/4 the modulator, which
+  is where the task's "modulation on audio channels 3 & 4" ended up. A
+  filter-bank vocoder and a polyBLEP-band-limited ring modulator run in parallel
+  and blend on Mix, rather than one mode replacing the other. Ring Ratio is
+  quantised to 16 musical steps; Formant transposes the modulator side of the
+  bank only, which is what moves a vowel. Five Drift CC lanes. Magneto look and
+  feel, with the Mix/Ring Freq x-y pad owning those two parameters so they are not
+  duplicated as sliders. Core, DPF wrapper, NanoVG UI and 19 deterministic tests
+  are complete, plus `docs/design.md`, `README.md`, `profile.ttl` and the catalog
+  page. **Outstanding from the new-plugin checklist**: `install.sh`,
+  `scripts/package-release.sh`, `.github/workflows/release.yml`, `docs/install.md`,
+  `docs/release.md`, `docs/architecture.md`, `docs/plan.md`, `docs/screenshots.md`
+  and `docs/pages/README.md` are not yet updated, and host validation in REAPER is
+  pending.
 
 ## Scales
 
-* [ ] add rhumba, samba and township jive (`/farelo/task/td4792ccd13b9`)
-  - see `docs/scales.md`; append-only, canonical ordering and naming rules apply
+* [x] add rhumba, samba and township jive (`/farelo/task/td4792ccd13b9`) - DONE as
+  *drumgen genres*, not scales. None of the three is a recognised scale (checked
+  against the Wikipedia scale list; no web search available to widen that), and
+  drumgen already carried rumba/samba clave templates, so `drumgen` was the
+  natural home. `GenreId` is append-only: `rumba=14`, `samba=15`,
+  `townshipJive=16`, `count=17`, pinned in `testFugueGenrePinsSparsePulse`.
+  These are the first genres with a *written* 16th-grid figure rather than a
+  per-lane velocity bias, so `applyClaveFigure` clears the lanes it owns and
+  re-strikes them. `docs/scales.md` is unchanged.
+
+## Bugs found while doing the above
+
+* **34 of 58 plugin test suites are compiled with `NDEBUG`, so every `assert()`
+  in them is dead code** (fixed for drumgen). The build is
+  `CMAKE_BUILD_TYPE=Release`, which adds `-DNDEBUG`, so those suites report
+  success while testing nothing. Only `plugins/arpgen/CMakeLists.txt` had the
+  `-UNDEBUG` fix. The list: ambo, arpgen, bassgen, bassops, bubbles, cadence,
+  campione, conductor, counterpointer, drift, drumgen, drumkit, e-mix, ground,
+  guardian, harmonic-atlas, lightverb, loopdelay, magneto, melgen, mixgen, m-mix,
+  mnemosyne, mosaic, oracle, orbit, orchid, p-mix, polymeter, resonance-garden,
+  rift, t-mix, worms, xoxolo. 10 other suites (treatment and friends) use their
+  own `check()` harness instead of `assert()` and are unaffected — those were
+  always running. **33 still need the `-UNDEBUG` block**, then a triage pass,
+  since fixing drumgen's immediately surfaced three real bugs.
+* `cleanupPattern` re-stamped a snare backbeat on every genre *after* the clave
+  overlay ran, so clave grooves came out with a rock backbeat.
+* `DrumgenUI.cpp` fed `getBundlePath()` (null outside a VST bundle) straight into
+  `std::string`, so the standalone jack app crashed on startup with
+  `basic_string: construction from null`. This is why drumgen screenshots could
+  not be captured.
 
 ## Evaluate Manually in Reaper
 

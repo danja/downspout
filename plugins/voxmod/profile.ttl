@@ -1,0 +1,18 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:voxmod a trn:PluginProfile ;
+    rdfs:label "Voxmod" ;
+    rdfs:comment "Combined vocoder and ring modulator. Inputs 1/2 are the analysed carrier, inputs 3/4 the modulator. Mix blends a filter-bank vocoder against a band-limited ring modulator in parallel; five CCs drive both engines." ;
+    trn:bundleName "voxmod.vst3" ;
+    trn:vendor "danja" ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio, trn:ControlMidi ;
+    trn:produces trn:Audio ;
+    trn:caution "The port roles are load-bearing: inputs 1/2 are the carrier the vocoder analyses and inputs 3/4 are the modulator it colours. Routing a single stereo pair into both halves will make the vocoder analyse its own modulator. Set Carrier to internal osc, or Sync, to drive the vocoder from inputs 3/4 alone." ;
+    trn:recommendedAfter dsp:drift ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

@@ -202,8 +202,12 @@ public:
         loadSharedResources();
        #endif
 
-        // Scan bundled and user patterns directories
-        const std::string bundle = getBundlePath();
+        // Scan bundled and user patterns directories.
+        // getBundlePath() returns nullptr outside a VST2/LV2 bundle (notably the
+        // standalone jack app used for screenshots), so it must not be fed
+        // straight into std::string.
+        const char* const bundlePath = getBundlePath();
+        const std::string bundle = bundlePath != nullptr ? bundlePath : "";
         if (!bundle.empty()) {
             templateLibrary_.scan(bundle + "/Contents/Resources/patterns");
         }

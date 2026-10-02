@@ -938,6 +938,50 @@ void testEngineFillTriggerUsesLastPulseInCompoundMeter() {
     assert(sawNextBarFill);
 }
 
+std::string patternLibraryDir() {
+    // Same source-relative resolution the existing template test uses.
+    return std::string(__FILE__).substr(0, std::string(__FILE__).rfind('/')) + "/../patterns/world";
+}
+
+void testNewGenreTemplatesCarryTheClave() {
+    // The new genres ship a written figure in the generator and matching
+    // .dg-pattern templates. Both paths must agree on the clave, and the
+    // templates must survive the text round trip used by the Load button.
+    const std::string dir = patternLibraryDir();
+
+    struct Expect { const char* name; int lane; std::vector<int> steps; };
+    const std::vector<Expect> cases = {
+        {"Guaguancó Tumbao", 10, {0, 3, 7, 11, 13}},
+        {"Township Jive", 10, {0, 3, 7, 11, 13}},
+    };
+
+    TemplateLibrary lib;
+    lib.scan(dir);
+    assert(lib.count() > 0);
+
+    for (const Expect& c : cases) {
+        const PatternTemplate* tmpl = lib.findByName(c.name);
+        assert(tmpl != nullptr);
+        if (tmpl == nullptr) {
+            continue;
+        }
+
+        for (int step : c.steps) {
+            assert(tmpl->pattern.lanes[c.lane].steps[static_cast<std::size_t>(step)].velocity > 0);
+        }
+
+        const std::string text = serializePatternState(tmpl->pattern);
+        const auto reparsed = deserializePatternState(text);
+        assert(reparsed.has_value());
+        if (reparsed.has_value()) {
+            for (int step : c.steps) {
+                assert(reparsed->lanes[c.lane].steps[static_cast<std::size_t>(step)].velocity ==
+                       tmpl->pattern.lanes[c.lane].steps[static_cast<std::size_t>(step)].velocity);
+            }
+        }
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -958,6 +1002,7 @@ int main() {
     testLatinGenresPinClaveFigures();
     testClaveGenresSurviveEighthResolution();
     testRefreshBarKeepsClaveFigure();
+    testNewGenreTemplatesCarryTheClave();
     testCrashCymbalsStaySparseByDefault();
     testRefreshBarKeepsOtherBars();
     testRefreshFillBarTargetsChosenBar();
@@ -974,9 +1019,7 @@ int main() {
 
     // Template library
     {
-        const std::string patternDir =
-            std::string(__FILE__).substr(0, std::string(__FILE__).rfind('/'))
-            + "/../patterns/world";
+        const std::string patternDir = patternLibraryDir();
 
         TemplateLibrary lib;
         lib.scan(patternDir);

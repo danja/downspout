@@ -32,6 +32,7 @@ plugins=(
   "rift:rift"
   "orchid:orchid"
   "drumgen:drumgen"
+  "voxmod:voxmod"
   "drumkit:drumkit"
   "syrinx:syrinx"
   "xoxolo:xoxolo"

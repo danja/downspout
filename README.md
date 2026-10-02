@@ -96,7 +96,7 @@ installed bundle.
 | [rift](plugins/rift/README.md) | `rift.vst3` | Audio effect | Transport-locked live/sample buffer disruptor with WAV loading, chop/stutter repeats, reverse, skip, smear, and pitch-slip actions. |
 | [Orchid](plugins/orchid/README.md) | `orchid.vst3` | Audio effect | Transport-aware voiced freeze/hold effect with autocorrelation capture and grid-synced loop holds. |
 | [Ambo](plugins/ambo/README.md) | `ambo.vst3` | Audio effect | Stereo ambient processor with rearrangeable time, spectral, tape, shimmer, delay, drive, and feedback modules. |
-| [drumgen](plugins/drumgen/README.md) | `drumgen.vst3` | MIDI drum generator | Pattern generator with meter-aware styles, fills, and Breakbeat/Amen/Jungle/Hip Hop genres. |
+| [drumgen](plugins/drumgen/README.md) | `drumgen.vst3` | MIDI drum generator | Pattern generator with meter-aware styles, fills, Breakbeat/Amen/Jungle/Hip Hop genres, and clave-led Rumba/Samba/Township Jive grooves. |
 | [drumkit](plugins/drumkit/README.md) | `drumkit.vst3` | Instrument | Port of the `flues` drum synth with stereo output, one MIDI input, and mixer-style UI. |
 | [syrinx](plugins/syrinx/README.md) | `syrinx.vst3` | Instrument | Polyphonic MIDI synthesizer based on the Mindlin-Laje biophysical avian syrinx model with 10 bird presets and chromatic pitch mapping. |
 | [cadence](plugins/cadence/README.md) | `cadence.vst3` | MIDI effect | Transport-aware MIDI harmonizer and comping generator. |
@@ -136,6 +136,7 @@ installed bundle.
 | [Spliff](plugins/spliff/README.md) | `spliff.vst3` | Audio effect | Adaptive transient processor in the Spiff manner: per-band dynamic cuts or boosts only where transient energy lives. |
 | [HelterSkelter](plugins/helterskelter/README.md) | `helterskelter.vst3` | Audio effect | Automatic wah pedal: resonant lowpass driven by the input envelope and/or a BBT-synced ADSR cycle, with Drift CC control. |
 | [Treatment](plugins/treatment/README.md) | `treatment.vst3` | Audio effect | Physically modelled acoustic treatment panel: a mass-air-mass absorber whose resonance and absorption come from real cavity, gap, facing mass and flow resistivity, with a seeded Randomise and five Drift CC lanes. |
+| [Voxmod](plugins/voxmod/README.md) | `voxmod.vst3` | Audio effect | Combined vocoder and ring modulator: a filter-bank vocoder analysing inputs 1/2 colours the modulator on 3/4, in parallel with a band-limited ring modulator, blended by Mix. |
 | [Keyframe](plugins/keyframe/README.md) | `keyframe.vst3` | Audio effect | Extrema-sampling time stretch after DAFx26: the input reduces to timestamped local extrema whose spacing drives the overlap-add splice length. No transient detector. |
 
 ## Architecture
