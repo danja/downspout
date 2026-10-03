@@ -17,6 +17,7 @@
 - Periodically review TODO.md and revise as necessary.
 - **`docs/scales.md` is the primary reference for all scale-related work** — canonical ordering, per-plugin coverage, naming conventions, and the append-only rule. Consult it before adding, renaming, or reordering scales in any plugin.
 - periodically read INBOX.md and insert tasks as appropriate in TODO.md then clear out INBOX.md
+- periodically check the `dim` MCP tools (`dim_endpoints`, `dim_search`, `dim_get`) for any Farelo tasks relevant to Downspout, and fold them into TODO.md as appropriate. DIM writes are real, so treat it as read-only for this check unless the user asks otherwise
 - All new plugins will have the basic look & feel of plugins/magneto with the choice of switches, dropdown select lists, rotary knobs, sliders, x-y controls or novel editable components decided on a case-by-case basis
 
 ## Repository shape

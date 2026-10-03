@@ -1023,7 +1023,7 @@ private:
         const float hintY = kBodyY + static_cast<float>(kDropDefs.size()) * kDropH + 14.0f;
         fontSize(9.5f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fc(th.textDisabled);
+        fc(th.textDim);
         text(kCcX, hintY, "in 1/2 = carrier to analyse", nullptr);
         text(kCcX, hintY + 15.0f, "in 3/4 = modulator to colour", nullptr);
         text(kCcX, hintY + 30.0f, "Sync makes the ring mod feed", nullptr);

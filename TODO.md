@@ -43,11 +43,11 @@ promotion of the shared OnePoleLowpass/DCBlocker/BiquadFilter duplicates into
   feel, with the Mix/Ring Freq x-y pad owning those two parameters so they are not
   duplicated as sliders. Core, DPF wrapper, NanoVG UI and 19 deterministic tests
   are complete, plus `docs/design.md`, `README.md`, `profile.ttl` and the catalog
-  page. **Outstanding from the new-plugin checklist**: `install.sh`,
-  `scripts/package-release.sh`, `.github/workflows/release.yml`, `docs/install.md`,
-  `docs/release.md`, `docs/architecture.md`, `docs/plan.md`, `docs/screenshots.md`
-  and `docs/pages/README.md` are not yet updated, and host validation in REAPER is
-  pending.
+  page. New-plugin checklist closed 2026-10-03: `install.sh` was the last missing
+  piece (`-DDOWNSPOUT_BUILD_VOXMOD=ON`); release script, workflow and docs already
+  listed it. Screenshot captured and reviewed: the first capture clipped the CC
+  drift list at 600px and the hint text was near-invisible, so the window is now
+  800x700 and hints use `textDim`. **Still pending:** host validation in REAPER.
 
 ## Scales
 
@@ -63,18 +63,14 @@ promotion of the shared OnePoleLowpass/DCBlocker/BiquadFilter duplicates into
 
 ## Bugs found while doing the above
 
-* **34 of 58 plugin test suites are compiled with `NDEBUG`, so every `assert()`
-  in them is dead code** (fixed for drumgen). The build is
-  `CMAKE_BUILD_TYPE=Release`, which adds `-DNDEBUG`, so those suites report
-  success while testing nothing. Only `plugins/arpgen/CMakeLists.txt` had the
-  `-UNDEBUG` fix. The list: ambo, arpgen, bassgen, bassops, bubbles, cadence,
-  campione, conductor, counterpointer, drift, drumgen, drumkit, e-mix, ground,
-  guardian, harmonic-atlas, lightverb, loopdelay, magneto, melgen, mixgen, m-mix,
-  mnemosyne, mosaic, oracle, orbit, orchid, p-mix, polymeter, resonance-garden,
-  rift, t-mix, worms, xoxolo. 10 other suites (treatment and friends) use their
-  own `check()` harness instead of `assert()` and are unaffected — those were
-  always running. **33 still need the `-UNDEBUG` block**, then a triage pass,
-  since fixing drumgen's immediately surfaced three real bugs.
+* [x] **Plugin test suites compiled with `NDEBUG` made every `assert()` dead code**
+  (`/farelo/task/te42f69e0eb75`) - DONE 2026-10-03. `CMAKE_BUILD_TYPE=Release`
+  adds `-DNDEBUG`, so the suites passed while testing nothing. Added the
+  `-UNDEBUG` / `/UNDEBUG` block (as in arpgen and drumgen) to the 32 remaining
+  plugin-local suites. After the fix all 61 ctest targets pass with live asserts
+  (`__assert_fail` is now linked in), so the triage pass found no further bugs.
+  **Still open:** `downspout_producer_bus_contract_tests` is declared in the root
+  `CMakeLists.txt` (shared glue, needs approval) and still lacks `-UNDEBUG`.
 * `cleanupPattern` re-stamped a snare backbeat on every genre *after* the clave
   overlay ran, so clave grooves came out with a rock backbeat.
 * `DrumgenUI.cpp` fed `getBundlePath()` (null outside a VST bundle) straight into

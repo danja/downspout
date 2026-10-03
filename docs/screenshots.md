@@ -92,6 +92,13 @@ Current output filenames:
 - `lifeform.png`
 - `syrinx.png`
 - `tuney-vst.png`
+- `voxmod.png`
+
+This list is out of date in places: it predates several plugins, and
+`docs/pages/_products/*.md` is the authoritative record of which catalog
+entries carry a screenshot. Add new capture targets to
+`scripts/capture-plugin-screenshots.sh` and the product page's `screenshot:`
+front matter together, not just here.
 
 The output path can be overridden:
 

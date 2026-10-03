@@ -217,6 +217,20 @@ Progress as of 2026-05-27:
   and the tests assert the cascade never boosts anywhere in the parameter
   space; deterministic tests, and a first VST3 wrapper target with UI via
   vendored DPF;
+- `voxmod` now exists as a combined vocoder and ring modulator sharing one
+  four-input bus: a filter-bank vocoder that analyses the carrier on inputs 1/2
+  and re-imposes its spectral envelope on the modulator from 3/4, running in
+  parallel with a polyBLEP-band-limited ring modulator over the same modulator,
+  blended by a single `Mix` parameter rather than a mode switch. Band edges are
+  logarithmic so the bank does not starve the formants, and are constant-skirt
+  so resynthesis gain does not tilt with band width. `Ring Ratio` is quantised to
+  16 musical steps so sideband moves are repeatable, and `Formant` transposes
+  the modulator side of the bank only, which relocates the envelope rather than
+  transposing the whole signal. `Sync` routes the ring-modulated signal back as
+  the vocoder's carrier so inputs 3/4 alone are sufficient. Five Drift-CC lanes;
+  read-only status parameters report the effective carrier frequency, carrier
+  sibilance and band-gate reduction; deterministic tests, and a first VST3
+  wrapper target with a NanoVG UI via vendored DPF;
 - `keyframe` now exists as an extrema-sampling time stretch after Nielsen's
   DAFx26-26 method: bandlimited B-spline derivative analysis, difference
   thresholding, subsample extrema location, a three-playhead sparse-domain
@@ -241,7 +255,7 @@ Current main gap:
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
   `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`,
-  `treatment.vst3`, and `keyframe.vst3` bundles.
+  `treatment.vst3`, `voxmod.vst3`, and `keyframe.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of

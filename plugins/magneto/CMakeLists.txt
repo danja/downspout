@@ -46,5 +46,12 @@ if(BUILD_TESTING)
         tests/magneto_core_tests.cpp
     )
     target_link_libraries(downspout_magneto_core_tests PRIVATE downspout_magneto_core)
+    # Release adds -DNDEBUG, which compiles every assert() out and lets the
+    # suite pass while testing nothing.
+    if(MSVC)
+        target_compile_options(downspout_magneto_core_tests PRIVATE /UNDEBUG)
+    else()
+        target_compile_options(downspout_magneto_core_tests PRIVATE -UNDEBUG)
+    endif()
     add_test(NAME downspout_magneto_core_tests COMMAND downspout_magneto_core_tests)
 endif()

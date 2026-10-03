@@ -71,6 +71,13 @@ if(BUILD_TESTING)
         tests/campione_core_tests.cpp
     )
     target_link_libraries(downspout_campione_core_tests PRIVATE downspout_campione_core)
+    # Release adds -DNDEBUG, which compiles every assert() out and lets the
+    # suite pass while testing nothing.
+    if(MSVC)
+        target_compile_options(downspout_campione_core_tests PRIVATE /UNDEBUG)
+    else()
+        target_compile_options(downspout_campione_core_tests PRIVATE -UNDEBUG)
+    endif()
     add_test(NAME downspout_campione_core_tests COMMAND downspout_campione_core_tests)
 
     add_executable(campione_diag_drum_map

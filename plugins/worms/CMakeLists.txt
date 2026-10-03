@@ -49,5 +49,12 @@ if(BUILD_TESTING)
     target_include_directories(downspout_worms_core_tests PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
+    # Release adds -DNDEBUG, which compiles every assert() out and lets the
+    # suite pass while testing nothing.
+    if(MSVC)
+        target_compile_options(downspout_worms_core_tests PRIVATE /UNDEBUG)
+    else()
+        target_compile_options(downspout_worms_core_tests PRIVATE -UNDEBUG)
+    endif()
     add_test(NAME downspout_worms_core_tests COMMAND downspout_worms_core_tests)
 endif()
