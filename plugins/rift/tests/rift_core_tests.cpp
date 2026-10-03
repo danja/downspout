@@ -3,7 +3,7 @@
 #include "rift_serialization.hpp"
 
 #include <array>
-#include <cassert>
+#include "downspout/test_assert.h"
 #include <cstdint>
 #include <cstdio>
 #include <cmath>

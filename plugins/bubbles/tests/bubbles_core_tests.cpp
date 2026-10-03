@@ -2,7 +2,7 @@
 #include "bubbles_serialization.hpp"
 
 #include <array>
-#include <cassert>
+#include "downspout/test_assert.h"
 #include <cmath>
 #include <cstdio>
 

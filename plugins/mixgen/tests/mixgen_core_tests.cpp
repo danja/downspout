@@ -1,7 +1,7 @@
 #include "mixgen_core.hpp"
 
 #include <array>
-#include <cassert>
+#include "downspout/test_assert.h"
 #include <cmath>
 
 using namespace downspout::mixgen;

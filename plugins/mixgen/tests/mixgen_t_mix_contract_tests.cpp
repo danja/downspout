@@ -4,7 +4,7 @@
 #include "lightverb_core.hpp"
 
 #include <array>
-#include <cassert>
+#include "downspout/test_assert.h"
 #include <cmath>
 
 int main()

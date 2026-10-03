@@ -5,7 +5,7 @@
 #include "bassgen_transport.hpp"
 #include "bassgen_variation.hpp"
 
-#include <cassert>
+#include "downspout/test_assert.h"
 #include <cmath>
 
 using namespace downspout::bassgen;

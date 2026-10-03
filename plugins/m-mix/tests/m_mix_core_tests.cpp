@@ -1,7 +1,7 @@
 #include "m_mix_engine.hpp"
 #include "m_mix_serialization.hpp"
 
-#include <cassert>
+#include "downspout/test_assert.h"
 #include <cmath>
 
 using namespace downspout::mmix;

@@ -69,8 +69,16 @@ promotion of the shared OnePoleLowpass/DCBlocker/BiquadFilter duplicates into
   `-UNDEBUG` / `/UNDEBUG` block (as in arpgen and drumgen) to the 32 remaining
   plugin-local suites. After the fix all 61 ctest targets pass with live asserts
   (`__assert_fail` is now linked in), so the triage pass found no further bugs.
-  **Still open:** `downspout_producer_bus_contract_tests` is declared in the root
-  `CMakeLists.txt` (shared glue, needs approval) and still lacks `-UNDEBUG`.
+  Follow-up, also 2026-10-03 (approved): the root-declared
+  `downspout_producer_bus_contract_tests` got `-UNDEBUG` too, and every suite that
+  uses `assert()` now includes `include/downspout/test_assert.h`, which `#error`s
+  if `NDEBUG` is defined, so a lost `-UNDEBUG` fails to compile instead of passing
+  silently. New suites using `assert()` must include it and set `-UNDEBUG`.
+* Replace the 36 copy-pasted `-UNDEBUG` + include-dir blocks with one root helper,
+  e.g. `downspout_add_core_test(<target> SOURCES ... LIBS ...)`, so a new plugin
+  cannot forget either. Worth doing but low urgency, since the `test_assert.h`
+  guard already catches the failure. Touches root glue and ~36 plugin CMake files,
+  so needs approval and a full test run.
 * `cleanupPattern` re-stamped a snare backbeat on every genre *after* the clave
   overlay ran, so clave grooves came out with a rock backbeat.
 * `DrumgenUI.cpp` fed `getBundlePath()` (null outside a VST bundle) straight into

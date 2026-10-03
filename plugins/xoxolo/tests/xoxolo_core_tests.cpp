@@ -2,7 +2,7 @@
 #include "xoxolo_generator.hpp"
 #include "xoxolo_serialization.hpp"
 
-#include <cassert>
+#include "downspout/test_assert.h"
 #include <cmath>
 #include <iostream>
 #include <string>

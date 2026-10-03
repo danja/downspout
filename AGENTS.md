@@ -13,6 +13,7 @@
 - Do not modify shared/framework code that existing plugins rely on without explicit user approval first. This includes `third_party/`, `src/common/`, `include/downspout/`, shared scripts, and root build/install/release glue.
 - Document assumptions when mapping LV2 concepts to DPF/VST3, especially transport, state, and UI behavior.
 - On a fresh CMake build directory, do not launch the build command until configure has finished. In this repo, starting `cmake --build` too early regularly races cache generation and fails with `Error: could not load cache`.
+- Test suites that use `assert()` must set `-UNDEBUG` on their target and include `downspout/test_assert.h`. The Release build adds `-DNDEBUG`, which compiles asserts out so a suite passes while testing nothing; the header turns that into a compile error.
 - Log mistakes in MISTAKES.md (what happened, root cause, prevention).
 - Periodically review TODO.md and revise as necessary.
 - **`docs/scales.md` is the primary reference for all scale-related work** — canonical ordering, per-plugin coverage, naming conventions, and the append-only rule. Consult it before adding, renaming, or reordering scales in any plugin.

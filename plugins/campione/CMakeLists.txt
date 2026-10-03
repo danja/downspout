@@ -78,6 +78,7 @@ if(BUILD_TESTING)
     else()
         target_compile_options(downspout_campione_core_tests PRIVATE -UNDEBUG)
     endif()
+    target_include_directories(downspout_campione_core_tests PRIVATE "${PROJECT_SOURCE_DIR}/include")
     add_test(NAME downspout_campione_core_tests COMMAND downspout_campione_core_tests)
 
     add_executable(campione_diag_drum_map

@@ -174,6 +174,15 @@ if(BUILD_TESTING AND TARGET downspout_mixgen_core AND TARGET downspout_t_mix_cor
     target_link_libraries(downspout_producer_bus_contract_tests PRIVATE
         downspout_mixgen_core downspout_t_mix_core
         downspout_loopdelay_core downspout_lightverb_core)
+    # Release adds -DNDEBUG, which compiles every assert() out and lets the
+    # suite pass while testing nothing.
+    if(MSVC)
+        target_compile_options(downspout_producer_bus_contract_tests PRIVATE /UNDEBUG)
+    else()
+        target_compile_options(downspout_producer_bus_contract_tests PRIVATE -UNDEBUG)
+    endif()
+    target_include_directories(downspout_producer_bus_contract_tests PRIVATE
+        "${PROJECT_SOURCE_DIR}/include")
     add_test(NAME downspout_producer_bus_contract_tests
         COMMAND downspout_producer_bus_contract_tests)
 endif()

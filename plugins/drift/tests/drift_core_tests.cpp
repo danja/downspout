@@ -1,5 +1,5 @@
 #include "drift_core.hpp"
-#include <cassert>
+#include "downspout/test_assert.h"
 using namespace downspout::drift;
 int main(){std::array<float,kParameterCount>p{};for(std::size_t i=0;i<p.size();++i)p[i]=kParameterSpecs[i].defaultValue;
 Transport t;t.valid=true;t.playing=true;t.bpm=120;State a,b;auto x=process(a,p,t,1024,48000,0.4f);auto y=process(b,p,t,1024,48000,0.4f);

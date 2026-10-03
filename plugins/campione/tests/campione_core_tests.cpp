@@ -4,7 +4,7 @@
 #include "campione_sample_loader.hpp"
 #include "campione_serialization.hpp"
 
-#include <cassert>
+#include "downspout/test_assert.h"
 #include <cmath>
 #include <cstdio>
 #include <vector>

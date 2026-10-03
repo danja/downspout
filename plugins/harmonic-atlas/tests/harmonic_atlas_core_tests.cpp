@@ -1,7 +1,7 @@
 #include "harmonic_atlas_core.hpp"
 
 #include <array>
-#include <cassert>
+#include "downspout/test_assert.h"
 
 using namespace downspout::harmonic_atlas;
 

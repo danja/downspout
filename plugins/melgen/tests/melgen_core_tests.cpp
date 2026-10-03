@@ -4,7 +4,7 @@
 #include "melgen_transport.hpp"
 #include "melgen_variation.hpp"
 
-#include <cassert>
+#include "downspout/test_assert.h"
 #include <cmath>
 
 using namespace downspout::melgen;

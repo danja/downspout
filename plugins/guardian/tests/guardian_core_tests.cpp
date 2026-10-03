@@ -1,5 +1,5 @@
 #include "guardian_core.hpp"
-#include <cassert>
+#include "downspout/test_assert.h"
 #include <limits>
 using namespace downspout::guardian;
 

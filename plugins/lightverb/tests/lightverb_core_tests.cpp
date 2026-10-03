@@ -1,7 +1,7 @@
 #include "lightverb_core.hpp"
 #include "lightverb_serialization.hpp"
 #include <array>
-#include <cassert>
+#include "downspout/test_assert.h"
 #include <cmath>
 using namespace downspout::lightverb;
 

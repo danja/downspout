@@ -1,5 +1,5 @@
 #include "conductor_core.hpp"
-#include <cassert>
+#include "downspout/test_assert.h"
 using namespace downspout::conductor;
 Transport at(double q,bool play=true){Transport t;t.valid=true;t.playing=play;t.bar=std::floor(q/4);t.barBeat=q-t.bar*4;return t;}
 int main(){std::array<float,kParameterCount>p{};for(std::size_t i=0;i<p.size();++i)p[i]=kParameterSpecs[i].defaultValue;

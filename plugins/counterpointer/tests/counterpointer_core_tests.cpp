@@ -3,7 +3,7 @@
 #include "counterpointer_transport.hpp"
 
 #include <array>
-#include <cassert>
+#include "downspout/test_assert.h"
 
 using namespace downspout::counterpointer;
 

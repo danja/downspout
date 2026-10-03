@@ -1,5 +1,5 @@
 #include "mosaic_core.hpp"
-#include <cassert>
+#include "downspout/test_assert.h"
 #include <cmath>
 #include <cstring>
 

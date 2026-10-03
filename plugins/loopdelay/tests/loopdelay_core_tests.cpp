@@ -3,7 +3,7 @@
 
 #include <algorithm>
 #include <array>
-#include <cassert>
+#include "downspout/test_assert.h"
 #include <cmath>
 
 using namespace downspout::loopdelay;
