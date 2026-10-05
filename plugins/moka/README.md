@@ -23,19 +23,27 @@ MIDI note allocation with a selectable 1–12 voice cap (default 4), modal
 resonators with per-mode decay, mallet/spread/position morphing, stereo
 alternating-partial panning, bounded output, and deterministic rendering.
 
+A note starts from silence and ramps in over the mallet's contact time
+(1.5–6 ms, hard to soft beater) with a raised cosine, crossfading from
+whatever the voice was already sounding. The modal bank and the mallet burst
+both begin at full amplitude, so without that ramp the first sample out of
+silence was a step of several tenths — a broadband click on every note, and a
+full-scale one on a chord. Retriggering a ringing note crossfades the same way.
+
 The DPF wrapper (`src/dpf/MokaPlugin.cpp`) exposes ten automatable
-parameters; the UI (`src/dpf/MokaUI.cpp`) follows the shared Cold War
-test-equipment look & feel with dark/light panel themes and a single
-factory preset menu that shows `Custom` once any control is tweaked.
+parameters. The UI (`src/dpf/MokaUI.cpp`) follows the shared Cold War
+test-equipment look & feel with dark/light panel themes, a ring-time dial, a
+partial ladder plotted from the same weighting the engine renders, and a
+factory preset list that shows `Custom` once any control is tweaked.
 
 ## Parameters
 
 | # | Name | Range | Default | Notes |
 |---|------|-------|---------|-------|
 | 0 | Instrument | Xylophone…Tube | Xylophone | Selects the modal table (via presets or automation) |
-| 1 | Decay | 0–100 % | 55 % | Overall resonance time, 0.15x–3x |
-| 2 | Mallet | 0–100 % | 75 % | Beater hardness: partial brightness + click |
-| 3 | Tone | 0–100 % | 65 % | Resonator lowpass |
+| 1 | Decay | 0–100 % | 55 % | Overall resonance time, 0.15x–3x of the model's base |
+| 2 | Mallet | 0–100 % | 75 % | Beater hardness: partial brightness + contact time |
+| 3 | Tone | 0–100 % | 65 % | Resonator lowpass, 900 Hz–11.9 kHz |
 | 4 | Spread | 0–100 % | 30 % | Inharmonic stretch, 0.6x–1.5x of table ratios |
 | 5 | Position | 0–100 % | 45 % | Strike point: edge (bright) to centre (round) |
 | 6 | Voices | 1–12 | 4 | Polyphony cap with oldest-voice stealing |
@@ -46,6 +54,6 @@ factory preset menu that shows `Custom` once any control is tweaked.
 ## Presets
 
 Xylophone, Glockenspiel, Temple Blocks, Glass Bowl, Frost Glass,
-Metal Sheet, Thunder Plate, Tube Flip-Flop, Dark Tube, Soft Xylo.
+Metal Sheet, Thunder Plate, Tube Flip-Flop, Dark Tube, Soft Xylo, Kalimba.
 Selecting a preset writes all ten controls; tweaking anything shows
-`Custom` in the preset menu.
+`Custom` in the preset list.

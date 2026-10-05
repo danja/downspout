@@ -1,5 +1,31 @@
 # Mistakes log
 
+- 2026-10-05: `scripts/capture-plugin-screenshots.sh` captured the wrong
+  window and overwrote the committed `moka.png` with a screenshot of an
+  unrelated editor window. `wait_for_window` matches by `_NET_WM_PID` first
+  but falls back to `xdotool search --name "$exe"`, and that is a substring
+  match: any window whose title happens to contain the plugin slug matches.
+  A session titled "Moka impulse removal..." was enough. Root cause: trusting
+  a name-based fallback to identify a specific window, in a script whose output
+  path is a committed asset. Prevention: after any capture, `identify` the PNG
+  and compare it against `DISTRHO_UI_DEFAULT_WIDTH/HEIGHT` before accepting it,
+  and open the image. If the fallback ever produces a plausible-looking but
+  wrong-sized capture, capture by PID alone.
+
+- 2026-10-05: Two `moka` UI defects that only the rendered screenshot exposed.
+  The Voices stepper read "5" while the value and the lit voice slots were both
+  4, because the label table was filled with `i + 1` and then indexed by the
+  parameter *value*. And every unexcited partial slot drew a full-width dark
+  groove, which reads as a loud bar — the exact opposite of "this model does
+  not excite this mode", and it buried the difference between a used-but-quiet
+  partial and an unused one. Root cause: a stepper's label table is indexed by
+  value, not by ordinal, and I filled it in ordinal terms; and I drew the
+  "empty" state using the same fill as the "full" state. Prevention: when a
+  table is indexed by a parameter value, generate it from the value
+  (`"%d", i`) rather than from the position, and clamp the index anyway. When a
+  plot has an empty state, give it no mark at all rather than the track mark —
+  a track is a positive statement that something occupies the slot.
+
 - 2026-10-01: `treatment`'s first RBJ high shelf was wrong twice over and both
   faults produced filters that looked plausible. Missing the `amp` factor on the
   numerator meant the shelf reached half its requested gain at Nyquist; then

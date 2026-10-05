@@ -137,7 +137,7 @@ engine-block vibration and exhaust to stereo.
 
 ### Moka (`moka.vst3`)
 
-Stereo modal hit-object synth with eight damped modes per voice, six instrument tables (xylophone, glockenspiel, woodblock, glass bowl, metal sheet, tube), selectable 1–12 voice polyphony defaulting to 4, and ten factory presets. Natural sound source for struck percussion and bell parts from DrumGen, Xoxolo, or authored MIDI.
+Stereo modal hit-object synth with eight damped modes per voice, six instrument tables (xylophone, glockenspiel, woodblock, glass bowl, metal sheet, tube), selectable 1–12 voice polyphony defaulting to 4, and eleven factory presets including a Kalimba. Notes ramp in over the mallet contact time rather than stepping to full amplitude, so there is no click at note onset. Natural sound source for struck percussion and bell parts from DrumGen, Xoxolo, or authored MIDI.
 
 ### Gremlin (`gremlin.vst3`)
 

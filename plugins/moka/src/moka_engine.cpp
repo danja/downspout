@@ -10,13 +10,17 @@ namespace {
 constexpr float kPi = 3.14159265358979323846f;
 constexpr float kTwoPi = kPi * 2.0f;
 constexpr float kOutputGain = 1.6f;
-constexpr float kMinT60 = 0.03f;
 constexpr float kSilenceEps = 0.00012f;
 
-float clampUnit(const float value)
-{
-    return std::clamp(std::isfinite(value) ? value : 0.0f, 0.0f, 1.0f);
-}
+// Mallet contact time bounds, in seconds. A struck bar does ring from a
+// finite displacement, not a step: the mallet spends this long compressing
+// before it releases the bar. Hard beater = short contact, soft beater long.
+constexpr float kContactHard = 0.0015f;
+constexpr float kContactSoft = 0.0060f;
+
+// Scales the mallet burst down from what a raw full-scale noise pop would be.
+// The burst is the attack transient, not the body of the note.
+constexpr float kTransientScale = 0.55f;
 
 float midiNoteToFrequency(const int midiNote)
 {
@@ -67,6 +71,17 @@ public:
 private:
     std::uint32_t state_ = 0x9E3779B9u;
 };
+
+// Mixes the note identity into a nonzero seed for the mallet-burst noise
+// stream. Separate multipliers from the mode-phase stream above so the burst
+// does not reuse the same sequence the partials are drawn from.
+std::uint32_t noiseSeed(const int midiNote, const std::uint8_t velocity, const std::uint64_t serial)
+{
+    const std::uint32_t state = static_cast<std::uint32_t>(midiNote) * 2654435761u
+                              ^ static_cast<std::uint32_t>(velocity) * 2246822519u
+                              ^ static_cast<std::uint32_t>(serial) * 3266489917u;
+    return state != 0u ? state : 0x9E3779B9u;
+}
 
 class OnePoleLowpass {
 public:
@@ -144,6 +159,11 @@ public:
         transientPosition_ = 0;
         transientLevel_ = 0.0f;
         transientDecay_ = 1.0f;
+        attackSamples_ = 1;
+        attackPosition_ = 1;
+        lastLeft_ = 0.0f;
+        lastRight_ = 0.0f;
+        rngState_ = 0x9E3779B9u;
         active_ = false;
         for (auto& mode : modes_)
             mode = ModeState {};
@@ -169,15 +189,14 @@ public:
         const float spread = params.values[static_cast<std::size_t>(ParamId::spread)];
         const float position = params.values[static_cast<std::size_t>(ParamId::position)];
 
-        // Overall resonance time: 0.15x–3x around the model base.
-        const float decayScale = 0.15f * std::pow(20.0f, clampUnit(decay));
-        // Spread stretches partials from near-harmonic (0.6x) to bell-like (1.5x).
-        const float stretch = 0.60f + 0.90f * clampUnit(spread);
-        // Hard beater excites upper partials; soft beater stays near the hum.
-        const float spectralSlope = (1.80f - 1.74f * clampUnit(mallet)) * 0.50f;
-        // Strike position: edge (0) is bright and clangorous, centre (1) is round.
-        const float edgeMix = 1.0f - clampUnit(position);
+        const float decayScale = decayScaleFor(decay);
         const float width = clampUnit(params.values[static_cast<std::size_t>(ParamId::width)]);
+
+        // Spread, Mallet and Position are applied in one place so the panel's
+        // partial ladder and the rendered spectrum cannot disagree.
+        const ModeWeights weights = computeModeWeights(model, spread, mallet, position);
+        // The mallet burst is brightest at an edge strike.
+        const float edgeMix = 1.0f - clampUnit(position);
 
         XorShift32 rng {};
         rng.seed(static_cast<std::uint32_t>(midiNote * 131 + velocity * 17 + serial * 1013904223u));
@@ -186,27 +205,19 @@ public:
         {
             const ModeEntry& entry = spec.modes[i];
             ModeState& mode = modes_[i];
-            if (entry.ratio <= 0.0f || entry.level <= 0.0f)
+            const float ratio = weights.ratio[i];
+            if (ratio <= 0.0f)
             {
                 mode = ModeState {};
                 continue;
             }
 
-            const float ratio = 1.0f + (entry.ratio - 1.0f) * stretch;
             const float frequency = std::min(baseFrequency_ * ratio, sampleRate_ * 0.42f);
             mode.increment = frequency / sampleRate_;
             mode.phase = rng.nextBipolar() * 0.5f;
 
-            float weight = entry.level * std::exp(-(ratio - 1.0f) * spectralSlope);
-            // Centre strike damps partials proportionally to their distance
-            // from the fundamental; edge strike lets them ring and adds bite.
-            weight /= 1.0f + (1.0f - edgeMix) * (ratio - 1.0f) * 1.10f;
-            weight *= 1.0f + edgeMix * std::min(ratio / 8.0f, 1.0f) * 0.90f;
-            if (i == 0)
-                weight *= 1.0f + (1.0f - edgeMix) * 0.25f;
-
-            mode.amplitude = weight * (0.25f + 0.75f * velocity_);
-            const float t60 = std::max(kMinT60, spec.baseT60 * decayScale * entry.decayMul);
+            mode.amplitude = weights.weight[i] * (0.25f + 0.75f * velocity_);
+            const float t60 = std::max(kMinRingT60, spec.baseT60 * decayScale * entry.decayMul);
             mode.decayCoeff = std::exp(-6.9077553f / (t60 * sampleRate_));
             // Alternate partials across the stereo field; higher partials wider.
             // Width collapses everything toward centre when turned down.
@@ -221,20 +232,37 @@ public:
         const float transientSeconds = 0.014f - 0.0115f * clampUnit(mallet);
         transientSamples_ = std::max(8, static_cast<int>(transientSeconds * sampleRate_));
         transientPosition_ = 0;
-        transientLevel_ = spec.transient * (0.35f + 0.65f * velocity_) * (0.5f + 0.5f * edgeMix)
-            * (0.45f + 0.75f * clampUnit(mallet));
+        transientLevel_ = kTransientScale * spec.transient * (0.35f + 0.65f * velocity_)
+            * (0.5f + 0.5f * edgeMix) * (0.45f + 0.75f * clampUnit(mallet));
         transientDecay_ = std::exp(-6.0f / static_cast<float>(transientSamples_));
         transientHp_.reset();
-        toneFilterLeft_.reset();
-        toneFilterRight_.reset();
+        // The tone filters keep their state across a retrigger: zeroing them
+        // mid-tail would step the ringing output down to nothing.
+        // The onset ramp below crossfades that tail into the new strike.
+        rngState_ = noiseSeed(midiNote, velocity, serial);
+
+        // Mallet contact time: the bar rings from the displacement the beater
+        // built up, not from an instantaneous step, so the modal bank ramps in
+        // over the contact rather than jumping to full amplitude.
+        const float contactSeconds = kContactHard + (kContactSoft - kContactHard) * (1.0f - clampUnit(mallet));
+        attackSamples_ = std::max(1, static_cast<int>(contactSeconds * sampleRate_));
+        attackPosition_ = 0;
+
         releaseCoeff_ = modes_[0].decayCoeff;
+        if (!active_)
+        {
+            // A voice that was not already sounding emitted silence, so the
+            // onset crossfade has to start from zero rather than a stale tail.
+            lastLeft_ = 0.0f;
+            lastRight_ = 0.0f;
+        }
         active_ = true;
     }
 
     void release(const float releaseT60)
     {
         releasing_ = true;
-        releaseCoeff_ = std::exp(-6.9077553f / (std::max(kMinT60, releaseT60) * sampleRate_));
+        releaseCoeff_ = std::exp(-6.9077553f / (std::max(kMinRingT60, releaseT60) * sampleRate_));
     }
 
     StereoFrame process(const Params& params)
@@ -243,7 +271,7 @@ public:
             return {};
 
         const float tone = params.values[static_cast<std::size_t>(ParamId::tone)];
-        const float cutoff = 900.0f + tone * tone * 11000.0f;
+        const float cutoff = toneCutoffHz(tone);
 
         float left = 0.0f;
         float right = 0.0f;
@@ -285,14 +313,34 @@ public:
         const float filteredRight = toneFilterRight_.process(right, cutoff, sampleRate_);
         ++age_;
 
+        // Onset shaping. The modal bank and the mallet burst both begin at full
+        // amplitude, so without this the first sample out of silence is a step
+        // of several tenths — a broadband click on every single note, and a
+        // full-scale one on a chord. A raised cosine over the contact time
+        // leaves the output starting at exactly zero with zero slope, so there
+        // is nothing for the ear to read as an impulse.
+        float ramp = 1.0f;
+        if (attackPosition_ < attackSamples_)
+        {
+            ramp = static_cast<float>(attackPosition_) / static_cast<float>(attackSamples_);
+            ++attackPosition_;
+        }
+        const float env = 0.5f * (1.0f - std::cos(kPi * ramp));
+        // Blend from whatever this voice contributed last sample, so retrigger
+        // a ringing note crossfades instead of cutting the tail to nothing.
+        lastLeft_ = lastLeft_ * (1.0f - ramp) + filteredLeft * env;
+        lastRight_ = lastRight_ * (1.0f - ramp) + filteredRight * env;
+
         if (releasing_ && peak < kSilenceEps && transientPosition_ >= transientSamples_)
         {
             active_ = false;
             note_ = -1;
+            lastLeft_ = 0.0f;
+            lastRight_ = 0.0f;
             return {};
         }
 
-        return {filteredLeft, filteredRight};
+        return {lastLeft_, lastRight_};
     }
 
     bool active() const { return active_; }
@@ -322,6 +370,12 @@ private:
     int transientPosition_ = 0;
     float transientLevel_ = 0.0f;
     float transientDecay_ = 1.0f;
+    // Onset ramp length in samples, and how far through it we are.
+    int attackSamples_ = 1;
+    int attackPosition_ = 1;
+    // This voice's previous output, used to crossfade a retrigger.
+    float lastLeft_ = 0.0f;
+    float lastRight_ = 0.0f;
     std::uint32_t rngState_ = 0x9E3779B9u;
     OnePoleLowpass toneFilterLeft_ {};
     OnePoleLowpass toneFilterRight_ {};
