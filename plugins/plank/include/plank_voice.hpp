@@ -192,6 +192,22 @@ struct ModalState {
         }
     }
 
+    // A decaying resonator creeps toward zero and spends a long time in the
+    // denormal range, where each multiply costs a hundred times more. Hosts do not
+    // enable flush-to-zero for us, so values this small are zeroed by hand once
+    // per block. 1e-15 is about -300 dB, far below anything audible.
+    void flushTiny() noexcept
+    {
+        for (std::size_t i = 0; i < kModeCount; ++i)
+        {
+            if (std::fabs(y1[i]) < 1.0e-15f && std::fabs(y2[i]) < 1.0e-15f)
+            {
+                y1[i] = 0.0f;
+                y2[i] = 0.0f;
+            }
+        }
+    }
+
     [[nodiscard]] float process(const float input, const ModalCoefficients& c) noexcept
     {
         float sum = 0.0f;

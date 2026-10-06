@@ -252,3 +252,23 @@ implementation, read its function for the behaviour before describing it. The
 UI's old ruler (row pitches laid out under the column letters) hid the problem
 by showing a ladder the sound did not follow; pads now carry their own note
 names.
+
+## Plank: resonator engines ran denormals and the host reset the patch (2026-10-06)
+
+**What happened.** With a resonator engine selected, a DAW reported heavy CPU use
+and no audio. Offline, per-block cost rose from 0.1 ms to 0.4 ms over thirty
+seconds after a single note, and `activate()` / `sampleRateChanged()` called
+`init()`, which reset every parameter, including `Engine`, to its default.
+
+**Root cause.** Idle voices kept running their resonators and filter, so
+decaying states spent most of their time in the denormal range, and hosts do not
+set flush-to-zero. Separately, the wrapper treated "host activated" and "sample
+rate changed" as "first-time setup".
+
+**Prevention.** Idle voices are now skipped and their state zeroed, modal state
+is flushed per block, and `activate()` / `setSampleRate()` clear only runtime
+state. Tests: `testHostActivationKeepsThePatch`, `testIdleResonatorsAreSilentAndCheap`.
+Time any new recursive DSP over a long decay, not just the attack, and never
+reuse a first-time-setup call for a host lifecycle callback. The "no audio"
+symptom was not reproduced offline; the two defects above are what the code
+showed, so it still needs confirming in the host.

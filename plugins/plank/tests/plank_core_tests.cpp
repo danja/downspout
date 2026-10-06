@@ -1020,19 +1020,21 @@ void testFixedIntervalSpreads()
 
 void testSpreadClampsAndSurvivesTuningChanges()
 {
-    Processor processor;
-    processor.init(48000.0);
+    Processor clampCheck;
+    clampCheck.init(48000.0);
     const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
 
-    processor.setParameter(p(ParamId::spread), 99.0f);
-    require(processor.getParameter(p(ParamId::spread)) ==
+    clampCheck.setParameter(p(ParamId::spread), 99.0f);
+    require(clampCheck.getParameter(p(ParamId::spread)) ==
                 static_cast<float>(static_cast<int>(SpreadId::count) - 1),
             "spread should clamp to its last mode");
 
     // A sounding string must follow a tuning change in every spread mode.
-    for (const SpreadId mode : {SpreadId::unison, SpreadId::scale, SpreadId::fourths, SpreadId::fifths})
+    for (const SpreadId mode : {SpreadId::unison, SpreadId::scale, SpreadId::fourths, SpreadId::fifths,
+                                SpreadId::stride})
     {
-        processor.activate();
+        Processor processor;
+        processor.init(48000.0);
         processor.setParameter(p(ParamId::spread), static_cast<float>(mode));
 
         const MidiMessage pluck[] = { noteOn(gridToNote(3, 4)) };
@@ -1045,6 +1047,53 @@ void testSpreadClampsAndSurvivesTuningChanges()
         const std::uint8_t after = processor.noteForCell(3, 4);
         require(after != before, "a sounding string should follow a tuning change in every spread mode");
     }
+}
+
+void testHostActivationKeepsThePatch()
+{
+    // Regression: activate() and sampleRateChanged() both called init(), which
+    // put every parameter back to its default, so the engine and the rest of the
+    // patch were lost whenever a host started playback or changed rate.
+    Processor processor;
+    processor.init(48000.0);
+    const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+    processor.setParameter(p(ParamId::engine), static_cast<float>(EngineId::marimba));
+    processor.setParameter(p(ParamId::damping), 0.9f);
+
+    processor.activate();
+    require(processor.getParameter(p(ParamId::engine)) == static_cast<float>(EngineId::marimba),
+            "activate must not reset the engine");
+
+    processor.setSampleRate(96000.0);
+    require(processor.getParameter(p(ParamId::damping)) == 0.9f, "a rate change must not reset the patch");
+
+    const MidiMessage down[] = { noteOn(gridToNote(2, 0)) };
+    const Render out = renderBlocks(processor, 20, down, 1u);
+    require(!out.silent(), "the plugin must still sound after a rate change");
+    require(std::isfinite(out.peak), "output must stay finite after a rate change");
+}
+
+void testIdleResonatorsAreSilentAndCheap()
+{
+    // After the note has released, the string must produce exact silence rather
+    // than a decaying tail of denormals.
+    Processor processor;
+    processor.init(48000.0);
+    const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+    processor.setParameter(p(ParamId::ledFeedback), 0.0f);
+    processor.setParameter(p(ParamId::engine), static_cast<float>(EngineId::drumhead));
+    processor.setParameter(p(ParamId::delaySend), 0.0f);
+    processor.setParameter(p(ParamId::reverbSend), 0.0f);
+    processor.setParameter(p(ParamId::envRelease), 5.0f);
+    processor.setParameter(p(ParamId::envSustain), 0.0f);
+
+    const MidiMessage down[] = { noteOn(gridToNote(2, 0)) };
+    renderBlocks(processor, 4, down, 1u);
+    const MidiMessage up[] = { noteOff(gridToNote(2, 0)) };
+    renderBlocks(processor, 2, up, 1u);
+    renderBlocks(processor, 40);  // let the 5 ms release finish
+    const Render later = renderBlocks(processor, 400);
+    require(later.silent(), "a released resonator must fall to exact silence");
 }
 
 // ── Session state ───────────────────────────────────────────────────────────
@@ -1428,6 +1477,8 @@ int main()
     testExcitersAreBothUsable();
     testStrikePositionChangesTheTone();
     testResonatorStateRoundTrips();
+    testHostActivationKeepsThePatch();
+    testIdleResonatorsAreSilentAndCheap();
     testStateRoundTrips();
     testStateRestoresTheMusicalLadder();
     testStateRejectsGarbage();

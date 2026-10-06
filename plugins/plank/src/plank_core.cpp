@@ -75,18 +75,34 @@ template <typename T>
 void Processor::init(const double sampleRate)
 {
     sampleRate_ = sampleRate > 1.0 ? sampleRate : 48000.0;
-    activate();
+    resetToDefaults();
 }
 
 void Processor::activate()
 {
-    resetToDefaults();
+    resetRuntime();
+}
+
+void Processor::setSampleRate(const double sampleRate)
+{
+    sampleRate_ = sampleRate > 1.0 ? sampleRate : 48000.0;
+    resetRuntime();
 }
 
 void Processor::resetToDefaults()
 {
     for (std::size_t i = 0; i < kParameterCount; ++i)
         parameters_[i] = kParameterSpecs[i].defaultValue;
+
+    resetRuntime();
+}
+
+void Processor::resetRuntime()
+{
+    // Held grid cells are parameters too; with the voices cleared they would
+    // claim strings that are no longer sounding.
+    for (std::size_t i = 0; i < kCellCount; ++i)
+        parameters_[kCellParameterStart + i] = 0.0f;
 
     for (Voice& voice : voices_)
         voice.reset();
@@ -663,6 +679,18 @@ void Processor::renderVoice(const std::size_t index,
     Voice& voice = voices_[index];
     const auto p = [](ParamId id) { return static_cast<std::size_t>(id); };
 
+    // An idle string contributes nothing: its output is scaled by an amplitude of
+    // zero. Skipping it saves the work, and zeroing its state stops the filter and
+    // resonators decaying through the denormal range, which is very slow on a CPU
+    // without flush-to-zero.
+    if (!voice.sounding && !voice.amplitude.active())
+    {
+        voice.filter.reset();
+        voice.modal.reset();
+        voice.level = 0.0f;
+        return;
+    }
+
     const float envLevel = parameters_[p(ParamId::envLevel)];
     const float modLevel = parameters_[p(ParamId::modLevel)];
     const float attackStep = envelopeStep(parameters_[p(ParamId::envAttack)]);
@@ -822,6 +850,9 @@ void Processor::renderVoice(const std::size_t index,
         left[frame] += filtered * panLeft;
         right[frame] += filtered * panRight;
     }
+
+    if (modal)
+        voice.modal.flushTiny();
 
     voice.noise = noiseTarget;
     voice.level = clampValue(levelFollower, 0.0f, 1.0f);

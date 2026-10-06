@@ -263,7 +263,7 @@ protected:
 
     void activate() override { processor_.activate(); }
 
-    void sampleRateChanged(const double newSampleRate) override { processor_.init(newSampleRate); }
+    void sampleRateChanged(const double newSampleRate) override { processor_.setSampleRate(newSampleRate); }
 
     void run(const float**, float** outputs, const uint32_t frames, const MidiEvent* midiEvents,
              const uint32_t midiEventCount) override

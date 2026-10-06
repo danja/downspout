@@ -51,8 +51,15 @@ struct ProcessResult {
 // default attack.
 class Processor {
 public:
+    // First-time setup: sets the rate and puts every parameter at its default.
     void init(double sampleRate);
+    // The host started or resumed processing. Clears voices, LFOs and effect
+    // tails but keeps the patch: hosts call this after restoring parameters, so
+    // resetting them here discarded the user's settings.
     void activate();
+    // The host changed the sample rate. Keeps the patch, rebuilds the effect
+    // buffers and clears running state.
+    void setSampleRate(double sampleRate);
 
     void setParameter(std::uint32_t index, float value);
     [[nodiscard]] float getParameter(std::uint32_t index) const noexcept;
@@ -159,6 +166,7 @@ private:
     [[nodiscard]] std::uint32_t random();
     void updateStatus(float peak);
     void resetToDefaults();
+    void resetRuntime();
 
     double sampleRate_ = 48000.0;
     std::array<float, kParameterCount> parameters_ {};
