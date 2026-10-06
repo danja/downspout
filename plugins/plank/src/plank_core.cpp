@@ -163,6 +163,7 @@ void Processor::setParameter(const std::uint32_t index, const float value)
     switch (static_cast<ParamId>(index))
     {
     case ParamId::scale:
+    case ParamId::spread:
     case ParamId::root:
     case ParamId::octave:
     case ParamId::rotate:
@@ -225,33 +226,66 @@ std::uint8_t Processor::noteForCell(const std::size_t row, const std::size_t col
     if (row >= kGridHeight || col >= kGridWidth)
         return 0u;
 
-    const int root = static_cast<int>(std::lround(parameters_[static_cast<std::size_t>(ParamId::root)]));
-    const int octave = static_cast<int>(std::lround(parameters_[static_cast<std::size_t>(ParamId::octave)]));
-    const int rotate = static_cast<int>(std::lround(parameters_[static_cast<std::size_t>(ParamId::rotate)]));
-    const int stride = static_cast<int>(std::lround(parameters_[static_cast<std::size_t>(ParamId::stride)]));
-    const int fine = static_cast<int>(
-        std::lround(parameters_[static_cast<std::size_t>(ParamId::microtune)] * 100.0f));
+    const auto p = [](ParamId id) { return static_cast<std::size_t>(id); };
 
-    // Rotating the scale shifts which degree sits under each row, so the ladder
-    // moves without the rows losing their pitch ordering.
-    const int degree = (static_cast<int>(row) + rotate) % static_cast<int>(kGridHeight);
-    const int interval = scaleInterval(static_cast<std::size_t>(degree));
+    const int root = static_cast<int>(std::lround(parameters_[p(ParamId::root)]));
+    const int octave = static_cast<int>(std::lround(parameters_[p(ParamId::octave)]));
+    const int rotate = static_cast<int>(std::lround(parameters_[p(ParamId::rotate)]));
+    const int stride = static_cast<int>(std::lround(parameters_[p(ParamId::stride)]));
 
-    // Stride is a constant semitone push, in the manner of Plinky's P_STRIDE.
-    // Column is part of the signature so callers can pass a grid coordinate
-    // directly; pitch is per-string, so every column yields the same ladder.
-    (void)col;
+    // Microtune is a fractional-semitone detune in cents. It has to stay a
+    // double all the way to the final rounding: treating it as whole semitones
+    // made the 8-cent default detune every note by an octave-ish 8 semitones.
+    const double fine = static_cast<double>(parameters_[p(ParamId::microtune)]) * (1.0 / 100.0);
 
-    const int note = root + octave * 12 + interval + stride + fine / 100;
-    return static_cast<std::uint8_t>(clampValue(note, 0, 127));
+    // Degree within the scale. The column contributes only when the strings are
+    // spread; in unison every column shares one ladder.
+    const auto spread = static_cast<SpreadId>(
+        clampValue(static_cast<int>(std::lround(parameters_[p(ParamId::spread)])),
+                   0,
+                   static_cast<int>(SpreadId::count) - 1));
+
+    int degree = static_cast<int>(row) + rotate;
+    int columnSemitones = 0;
+
+    switch (spread)
+    {
+    case SpreadId::unison:
+        break;
+
+    case SpreadId::scale:
+        // Column c starts c degrees higher, so the grid spans two octaves of
+        // the current scale and a held row plays a cluster rather than a unison.
+        degree += static_cast<int>(col);
+        break;
+
+    case SpreadId::fourths:
+        columnSemitones = static_cast<int>(col) * kFourthSemitones;
+        break;
+
+    case SpreadId::fifths:
+        columnSemitones = static_cast<int>(col) * kFifthSemitones;
+        break;
+
+    case SpreadId::count:
+        break;
+    }
+
+    const double note = static_cast<double>(root + octave * 12 + scaleStep(degree) + columnSemitones + stride) + fine;
+    return static_cast<std::uint8_t>(clampValue(std::lround(note), 0L, 127L));
+}
+
+int Processor::scaleStep(const int degree) const noexcept
+{
+    const int scale = clampValue(static_cast<int>(std::lround(parameters_[static_cast<std::size_t>(ParamId::scale)])),
+                                 0,
+                                 static_cast<int>(ScaleId::count) - 1);
+    return scaleStepAt(static_cast<std::size_t>(scale), degree);
 }
 
 int Processor::scaleInterval(const std::size_t degree) const noexcept
 {
-    const int scale = static_cast<int>(std::lround(parameters_[static_cast<std::size_t>(ParamId::scale)]));
-    const auto index = static_cast<std::size_t>(clampValue(scale, 0, static_cast<int>(ScaleId::count) - 1));
-    const std::size_t wrapped = degree < kGridHeight ? degree : degree % kGridHeight;
-    return static_cast<int>(kScaleIntervals[index][wrapped]);
+    return scaleStep(static_cast<int>(degree));
 }
 
 void Processor::setDegree(Voice& voice, const std::size_t row)

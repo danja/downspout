@@ -14,9 +14,16 @@ keeping its own pitch and timbre, exactly as on the hardware.
 - Click a pad in the UI, or press the matching Launchpad grid pad, to pluck its
   column. The struck cell lights white and the rest of the column takes on that
   string's level colour.
-- The `ROW PITCH` readout under the grid spells out the note each row plays, so
-  the mapping is legible without consulting a manual.
-- `Scale`, `Root` and `Octave` define the ladder the rows play.
+- `Spread` sets how the eight strings are tuned apart. `Scale` (the default)
+  starts each column a scale degree higher, so the grid is a two-octave scale
+  surface and holding a row plays a cluster. `Fourths` and `Fifths` stack
+  perfect intervals, the classic guitar tuning. `Unison` makes every column
+  share one ladder.
+- The `ROW PITCH, STRING <letter>` readout under the grid spells out the note
+  each row plays for the string currently sounding, so the mapping is legible
+  without consulting a manual.
+- `Scale`, `Root`, `Octave`, `Rotate` and `Stride` define the ladder the rows
+  play.
 - `Morph` crossfades from the polyBLEP oscillator pair into the band-limited
   wavetables, acting as a single continuous timbre axis.
 - `Latch` holds strings after the pad is released. Tap a held cell again to
@@ -91,6 +98,24 @@ not a port of its Cortex-M4 code:
 - Cytomic-style dynamic parameter smoothing;
 - a tape-style delay, a shimmer reverb, mid/side width and a soft output stage.
 
+### String spread
+
+Plinky's eight strings are tuned like guitar strings, so strumming across them
+gives eight different notes rather than eight copies of one. `Spread` controls
+how far apart the columns are tuned:
+
+| Spread | Column *c* is tuned |
+|---|---|
+| `Scale` (default) | *c* scale degrees above column 0 |
+| `Fourths` | *c* perfect fourths (5 semitones) above |
+| `Fifths` | *c* perfect fifths (7 semitones) above |
+| `Unison` | the same as column 0 |
+
+In `Scale` the grid becomes a two-octave scale surface: column 0 row 0 is the
+root, column 7 row 0 is the octave, and holding a row across all eight columns
+plays a cluster. `Unison` is the fallback for anyone who wants the original
+single-ladder behaviour.
+
 `docs/scales.md` is the reference for the scale list and its ordinals.
 
 See [docs/design.md](docs/design.md) for implementation notes, including where
@@ -101,3 +126,28 @@ Plank deliberately departs from Plinky.
 The core has no audio I/O of its own beyond rendering. The DPF/VST3 wrapper
 declares two stereo outputs, zero inputs, MIDI in and out, and requests host
 time position so the delay can follow the tempo.
+
+## Saving and restoring
+
+Plank's patch is stored as a single versioned text state keyed by parameter
+symbol, so it is human-readable in a project file and adding or reordering
+parameters later cannot invalidate an existing project:
+
+```
+version=1
+morph=0.770000
+scale=16.000000
+root=55.000000
+...
+```
+
+Opening a project restores the sound settings, the tuning, the LFO routing and
+the LED/MIDI/latch switches. Two things are deliberately **not** saved: the 64
+grid cells, because restoring them would re-pluck every string on load, and the
+panic trigger, because restoring a value of 1 would fire it. A state naming
+either is skipped rather than rejected, so a hand-edited file cannot make the
+plugin start making noise.
+
+The state is versioned, and it refuses unknown parameter names and unknown
+version numbers outright rather than half-applying them, so loading a state
+from an incompatible build leaves the current patch untouched.

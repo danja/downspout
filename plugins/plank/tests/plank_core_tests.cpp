@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <string>
 #include <vector>
 
 namespace {
@@ -124,6 +125,21 @@ Render renderBlocks(Processor& processor,
     return out;
 }
 
+// Mirrors Processor::scaleStep for an explicit scale, so the tables themselves
+// can be checked without constructing a Processor.
+[[nodiscard]] int scaleStepOf(const std::size_t scale, const int degree)
+{
+    const int perOctave = kScaleDegreeCount[scale];
+    int octave = degree / perOctave;
+    int step = degree % perOctave;
+    if (step < 0)
+    {
+        step += perOctave;
+        --octave;
+    }
+    return static_cast<int>(kScaleIntervals[scale][static_cast<std::size_t>(step)]) + octave * 12;
+}
+
 [[nodiscard]] bool containsNoteOn(const ProcessResult& result)
 {
     for (std::uint32_t i = 0; i < result.eventCount; ++i)
@@ -197,12 +213,15 @@ void testScaleLadder()
                 "scale ladder rows should ascend");
     }
 
-    // Every column is the same ladder: pitch is per string, not per cell.
+    // In unison the column is ignored, so every column shares one ladder. This
+    // is the fallback behaviour, not the default: the default Spread is Scale,
+    // which makes the columns different the way Plinky's strings are.
+    processor.setParameter(scale(ParamId::spread), static_cast<float>(SpreadId::unison));
     for (std::size_t col = 0; col < kGridWidth; ++col)
     {
         for (std::size_t row = 0; row < kGridHeight; ++row)
             require(processor.noteForCell(row, col) == processor.noteForCell(row, 0),
-                    "every column should share the same scale ladder");
+                    "unison spread should give every column the same ladder");
     }
 
     // Octave shifts the whole ladder.
@@ -226,11 +245,20 @@ void testScaleLadder()
     require(processor.noteForCell(0, 0) == 48, "stride 3 should push the root up three semitones");
     processor.setParameter(scale(ParamId::stride), 0.0f);
 
-    // scaleInterval wraps and clamps safely.
+    // scaleInterval wraps per octave, not every eight steps: the ladder keeps
+    // climbing rather than resetting, which is what makes the 8-row and 64-cell
+    // surfaces work.
     require(processor.scaleInterval(0) == 0, "scale interval 0 should be zero semitones");
     require(processor.scaleInterval(7) == 12, "scale interval 7 should be the octave");
-    require(processor.scaleInterval(99) == processor.scaleInterval(99 % kGridHeight),
-            "scale interval should wrap past the ladder");
+    require(processor.scaleInterval(14) == 24, "scale interval 14 should be two octaves up");
+    require(processor.scaleInterval(-1) == -1,
+            "a negative degree should fall below the root, not wrap to the top");
+
+    for (int degree = 0; degree < 40; ++degree)
+    {
+        require(processor.scaleInterval(degree + 1) > processor.scaleInterval(degree),
+                "the ladder must ascend without limit");
+    }
 }
 
 // ── Grid plucking and audio ─────────────────────────────────────────────────
@@ -820,10 +848,31 @@ void testScaleIdsMatchTheCanonicalReference()
     require(static_cast<std::uint32_t>(ScaleId::count) == 24, "there should be 24 scales");
     require(kScaleNames.size() == 24u, "every scale needs a display name");
     require(kScaleIntervals.size() == 24u, "every scale needs an interval table");
+    require(kScaleDegreeCount.size() == 24u, "every scale needs a degree count");
 
-    // Row 7 must be the octave for every scale, or the ladder would not ascend.
     for (std::size_t scale = 0; scale < kScaleIntervals.size(); ++scale)
-        require(kScaleIntervals[scale][7] == 12, "scale row 7 should be the octave");
+    {
+        const std::size_t degrees = kScaleDegreeCount[scale];
+        require(degrees >= 5 && degrees <= 8, "a scale needs between five and eight degrees");
+        require(kScaleIntervals[scale][0] == 0, "a scale must start on its root");
+        require(kScaleIntervals[scale][degrees - 1] < 12,
+                "the last degree of an octave must stay below the octave");
+
+        // The ladder must strictly ascend across all eight grid rows for every
+        // scale. Pentatonic, blues and whole-tone failed this when the tables
+        // stored a fixed octave at index 7 instead of wrapping per octave.
+        for (int row = 1; row < static_cast<int>(kGridHeight); ++row)
+        {
+            require(scaleStepOf(scale, row) > scaleStepOf(scale, row - 1),
+                    "every scale ladder must ascend across all eight rows");
+        }
+
+        if (degrees == 7)
+        {
+            require(scaleStepOf(scale, 7) == 12,
+                    "a seven-note scale's eighth row should be the octave");
+        }
+    }
 }
 
 void testEmptyProcessIsSafe()
@@ -843,6 +892,276 @@ void testEmptyProcessIsSafe()
         require(left[i] == 0.0f && right[i] == 0.0f, "an idle process should output silence");
         require(std::isfinite(left[i]) && std::isfinite(right[i]), "output should stay finite");
     }
+}
+
+// ── String spread ───────────────────────────────────────────────────────────
+
+void testMicrotuneIsCentsNotSemitones()
+{
+    Processor processor;
+    processor.init(48000.0);
+    const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+    processor.setParameter(p(ParamId::scale), static_cast<float>(ScaleId::chromatic));
+    processor.setParameter(p(ParamId::root), 60.0f);
+    processor.setParameter(p(ParamId::octave), 0.0f);
+    processor.setParameter(p(ParamId::rotate), 0.0f);
+    processor.setParameter(p(ParamId::stride), 0.0f);
+
+    processor.setParameter(p(ParamId::microtune), 0.0f);
+    require(processor.noteForCell(0, 0) == 60, "zero microtune should leave the root alone");
+
+    // Microtune is in cents. 100 cents is one semitone; 50 cents is a quarter
+    // tone. It used to be applied as whole semitones, so the 8-cent default
+    // pushed every note up by eight.
+    processor.setParameter(p(ParamId::microtune), 50.0f);
+    require(processor.noteForCell(0, 0) == 61, "50 cents should be a quarter tone");
+
+    processor.setParameter(p(ParamId::microtune), 100.0f);
+    require(processor.noteForCell(0, 0) == 61, "100 cents should be one semitone");
+
+    // The parameter spans a quarter tone either side, so it clamps rather than
+    // allowing whole-semitone transposition.
+    processor.setParameter(p(ParamId::microtune), 5000.0f);
+    require(processor.getParameter(p(ParamId::microtune)) == 50.0f,
+            "microtune should clamp to its maximum");
+    require(processor.noteForCell(0, 0) == 61, "the maximum microtune should be a quarter tone");
+
+    // The default is a small detune, not a transposition.
+    Processor defaults;
+    defaults.init(48000.0);
+    require(defaults.getParameter(p(ParamId::microtune)) < 20.0f,
+            "the default microtune should be a few cents");
+    defaults.setParameter(p(ParamId::scale), static_cast<float>(ScaleId::chromatic));
+    defaults.setParameter(p(ParamId::root), 60.0f);
+    require(defaults.noteForCell(0, 0) == 60, "the default microtune must not shift the pitch");
+}
+
+void testUnisonSpreadIgnoresTheColumn()
+{
+    Processor processor;
+    processor.init(48000.0);
+    const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+    processor.setParameter(p(ParamId::scale), static_cast<float>(ScaleId::major));
+    processor.setParameter(p(ParamId::root), 45.0f);
+    processor.setParameter(p(ParamId::spread), static_cast<float>(SpreadId::unison));
+
+    for (std::size_t row = 0; row < kGridHeight; ++row)
+    {
+        for (std::size_t col = 1; col < kGridWidth; ++col)
+        {
+            require(processor.noteForCell(row, col) == processor.noteForCell(row, 0),
+                    "unison spread should ignore the column entirely");
+        }
+    }
+}
+
+void testScaleSpreadMakesColumnsDifferent()
+{
+    Processor processor;
+    processor.init(48000.0);
+    const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+    processor.setParameter(p(ParamId::scale), static_cast<float>(ScaleId::major));
+    processor.setParameter(p(ParamId::root), 45.0f);
+    processor.setParameter(p(ParamId::octave), 0.0f);
+    processor.setParameter(p(ParamId::rotate), 0.0f);
+    processor.setParameter(p(ParamId::spread), static_cast<float>(SpreadId::scale));
+
+    // This is the whole point of the change: eight columns must be eight
+    // different notes, or the grid is eight copies of one instrument.
+    for (std::size_t row = 0; row < kGridHeight; ++row)
+    {
+        for (std::size_t col = 1; col < kGridWidth; ++col)
+        {
+            require(processor.noteForCell(row, col) != processor.noteForCell(row, 0),
+                    "scale spread should make every column a different note");
+            require(processor.noteForCell(row, col) > processor.noteForCell(row, col - 1),
+                    "scale spread columns should ascend left to right");
+        }
+    }
+
+    // Column c is degree c above column 0, so column 7 row 0 is the octave of
+    // the root and the grid spans two octaves.
+    require(processor.noteForCell(0, 7) == 45 + 12,
+            "scale spread column 8 should start an octave up");
+    require(processor.noteForCell(0, 0) == 45, "scale spread column 1 should start on the root");
+
+    // Rows still ascend within a column.
+    for (std::size_t col = 0; col < kGridWidth; ++col)
+    {
+        for (std::size_t row = 1; row < kGridHeight; ++row)
+        {
+            require(processor.noteForCell(row, col) > processor.noteForCell(row - 1, col),
+                    "rows must still ascend within each column");
+        }
+    }
+}
+
+void testFixedIntervalSpreads()
+{
+    Processor processor;
+    processor.init(48000.0);
+    const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+    processor.setParameter(p(ParamId::scale), static_cast<float>(ScaleId::chromatic));
+    processor.setParameter(p(ParamId::root), 45.0f);
+    processor.setParameter(p(ParamId::octave), 0.0f);
+
+    processor.setParameter(p(ParamId::spread), static_cast<float>(SpreadId::fourths));
+    for (std::size_t col = 0; col < kGridWidth; ++col)
+    {
+        const int expected = 45 + static_cast<int>(col) * kFourthSemitones;
+        require(processor.noteForCell(0, col) == expected, "fourths spread should step 5 semitones");
+        require(processor.noteForCell(4, col) == expected + 4, "rows should still move by scale degree");
+    }
+
+    processor.setParameter(p(ParamId::spread), static_cast<float>(SpreadId::fifths));
+    for (std::size_t col = 0; col < kGridWidth; ++col)
+    {
+        const int expected = 45 + static_cast<int>(col) * kFifthSemitones;
+        require(processor.noteForCell(0, col) == expected, "fifths spread should step 7 semitones");
+    }
+}
+
+void testSpreadClampsAndSurvivesTuningChanges()
+{
+    Processor processor;
+    processor.init(48000.0);
+    const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+
+    processor.setParameter(p(ParamId::spread), 99.0f);
+    require(processor.getParameter(p(ParamId::spread)) ==
+                static_cast<float>(static_cast<int>(SpreadId::count) - 1),
+            "spread should clamp to its last mode");
+
+    // A sounding string must follow a tuning change in every spread mode.
+    for (const SpreadId mode : {SpreadId::unison, SpreadId::scale, SpreadId::fourths, SpreadId::fifths})
+    {
+        processor.activate();
+        processor.setParameter(p(ParamId::spread), static_cast<float>(mode));
+
+        const MidiMessage pluck[] = { noteOn(gridToNote(3, 4)) };
+        renderBlocks(processor, 6, pluck, 1u);
+
+        const std::uint8_t before = processor.noteForCell(3, 4);
+        processor.setParameter(p(ParamId::scale), static_cast<float>(ScaleId::blues));
+        processor.setParameter(p(ParamId::octave), 1.0f);
+
+        const std::uint8_t after = processor.noteForCell(3, 4);
+        require(after != before, "a sounding string should follow a tuning change in every spread mode");
+    }
+}
+
+// ── Session state ───────────────────────────────────────────────────────────
+
+void testStateRoundTrips()
+{
+    Processor saved;
+    saved.init(48000.0);
+
+    const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+    saved.setParameter(p(ParamId::morph), 0.42f);
+    saved.setParameter(p(ParamId::cutoff), 0.17f);
+    saved.setParameter(p(ParamId::drive), 0.88f);
+    saved.setParameter(p(ParamId::resonance), 0.63f);
+    saved.setParameter(p(ParamId::envAttack), 123.0f);
+    saved.setParameter(p(ParamId::envRelease), 777.0f);
+    saved.setParameter(p(ParamId::scale), static_cast<float>(ScaleId::blues));
+    saved.setParameter(p(ParamId::root), 52.0f);
+    saved.setParameter(p(ParamId::octave), -1.0f);
+    saved.setParameter(p(ParamId::width), 0.29f);
+    saved.setParameter(p(ParamId::level), 0.91f);
+    saved.setParameter(p(ParamId::latch), 1.0f);
+    saved.setParameter(p(ParamId::midiThru), 1.0f);
+    saved.setParameter(p(ParamId::ledFeedback), 0.0f);
+    saved.setParameter(p(ParamId::lfoATarget), static_cast<float>(ModTarget::morph));
+
+    const std::string state = saved.serializeParameters();
+    require(!state.empty(), "serialize should produce a non-empty state");
+    require(state.find("version=") != std::string::npos, "state should carry a version line");
+
+    // A reopened plugin starts from defaults, then restores.
+    Processor reopened;
+    reopened.init(48000.0);
+    require(reopened.getParameter(p(ParamId::cutoff)) != 0.17f,
+            "a fresh plugin should not already have the saved values");
+
+    require(reopened.deserializeParameters(state), "a well-formed state should load");
+
+    for (const ParamId id : {ParamId::morph, ParamId::cutoff, ParamId::drive, ParamId::resonance,
+                             ParamId::envAttack, ParamId::envRelease, ParamId::scale, ParamId::root,
+                             ParamId::octave, ParamId::width, ParamId::level, ParamId::latch,
+                             ParamId::midiThru, ParamId::ledFeedback, ParamId::lfoATarget})
+    {
+        require(std::fabs(reopened.getParameter(p(id)) - saved.getParameter(p(id))) < 1.0e-4f,
+                "every persisted parameter should survive a save and reload");
+    }
+}
+
+void testStateRestoresTheMusicalLadder()
+{
+    Processor saved;
+    saved.init(48000.0);
+    saved.setParameter(static_cast<std::uint32_t>(ParamId::scale), static_cast<float>(ScaleId::wholeTone));
+    saved.setParameter(static_cast<std::uint32_t>(ParamId::root), 40.0f);
+    saved.setParameter(static_cast<std::uint32_t>(ParamId::octave), 2.0f);
+
+    const auto before = saved.noteForCell(3, 0);
+
+    Processor reopened;
+    reopened.init(48000.0);
+    require(reopened.deserializeParameters(saved.serializeParameters()),
+            "the ladder state should load");
+
+    require(reopened.noteForCell(3, 0) == before,
+            "the grid's pitches should be identical after a reload");
+}
+
+void testStateRejectsGarbage()
+{
+    Processor processor;
+    processor.init(48000.0);
+    processor.setParameter(static_cast<std::uint32_t>(ParamId::cutoff), 0.6f);
+    const float before = processor.getParameter(static_cast<std::uint32_t>(ParamId::cutoff));
+
+    require(!processor.deserializeParameters(""), "an empty state should be rejected");
+    require(!processor.deserializeParameters("nonsense"), "a state with no version should be rejected");
+    require(!processor.deserializeParameters("version=999\ncutoff=0.1\n"),
+            "an unknown version should be rejected");
+    require(!processor.deserializeParameters("version=1\nnot_a_parameter=0.5\n"),
+            "an unknown parameter should be rejected");
+    require(!processor.deserializeParameters("version=1\ncutoff\n"),
+            "a line without a separator should be rejected");
+
+    require(processor.getParameter(static_cast<std::uint32_t>(ParamId::cutoff)) == before,
+            "a rejected state must not partially change the patch");
+}
+
+void testStateExcludesGridCellsAndPanic()
+{
+    Processor processor;
+    processor.init(48000.0);
+    processor.setParameter(static_cast<std::uint32_t>(ParamId::morph), 0.3f);
+
+    const std::string state = processor.serializeParameters();
+
+    // Restoring cells would re-pluck every string on load, and restoring a
+    // panic value of 1 would fire the panic.
+    require(state.find("cell_1=") == std::string::npos, "grid cells should not be persisted");
+    require(state.find("panic=") == std::string::npos, "the panic trigger should not be persisted");
+    require(state.find("morph=") != std::string::npos, "real settings should be persisted");
+
+    // Even if a hand-edited state names them, they must not re-pluck.
+    const std::string tampered =
+        "version=1\nmorph=0.5\ncell_1=1\ncell_9=1\npanic=1\n";
+    Processor other;
+    other.init(48000.0);
+    require(other.deserializeParameters(tampered), "a state naming cells should still parse");
+
+    std::vector<float> left(kBlock * 4, 0.0f);
+    std::vector<float> right(kBlock * 4, 0.0f);
+    ProcessResult result {};
+    other.process(left.data(), right.data(), kBlock * 4, TransportSnapshot {}, nullptr, 0, result);
+    require(other.getStatus().activeStrings == 0.0f,
+            "a restored state must not leave strings sounding");
 }
 
 }  // namespace
@@ -876,6 +1195,15 @@ int main()
     testParameterClamping();
     testScaleIdsMatchTheCanonicalReference();
     testEmptyProcessIsSafe();
+    testMicrotuneIsCentsNotSemitones();
+    testUnisonSpreadIgnoresTheColumn();
+    testScaleSpreadMakesColumnsDifferent();
+    testFixedIntervalSpreads();
+    testSpreadClampsAndSurvivesTuningChanges();
+    testStateRoundTrips();
+    testStateRestoresTheMusicalLadder();
+    testStateRejectsGarbage();
+    testStateExcludesGridCellsAndPanic();
     std::cout << "plank core tests passed\n";
     return 0;
 }

@@ -188,3 +188,46 @@ original, duplicating table rows, and a separate branch built cells by
 When appending conditionally in a loop, `continue` in every branch, or build a
 list of replacements keyed by exact match and look up rather than branch. Diff
 the result before trusting it.
+
+## Three bugs the guitar-string change exposed
+
+Adding `Spread` meant the pitch mapping had to become two-dimensional, which
+forced a proper look at the scale tables. Three defects came out of it, and all
+three were invisible to the existing tests.
+
+**The scale ladders descended at the top row.** `kScaleIntervals` stored a fixed
+octave (12) at index 7, which is only correct for a seven-note scale. For
+pentatonic (5 degrees), blues and whole-tone (6) the ladder went
+`0,2,4,7,9,12,14,12` — row 7 was *lower* than row 6. The test asserted
+`kScaleIntervals[scale][7] == 12`, which those scales happened to satisfy, and
+only checked monotonicity on major. Fixed by storing the notes of one octave
+plus a per-scale degree count, and wrapping with an octave per repetition. The
+test now checks strict ascent across all eight rows for all 24 scales, and the
+UI's note readout shares `scaleStepAt()` with the core so it cannot drift.
+
+**`microtune` was applied as whole semitones.** The parameter is in cents with a
+default of 8, and the code computed `fine = lround(microtune * 100)` then used
+`fine / 100`, which is just `microtune` — so the default patch was 8 semitones
+sharp. The test set `microtune` to 0 before checking pitches, which hid it
+completely. Fixed by keeping it a `double` all the way to the final rounding, and
+the test now asserts 50 cents is a quarter tone and that the default leaves the
+pitch alone.
+
+**Plank had no session state at all.** `initState`/`getState`/`setState` were
+never implemented, and `DISTRHO_PLUGIN_WANT_STATE` was never set. Two further
+mistakes hid it: the constructor was `Plugin(kParameterCount, 0, 2)`, where the
+third argument is *stateCount* not outputs, so it declared two states it could
+never fill; and `getState()` is gated on a separate macro,
+`DISTRHO_PLUGIN_WANT_FULL_STATE`, not on `WANT_STATE`. Chasing it across the repo
+found 6 plugins with `WANT_STATE` but no `WANT_FULL_STATE`, which is worse than
+having no state: DPF's VST3 wrapper seeds its state map from `initState`'s
+`defaultValue` (`DistrhoPluginVST3.cpp:662`) and only refreshes it from the
+plugin inside `#if WANT_FULL_STATE` (line 1185), so those plugins write their
+**defaults** into every host project and silently discard the user's settings.
+24 more plugins have no state at all. `scripts/check-plugin-state.sh` now detects
+all three classes.
+
+The common thread is that all three were masked by tests that zeroed the
+offending parameter or only checked one scale. When a test needs a parameter to be
+inert, assert the *default* is inert rather than forcing it to zero — that is how
+the microtune bug survived.

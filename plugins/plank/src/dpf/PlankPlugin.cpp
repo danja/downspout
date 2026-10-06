@@ -8,13 +8,21 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <iterator>
+#include <string_view>
 
 START_NAMESPACE_DISTRHO
 
 namespace {
 
 using namespace downspout::plank;
+
+// One text state holding the whole patch. Without it the host has nothing to
+// save and every parameter reverts on reopen.
+constexpr std::uint32_t kStateParameters = 0;
+constexpr std::uint32_t kStateCount = 1;
+constexpr const char* kStateKeyParameters = "parameters";
 
 ParameterEnumerationValue kScaleEnumValues[] = {
     {0.0f, kScaleNames[0]},   {1.0f, kScaleNames[1]},   {2.0f, kScaleNames[2]},
@@ -25,6 +33,11 @@ ParameterEnumerationValue kScaleEnumValues[] = {
     {15.0f, kScaleNames[15]}, {16.0f, kScaleNames[16]}, {17.0f, kScaleNames[17]},
     {18.0f, kScaleNames[18]}, {19.0f, kScaleNames[19]}, {20.0f, kScaleNames[20]},
     {21.0f, kScaleNames[21]}, {22.0f, kScaleNames[22]}, {23.0f, kScaleNames[23]},
+};
+
+ParameterEnumerationValue kSpreadEnumValues[] = {
+    {0.0f, kSpreadNames[0]}, {1.0f, kSpreadNames[1]},
+    {2.0f, kSpreadNames[2]}, {3.0f, kSpreadNames[3]},
 };
 
 ParameterEnumerationValue kLfoEnumValues[] = {
@@ -100,7 +113,7 @@ TransportSnapshot toTransport(const TimePosition& timePos)
 class PlankPlugin : public Plugin {
 public:
     PlankPlugin()
-        : Plugin(kParameterCount, 0, 2)
+        : Plugin(kParameterCount, 0, kStateCount)
     {
         processor_.init(getSampleRate());
     }
@@ -170,6 +183,10 @@ protected:
             applyEnumValues(parameter, kScaleEnumValues, std::size(kScaleEnumValues));
             parameter.ranges.def = spec.defaultValue;
             break;
+        case ParamId::spread:
+            applyEnumValues(parameter, kSpreadEnumValues, std::size(kSpreadEnumValues));
+            parameter.ranges.def = spec.defaultValue;
+            break;
         case ParamId::lfoAShape:
         case ParamId::lfoBShape:
             applyEnumValues(parameter, kLfoEnumValues, std::size(kLfoEnumValues));
@@ -195,6 +212,34 @@ protected:
     void setParameterValue(const uint32_t index, const float value) override
     {
         processor_.setParameter(index, value);
+    }
+
+    void initState(const uint32_t index, State& state) override
+    {
+        if (index != kStateParameters)
+            return;
+        state.key = kStateKeyParameters;
+        state.label = "Parameters";
+        state.hints = kStateIsOnlyForDSP;
+        state.defaultValue = "";
+    }
+
+    String getState(const char* key) const override
+    {
+        if (std::strcmp(key, kStateKeyParameters) == 0)
+            return String(processor_.serializeParameters().c_str());
+        return String();
+    }
+
+    void setState(const char* key, const char* value) override
+    {
+        if (std::strcmp(key, kStateKeyParameters) != 0)
+            return;
+
+        // A malformed state is ignored rather than half-applied; the core
+        // refuses unknown symbols and version mismatches outright.
+        static_cast<void>(
+            processor_.deserializeParameters(value != nullptr ? std::string_view(value) : std::string_view()));
     }
 
     void activate() override { processor_.activate(); }

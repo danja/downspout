@@ -20,7 +20,7 @@ using namespace downspout::plank;
 
 constexpr float kGridX = 24.0f;
 constexpr float kGridY = 100.0f;
-constexpr float kCell = 38.0f;
+constexpr float kCell = 42.0f;
 constexpr float kGap = 5.0f;
 constexpr float kGridPitch = kCell + kGap;
 constexpr float kGridSize = kGridWidth * kGridPitch - kGap;
@@ -56,8 +56,9 @@ struct Rect {
     }
 };
 
-constexpr std::size_t kSliderCount = 23;
-constexpr std::size_t kSelectorCount = 8;
+constexpr std::size_t kSliderCount = 26;
+constexpr std::size_t kSelectorCount = 11;
+constexpr std::size_t kPerSliderRow = 5;
 constexpr std::size_t kButtonCount = 5;
 constexpr std::size_t kToggleCount = 4;
 
@@ -85,11 +86,13 @@ constexpr SliderDef kSliders[kSliderCount] = {
     {ParamId::resonance, "Reso", 1},
     {ParamId::filterEnv, "F Env", 1},
 
+    {ParamId::envLevel, "Level", 2},
     {ParamId::envAttack, "Attack", 2},
     {ParamId::envDecay, "Decay", 2},
-    {ParamId::envSustain, "Sustain", 2},
-    {ParamId::envRelease, "Release", 2},
+    {ParamId::envSustain, "Sus", 2},
+    {ParamId::envRelease, "Rel", 2},
 
+    {ParamId::modLevel, "Mod Lvl", 3},
     {ParamId::modAttack, "M Atk", 3},
     {ParamId::modDecay, "M Dec", 3},
     {ParamId::modSustain, "M Sus", 3},
@@ -108,8 +111,11 @@ constexpr SliderDef kSliders[kSliderCount] = {
 
 constexpr SelectorDef kSelectors[kSelectorCount] = {
     {ParamId::scale, "Scale", 4},
+    {ParamId::spread, "Spread", 4},
     {ParamId::root, "Root", 4},
     {ParamId::octave, "Octave", 4},
+    {ParamId::rotate, "Rotate", 4},
+    {ParamId::stride, "Stride", 4},
     {ParamId::lfoAShape, "LFO A", 4},
     {ParamId::lfoATarget, "A Dest", 4},
     {ParamId::lfoBShape, "LFO B", 4},
@@ -177,6 +183,9 @@ constexpr const char* kLaneLabels[6] = {
     case ParamId::lfoBTarget:
         return kModTargetNames[static_cast<std::size_t>(clampf(value, 0.0f,
                                                               static_cast<float>(kModTargetNames.size() - 1u)))];
+    case ParamId::spread:
+        return kSpreadNames[static_cast<std::size_t>(clampf(value, 0.0f,
+                                                            static_cast<float>(kSpreadNames.size() - 1u)))];
     case ParamId::root:
         std::snprintf(buffer, sizeof(buffer), "%d", static_cast<int>(std::lround(value)));
         return buffer;
@@ -515,31 +524,40 @@ private:
         }
     }
 
-    // Spell out the pitch each row plays under the current tuning. Without this
-    // the grid is a mystery until the player already knows the mapping.
+    // Spell out the pitch each row plays for one string. With the columns
+    // spread they no longer share a ladder, so the readout follows whichever
+    // string is currently sounding and falls back to the first.
     void drawScaleRuler()
     {
         const float y = kGridY + kGridSize + 17.0f;
-        const std::size_t scale = static_cast<std::size_t>(
-            clampf(values_[idx(ParamId::scale)], 0.0f, static_cast<float>(kScaleNames.size() - 1u)));
-        const int root = static_cast<int>(std::lround(values_[idx(ParamId::root)]));
-        const int octave = static_cast<int>(std::lround(values_[idx(ParamId::octave)]));
+
+        std::size_t column = 0;
+        for (std::size_t i = 0; i < kStringCount; ++i)
+        {
+            if (values_[idx(ParamId::outString0) + i] > 0.001f)
+            {
+                column = i;
+                break;
+            }
+        }
 
         static constexpr const char* kNoteNames[12] = {"C",  "C#", "D",  "D#", "E",  "F",
                                                        "F#", "G",  "G#", "A",  "A#", "B"};
 
+        char caption[32];
+        std::snprintf(caption, sizeof(caption), "ROW PITCH, STRING %c",
+                      static_cast<char>('A' + column));
+
         fc(t().textDim);
         fontSize(9.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        text(kGridX, y, "ROW PITCH", nullptr);
+        text(kGridX, y, caption, nullptr);
 
         fc(t().textPrimary);
         textAlign(ALIGN_CENTER | ALIGN_TOP);
         for (std::size_t row = 0; row < kGridHeight; ++row)
         {
-            const int interval = kScaleIntervals[scale][row];
-            const int note = root + octave * 12 + interval;
-
+            const int note = noteForRow(row, column);
             char label[16];
             std::snprintf(label, sizeof(label), "%s%d", kNoteNames[((note % 12) + 12) % 12], note / 12 - 1);
             text(kGridX + static_cast<float>(row) * kGridPitch + kCell * 0.5f, y + 13.0f, label, nullptr);
@@ -548,6 +566,44 @@ private:
         fc(t().textDisabled);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         text(kGridX, y + 30.0f, "column = string, row = scale degree", nullptr);
+    }
+
+    // Mirrors the engine's pitch mapping for display only. scaleStepAt() is
+    // shared with the core, so the readout cannot drift from the sound.
+    [[nodiscard]] int noteForRow(const std::size_t row, const std::size_t column) const noexcept
+    {
+        const auto p = [](ParamId id) { return static_cast<std::size_t>(id); };
+        const auto scale = static_cast<std::size_t>(clampf(values_[p(ParamId::scale)], 0.0f,
+                                                            static_cast<float>(ScaleId::count) - 1.0f));
+        const int root = static_cast<int>(std::lround(values_[p(ParamId::root)]));
+        const int octave = static_cast<int>(std::lround(values_[p(ParamId::octave)]));
+        const int rotate = static_cast<int>(std::lround(values_[p(ParamId::rotate)]));
+        const int stride = static_cast<int>(std::lround(values_[p(ParamId::stride)]));
+        const double fine = static_cast<double>(values_[p(ParamId::microtune)]) * 0.01;
+
+        int degree = static_cast<int>(row) + rotate;
+        int columnSemitones = 0;
+        switch (static_cast<SpreadId>(static_cast<int>(std::lround(values_[p(ParamId::spread)]))))
+        {
+        case SpreadId::unison:
+            break;
+        case SpreadId::scale:
+            degree += static_cast<int>(column);
+            break;
+        case SpreadId::fourths:
+            columnSemitones = static_cast<int>(column) * kFourthSemitones;
+            break;
+        case SpreadId::fifths:
+            columnSemitones = static_cast<int>(column) * kFifthSemitones;
+            break;
+        case SpreadId::count:
+            break;
+        }
+
+        const double note = static_cast<double>(root + octave * 12 + scaleStepAt(scale, degree) +
+                                                columnSemitones + stride) +
+                            fine;
+        return static_cast<int>(clampf(static_cast<float>(std::lround(note)), 0.0f, 127.0f));
     }
 
     void drawPad(const Rect& rect, const std::size_t row, const std::size_t, const float level)
@@ -659,8 +715,6 @@ private:
 
     void drawSliderLanes(const float x, float y, const float w, const float bottom)
     {
-        constexpr std::size_t kPerRow = 4;
-
         for (std::size_t lane = 0; lane < 6; ++lane)
         {
             std::size_t inLane = 0;
@@ -672,7 +726,7 @@ private:
             if (inLane == 0u)
                 continue;
 
-            const std::size_t rows = (inLane + kPerRow - 1u) / kPerRow;
+            const std::size_t rows = (inLane + kPerSliderRow - 1u) / kPerSliderRow;
             const float laneHeight = kLaneLabelH + static_cast<float>(rows) * (kSliderH + kRowGap);
 
             // Drop a lane rather than let it overflow into the button strip.
@@ -685,7 +739,8 @@ private:
             text(x, y, kLaneLabels[lane], nullptr);
             y += kLaneLabelH;
 
-            const float sliderW = (w - static_cast<float>(kPerRow - 1u) * kItemGap) / static_cast<float>(kPerRow);
+            const float sliderW =
+                (w - static_cast<float>(kPerSliderRow - 1u) * kItemGap) / static_cast<float>(kPerSliderRow);
 
             std::size_t placed = 0;
             for (const SliderDef& slider : kSliders)
@@ -693,8 +748,8 @@ private:
                 if (slider.lane != lane)
                     continue;
 
-                const std::size_t row = placed / kPerRow;
-                const std::size_t col = placed % kPerRow;
+                const std::size_t row = placed / kPerSliderRow;
+                const std::size_t col = placed % kPerSliderRow;
                 const Rect rect {x + static_cast<float>(col) * (sliderW + kItemGap),
                                  y + static_cast<float>(row) * (kSliderH + kRowGap), sliderW, kSliderH};
                 sliderRects_[sliderCount_++] = rect;

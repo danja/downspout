@@ -1,5 +1,6 @@
 add_library(downspout_plank_core STATIC
     src/plank_core.cpp
+    src/plank_serialization.cpp
     src/plank_voice.cpp
     src/plank_wavetables.cpp
 )

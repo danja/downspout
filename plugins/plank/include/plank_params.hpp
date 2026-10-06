@@ -105,36 +105,68 @@ inline constexpr std::array<ScaleId, kStringCount> kSideButtonScales = {{
     ScaleId::wholeTone,
 }};
 
-// Eight semitone offsets per scale, index 7 always the octave, so grid row 7
-// sits one octave above row 0. Ordinals follow ScaleId and therefore
-// docs/scales.md.
+// The notes of one octave, and how many of them the scale actually uses. The
+// ladder is built by wrapping with an octave per repetition, so a five-note
+// pentatonic and a seven-note diatonic both ascend correctly across all eight
+// grid rows. Storing a fixed octave at index 7 instead would make pentatonic,
+// blues and whole-tone *descend* at the top row, which is how they were first
+// written and what the test suite failed to catch.
 inline constexpr std::array<std::array<std::uint8_t, 8>, static_cast<std::size_t>(ScaleId::count)>
     kScaleIntervals = {{
-        {{0, 1, 2, 3, 4, 5, 6, 12}},    // chromatic
-        {{0, 2, 4, 5, 7, 9, 11, 12}},   // major
-        {{0, 2, 4, 5, 7, 9, 11, 12}},   // ionian
-        {{0, 2, 3, 5, 7, 8, 10, 12}},   // minor
-        {{0, 2, 3, 5, 7, 8, 11, 12}},   // harmonic minor
-        {{0, 2, 3, 5, 7, 9, 11, 12}},   // melodic minor
-        {{0, 2, 3, 5, 7, 9, 10, 12}},   // dorian
-        {{0, 1, 3, 5, 7, 8, 10, 12}},   // phrygian
-        {{0, 2, 4, 6, 7, 9, 11, 12}},   // lydian
-        {{0, 2, 4, 5, 7, 9, 10, 12}},   // mixolydian
-        {{0, 1, 3, 5, 6, 8, 10, 12}},   // locrian
-        {{0, 1, 4, 5, 7, 8, 10, 12}},   // phrygian dominant
-        {{0, 1, 4, 6, 7, 9, 11, 12}},   // neapolitan major
-        {{0, 1, 3, 6, 7, 8, 10, 12}},   // neapolitan minor
-        {{0, 2, 4, 7, 9, 12, 14, 12}},  // pentatonic major
-        {{0, 3, 5, 7, 10, 12, 15, 12}}, // pentatonic minor
-        {{0, 3, 5, 6, 7, 10, 12, 12}},  // blues
-        {{0, 2, 4, 6, 8, 10, 12, 12}},  // whole tone
-        {{0, 1, 3, 4, 6, 8, 10, 12}},   // altered
-        {{0, 1, 3, 4, 6, 7, 9, 12}},    // half-whole diminished
-        {{0, 2, 3, 5, 6, 8, 9, 12}},    // whole-half diminished
-        {{0, 2, 4, 5, 7, 9, 10, 12}},   // bebop dominant
-        {{0, 2, 4, 5, 7, 8, 9, 12}},    // bebop major
-        {{0, 2, 3, 4, 5, 7, 9, 12}},    // bebop minor
+        {{0, 1, 2, 3, 4, 5, 6, 7}},    // chromatic
+        {{0, 2, 4, 5, 7, 9, 11, 0}},    // major
+        {{0, 2, 4, 5, 7, 9, 11, 0}},    // ionian
+        {{0, 2, 3, 5, 7, 8, 10, 0}},    // minor
+        {{0, 2, 3, 5, 7, 8, 11, 0}},    // harmonic minor
+        {{0, 2, 3, 5, 7, 9, 11, 0}},    // melodic minor
+        {{0, 2, 3, 5, 7, 9, 10, 0}},    // dorian
+        {{0, 1, 3, 5, 7, 8, 10, 0}},    // phrygian
+        {{0, 2, 4, 6, 7, 9, 11, 0}},    // lydian
+        {{0, 2, 4, 5, 7, 9, 10, 0}},    // mixolydian
+        {{0, 1, 3, 5, 6, 8, 10, 0}},    // locrian
+        {{0, 1, 4, 5, 7, 8, 10, 0}},    // phrygian dominant
+        {{0, 1, 4, 6, 7, 9, 11, 0}},    // neapolitan major
+        {{0, 1, 3, 6, 7, 8, 10, 0}},    // neapolitan minor
+        {{0, 2, 4, 7, 9, 0, 0, 0}},     // pentatonic major
+        {{0, 3, 5, 7, 10, 0, 0, 0}},    // pentatonic minor
+        {{0, 3, 5, 6, 7, 10, 0, 0}},    // blues
+        {{0, 2, 4, 6, 8, 10, 0, 0}},    // whole tone
+        {{0, 1, 3, 4, 6, 8, 10, 0}},    // altered
+        {{0, 1, 3, 4, 6, 7, 9, 0}},     // half-whole diminished
+        {{0, 2, 3, 5, 6, 8, 9, 0}},     // whole-half diminished
+        {{0, 2, 4, 5, 7, 9, 10, 0}},    // bebop dominant
+        {{0, 2, 4, 5, 7, 8, 9, 0}},     // bebop major
+        {{0, 2, 3, 4, 5, 7, 9, 0}},     // bebop minor
     }};
+
+// How many entries of kScaleIntervals are real degrees. Everything past this is
+// padding and must not be read.
+inline constexpr std::array<std::uint8_t, static_cast<std::size_t>(ScaleId::count)> kScaleDegreeCount = {{
+    8,  // chromatic
+    7,  // major
+    7,  // ionian
+    7,  // minor
+    7,  // harmonic minor
+    7,  // melodic minor
+    7,  // dorian
+    7,  // phrygian
+    7,  // lydian
+    7,  // mixolydian
+    7,  // locrian
+    7,  // phrygian dominant
+    7,  // neapolitan major
+    7,  // neapolitan minor
+    5,  // pentatonic major
+    5,  // pentatonic minor
+    6,  // blues
+    6,  // whole tone
+    7,  // altered
+    7,  // half-whole diminished
+    7,  // whole-half diminished
+    7,  // bebop dominant
+    7,  // bebop major
+    7,  // bebop minor
+}};
 
 // ── Modulation ──────────────────────────────────────────────────────────────
 
@@ -186,6 +218,36 @@ inline constexpr std::array<const char*, static_cast<std::size_t>(ModTarget::cou
     "Drive",
 }};
 
+// ── String spread ───────────────────────────────────────────────────────────
+//
+// Plinky's eight strings are tuned like guitar strings: strum across them and
+// you get eight different notes, not eight copies of one. `Spread` is what
+// separates a column's tuning from the others.
+//
+//   unison  every column plays the same ladder (the column is ignored)
+//   scale   column c starts c scale degrees higher, so the grid becomes a
+//           two-octave scale surface and holding a row plays a cluster
+//   fourths column c is c perfect fourths higher, the classic guitar stack
+//   fifths  column c is c perfect fifths higher
+
+enum class SpreadId : std::uint32_t {
+    unison = 0,
+    scale,
+    fourths,
+    fifths,
+    count,
+};
+
+inline constexpr std::array<const char*, static_cast<std::size_t>(SpreadId::count)> kSpreadNames = {{
+    "Unison",
+    "Scale",
+    "Fourths",
+    "Fifths",
+}};
+
+inline constexpr int kFourthSemitones = 5;
+inline constexpr int kFifthSemitones = 7;
+
 // ── Parameters ──────────────────────────────────────────────────────────────
 //
 // Host-writable parameters first, then read-only status parameters the UI uses
@@ -219,6 +281,7 @@ enum class ParamId : std::uint32_t {
     // Pitch and scale
     root,
     scale,
+    spread,
     rotate,
     microtune,
     stride,
@@ -381,6 +444,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
 
     {"root", "Root", "", 21.0f, 108.0f, 45.0f, true, false},
     {"scale", "Scale", "", 0.0f, static_cast<float>(static_cast<std::size_t>(ScaleId::count) - 1u), 1.0f, true, false},
+    {"spread", "Spread", "", 0.0f, static_cast<float>(static_cast<std::size_t>(SpreadId::count) - 1u), 1.0f, true, false},
     {"rotate", "Rotate", "", 0.0f, 7.0f, 0.0f, true, false},
     {"microtune", "Microtune", "ct", 0.0f, 50.0f, 8.0f, false, false},
     {"stride", "Stride", "st", -24.0f, 24.0f, 0.0f, true, false},
@@ -533,6 +597,35 @@ inline constexpr std::uint8_t kLedCyan = 37;
 inline constexpr std::uint8_t kLedBlue = 45;
 inline constexpr std::uint8_t kLedPurple = 53;
 inline constexpr std::uint8_t kLedPink = 57;
+
+// ── Ladder maths ────────────────────────────────────────────────────────────
+//
+// Shared by the core and the UI so the panel's note readout cannot drift from
+// what the engine actually plays.
+
+[[nodiscard]] constexpr std::size_t scaleDegreeCount(const std::size_t scale) noexcept
+{
+    return scale < kScaleDegreeCount.size() ? kScaleDegreeCount[scale] : 7u;
+}
+
+// Semitones above the root for a scale degree, wrapping per octave. Negative
+// degrees fall below the root rather than wrapping to the top.
+[[nodiscard]] constexpr int scaleStepAt(const std::size_t scale, const int degree) noexcept
+{
+    if (scale >= kScaleIntervals.size())
+        return degree;
+
+    const int perOctave = static_cast<int>(kScaleDegreeCount[scale]);
+    int octave = degree / perOctave;
+    int step = degree % perOctave;
+    if (step < 0)
+    {
+        step += perOctave;
+        --octave;
+    }
+
+    return static_cast<int>(kScaleIntervals[scale][static_cast<std::size_t>(step)]) + octave * 12;
+}
 
 // ── Grid helpers ────────────────────────────────────────────────────────────
 

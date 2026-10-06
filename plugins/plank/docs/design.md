@@ -46,6 +46,7 @@ is recorded in `README.md` and here.
 | scale quantised pitch lookup | `kScaleIntervals` plus `noteForCell` |
 | tape delay, shimmer reverb, compressor, M/S width | `renderDelay`, `renderReverb`, `applyOutputStage` |
 | eight fingers as eight voices | eight grid columns as eight strings |
+| strings tuned apart, like a guitar | `Spread` separates the columns |
 
 ## What was left behind, and why
 
@@ -84,7 +85,13 @@ round harmonic tone is one gesture rather than two coupled ones.
 along a string to pitch, continuously. A Launchpad has discrete pads, so each
 column instead gets one octave of the current scale across its eight rows, with
 `Rotate` shifting which degree sits under which row and `Stride` pushing the whole
-ladder by a constant interval.
+ladder by a constant interval. On top of that, `Spread` separates the columns the
+way Plinky's strings are separated, which is what makes the eight voices sound
+like eight strings rather than one string played eight times.
+
+**Microtune is cents.** Plinky's `P_MICROTUNE` is a fine pitch offset in cents.
+Plank keeps that meaning and applies it as a fractional-semitone detune, so the
+8-cent default is a subtle chorus rather than a transposition.
 
 ## Launchpad contract
 

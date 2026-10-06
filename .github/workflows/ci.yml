@@ -33,6 +33,15 @@ jobs:
             bash -n "$f"
           done
 
+      # Session state is easy to get subtly wrong: WANT_STATE without
+      # WANT_FULL_STATE compiles, looks like it saves, and actually records the
+      # plugin's defaults every time. Nothing in the core test suites can see
+      # it, so it is checked here. Reported rather than enforced while 6 plugins
+      # still carry the bug -- see TODO.md.
+      - name: Audit plugin session state
+        continue-on-error: true
+        run: bash scripts/check-plugin-state.sh --report
+
   release-package-build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.runner }}

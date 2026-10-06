@@ -6,6 +6,9 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
+#include <string>
+#include <string_view>
 #include <vector>
 
 namespace downspout::plank {
@@ -67,9 +70,21 @@ public:
 
     // Grid mapping helpers, shared with the UI and the tests.
     [[nodiscard]] std::uint8_t noteForCell(std::size_t row, std::size_t col) const noexcept;
+    [[nodiscard]] int scaleStep(int degree) const noexcept;
     [[nodiscard]] int scaleInterval(std::size_t degree) const noexcept;
     [[nodiscard]] float levelForString(std::size_t index) const noexcept;
     [[nodiscard]] std::uint8_t ledColorForCell(std::size_t row, std::size_t col) const noexcept;
+
+    // Host session state. A versioned, symbol-keyed text form, so parameters
+    // can be reordered or inserted without invalidating saved projects, and a
+    // corrupt or truncated value is rejected rather than half-applied.
+    [[nodiscard]] std::string serializeParameters() const;
+    [[nodiscard]] bool deserializeParameters(std::string_view text);
+
+private:
+    [[nodiscard]] std::optional<std::array<float, kParameterCount>> parseState(std::string_view text) const;
+
+public:
 
 private:
     struct Modulation {

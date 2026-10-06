@@ -35,5 +35,9 @@ performance scale.
 
 Playable and building. The granular sampler, arpeggiator and step sequencer from
 Plinky are deliberately absent, and the wavetables are synthesised rather than
-Plinky's generated data, so the timbre sweep is close to the hardware but not
+Planky's generated data, so the timbre sweep is close to the hardware but not
 identical to it.
+
+The eight strings are tuned apart by `Spread`, defaulting to `Scale` so the grid
+is a two-octave scale surface and holding a row plays a cluster. `Unison`
+restores the original single-ladder behaviour.

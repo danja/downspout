@@ -135,6 +135,17 @@ into a broken release.
   package builds, plus a `bash -n` pass over `install.sh` and `scripts/*.sh`. The
   point is timing: this drift was previously caught only by
   `package-release.sh`, i.e. after configure, build, ctest and staging.
+* [x] **`scripts/check-plugin-state.sh` added** for the session-state audit below.
+  It classifies all 61 plugins into correct / broken / no-state and also flags
+  inert `WANT_STATE` macros on plugins whose `stateCount` is 0. Wired into CI as a
+  non-blocking `--report` step, since 6 plugins still carry the bug.
+* [x] **Plank's own session state fixed** (2026-10-06): `initState`/`getState`/
+  `setState` implemented, `WANT_STATE` and `WANT_FULL_STATE` both set, and the
+  constructor corrected from `Plugin(kParameterCount, 0, 2)` — where the third
+  argument is stateCount, not outputs — to `Plugin(kParameterCount, 0, kStateCount)`.
+  The patch is one versioned, symbol-keyed text state. Grid cells and the panic
+  trigger are deliberately not persisted, and a state naming either is skipped
+  rather than rejected so a hand-edited file cannot re-pluck strings on load.
 * [x] Negative-tested. All five regression classes are detected: a bundle dropped
   from the base variant only, dropped from every variant, a typo'd bundle name, an
   `install.sh` option removed, and a `CONDITIONAL_FROM_BASE` entry appearing in no
@@ -175,6 +186,44 @@ into a broken release.
     chunk silently loses loop points on a sampler. The same function also reads
     only the first of `numSampleLoops` loop records, despite the comment
     describing the record layout.
+
+## Session state is missing or broken in 30 of 61 plugins (found 2026-10-06)
+
+Reported as "settings are not saved" while testing `plank`, then traced across
+the whole set. `scripts/check-plugin-state.sh` classifies every plugin:
+
+* **23 plugins have no session state at all** — neither `WANT_STATE` nor
+  `initState`/`getState`/`setState`: arpgen, basilico, canticle, conductor,
+  drift, drumkit, floozy, flues-synth-driver, gremlin, gremlin-driver, guardian,
+  harmonic-atlas, **lifeform**, **luma**, m-mix, mixgen, moka, oracle, orbit,
+  **paunchlad**, polymeter, resonance-garden, syrinx. Everything reverts to
+  defaults when the project is reopened.
+* **7 plugins declare `WANT_STATE` but not `WANT_FULL_STATE`**: chipper,
+  damiano, ghost, helterskelter, skream, spliff. This is the worse failure and
+  it is silent. `getState()` is declared only under `WANT_FULL_STATE`
+  (`DistrhoPlugin.hpp:353`), and DPF's VST3 wrapper only refreshes its state map
+  from the plugin inside `#if DISTRHO_PLUGIN_WANT_FULL_STATE`
+  (`DistrhoPluginVST3.cpp:1185-1192`). The map is otherwise left holding what
+  `initState` put there, which is `getStateDefaultValue(i)`
+  (`DistrhoPluginVST3.cpp:662`). These plugins therefore implement `initState`
+  and `setState`, appear to save correctly, and in fact write their **default**
+  values into every host project. Reloading restores the defaults and silently
+  discards the user's settings, with no error anywhere.
+* **31 plugins are correct** — both macros set, all three callbacks present,
+  including plank after the fix below.
+
+Fix is mechanical: add `#define DISTRHO_PLUGIN_WANT_FULL_STATE 1` to those 7
+`DistrhoPluginInfo.h` files and implement `getState`. It needs a test run per
+plugin, since some may have been relying on the broken behaviour. The 23 with no
+state need a serialisation format each, which is real work — the Launchpad
+plugins (lifeform, luma, paunchlad) are the obvious first candidates given they
+are all performance instruments people will want to reopen as they left them.
+
+**Add a CI check** that every plugin declaring `WANT_STATE` also declares
+`WANT_FULL_STATE` and implements all three callbacks. The failure is invisible
+to the existing test suites because they test the core, not the wrapper, and
+nothing in the build can tell a plugin with working persistence from one that
+writes defaults.
 
 ## -Wall -Wextra sweep over the plugin cores (found 2026-10-06)
 
