@@ -11,6 +11,28 @@ permissions:
   contents: read
 
 jobs:
+  bundle-lists:
+    name: Bundle list consistency
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      # Cheap gate that runs before the 30-minute package builds. The bundle
+      # lists are repeated by hand in four places, and the only enforcement was
+      # package-release.sh's gate, which fails late: after configure, build,
+      # ctest and staging. This catches the same drift in seconds.
+      - name: Check bundle lists against plugin CMakeLists
+        run: bash scripts/check-bundle-lists.sh
+
+      - name: Syntax-check the shell scripts
+        run: |
+          for f in install.sh scripts/*.sh; do
+            echo "  $f"
+            bash -n "$f"
+          done
+
   release-package-build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.runner }}

@@ -36,14 +36,6 @@ template <typename T>
     return -1;
 }
 
-// Perceptual knob law in place of Plinky's interpolated pitch table: a gentle
-// rise out of zero, then a near-linear top end.
-[[nodiscard]] float knobToRatio(const float value) noexcept
-{
-    const float clamped = clampValue(value, 0.0f, 1.0f);
-    return std::pow(2.0f, clamped * clamped * 10.0f);
-}
-
 // PolyBLEP correction for the step discontinuity of a naive ramp. `phase` is
 // the normalised position in the cycle and `width` the normalised increment.
 [[nodiscard]] float polyBlep(const float phase, const float width) noexcept
@@ -857,7 +849,6 @@ void Processor::renderReverb(float* left, float* right, const std::uint32_t fram
 
     const float time = parameters_[p(ParamId::reverbTime)];
     const float shimmer = parameters_[p(ParamId::reverbShimmer)];
-    const float wobble = parameters_[p(ParamId::reverbWobble)];
 
     // Feedback sets the tail; time sets how far down the comb lines the tail is
     // allowed to run before it is absorbed.

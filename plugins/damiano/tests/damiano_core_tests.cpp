@@ -1,10 +1,12 @@
 #include "damiano_core.hpp"
 
 #include <array>
-#include <cassert>
 #include <cmath>
 #include <cstdio>
 #include <string>
+
+// This suite uses its own CHECK/gFailed harness below, not assert(), so it does
+// not depend on -UNDEBUG and does not include downspout/test_assert.h.
 
 static int gPassed = 0;
 static int gFailed = 0;

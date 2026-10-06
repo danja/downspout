@@ -11,6 +11,7 @@ sidecar_build="${DOWNSPOUT_BUILD_SIDECAR:-OFF}"
 # Reference set used to report what a complete build should contain.
 # Kept in step with scripts/package-release.sh, which gates the Linux build.
 required_bundles=(
+  bassops.vst3 bubbles.vst3 damiano.vst3 flues_synth_driver.vst3 gater.vst3 midiscribe.vst3 keyframe.vst3 treatment.vst3 voxmod.vst3
   campione.vst3 bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 t_mix.vst3
   mixgen.vst3 loopdelay.vst3 lightverb.vst3 melgen.vst3 rift.vst3
   orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 syrinx.vst3 cadence.vst3
@@ -24,6 +25,7 @@ required_bundles=(
 )
 if [[ "$sidecar_build" == "ON" ]]; then
   required_bundles=(
+  bassops.vst3 bubbles.vst3 damiano.vst3 flues_synth_driver.vst3 gater.vst3 midiscribe.vst3 keyframe.vst3 treatment.vst3 voxmod.vst3
     campione.vst3 bassgen.vst3 p_mix.vst3 e_mix.vst3 m_mix.vst3 t_mix.vst3
     mixgen.vst3 loopdelay.vst3 lightverb.vst3 melgen.vst3 rift.vst3
     orchid.vst3 ambo.vst3 drumgen.vst3 drumkit.vst3 syrinx.vst3 cadence.vst3

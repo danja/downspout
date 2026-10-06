@@ -86,6 +86,125 @@ promotion of the shared OnePoleLowpass/DCBlocker/BiquadFilter duplicates into
   `basic_string: construction from null`. This is why drumgen screenshots could
   not be captured.
 
+## Release bundle lists have drifted (found 2026-10-06, while adding plank)
+
+Four separate hand-maintained lists have to agree about which bundles exist, and
+nothing checked that they did. Verified counts as of today: 63 `DOWNSPOUT_BUILD_*`
+options in the root `CMakeLists.txt`, 61 plugins with a CMake `install(DIRECTORY
+... .vst3)` rule, 61 bundles in `scripts/package-release.sh`'s `required_bundles`,
+61 in `scripts/package-built-bundles.sh`, and 61 in the `.github/workflows/release.yml`
+notes. All four now agree. What the drift was:
+
+* `scripts/package-release.sh` `required_bundles` was missing 7 bundles that have
+  CMake install rules: `bassops`, `bubbles`, `damiano`, `flues_synth_driver`,
+  `gater`, `midiscribe`, `sidecar`. This one was a **hard gate** — lines 162-167
+  abort packaging if a listed bundle is absent from the staged install, so the
+  failure mode was a release build that dies late. (`sidecar` belongs only in the
+  `sidecar_build == ON` variant, which was already correct.)
+* `scripts/package-built-bundles.sh` was missing 9: the same set less `sidecar`
+  plus `keyframe`, `treatment`, `voxmod`.
+* `install.sh` omitted 4 build options that exist: `DOWNSPOUT_BUILD_AI_COORDINATOR`,
+  `DOWNSPOUT_BUILD_BASSOPS`, `DOWNSPOUT_BUILD_BUBBLES`, `DOWNSPOUT_BUILD_CHIPPER`,
+  and listed `DOWNSPOUT_BUILD_KEYFRAME` twice. Harmless only because every option
+  defaults to `ON`, so the array is documentation rather than behaviour — which
+  is exactly why it drifted.
+* `.github/workflows/release.yml` was missing the same 7 as `package-release.sh`.
+
+**All of the above fixed 2026-10-06.** All 10 bundles were built and confirmed to
+produce a valid `.so` *before* being added to the hard gate, since adding a name
+to `required_bundles` that does not actually build would turn a documentation fix
+into a broken release.
+
+* [x] **`scripts/check-bundle-lists.sh` added.** Compares the authoritative set
+  derived from `dpf_add_plugin()` + `install(DIRECTORY ...)` across
+  `plugins/*/CMakeLists.txt` against all four lists plus `install.sh`. It also
+  checks each plugin's `dpf_add_plugin` name matches its install rule, and
+  reports duplicated `install.sh` options. `--list` prints the authoritative set.
+  It is **variant-aware**: `package-release.sh` and `package-built-bundles.sh`
+  each have a base list and a `sidecar_build=ON` variant, checked separately
+  rather than merged. That distinction matters — the first version merged them
+  and so could not see a bundle removed from the base list while still present in
+  the sidecar one, which a deliberate negative test exposed. `sidecar.vst3` is
+  the one bundle legitimately absent from the base list, declared in
+  `CONDITIONAL_FROM_BASE` with a comment explaining that the conditionality lives
+  in the shell scripts and not in any CMakeLists (sidecar's install rule sits
+  behind the same `DOWNSPOUT_ENABLE_DPF` guard as every other plugin). The union
+  of all variants is checked against the authoritative set, so that exception
+  list cannot go stale unnoticed.
+* [x] **Wired into CI** as a new fast `bundle-lists` job ahead of the 30-minute
+  package builds, plus a `bash -n` pass over `install.sh` and `scripts/*.sh`. The
+  point is timing: this drift was previously caught only by
+  `package-release.sh`, i.e. after configure, build, ctest and staging.
+* [x] Negative-tested. All five regression classes are detected: a bundle dropped
+  from the base variant only, dropped from every variant, a typo'd bundle name, an
+  `install.sh` option removed, and a `CONDITIONAL_FROM_BASE` entry appearing in no
+  variant. Passes cleanly on the repaired tree.
+
+## Minor cleanups (found 2026-10-06)
+
+* [x] `plugins/damiano/tests/damiano_core_tests.cpp` included `<cassert>` but made
+  no `assert()` calls; it uses its own `CHECK`/`gFailed` harness like syrinx,
+  midiscribe and flues-synth-driver. DONE 2026-10-06: include removed, with a
+  comment recording why the suite does not need `-UNDEBUG`. Tests still pass.
+* **BUG: `ground` and `melgen` report the wrong scale name for three selectable
+  scales.** Found by the `-Wall -Wextra` sweep below. Both plugins' `ScaleId`
+  includes `ionian`, `neapolitanMajor` and `neapolitanMinor`, and both expose the
+  whole enum as the Scale parameter range (`ground/src/dpf/GroundPlugin.cpp:292`
+  uses `ScaleId::count - 1`). But the `scaleName()` switches handle `count`
+  explicitly and have **no `default:`**, so those three fall out of the switch
+  to `return "minor"`. `ground`'s `scaleName` is what emits `"scale"` in the AI
+  coordinator hand-off (`ground_ai_state.cpp:27`, used at line 131), so
+  selecting Neapolitan Minor on ground tells the coordinator it is playing
+  minor. Affected: `plugins/ground/src/ground_ai_state.cpp:27`,
+  `plugins/ground/src/ground_pattern.cpp:115`,
+  `plugins/melgen/src/melgen_pattern.cpp:154`. Fix by adding the three cases,
+  then check whether any other `ScaleId` switch in the repo has the same shape.
+  `docs/scales.md` already warns that appending a scale silently reinterprets
+  saved state; this is the other half of that hazard, where a newly appended
+  scale quietly reports as `minor` instead of failing to build.
+* Not bugs, but noted while triaging the sweep:
+  * `cadence` (2) and `drumgen` (1) `memset`/`memcpy` structs that are
+    standard-layout and trivially copyable, so it is safe in practice even
+    though `-Wclass-memaccess` fires on their default member initialisers. One
+    semantic wrinkle: `cadence_clear_progression` zeroes `ChordSlot`, whose
+    `velocity` defaults to `96`, so a cleared slot has velocity `0` rather than
+    the constructed default. Consistent within the plugin, but worth deciding.
+  * `campione/src/campione_sample_loader.cpp:200` ignores the `[[nodiscard]]`
+    `parseSmplChunk` result. It only returns false for a truncated `smpl` chunk,
+    where the fallback is "no smpl data", so it is benign — but a truncated
+    chunk silently loses loop points on a sampler. The same function also reads
+    only the first of `numSampleLoops` loop records, despite the comment
+    describing the record layout.
+
+## -Wall -Wextra sweep over the plugin cores (found 2026-10-06)
+
+Standing task at the top of this file, now done with the flagset named rather
+than "whatever the default build happens to emit". Every `plugins/*/src/*.cpp`
+compiled standalone with `-std=c++17 -Wall -Wextra -fsyntax-only`: **31 warnings
+across 11 plugins**. Plank is clean (it was written against the flagset, and two
+of its own warnings were removed rather than logged).
+
+| plugin | n | classes |
+|---|---|---|
+| ground | 14 | `-Wswitch` unhandled `ScaleId` (the bug above), plus `PhraseRoleId::count` |
+| melgen | 3 | `-Wswitch` unhandled `ScaleId` (the bug above) |
+| gater | 3 | unused parameters in `gater_engine.cpp:6-9` — looks like a stubbed API |
+| drumgen | 3 | unused parameters, one `-Wclass-memaccess` |
+| campione | 2 | unused parameter, ignored `[[nodiscard]]` |
+| cadence | 2 | `-Wclass-memaccess` (benign, see above) |
+| drumkit | 2 | unused `vel` in `CrashVoice.hpp:85`, `ClapVoice.hpp:89` |
+| bassgen | 1 | unused `beatIndex` in `bassgen_pattern.cpp:1406` |
+| sidecar | 1 | unused `intValue` in `sidecar_serialization.cpp:120` |
+
+Most are cosmetic (unused locals and parameters). The `-Wswitch` class is the
+only one that found a real defect, and it is worth taking seriously for the
+reason above: an incomplete enum switch is exactly how a newly appended scale
+becomes a silent behaviour change instead of a compile error.
+
+Suggested follow-up: add `-Wall -Wextra` to `downspout-project-options` and clear
+the resulting noise plugin by plugin so this cannot regress. That touches the
+shared options target, so it needs approval and a full 62-suite run.
+
 ## Evaluate Manually in Reaper
 
 * helterskelter
@@ -105,6 +224,7 @@ promotion of the shared OnePoleLowpass/DCBlocker/BiquadFilter duplicates into
 * orbit
 * polymeter
 * resonance-garden
+* plank
 * tuney-vst
 * worms
 
