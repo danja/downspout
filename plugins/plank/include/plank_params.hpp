@@ -125,8 +125,8 @@ inline constexpr std::array<std::array<std::uint8_t, 8>, static_cast<std::size_t
         {{0, 2, 4, 5, 7, 9, 10, 0}},    // mixolydian
         {{0, 1, 3, 5, 6, 8, 10, 0}},    // locrian
         {{0, 1, 4, 5, 7, 8, 10, 0}},    // phrygian dominant
-        {{0, 1, 4, 5, 7, 9, 11, 0}},    // neapolitan major
-        {{0, 1, 3, 5, 7, 8, 10, 0}},    // neapolitan minor
+        {{0, 1, 3, 5, 7, 9, 11, 0}},    // neapolitan major
+        {{0, 1, 3, 5, 7, 8, 11, 0}},    // neapolitan minor
         {{0, 2, 4, 7, 9, 0, 0, 0}},     // pentatonic major
         {{0, 3, 5, 7, 10, 0, 0, 0}},    // pentatonic minor
         {{0, 3, 5, 6, 7, 10, 0, 0}},    // blues

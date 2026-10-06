@@ -66,8 +66,8 @@ constexpr int kScaleBebopDominant[] = {0, 2, 4, 5, 7, 9, 10, 11};
 constexpr int kScaleBebopMajor[] = {0, 2, 4, 5, 7, 8, 9, 11};
 constexpr int kScaleBebopMinor[] = {0, 2, 3, 4, 5, 7, 9, 10};
 constexpr int kScaleIonian[] = {0, 2, 4, 5, 7, 9, 11};
-constexpr int kScaleNeapolitanMajor[] = {0, 1, 4, 5, 7, 9, 11};
-constexpr int kScaleNeapolitanMinor[] = {0, 1, 3, 5, 7, 8, 10};
+constexpr int kScaleNeapolitanMajor[] = {0, 1, 3, 5, 7, 9, 11};
+constexpr int kScaleNeapolitanMinor[] = {0, 1, 3, 5, 7, 8, 11};
 
 constexpr ScaleDef kScales[] = {
     {kScaleMajor, 7},

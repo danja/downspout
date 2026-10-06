@@ -75,6 +75,31 @@ Row 16 (`pentatonic`) is a generic single-scale entry used by lifeform and luma 
 | bebopMinor | 22 | 22 | 22 | 23 | 23 | — | 15 | 15 | 23 |
 | **count** | **23** | **23** | **23** | **24** | **24** | **13** | **16** | **16** | **24** |
 
+## Pitch content
+
+Ordinals are stable, but the notes under an ordinal are a separate matter. Every plugin's table
+must agree with these sets (semitones above the root). They are the textbook scales; a plugin
+that disagrees is wrong, not different.
+
+| Scale | Semitones |
+|---|---|
+| neapolitanMajor | 0 1 3 5 7 9 11 |
+| neapolitanMinor | 0 1 3 5 7 8 11 |
+| halfWholeDiminished | 0 1 3 4 6 7 9 10 |
+| wholeHalfDiminished | 0 2 3 5 6 8 9 11 |
+| bebopDominant | 0 2 4 5 7 9 10 11 |
+| bebopMajor | 0 2 4 5 7 8 9 11 |
+| bebopMinor | 0 2 3 4 5 7 9 10 |
+
+The diminished and bebop scales have eight notes; a table that stores seven has dropped one.
+
+**History.** Until 2026-10-06 the two Neapolitan scales were `0 1 4 5 7 9 11` and
+`0 1 3 5 7 8 10` in every plugin. The second is simply Phrygian, so the repository had a duplicate
+scale under another name, and the first was not Neapolitan major. Both were corrected in all
+thirteen plugin tables at once. Saved projects keep their ordinals, but the notes under 12 and 13
+now differ, so a project using either scale sounds different when reopened. Plank's tests hold an
+independent reference set for all 24 scales (`testEveryPadStaysInTheChosenScale`).
+
 ## Naming conventions
 
 Two conventions coexist in the codebase:

@@ -61,8 +61,8 @@ static const int kScalePhrygian[] = {0, 1, 3, 5, 7, 8, 10};
 static const int kScaleLocrian[] = {0, 1, 3, 5, 6, 8, 10};
 static const int kScalePhrygianDominant[] = {0, 1, 4, 5, 7, 8, 10};
 static const int kScaleIonian[] = {0, 2, 4, 5, 7, 9, 11};
-static const int kScaleNeapolitanMajor[] = {0, 1, 4, 5, 7, 9, 11};
-static const int kScaleNeapolitanMinor[] = {0, 1, 3, 5, 7, 8, 10};
+static const int kScaleNeapolitanMajor[] = {0, 1, 3, 5, 7, 9, 11};
+static const int kScaleNeapolitanMinor[] = {0, 1, 3, 5, 7, 8, 11};
 
 static const ScaleDef kScales[SCALE_COUNT] = {
     {kScaleChromatic, 12},

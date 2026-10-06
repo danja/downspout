@@ -23,8 +23,8 @@ constexpr std::array<ScaleDefinition, SCALE_COUNT> kScales {{
     {{{0, 2, 4, 5, 7, 9, 10}}, 7},   // Mixolydian
     {{{0, 2, 4, 6, 7, 9, 11}}, 7},   // Lydian
     {{{0, 1, 4, 5, 7, 8, 10}}, 7},   // Phrygian Dominant
-    {{{0, 1, 4, 5, 7, 9, 11}}, 7},   // Neo Major
-    {{{0, 1, 3, 5, 7, 8, 10}}, 7},   // Neo Minor
+    {{{0, 1, 3, 5, 7, 9, 11}}, 7},   // Neo Major
+    {{{0, 1, 3, 5, 7, 8, 11}}, 7},   // Neo Minor
     {{{0, 2, 4, 7, 9}}, 5},          // Pentatonic Major
     {{{0, 3, 5, 7, 10}}, 5},         // Pentatonic Minor
     {{{0, 3, 5, 6, 7, 10}}, 6},      // Blues

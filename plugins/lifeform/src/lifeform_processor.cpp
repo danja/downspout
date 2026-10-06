@@ -37,8 +37,8 @@ constexpr std::array<std::array<int, 8>, static_cast<std::size_t>(ScaleId::count
     {{0, 2, 4, 5, 7, 9, 10, 12}},  // mixolydian
     {{0, 2, 4, 7, 9, 12, 14, 16}}, // pentatonic
     {{0, 3, 5, 6, 7, 10, 12, 15}}, // blues
-    {{0, 1, 4, 5, 7, 9, 11, 12}},  // neapolitanMajor
-    {{0, 1, 3, 5, 7, 8, 10, 12}},  // neapolitanMinor
+    {{0, 1, 3, 5, 7, 9, 11, 12}},  // neapolitanMajor
+    {{0, 1, 3, 5, 7, 8, 11, 12}},  // neapolitanMinor
     {{0, 1, 3, 4, 6, 8, 10, 12}},  // altered
     {{0, 1, 3, 4, 6, 7, 9, 10}},   // halfWholeDiminished
     {{0, 2, 3, 5, 6, 8, 9, 11}},   // wholeHalfDiminished

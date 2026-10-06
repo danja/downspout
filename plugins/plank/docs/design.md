@@ -97,11 +97,12 @@ audible effect at all; the grid now sounds exactly what each pad's label says.
 Chromatic is also a twelve-degree scale now, so stride and rotate do not wrap an
 octave early.
 
-**Scale tables follow the rest of the repository.** The two Neapolitan scales had a
-tritone where the fourth or fifth belongs, and the five eight-note scales
-(half-whole and whole-half diminished, three bebop) were stored as seven notes, so
-their last degree was dropped and the top row of a column played an out-of-scale
-pitch. They now match Orchid, bassgen and cadence. `testEveryPadStaysInTheChosenScale`
+**Scale tables are the textbook ones.** The two Neapolitan scales had wrong notes
+(the minor was simply Phrygian), and the five eight-note scales (half-whole and
+whole-half diminished, three bebop) were stored as seven notes, so their last
+degree was dropped and the top row of a column played an out-of-scale pitch. All are
+corrected, and the same Neapolitan fix was applied to every plugin that carries the
+scale; `docs/scales.md` holds the pitch sets. `testEveryPadStaysInTheChosenScale`
 checks every pad against independent pitch-class sets for all 24 scales, in Unison,
 Scale and Stride spreads, across several strides and rotations.
 
