@@ -209,7 +209,7 @@ float Exciter::next(const ExciterId kind, const float hardness) noexcept
         random ^= random << 5u;
         const float white = static_cast<float>(random & 0xffffu) * (1.0f / 32768.0f) - 1.0f;
         lowpass += (white - lowpass) * (0.04f + 0.9f * hardness);
-        out = lowpass * (1.0f - phase) * 0.06f;
+        out = lowpass * (1.0f - phase) * 0.12f;
     }
 
     if (++position >= length)

@@ -1340,6 +1340,46 @@ void testEveryResonatorEngineSounds()
     }
 }
 
+float rmsOf(const Render& render)
+{
+    double sum = 0.0;
+    for (const float v : render.left)
+        sum += static_cast<double>(v) * static_cast<double>(v);
+    return static_cast<float>(std::sqrt(sum / static_cast<double>(render.left.size())));
+}
+
+void testResonatorsAreAboutAsLoudAsPlinky()
+{
+    // Regression: the resonator engines sat about 14 dB below the Plinky voice.
+    // A struck sound decays, so it cannot match the sustained voice's RMS, but it
+    // must be within a few dB and must not clip.
+    const auto render = [](const EngineId engine, const ExciterId exciter) {
+        Processor processor;
+        processor.init(48000.0);
+        const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+        processor.setParameter(p(ParamId::ledFeedback), 0.0f);
+        processor.setParameter(p(ParamId::engine), static_cast<float>(engine));
+        processor.setParameter(p(ParamId::exciter), static_cast<float>(exciter));
+        processor.setParameter(p(ParamId::delaySend), 0.0f);
+        processor.setParameter(p(ParamId::reverbSend), 0.0f);
+        const MidiMessage down[] = { noteOn(gridToNote(2, 0)) };
+        return renderBlocks(processor, 700, down, 1u);
+    };
+
+    const float reference = rmsOf(render(EngineId::plinky, ExciterId::mallet));
+    for (std::uint32_t id = 1; id < static_cast<std::uint32_t>(EngineId::count); ++id)
+    {
+        for (const ExciterId exciter : {ExciterId::mallet, ExciterId::noise})
+        {
+            const Render out = render(static_cast<EngineId>(id), exciter);
+            const float ratio = rmsOf(out) / reference;
+            require(ratio > 0.4f, "a resonator engine must not be far quieter than the Plinky voice");
+            require(ratio < 1.5f, "a resonator engine must not be far louder than the Plinky voice");
+            require(out.peak < 1.0f, "a resonator engine must not clip");
+        }
+    }
+}
+
 void testResonatorEnginesDifferFromEachOther()
 {
     const Render beam = pluckWith(EngineId::beam);
@@ -1472,6 +1512,7 @@ int main()
     testStridePitchReachesTheVoice();
     testEngineIdsAreStable();
     testEveryResonatorEngineSounds();
+    testResonatorsAreAboutAsLoudAsPlinky();
     testResonatorEnginesDifferFromEachOther();
     testDampingSetsTheRingTime();
     testExcitersAreBothUsable();

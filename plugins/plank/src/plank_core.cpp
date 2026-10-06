@@ -799,7 +799,12 @@ void Processor::renderVoice(const std::size_t index,
         float raw = 0.0f;
         if (modal)
         {
-            raw = voice.modal.process(voice.exciter.next(exciterKind, morph), modalCoefficients) * 0.5f;
+            // A struck resonator is all spike and no body, so its RMS sits far below
+            // the oscillator engine at the same peak. Gain it up through a tanh
+            // limiter: the average level comes up to match Plinky while the
+            // initial strike is rounded off instead of overshooting.
+            const float struck = voice.modal.process(voice.exciter.next(exciterKind, morph), modalCoefficients);
+            raw = std::tanh(struck * 6.0f) * 0.6f;
         }
         else if (morph < 0.999f)
         {
