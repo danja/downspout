@@ -71,6 +71,7 @@ option(DOWNSPOUT_BUILD_VOXMOD "Configure the Voxmod vocoder/ring-mod target" ON)
 option(DOWNSPOUT_BUILD_PRIMEFOLD "Configure the primefold prime-harmonic shifter target" ON)
 option(DOWNSPOUT_BUILD_QUEFRENCY "Configure the quefrency cepstral shifter target" ON)
 option(DOWNSPOUT_BUILD_KEYFRAME "Configure the keyframe extrema time-stretch target" ON)
+option(DOWNSPOUT_BUILD_PLANK "Configure the Plank string synth instrument target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 option(DOWNSPOUT_BUILD_SCREENSHOT_APPS "Build DPF standalone apps for documentation screenshots" OFF)
 
@@ -386,4 +387,8 @@ endif()
 
 if(DOWNSPOUT_BUILD_KEYFRAME)
     add_subdirectory(plugins/keyframe)
+endif()
+
+if(DOWNSPOUT_BUILD_PLANK)
+    add_subdirectory(plugins/plank)
 endif()

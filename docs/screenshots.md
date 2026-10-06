@@ -90,6 +90,7 @@ Current output filenames:
 - `luma.png`
 - `paunchlad.png`
 - `lifeform.png`
+- `plank.png`
 - `syrinx.png`
 - `tuney-vst.png`
 - `voxmod.png`

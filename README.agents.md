@@ -79,6 +79,7 @@ Downspout is a suite of VST3 plugins for autonomous music generation and process
 | [Gremlin](plugins/gremlin/) | Chaotic glitch instrument with scenes, macros, actions, and randomisation | [profile.ttl](plugins/gremlin/profile.ttl) |
 | [Mosaic](plugins/mosaic/) | Four-slot WAV sampler with deterministic slicing and autonomous triggering | [profile.ttl](plugins/mosaic/profile.ttl) |
 | [Syrinx](plugins/syrinx/) | Polyphonic avian vocal synthesizer using Mindlin-Laje ODE models | [profile.ttl](plugins/syrinx/profile.ttl) |
+| [Plank](plugins/plank/) | Eight-string synthesizer derived from Plinky, one voice per Launchpad column | [profile.ttl](plugins/plank/profile.ttl) |
 
 ## Routing conventions
 

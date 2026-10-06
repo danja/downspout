@@ -1,0 +1,18 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:plank a trn:PluginProfile ;
+    rdfs:label "Plank" ;
+    rdfs:comment "Eight-string synthesizer derived from Plinky, with one voice per Launchpad grid column." ;
+    trn:bundleName "plank.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/plank/> ;
+    trn:role trn:Instrument, trn:Controller ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Audio, trn:Midi, trn:MelodyMidi ;
+    trn:requires trn:Launchpad ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

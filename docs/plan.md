@@ -188,6 +188,12 @@ Progress as of 2026-05-27:
 - `luma` now exists as an original Launchpad-oriented MIDI performance generator with pad agents, LED feedback, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `paunchlad` now exists as an original Launchpad-oriented dub performance effect with echo throws, sirens, spring splashes, dropouts, chops, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `lifeform` now exists as an original Launchpad-oriented Conway Game of Life MIDI generator with one generation per beat, LED feedback, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
+- `plank` now reimplements Plinky's voice engine as a portable eight-string
+  synthesizer: a polyBLEP oscillator pair morphing into seventeen synthesised
+  band-limited wavetables, Plinky's resonant two-pole filter, two envelopes,
+  dynamic parameter smoothing, tape delay, shimmer reverb and mid/side width,
+  played as one string per Launchpad grid column, with LED feedback,
+  deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `xoxolo` now exists as an original simple MIDI drum pattern editor with a
   fixed 11-lane drumkit map, 32-step maximum, text state serialization,
   deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
@@ -249,7 +255,8 @@ Current main gap:
   `rift.vst3`, `orchid.vst3`, `ambo.vst3`, `drumgen.vst3`, `drumkit.vst3`,
   `cadence.vst3`, `arpgen.vst3`, `counterpointer.vst3`, `sidecar.vst3`, `gremlin.vst3`,
   `gremlin_driver.vst3`, `ground.vst3`, `floozy.vst3`, `basilico.vst3`,
-  `canticle.vst3`, `moka.vst3`, `luma.vst3`, `paunchlad.vst3`, `lifeform.vst3`, and
+  `canticle.vst3`, `moka.vst3`, `luma.vst3`, `paunchlad.vst3`, `lifeform.vst3`,
+  `plank.vst3`, and
   `xoxolo.vst3`, `syrinx.vst3`, `tuney_vst.vst3`, `harmonic_atlas.vst3`,
   `conductor.vst3`, `drift.vst3`, `mnemosyne.vst3`, `polymeter.vst3`,
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,

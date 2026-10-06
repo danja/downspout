@@ -147,6 +147,10 @@ Chaotic glitch instrument with performance scenes, live and hidden parameters, m
 
 Text-to-music instrument and MIDI generator derived from Tuney 0.3.39. Focused Unicode typing or stored text is mapped through configurable alphabets, scales, and microtonal tunings, then played with seeded free-time phrasing through a simple polyphonic synth and ordinary MIDI output.
 
+### Plank (`plank.vst3`)
+
+Eight-string synthesizer derived from the Plinky touch synth. A polyBLEP oscillator pair morphs into seventeen synthesised band-limited wavetables, feeding Plinky's resonant two-pole filter, two envelopes, tape delay, shimmer reverb and mid/side width. Each Launchpad grid column is one string and each row a scale degree, so the eight-voice polyphony is held rather than allocated.
+
 ## Audio effects
 
 ### T-Mix (`t_mix.vst3`)

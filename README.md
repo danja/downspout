@@ -115,6 +115,7 @@ installed bundle.
 | [luma](plugins/luma/README.md) | `luma.vst3` | MIDI generator | Launchpad-oriented performance generator where lit pads become bass, chord, melody, and drum agents. |
 | [paunchlad](plugins/paunchlad/README.md) | `paunchlad.vst3` | Audio effect/instrument | Launchpad dub performance effect with echo throws, sirens, spring splashes, dropouts, and chops. |
 | [lifeform](plugins/lifeform/README.md) | `lifeform.vst3` | MIDI generator | Conway Game of Life sequencer for Launchpad, evolving one generation per beat into melodic or drum MIDI. |
+| [plank](plugins/plank/README.md) | `plank.vst3` | Instrument | Eight-string synthesizer derived from Plinky, with one voice per Launchpad grid column. |
 | [xoxolo](plugins/xoxolo/README.md) | `xoxolo.vst3` | MIDI generator | Simple x0x-style drum pattern editor with 11 drumkit lanes and a 32-step maximum. |
 | [Harmonic Atlas](plugins/harmonic-atlas/README.md) | `harmonic_atlas.vst3` | MIDI generator | Autonomous tonal, modal, chromatic-mediant, and neo-Riemannian-inspired harmony. |
 | [Conductor](plugins/conductor/README.md) | `conductor.vst3` | MIDI generator | Long-form section and scene-command generator. |

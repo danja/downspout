@@ -71,6 +71,12 @@ current Downspout plugins.
   performance actions, hold pads, and MIDI LED feedback.
 - `Canticle`: a 12-voice tonal synth for readable keys, reed, pad, pluck, and
   glass parts driven by melody, counterpoint, and harmony generators.
+- `Plank`: eight strings, one per Launchpad grid column. Each column's eight
+  rows are one octave of the current scale. Two 32-bit phase oscillators are
+  summed as a polyBLEP saw pair with the second inverted; a morph axis
+  crossfades that into a band-limited wavetable pair read at a quarter-cycle
+  offset, and the result feeds a two-pole resonant filter whose coefficient is
+  modulated by a second envelope.
 
 ## How the site treats these methods
 

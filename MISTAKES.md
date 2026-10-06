@@ -130,3 +130,61 @@ uniformly sampled version of the input rather than a reconstruction of it.
 Several hours went into the core before the probe was suspect. Always offset the
 input pointer with the block, and sanity-check a probe against the raw input
 before believing what it says about the engine.
+
+## Writing a DSP core in one pass and then compiling it
+
+Three of the mistakes below came from drafting `plugins/plank/src/plank_core.cpp`
+in a single write with the effect and render sections left as stubs and a
+half-written lambda in `renderDelay` (a `size_placeholder` identifier that never
+existed, and a lambda returning a pair into a `void` function). The file did not
+compile, and nothing about it had been type-checked. Port a DSP subsystem one
+function at a time and build after each one; a large unreviewed write hides real
+errors behind the first syntax error.
+
+## Computing a filter coefficient and then not using it
+
+In `renderVoice` the cutoff coefficient was computed, clamped, and then ignored:
+`voice.filter.process(input, amplitude, resonance)` passed the envelope as the
+filter's coefficient. Plinky conflates the two (`y1 += (... - y1) * vol`), so
+copying the call shape carried the conflation across, and the cutoff control did
+almost nothing -- peak moved 0.6325 to 0.6313 across the parameter's entire
+range. It only showed up because a sweep printed peak per step and the numbers
+barely moved. When a control has an obvious expected effect, assert that effect
+directly: the plank test now requires a closed filter to be under 0.75x an open
+one, and also compares high-frequency content, so a level-only "fix" cannot pass.
+
+## Asserting a wrap condition that is not a wrap condition
+
+The first wavetable test asserted `data[0] == data[size-1]`, reasoning that a
+periodic table should meet itself. That is false: sample `size-1` is the last
+point *before* returning to sample 0, and the two differ by one ordinary step.
+The assertion failed on correct tables and would have been "fixed" by corrupting
+the generator. The property that actually matters is continuity: compare the
+final-to-first step against the largest step inside the table. That test then
+found a real defect -- the pulse tables were built with a two-sample slew that
+still produced full-scale (32768) steps -- which the original assertion could
+never have surfaced. Prefer asserting a physical property over a guessed one.
+
+## Documenting scale ordinals from the reference table instead of the enum
+
+`docs/scales.md` was updated with plank's ordinals read off the canonical
+24-row table, which includes a generic `pentatonic` row at position 16. Plank's
+enum does not contain `pentatonic`, so everything from `blues` down was
+documented one too high (`blues = 17` when the enum says 16). The plank tests
+passed throughout, because they pinned `bebopMinor == 23` and
+`ScaleId::count == 24`, both of which happened to be right. Cross-check
+generated documentation against the source rather than the reference it was
+derived from; a script that parses the enum and diffs it against the doc table
+catches this in a second.
+
+## Batch text edits: `if/elif` chain followed by an unconditional append
+
+A Python rewrite of `docs/scales.md` used an `if/elif` chain to choose a
+replacement line and then ran `out.append(line)` unconditionally after the chain.
+Every branch that matched therefore emitted both its replacement *and* the
+original, duplicating table rows, and a separate branch built cells by
+`line.rstrip()[:-1]` which stripped the trailing pipe and concatenated two cells
+(`| — 0 |`). The result was mangled enough to need `git checkout` and a rewrite.
+When appending conditionally in a loop, `continue` in every branch, or build a
+list of replacements keyed by exact match and look up rather than branch. Diff
+the result before trusting it.

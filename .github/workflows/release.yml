@@ -226,6 +226,7 @@ jobs:
             echo "- luma.vst3"
             echo "- paunchlad.vst3"
             echo "- lifeform.vst3"
+            echo "- plank.vst3"
             echo "- xoxolo.vst3"
             echo "- syrinx.vst3"
             echo "- tuney_vst.vst3"

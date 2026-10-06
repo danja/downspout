@@ -50,6 +50,7 @@ downspout-<version>-<platform>-vst3.zip
 ├── luma.vst3/
 ├── paunchlad.vst3/
 ├── lifeform.vst3/
+├── plank.vst3/
 ├── xoxolo.vst3/
 ├── syrinx.vst3/
 ├── tuney_vst.vst3/
