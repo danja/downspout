@@ -61,6 +61,19 @@ promotion of the shared OnePoleLowpass/DCBlocker/BiquadFilter duplicates into
   per-lane velocity bias, so `applyClaveFigure` clears the lanes it owns and
   re-strikes them. `docs/scales.md` is unchanged.
 
+* [ ] **Neapolitan scales are not the textbook ones** (found 2026-10-06, while fixing
+  plank). Every plugin that has them (plank, orchid, bassgen, cadence,
+  counterpointer, lifeform, ...) uses `neapolitanMajor = 0 1 4 5 7 9 11` and
+  `neapolitanMinor = 0 1 3 5 7 8 10`. The textbook forms are
+  `neapolitanMajor = 0 1 3 5 7 9 11` (flat 2, flat 3, natural 6 and 7) and
+  `neapolitanMinor = 0 1 3 5 7 8 11` (flat 2, harmonic-minor-style natural 7). Plank
+  was brought into line with the repo's existing tables rather than the textbook, so
+  all of them are consistently non-standard. If we change them: do it in every plugin
+  at once, record the decision in `docs/scales.md`, and expect saved projects to
+  change sound (ordinals stay put, so the append-only rule is not the issue, but the
+  notes under 12 and 13 move). Decide first whether that is wanted; the current set
+  may be deliberate.
+
 ## Bugs found while doing the above
 
 * [x] **Plugin test suites compiled with `NDEBUG` made every `assert()` dead code**

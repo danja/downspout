@@ -272,3 +272,19 @@ Time any new recursive DSP over a long decay, not just the attack, and never
 reuse a first-time-setup call for a host lifecycle callback. The "no audio"
 symptom was not reproduced offline; the two defects above are what the code
 showed, so it still needs confirming in the host.
+
+## Plank: scale tables wrong, so pads played out-of-scale notes (2026-10-06)
+
+**What happened.** Notes up a column did not follow the chosen scale. The two
+Neapolitan scales each had a wrong note, and the five eight-note scales
+(half-whole and whole-half diminished, three bebop) were stored with seven degrees,
+so their last note was dropped and the top row played an unrelated pitch. Separately
+the MIDI clamp pinned notes past 127 to 127, which is rarely in the scale.
+
+**Root cause.** The tests checked that each ladder ascended and that seven-note
+scales reached the octave, but never that the notes were the right ones. The tables
+were not compared with the other plugins' copies, which already disagreed with Plank.
+
+**Prevention.** `testEveryPadStaysInTheChosenScale` holds an independent reference
+set for every scale and checks every pad. When a table already exists in the
+repository, diff against it before writing another.

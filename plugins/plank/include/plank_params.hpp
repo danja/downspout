@@ -125,18 +125,18 @@ inline constexpr std::array<std::array<std::uint8_t, 8>, static_cast<std::size_t
         {{0, 2, 4, 5, 7, 9, 10, 0}},    // mixolydian
         {{0, 1, 3, 5, 6, 8, 10, 0}},    // locrian
         {{0, 1, 4, 5, 7, 8, 10, 0}},    // phrygian dominant
-        {{0, 1, 4, 6, 7, 9, 11, 0}},    // neapolitan major
-        {{0, 1, 3, 6, 7, 8, 10, 0}},    // neapolitan minor
+        {{0, 1, 4, 5, 7, 9, 11, 0}},    // neapolitan major
+        {{0, 1, 3, 5, 7, 8, 10, 0}},    // neapolitan minor
         {{0, 2, 4, 7, 9, 0, 0, 0}},     // pentatonic major
         {{0, 3, 5, 7, 10, 0, 0, 0}},    // pentatonic minor
         {{0, 3, 5, 6, 7, 10, 0, 0}},    // blues
         {{0, 2, 4, 6, 8, 10, 0, 0}},    // whole tone
         {{0, 1, 3, 4, 6, 8, 10, 0}},    // altered
-        {{0, 1, 3, 4, 6, 7, 9, 0}},     // half-whole diminished
-        {{0, 2, 3, 5, 6, 8, 9, 0}},     // whole-half diminished
-        {{0, 2, 4, 5, 7, 9, 10, 0}},    // bebop dominant
-        {{0, 2, 4, 5, 7, 8, 9, 0}},     // bebop major
-        {{0, 2, 3, 4, 5, 7, 9, 0}},     // bebop minor
+        {{0, 1, 3, 4, 6, 7, 9, 10}},    // half-whole diminished
+        {{0, 2, 3, 5, 6, 8, 9, 11}},    // whole-half diminished
+        {{0, 2, 4, 5, 7, 9, 10, 11}},   // bebop dominant
+        {{0, 2, 4, 5, 7, 8, 9, 11}},    // bebop major
+        {{0, 2, 3, 4, 5, 7, 9, 10}},    // bebop minor
     }};
 
 // How many entries of kScaleIntervals are real degrees. Everything past this is
@@ -161,11 +161,11 @@ inline constexpr std::array<std::uint8_t, static_cast<std::size_t>(ScaleId::coun
     6,  // blues
     6,  // whole tone
     7,  // altered
-    7,  // half-whole diminished
-    7,  // whole-half diminished
-    7,  // bebop dominant
-    7,  // bebop major
-    7,  // bebop minor
+    8,  // half-whole diminished
+    8,  // whole-half diminished
+    8,  // bebop dominant
+    8,  // bebop major
+    8,  // bebop minor
 }};
 
 // ── Modulation ──────────────────────────────────────────────────────────────

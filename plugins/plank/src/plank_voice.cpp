@@ -179,13 +179,27 @@ void computeModalCoefficients(const EngineId engine,
     }
 }
 
-void Exciter::trigger(const ExciterId kind, const float hardness, const double sampleRate) noexcept
+void Exciter::trigger(const ExciterId kind,
+                      const float hardness,
+                      const double sampleRate,
+                      const double fundamentalHz) noexcept
 {
     position = 0;
     lowpass = 0.0f;
 
-    // Mallet: 6 ms soft down to 0.15 ms hard. Noise: a fixed 12 ms burst.
-    const double seconds = kind == ExciterId::mallet ? 0.006 - 0.00585 * static_cast<double>(hardness) : 0.012;
+    double seconds = 0.012;  // noise: a fixed 12 ms burst
+    if (kind == ExciterId::mallet)
+    {
+        // Contact time is a fraction of the fundamental's period: half a period
+        // for a soft mallet down to 8% for a hard one. A half-sine pulse of width
+        // W has its first spectral null at 1 / W, so a fixed 6 ms mallet put the
+        // null below most of the modes and left the strike almost silent at any
+        // pitch above the lowest rows. The clamp keeps it a real mallet at the
+        // extremes: never tighter than 0.15 ms, never longer than 6 ms.
+        const double period = fundamentalHz > 1.0 ? 1.0 / fundamentalHz : 0.01;
+        const double fraction = 0.5 - 0.42 * static_cast<double>(hardness);
+        seconds = std::min(0.006, std::max(0.00015, period * fraction));
+    }
     length = static_cast<std::uint32_t>(std::max(2.0, seconds * sampleRate));
 }
 

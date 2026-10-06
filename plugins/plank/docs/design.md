@@ -97,6 +97,14 @@ audible effect at all; the grid now sounds exactly what each pad's label says.
 Chromatic is also a twelve-degree scale now, so stride and rotate do not wrap an
 octave early.
 
+**Scale tables follow the rest of the repository.** The two Neapolitan scales had a
+tritone where the fourth or fifth belongs, and the five eight-note scales
+(half-whole and whole-half diminished, three bebop) were stored as seven notes, so
+their last degree was dropped and the top row of a column played an out-of-scale
+pitch. They now match Orchid, bassgen and cadence. `testEveryPadStaysInTheChosenScale`
+checks every pad against independent pitch-class sets for all 24 scales, in Unison,
+Scale and Stride spreads, across several strides and rotations.
+
 **Resonator engines come from Plonk, not Plinky.** `Engine` adds six modal models
 (beam, marimba, drumhead, membrane, plate, string) after the Intellijel/AAS Plonk
 Eurorack module: an exciter (`Mallet` half-sine pulse or `Noise` burst) drives
@@ -138,6 +146,10 @@ note     = root + 12 * octave + semitone + microtune / 100        (rounded, 0..1
 | Fourths | 0 | `5 * col` |
 | Fifths | 0 | `7 * col` |
 | Stride | `strideSteps(scale, stride, col)` | 0 |
+
+The result is folded into MIDI range by whole octaves, never clamped. A clamp pins
+everything past the top to 127, which is usually not in the scale, so a large
+`Stride` put wrong notes on the right-hand columns; folding keeps the pitch class.
 
 `scaleStepAt()` wraps per octave, so a 5-note pentatonic and a 7-note diatonic
 both climb across all eight rows. Chromatic is special-cased as 12 degrees
@@ -222,9 +234,13 @@ Plonk's own ratios are not published, so none of these claim to be a copy.
 **Exciter.** One `Exciter` per voice, triggered by `startNote()` using the current
 `Morph` as hardness.
 
-- `Mallet`: a half-sine pulse of unit area. Width falls from 6 ms (soft) to 0.15 ms
-  (hard), peak `pi / (2 * width)`. Unit area keeps the loudness independent of
-  hardness.
+- `Mallet`: a half-sine pulse of unit area, peak `pi / (2 * width)`. The width is a
+  fraction of the note's period, from half a period (soft) down to 8% (hard),
+  clamped to 0.15 to 6 ms. It has to scale with pitch: a half-sine of width *W* has
+  its first spectral null at 1 / *W*, so the original fixed 6 ms mallet put the
+  null (about 170 Hz) below nearly every mode and the default soft strike was
+  close to silent above the lowest rows. Unit area keeps the loudness independent
+  of hardness.
 - `Noise`: a 12 ms white-noise burst with a linear decay, through a one-pole
   lowpass whose coefficient is `0.04 + 0.9 * hardness`.
 
@@ -278,8 +294,15 @@ silently, and the screenshot is the check.
   note name, computed by `noteForRow()`, the display twin of `noteForCell()`. The
   old column-letter ruler was dropped: it spelled out one string's ladder under
   columns that, once spread, each played a different one.
-- **Selectors** all live in one block at the top and ignore their `lane` field;
-  clicking steps to the next value and wraps (`cycleSelector`).
+- **Selectors** all live in one block at the top and ignore their `lane` field.
+  Clicking one opens a drop-down (`drawDropdown`), drawn last so it floats over the
+  panel and the pad grid. Geometry comes from `dropdownLayout()`, which the draw
+  and hit-test (`dropdownItemAt`) share so they cannot disagree. Lists of more than
+  12 items flow into columns of 12 (22 for the 88-note root list), and the box is
+  clamped inside the window and flips above the selector when it would run off the
+  bottom. While a list is open it consumes the next click, so dismissing it never
+  plucks a pad underneath. Items are `spec.minimum + i`; labels come from
+  `formatValue()`, with note names for `root`.
 - **Sliders** are laid out by lane, five per row. `kSliderCount` must equal the
   number of entries in `kSliders`. It was once one too high, and the zero-initialised
   extra entry drew a blank slider in the Oscillators lane.

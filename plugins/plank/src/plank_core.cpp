@@ -295,7 +295,15 @@ std::uint8_t Processor::noteForCell(const std::size_t row, const std::size_t col
     }
 
     const double note = static_cast<double>(root + octave * 12 + scaleStep(degree) + columnSemitones) + fine;
-    return static_cast<std::uint8_t>(clampValue(std::lround(note), 0L, 127L));
+    // Fold into MIDI range by whole octaves rather than clamping: a clamp pins
+    // every note past the top to 127, which is usually not in the scale, so a
+    // large Stride put wrong notes on the right-hand columns.
+    long folded = std::lround(note);
+    while (folded > 127L)
+        folded -= 12L;
+    while (folded < 0L)
+        folded += 12L;
+    return static_cast<std::uint8_t>(folded);
 }
 
 int Processor::scaleStep(const int degree) const noexcept
@@ -359,7 +367,8 @@ void Processor::startNote(Voice& voice,
         const auto p = [](ParamId id) { return static_cast<std::size_t>(id); };
         const auto kind = static_cast<ExciterId>(clampValue(
             static_cast<int>(std::lround(parameters_[p(ParamId::exciter)])), 0, 1));
-        voice.exciter.trigger(kind, clampValue(parameters_[p(ParamId::morph)], 0.0f, 1.0f), sampleRate_);
+        const double hertz = 440.0 * std::pow(2.0, static_cast<double>(voice.pitchSemitones) / 12.0);
+        voice.exciter.trigger(kind, clampValue(parameters_[p(ParamId::morph)], 0.0f, 1.0f), sampleRate_, hertz);
     }
 
     // Keep the cell parameter in step so the host sees the same grid state

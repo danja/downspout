@@ -1096,6 +1096,113 @@ void testIdleResonatorsAreSilentAndCheap()
     require(later.silent(), "a released resonator must fall to exact silence");
 }
 
+// ── Every pad stays in the chosen scale ────────────────────────────────────
+
+void testEveryPadStaysInTheChosenScale()
+{
+    // Independent pitch-class sets, written out here rather than read from
+    // kScaleIntervals, so a wrong or truncated table cannot agree with itself.
+    // The 8-note diminished and bebop scales were once stored as 7-note scales,
+    // which dropped their last note and put out-of-scale pitches on the grid.
+    const std::vector<std::vector<int>> reference = {
+        {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},  // chromatic
+        {0, 2, 4, 5, 7, 9, 11},                  // major
+        {0, 2, 4, 5, 7, 9, 11},                  // ionian
+        {0, 2, 3, 5, 7, 8, 10},                  // minor
+        {0, 2, 3, 5, 7, 8, 11},                  // harmonic minor
+        {0, 2, 3, 5, 7, 9, 11},                  // melodic minor
+        {0, 2, 3, 5, 7, 9, 10},                  // dorian
+        {0, 1, 3, 5, 7, 8, 10},                  // phrygian
+        {0, 2, 4, 6, 7, 9, 11},                  // lydian
+        {0, 2, 4, 5, 7, 9, 10},                  // mixolydian
+        {0, 1, 3, 5, 6, 8, 10},                  // locrian
+        {0, 1, 4, 5, 7, 8, 10},                  // phrygian dominant
+        {0, 1, 4, 5, 7, 9, 11},                  // neapolitan major
+        {0, 1, 3, 5, 7, 8, 10},                  // neapolitan minor
+        {0, 2, 4, 7, 9},                         // pentatonic major
+        {0, 3, 5, 7, 10},                        // pentatonic minor
+        {0, 3, 5, 6, 7, 10},                     // blues
+        {0, 2, 4, 6, 8, 10},                     // whole tone
+        {0, 1, 3, 4, 6, 8, 10},                  // altered
+        {0, 1, 3, 4, 6, 7, 9, 10},               // half-whole diminished
+        {0, 2, 3, 5, 6, 8, 9, 11},               // whole-half diminished
+        {0, 2, 4, 5, 7, 9, 10, 11},              // bebop dominant
+        {0, 2, 4, 5, 7, 8, 9, 11},               // bebop major
+        {0, 2, 3, 4, 5, 7, 9, 10},               // bebop minor
+    };
+    require(reference.size() == static_cast<std::size_t>(ScaleId::count), "one reference set per scale");
+
+    const auto inSet = [](const std::vector<int>& set, const int pitchClass) {
+        for (const int value : set)
+        {
+            if (value == pitchClass)
+                return true;
+        }
+        return false;
+    };
+
+    constexpr int kRoot = 45;
+    for (std::size_t scale = 0; scale < reference.size(); ++scale)
+    {
+        // The scale must contain every one of its notes, and nothing else.
+        Processor probe;
+        probe.init(48000.0);
+        const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+        probe.setParameter(p(ParamId::scale), static_cast<float>(scale));
+        std::vector<int> seen;
+        for (int degree = 0; degree < 24; ++degree)
+        {
+            const int pitchClass = ((probe.scaleStep(degree) % 12) + 12) % 12;
+            require(inSet(reference[scale], pitchClass), "a scale degree must belong to the scale");
+            if (!inSet(seen, pitchClass))
+                seen.push_back(pitchClass);
+        }
+        require(seen.size() == reference[scale].size(), "a scale must contain every one of its notes");
+
+        // Every pad, in every column and every spread that is meant to stay in
+        // key, must land on a note of the scale.
+        for (const SpreadId spread : {SpreadId::unison, SpreadId::scale, SpreadId::stride})
+        {
+            for (const int stride : {0, 3, 5, 7, 12})
+            {
+                Processor processor;
+                processor.init(48000.0);
+                processor.setParameter(p(ParamId::scale), static_cast<float>(scale));
+                processor.setParameter(p(ParamId::root), static_cast<float>(kRoot));
+                processor.setParameter(p(ParamId::octave), 0.0f);
+                processor.setParameter(p(ParamId::microtune), 0.0f);
+                processor.setParameter(p(ParamId::spread), static_cast<float>(spread));
+                processor.setParameter(p(ParamId::stride), static_cast<float>(stride));
+                for (const float rotate : {0.0f, 3.0f})
+                {
+                    processor.setParameter(p(ParamId::rotate), rotate);
+                    for (std::size_t row = 0; row < kGridHeight; ++row)
+                    {
+                        for (std::size_t col = 0; col < kGridWidth; ++col)
+                        {
+                            const int pitchClass = (((processor.noteForCell(row, col) - kRoot) % 12) + 12) % 12;
+                            require(inSet(reference[scale], pitchClass),
+                                    "every pad must play a note of the chosen scale");
+                        }
+                    }
+                }
+            }
+        }
+
+        // Down a column the notes must ascend through the scale.
+        Processor column;
+        column.init(48000.0);
+        column.setParameter(p(ParamId::scale), static_cast<float>(scale));
+        column.setParameter(p(ParamId::microtune), 0.0f);
+        for (std::size_t col = 0; col < kGridWidth; ++col)
+        {
+            for (std::size_t row = 1; row < kGridHeight; ++row)
+                require(column.noteForCell(row, col) > column.noteForCell(row - 1, col),
+                        "notes must ascend up a column");
+        }
+    }
+}
+
 // ── Session state ───────────────────────────────────────────────────────────
 
 void testStateRoundTrips()
@@ -1380,6 +1487,32 @@ void testResonatorsAreAboutAsLoudAsPlinky()
     }
 }
 
+void testSoftMalletIsAudibleAtEveryPitch()
+{
+    // Regression: the mallet had a fixed 6 ms contact time at the default Morph,
+    // which put its first spectral null below most modes, so the strike was
+    // nearly silent above the lowest rows.
+    const auto level = [](const std::size_t row) {
+        Processor processor;
+        processor.init(48000.0);
+        const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+        processor.setParameter(p(ParamId::ledFeedback), 0.0f);
+        processor.setParameter(p(ParamId::engine), static_cast<float>(EngineId::drumhead));
+        processor.setParameter(p(ParamId::exciter), static_cast<float>(ExciterId::mallet));
+        processor.setParameter(p(ParamId::morph), 0.0f);
+        processor.setParameter(p(ParamId::root), 57.0f);
+        processor.setParameter(p(ParamId::delaySend), 0.0f);
+        processor.setParameter(p(ParamId::reverbSend), 0.0f);
+        const MidiMessage down[] = { noteOn(gridToNote(row, 0)) };
+        return rmsOf(renderBlocks(processor, 400, down, 1u));
+    };
+
+    const float low = level(0);
+    const float high = level(7);
+    require(high > low * 0.6f, "a soft mallet must stay about as loud at higher pitches");
+    require(low > 0.08f, "a soft mallet must not be nearly silent");
+}
+
 void testResonatorEnginesDifferFromEachOther()
 {
     const Render beam = pluckWith(EngineId::beam);
@@ -1508,11 +1641,13 @@ int main()
     testScaleSpreadMakesColumnsDifferent();
     testFixedIntervalSpreads();
     testSpreadClampsAndSurvivesTuningChanges();
+    testEveryPadStaysInTheChosenScale();
     testStrideSpreadFollowsPlinky();
     testStridePitchReachesTheVoice();
     testEngineIdsAreStable();
     testEveryResonatorEngineSounds();
     testResonatorsAreAboutAsLoudAsPlinky();
+    testSoftMalletIsAudibleAtEveryPitch();
     testResonatorEnginesDifferFromEachOther();
     testDampingSetsTheRingTime();
     testExcitersAreBothUsable();

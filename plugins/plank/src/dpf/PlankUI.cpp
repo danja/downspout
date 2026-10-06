@@ -282,6 +282,7 @@ protected:
         drawGrid();
         drawScaleRuler();
         drawPanel();
+        drawDropdown();  // last, so it floats over everything else
     }
 
     bool onMouse(const MouseEvent& ev) override
@@ -297,6 +298,23 @@ protected:
 
         const float x = static_cast<float>(ev.pos.getX());
         const float y = static_cast<float>(ev.pos.getY());
+
+        // An open list takes the click: pick an item, or dismiss it. Either way
+        // the click is consumed, so closing a list never plucks a pad underneath.
+        if (openSelector_ >= 0)
+        {
+            const int item = dropdownItemAt(x, y);
+            if (item >= 0)
+            {
+                const ParamSpec& spec = getParameterSpec(idx(kSelectors[static_cast<std::size_t>(openSelector_)].parameter));
+                commit(idx(kSelectors[static_cast<std::size_t>(openSelector_)].parameter),
+                       spec.minimum + static_cast<float>(item));
+            }
+            openSelector_ = -1;
+            hoverItem_ = -1;
+            repaint();
+            return true;
+        }
 
         for (std::size_t row = 0; row < kGridHeight; ++row)
         {
@@ -317,7 +335,9 @@ protected:
         {
             if (!selectorRects_[i].contains(x, y))
                 continue;
-            cycleSelector(i);
+            openSelector_ = static_cast<int>(i);
+            hoverItem_ = -1;
+            repaint();
             return true;
         }
 
@@ -350,6 +370,17 @@ protected:
 
     bool onMotion(const MotionEvent& ev) override
     {
+        if (openSelector_ >= 0)
+        {
+            const int item = dropdownItemAt(static_cast<float>(ev.pos.getX()), static_cast<float>(ev.pos.getY()));
+            if (item != hoverItem_)
+            {
+                hoverItem_ = item;
+                repaint();
+            }
+            return true;
+        }
+
         if (activeSlider_ < 0)
             return false;
         setFromMouse(sliderRects_[static_cast<std::size_t>(activeSlider_)],
@@ -371,6 +402,8 @@ private:
     std::size_t selectorCount_ = 0;
     std::size_t buttonCount_ = 0;
     int activeSlider_ = -1;
+    int openSelector_ = -1;  // index into kSelectors, or -1 when no list is open
+    int hoverItem_ = -1;
 
     [[nodiscard]] static Rect gridRect(const std::size_t row, const std::size_t col) noexcept
     {
@@ -399,19 +432,138 @@ private:
         commit(static_cast<std::uint32_t>(kCellParameterStart + cellIndex(row, col)), on ? 1.0f : 0.0f);
     }
 
-    void cycleSelector(const std::size_t index)
+    // ── Drop-down lists ─────────────────────────────────────────────────────
+    //
+    // Clicking a selector opens a list of every value; the current one is
+    // highlighted. Long lists (24 scales, 88 root notes) flow into columns, so the
+    // whole list is visible at once without scrolling.
+
+    static constexpr float kItemH = 18.0f;
+
+    struct DropdownLayout {
+        Rect box;
+        std::size_t count = 0;
+        std::size_t perColumn = 1;
+        float columnW = 0.0f;
+    };
+
+    [[nodiscard]] DropdownLayout dropdownLayout() const noexcept
     {
-        if (index >= selectorCount_)
+        DropdownLayout layout;
+        if (openSelector_ < 0 || static_cast<std::size_t>(openSelector_) >= selectorCount_)
+            return layout;
+
+        const Rect anchor = selectorRects_[static_cast<std::size_t>(openSelector_)];
+        const ParamSpec& spec = getParameterSpec(idx(kSelectors[static_cast<std::size_t>(openSelector_)].parameter));
+
+        layout.count = static_cast<std::size_t>(spec.maximum - spec.minimum + 1.5f);
+        layout.perColumn = layout.count > 48u ? 22u : (layout.count > 12u ? 12u : layout.count);
+        const std::size_t columns = (layout.count + layout.perColumn - 1u) / layout.perColumn;
+        layout.columnW = layout.count > 48u ? 62.0f : std::max(anchor.w, 88.0f);
+
+        const float w = static_cast<float>(columns) * layout.columnW;
+        const float h = static_cast<float>(layout.perColumn) * kItemH + 6.0f;
+
+        // Open below the selector, but keep the whole list inside the window.
+        float x = anchor.x;
+        float y = anchor.y + anchor.h + 2.0f;
+        x = std::max(4.0f, std::min(x, kWidth - w - 4.0f));
+        if (y + h > kHeight - 4.0f)
+            y = std::max(4.0f, anchor.y - h - 2.0f);
+        if (y + h > kHeight - 4.0f)
+            y = kHeight - h - 4.0f;
+
+        layout.box = {x, y, w, h};
+        return layout;
+    }
+
+    // Index of the item under the pointer, or -1.
+    [[nodiscard]] int dropdownItemAt(const float x, const float y) const noexcept
+    {
+        const DropdownLayout layout = dropdownLayout();
+        if (layout.count == 0u || !layout.box.contains(x, y))
+            return -1;
+
+        const auto column = static_cast<std::size_t>((x - layout.box.x) / layout.columnW);
+        const float inner = y - (layout.box.y + 3.0f);
+        if (inner < 0.0f)
+            return -1;
+        const auto row = static_cast<std::size_t>(inner / kItemH);
+        if (row >= layout.perColumn)
+            return -1;
+
+        const std::size_t item = column * layout.perColumn + row;
+        return item < layout.count ? static_cast<int>(item) : -1;
+    }
+
+    [[nodiscard]] static std::string dropdownLabel(const ParamId parameter, const float value)
+    {
+        if (parameter == ParamId::root)
+        {
+            static constexpr const char* kNames[12] = {"C",  "C#", "D",  "D#", "E",  "F",
+                                                       "F#", "G",  "G#", "A",  "A#", "B"};
+            const int note = static_cast<int>(std::lround(value));
+            char buffer[24];
+            std::snprintf(buffer, sizeof(buffer), "%s%d", kNames[((note % 12) + 12) % 12], note / 12 - 1);
+            return buffer;
+        }
+        return formatValue(idx(parameter), value);
+    }
+
+    void drawDropdown()
+    {
+        const DropdownLayout layout = dropdownLayout();
+        if (layout.count == 0u)
             return;
 
-        const ParamId parameter = kSelectors[index].parameter;
+        const ParamId parameter = kSelectors[static_cast<std::size_t>(openSelector_)].parameter;
         const ParamSpec& spec = getParameterSpec(idx(parameter));
+        const int current = static_cast<int>(std::lround(values_[idx(parameter)] - spec.minimum));
 
-        float next = std::round(values_[idx(parameter)]) + 1.0f;
-        if (next > spec.maximum)
-            next = spec.minimum;
+        // Soft shadow, then the list itself.
+        beginPath();
+        roundedRect(layout.box.x + 2.0f, layout.box.y + 3.0f, layout.box.w, layout.box.h, laf::kRadiusSmall);
+        fillColor(0, 0, 0, 110);
+        fill();
+        closePath();
 
-        commit(idx(parameter), next);
+        beginPath();
+        roundedRect(layout.box.x, layout.box.y, layout.box.w, layout.box.h, laf::kRadiusSmall);
+        fc(t().panel);
+        fill();
+        sc(t().border);
+        strokeWidth(laf::kBorderWidth);
+        stroke();
+        closePath();
+
+        fontSize(10.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        for (std::size_t item = 0; item < layout.count; ++item)
+        {
+            const std::size_t column = item / layout.perColumn;
+            const std::size_t row = item % layout.perColumn;
+            const Rect cell {layout.box.x + static_cast<float>(column) * layout.columnW + 2.0f,
+                             layout.box.y + 3.0f + static_cast<float>(row) * kItemH,
+                             layout.columnW - 4.0f, kItemH};
+
+            const bool selected = static_cast<int>(item) == current;
+            const bool hovered = static_cast<int>(item) == hoverItem_;
+            if (selected || hovered)
+            {
+                beginPath();
+                roundedRect(cell.x, cell.y, cell.w, cell.h - 1.0f, 3.0f);
+                if (selected)
+                    fillColor(220, 130, 20, hovered ? 255 : 210);
+                else
+                    fc(t().surface);
+                fill();
+                closePath();
+            }
+
+            fc(selected ? t().background : t().textPrimary);
+            text(cell.x + 6.0f, cell.y + cell.h * 0.5f,
+                 dropdownLabel(parameter, spec.minimum + static_cast<float>(item)).c_str(), nullptr);
+        }
     }
 
     void setFromMouse(const Rect& rect, const float x)
@@ -587,7 +739,14 @@ private:
         const double note = static_cast<double>(root + octave * 12 + scaleStepAt(scale, degree) +
                                                 columnSemitones) +
                             fine;
-        return static_cast<int>(clampf(static_cast<float>(std::lround(note)), 0.0f, 127.0f));
+        // Fold by octaves, as the core does, so a label never disagrees with the
+        // note the pad actually plays.
+        int folded = static_cast<int>(std::lround(note));
+        while (folded > 127)
+            folded -= 12;
+        while (folded < 0)
+            folded += 12;
+        return folded;
     }
 
     void drawPad(const Rect& rect, const std::size_t row, const std::size_t col, const float level)
@@ -776,6 +935,17 @@ private:
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
         text(rect.x + rect.w * 0.5f, rect.y + 12.0f + (rect.h - 12.0f) * 0.5f,
              formatValue(idx(def.parameter), values_[idx(def.parameter)]).c_str(), nullptr);
+
+        // A small down-pointing arrow marks it as a drop-down list.
+        const float arrowX = rect.x + rect.w - 11.0f;
+        const float arrowY = rect.y + 12.0f + (rect.h - 12.0f) * 0.5f;
+        beginPath();
+        moveTo(arrowX - 3.5f, arrowY - 1.5f);
+        lineTo(arrowX + 3.5f, arrowY - 1.5f);
+        lineTo(arrowX, arrowY + 2.5f);
+        closePath();
+        fc(t().textDim);
+        fill();
     }
 
     // Sliders are horizontal: the panel is narrow, so a lane of short horizontal

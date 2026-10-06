@@ -223,7 +223,8 @@ struct ModalState {
 };
 
 // Strike excitation, generated sample by sample. A mallet is a half-sine pulse
-// of unit area whose width shrinks as it hardens; noise is a short decaying
+// of unit area whose width is a fraction of the note's period and shrinks as it
+// hardens (a fixed width would nearly cancel every mode above its cutoff); noise is a short decaying
 // burst through a one-pole lowpass that opens as it hardens.
 struct Exciter {
     std::uint32_t position = 0;
@@ -231,7 +232,7 @@ struct Exciter {
     float lowpass = 0.0f;
     std::uint32_t random = 0x9e3779b9u;
 
-    void trigger(ExciterId kind, float hardness, double sampleRate) noexcept;
+    void trigger(ExciterId kind, float hardness, double sampleRate, double fundamentalHz) noexcept;
     [[nodiscard]] float next(ExciterId kind, float hardness) noexcept;
 };
 
