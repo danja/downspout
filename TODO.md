@@ -225,6 +225,29 @@ to the existing test suites because they test the core, not the wrapper, and
 nothing in the build can tell a plugin with working persistence from one that
 writes defaults.
 
+### Checklist for this issue
+
+- [ ] Run `scripts/check-plugin-state.sh` and confirm the counts have not moved
+      (currently 31 correct / 6 broken / 24 no state). Any movement means a new
+      plugin was added without state, or a fix regressed.
+- [ ] Fix the 6 `WANT_STATE`-without-`WANT_FULL_STATE` plugins first: chipper,
+      damiano, ghost, helterskelter, skream, spliff. Add
+      `#define DISTRHO_PLUGIN_WANT_FULL_STATE 1` and implement `getState()`.
+      These are the ones actively destroying settings, so they outrank the 24
+      that merely lack the feature.
+- [ ] Verify each of the 6 in a host after fixing, not just by building: the
+      failure is silent, so a green build proves nothing. Change a setting,
+      save, reopen, confirm it stuck.
+- [ ] Then work through the 24 with no state, starting with the Launchpad
+      performance plugins (lifeform, luma, paunchlad) since those are the ones a
+      performer will most want to reopen as they left them.
+- [ ] Add the CI gate so a plugin cannot declare `WANT_STATE` without
+      `WANT_FULL_STATE` again. `scripts/check-plugin-state.sh` already exits 1 on
+      that condition; wire it into `.github/workflows/ci.yml` as a blocking step
+      once the 6 are fixed.
+- [ ] Re-run the `-Wall -Wextra` sweep after any of these changes: the state
+      callbacks are the part of the wrapper the core tests never touch.
+
 ## -Wall -Wextra sweep over the plugin cores (found 2026-10-06)
 
 Standing task at the top of this file, now done with the flagset named rather

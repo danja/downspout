@@ -129,15 +129,7 @@ Render renderBlocks(Processor& processor,
 // can be checked without constructing a Processor.
 [[nodiscard]] int scaleStepOf(const std::size_t scale, const int degree)
 {
-    const int perOctave = kScaleDegreeCount[scale];
-    int octave = degree / perOctave;
-    int step = degree % perOctave;
-    if (step < 0)
-    {
-        step += perOctave;
-        --octave;
-    }
-    return static_cast<int>(kScaleIntervals[scale][static_cast<std::size_t>(step)]) + octave * 12;
+    return scaleStepAt(scale, degree);
 }
 
 [[nodiscard]] bool containsNoteOn(const ProcessResult& result)
@@ -240,10 +232,12 @@ void testScaleLadder()
     require(processor.noteForCell(5, 0) == 50, "chromatic row 5 should be five semitones up");
     processor.setParameter(scale(ParamId::scale), static_cast<float>(ScaleId::major));
 
-    // Stride is a constant push on top of the ladder.
-    processor.setParameter(scale(ParamId::stride), 3.0f);
-    require(processor.noteForCell(0, 0) == 48, "stride 3 should push the root up three semitones");
-    processor.setParameter(scale(ParamId::stride), 0.0f);
+    // Chromatic must stay a twelve-note ladder past row 7, or stride and rotate
+    // would wrap an octave early.
+    processor.setParameter(scale(ParamId::scale), static_cast<float>(ScaleId::chromatic));
+    require(processor.scaleStep(11) == 11, "chromatic degree 11 should be eleven semitones");
+    require(processor.scaleStep(12) == 12, "chromatic degree 12 should be the octave");
+    processor.setParameter(scale(ParamId::scale), static_cast<float>(ScaleId::major));
 
     // scaleInterval wraps per octave, not every eight steps: the ladder keeps
     // climbing rather than resetting, which is what makes the 8-row and 64-cell
@@ -853,10 +847,13 @@ void testScaleIdsMatchTheCanonicalReference()
     for (std::size_t scale = 0; scale < kScaleIntervals.size(); ++scale)
     {
         const std::size_t degrees = kScaleDegreeCount[scale];
-        require(degrees >= 5 && degrees <= 8, "a scale needs between five and eight degrees");
+        const bool chromatic = scale == static_cast<std::size_t>(ScaleId::chromatic);
+        require(chromatic ? degrees == 12 : (degrees >= 5 && degrees <= 8),
+                "a scale needs between five and eight degrees (chromatic has twelve)");
         require(kScaleIntervals[scale][0] == 0, "a scale must start on its root");
-        require(kScaleIntervals[scale][degrees - 1] < 12,
-                "the last degree of an octave must stay below the octave");
+        if (!chromatic)
+            require(kScaleIntervals[scale][degrees - 1] < 12,
+                    "the last degree of an octave must stay below the octave");
 
         // The ladder must strictly ascend across all eight grid rows for every
         // scale. Pentatonic, blues and whole-tone failed this when the tables
@@ -1166,6 +1163,228 @@ void testStateExcludesGridCellsAndPanic()
 
 }  // namespace
 
+// ── Plinky string stride ────────────────────────────────────────────────────
+
+void testStrideSpreadFollowsPlinky()
+{
+    Processor processor;
+    processor.init(48000.0);
+    const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+    processor.setParameter(p(ParamId::scale), static_cast<float>(ScaleId::major));
+    processor.setParameter(p(ParamId::root), 45.0f);
+    processor.setParameter(p(ParamId::octave), 0.0f);
+    processor.setParameter(p(ParamId::rotate), 0.0f);
+    processor.setParameter(p(ParamId::microtune), 0.0f);
+    processor.setParameter(p(ParamId::spread), static_cast<float>(SpreadId::stride));
+
+    // Plinky's default: each string a fifth above the last, snapped to the scale.
+    processor.setParameter(p(ParamId::stride), 7.0f);
+    require(processor.noteForCell(0, 0) == 45, "string 1 sits on the root");
+    require(processor.noteForCell(0, 1) == 52, "string 2 is a fifth up");
+    require(processor.noteForCell(0, 2) == 59, "string 3 is two fifths up");
+
+    // Stride 0 puts every string on the same ladder, as on Plinky.
+    processor.setParameter(p(ParamId::stride), 0.0f);
+    for (std::size_t col = 1; col < kGridWidth; ++col)
+        require(processor.noteForCell(0, col) == processor.noteForCell(0, 0), "stride 0 is unison");
+
+    // Snapping: a stride of 6 has no major-scale degree at +6, so the result must
+    // still be a note of the scale, never a chromatic neighbour.
+    processor.setParameter(p(ParamId::stride), 6);
+    for (std::size_t col = 0; col < kGridWidth; ++col)
+    {
+        const int semitones = (processor.noteForCell(0, col) - 45) % 12;
+        bool inScale = false;
+        for (int degree = 0; degree < 7; ++degree)
+            inScale = inScale || scaleStepAt(static_cast<std::size_t>(ScaleId::major), degree) == semitones;
+        require(inScale, "stride must keep every string in the scale");
+    }
+}
+
+void testStridePitchReachesTheVoice()
+{
+    // Regression: setDegree() used to pass column 0 to noteForCell, so every
+    // string ignored its column and Spread had no audible effect.
+    Processor processor;
+    processor.init(48000.0);
+    const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+    processor.setParameter(p(ParamId::ledFeedback), 0.0f);
+    processor.setParameter(p(ParamId::midiThru), 1.0f);
+    processor.setParameter(p(ParamId::spread), static_cast<float>(SpreadId::scale));
+
+    for (std::size_t col = 0; col < kGridWidth; ++col)
+    {
+        Processor fresh;
+        fresh.init(48000.0);
+        fresh.setParameter(p(ParamId::ledFeedback), 0.0f);
+        fresh.setParameter(p(ParamId::midiThru), 1.0f);
+        fresh.setParameter(p(ParamId::spread), static_cast<float>(SpreadId::scale));
+
+        const MidiMessage down[] = { noteOn(gridToNote(0, col)) };
+        const Render out = renderBlocks(fresh, 2, down, 1u);
+
+        bool found = false;
+        for (std::uint32_t i = 0; i < out.result.eventCount; ++i)
+        {
+            if ((out.result.events[i].data[0] & 0xf0u) == 0x90u)
+            {
+                require(out.result.events[i].data[1] == fresh.noteForCell(0, col),
+                        "a string must sound the note its column maps to");
+                found = true;
+            }
+        }
+        require(found, "the pluck should emit a note");
+    }
+}
+
+// ── Resonator engines ───────────────────────────────────────────────────────
+
+Render pluckWith(const EngineId engine, const float damping = 0.55f, const std::uint32_t blocks = 40u)
+{
+    Processor processor;
+    processor.init(48000.0);
+    const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+    processor.setParameter(p(ParamId::ledFeedback), 0.0f);
+    processor.setParameter(p(ParamId::engine), static_cast<float>(engine));
+    processor.setParameter(p(ParamId::damping), damping);
+    const MidiMessage down[] = { noteOn(gridToNote(2, 0)) };
+    return renderBlocks(processor, blocks, down, 1u);
+}
+
+float tailEnergy(const Render& render)
+{
+    float energy = 0.0f;
+    for (std::size_t i = render.left.size() * 3u / 4u; i < render.left.size(); ++i)
+        energy += render.left[i] * render.left[i];
+    return energy;
+}
+
+void testEngineIdsAreStable()
+{
+    // Engine ordinals are saved in host state: append only.
+    require(static_cast<std::uint32_t>(EngineId::plinky) == 0, "plinky is engine 0");
+    require(static_cast<std::uint32_t>(EngineId::beam) == 1, "beam is engine 1");
+    require(static_cast<std::uint32_t>(EngineId::string) == 6, "string is engine 6");
+    require(kEngineNames.size() == static_cast<std::size_t>(EngineId::count), "every engine needs a name");
+    require(kExciterNames.size() == static_cast<std::size_t>(ExciterId::count), "every exciter needs a name");
+
+    Processor processor;
+    processor.init(48000.0);
+    require(processor.getParameter(static_cast<std::uint32_t>(ParamId::engine)) == 0.0f,
+            "the default engine must remain Plinky so existing patches sound the same");
+}
+
+void testEveryResonatorEngineSounds()
+{
+    const Render reference = pluckWith(EngineId::plinky);
+    for (std::uint32_t id = 1; id < static_cast<std::uint32_t>(EngineId::count); ++id)
+    {
+        const Render render = pluckWith(static_cast<EngineId>(id));
+        require(!render.silent(), "every resonator engine should produce audio");
+        require(render.peak < 1.5f, "resonator output must stay in a sane range");
+        require(std::isfinite(render.peak), "resonator output must be finite");
+
+        bool differs = false;
+        for (std::size_t i = 0; i < render.left.size() && !differs; ++i)
+            differs = std::fabs(render.left[i] - reference.left[i]) > 1.0e-4f;
+        require(differs, "a resonator engine must not sound like the Plinky engine");
+    }
+}
+
+void testResonatorEnginesDifferFromEachOther()
+{
+    const Render beam = pluckWith(EngineId::beam);
+    const Render drum = pluckWith(EngineId::drumhead);
+    const Render string = pluckWith(EngineId::string);
+
+    float beamVsDrum = 0.0f;
+    float drumVsString = 0.0f;
+    for (std::size_t i = 0; i < beam.left.size(); ++i)
+    {
+        beamVsDrum += std::fabs(beam.left[i] - drum.left[i]);
+        drumVsString += std::fabs(drum.left[i] - string.left[i]);
+    }
+    require(beamVsDrum > 0.01f, "beam and drumhead should have different spectra");
+    require(drumVsString > 0.01f, "drumhead and string should have different spectra");
+}
+
+void testDampingSetsTheRingTime()
+{
+    // Sustain is raised so the envelope does not mask the resonator's own decay.
+    const auto ring = [](const float damping) {
+        Processor processor;
+        processor.init(48000.0);
+        const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+        processor.setParameter(p(ParamId::ledFeedback), 0.0f);
+        processor.setParameter(p(ParamId::engine), static_cast<float>(EngineId::string));
+        processor.setParameter(p(ParamId::damping), damping);
+        processor.setParameter(p(ParamId::envSustain), 1.0f);
+        const MidiMessage down[] = { noteOn(gridToNote(2, 0)) };
+        return tailEnergy(renderBlocks(processor, 60, down, 1u));
+    };
+
+    require(ring(0.9f) > ring(0.1f) * 4.0f, "more damping control should ring far longer");
+}
+
+void testExcitersAreBothUsable()
+{
+    for (std::uint32_t kind = 0; kind < static_cast<std::uint32_t>(ExciterId::count); ++kind)
+    {
+        Processor processor;
+        processor.init(48000.0);
+        const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+        processor.setParameter(p(ParamId::ledFeedback), 0.0f);
+        processor.setParameter(p(ParamId::engine), static_cast<float>(EngineId::marimba));
+        processor.setParameter(p(ParamId::exciter), static_cast<float>(kind));
+        const MidiMessage down[] = { noteOn(gridToNote(3, 3)) };
+        const Render render = renderBlocks(processor, 20, down, 1u);
+        require(!render.silent(), "each exciter should excite the resonator");
+        require(render.peak < 1.5f, "each exciter must stay in range");
+    }
+}
+
+void testStrikePositionChangesTheTone()
+{
+    const auto render = [](const float strike) {
+        Processor processor;
+        processor.init(48000.0);
+        const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+        processor.setParameter(p(ParamId::ledFeedback), 0.0f);
+        processor.setParameter(p(ParamId::engine), static_cast<float>(EngineId::string));
+        processor.setParameter(p(ParamId::strike), strike);
+        const MidiMessage down[] = { noteOn(gridToNote(2, 0)) };
+        return renderBlocks(processor, 10, down, 1u);
+    };
+
+    const Render centre = render(0.5f);
+    const Render edge = render(0.1f);
+    float difference = 0.0f;
+    for (std::size_t i = 0; i < centre.left.size(); ++i)
+        difference += std::fabs(centre.left[i] - edge.left[i]);
+    require(difference > 0.01f, "strike position should reshape the harmonic balance");
+}
+
+void testResonatorStateRoundTrips()
+{
+    Processor saved;
+    saved.init(48000.0);
+    const auto p = [](ParamId id) { return static_cast<std::uint32_t>(id); };
+    saved.setParameter(p(ParamId::engine), static_cast<float>(EngineId::plate));
+    saved.setParameter(p(ParamId::exciter), static_cast<float>(ExciterId::noise));
+    saved.setParameter(p(ParamId::strike), 0.8f);
+    saved.setParameter(p(ParamId::damping), 0.2f);
+    saved.setParameter(p(ParamId::material), 0.9f);
+    saved.setParameter(p(ParamId::stride), 5.0f);
+
+    Processor reopened;
+    reopened.init(48000.0);
+    require(reopened.deserializeParameters(saved.serializeParameters()), "state should restore");
+    require(reopened.getParameter(p(ParamId::engine)) == static_cast<float>(EngineId::plate), "engine restores");
+    require(reopened.getParameter(p(ParamId::exciter)) == static_cast<float>(ExciterId::noise), "exciter restores");
+    require(reopened.getParameter(p(ParamId::material)) == 0.9f, "material restores");
+    require(reopened.getParameter(p(ParamId::stride)) == 5.0f, "stride restores");
+}
+
 int main()
 {
     testGridNoteMapping();
@@ -1200,6 +1419,15 @@ int main()
     testScaleSpreadMakesColumnsDifferent();
     testFixedIntervalSpreads();
     testSpreadClampsAndSurvivesTuningChanges();
+    testStrideSpreadFollowsPlinky();
+    testStridePitchReachesTheVoice();
+    testEngineIdsAreStable();
+    testEveryResonatorEngineSounds();
+    testResonatorEnginesDifferFromEachOther();
+    testDampingSetsTheRingTime();
+    testExcitersAreBothUsable();
+    testStrikePositionChangesTheTone();
+    testResonatorStateRoundTrips();
     testStateRoundTrips();
     testStateRestoresTheMusicalLadder();
     testStateRejectsGarbage();

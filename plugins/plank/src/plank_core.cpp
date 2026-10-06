@@ -169,10 +169,10 @@ void Processor::setParameter(const std::uint32_t index, const float value)
     case ParamId::rotate:
     case ParamId::microtune:
     case ParamId::stride:
-        for (Voice& voice : voices_)
+        for (std::size_t col = 0; col < kStringCount; ++col)
         {
-            if (voice.sounding)
-                setDegree(voice, voice.degree);
+            if (voices_[col].sounding)
+                setDegree(voices_[col], voices_[col].degree, col);
         }
         break;
     default:
@@ -232,6 +232,9 @@ std::uint8_t Processor::noteForCell(const std::size_t row, const std::size_t col
     const int octave = static_cast<int>(std::lround(parameters_[p(ParamId::octave)]));
     const int rotate = static_cast<int>(std::lround(parameters_[p(ParamId::rotate)]));
     const int stride = static_cast<int>(std::lround(parameters_[p(ParamId::stride)]));
+    const int scale = clampValue(static_cast<int>(std::lround(parameters_[p(ParamId::scale)])),
+                                 0,
+                                 static_cast<int>(ScaleId::count) - 1);
 
     // Microtune is a fractional-semitone detune in cents. It has to stay a
     // double all the way to the final rounding: treating it as whole semitones
@@ -267,11 +270,15 @@ std::uint8_t Processor::noteForCell(const std::size_t row, const std::size_t col
         columnSemitones = static_cast<int>(col) * kFifthSemitones;
         break;
 
+    case SpreadId::stride:
+        degree += strideSteps(static_cast<std::size_t>(scale), stride, col);
+        break;
+
     case SpreadId::count:
         break;
     }
 
-    const double note = static_cast<double>(root + octave * 12 + scaleStep(degree) + columnSemitones + stride) + fine;
+    const double note = static_cast<double>(root + octave * 12 + scaleStep(degree) + columnSemitones) + fine;
     return static_cast<std::uint8_t>(clampValue(std::lround(note), 0L, 127L));
 }
 
@@ -288,10 +295,13 @@ int Processor::scaleInterval(const std::size_t degree) const noexcept
     return scaleStep(static_cast<int>(degree));
 }
 
-void Processor::setDegree(Voice& voice, const std::size_t row)
+void Processor::setDegree(Voice& voice, const std::size_t row, const std::size_t col)
 {
+    // The column has to reach noteForCell: every Spread mode other than Unison
+    // tunes the strings apart by column, and passing 0 here silently made all
+    // eight strings play the same ladder.
     voice.degree = static_cast<std::uint8_t>(row);
-    voice.pitchSemitones = static_cast<float>(noteForCell(row, 0)) - 69.0f;  // A4 = MIDI 69
+    voice.pitchSemitones = static_cast<float>(noteForCell(row, col)) - 69.0f;  // A4 = MIDI 69
 }
 
 std::uint8_t Processor::midiNoteFor(const Voice& voice) const noexcept
@@ -322,11 +332,19 @@ void Processor::startNote(Voice& voice,
                           ProcessResult& result,
                           const std::uint32_t frame)
 {
-    setDegree(voice, row);
+    setDegree(voice, row, col);
     voice.held = true;
     voice.sounding = true;
     voice.amplitude.gateOn();
     voice.modulation.gateOn();
+
+    // Resonator engines are struck, not driven: every pluck fires the exciter.
+    {
+        const auto p = [](ParamId id) { return static_cast<std::size_t>(id); };
+        const auto kind = static_cast<ExciterId>(clampValue(
+            static_cast<int>(std::lround(parameters_[p(ParamId::exciter)])), 0, 1));
+        voice.exciter.trigger(kind, clampValue(parameters_[p(ParamId::morph)], 0.0f, 1.0f), sampleRate_);
+    }
 
     // Keep the cell parameter in step so the host sees the same grid state
     // whether the string was played from the UI or from hardware.
@@ -687,6 +705,22 @@ void Processor::renderVoice(const std::size_t index,
     const float panRight = std::sqrt((1.0f + pan) * 0.5f) * 1.41421f;
 
     const float basePitch = voice.pitchSemitones + modulation.pitch;
+
+    // Resonator engines replace the oscillator pair with a modal bank. Morph is
+    // the exciter hardness there, so the same control keeps meaning "brighter".
+    const auto engine = static_cast<EngineId>(clampValue(
+        static_cast<int>(std::lround(parameters_[p(ParamId::engine)])), 0, static_cast<int>(EngineId::count) - 1));
+    const bool modal = engine != EngineId::plinky;
+    const auto exciterKind = static_cast<ExciterId>(clampValue(
+        static_cast<int>(std::lround(parameters_[p(ParamId::exciter)])), 0, static_cast<int>(ExciterId::count) - 1));
+    ModalCoefficients modalCoefficients {};
+    if (modal)
+    {
+        const double hertz = 440.0 * std::pow(2.0, static_cast<double>(basePitch) / 12.0);
+        computeModalCoefficients(engine, hertz, sampleRate_, parameters_[p(ParamId::damping)],
+                                 parameters_[p(ParamId::material)], parameters_[p(ParamId::strike)],
+                                 modalCoefficients);
+    }
     const std::uint32_t incrementA = oscillatorIncrement(basePitch);
     const std::uint32_t incrementB = oscillatorIncrement(basePitch + interval + detuneSemitones);
 
@@ -735,7 +769,11 @@ void Processor::renderVoice(const std::size_t index,
         // out as the interval shrinks. A little square is mixed back in so the
         // pair never falls silent when interval and detune are both zero.
         float raw = 0.0f;
-        if (morph < 0.999f)
+        if (modal)
+        {
+            raw = voice.modal.process(voice.exciter.next(exciterKind, morph), modalCoefficients) * 0.5f;
+        }
+        else if (morph < 0.999f)
         {
             float sawA = phases[0] * 2.0f - 1.0f;
             sawA -= polyBlep(phases[0], widths[0]);
@@ -751,7 +789,7 @@ void Processor::renderVoice(const std::size_t index,
         }
 
         // ── Band-limited wavetable pair ──
-        if (morph > 0.001f)
+        if (!modal && morph > 0.001f)
         {
             const float phaseB = phases[0] + kMorphPhaseOffset;
             const float wrappedB = phaseB >= 1.0f ? phaseB - 1.0f : phaseB;

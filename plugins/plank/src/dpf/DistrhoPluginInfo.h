@@ -21,7 +21,7 @@
 #define DISTRHO_PLUGIN_WANT_TIMEPOS     1
 #define DISTRHO_PLUGIN_VST3_CATEGORIES  "Instrument|Generator|Synth"
 #define DISTRHO_UI_DEFAULT_WIDTH        752
-#define DISTRHO_UI_DEFAULT_HEIGHT       612
+#define DISTRHO_UI_DEFAULT_HEIGHT       700
 #define DISTRHO_UI_USE_NANOVG           1
 #define DISTRHO_UI_FILE_BROWSER         0
 

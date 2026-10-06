@@ -142,7 +142,7 @@ inline constexpr std::array<std::array<std::uint8_t, 8>, static_cast<std::size_t
 // How many entries of kScaleIntervals are real degrees. Everything past this is
 // padding and must not be read.
 inline constexpr std::array<std::uint8_t, static_cast<std::size_t>(ScaleId::count)> kScaleDegreeCount = {{
-    8,  // chromatic
+    12,  // chromatic (intervals are implicit: degree == semitone)
     7,  // major
     7,  // ionian
     7,  // minor
@@ -229,12 +229,16 @@ inline constexpr std::array<const char*, static_cast<std::size_t>(ModTarget::cou
 //           two-octave scale surface and holding a row plays a cluster
 //   fourths column c is c perfect fourths higher, the classic guitar stack
 //   fifths  column c is c perfect fifths higher
+//   stride  Plinky's own rule: column c is pushed up by the `Stride` interval
+//           (in semitones) per string, but snapped to the nearest degree of the
+//           current scale so every string stays in key. See strideSteps().
 
 enum class SpreadId : std::uint32_t {
     unison = 0,
     scale,
     fourths,
     fifths,
+    stride,
     count,
 };
 
@@ -243,10 +247,51 @@ inline constexpr std::array<const char*, static_cast<std::size_t>(SpreadId::coun
     "Scale",
     "Fourths",
     "Fifths",
+    "Stride",
 }};
 
 inline constexpr int kFourthSemitones = 5;
 inline constexpr int kFifthSemitones = 7;
+
+// ── Synthesis engines ───────────────────────────────────────────────────────
+//
+// `plinky` is the original two-oscillator wavetable voice. The rest are the
+// resonator models of the Intellijel/AAS Plonk Eurorack module: an exciter
+// (mallet or noise burst) strikes a bank of modal resonators tuned like the
+// named object. Plonk's DSP is not public, so the mode ratios in plank_voice.cpp
+// are textbook approximations, not a copy.
+
+enum class EngineId : std::uint32_t {
+    plinky = 0,
+    beam,
+    marimba,
+    drumhead,
+    membrane,
+    plate,
+    string,
+    count,
+};
+
+inline constexpr std::array<const char*, static_cast<std::size_t>(EngineId::count)> kEngineNames = {{
+    "Plinky",
+    "Beam",
+    "Marimba",
+    "Drumhead",
+    "Membrane",
+    "Plate",
+    "String",
+}};
+
+enum class ExciterId : std::uint32_t {
+    mallet = 0,
+    noise,
+    count,
+};
+
+inline constexpr std::array<const char*, static_cast<std::size_t>(ExciterId::count)> kExciterNames = {{
+    "Mallet",
+    "Noise",
+}};
 
 // ── Parameters ──────────────────────────────────────────────────────────────
 //
@@ -304,6 +349,12 @@ enum class ParamId : std::uint32_t {
     reverbWobble,
     width,
     level,
+    // Resonator engines (Plonk-style). Morph doubles as exciter hardness.
+    engine,
+    exciter,
+    strike,
+    damping,
+    material,
     // Launchpad and host integration
     baseChannel,
     ledFeedback,
@@ -444,10 +495,10 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
 
     {"root", "Root", "", 21.0f, 108.0f, 45.0f, true, false},
     {"scale", "Scale", "", 0.0f, static_cast<float>(static_cast<std::size_t>(ScaleId::count) - 1u), 1.0f, true, false},
-    {"spread", "Spread", "", 0.0f, static_cast<float>(static_cast<std::size_t>(SpreadId::count) - 1u), 1.0f, true, false},
+    {"spread", "Spread", "", 0.0f, static_cast<float>(static_cast<std::size_t>(SpreadId::count) - 1u), 4.0f, true, false},
     {"rotate", "Rotate", "", 0.0f, 7.0f, 0.0f, true, false},
     {"microtune", "Microtune", "ct", 0.0f, 50.0f, 8.0f, false, false},
-    {"stride", "Stride", "st", -24.0f, 24.0f, 0.0f, true, false},
+    {"stride", "Stride", "st", 0.0f, 12.0f, 7.0f, true, false},
 
     {"lfo_a_freq", "LFO A Rate", "Hz", 0.01f, 40.0f, 1.20f, false, false},
     {"lfo_a_shape", "LFO A Shape", "", 0.0f, static_cast<float>(static_cast<std::size_t>(LfoShape::count) - 1u), 0.0f, true, false},
@@ -467,6 +518,12 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"reverb_wobble", "Reverb Wobble", "", 0.0f, 1.0f, 0.20f, false, false},
     {"width", "Width", "", 0.0f, 1.0f, 0.55f, false, false},
     {"level", "Level", "", 0.0f, 1.0f, 0.75f, false, false},
+
+    {"engine", "Engine", "", 0.0f, static_cast<float>(static_cast<std::size_t>(EngineId::count) - 1u), 0.0f, true, false},
+    {"exciter", "Exciter", "", 0.0f, static_cast<float>(static_cast<std::size_t>(ExciterId::count) - 1u), 0.0f, true, false},
+    {"strike", "Strike", "", 0.0f, 1.0f, 0.27f, false, false},
+    {"damping", "Damping", "", 0.0f, 1.0f, 0.55f, false, false},
+    {"material", "Material", "", 0.0f, 1.0f, 0.50f, false, false},
 
     {"base_channel", "Base Ch", "", 1.0f, 16.0f, 4.0f, true, false},
     {"led_feedback", "LED", "", 0.0f, 1.0f, 1.0f, true, false},
@@ -612,7 +669,9 @@ inline constexpr std::uint8_t kLedPink = 57;
 // degrees fall below the root rather than wrapping to the top.
 [[nodiscard]] constexpr int scaleStepAt(const std::size_t scale, const int degree) noexcept
 {
-    if (scale >= kScaleIntervals.size())
+    // Chromatic is implicit: its table only holds eight entries, but the scale
+    // has twelve, so a degree is simply a semitone.
+    if (scale >= kScaleIntervals.size() || scale == static_cast<std::size_t>(ScaleId::chromatic))
         return degree;
 
     const int perOctave = static_cast<int>(kScaleDegreeCount[scale]);
@@ -625,6 +684,60 @@ inline constexpr std::uint8_t kLedPink = 57;
     }
 
     return static_cast<int>(kScaleIntervals[scale][static_cast<std::size_t>(step)]) + octave * 12;
+}
+
+// Plinky's per-string stride (plinky.c `stride()`), ported unchanged in
+// behaviour. String `col` is pushed up by `col * strideSemitones`, but each push
+// is snapped to the nearest scale degree, with a penalty on degrees already used
+// so the strings fan out across the scale instead of piling onto one note.
+// Returns scale *steps* above the base degree, so it adds to row and rotate.
+[[nodiscard]] inline int strideSteps(const std::size_t scale, const int strideSemitones, const std::size_t col) noexcept
+{
+    if (strideSemitones <= 0 || col == 0u)
+        return 0;
+
+    const int numSteps = static_cast<int>(scaleDegreeCount(scale));
+    std::array<int, 16> used {};
+    used[0] = 1;
+
+    int pos = 0;
+    int result = 0;
+    for (std::size_t string = 0; string < col; ++string)
+    {
+        pos += strideSemitones;
+        const int step = pos % 12;
+
+        int best = 0;
+        int bestDist = 0;
+        int bestScore = 9999;
+        for (int i = 0; i < numSteps; ++i)
+        {
+            int candidate = scaleStepAt(scale, i);
+            int dist = candidate - step;
+            if (dist < -6)
+            {
+                dist += 12;
+                candidate += 12;
+            }
+            else if (dist > 6)
+            {
+                dist -= 12;
+                candidate -= 12;
+            }
+            const int score = (dist < 0 ? -dist : dist) * 16 + used[static_cast<std::size_t>(i)];
+            if (score < bestScore)
+            {
+                bestScore = score;
+                best = i;
+                bestDist = dist;
+            }
+        }
+
+        ++used[static_cast<std::size_t>(best)];
+        pos += bestDist;
+        result = best + (pos / 12) * numSteps;
+    }
+    return result;
 }
 
 // ── Grid helpers ────────────────────────────────────────────────────────────

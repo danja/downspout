@@ -149,6 +149,76 @@ struct Lfo {
     [[nodiscard]] std::uint32_t random() noexcept;
 };
 
+// ── Modal resonators (Plonk-style engines) ─────────────────────────────────
+//
+// A bank of two-pole resonators, one per mode of the struck object. Each mode is
+// y = x + b1*y1 + b2*y2 with a pole radius set from its T60, so a mode rings for
+// exactly as long as the Damping and Material controls say.
+
+inline constexpr std::size_t kModeCount = 8;
+
+struct ModalCoefficients {
+    float b1[kModeCount] {};
+    float b2[kModeCount] {};
+    float gain[kModeCount] {};
+};
+
+// Frequency ratio of each mode to the fundamental for an engine. The Plinky
+// engine has no modes and returns the string ratios.
+[[nodiscard]] const float* modeRatios(EngineId engine) noexcept;
+
+// `damping` is the fundamental's ring time (0 = a dead thud, 1 = several
+// seconds). `material` tilts how much faster the upper modes die: 0 is wood or
+// skin, 1 is glass or metal. `strike` is the strike position along the object,
+// which nulls the modes that have a node there.
+void computeModalCoefficients(EngineId engine,
+                              double fundamentalHz,
+                              double sampleRate,
+                              float damping,
+                              float material,
+                              float strike,
+                              ModalCoefficients& out) noexcept;
+
+struct ModalState {
+    float y1[kModeCount] {};
+    float y2[kModeCount] {};
+
+    void reset() noexcept
+    {
+        for (std::size_t i = 0; i < kModeCount; ++i)
+        {
+            y1[i] = 0.0f;
+            y2[i] = 0.0f;
+        }
+    }
+
+    [[nodiscard]] float process(const float input, const ModalCoefficients& c) noexcept
+    {
+        float sum = 0.0f;
+        for (std::size_t i = 0; i < kModeCount; ++i)
+        {
+            const float y = input + c.b1[i] * y1[i] + c.b2[i] * y2[i];
+            y2[i] = y1[i];
+            y1[i] = y;
+            sum += y * c.gain[i];
+        }
+        return sum;
+    }
+};
+
+// Strike excitation, generated sample by sample. A mallet is a half-sine pulse
+// of unit area whose width shrinks as it hardens; noise is a short decaying
+// burst through a one-pole lowpass that opens as it hardens.
+struct Exciter {
+    std::uint32_t position = 0;
+    std::uint32_t length = 0;  // 0 = idle
+    float lowpass = 0.0f;
+    std::uint32_t random = 0x9e3779b9u;
+
+    void trigger(ExciterId kind, float hardness, double sampleRate) noexcept;
+    [[nodiscard]] float next(ExciterId kind, float hardness) noexcept;
+};
+
 // Per-string voice state. A string owns its voice for the life of a note, so
 // column c always sounds the same timbre, matching Plinky's per-finger model.
 struct Voice {
@@ -164,6 +234,8 @@ struct Voice {
     bool held = false;   // pad still down, or latched
     bool sounding = false;
     std::uint8_t degree = 0;  // grid row, i.e. scale degree
+    ModalState modal;
+    Exciter exciter;
 
     void reset() noexcept;
 };

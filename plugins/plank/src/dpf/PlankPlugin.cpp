@@ -38,6 +38,17 @@ ParameterEnumerationValue kScaleEnumValues[] = {
 ParameterEnumerationValue kSpreadEnumValues[] = {
     {0.0f, kSpreadNames[0]}, {1.0f, kSpreadNames[1]},
     {2.0f, kSpreadNames[2]}, {3.0f, kSpreadNames[3]},
+    {4.0f, kSpreadNames[4]},
+};
+
+ParameterEnumerationValue kEngineEnumValues[] = {
+    {0.0f, kEngineNames[0]}, {1.0f, kEngineNames[1]}, {2.0f, kEngineNames[2]},
+    {3.0f, kEngineNames[3]}, {4.0f, kEngineNames[4]}, {5.0f, kEngineNames[5]},
+    {6.0f, kEngineNames[6]},
+};
+
+ParameterEnumerationValue kExciterEnumValues[] = {
+    {0.0f, kExciterNames[0]}, {1.0f, kExciterNames[1]},
 };
 
 ParameterEnumerationValue kLfoEnumValues[] = {
@@ -123,7 +134,7 @@ protected:
 
     const char* getDescription() const override
     {
-        return "Eight-string synthesizer derived from Plinky, played as one voice per Launchpad column.";
+        return "Eight-voice synthesizer played from a Launchpad grid, with a Plinky-derived wavetable voice and Plonk-style resonator engines.";
     }
 
     const char* getMaker() const override { return "danja"; }
@@ -185,6 +196,14 @@ protected:
             break;
         case ParamId::spread:
             applyEnumValues(parameter, kSpreadEnumValues, std::size(kSpreadEnumValues));
+            parameter.ranges.def = spec.defaultValue;
+            break;
+        case ParamId::engine:
+            applyEnumValues(parameter, kEngineEnumValues, std::size(kEngineEnumValues));
+            parameter.ranges.def = spec.defaultValue;
+            break;
+        case ParamId::exciter:
+            applyEnumValues(parameter, kExciterEnumValues, std::size(kExciterEnumValues));
             parameter.ranges.def = spec.defaultValue;
             break;
         case ParamId::lfoAShape:

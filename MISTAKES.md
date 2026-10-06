@@ -231,3 +231,24 @@ The common thread is that all three were masked by tests that zeroed the
 offending parameter or only checked one scale. When a test needs a parameter to be
 inert, assert the *default* is inert rather than forcing it to zero — that is how
 the microtune bug survived.
+
+## Plank: the grid ignored its columns and stride was not Plinky's (2026-10-06)
+
+**What happened.** Plank's note layout did not match Plinky. Spread was
+implemented in `noteForCell(row, col)` and tested there, but the voice was
+pitched through `setDegree()`, which hard-coded column 0, so every string played
+the same ladder whatever Spread said. Separately, `Stride` was a flat semitone
+offset on all columns instead of Plinky's per-string, scale-snapped stride, and
+chromatic was an eight-degree scale so stride and rotate wrapped an octave early.
+
+**Root cause.** The tests asserted on `noteForCell` directly, never on the note a
+plucked string actually sounded, so the one call site that dropped the column
+was never exercised. The design notes also called stride "a constant push"
+without checking `plinky.c`'s `stride()`.
+
+**Prevention.** `testStridePitchReachesTheVoice` plucks each column and compares
+the emitted MIDI note with `noteForCell`. When porting from a reference
+implementation, read its function for the behaviour before describing it. The
+UI's old ruler (row pitches laid out under the column letters) hid the problem
+by showing a ladder the sound did not follow; pads now carry their own note
+names.

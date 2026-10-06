@@ -56,8 +56,8 @@ struct Rect {
     }
 };
 
-constexpr std::size_t kSliderCount = 26;
-constexpr std::size_t kSelectorCount = 11;
+constexpr std::size_t kSliderCount = 28;
+constexpr std::size_t kSelectorCount = 13;
 constexpr std::size_t kPerSliderRow = 5;
 constexpr std::size_t kButtonCount = 5;
 constexpr std::size_t kToggleCount = 4;
@@ -81,6 +81,9 @@ constexpr SliderDef kSliders[kSliderCount] = {
     {ParamId::detune, "Detune", 0},
     {ParamId::drive, "Drive", 0},
     {ParamId::noise, "Noise", 0},
+    {ParamId::strike, "Strike", 0},
+    {ParamId::damping, "Damp", 0},
+    {ParamId::material, "Material", 0},
 
     {ParamId::cutoff, "Cutoff", 1},
     {ParamId::resonance, "Reso", 1},
@@ -110,6 +113,8 @@ constexpr SliderDef kSliders[kSliderCount] = {
 };
 
 constexpr SelectorDef kSelectors[kSelectorCount] = {
+    {ParamId::engine, "Engine", 0},
+    {ParamId::exciter, "Exciter", 0},
     {ParamId::scale, "Scale", 4},
     {ParamId::spread, "Spread", 4},
     {ParamId::root, "Root", 4},
@@ -183,6 +188,12 @@ constexpr const char* kLaneLabels[6] = {
     case ParamId::lfoBTarget:
         return kModTargetNames[static_cast<std::size_t>(clampf(value, 0.0f,
                                                               static_cast<float>(kModTargetNames.size() - 1u)))];
+    case ParamId::engine:
+        return kEngineNames[static_cast<std::size_t>(clampf(value, 0.0f,
+                                                            static_cast<float>(kEngineNames.size() - 1u)))];
+    case ParamId::exciter:
+        return kExciterNames[static_cast<std::size_t>(clampf(value, 0.0f,
+                                                              static_cast<float>(kExciterNames.size() - 1u)))];
     case ParamId::spread:
         return kSpreadNames[static_cast<std::size_t>(clampf(value, 0.0f,
                                                             static_cast<float>(kSpreadNames.size() - 1u)))];
@@ -524,48 +535,18 @@ private:
         }
     }
 
-    // Spell out the pitch each row plays for one string. With the columns
-    // spread they no longer share a ladder, so the readout follows whichever
-    // string is currently sounding and falls back to the first.
+    // Every pad carries its own note name (see drawPad), because with the strings
+    // spread each column plays a different ladder and no single ruler is right.
+    // This caption just says how to read the grid.
     void drawScaleRuler()
     {
         const float y = kGridY + kGridSize + 17.0f;
 
-        std::size_t column = 0;
-        for (std::size_t i = 0; i < kStringCount; ++i)
-        {
-            if (values_[idx(ParamId::outString0) + i] > 0.001f)
-            {
-                column = i;
-                break;
-            }
-        }
-
-        static constexpr const char* kNoteNames[12] = {"C",  "C#", "D",  "D#", "E",  "F",
-                                                       "F#", "G",  "G#", "A",  "A#", "B"};
-
-        char caption[32];
-        std::snprintf(caption, sizeof(caption), "ROW PITCH, STRING %c",
-                      static_cast<char>('A' + column));
-
-        fc(t().textDim);
+        fc(t().textDisabled);
         fontSize(9.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        text(kGridX, y, caption, nullptr);
-
-        fc(t().textPrimary);
-        textAlign(ALIGN_CENTER | ALIGN_TOP);
-        for (std::size_t row = 0; row < kGridHeight; ++row)
-        {
-            const int note = noteForRow(row, column);
-            char label[16];
-            std::snprintf(label, sizeof(label), "%s%d", kNoteNames[((note % 12) + 12) % 12], note / 12 - 1);
-            text(kGridX + static_cast<float>(row) * kGridPitch + kCell * 0.5f, y + 13.0f, label, nullptr);
-        }
-
-        fc(t().textDisabled);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        text(kGridX, y + 30.0f, "column = string, row = scale degree", nullptr);
+        text(kGridX, y, "column = string, row = scale degree (bottom is lowest)", nullptr);
+        text(kGridX, y + 13.0f, "pad labels show the note each cell plays", nullptr);
     }
 
     // Mirrors the engine's pitch mapping for display only. scaleStepAt() is
@@ -596,17 +577,20 @@ private:
         case SpreadId::fifths:
             columnSemitones = static_cast<int>(column) * kFifthSemitones;
             break;
+        case SpreadId::stride:
+            degree += strideSteps(scale, stride, column);
+            break;
         case SpreadId::count:
             break;
         }
 
         const double note = static_cast<double>(root + octave * 12 + scaleStepAt(scale, degree) +
-                                                columnSemitones + stride) +
+                                                columnSemitones) +
                             fine;
         return static_cast<int>(clampf(static_cast<float>(std::lround(note)), 0.0f, 127.0f));
     }
 
-    void drawPad(const Rect& rect, const std::size_t row, const std::size_t, const float level)
+    void drawPad(const Rect& rect, const std::size_t row, const std::size_t col, const float level)
     {
         const bool sounding = level > 0.001f;
 
@@ -639,6 +623,16 @@ private:
         strokeWidth(sounding ? 1.6f : laf::kBorderWidth);
         stroke();
         closePath();
+
+        static constexpr const char* kNoteNames[12] = {"C",  "C#", "D",  "D#", "E",  "F",
+                                                       "F#", "G",  "G#", "A",  "A#", "B"};
+        const int note = noteForRow(row, col);
+        char label[16];
+        std::snprintf(label, sizeof(label), "%s%d", kNoteNames[((note % 12) + 12) % 12], note / 12 - 1);
+        fc(sounding ? t().background : t().textDim);
+        fontSize(10.0f);
+        textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+        text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f, label, nullptr);
     }
 
     void drawPanel()
