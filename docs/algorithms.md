@@ -76,6 +76,14 @@ current Downspout plugins.
   crossfades that into a band-limited wavetable pair read at a quarter-cycle
   offset, and the result feeds a two-pole resonant filter whose coefficient is
   modulated by a second envelope.
+- `Pratt`: Pratt polynomials `f_1 = 1`, `f_2 = x`, `f_p = 1 + f_{p-1}` (odd prime p),
+  `f_n = prod f_p^v`, so `f_n(2) = n` and `f_mn = f_m f_n`. The filter
+  `H_n(s) = n / f_n(2 + s/w0)` is all-pole, unity at DC and strictly stable (every
+  pole has `Re(s/w0) < -1.02` for n up to 8192; degree at most 13). Cascading two
+  filters is the product of indices, `H_m H_n = H_mn`. Voices sum partial k with
+  weight `k^-roll * H_n(i xi k)` for `n = (note + 1) x base` into a band-limited
+  table; the filter mode factors the roots into biquads (bilinear transform, no
+  prewarp) and crossfades old and new cascades when index or cutoff changes.
 
 ## Appendix: Ground Algorithm Detail
 

@@ -52,6 +52,7 @@ plugins=(
   "paunchlad:paunchlad"
   "lifeform:lifeform"
   "plank:plank"
+  "pratt:pratt"
   "tuney-vst:tuney_vst"
   "harmonic-atlas:harmonic_atlas"
   "conductor:conductor"

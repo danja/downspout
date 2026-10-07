@@ -89,6 +89,21 @@ and others will not compile). No `-Wswitch` warnings remain. What was left on pu
   a splice halo was added so it reads live during crossfades. If it still reads dead at
   defaults, the diagram needs a rethink, not another lamp.
 
+## Pratt (new plugin, from `~/github/pratt-synth`)
+
+Fully wired (root CMake option, install/release scripts, workflow, docs, product page,
+screenshot script entry and asset). 4 core suites pass, threading suite clean under TSan.
+Remaining:
+
+* **Verify in a host (REAPER):** load, play notes, filter an audio track, save/reopen state.
+  Nothing has been listened to. Also confirm the host accepts an instrument with audio inputs.
+* Listen to drum levels (normalised per hit, consistent at ~0.15); check voice-stealing clicks.
+* GM Program mode warms only the last requested voice; other voices build on first note
+  (~1.9 ms). Warm several if this is audible.
+* `scripts/capture-plugin-screenshots.sh` captures the real desktop if `DISPLAY` is set
+  (see `MISTAKES.md`). Make it always use Xvfb. Shared script, needs approval.
+* Catalogue screenshot shows Synth mode (filter dimmed); consider a Synth + Filter capture.
+
 ## Evaluate Manually in Reaper
 
 * helterskelter

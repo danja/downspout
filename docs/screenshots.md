@@ -91,6 +91,7 @@ Current output filenames:
 - `paunchlad.png`
 - `lifeform.png`
 - `plank.png`
+- `pratt.png`
 - `syrinx.png`
 - `tuney-vst.png`
 - `voxmod.png`

@@ -97,6 +97,7 @@ The repository currently installs sixty-one real wrapper targets:
 - `paunchlad.vst3` with UI
 - `lifeform.vst3` with UI
 - `plank.vst3` with UI
+- `pratt.vst3` with UI
 - `xoxolo.vst3` with UI
 - `syrinx.vst3` with UI
 - `tuney_vst.vst3` with UI
@@ -164,6 +165,7 @@ The script has been smoke-tested with a temporary install root under `/tmp`:
 - confirmed `paunchlad.vst3` bundle output and install
 - confirmed `lifeform.vst3` bundle output and install
 - `plank.vst3` builds locally and awaits host-side install validation
+- `pratt.vst3` builds locally (VST3 and JACK standalone) and awaits host-side install validation
 - confirmed `xoxolo.vst3` bundle output and install
 - confirmed `syrinx.vst3` bundle output and install
 - confirmed `tuney_vst.vst3` bundle output and install

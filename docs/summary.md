@@ -151,6 +151,17 @@ Text-to-music instrument and MIDI generator derived from Tuney 0.3.39. Focused U
 
 Eight-string synthesizer derived from the Plinky touch synth. A polyBLEP oscillator pair morphs into seventeen synthesised band-limited wavetables, feeding Plinky's resonant two-pole filter, two envelopes, tape delay, shimmer reverb and mid/side width. Each Launchpad grid column is one string and each row a scale degree, so the eight-voice polyphony is held rather than allocated.
 
+### Pratt (`pratt.vst3`)
+
+Number-theoretic synthesizer and filter built from Pratt polynomials. **Synth** mode
+plays eleven General MIDI voice families (piano, electric piano, organ, pluck, bass,
+strings, brass, reed, flute, pad, timpani) whose spectra come from the stable
+all-pole filter `H_n` at `n = (note + 1) x base`; sustain pedal, volume, expression,
+pan, pitch bend and channel-10 drums are handled. **Filter** mode runs audio through
+the Pratt filter, with two cascading **Index** controls (`n = A x B`), **Cutoff** and
+**Filter Mix**; **Synth + Filter** does both. It has an audio input, so route a track
+into it for Filter mode; in Synth mode the input is ignored.
+
 ## Audio effects
 
 ### T-Mix (`t_mix.vst3`)
@@ -239,6 +250,9 @@ Facing Mass and Flow Resist by default.
 - Live dub transitions: a drum or full-mix bus -> PaunchLad.
 - Vehicle and machine texture: Magneto -> Lightverb or Ambo for exterior space,
   automating RPM and Throttle together; Guardian at the end of the chain.
+- Number-theoretic colour: any synth or loop -> Pratt in Filter mode; try Index A 3 or 5
+  with Index B 1 for a gentle slope, then raise B to cascade more poles. Or play it
+  directly from a keyboard or generator with Voice set to GM Program.
 - Hands-off engine modulation: Drift -> Magneto. Drift's four lanes default to
   CC 1-4, which Magneto reads as Throttle, RPM, Silencing and Growl.
 - Living drums: dry drum bus -> Ghost, Ghost MIDI -> DrumKit for the ghost

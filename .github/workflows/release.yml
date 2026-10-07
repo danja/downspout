@@ -234,6 +234,7 @@ jobs:
             echo "- midiscribe.vst3"
             echo "- sidecar.vst3"
             echo "- plank.vst3"
+            echo "- pratt.vst3"
             echo "- xoxolo.vst3"
             echo "- syrinx.vst3"
             echo "- tuney_vst.vst3"

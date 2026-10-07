@@ -72,6 +72,7 @@ option(DOWNSPOUT_BUILD_PRIMEFOLD "Configure the primefold prime-harmonic shifter
 option(DOWNSPOUT_BUILD_QUEFRENCY "Configure the quefrency cepstral shifter target" ON)
 option(DOWNSPOUT_BUILD_KEYFRAME "Configure the keyframe extrema time-stretch target" ON)
 option(DOWNSPOUT_BUILD_PLANK "Configure the Plank string synth instrument target" ON)
+option(DOWNSPOUT_BUILD_PRATT "Configure the Pratt number-theoretic synth and filter target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 option(DOWNSPOUT_BUILD_SCREENSHOT_APPS "Build DPF standalone apps for documentation screenshots" OFF)
 
@@ -391,4 +392,8 @@ endif()
 
 if(DOWNSPOUT_BUILD_PLANK)
     add_subdirectory(plugins/plank)
+endif()
+
+if(DOWNSPOUT_BUILD_PRATT)
+    add_subdirectory(plugins/pratt)
 endif()

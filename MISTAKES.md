@@ -117,3 +117,15 @@ unchecked.
   string match removed the first of four identical lines, in a function that used it.
   The compiler caught it. Anchor on line numbers or surrounding context when a
   line is not unique.
+- **Screenshot script captured the real desktop (2026-10-07).** `scripts/capture-plugin-screenshots.sh`
+  only starts Xvfb when `DISPLAY` is empty. Run from an agent session that had `DISPLAY`
+  set, it screenshotted the user's actual screen (browser tabs, bookmarks) into
+  `docs/pages/assets/plugins/pratt.png`. Caught at the mandatory full-resolution review,
+  restored from the earlier Xvfb capture before anything was committed. Prevention: always
+  run it as `env -u DISPLAY scripts/capture-plugin-screenshots.sh <plugin>` (or under
+  `xvfb-run`) and open every capture before keeping it. The script should be changed to
+  always use Xvfb; that is shared glue, so it needs approval.
+- **Cross-repo parity script, wrong field order (2026-10-07).** `Note(...)` was built
+  positionally with `program` and `channel` swapped, which showed as a bogus 10-18 dB
+  mismatch for every sustained voice. Read the dataclass before constructing it, and
+  distrust a large mismatch on only some cases.

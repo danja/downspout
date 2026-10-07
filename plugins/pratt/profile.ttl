@@ -1,0 +1,48 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:pratt a trn:PluginProfile ;
+    rdfs:label "Pratt" ;
+    rdfs:comment "Number-theoretic synthesizer and filter built from Pratt polynomials: eleven instrument voices whose spectra are shaped by the factorisation of (note+1) x base, a stable all-pole Pratt filter with two cascading index controls, or both together." ;
+    trn:bundleName "pratt.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/pratt/> ;
+    trn:role trn:InstrumentPlugin ;
+    trn:accepts trn:Midi, trn:Audio ;
+    trn:produces trn:Audio ;
+    trn:caution "Synth mode ignores the audio input; Filter mode ignores MIDI. Drum levels on MIDI channel 10 have not been tuned by ear. Parameter changes in Filter modes crossfade over 20 ms." ;
+    trn:parameter [ rdfs:label "Mode" ; trn:symbol "mode" ; trn:range "Synth, Filter, Synth + Filter" ;
+                    rdfs:comment "Synth: MIDI voices only. Filter: audio input through the Pratt filter. Synth + Filter: voices plus audio input, all filtered." ] ;
+    trn:parameter [ rdfs:label "Voice" ; trn:symbol "preset" ; trn:range "GM Program, Piano, Electric Piano, Organ, Pluck, Bass, Strings, Brass, Reed, Flute, Pad, Timpani" ;
+                    rdfs:comment "Instrument family. GM Program follows each MIDI channel's program change; the others override it." ] ;
+    trn:parameter [ rdfs:label "Pratt Base" ; trn:symbol "base" ; trn:range "0-64" ;
+                    rdfs:comment "Multiplier in the voice index n = (note + 1) x base. 0 uses the voice's own base." ] ;
+    trn:parameter [ rdfs:label "Brightness" ; trn:symbol "brightness" ; trn:range "0.25-3.0" ;
+                    rdfs:comment "Scales the filter frequency coordinate so more partials pass. Logarithmic." ] ;
+    trn:parameter [ rdfs:label "Rolloff" ; trn:symbol "darkness" ; trn:range "-0.5 to 1.5" ;
+                    rdfs:comment "Added to the voice's excitation rolloff exponent; positive is darker." ] ;
+    trn:parameter [ rdfs:label "Bend Range" ; trn:symbol "bend_range" ; trn:range "0-12 st" ;
+                    rdfs:comment "Pitch bend range in semitones. RPN bend-range messages are not parsed." ] ;
+    trn:parameter [ rdfs:label "Drums Ch10" ; trn:symbol "percussion" ; trn:range "Off, On" ;
+                    rdfs:comment "Procedural percussion on MIDI channel 10: a swept-sine kick, other notes are noise through the Pratt filter H_(note+1)." ] ;
+    trn:parameter [ rdfs:label "Room" ; trn:symbol "room" ; trn:range "0-100" ;
+                    rdfs:comment "Level of the fixed 14-tap diffuse room send." ] ;
+    trn:parameter [ rdfs:label "Level" ; trn:symbol "level" ; trn:range "0-200" ;
+                    rdfs:comment "Synth output gain ahead of a tanh soft clip. 50 is the default." ] ;
+    trn:parameter [ rdfs:label "Index A" ; trn:symbol "filter_a" ; trn:range "1-128" ;
+                    rdfs:comment "First Pratt filter index. The effective index is A x B (capped at 8192), because H_m H_n = H_mn." ] ;
+    trn:parameter [ rdfs:label "Index B" ; trn:symbol "filter_b" ; trn:range "1-64" ;
+                    rdfs:comment "Second Pratt filter index, cascaded with the first." ] ;
+    trn:parameter [ rdfs:label "Cutoff" ; trn:symbol "cutoff" ; trn:range "20-4000 Hz" ;
+                    rdfs:comment "Filter w0 / 2pi. Clamped to 0.1 x sample rate; logarithmic." ] ;
+    trn:parameter [ rdfs:label "Filter Mix" ; trn:symbol "mix" ; trn:range "0-100" ;
+                    rdfs:comment "Dry/wet of the Pratt filter." ] ;
+    trn:parameter [ rdfs:label "Index n" ; trn:symbol "out_index" ; trn:range "1-8192" ;
+                    rdfs:comment "Read-only: the effective filter index A x B." ] ;
+    trn:parameter [ rdfs:label "Voices" ; trn:symbol "out_voices" ; trn:range "0-64" ;
+                    rdfs:comment "Read-only: sounding voices, shown by the panel's voice lamp." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

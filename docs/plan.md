@@ -188,6 +188,15 @@ Progress as of 2026-05-27:
 - `luma` now exists as an original Launchpad-oriented MIDI performance generator with pad agents, LED feedback, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `paunchlad` now exists as an original Launchpad-oriented dub performance effect with echo throws, sirens, spring splashes, dropouts, chops, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `lifeform` now exists as an original Launchpad-oriented Conway Game of Life MIDI generator with one generation per beat, LED feedback, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
+- `pratt` now ports the offline `pratt-synth` renderer to a real-time plugin built on
+  Pratt polynomials (`f_n(2) = n`, `f_mn = f_m f_n`) and the stable all-pole filter
+  `H_n(s) = n / f_n(2 + s/w0)`: eleven General MIDI voice families whose spectra come
+  from `H_n` at `n = (note + 1) x base`, and a Pratt filter effect whose two index
+  controls cascade as `H_m H_n = H_mn`, usable on its own, on audio, or after the
+  synth. The engine matches the Python renderer's harmonics within 0.12 dB, has
+  deterministic core/engine/state/threading suites (the last also run under
+  ThreadSanitizer), a worker thread that pre-builds wavetables off the audio thread,
+  and a VST3 wrapper with UI; host validation is pending;
 - `plank` now reimplements Plinky's voice engine as a portable eight-string
   synthesizer: a polyBLEP oscillator pair morphing into seventeen synthesised
   band-limited wavetables, Plinky's resonant two-pole filter, two envelopes,
@@ -256,7 +265,7 @@ Current main gap:
   `cadence.vst3`, `arpgen.vst3`, `counterpointer.vst3`, `sidecar.vst3`, `gremlin.vst3`,
   `gremlin_driver.vst3`, `ground.vst3`, `floozy.vst3`, `basilico.vst3`,
   `canticle.vst3`, `moka.vst3`, `luma.vst3`, `paunchlad.vst3`, `lifeform.vst3`,
-  `plank.vst3`, and
+  `plank.vst3`, `pratt.vst3`, and
   `xoxolo.vst3`, `syrinx.vst3`, `tuney_vst.vst3`, `harmonic_atlas.vst3`,
   `conductor.vst3`, `drift.vst3`, `mnemosyne.vst3`, `polymeter.vst3`,
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
