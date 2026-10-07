@@ -1,5 +1,6 @@
 add_library(downspout_lifeform_core STATIC
     src/lifeform_processor.cpp
+    src/lifeform_serialization.cpp
 )
 target_link_libraries(downspout_lifeform_core PUBLIC downspout-project-options)
 target_include_directories(downspout_lifeform_core PUBLIC

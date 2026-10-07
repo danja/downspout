@@ -82,7 +82,7 @@ public:
         metalParam = std::clamp(value, 0.0f, 1.0f);
     }
 
-    void trigger(float vel = 1.0f) {
+    void trigger(float /*vel*/ = 1.0f) {
         env.trigger();
         bp1.reset();
         bp2.reset();

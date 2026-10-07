@@ -1,8 +1,10 @@
 #include "luma_processor.hpp"
 
 #include <array>
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <string>
 
 namespace {
 
@@ -50,8 +52,114 @@ bool hasNoteOn(const downspout::luma::ProcessResult& result)
 
 } // namespace
 
+// ── Session state ───────────────────────────────────────────────────────────
+
+std::array<bool, 64> cellsOf(const downspout::luma::Processor& processor)
+{
+    std::array<bool, 64> cells {};
+    for (std::uint32_t i = 0; i < 64; ++i)
+        cells[i] = processor.getParameter(downspout::luma::kParamStatusCellStart + i) > 0.5f;
+    return cells;
+}
+
+void testStateRoundTripsSettingsAndPattern()
+{
+    using namespace downspout::luma;
+
+    Processor saved;
+    saved.init(48000.0);
+    saved.setParameter(kParamRootNote, 55.0f);
+    saved.setParameter(kParamScale, 7.0f);
+    saved.setParameter(kParamGate, 0.81f);
+    saved.setParameter(kParamDensity, 0.12f);
+    saved.setParameter(kParamBaseChannel, 9.0f);
+    // A hand-drawn pattern that is not any preset.
+    for (std::uint32_t i = 0; i < 64; ++i)
+        saved.setParameter(kParamCellStart + i, (i % 5 == 0 || i == 63) ? 1.0f : 0.0f);
+
+    const std::string text = saved.serializeParameters();
+    require(text.find("version=") != std::string::npos, "state should carry a version line");
+
+    Processor reopened;
+    reopened.init(48000.0);
+    require(reopened.deserializeParameters(text), "a saved state should load");
+    require(reopened.getParameter(kParamRootNote) == 55.0f, "root should restore");
+    require(reopened.getParameter(kParamScale) == 7.0f, "scale should restore");
+    require(reopened.getParameter(kParamBaseChannel) == 9.0f, "base channel should restore");
+    require(std::abs(reopened.getParameter(kParamGate) - 0.81f) < 1.0e-5f, "gate should restore");
+    require(cellsOf(reopened) == cellsOf(saved), "the live cell pattern should restore exactly");
+}
+
+void testStateNeverStoresTriggers()
+{
+    using namespace downspout::luma;
+
+    Processor processor;
+    processor.init(48000.0);
+    const std::string text = processor.serializeParameters();
+    for (const char* trigger : {"randomize", "clear", "status"})
+        require(text.find(trigger) == std::string::npos, "triggers and status must not be persisted");
+
+    // A hand-edited state naming one is refused outright rather than firing it.
+    Processor target;
+    target.init(48000.0);
+    require(!target.deserializeParameters("version=1\nclear=1\n"), "a trigger in state must be rejected");
+    require(!target.deserializeParameters("version=1\nrandomize=1\n"), "a trigger in state must be rejected");
+}
+
+void testStateRejectsGarbage()
+{
+    using namespace downspout::luma;
+
+    Processor processor;
+    processor.init(48000.0);
+    processor.setParameter(kParamRootNote, 61.0f);
+    const auto before = cellsOf(processor);
+
+    require(!processor.deserializeParameters(""), "empty state is rejected");
+    require(!processor.deserializeParameters("root=70\n"), "state without a version is rejected");
+    require(!processor.deserializeParameters("version=99\nroot=70\n"), "an unknown version is rejected");
+    require(!processor.deserializeParameters("version=1\nnonsense=1\n"), "an unknown key is rejected");
+    require(!processor.deserializeParameters("version=1\nroot=abc\n"), "a non-numeric value is rejected");
+    require(!processor.deserializeParameters("version=1\ncells=0101\n"), "a short bitmap is rejected");
+    require(!processor.deserializeParameters(std::string("version=1\ncells=") + std::string(64, '2') + "\n"),
+            "a bitmap with other characters is rejected");
+
+    require(processor.getParameter(kParamRootNote) == 61.0f, "a rejected state must leave the patch alone");
+    require(cellsOf(processor) == before, "a rejected state must leave the pattern alone");
+}
+
+void testHostActivationKeepsThePatch()
+{
+    // Regression: activate() and sampleRateChanged() both reset to defaults, so
+    // the settings and the drawn pattern were lost whenever a host started
+    // playback or changed rate.
+    using namespace downspout::luma;
+
+    Processor processor;
+    processor.init(48000.0);
+    processor.setParameter(kParamRootNote, 60.0f);
+    processor.setParameter(kParamScale, 4.0f);
+    for (std::uint32_t i = 0; i < 64; ++i)
+        processor.setParameter(kParamCellStart + i, i % 7 == 0 ? 1.0f : 0.0f);
+    const auto pattern = cellsOf(processor);
+
+    processor.activate();
+    require(processor.getParameter(kParamRootNote) == 60.0f, "activate must not reset the root");
+    require(processor.getParameter(kParamScale) == 4.0f, "activate must not reset the scale");
+    require(cellsOf(processor) == pattern, "activate must not reset the pattern");
+
+    processor.setSampleRate(96000.0);
+    require(processor.getParameter(kParamRootNote) == 60.0f, "a rate change must not reset the patch");
+    require(cellsOf(processor) == pattern, "a rate change must not reset the pattern");
+}
+
 int main()
 {
+    testStateRoundTripsSettingsAndPattern();
+    testStateNeverStoresTriggers();
+    testStateRejectsGarbage();
+    testHostActivationKeepsThePatch();
     using downspout::luma::MidiMessage;
     using downspout::luma::Processor;
     using downspout::luma::TransportSnapshot;

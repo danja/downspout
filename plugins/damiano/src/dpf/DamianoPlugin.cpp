@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstdlib>
+#include <cstdio>
 #include <cstring>
 
 START_NAMESPACE_DISTRHO
@@ -177,6 +178,26 @@ protected:
         // replays them via IParameterChanges every process block, permanently
         // overriding live values. All slider state is driven through setState
         // so host automation cannot interfere.
+    }
+
+    // The inverse of setState(). Without it (and DISTRHO_PLUGIN_WANT_FULL_STATE)
+    // the host saves the defaults from initState() into every project.
+    String getState(const char* key) const override
+    {
+        const auto text = [](const float value) {
+            char buffer[32];
+            std::snprintf(buffer, sizeof(buffer), "%.9g", static_cast<double>(value));
+            return String(buffer);
+        };
+        if      (std::strcmp(key, kStateModeKey)       == 0) return text(parameters_.mode);
+        else if (std::strcmp(key, kStateDriveKey)      == 0) return text(parameters_.drive);
+        else if (std::strcmp(key, kStateToneKey)       == 0) return text(parameters_.tone);
+        else if (std::strcmp(key, kStateFoldCountKey)  == 0) return text(parameters_.foldCount);
+        else if (std::strcmp(key, kStateMixKey)        == 0) return text(parameters_.mix);
+        else if (std::strcmp(key, kStateOutputGainKey) == 0) return text(parameters_.outputGain);
+        else if (std::strcmp(key, kStateCCDriveKey)    == 0) return text(parameters_.ccDrive);
+        else if (std::strcmp(key, kStateCCChannelKey)  == 0) return text(parameters_.ccChannel);
+        return String();
     }
 
     // All parameters driven through state: bypasses IParameterChanges so

@@ -1,5 +1,6 @@
 add_library(downspout_paunchlad_core STATIC
     src/paunchlad_processor.cpp
+    src/paunchlad_serialization.cpp
 )
 target_link_libraries(downspout_paunchlad_core PUBLIC downspout-project-options)
 target_include_directories(downspout_paunchlad_core PUBLIC

@@ -52,7 +52,7 @@ std::uint32_t snapToZeroCrossing(const std::vector<float>& data,
 std::uint32_t findLoopStart(const std::vector<float>& data,
                               int channelCount,
                               std::uint32_t loopEnd,
-                              std::uint32_t searchWindowFrames)
+                              std::uint32_t /*searchWindowFrames*/)
 {
     if (data.empty() || channelCount <= 0 || loopEnd < 4) return 0;
 

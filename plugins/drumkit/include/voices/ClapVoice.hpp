@@ -86,7 +86,7 @@ public:
         level = std::clamp(value, 0.0f, 1.5f);
     }
 
-    void trigger(float vel = 1.0f) {
+    void trigger(float /*vel*/ = 1.0f) {
         currentImpulse = 0;
         samplesUntilNext = 0;
         burstSamples = 0;

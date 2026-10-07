@@ -94,3 +94,14 @@ See [docs/design.md](docs/design.md) for implementation notes.
 The portable core has no audio I/O. The DPF/VST3 wrapper exposes a silent
 stereo output bus for compatibility with hosts that reject event-only plugins
 with no audio outputs, and clears both channels every block.
+
+## Saving and restoring
+
+The patch is stored as one versioned text state keyed by setting name, so a project
+reopens as you left it: root, scale, gate, velocity, mutation, density, clock, output
+and emit modes, base channel, LED, running and pass-input switches, the seed choice, and
+the live cell pattern (as a 64-character bitmap, so a pattern you drew or evolved comes
+back exactly rather than being replaced by the seed preset). Randomize, clear, step and
+panic are momentary and are never stored, and a state naming one is refused. A corrupt
+or future-version state is rejected whole and leaves the current patch untouched. Starting
+playback or changing the sample rate no longer resets anything.

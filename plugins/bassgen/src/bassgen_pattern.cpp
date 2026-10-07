@@ -1403,7 +1403,6 @@ void buildSabbathDegreeCell(std::array<int, 4>& cell, int cellLen, Rng& rng) {
     const int pulseStep = std::max(1, pattern.stepsPerBeat / 4);
     const int pulseIndex = pulseStep > 0 ? stepInBar / pulseStep : 0;
     const int barIndex = pattern.stepsPerBar > 0 ? event.startStep / pattern.stepsPerBar : 0;
-    const int beatIndex = pattern.stepsPerBeat > 0 ? stepInBar / pattern.stepsPerBeat : 0;
     const int stepInBeat = pattern.stepsPerBeat > 0 ? stepInBar % pattern.stepsPerBeat : 0;
     const bool beatStart = pattern.stepsPerBeat > 0 && (stepInBar % pattern.stepsPerBeat) == 0;
     const bool phraseEnd = pattern.stepsPerBar > 0 && stepInBar >= pattern.stepsPerBar - pattern.stepsPerBeat;

@@ -3,6 +3,7 @@
 #include "spliff_core.hpp"
 
 #include <cstdlib>
+#include <cstdio>
 #include <cstring>
 
 START_NAMESPACE_DISTRHO
@@ -175,6 +176,36 @@ protected:
     }
 
     void setParameterValue(uint32_t, float) override {}
+
+    // The inverse of setState(). Without it (and DISTRHO_PLUGIN_WANT_FULL_STATE)
+    // the host never asks the plugin for its values and saves the defaults from
+    // initState() into every project.
+    String getState(const char* key) const override
+    {
+        const auto text = [](const float value) {
+            char buffer[32];
+            std::snprintf(buffer, sizeof(buffer), "%.9g", static_cast<double>(value));
+            return String(buffer);
+        };
+        if      (std::strcmp(key, kStateMode)          == 0) return text(params_.mode);
+        else if (std::strcmp(key, kStateDepth)         == 0) return text(params_.depth);
+        else if (std::strcmp(key, kStateSensitivity)   == 0) return text(params_.sensitivity);
+        else if (std::strcmp(key, kStateSharpness)     == 0) return text(params_.sharpness);
+        else if (std::strcmp(key, kStateDecay)         == 0) return text(params_.decay);
+        else if (std::strcmp(key, kStateDecayTilt)     == 0) return text(params_.decayTilt);
+        else if (std::strcmp(key, kStateSplitLow)      == 0) return text(params_.splitLow);
+        else if (std::strcmp(key, kStateSplitHigh)     == 0) return text(params_.splitHigh);
+        else if (std::strcmp(key, kStateMix)           == 0) return text(params_.mix);
+        else if (std::strcmp(key, kStateTrim)          == 0) return text(params_.trim);
+        else if (std::strcmp(key, kStateBypass)        == 0) return text(params_.bypass);
+        else if (std::strcmp(key, kStateDelta)         == 0) return text(params_.delta);
+        else if (std::strcmp(key, kStateCCDepth)       == 0) return text(params_.ccDepth);
+        else if (std::strcmp(key, kStateCCSensitivity) == 0) return text(params_.ccSensitivity);
+        else if (std::strcmp(key, kStateCCDecay)       == 0) return text(params_.ccDecay);
+        else if (std::strcmp(key, kStateCCMix)         == 0) return text(params_.ccMix);
+        else if (std::strcmp(key, kStateCCChannel)     == 0) return text(params_.ccChannel);
+        return String();
+    }
 
     void setState(const char* key, const char* value) override
     {

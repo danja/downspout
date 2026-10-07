@@ -117,7 +117,6 @@ std::optional<Phrase> deserializePhrase(const std::string& text)
         const std::string_view key = line.substr(0, sep);
         const std::string_view value = line.substr(sep + 1);
 
-        int intValue = 0;
         if (key == "version")
         {
             if (!parseInteger(value, phrase.version))

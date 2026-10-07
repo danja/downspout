@@ -1,9 +1,11 @@
 #include "lifeform_processor.hpp"
 
 #include <array>
+#include <cmath>
 #include <cstdlib>
 #include <initializer_list>
 #include <iostream>
+#include <string>
 
 namespace {
 
@@ -118,8 +120,135 @@ bool containsLedChannelMusicNote(const downspout::lifeform::ProcessResult& resul
 
 } // namespace
 
+// ── Session state ───────────────────────────────────────────────────────────
+
+std::array<bool, 64> cellsOf(const downspout::lifeform::Processor& processor)
+{
+    std::array<bool, 64> cells {};
+    for (std::uint32_t i = 0; i < 64; ++i)
+        cells[i] = processor.getParameter(downspout::lifeform::kParamStatusCellStart + i) > 0.5f;
+    return cells;
+}
+
+void testStateRoundTripsSettingsAndPattern()
+{
+    using namespace downspout::lifeform;
+
+    Processor saved;
+    saved.init(48000.0);
+    saved.setParameter(kParamRootNote, 55.0f);
+    saved.setParameter(kParamScale, 7.0f);
+    saved.setParameter(kParamGate, 0.81f);
+    saved.setParameter(kParamDensity, 0.12f);
+    saved.setParameter(kParamBaseChannel, 9.0f);
+    saved.setParameter(kParamSeed, 3.0f);
+    // A hand-drawn pattern that is not any preset.
+    for (std::uint32_t i = 0; i < 64; ++i)
+        saved.setParameter(kParamCellStart + i, (i % 5 == 0 || i == 63) ? 1.0f : 0.0f);
+
+    const std::string text = saved.serializeParameters();
+    require(text.find("version=") != std::string::npos, "state should carry a version line");
+
+    Processor reopened;
+    reopened.init(48000.0);
+    require(reopened.deserializeParameters(text), "a saved state should load");
+    require(reopened.getParameter(kParamRootNote) == 55.0f, "root should restore");
+    require(reopened.getParameter(kParamScale) == 7.0f, "scale should restore");
+    require(reopened.getParameter(kParamBaseChannel) == 9.0f, "base channel should restore");
+    require(std::abs(reopened.getParameter(kParamGate) - 0.81f) < 1.0e-5f, "gate should restore");
+    require(reopened.getParameter(kParamSeed) == 3.0f, "seed should restore");
+    require(cellsOf(reopened) == cellsOf(saved), "the live cell pattern should restore exactly");
+}
+
+void testRestoringSeedDoesNotClobberThePattern()
+{
+    // Setting the seed parameter normally replaces the pattern with the preset;
+    // restoring state must not, or every reopened project loses its drawing.
+    using namespace downspout::lifeform;
+
+    Processor saved;
+    saved.init(48000.0);
+    saved.setParameter(kParamSeed, 5.0f);
+    for (std::uint32_t i = 0; i < 64; ++i)
+        saved.setParameter(kParamCellStart + i, i == 10 || i == 20 ? 1.0f : 0.0f);
+
+    Processor reopened;
+    reopened.init(48000.0);
+    require(reopened.deserializeParameters(saved.serializeParameters()), "state should load");
+    require(cellsOf(reopened) == cellsOf(saved), "restoring the seed must not reseed the grid");
+}
+
+void testStateNeverStoresTriggers()
+{
+    using namespace downspout::lifeform;
+
+    Processor processor;
+    processor.init(48000.0);
+    const std::string text = processor.serializeParameters();
+    for (const char* trigger : {"randomize", "clear", "step", "panic", "status"})
+        require(text.find(trigger) == std::string::npos, "triggers and status must not be persisted");
+
+    // A hand-edited state naming one is refused outright rather than firing it.
+    Processor target;
+    target.init(48000.0);
+    require(!target.deserializeParameters("version=1\npanic=1\n"), "a trigger in state must be rejected");
+    require(!target.deserializeParameters("version=1\nrandomize=1\n"), "a trigger in state must be rejected");
+}
+
+void testStateRejectsGarbage()
+{
+    using namespace downspout::lifeform;
+
+    Processor processor;
+    processor.init(48000.0);
+    processor.setParameter(kParamRootNote, 61.0f);
+    const auto before = cellsOf(processor);
+
+    require(!processor.deserializeParameters(""), "empty state is rejected");
+    require(!processor.deserializeParameters("root=70\n"), "state without a version is rejected");
+    require(!processor.deserializeParameters("version=99\nroot=70\n"), "an unknown version is rejected");
+    require(!processor.deserializeParameters("version=1\nnonsense=1\n"), "an unknown key is rejected");
+    require(!processor.deserializeParameters("version=1\nroot=abc\n"), "a non-numeric value is rejected");
+    require(!processor.deserializeParameters("version=1\ncells=0101\n"), "a short bitmap is rejected");
+    require(!processor.deserializeParameters(std::string("version=1\ncells=") + std::string(64, '2') + "\n"),
+            "a bitmap with other characters is rejected");
+
+    require(processor.getParameter(kParamRootNote) == 61.0f, "a rejected state must leave the patch alone");
+    require(cellsOf(processor) == before, "a rejected state must leave the pattern alone");
+}
+
+void testHostActivationKeepsThePatch()
+{
+    // Regression: activate() and sampleRateChanged() both reset to defaults, so
+    // the settings and the drawn pattern were lost whenever a host started
+    // playback or changed rate.
+    using namespace downspout::lifeform;
+
+    Processor processor;
+    processor.init(48000.0);
+    processor.setParameter(kParamRootNote, 60.0f);
+    processor.setParameter(kParamScale, 4.0f);
+    for (std::uint32_t i = 0; i < 64; ++i)
+        processor.setParameter(kParamCellStart + i, i % 7 == 0 ? 1.0f : 0.0f);
+    const auto pattern = cellsOf(processor);
+
+    processor.activate();
+    require(processor.getParameter(kParamRootNote) == 60.0f, "activate must not reset the root");
+    require(processor.getParameter(kParamScale) == 4.0f, "activate must not reset the scale");
+    require(cellsOf(processor) == pattern, "activate must not reset the pattern");
+
+    processor.setSampleRate(96000.0);
+    require(processor.getParameter(kParamRootNote) == 60.0f, "a rate change must not reset the patch");
+    require(cellsOf(processor) == pattern, "a rate change must not reset the pattern");
+}
+
 int main()
 {
+    testStateRoundTripsSettingsAndPattern();
+    testRestoringSeedDoesNotClobberThePattern();
+    testStateNeverStoresTriggers();
+    testStateRejectsGarbage();
+    testHostActivationKeepsThePatch();
     using downspout::lifeform::MidiMessage;
     using downspout::lifeform::Processor;
     using downspout::lifeform::TransportSnapshot;
@@ -170,7 +299,7 @@ int main()
     require(processor.getParameter(kParamStatusCellStart + cellIndex(3, 2)) == 0.0f,
             "lifeform blinker should clear left arm");
 
-    processor.activate();
+    processor.init(48000.0);  // back to defaults
     processor.setParameter(kParamLedFeedback, 0.0f);
     processor.setParameter(kParamRunning, 0.0f);
     for (std::uint32_t i = 0; i < 64; ++i)
@@ -181,7 +310,7 @@ int main()
     require(countNoteOns(result) == 8,
             "lifeform lean emit mode should limit dense patterns to eight musical note-ons");
 
-    processor.activate();
+    processor.init(48000.0);  // back to defaults
     processor.setParameter(kParamLedFeedback, 0.0f);
     processor.setParameter(kParamRunning, 0.0f);
     processor.setParameter(kParamEmitMode, 1.0f);
@@ -193,7 +322,7 @@ int main()
     require(countNoteOns(result) == 64,
             "lifeform full emit mode should preserve all-cell musical output");
 
-    processor.activate();
+    processor.init(48000.0);  // back to defaults
     processor.setParameter(kParamLedFeedback, 0.0f);
     processor.setParameter(kParamRunning, 0.0f);
     for (std::uint32_t i = 0; i < 64; ++i)
@@ -215,7 +344,7 @@ int main()
     require(processor.getParameter(kParamStatusCellStart + cellIndex(0, 1)) == 0.0f,
             "lifeform wrapped blinker should clear the wrapped right arm");
 
-    processor.activate();
+    processor.init(48000.0);  // back to defaults
     processor.setParameter(kParamLedFeedback, 0.0f);
     processor.setParameter(kParamRunning, 0.0f);
     MidiMessage press {};
@@ -237,7 +366,7 @@ int main()
     require(processor.getParameter(kParamStatusCellStart + cellIndex(5, 6)) == 0.0f,
             "lifeform Launchpad pad press should flip a cell off");
 
-    processor.activate();
+    processor.init(48000.0);  // back to defaults
     processor.setParameter(kParamLedFeedback, 0.0f);
     processor.setParameter(kParamRunning, 0.0f);
     MidiMessage foreignNote {};
@@ -252,7 +381,7 @@ int main()
     result = processor.processBlock(128, transport, &foreignNote, 1);
     require(containsMidi(result, 0x99, 100, 64), "lifeform pass input switch should forward unhandled MIDI");
 
-    processor.activate();
+    processor.init(48000.0);  // back to defaults
     processor.setParameter(kParamLedFeedback, 0.0f);
     processor.setParameter(kParamRunning, 0.0f);
     for (std::uint32_t i = 0; i < 64; ++i)

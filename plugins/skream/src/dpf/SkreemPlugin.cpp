@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstdlib>
+#include <cstdio>
 #include <cstring>
 
 START_NAMESPACE_DISTRHO
@@ -187,6 +188,29 @@ protected:
     {
         // Intentional no-op — all state driven through setState to prevent
         // host automation replay from overriding live values.
+    }
+
+    // The inverse of setState(). Without it (and DISTRHO_PLUGIN_WANT_FULL_STATE)
+    // the host never asks the plugin for its values and saves the defaults from
+    // initState() into every project.
+    String getState(const char* key) const override
+    {
+        const auto text = [](const float value) {
+            char buffer[32];
+            std::snprintf(buffer, sizeof(buffer), "%.9g", static_cast<double>(value));
+            return String(buffer);
+        };
+        if      (std::strcmp(key, kStateInputGain)  == 0) return text(parameters_.inputGain);
+        else if (std::strcmp(key, kStateCutoff)     == 0) return text(parameters_.cutoff);
+        else if (std::strcmp(key, kStateScream)     == 0) return text(parameters_.scream);
+        else if (std::strcmp(key, kStateResonance)  == 0) return text(parameters_.resonance);
+        else if (std::strcmp(key, kStateMix)        == 0) return text(parameters_.mix);
+        else if (std::strcmp(key, kStateOutputGain) == 0) return text(parameters_.outputGain);
+        else if (std::strcmp(key, kStateTrack)      == 0) return text(parameters_.track);
+        else if (std::strcmp(key, kStateCCCutoff)   == 0) return text(parameters_.ccCutoff);
+        else if (std::strcmp(key, kStateCCScream)   == 0) return text(parameters_.ccScream);
+        else if (std::strcmp(key, kStateCCChannel)  == 0) return text(parameters_.ccChannel);
+        return String();
     }
 
     void setState(const char* key, const char* value) override

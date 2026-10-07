@@ -134,6 +134,9 @@ static_assert((sizeof(kScales) / sizeof(kScales[0])) == static_cast<int>(ScaleId
     case ScaleId::pentMajor:
     case ScaleId::locrian:
     case ScaleId::phrygianDominant:
+    case ScaleId::ionian:
+    case ScaleId::neapolitanMajor:
+    case ScaleId::neapolitanMinor:
     case ScaleId::count:
         break;
     }
@@ -182,6 +185,8 @@ static_assert((sizeof(kScales) / sizeof(kScales[0])) == static_cast<int>(ScaleId
         return rng.nextFloat() < 0.65f ? 4 : 5;
     case PhraseRoleId::release:
         return rng.nextFloat() < 0.60f ? 0 : 2;
+        case PhraseRoleId::count:
+            break;
     }
     return 0;
 }
@@ -196,6 +201,8 @@ static_assert((sizeof(kScales) / sizeof(kScales[0])) == static_cast<int>(ScaleId
     case PhraseRoleId::breakdown: return 0.26f;
     case PhraseRoleId::cadence: return 0.86f;
     case PhraseRoleId::release: return 0.44f;
+        case PhraseRoleId::count:
+            break;
     }
     return 0.60f;
 }
@@ -210,6 +217,8 @@ static_assert((sizeof(kScales) / sizeof(kScales[0])) == static_cast<int>(ScaleId
     case PhraseRoleId::breakdown: return motion * 0.15f;
     case PhraseRoleId::cadence: return motion * 0.55f;
     case PhraseRoleId::release: return motion * 0.35f;
+        case PhraseRoleId::count:
+            break;
     }
     return motion;
 }
@@ -320,6 +329,8 @@ static_assert((sizeof(kScales) / sizeof(kScales[0])) == static_cast<int>(ScaleId
         return 0;
     case PhraseRoleId::cadence:
         return 4;
+        case PhraseRoleId::count:
+            break;
     }
     return 0;
 }
@@ -720,6 +731,8 @@ void constrainFormNotesToRegisterLane(FormState& form, const Controls& controls)
         case PhraseRoleId::release:
             degree = base + direction * distance + direction * std::max(0, ordinal / 3);
             break;
+            case PhraseRoleId::count:
+                break;
         }
 
         if (!strongBeat && rng.nextFloat() < color * 0.25f) {
@@ -775,6 +788,8 @@ void constrainFormNotesToRegisterLane(FormState& form, const Controls& controls)
     }
     case PhraseRoleId::release:
         return clampi(base - (ordinal / 2) + rng.nextInt(-1, 0), 0, std::max(0, base + 1));
+        case PhraseRoleId::count:
+            break;
     }
 
     return base;
@@ -850,6 +865,8 @@ void addRoleSyncopation(std::array<bool, kMaxPhraseGridSteps>& onset,
             appendOnset(onset, localBarStart + scaledBarStep(stepsPerBar, ((barIndex % 2) == 0) ? 7 : 15));
         }
         break;
+        case PhraseRoleId::count:
+            break;
     }
 
     if (controls.style == StyleId::grounded && motion > 0.52f) {
@@ -1096,6 +1113,8 @@ void buildBarOnsets(std::array<bool, kMaxPhraseGridSteps>& onset,
     case PhraseRoleId::breakdown: legato -= 0.24f; break;
     case PhraseRoleId::cadence: legato += 0.12f; break;
     case PhraseRoleId::release: legato += 0.18f; break;
+        case PhraseRoleId::count:
+            break;
     }
 
     return clampf(legato, 0.0f, 1.0f);

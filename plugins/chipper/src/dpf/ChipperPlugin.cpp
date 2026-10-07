@@ -3,6 +3,7 @@
 #include "chipper_core.hpp"
 
 #include <cstdlib>
+#include <cstdio>
 #include <cstring>
 
 START_NAMESPACE_DISTRHO
@@ -197,6 +198,29 @@ protected:
     }
 
     void setParameterValue(uint32_t, float) override {}
+
+    // The inverse of setState(). Without it the host never asks the plugin for its
+    // values (DPF only does so under DISTRHO_PLUGIN_WANT_FULL_STATE) and saves the
+    // defaults from initState() into every project.
+    String getState(const char* key) const override
+    {
+        const auto text = [](const float value) {
+            char buffer[32];
+            std::snprintf(buffer, sizeof(buffer), "%.9g", static_cast<double>(value));
+            return String(buffer);
+        };
+        if      (std::strcmp(key, kStateBitDepth)   == 0) return text(params_.bitDepth);
+        else if (std::strcmp(key, kStateRateDiv)    == 0) return text(params_.rateDiv);
+        else if (std::strcmp(key, kStateJitter)     == 0) return text(params_.jitter);
+        else if (std::strcmp(key, kStateMix)        == 0) return text(params_.mix);
+        else if (std::strcmp(key, kStateOutputGain) == 0) return text(params_.outputGain);
+        else if (std::strcmp(key, kStateCCBitDepth) == 0) return text(params_.ccBitDepth);
+        else if (std::strcmp(key, kStateCCRateDiv)  == 0) return text(params_.ccRateDiv);
+        else if (std::strcmp(key, kStateCCJitter)   == 0) return text(params_.ccJitter);
+        else if (std::strcmp(key, kStateCCMix)      == 0) return text(params_.ccMix);
+        else if (std::strcmp(key, kStateCCChannel)  == 0) return text(params_.ccChannel);
+        return String();
+    }
 
     void setState(const char* key, const char* value) override
     {

@@ -47,6 +47,9 @@ const char* scaleName(const ScaleId scale) noexcept
     case ScaleId::bebopDominant: return "bebop_dominant";
     case ScaleId::bebopMajor: return "bebop_major";
     case ScaleId::bebopMinor: return "bebop_minor";
+    case ScaleId::ionian: return "ionian";
+    case ScaleId::neapolitanMajor: return "neapolitan_major";
+    case ScaleId::neapolitanMinor: return "neapolitan_minor";
     case ScaleId::count: break;
     }
     return "minor";

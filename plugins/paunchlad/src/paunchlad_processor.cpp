@@ -32,24 +32,36 @@ constexpr std::array<std::uint8_t, 9> kProgrammerModeSysex = {{
 void Processor::init(const double sampleRate)
 {
     sampleRate_ = sampleRate > 1.0 ? sampleRate : 48000.0;
-    const std::size_t delaySize = static_cast<std::size_t>(std::ceil(sampleRate_ * 4.0));
-    delayLeft_.assign(std::max<std::size_t>(delaySize, 8u), 0.0f);
-    delayRight_.assign(std::max<std::size_t>(delaySize, 8u), 0.0f);
-    activate();
+    allocateDelay();
+    resetToDefaults();
 }
 
 void Processor::activate()
 {
-    resetToDefaults();
+    clearPerformance();
+    ledInitialized_ = false;
+    ledRefreshSamples_ = 0;
+}
+
+void Processor::setSampleRate(const double sampleRate)
+{
+    sampleRate_ = sampleRate > 1.0 ? sampleRate : 48000.0;
+    allocateDelay();
+    activate();
+}
+
+void Processor::allocateDelay()
+{
+    const std::size_t delaySize = static_cast<std::size_t>(std::ceil(sampleRate_ * 4.0));
+    delayLeft_.assign(std::max<std::size_t>(delaySize, 8u), 0.0f);
+    delayRight_.assign(std::max<std::size_t>(delaySize, 8u), 0.0f);
 }
 
 void Processor::resetToDefaults()
 {
     for (std::uint32_t i = 0; i < kParameterCount; ++i)
         parameters_[i] = parameterDefault(i);
-    clearPerformance();
-    ledInitialized_ = false;
-    ledRefreshSamples_ = 0;
+    activate();
 }
 
 void Processor::clearPerformance()

@@ -3,6 +3,8 @@
 #include "paunchlad_params.hpp"
 
 #include <array>
+#include <string>
+#include <string_view>
 #include <cstdint>
 #include <vector>
 
@@ -35,8 +37,22 @@ enum class LaunchpadInputLayout {
 
 class Processor {
 public:
+    // First-time setup: sets the rate, allocates the delay and puts every
+    // parameter at its default.
     void init(double sampleRate);
+    // The host started or resumed processing. Clears sounding state and the LED
+    // cache but keeps the settings: hosts call this after restoring state, so
+    // resetting parameters here discarded the user's mix.
     void activate();
+    // The host changed the sample rate. Resizes the delay, keeps the settings.
+    void setSampleRate(double sampleRate);
+
+    // Host session state: the nine settings as a versioned, symbol-keyed text
+    // form. Pad triggers and the panic trigger are momentary and the status
+    // outputs are derived, so none are stored. A corrupt, truncated or
+    // future-version value is rejected rather than half-applied.
+    [[nodiscard]] std::string serializeParameters() const;
+    [[nodiscard]] bool deserializeParameters(std::string_view text);
 
     void setParameter(std::uint32_t index, float value);
     [[nodiscard]] float getParameter(std::uint32_t index) const noexcept;
@@ -52,6 +68,7 @@ public:
 
 private:
     void resetToDefaults();
+    void allocateDelay();
     void clearPerformance();
     bool handleMidi(const MidiMessage& message);
     bool handleGridPress(std::uint8_t note, std::uint8_t velocity);

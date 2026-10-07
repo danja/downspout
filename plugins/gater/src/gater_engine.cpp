@@ -3,10 +3,10 @@
 namespace downspout::gater {
 
 void processBlock(EngineState& state,
-                  const Parameters& parameters,
-                  const TransportSnapshot& transport,
+                  const Parameters& /*parameters*/,
+                  const TransportSnapshot& /*transport*/,
                   std::uint32_t nframes,
-                  double sampleRate,
+                  double /*sampleRate*/,
                   const AudioBlock& audio)
 {
     for (std::uint32_t i = 0; i < nframes; ++i)

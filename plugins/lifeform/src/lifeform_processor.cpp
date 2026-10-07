@@ -52,12 +52,18 @@ constexpr std::array<std::array<int, 8>, static_cast<std::size_t>(ScaleId::count
 void Processor::init(const double sampleRate)
 {
     sampleRate_ = sampleRate > 1.0 ? sampleRate : 48000.0;
-    activate();
+    resetToDefaults();
 }
 
 void Processor::activate()
 {
-    resetToDefaults();
+    resetRuntime();
+}
+
+void Processor::setSampleRate(const double sampleRate)
+{
+    sampleRate_ = sampleRate > 1.0 ? sampleRate : 48000.0;
+    resetRuntime();
 }
 
 void Processor::resetToDefaults()
@@ -66,18 +72,27 @@ void Processor::resetToDefaults()
         parameters_[i] = parameterDefault(i);
     cells_.fill(false);
     born_.fill(false);
+    generation_ = 0;
+    resetRuntime();
+    seedPattern();
+    updateStatus();
+}
+
+// Timing, pending notes and the LED cache: everything that belongs to a running
+// session rather than to the patch. The parameters and the cell pattern are left
+// alone.
+void Processor::resetRuntime()
+{
     lastCellLeds_.fill(255u);
     lastTopLeds_.fill(255u);
     lastSideLeds_.fill(255u);
     pendingNoteOffs_.fill({});
-    generation_ = 0;
     lastHostBeat_ = static_cast<std::uint64_t>(-1);
     freeBeatSamples_ = 0.0;
     ledRefreshSamples_ = 0;
     ledInitialized_ = false;
     panicRequested_ = false;
     suppressLedFeedbackOnce_ = false;
-    seedPattern();
     updateStatus();
 }
 

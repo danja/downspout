@@ -70,3 +70,12 @@ cmake -S ../.. -B ../../build -DDOWNSPOUT_BUILD_PAUNCHLAD=ON
 cmake --build ../../build --target paunchlad-vst3 downspout_paunchlad_core_tests
 ctest --test-dir ../../build --output-on-failure -R paunchlad
 ```
+
+## Saving and restoring
+
+The nine settings (dry, echo wet, feedback, tape tone, siren, spring, output, LED feedback
+and pad map) are stored as one versioned text state, so a project reopens with the same mix.
+Pads and panic are momentary and are never stored, and a state naming one is refused. A
+corrupt or future-version state is rejected whole and leaves the current settings untouched.
+Starting playback no longer resets the settings, and a sample-rate change resizes the echo
+without touching them.

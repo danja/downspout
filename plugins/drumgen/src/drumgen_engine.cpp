@@ -73,7 +73,7 @@ void emitNoteOn(BlockResult& result, const EngineState& state, std::uint32_t fra
     appendMidi(result, MidiEventType::noteOn, frame, state.controls.channel, note, velocity);
 }
 
-void emitNoteOff(BlockResult& result, const EngineState& state, std::uint32_t frame, int note, int channel) {
+void emitNoteOff(BlockResult& result, const EngineState& /*state*/, std::uint32_t frame, int note, int channel) {
     appendMidi(result, MidiEventType::noteOff, frame, channel, note, 0);
 }
 

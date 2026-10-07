@@ -71,3 +71,12 @@ wrapper is deliberately thin around parameters, transport, and MIDI I/O.
 The DPF/VST3 wrapper exposes a silent stereo output bus for compatibility with
 hosts that reject event-only plugins with no audio outputs. The portable core
 remains MIDI-only, and the wrapper clears both output channels every block.
+
+## Saving and restoring
+
+The patch is stored as one versioned text state keyed by setting name, so a project
+reopens as you left it: root, scale, density, energy, gate, swing, clock and output modes,
+base channel, the LED and pass-input switches, and the live cell pattern (as a 64-character
+bitmap). Randomize and clear are momentary and are never stored, and a state naming one is
+refused. A corrupt or future-version state is rejected whole and leaves the current patch
+untouched. Starting playback or changing the sample rate no longer resets anything.

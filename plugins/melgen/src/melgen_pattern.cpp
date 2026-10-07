@@ -173,6 +173,9 @@ static_assert((sizeof(kScales) / sizeof(kScales[0])) == static_cast<int>(ScaleId
     case ScaleId::locrian:
     case ScaleId::phrygianDominant:
     case ScaleId::wholeTone:
+    case ScaleId::ionian:
+    case ScaleId::neapolitanMajor:
+    case ScaleId::neapolitanMinor:
     case ScaleId::count:
         break;
     }

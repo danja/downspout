@@ -1332,7 +1332,7 @@ struct StylePulseInfo {
                                           const int lane,
                                           const int beatIndex,
                                           const int subIndex,
-                                          const int stepsPerBeat,
+                                          const int /*stepsPerBeat*/,
                                           const ::downspout::Meter& meter) {
     const float density = clampf(controls.density, 0.0f, 1.0f);
     const bool beatStart = subIndex == 0;

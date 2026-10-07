@@ -4,6 +4,8 @@
 
 #include <array>
 #include <cstdint>
+#include <string>
+#include <string_view>
 
 namespace downspout::luma {
 
@@ -38,8 +40,22 @@ struct ProcessResult {
 
 class Processor {
 public:
+    // First-time setup: sets the rate and puts every parameter and the cell
+    // pattern at its default.
     void init(double sampleRate);
+    // The host started or resumed processing. Clears timing, pending notes and the
+    // LED cache but keeps the patch: hosts call this after restoring state, so
+    // resetting parameters here discarded the user's settings and pattern.
     void activate();
+    // The host changed the sample rate. Keeps the patch.
+    void setSampleRate(double sampleRate);
+
+    // Host session state: the settings plus the live cell pattern as a 64
+    // character bitmap, in a versioned, symbol-keyed text form. Triggers
+    // (randomize, clear) and the status outputs are not stored. A corrupt,
+    // truncated or future-version value is rejected rather than half-applied.
+    [[nodiscard]] std::string serializeParameters() const;
+    [[nodiscard]] bool deserializeParameters(std::string_view text);
 
     void setParameter(std::uint32_t index, float value);
     [[nodiscard]] float getParameter(std::uint32_t index) const noexcept;
@@ -66,6 +82,7 @@ private:
     };
 
     void resetToDefaults();
+    void resetRuntime();
     void clearCells();
     void randomizeCells();
     bool handleMidi(const MidiMessage& event, ProcessResult& result);

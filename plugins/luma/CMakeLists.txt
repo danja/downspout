@@ -1,5 +1,6 @@
 add_library(downspout_luma_core STATIC
     src/luma_processor.cpp
+    src/luma_serialization.cpp
 )
 target_link_libraries(downspout_luma_core PUBLIC downspout-project-options)
 target_include_directories(downspout_luma_core PUBLIC

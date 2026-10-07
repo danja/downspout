@@ -4,6 +4,8 @@
 #include "paunchlad_processor.hpp"
 
 #include <algorithm>
+#include <string_view>
+#include <cstring>
 #include <array>
 
 START_NAMESPACE_DISTRHO
@@ -55,11 +57,15 @@ MidiEvent toDpfMidiEvent(const MidiMessage& event)
 
 } // namespace
 
+constexpr std::uint32_t kStateParameters = 0;
+constexpr std::uint32_t kStateCount = 1;
+constexpr const char* kStateKeyParameters = "parameters";
+
 class PaunchLadPlugin : public Plugin
 {
 public:
     PaunchLadPlugin()
-        : Plugin(kParameterCount, 0, 0)
+        : Plugin(kParameterCount, 0, kStateCount)
     {
         processor_.init(getSampleRate());
     }
@@ -206,6 +212,35 @@ protected:
         processor_.setParameter(index, value);
     }
 
+    // One text state holding the settings. Without it the host has nothing to save
+    // and everything reverts on reopen.
+    void initState(const uint32_t index, State& state) override
+    {
+        if (index != kStateParameters)
+            return;
+        state.key = kStateKeyParameters;
+        state.label = "Parameters";
+        state.hints = kStateIsOnlyForDSP;
+        state.defaultValue = "";
+    }
+
+    String getState(const char* key) const override
+    {
+        if (std::strcmp(key, kStateKeyParameters) == 0)
+            return String(processor_.serializeParameters().c_str());
+        return String();
+    }
+
+    void setState(const char* key, const char* value) override
+    {
+        if (std::strcmp(key, kStateKeyParameters) != 0)
+            return;
+
+        // A malformed state is ignored rather than half-applied.
+        static_cast<void>(
+            processor_.deserializeParameters(value != nullptr ? std::string_view(value) : std::string_view()));
+    }
+
     void activate() override
     {
         processor_.activate();
@@ -213,7 +248,7 @@ protected:
 
     void sampleRateChanged(const double newSampleRate) override
     {
-        processor_.init(newSampleRate);
+        processor_.setSampleRate(newSampleRate);
     }
 
     void run(const float** inputs,

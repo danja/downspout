@@ -881,10 +881,34 @@ void testSerializationRoundTrip()
     assert(variationRoundTrip->lastMutationLoop == 3);
 }
 
+// Every selectable scale must report its own name to the AI coordinator. The
+// switch once had no case for ionian or the two Neapolitan scales, so they fell
+// through to "minor" and the coordinator was told the wrong scale.
+void testEveryScaleHasItsOwnAiName()
+{
+    std::array<std::string, static_cast<std::size_t>(ScaleId::count)> names {};
+    for (int i = 0; i < static_cast<int>(ScaleId::count); ++i)
+    {
+        names[static_cast<std::size_t>(i)] = scaleName(static_cast<ScaleId>(i));
+        assert(!names[static_cast<std::size_t>(i)].empty());
+    }
+
+    for (std::size_t a = 0; a < names.size(); ++a)
+    {
+        for (std::size_t b = a + 1; b < names.size(); ++b)
+            assert(names[a] != names[b] && "two scales report the same name");
+    }
+
+    assert(std::string(scaleName(ScaleId::neapolitanMinor)) == "neapolitan_minor");
+    assert(std::string(scaleName(ScaleId::neapolitanMajor)) == "neapolitan_major");
+    assert(std::string(scaleName(ScaleId::ionian)) == "ionian");
+}
+
 }  // namespace
 
 int main()
 {
+    testEveryScaleHasItsOwnAiName();
     testDeterministicGeneration();
     testRefreshPhraseKeepsNeighbours();
     testSetPhraseRoleKeepsNeighbours();

@@ -6,6 +6,7 @@
 #include <array>
 #include <cmath>
 #include <cstdlib>
+#include <cstdio>
 #include <cstring>
 
 START_NAMESPACE_DISTRHO
@@ -176,6 +177,34 @@ protected:
     }
 
     void setParameterValue(uint32_t, float) override {}
+
+    // The inverse of setState(). Without it (and DISTRHO_PLUGIN_WANT_FULL_STATE)
+    // the host never asks the plugin for its values and saves the defaults from
+    // initState() into every project.
+    String getState(const char* key) const override
+    {
+        const auto text = [](const float value) {
+            char buffer[32];
+            std::snprintf(buffer, sizeof(buffer), "%.9g", static_cast<double>(value));
+            return String(buffer);
+        };
+        if      (std::strcmp(key, kStateSensitivity)   == 0) return text(params_.sensitivity);
+        else if (std::strcmp(key, kStateDensity)       == 0) return text(params_.density);
+        else if (std::strcmp(key, kStateVelocity)      == 0) return text(params_.velocity);
+        else if (std::strcmp(key, kStateDrag)          == 0) return text(params_.drag);
+        else if (std::strcmp(key, kStateMode)          == 0) return text(params_.mode);
+        else if (std::strcmp(key, kStateChannel)       == 0) return text(params_.channel);
+        else if (std::strcmp(key, kStateBaseNote)      == 0) return text(params_.baseNote);
+        else if (std::strcmp(key, kStatePassInput)     == 0) return text(params_.passInput);
+        else if (std::strcmp(key, kStateSeed)          == 0) return text(params_.seed);
+        else if (std::strcmp(key, kStateCCSensitivity) == 0) return text(params_.ccSensitivity);
+        else if (std::strcmp(key, kStateCCDensity)     == 0) return text(params_.ccDensity);
+        else if (std::strcmp(key, kStateCCVelocity)    == 0) return text(params_.ccVelocity);
+        else if (std::strcmp(key, kStateCCDrag)        == 0) return text(params_.ccDrag);
+        else if (std::strcmp(key, kStateCCChannel)     == 0) return text(params_.ccChannel);
+        else if (std::strcmp(key, kStateAudioThru)     == 0) return text(params_.audioThru);
+        return String();
+    }
 
     void setState(const char* key, const char* value) override
     {
