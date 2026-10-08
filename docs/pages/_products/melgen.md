@@ -21,6 +21,11 @@ incoming MIDI pull the generated line toward another part without simply
 copying it. High Structure with Call Answer and low Leap/Rest gives it a
 Fugue-friendly tonic subject and dominant answer region.
 
+**Inertia** (default 0, which leaves the line unchanged) adds Narmour-style melodic
+implication: after a leap of three scale degrees or more the next move tends to turn
+back without overshooting, and after a step it tends to continue in the same direction.
+Idea from [Subsequence](https://subsystem.co/subsequence).
+
 ### Status
 
 Working, but the melodies generated are questionable. Algorithms under review.

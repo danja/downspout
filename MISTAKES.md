@@ -129,3 +129,12 @@ unchecked.
   positionally with `program` and `channel` swapped, which showed as a bogus 10-18 dB
   mismatch for every sustained voice. Read the dataclass before constructing it, and
   distrust a large mismatch on only some cases.
+- **Build errors hidden by my own grep, stale test binary reported as passing (2026-10-08).**
+  After adding a pitch-bend test to `canticle`, I filtered build output with `grep " error "`
+  (spaces around the word). GCC prints `error:`, so the compile failure
+  (`StereoFrame` not in scope in the test) matched nothing, `ctest` then ran the previous test
+  binary, and I reported the new test as passing. The user hit the error building canticle.
+  Prevention: filter with `grep -E "error:|Error [0-9]"` and also check the build's exit status;
+  after adding a test, confirm it runs (a deliberately failing assertion, or the test count or
+  runtime changing) before saying it passes. The test is now fixed and the whole tree rebuilt
+  with the correct filter: 68 of 68 pass.

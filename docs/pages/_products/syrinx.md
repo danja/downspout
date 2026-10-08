@@ -63,7 +63,7 @@ Master controls: Distance (air absorption + reverb mix), Gain.
 | 91 | Distance |
 | 94 | Contour Bend |
 
-Pitch bend spans ±2 semitones across all active voices.
+Pitch bend is applied per MIDI channel (2 semitones by default, set per channel with RPN 0), and voices are keyed by channel and note, so Retune's one-note-per-channel output bends each note on its own.
 
 ### Status
 

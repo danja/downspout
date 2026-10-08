@@ -20,6 +20,10 @@ source algorithm, interface/body model, quantized body tuning, feedback,
 filter, modulation, reverb, and output controls while keeping the voice engine
 deterministic and bounded.
 
+**Pitch bend** is applied per MIDI channel (2 semitones by default, set per channel with
+RPN 0) and voices are keyed by channel and note, so it follows the one-note-per-channel
+output of [Retune](/downspout/plugins/retune/).
+
 ### Status
 
 This can make many useful sounds but it is a little hit & miss trying to find them.

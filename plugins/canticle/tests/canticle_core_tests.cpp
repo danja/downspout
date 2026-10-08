@@ -208,7 +208,7 @@ float estimateHz(CanticleEngine& engine)
     std::vector<float> mono(length);
     for (int i = 0; i < warm; ++i) (void)engine.processStereo();
     for (int i = 0; i < length; ++i) {
-        const StereoFrame f = engine.processStereo();
+        const auto f = engine.processStereo();
         mono[static_cast<std::size_t>(i)] = 0.5f * (f.left + f.right);
     }
     // Autocorrelation peak between 100 Hz and 1 kHz.

@@ -20,6 +20,10 @@ line. Controls shape how closely it follows, how often it moves contrary to the
 source, and how much rhythmic answering, chromatic color, or randomness is
 introduced.
 
+**Inertia** (default 0, which leaves the line unchanged) biases the counterline to turn
+back after a leap of a fourth or more and to keep going after a step. It applies in
+Counterpoint mode, not Bass Descend. Idea from [Subsequence](https://subsystem.co/subsequence).
+
 ### Status
 
 Functional, as far as it goes, but could maybe be improved with more deterministic patterns. 

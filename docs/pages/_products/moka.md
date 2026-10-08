@@ -52,6 +52,10 @@ Xylophone, Glockenspiel, Temple Blocks, Glass Bowl, Frost Glass,
 Metal Sheet, Thunder Plate, Tube Flip-Flop, Dark Tube, Soft Xylo, Kalimba.
 A preset writes all ten controls; any tweak shows `Custom`.
 
+**Pitch bend** is applied per MIDI channel (2 semitones by default, set per channel with
+RPN 0) and voices are keyed by channel and note, so it follows the one-note-per-channel
+output of [Retune](/downspout/plugins/retune/).
+
 ### Status
 
 Core DSP, tests, VST3 target, and catalog screenshot are complete.
