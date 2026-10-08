@@ -138,3 +138,10 @@ unchecked.
   after adding a test, confirm it runs (a deliberately failing assertion, or the test count or
   runtime changing) before saying it passes. The test is now fixed and the whole tree rebuilt
   with the correct filter: 68 of 68 pass.
+- **Wrong stability bound documented and tested for Pratt (2026-10-08).** `design.md`, the Pages
+  page and `docs/algorithms.md` said every pole has `Re(t - 2) < -1.02` for n up to 8192. The
+  test only swept every 7th index above 2000 and asserted `< -1.0` with the comment "about
+  -1.026", so it missed n = 6173, whose worst root is at -0.9977. Found while probing larger
+  bases. The filter is still strictly stable; only the margin was overstated. Prevention: when a
+  doc quotes a "worst case over a range", the test must cover the whole range (a full sweep was
+  cheap, under half a second) and the assertion should be the bound that is documented.

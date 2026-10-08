@@ -122,7 +122,7 @@ at start-up and when the preset changes. The wrapper must decide how to schedule
 |---|---|
 | Polynomial degree | <= 13 |
 | Largest integer coefficient | 70 (int64 is exact with huge margin) |
-| Stability | every root has `Re(t - 2) < -1.02`, so all poles are strictly stable |
+| Stability | every root has `Re(t - 2) < -0.997` for n <= 8192 (worst at n = 6173), so all poles are strictly stable |
 | Root conditioning | Durand-Kerner per prime factor + Newton: `|f_n(t)|/n < 3e-17` |
 | Python parity | `response()` and table samples match to 1e-12 / 1e-5 |
 

@@ -73,7 +73,8 @@ void testRootsAndStability() {
     // Every index the synth can produce (pitch+1 in 1..128, base 1..64) plus a
     // sweep of the rest: roots are zeros of f_n and poles are stable.
     double worstResidual = 0.0, worstRe = -1e9;
-    for (int n = 2; n <= kMaxIndex; n += (n < 2000 ? 1 : 7)) {
+    // Every index, not a sample: the worst root is at n = 6173, which a stride of 7 skips.
+    for (int n = 2; n <= kMaxIndex; ++n) {
         const auto& r = roots(n);
         assert(static_cast<int>(r.size()) == degree(n));
         for (const Complex& t : r) {
@@ -83,7 +84,7 @@ void testRootsAndStability() {
     }
     std::printf("roots: worst |f_n(t)|/n = %.3g, max Re(t-2) = %.4f\n", worstResidual, worstRe);
     assert(worstResidual < 1e-6);
-    assert(worstRe < -1.0);  // measured bound over this sweep is about -1.026
+    assert(worstRe < -0.99);  // measured worst case over all n <= 8192 is -0.9977 (n = 6173)
 }
 
 void testSections() {

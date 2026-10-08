@@ -33,7 +33,7 @@ primes, multiplicative otherwise, with `f_n(2) = n`. The filter
 
     H_n(s) = n / f_n(2 + s/w0)
 
-is all-pole, has unity gain at DC and is strictly stable (poles at least 1.02 w0
+is all-pole, has unity gain at DC and is strictly stable (poles at least 0.99 w0
 into the left half plane for every n up to 8192). Because `H_m H_n = H_mn`,
 two index controls cascade into one filter of index `A x B`.
 
