@@ -1,0 +1,20 @@
+! bohlen-pierce.scl
+!
+! The period is a 3/1 tritave, not an octave. Retune repeats the scale every period.
+!
+Bohlen-Pierce, 13 equal divisions of the 3/1 tritave
+ 13
+!
+ 146.304231
+ 292.608462
+ 438.912693
+ 585.216923
+ 731.521154
+ 877.825385
+ 1024.129616
+ 1170.433847
+ 1316.738078
+ 1463.042308
+ 1609.346539
+ 1755.650770
+ 1901.955001

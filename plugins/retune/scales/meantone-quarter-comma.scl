@@ -1,0 +1,14 @@
+! meantone-quarter-comma.scl
+!
+! Pure major thirds (5/4) obtained by narrowing each fifth by a quarter of the syntonic comma.
+!
+Quarter-comma meantone diatonic scale
+ 7
+!
+ 193.156857
+ 386.313714
+ 503.421572
+ 696.578428
+ 889.735285
+ 1082.892142
+ 2/1

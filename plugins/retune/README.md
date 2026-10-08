@@ -28,6 +28,12 @@ is original.
 Synths that currently follow per-channel pitch bend (2-semitone default, RPN 0 range):
 `canticle`, `moka`, `floozy`, `syrinx`, `pratt`. The others are listed in `TODO.md`.
 
+Example scales are in `scales/`: Slendro (5 equal steps), a Pelog-like seven-note scale,
+Bohlen-Pierce, 19, 24 and 31-EDO, 5-limit just major, Pythagorean, quarter-comma meantone and
+harmonics 8-16. The gamelan files are idealised illustrations: real slendro and pelog tunings
+differ between ensembles, so load a measured `.scl` (for example from the Scala archive) for an
+authentic tuning. A test loads every example.
+
 Not supported: `.kbm` keyboard maps, N-TET entry without a file, MPE zone setup
 messages. The receiving synth must be in a one-channel-per-note mode.
 

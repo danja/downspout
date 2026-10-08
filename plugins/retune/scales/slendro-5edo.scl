@@ -1,0 +1,13 @@
+! slendro-5edo.scl
+!
+! Real slendro tunings differ from ensemble to ensemble and many are far from equal.
+! Five equal steps is the usual idealisation, not a measurement of any gamelan.
+!
+Slendro, idealised as five equal steps (240 cents)
+ 5
+!
+ 240.000000
+ 480.000000
+ 720.000000
+ 960.000000
+ 1200.000000

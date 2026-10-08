@@ -34,6 +34,12 @@ bend and channel aftertouch are dropped, because they would undo the tuning. Whe
 fifteen notes are held, the oldest is stolen. With no file loaded the plugin plays
 12-tone equal temperament, which leaves notes unchanged apart from the channel move.
 
+Example scales ship in `plugins/retune/scales/`: Slendro as five equal steps, a Pelog-like
+seven-note scale, Bohlen-Pierce, 19, 24 and 31-EDO, 5-limit just major, Pythagorean,
+quarter-comma meantone and harmonics 8-16. The two gamelan files are idealised illustrations,
+because real slendro and pelog tunings differ from one ensemble to the next; for an authentic
+tuning load a measured `.scl`, for example from the Scala archive.
+
 ### Status
 
 Core and wrapper are covered by deterministic tests; the keyboard mapping (`.kbm`)

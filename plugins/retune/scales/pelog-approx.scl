@@ -1,0 +1,18 @@
+! pelog-approx.scl
+!
+! An illustrative pelog-like seven-note scale: small steps at the start and a
+! large gap between the third and fourth notes. The cents are rounded and chosen
+! for illustration. Real gamelans vary widely and this is not a measurement of any
+! particular instrument; load a measured .scl for an authentic tuning.
+! Pelog is usually played as five-note subsets (patet) of the seven.
+!
+Pelog-like seven-note scale (illustrative)
+ 7
+!
+ 120.0
+ 270.0
+ 540.0
+ 670.0
+ 800.0
+ 950.0
+ 1200.0

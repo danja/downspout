@@ -238,6 +238,30 @@ void testOtherMessageRouting()
     assert(out.size() == 1 && (out[0].status >> 4) == 0x8 && e.activeNotes() == 0);
 }
 
+void testExampleScalesLoad()
+{
+    // Every shipped example must parse, with a plausible period and increasing degrees.
+    const char* names[] = {"slendro-5edo", "pelog-approx", "bohlen-pierce", "19-edo", "24-edo", "31-edo",
+                           "just-5limit-major", "pythagorean", "meantone-quarter-comma", "harmonic-series-8-16"};
+    for (const char* name : names) {
+        const auto scale = loadSclFile(std::string(RETUNE_EXAMPLES_DIR) + "/" + name + ".scl");
+        assert(scale.has_value());
+        double previous = 0.0;
+        for (double cents : scale->cents) {
+            assert(cents > previous);
+            previous = cents;
+        }
+    }
+    const auto slendro = loadSclFile(std::string(RETUNE_EXAMPLES_DIR) + "/slendro-5edo.scl");
+    assert(slendro->size() == 5 && near(slendro->period(), 1200.0, 1e-4) && near(slendro->cents[0], 240.0, 1e-4));
+    const auto bp = loadSclFile(std::string(RETUNE_EXAMPLES_DIR) + "/bohlen-pierce.scl");
+    assert(bp->size() == 13 && near(bp->period(), 1901.955001, 1e-3));
+    const auto pelog = loadSclFile(std::string(RETUNE_EXAMPLES_DIR) + "/pelog-approx.scl");
+    assert(pelog->size() == 7 && near(pelog->period(), 1200.0, 1e-9));
+    const auto meantone = loadSclFile(std::string(RETUNE_EXAMPLES_DIR) + "/meantone-quarter-comma.scl");
+    assert(near(meantone->cents[1], 1200.0 * std::log2(1.25), 1e-4));  // pure major third
+}
+
 }  // namespace
 
 int main()
@@ -254,5 +278,6 @@ int main()
     testUntunableNoteIsDroppedWithItsOff();
     testSameNoteOnDifferentInputChannelsAreSeparate();
     testOtherMessageRouting();
+    testExampleScalesLoad();
     return 0;
 }
