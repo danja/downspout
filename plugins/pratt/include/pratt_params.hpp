@@ -31,13 +31,15 @@ enum class ParamId : std::uint32_t {
     filterB,
     cutoff,
     mix,
+    // Voice (appended after the filter group so existing host automation indices stay put)
+    timbre,     // extra fixed Pratt module chain, H_timbre, cascaded onto every note
     // Read-only status
     outIndex,   // effective filter index n
     outVoices,  // sounding voices
 };
 
-inline constexpr std::size_t kParameterCount = 15;
-inline constexpr std::size_t kInputParameterCount = 13;
+inline constexpr std::size_t kParameterCount = 16;
+inline constexpr std::size_t kInputParameterCount = 14;
 
 struct ParamSpec {
     const char* symbol;
@@ -65,6 +67,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"filter_b", "Index B", "", 1.0f, 64.0f, 7.0f, true, false, false},
     {"cutoff", "Cutoff", "Hz", 20.0f, 4000.0f, 800.0f, false, false, true},
     {"mix", "Filter Mix", "", 0.0f, 1.0f, 1.0f, false, false, false},
+    {"timbre", "Timbre Index", "", 1.0f, 8192.0f, 1.0f, true, false, true},
     {"out_index", "Index n", "", 1.0f, 8192.0f, 35.0f, true, true, false},
     {"out_voices", "Voices", "", 0.0f, 64.0f, 0.0f, true, true, false},
 }};
@@ -115,6 +118,7 @@ inline EngineParams toEngineParams(const Settings& s) {
     p.filterIndexB = static_cast<int>(s[ParamId::filterB]);
     p.filterCutoffHz = s[ParamId::cutoff];
     p.filterMix = s[ParamId::mix];
+    p.timbreIndex = static_cast<int>(s[ParamId::timbre]);
     return p;
 }
 

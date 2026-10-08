@@ -86,6 +86,45 @@ void testSynthVoice() {
     assert(peakOf(tail.l) < 1e-6);
 }
 
+// Timbre index: 1 (default) is the stock sound; a high chain darkens every note,
+// and the chain is applied when tables are built, so no per-sample cost exists.
+void testTimbreIndex() {
+    const auto render = [](int timbre) {
+        Engine e(kFs);
+        EngineParams p;
+        p.presetOverride = 2;  // organ: sustained
+        p.timbreIndex = timbre;
+        e.setParams(p);
+        e.noteOn(0, 72, 100);
+        return run(e, 16384);
+    };
+    const auto brightness = [](const Rendered& r) {
+        double lo = 0.0, hi = 0.0;
+        for (std::size_t i = 4001; i < r.l.size(); ++i) {
+            lo += static_cast<double>(r.l[i]) * r.l[i];
+            const double d = r.l[i] - r.l[i - 1];
+            hi += d * d;
+        }
+        return hi / lo;
+    };
+    const Rendered stock = render(1), same = render(1), dark = render(4096);
+    assert(stock.l == same.l);
+    assert(stock.l != dark.l);
+    assert(peakOf(dark.l, 4000) > 0.01 && peakOf(dark.l) < 1.0);
+    assert(brightness(dark) < brightness(stock));
+
+    // Out-of-range values are clamped, and changing the chain rebuilds tables rather
+    // than reusing a stale one.
+    Engine e(kFs);
+    EngineParams p;
+    p.timbreIndex = 1 << 20;
+    e.setParams(p);
+    assert(e.params().timbreIndex == kMaxIndex);
+    p.timbreIndex = -5;
+    e.setParams(p);
+    assert(e.params().timbreIndex == 1);
+}
+
 void testPitchBend() {
     Engine e(kFs);
     EngineParams p;
@@ -238,6 +277,7 @@ int main() {
     Engine::warmCaches();
     testPresetMapping();
     testSynthVoice();
+    testTimbreIndex();
     testPitchBend();
     testSustainPedalAndPolyphony();
     testPianoDecaysByItself();

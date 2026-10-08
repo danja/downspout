@@ -173,6 +173,51 @@ void testWavetable() {
     assert(near(readWavetable(t.samples, -0.75), readWavetable(t.samples, 0.25), 1e-6));
 }
 
+// The timbre chain is H_timbre cascaded onto the note's own filter (H_mn = H_m H_n).
+void testTimbreChain() {
+    // At pitch 63 (note+1 = 64): base 1 with timbre 3 is the same filter as base 3 with
+    // no timbre (index 192 either way), and the same pitch gives the same harmonics.
+    TableParams chained, direct, plain;
+    chained.pitch = direct.pitch = plain.pitch = 63;
+    chained.base = 1; chained.timbre = 3;
+    direct.base = 3;
+    plain.base = 1;
+    const Wavetable c = buildWavetable(chained), d = buildWavetable(direct), p = buildWavetable(plain);
+    assert(c.index == 64 && c.timbre == 3 && d.index == 192 && p.timbre == 1);
+    assert(c.harmonics == d.harmonics);
+    double worst = 0.0, differs = 0.0;
+    for (std::size_t i = 0; i < c.samples.size(); ++i) {
+        worst = std::max(worst, static_cast<double>(std::abs(c.samples[i] - d.samples[i])));
+        differs = std::max(differs, static_cast<double>(std::abs(c.samples[i] - p.samples[i])));
+    }
+    assert(worst < 1e-5);
+    assert(differs > 0.01);
+
+    // A chain beyond what a single product index could reach still builds: base 64 on
+    // the top key is already n = 8192, and the chain multiplies another filter in.
+    TableParams top;
+    top.pitch = 127; top.base = 64; top.timbre = 8192;
+    const Wavetable t = buildWavetable(top);
+    assert(t.index == kMaxIndex && t.timbre == kMaxIndex);
+    for (float v : t.samples) assert(std::isfinite(v) && std::abs(v) <= 1.0f + 1e-6f);
+
+    // A deeper chain darkens: less energy in the upper partials of a fixed note.
+    const auto upperShare = [](const Wavetable& w) {
+        // Crude spectral centroid from the first differences.
+        double lo = 0.0, hi = 0.0;
+        for (std::size_t i = 0; i + 1 < w.samples.size(); ++i) {
+            lo += static_cast<double>(w.samples[i]) * w.samples[i];
+            const double dv = w.samples[i + 1] - w.samples[i];
+            hi += dv * dv;
+        }
+        return hi / lo;
+    };
+    TableParams a, b;
+    a.pitch = b.pitch = 48;
+    b.timbre = 1024;
+    assert(upperShare(buildWavetable(b)) < upperShare(buildWavetable(a)));
+}
+
 }  // namespace
 
 int main() {
@@ -182,6 +227,7 @@ int main() {
     testRootsAndStability();
     testSections();
     testWavetable();
+    testTimbreChain();
     std::puts("pratt core tests passed");
     return 0;
 }

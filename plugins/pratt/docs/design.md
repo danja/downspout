@@ -115,6 +115,15 @@ at start-up and when the preset changes. The wrapper must decide how to schedule
 - Synth voice: `n = (midi_pitch + 1) * base`; partial k of the note has weight
   `k^-roll * H_n(i * xi * k)` (magnitude and phase). Summed into a single-cycle
   table.
+- Timbre chain: `R(k) = H_n(i xi k) * H_t(i xi k)` with `t` the Timbre Index (1..8192, default 1).
+  `H_mn = H_m H_n`, so the chain is a cascade that is independent of the note and not limited by
+  `kMaxIndex` as a combined index would be. At `t = 1` the chain is skipped; the golden wavetable
+  tests (to 1e-5) still pass, so the default sound is unchanged. Cost is nil per sample (the synth reads
+  tables, it runs no biquads) and unmeasurable per table (about 0.8 ms either way). Only Filter
+  mode runs biquads, one per pole pair, as before. The Timbre value is part of the table cache key
+  and `trimTables` drops tables for stale values. State key `timbre` is optional on load so
+  projects saved before it existed still open. Added after the first release, appended as input
+  parameter 13; the two output status parameters moved to 14 and 15.
 
 ## Measured facts (all n <= 8192, verified in `pratt_core_tests`)
 

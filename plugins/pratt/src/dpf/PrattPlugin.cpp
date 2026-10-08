@@ -402,14 +402,15 @@ private:
     {
         const WarmKey key{preset, static_cast<int>(settings_[core::ParamId::base]),
                           static_cast<double>(settings_[core::ParamId::brightness]),
-                          static_cast<double>(settings_[core::ParamId::darkness])};
+                          static_cast<double>(settings_[core::ParamId::darkness]),
+                          static_cast<int>(settings_[core::ParamId::timbre])};
         if (!warmer_ || key == lastWarm_)
         {
             wantedPreset_ = -1;
             return;
         }
         // If the worker is busy this instant, run() asks again on the next block.
-        if (warmer_->request(preset, {key.base, key.brightness, key.darkness}))
+        if (warmer_->request(preset, {key.base, key.brightness, key.darkness, key.timbre}))
         {
             lastWarm_ = key;
             wantedPreset_ = -1;
@@ -425,9 +426,11 @@ private:
         int base;
         double brightness;
         double darkness;
+        int timbre = 1;
         bool operator==(const WarmKey& o) const
         {
-            return preset == o.preset && base == o.base && brightness == o.brightness && darkness == o.darkness;
+            return preset == o.preset && base == o.base && brightness == o.brightness && darkness == o.darkness &&
+                   timbre == o.timbre;
         }
     };
 

@@ -72,4 +72,11 @@ largest, 37, which fits this.
   separate timbre index that does not multiply `note + 1`, so the character stays tied to key
   factorisation while a fixed module chain adds the roll-off.
 
-No code change has been made for this.
+## Implemented: Timbre Index
+
+The separate timbre index is now a parameter (`timbre`, 1-8192, default 1). It cascades `H_timbre`
+onto every note's own `H_(note+1)*base` rather than multiplying into the base, so it keeps the
+key-to-key character of the factorisation. At 1 it is skipped entirely. The synth evaluates it
+while building a wavetable, never per sample, and a table costs about 0.8 ms to build at any
+setting, so there is nothing for the default to save and nothing extra to pay when it is raised.
+The raised-limit options above (bigger base range, `kMaxSections`) are still unimplemented.

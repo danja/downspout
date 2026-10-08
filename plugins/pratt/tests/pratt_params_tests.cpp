@@ -41,6 +41,7 @@ int main() {
     s[ParamId::brightness] = 1.75f;
     s[ParamId::cutoff] = 1234.5f;
     s[ParamId::filterA] = 97.0f;
+    s[ParamId::timbre] = 1155.0f;
     const auto loaded = deserializeSettings(serializeSettings(s));
     assert(loaded.has_value());
     for (std::size_t i = 0; i < kInputParameterCount; ++i) assert(loaded->v[i] == s.v[i]);
@@ -61,6 +62,20 @@ int main() {
     assert((*clamped)[ParamId::cutoff] == 4000.0f);
     assert((*clamped)[ParamId::filterA] == 6.0f);
     assert((*clamped)[ParamId::mode] == 0.0f);
+
+    // Timbre: default is off and costs nothing, it reaches the engine, and a state
+    // saved before the parameter existed (no timbre line) still loads with it off.
+    assert(def[ParamId::timbre] == 1.0f && ep.timbreIndex == 1);
+    assert(toEngineParams(s).timbreIndex == 1155);
+    assert(static_cast<std::size_t>(ParamId::timbre) == kInputParameterCount - 1);
+    std::string old = serializeSettings(s);
+    old.erase(old.find("timbre="), old.find('\n', old.find("timbre=")) - old.find("timbre=") + 1);
+    assert(old.find("timbre") == std::string::npos);
+    const auto legacy = deserializeSettings(old);
+    assert(legacy.has_value() && (*legacy)[ParamId::timbre] == 1.0f && (*legacy)[ParamId::filterA] == 97.0f);
+    text = serializeSettings(def);
+    replace("timbre", "99999");
+    assert((*deserializeSettings(text))[ParamId::timbre] == 8192.0f);
 
     // Rejections: bad version, unknown key, duplicate, missing key, garbage value, empty.
     assert(!deserializeSettings("").has_value());

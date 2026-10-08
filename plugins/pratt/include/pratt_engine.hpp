@@ -44,6 +44,11 @@ struct EngineParams {
     Mode mode = Mode::Synth;
     int presetOverride = -1;   // -1: follow each channel's GM program
     int baseOverride = 0;      // 0: use the preset's Pratt base, else 1..64
+    // Fixed module chain cascaded onto every voice: R(k) = H_(note+1)*base . H_timbre.
+    // 1 (default) adds nothing and costs nothing. Evaluated while a wavetable is built,
+    // never per sample, and independent of the note, so it keeps the per-key character
+    // of the factorisation while adding roll-off that a larger base would not.
+    int timbreIndex = 1;
     double xiScale = 1.0;      // scales preset xi (brighter > 1)
     double rollOffset = 0.0;   // added to preset roll (darker > 0)
     double bendRange = 2.0;    // semitones
@@ -62,6 +67,7 @@ struct VoiceTuning {
     int base = 0;           // 0: preset's Pratt base
     double xiScale = 1.0;
     double rollOffset = 0.0;
+    int timbre = 1;         // module chain index, 1: none
 };
 
 // Fixed-capacity biquad cascade so the audio path never allocates.
@@ -76,7 +82,8 @@ Cascade buildCascade(int n, double cutoffHz, double sampleRate);
 
 // Wavetable cache key: everything buildWavetable depends on besides fs.
 using TableKey = std::tuple<int /*pitch*/, int /*preset*/, int /*velBucket*/, bool /*dark*/,
-                            int /*base*/, int /*xi x1000*/, int /*roll x1000*/>;
+                            int /*base*/, int /*xi x1000*/, int /*roll x1000*/,
+                            int /*timbre*/>;
 
 class Engine {
 public:

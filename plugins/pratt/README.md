@@ -7,7 +7,7 @@ polynomials `f_n` (`f_p = 1 + f_{p-1}` for odd primes, multiplicative otherwise,
 **Based on [pratt-synth](https://github.com/githubuser1983/pratt-synth)**, the original Pratt-polynomial MIDI synthesizer
 and sonification code. This plugin is a real-time port of that offline renderer.
 
-![Pratt in Synth + Filter mode](docs/screenshot.png)
+![Pratt in Synth mode](docs/screenshot.png)
 
 | Mode | Signal |
 |---|---|
@@ -18,7 +18,10 @@ and sonification code. This plugin is a real-time port of that offline renderer.
 - **Voices:** eleven families (piano, electric piano, organ, pluck, bass, strings,
   brass, reed, flute, pad, timpani) following General MIDI programs, or fixed. The
   spectrum of each note comes from `H_n` with `n = (note + 1) x base`, so timbre
-  shifts irregularly across the keyboard with the factorisation of `n`.
+  shifts irregularly across the keyboard with the factorisation of `n`. **Timbre
+  Index** (default 1 = off) cascades one more fixed filter `H_timbre` onto every
+  note without touching `n`, for roll-off that keeps the per-key character; it is
+  folded into the wavetable when it is built, so it never costs anything per sample.
 - **Filter:** `n = A x B` (two cascading index controls, `H_A H_B = H_AB`), cutoff
   and dry/wet. The panel plots the magnitude response and the poles.
 - 64 voices, sustain pedal, volume/expression/pan, pitch bend, channel-10 drums.

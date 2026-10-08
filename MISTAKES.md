@@ -145,3 +145,12 @@ unchecked.
   bases. The filter is still strictly stable; only the margin was overstated. Prevention: when a
   doc quotes a "worst case over a range", the test must cover the whole range (a full sweep was
   cheap, under half a second) and the assertion should be the bound that is documented.
+- **Screenshot capture grabbed the real desktop again (2026-10-08).** Re-capturing `pratt` I ran
+  `scripts/capture-plugin-screenshots.sh pratt` with `DISPLAY=:0` set, ignoring the entry above.
+  The capture was the user's browser, and I had already copied it over
+  `docs/pages/assets/plugins/pratt.png` and `plugins/pratt/docs/screenshot.png` (the latter
+  also lost its original Synth + Filter view). Noticed on the very next full-resolution look;
+  both files were overwritten with a correct capture before finishing. Prevention: run it as
+  `env -u DISPLAY scripts/capture-plugin-screenshots.sh <plugin>`, capture into the scratchpad
+  first, open the image, and only then copy it into the repo. The script still needs to force
+  Xvfb itself (shared glue, needs approval).

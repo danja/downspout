@@ -48,6 +48,10 @@ std::optional<Settings> deserializeSettings(const std::string& text) {
         ++count;
         result.v[index] = static_cast<float>(value);
     }
+    // `timbre` was added after the first release of the format; states saved without
+    // it keep loading (version 1) and get the default, which changes nothing.
+    constexpr std::size_t kTimbre = static_cast<std::size_t>(ParamId::timbre);
+    if (!seen[kTimbre]) ++count;
     if (count != kInputParameterCount) return std::nullopt;
     return clampSettings(result);
 }

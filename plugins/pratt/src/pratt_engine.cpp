@@ -157,6 +157,7 @@ void Engine::setParams(const EngineParams& p) {
     params_.filterIndexA = clampi(p.filterIndexA, 1, kMaxIndex);
     params_.filterIndexB = clampi(p.filterIndexB, 1, kMaxIndex);
     params_.filterMix = clampd(p.filterMix, 0.0, 1.0);
+    params_.timbreIndex = clampi(p.timbreIndex, 1, kMaxIndex);
     params_.room = clampd(p.room, 0.0, 1.0);
     params_.bendRange = clampd(p.bendRange, 0.0, 24.0);
     if (params_.mode != Mode::Synth) {
@@ -169,14 +170,15 @@ void Engine::setParams(const EngineParams& p) {
 namespace {
 
 struct Shaping {
-    int base, xiQ, rollQ;
+    int base, xiQ, rollQ, timbre;
 };
 
 Shaping shapingFor(int preset, const VoiceTuning& tuning) {
     const Preset& pr = kPresets[static_cast<std::size_t>(preset)];
     return {tuning.base > 0 ? clampi(tuning.base, 1, 64) : pr.base,
             static_cast<int>(std::lround(pr.xi * clampd(tuning.xiScale, 0.1, 4.0) * 1000.0)),
-            static_cast<int>(std::lround((pr.roll + clampd(tuning.rollOffset, -1.0, 2.0)) * 1000.0))};
+            static_cast<int>(std::lround((pr.roll + clampd(tuning.rollOffset, -1.0, 2.0)) * 1000.0)),
+            clampi(tuning.timbre, 1, kMaxIndex)};
 }
 
 // Upper bound on cached tables (about 16 KB each). Past it, new tables are still
@@ -188,9 +190,9 @@ constexpr std::size_t kMaxCachedTables = 4096;
 
 std::shared_ptr<const Wavetable> Engine::table(int pitch, int preset, int bucket, bool dark,
                                                const VoiceTuning& tuning) {
-    const auto [base, xiQ, rollQ] = shapingFor(preset, tuning);
+    const auto [base, xiQ, rollQ, timbre] = shapingFor(preset, tuning);
     const Preset& pr = kPresets[static_cast<std::size_t>(preset)];
-    const TableKey key{pitch, preset, bucket, dark, base, xiQ, rollQ};
+    const TableKey key{pitch, preset, bucket, dark, base, xiQ, rollQ, timbre};
     {
         std::lock_guard<std::mutex> lock(tablesMutex_);
         auto it = tables_.find(key);
@@ -199,6 +201,7 @@ std::shared_ptr<const Wavetable> Engine::table(int pitch, int preset, int bucket
     TableParams tp;
     tp.pitch = pitch;
     tp.base = base;
+    tp.timbre = timbre;
     tp.roll = rollQ / 1000.0;
     tp.xi = xiQ / 1000.0;
     tp.velocity = (bucket + 0.5) / 8.0;
@@ -221,7 +224,7 @@ void Engine::trimTables(const VoiceTuning& keep) {
             const int preset = std::get<1>(it->first);
             const Shaping s = shapingFor(preset, keep);
             if (std::get<4>(it->first) != s.base || std::get<5>(it->first) != s.xiQ ||
-                std::get<6>(it->first) != s.rollQ) {
+                std::get<6>(it->first) != s.rollQ || std::get<7>(it->first) != s.timbre) {
                 doomed.push_back(std::move(it->second));
                 it = tables_.erase(it);
             } else {
@@ -322,7 +325,7 @@ void Engine::noteOn(int channel, int pitch, int velocity) {
                            : presetForProgram(channels_[static_cast<std::size_t>(channel)].program);
     const Preset& pr = kPresets[static_cast<std::size_t>(preset)];
     const int bucket = std::min(7, velocity / 16);
-    const VoiceTuning tuning{params_.baseOverride, params_.xiScale, params_.rollOffset};
+    const VoiceTuning tuning{params_.baseOverride, params_.xiScale, params_.rollOffset, params_.timbreIndex};
     v.bright = table(pitch, preset, bucket, false, tuning);
     if (pr.brightDecay > 0.0) {
         v.dark = table(pitch, preset, bucket, true, tuning);

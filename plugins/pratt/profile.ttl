@@ -21,6 +21,8 @@ dsp:pratt a trn:PluginProfile ;
                     rdfs:comment "Instrument family. GM Program follows each MIDI channel's program change; the others override it." ] ;
     trn:parameter [ rdfs:label "Pratt Base" ; trn:symbol "base" ; trn:range "0-64" ;
                     rdfs:comment "Multiplier in the voice index n = (note + 1) x base. 0 uses the voice's own base." ] ;
+    trn:parameter [ rdfs:label "Timbre Index" ; trn:symbol "timbre" ; trn:range "1-8192" ;
+                    rdfs:comment "Extra fixed Pratt filter H_timbre cascaded onto every note (H_mn = H_m H_n), independent of the note. 1 adds nothing and costs nothing. Larger values add roll-off while the per-key character from (note + 1) x base stays. Logarithmic; evaluated when wavetables are built, never per sample." ] ;
     trn:parameter [ rdfs:label "Brightness" ; trn:symbol "brightness" ; trn:range "0.25-3.0" ;
                     rdfs:comment "Scales the filter frequency coordinate so more partials pass. Logarithmic." ] ;
     trn:parameter [ rdfs:label "Rolloff" ; trn:symbol "darkness" ; trn:range "-0.5 to 1.5" ;

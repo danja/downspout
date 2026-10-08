@@ -103,6 +103,11 @@ Remaining:
 * `scripts/capture-plugin-screenshots.sh` captures the real desktop if `DISPLAY` is set
   (see `MISTAKES.md`). Make it always use Xvfb. Shared script, needs approval.
 * Catalogue screenshot shows Synth mode (filter dimmed); consider a Synth + Filter capture.
+* **Timbre Index** (separate fixed filter chain, default 1 = off) is in and tested; not yet
+  listened to. Open: it is limited to one index <= 8192 (degree <= 13), so very dark voices still
+  lean on Rolloff; a second chain or a larger limit would need `kMaxSections` raised and a
+  warm-up that touches only the indices in use (see `plugins/pratt/docs/high-base.md`).
+  Filter mode keeps A x B capped at 8192.
 
 ## Subsequence-inspired work (see `docs/subsequent.md`)
 

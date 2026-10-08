@@ -86,6 +86,13 @@ std::string formatValue(const std::uint32_t parameter, const float value)
         else
             std::snprintf(buffer, sizeof(buffer), "%d", static_cast<int>(std::lround(value)));
         break;
+    case ParamId::timbre:
+        if (value < 1.5f)
+            std::snprintf(buffer, sizeof(buffer), "off");
+        else
+            std::snprintf(buffer, sizeof(buffer), "%d  (order %d)", static_cast<int>(std::lround(value)),
+                          core::degree(static_cast<int>(std::lround(value))));
+        break;
     case ParamId::brightness:
         std::snprintf(buffer, sizeof(buffer), "x%.2f", static_cast<double>(value));
         break;
@@ -554,6 +561,8 @@ private:
         y += 40.0f;
         drawSlider(ParamId::base, "Pratt base  (index n = (note+1) x base)", {x, y, w, 34.0f}, kVoiceAccent, on);
         y += 34.0f;
+        drawSlider(ParamId::timbre, "Timbre index  (extra fixed filter chain, same for every note)", {x, y, w, 34.0f}, kVoiceAccent, on);
+        y += 34.0f;
         drawSlider(ParamId::brightness, "Brightness  (filter reaches higher partials)", {x, y, w, 34.0f}, kVoiceAccent, on);
         y += 34.0f;
         drawSlider(ParamId::darkness, "Rolloff offset  (positive = darker)", {x, y, w, 34.0f}, kVoiceAccent, on);
@@ -582,6 +591,7 @@ private:
         const core::Preset& p = core::kPresets[static_cast<std::size_t>(preset)];
         const int base = intValue(ParamId::base) > 0 ? intValue(ParamId::base) : p.base;
         const int n = (60 + 1) * base;
+        const int timbre = intValue(ParamId::timbre);
         const double xi = p.xi * value(ParamId::brightness) * (1.20 - 0.30 * 0.5);
         const double roll = p.roll + value(ParamId::darkness);
 
@@ -595,14 +605,18 @@ private:
                 a *= p.evenGain;
             if (p.upperStart > 0 && k > p.upperStart)
                 a *= p.upperGain;
-            amp[static_cast<std::size_t>(k - 1)] = a * std::abs(core::response(n, xi * k));
+            amp[static_cast<std::size_t>(k - 1)] = a * std::abs(core::response(n, xi * k)) * std::abs(core::response(timbre, xi * k));
             peak = std::max(peak, amp[static_cast<std::size_t>(k - 1)]);
         }
 
         const Rect plot {bounds.x, bounds.y + 14.0f, bounds.w, bounds.h - 14.0f};
         char label[96];
-        std::snprintf(label, sizeof(label), "Harmonics of middle C:  n = 61 x %d = %d  (%s)", base, n,
-                      core::kPresets[static_cast<std::size_t>(preset)].name);
+        if (timbre > 1)
+            std::snprintf(label, sizeof(label), "Harmonics of middle C:  n = 61 x %d = %d, timbre %d  (%s)", base, n,
+                          timbre, core::kPresets[static_cast<std::size_t>(preset)].name);
+        else
+            std::snprintf(label, sizeof(label), "Harmonics of middle C:  n = 61 x %d = %d  (%s)", base, n,
+                          core::kPresets[static_cast<std::size_t>(preset)].name);
         caption(bounds.x, bounds.y, label);
         caption(bounds.x + bounds.w, bounds.y, "partials 1-32, low to high", true);
         drawPlotFrame(plot);

@@ -46,6 +46,13 @@ pan and pitch bend are handled; channel 10 plays procedural drums (a swept-sine
 kick, the rest noise through `H_(note+1)`). A fixed 14-tap diffuse room and a
 soft clip finish the voice path.
 
+**Timbre Index.** A large Pratt base darkens a voice but also washes out the
+key-to-key variation, because the same factors are multiplied into every note.
+Timbre Index instead cascades one fixed filter `H_timbre` onto every note
+(`H_mn = H_m H_n`), so the character from `(note + 1) x base` stays and the
+chain only adds roll-off. It defaults to 1, which adds nothing; it is applied when
+a wavetable is built, so it costs no extra time per sample at any setting.
+
 **Filter mode.** Audio in goes through the Pratt filter at the chosen cutoff
 with a dry/wet mix. The panel plots the magnitude response and the poles.
 **Synth + Filter** sums the voices and the audio input before the filter.
@@ -60,6 +67,7 @@ activated, so the first chord does not pay for them.
 | Mode | Synth, Filter, Synth + Filter | Synth | Signal flow is shown on the panel |
 | Voice | GM Program + 11 families | GM Program | Fixed voice overrides program changes |
 | Pratt Base | 0–64 | 0 | 0 uses the voice's own base; `n = (note + 1) x base` |
+| Timbre Index | 1–8192 | 1 (off) | Extra fixed filter chain `H_timbre` on every note; darker, key-to-key character kept |
 | Brightness | 0.25–3.0 | 1.0 | More partials pass |
 | Rolloff | −0.5 to 1.5 | 0 | Positive is darker |
 | Bend Range | 0–12 st | 2 | RPN is not parsed |

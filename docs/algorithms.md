@@ -83,7 +83,10 @@ current Downspout plugins.
   filters is the product of indices, `H_m H_n = H_mn`. Voices sum partial k with
   weight `k^-roll * H_n(i xi k)` for `n = (note + 1) x base` into a band-limited
   table; the filter mode factors the roots into biquads (bilinear transform, no
-  prewarp) and crossfades old and new cascades when index or cutoff changes.
+  prewarp) and crossfades old and new cascades when index or cutoff changes. An
+  optional Timbre Index `t` multiplies one more fixed response `H_t` onto every
+  voice (cascade, not a combined index), applied while the table is built and
+  skipped at `t = 1`.
 
 ## Appendix: Ground Algorithm Detail
 

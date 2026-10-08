@@ -14,15 +14,28 @@ Wavetable buildWavetable(const TableParams& p) {
     const double f0 = pitchToHz(p.pitch);
     out.harmonics = std::max(1, std::min(p.maxHarmonics, static_cast<int>(p.sampleRate * 0.42 / f0)));
     out.index = (p.pitch + 1) * p.base;
+    out.timbre = std::max(1, std::min(p.timbre, kMaxIndex));
     const double xi = p.xi * (1.20 - 0.30 * p.velocity);
 
     // c_k = a_k * R(k); partial k contributes Re(-i c_k e^{i theta}) = y cos + x sin.
+    // H_mn = H_m H_n, so a separate chain multiplies in without a combined index
+    // (which would be capped at kMaxIndex). At timbre 1 the chain is skipped.
+    const auto& poly = polynomial(out.index);
+    const std::vector<std::int64_t>* chain = out.timbre > 1 ? &polynomial(out.timbre) : nullptr;
+    const auto responseOf = [](const std::vector<std::int64_t>& c, int n, double coordinate) {
+        Complex acc = 0.0;
+        const Complex x(2.0, coordinate);
+        for (std::size_t i = c.size(); i-- > 0;) acc = acc * x + static_cast<double>(c[i]);
+        return static_cast<double>(n) / acc;
+    };
     std::vector<double> cx(out.harmonics + 1), cy(out.harmonics + 1);
     for (int k = 1; k <= out.harmonics; ++k) {
         double a = std::pow(static_cast<double>(k), -(p.roll + p.extraRoll));
         if (k % 2 == 0) a *= p.evenGain;
         if (p.upperStart > 0 && k > p.upperStart) a *= p.upperGain;
-        const Complex c = a * response(out.index, xi * k);
+        Complex r = responseOf(poly, out.index, xi * k);
+        if (chain) r *= responseOf(*chain, out.timbre, xi * k);
+        const Complex c = a * r;
         cx[k] = c.real();
         cy[k] = c.imag();
     }

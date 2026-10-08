@@ -11,6 +11,7 @@ namespace downspout::pratt {
 struct TableParams {
     int pitch = 69;          // MIDI key; f0 = 440 * 2^((pitch-69)/12)
     int base = 5;            // preset Pratt base; index n = (pitch + 1) * base
+    int timbre = 1;          // extra module chain H_timbre, same for every pitch; 1 = none (skipped)
     double roll = 0.92;      // excitation a_k = k^-(roll + extraRoll)
     double xi = 0.15;        // filter scale: R(k) = H_n(i * xi_eff * k)
     double velocity = 0.5;   // 0..1; xi_eff = xi * (1.20 - 0.30 * velocity)
@@ -25,7 +26,8 @@ struct TableParams {
 
 struct Wavetable {
     std::vector<float> samples;  // tableSize + 1 (guard point == samples[0]), peak-normalised to 1
-    int index = 0;               // Pratt index n
+    int index = 0;               // Pratt index n = (pitch + 1) * base
+    int timbre = 1;              // cascaded module chain index
     int harmonics = 0;           // partials kept below 0.42 * fs
 };
 
