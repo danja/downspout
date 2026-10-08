@@ -222,6 +222,21 @@ int generationAtBar(const int generations, const int growBars, const std::int64_
     return static_cast<int>(std::min<std::int64_t>(g, top));
 }
 
+namespace {
+constexpr const char* kGridNames[kGridCount] = {"1/32", "1/16T", "1/16", "1/16.", "1/8T", "1/8",
+                                                "1/8.", "1/4T", "1/4", "1/4.", "1/2", "1 bar"};
+constexpr double kGridQuarters[kGridCount - 1] = {0.125, 1.0 / 6.0, 0.25, 0.375, 1.0 / 3.0, 0.5,
+                                                   0.75, 2.0 / 3.0, 1.0, 1.5, 2.0};
+}  // namespace
+
+const char* gridName(const int grid) noexcept { return kGridNames[std::clamp(grid, 0, kGridCount - 1)]; }
+
+double gridQuarters(const int grid, const double barQuarters) noexcept
+{
+    const int g = std::clamp(grid, 0, kGridCount - 1);
+    return g == kGridBar ? std::max(0.25, barQuarters) : kGridQuarters[g];
+}
+
 void reset(State& s) noexcept { s = {}; }
 
 MidiBlock process(State& s, const std::array<float, kParameterCount>& p, const Transport& t, const std::uint32_t frames,
@@ -238,8 +253,8 @@ MidiBlock process(State& s, const std::array<float, kParameterCount>& p, const T
     const double qpf = std::clamp(t.bpm, 1.0, 999.0) / (60.0 * std::max(1.0, sampleRate));
     const double start = downspout::generative::absoluteQuarter(t);
     const double end = start + frames * qpf;
-    const double grid = pv(p, kGrid);
     const double barQ = downspout::generative::barLengthQuarters(t);
+    const double grid = gridQuarters(iv(p, kGrid), barQ);
 
     if (downspout::generative::isDiscontinuity(s.havePosition, s.previousEnd, start)) {
         release(s, out, 0);

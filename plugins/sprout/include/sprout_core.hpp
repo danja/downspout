@@ -21,6 +21,11 @@ inline constexpr int kScaleMajor = 1;
 inline constexpr int kScaleMinor = 3;
 inline constexpr int kScaleBebopMinor = 23;
 inline constexpr int kMaxGeneration = 7;
+// Step grid: musical divisions of the quarter note, plus one bar of the host's time
+// signature. The Param value is an index into this list.
+inline constexpr int kGridCount = 12;
+inline constexpr int kGridSixteenth = 2;
+inline constexpr int kGridBar = kGridCount - 1;
 inline constexpr std::size_t kMaxSymbols = 4096;  // an expansion longer than this is not used
 
 enum Param : std::uint32_t {
@@ -51,7 +56,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs {{
     {"root", "Root note", 0, 127, 60, true},
     {"step_size", "Step size", 1, 3, 1, true},
     {"range", "Range", 3, 28, 14, true},
-    {"grid", "Step grid", 0.0625f, 2.0f, 0.25f},
+    {"grid", "Step grid", 0, kGridCount - 1, kGridSixteenth, true},
     {"gate", "Gate", 0.1f, 1.0f, 0.7f},
     {"probability", "Probability", 0.0f, 1.0f, 1.0f},
     {"velocity", "Velocity", 1, 127, 90, true},
@@ -78,6 +83,11 @@ struct Sequence {
 const char* presetName(int preset) noexcept;
 const char* presetRules(int preset) noexcept;  // axiom and rules, for display
 const char* scaleName(int scale) noexcept;
+const char* gridName(int grid) noexcept;  // "1/16", "1/8T", "1/4.", "1 bar"
+
+// Length of a grid step in quarter notes; `barQuarters` is the bar length in the
+// host's time signature (used by "1 bar").
+double gridQuarters(int grid, double barQuarters) noexcept;
 
 // The turtle interpretation of generation `generation` of `preset`. If the
 // expansion would exceed kMaxSymbols the deepest generation that fits is returned.

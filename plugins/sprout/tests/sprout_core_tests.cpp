@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <set>
+#include <string>
 #include <tuple>
 #include <vector>
 
@@ -296,6 +297,62 @@ void testStopAndJumpReleaseNotes()
     assert(onsAfter - offsAfter <= 1);
 }
 
+// The grid is a list of note values, and "1 bar" follows the time signature.
+void testGridDivisions()
+{
+    assert(kGridCount == 12 && kParameterSpecs[kGrid].defaultValue == static_cast<float>(kGridSixteenth));
+    assert(std::string(gridName(kGridSixteenth)) == "1/16" && std::string(gridName(kGridBar)) == "1 bar");
+    assert(gridQuarters(kGridSixteenth, 4.0) == 0.25);
+    assert(std::abs(gridQuarters(1, 4.0) - 1.0 / 6.0) < 1e-12);   // 1/16T
+    assert(std::abs(gridQuarters(4, 4.0) - 1.0 / 3.0) < 1e-12);   // 1/8T
+    assert(gridQuarters(6, 4.0) == 0.75);                          // 1/8.
+    assert(gridQuarters(kGridBar, 4.0) == 4.0 && gridQuarters(kGridBar, 3.0) == 3.0);
+
+    // Every grid keeps note-ons on its own lattice. 120 bpm, 48 kHz: one quarter = 24000 frames.
+    for (int g = 0; g < kGridCount - 1; ++g) {
+        Params p = defaults();
+        p[kGrid] = static_cast<float>(g);
+        State s;
+        reset(s);
+        const auto events = run(p, 4, 480, s);
+        const double lattice = gridQuarters(g, 4.0) * 24000.0;
+        int ons = 0;
+        for (const Event& e : events) {
+            if ((e.status & 0xF0) != 0x90) continue;
+            ++ons;
+            const double cells = static_cast<double>(e.frame) / lattice;
+            assert(std::abs(cells - std::round(cells)) < 0.02);
+        }
+        assert(ons > 0);
+    }
+
+    // 1 bar in 3/4: onsets only on bar lines, 1.5 s apart.
+    constexpr double sr = 48000.0;
+    Params p = defaults();
+    p[kGrid] = static_cast<float>(kGridBar);
+    State s;
+    reset(s);
+    int ons = 0;
+    for (long long pos = 0; pos < static_cast<long long>(6 * 1.5 * sr); pos += 480) {
+        const double quarter = static_cast<double>(pos) / sr * 2.0;
+        downspout::generative::Transport t;
+        t.valid = t.playing = true;
+        t.bpm = 120.0;
+        t.beatsPerBar = 3.0;
+        t.beatType = 4.0;
+        t.bar = std::floor(quarter / 3.0);
+        t.barBeat = quarter - t.bar * 3.0;
+        const auto out = process(s, p, t, 480, sr);
+        for (std::uint32_t i = 0; i < out.count; ++i) {
+            if ((out.events[i].data[0] & 0xF0) != 0x90) continue;
+            ++ons;
+            const double at = static_cast<double>(pos + out.events[i].frame) / (1.5 * sr);
+            assert(std::abs(at - std::round(at)) < 0.001);
+        }
+    }
+    assert(ons > 0);
+}
+
 }  // namespace
 
 int main()
@@ -311,5 +368,6 @@ int main()
     testProbabilityZeroIsSilent();
     testGrowthRestartsAndReachesTarget();
     testStopAndJumpReleaseNotes();
+    testGridDivisions();
     return 0;
 }

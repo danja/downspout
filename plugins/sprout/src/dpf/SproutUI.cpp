@@ -182,8 +182,11 @@ private:
     {
         drawPanel(b, "TIMING AND DYNAMICS", kTimeAccent);
         char buf[32];
-        std::snprintf(buf, sizeof(buf), "%.4g beats", static_cast<double>(value(core::kGrid)));
-        slider(core::kGrid, "Step grid", buf, b, 0, kTimeAccent);
+        if (intValue(core::kGrid) == core::kGridBar)
+            std::snprintf(buf, sizeof(buf), "1 bar (time signature)");
+        else
+            std::snprintf(buf, sizeof(buf), "%s note", core::gridName(intValue(core::kGrid)));
+        slider(core::kGrid, "Step grid  (T triplet, . dotted)", buf, b, 0, kTimeAccent);
         std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::lround(value(core::kGate) * 100.0f)));
         slider(core::kGate, "Gate", buf, b, 1, kTimeAccent);
         std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::lround(value(core::kProbability) * 100.0f)));
