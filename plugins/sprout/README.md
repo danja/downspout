@@ -14,8 +14,8 @@ host transport. The idea comes from [Subsequence](https://subsystem.co/subsequen
 | other | variable: rewritten but silent |
 
 Grammars: Plant, Koch, Dragon, Sierpinski, Cantor (rhythm only), Levy, Tree.
-Expansions longer than 4096 symbols are not used; the deepest generation that fits
-plays instead. **Grow every** N bars starts at generation 1 and adds one per N bars,
+Up to 16 generations. Expansions longer than 131,072 symbols are not used; the deepest
+generation that fits plays instead (Most generations each grammar reaches: Plant 7, Koch 6, Dragon 15, Sierpinski 9, Cantor 10, Levy 14, Tree 6.) and the slider says so. **Grow every** N bars starts at generation 1 and adds one per N bars,
 restarting the pattern at each change. Scales follow `docs/scales.md` (the same 24 as
 plank). The plugin is stateless against the transport, so it survives loops and jumps.
 

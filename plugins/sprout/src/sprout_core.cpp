@@ -214,6 +214,11 @@ int degreeToNote(const int scale, const int root, const int degree) noexcept
     return std::clamp(root + 12 * octave + intervals[index], 0, 127);
 }
 
+int usableGeneration(const int preset, const int generations) noexcept
+{
+    return sequenceFor(preset, std::clamp(generations, 0, kMaxGeneration)).generation;
+}
+
 int generationAtBar(const int generations, const int growBars, const std::int64_t bar) noexcept
 {
     const int top = std::clamp(generations, 1, kMaxGeneration);
@@ -286,7 +291,7 @@ MidiBlock process(State& s, const std::array<float, kParameterCount>& p, const T
         release(s, out, frame);
 
         const auto bar = static_cast<std::int64_t>(std::floor((boundary + 1e-8) / barQ));
-        const int wanted = generationAtBar(generations, growBars, bar);
+        const int wanted = generationAtBar(usableGeneration(preset, generations), growBars, bar);
         const Sequence& seq = sequenceFor(preset, wanted);
         const auto total = static_cast<std::int64_t>(seq.steps.size());
         if (total > 0) {

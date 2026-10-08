@@ -32,8 +32,9 @@ are softer, and the first step of each pass is accented. **Probability** thins t
 
 The pattern is locked to the host transport and loops. With **Grow every** above zero the
 pattern starts at generation 1 and gains a generation every N bars until it reaches
-**Generations**, restarting at each change. Expansions are limited to 4096 symbols, so a
-fast-growing grammar such as Plant falls back to the deepest generation that fits.
+**Generations**, restarting at each change. Up to 16 generations are allowed, but expansions are limited to 131,072 steps, so each
+grammar stops at the deepest generation that fits and Grow stops there too. Most generations each grammar reaches: Plant 7, Koch 6, Dragon 15, Sierpinski 9, Cantor 10, Levy 14, Tree 6. The
+Pattern plot condenses long patterns to one column of pitch range per few pixels.
 
 Scales use the canonical order in `docs/scales.md`.
 

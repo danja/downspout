@@ -20,13 +20,13 @@ inline constexpr int kScaleCount = 24;
 inline constexpr int kScaleMajor = 1;
 inline constexpr int kScaleMinor = 3;
 inline constexpr int kScaleBebopMinor = 23;
-inline constexpr int kMaxGeneration = 7;
+inline constexpr int kMaxGeneration = 16;
 // Step grid: musical divisions of the quarter note, plus one bar of the host's time
 // signature. The Param value is an index into this list.
 inline constexpr int kGridCount = 12;
 inline constexpr int kGridSixteenth = 2;
 inline constexpr int kGridBar = kGridCount - 1;
-inline constexpr std::size_t kMaxSymbols = 4096;  // an expansion longer than this is not used
+inline constexpr std::size_t kMaxSymbols = 131072;  // an expansion longer than this is not used (~8k bars at 1/16)
 
 enum Param : std::uint32_t {
     kPreset,
@@ -62,9 +62,9 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs {{
     {"velocity", "Velocity", 1, 127, 90, true},
     {"channel", "Channel", 1, 16, 1, true},
     {"seed", "Seed", 1, 65535, 1, true},
-    {"status_length", "Pattern steps", 0, 4096, 0, true, true},
+    {"status_length", "Pattern steps", 0, static_cast<float>(kMaxSymbols), 0, true, true},
     {"status_generation", "Generation", 0, kMaxGeneration, 0, true, true},
-    {"status_step", "Current step", 0, 4096, 0, true, true},
+    {"status_step", "Current step", 0, static_cast<float>(kMaxSymbols), 0, true, true},
 }};
 
 // One time step of a pattern. `unit` is the turtle's pitch in +/- units (the
@@ -108,6 +108,9 @@ int degreeToNote(int scale, int root, int degree) noexcept;
 
 // Semitones above the root of each degree of `scale` (one octave) and their count.
 const std::uint8_t* scaleIntervals(int scale, int& count) noexcept;
+
+// The deepest generation of `preset` that fits kMaxSymbols, at most `generations`.
+int usableGeneration(int preset, int generations) noexcept;
 
 // Generation in force during `bar` when growing: 1 at bar 0, one more every
 // `growBars` bars, up to `generations`. growBars == 0 means always `generations`.

@@ -353,6 +353,43 @@ void testGridDivisions()
     assert(ons > 0);
 }
 
+// Many more generations are allowed; each grammar stops at the deepest one that fits.
+void testDeepGenerations()
+{
+    static_assert(kMaxGeneration >= 16 && kMaxSymbols >= 131072);
+    int slowest = 0;
+    for (int preset = 0; preset < kPresetCount; ++preset) {
+        const int usable = usableGeneration(preset, kMaxGeneration);
+        assert(usable >= 4 && usable <= kMaxGeneration);
+        assert(usableGeneration(preset, 2) == 2);
+        assert(usableGeneration(preset, 0) == 0);
+        const Sequence& deepest = sequenceFor(preset, kMaxGeneration);
+        assert(deepest.generation == usable && deepest.steps.size() <= kMaxSymbols);
+        // One generation deeper would not have fit (unless the limit is the slider).
+        if (usable < kMaxGeneration) {
+            const std::string next = expansion(preset, usable);
+            assert(!next.empty());
+        }
+        slowest = std::max(slowest, usable);
+    }
+    // Levy doubles its notes each generation, so it goes far past the old limit of 7.
+    assert(usableGeneration(5, kMaxGeneration) >= 12);
+    assert(sequenceFor(5, 12).steps.size() == 4096);
+
+    // Growth stops restarting once a grammar tops out: Plant fits only a few generations,
+    // so with Grow every bar and 16 generations asked the pattern must not restart past it.
+    Params p = defaults();
+    p[kPreset] = 0;
+    p[kGenerations] = kMaxGeneration;
+    p[kGrowBars] = 1;
+    p[kGrid] = 5;  // 1/8
+    State s;
+    reset(s);
+    int last = 0;
+    run(p, 40, 480, s, &last);
+    assert(last == usableGeneration(0, kMaxGeneration));
+}
+
 }  // namespace
 
 int main()
@@ -369,5 +406,6 @@ int main()
     testGrowthRestartsAndReachesTarget();
     testStopAndJumpReleaseNotes();
     testGridDivisions();
+    testDeepGenerations();
     return 0;
 }

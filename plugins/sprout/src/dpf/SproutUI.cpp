@@ -121,20 +121,45 @@ private:
         const float cell = std::max(1.5f, inner / total);
         const int playhead = intValue(core::kStatusStep);
         const auto& t = theme();
-        for (std::size_t i = 0; i < seq.steps.size(); ++i) {
-            const core::Step& s = seq.steps[i];
-            if (!s.note) continue;
-            const int degree = core::foldDegree(s.unit * stepSize, range);
+        const auto yOf = [&](const int degree) {
             const float norm = 0.5f + 0.40f * (static_cast<float>(degree) - mid) / (0.5f * span);
-            const float px = plot.x + 6.0f + static_cast<float>(i) / total * inner;
-            const float py = plot.y + plot.h - 6.0f - norm * (plot.h - 12.0f);
-            beginPath();
-            if (static_cast<int>(i) == playhead)
-                fc(t.textPrimary);
-            else
-                fillColor(kPatternAccent.r, kPatternAccent.g, kPatternAccent.b, 255 - std::min(150, s.depth * 45));
-            rect(px, py - 1.5f, std::max(1.5f, cell - (cell > 4.0f ? 1.0f : 0.0f)), 3.0f);
-            fill();
+            return plot.y + plot.h - 6.0f - norm * (plot.h - 12.0f);
+        };
+        if (inner / total >= 1.5f) {
+            for (std::size_t i = 0; i < seq.steps.size(); ++i) {
+                const core::Step& s = seq.steps[i];
+                if (!s.note) continue;
+                const float px = plot.x + 6.0f + static_cast<float>(i) / total * inner;
+                beginPath();
+                if (static_cast<int>(i) == playhead)
+                    fc(t.textPrimary);
+                else
+                    fillColor(kPatternAccent.r, kPatternAccent.g, kPatternAccent.b, 255 - std::min(150, s.depth * 45));
+                rect(px, yOf(core::foldDegree(s.unit * stepSize, range)) - 1.5f,
+                     std::max(1.5f, cell - (cell > 4.0f ? 1.0f : 0.0f)), 3.0f);
+                fill();
+            }
+        } else {
+            // More steps than pixels: one bar per 1.5 px column spanning the pitch range
+            // of the notes in it, so a pattern of 100,000 steps is still a few hundred rects.
+            const int columns = std::max(1, static_cast<int>(inner / 1.5f));
+            for (int col = 0; col < columns; ++col) {
+                const std::size_t from = static_cast<std::size_t>(static_cast<double>(col) / columns * total);
+                const std::size_t to = std::min(seq.steps.size(), static_cast<std::size_t>(static_cast<double>(col + 1) / columns * total) + 1);
+                int lowDegree = range + 1, highDegree = -range - 1;
+                for (std::size_t i = from; i < to; ++i) {
+                    if (!seq.steps[i].note) continue;
+                    const int degree = core::foldDegree(seq.steps[i].unit * stepSize, range);
+                    lowDegree = std::min(lowDegree, degree);
+                    highDegree = std::max(highDegree, degree);
+                }
+                if (highDegree < lowDegree) continue;
+                const float top = yOf(highDegree) - 1.5f, bottom = yOf(lowDegree) + 1.5f;
+                beginPath();
+                fillColor(kPatternAccent.r, kPatternAccent.g, kPatternAccent.b, 200);
+                rect(plot.x + 6.0f + static_cast<float>(col) * inner / static_cast<float>(columns), top, 1.5f, bottom - top);
+                fill();
+            }
         }
         beginPath();
         fillColor(kPatternAccent.r, kPatternAccent.g, kPatternAccent.b, 60);
@@ -151,7 +176,11 @@ private:
     {
         drawPanel(b, "GROWTH", kGrammarAccent);
         char buf[48];
-        std::snprintf(buf, sizeof(buf), "%d", intValue(core::kGenerations));
+        const int usable = core::usableGeneration(preset(), intValue(core::kGenerations));
+        if (usable < intValue(core::kGenerations))
+            std::snprintf(buf, sizeof(buf), "%d (this grammar tops out at %d)", intValue(core::kGenerations), usable);
+        else
+            std::snprintf(buf, sizeof(buf), "%d", intValue(core::kGenerations));
         slider(core::kGenerations, "Generations", buf, b, 0, kGrammarAccent);
         const int grow = intValue(core::kGrowBars);
         if (grow == 0)
