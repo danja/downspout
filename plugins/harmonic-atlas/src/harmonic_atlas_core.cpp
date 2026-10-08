@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdlib>
 
 namespace downspout::harmonic_atlas {
 namespace {
@@ -84,7 +85,152 @@ int movementRoot(const int style,
         [static_cast<std::size_t>(position)]) % 12;
 }
 
+struct Pull {
+    int step;      // semitones above the tonic
+    float weight;
+};
+
+// Weighted targets, by the previous chord's distance above the tonic.
+int gravityTarget(const int previousDistance, const float draw) noexcept
+{
+    static constexpr std::array<Pull, 3> afterDominant {{{0, 0.70f}, {5, 0.10f}, {9, 0.20f}}};
+    static constexpr std::array<Pull, 3> afterSubdominant {{{7, 0.55f}, {0, 0.30f}, {2, 0.15f}}};
+    static constexpr std::array<Pull, 3> afterTonic {{{5, 0.40f}, {7, 0.35f}, {9, 0.25f}}};
+    static constexpr std::array<Pull, 3> elsewhere {{{7, 0.40f}, {0, 0.35f}, {5, 0.25f}}};
+    const auto& row = previousDistance == 7 ? afterDominant
+        : previousDistance == 5 ? afterSubdominant
+        : previousDistance == 0 ? afterTonic : elsewhere;
+    float acc = 0.0f;
+    for (const Pull& pull : row) {
+        acc += pull.weight;
+        if (draw < acc)
+            return pull.step;
+    }
+    return row.back().step;
+}
+
+int rootAt(const int style, const std::int64_t chord, const int tonic, const int cadence,
+           const std::uint64_t seed, const float gravity, const int depth) noexcept
+{
+    const int base = movementRoot(style, chord, tonic, cadence, seed);
+    if (gravity <= 0.0f || chord <= 0 || depth <= 0)
+        return base;
+    if (cadence > 0 && chord % cadence == cadence - 1)
+        return tonic;
+    const float draw = downspout::generative::randomUnit(seed, static_cast<std::uint64_t>(chord) + 977);
+    if (draw >= gravity * 0.85f)
+        return base;
+    const int previous = rootAt(style, chord - 1, tonic, cadence, seed, gravity, depth - 1);
+    const int distance = ((previous - tonic) % 12 + 12) % 12;
+    const float pick = downspout::generative::randomUnit(seed, static_cast<std::uint64_t>(chord) + 1409);
+    return (tonic + gravityTarget(distance, pick)) % 12;
+}
+
+bool chordIsMinor(const int style, const std::uint64_t seed, const std::int64_t chord, const float tension) noexcept
+{
+    return style == 1 || downspout::generative::randomUnit(seed, static_cast<std::uint64_t>(chord + 71)) < tension * 0.45f;
+}
+
+struct Voicing {
+    std::array<int, 6> notes {};  // ascending
+    int count = 0;
+};
+
+struct VoicingSettings {
+    int style;
+    int tonic;
+    int cadence;
+    std::uint64_t seed;
+    float gravity;
+    float tension;
+    int voices;
+    int inversionRange;
+    float strictness;  // the Voice-leading control, above 0.5
+};
+
+// The original stacking: fixed intervals above the root, the lowest `inversion` voices lifted an octave,
+// anything above 72 dropped an octave when the control is above 0.5.
+Voicing plainVoicing(const int root, const bool minor, const float tension, const int voices, const int inversion,
+                     const bool fold) noexcept
+{
+    const std::array<int, 6> intervals {{0, minor ? 3 : 4, 7, tension > 0.45f ? 10 : 11, 14, 17}};
+    Voicing v;
+    v.count = voices;
+    for (int voice = 0; voice < voices; ++voice) {
+        int note = 48 + root + intervals[static_cast<std::size_t>(voice)];
+        if (voice < inversion)
+            note += 12;
+        if (fold && note > 72)
+            note -= 12;
+        v.notes[static_cast<std::size_t>(voice)] = std::clamp(note, 24, 96);
+    }
+    return v;
+}
+
+// Real voice-leading: among rotations (inversions) and octave placements of the chord, pick the one whose
+// sorted voices move least from the previous chord. The previous chord is itself computed the same way, a
+// bounded number of chords back, so the result depends only on the chord number: loops and jumps agree.
+Voicing leadVoicing(const VoicingSettings& s, const std::int64_t chord, const int depth) noexcept
+{
+    const int root = rootAt(s.style, chord, s.tonic, s.cadence, s.seed, s.gravity, 8);
+    const bool minor = chordIsMinor(s.style, s.seed, chord, s.tension);
+    if (chord <= 0 || depth <= 0)
+        return plainVoicing(root, minor, s.tension, s.voices, 0, true);
+
+    const Voicing previous = leadVoicing(s, chord - 1, depth - 1);
+    const std::array<int, 6> intervals {{0, minor ? 3 : 4, 7, s.tension > 0.45f ? 10 : 11, 14, 17}};
+
+    struct Option {
+        Voicing voicing;
+        double cost;
+    };
+    std::array<Option, 3 * 6> options {};
+    int optionCount = 0;
+    double best = 1.0e30;
+    const int maxInversion = std::min(s.inversionRange + 1, s.voices - 1);
+    for (int inversion = 0; inversion <= maxInversion; ++inversion) {
+        for (const int shift : {-12, 0, 12}) {
+            Voicing v;
+            v.count = s.voices;
+            for (int voice = 0; voice < s.voices; ++voice)
+                v.notes[static_cast<std::size_t>(voice)] = 48 + root + intervals[static_cast<std::size_t>(voice)]
+                    + (voice < inversion ? 12 : 0) + shift;
+            std::sort(v.notes.begin(), v.notes.begin() + v.count);
+            double cost = 0.5 * inversion;
+            for (int i = 0; i < v.count; ++i) {
+                const int target = i < previous.count ? previous.notes[static_cast<std::size_t>(i)]
+                                                      : previous.notes[static_cast<std::size_t>(previous.count - 1)];
+                cost += std::abs(v.notes[static_cast<std::size_t>(i)] - target);
+                if (v.notes[static_cast<std::size_t>(i)] < 36 || v.notes[static_cast<std::size_t>(i)] > 84)
+                    cost += 6.0;
+            }
+            options[static_cast<std::size_t>(optionCount++)] = {v, cost};
+            best = std::min(best, cost);
+        }
+    }
+    // Below full strictness, any option within a window of the best may be chosen (seeded).
+    const double window = (1.0 - static_cast<double>(s.strictness)) * 16.0;
+    int eligible[3 * 6];
+    int eligibleCount = 0;
+    for (int i = 0; i < optionCount; ++i)
+        if (options[static_cast<std::size_t>(i)].cost <= best + window)
+            eligible[eligibleCount++] = i;
+    const int pick = eligibleCount > 1
+        ? downspout::generative::randomInt(s.seed, static_cast<std::uint64_t>(chord) + 2113, 0, eligibleCount - 1)
+        : 0;
+    Voicing chosen = options[static_cast<std::size_t>(eligible[pick])].voicing;
+    for (int i = 0; i < chosen.count; ++i)
+        chosen.notes[static_cast<std::size_t>(i)] = std::clamp(chosen.notes[static_cast<std::size_t>(i)], 24, 96);
+    return chosen;
+}
+
 } // namespace
+
+int chordRoot(const int style, const std::int64_t chord, const int tonic, const int cadence,
+              const std::uint64_t seed, const float gravity) noexcept
+{
+    return rootAt(style, chord, tonic, cadence, seed, gravity, 8);
+}
 
 void reset(State& state) noexcept
 {
@@ -144,23 +290,30 @@ MidiBlock process(State& state,
         const std::uint32_t frame = downspout::generative::frameAt(boundary, start, qpf, frames);
         release(state, result, frame, channel);
         const int tonic = follow && state.followedRoot >= 0 ? state.followedRoot : configuredRoot;
-        const int root = movementRoot(value(parameters, kStyle), chord, tonic,
-                                      value(parameters, kCadenceBars),
-                                      static_cast<std::uint64_t>(value(parameters, kSeed)));
+        const int root = chordRoot(value(parameters, kStyle), chord, tonic,
+                                   value(parameters, kCadenceBars),
+                                   static_cast<std::uint64_t>(value(parameters, kSeed)),
+                                   unit(parameters, kGravity));
         const int voices = value(parameters, kVoiceCount);
         const float tension = unit(parameters, kTension);
-        const bool minor = value(parameters, kStyle) == 1
-            || downspout::generative::randomUnit(value(parameters, kSeed), chord + 71) < tension * 0.45f;
-        std::array<int, 6> intervals {{0, minor ? 3 : 4, 7, tension > 0.45f ? 10 : 11, 14, 17}};
+        const bool minor = chordIsMinor(value(parameters, kStyle), static_cast<std::uint64_t>(value(parameters, kSeed)),
+                                        chord, tension);
         const int inversion = std::min(value(parameters, kInversionRange),
             downspout::generative::randomInt(value(parameters, kSeed), chord + 13, 0, 3));
+        const float strictness = unit(parameters, kVoiceLeading);
+        Voicing voicing;
+        if (strictness > 0.5f) {
+            // Voice-leading engaged: the voicing is chosen against the previous chords (six back).
+            const VoicingSettings settings {value(parameters, kStyle), tonic, value(parameters, kCadenceBars),
+                                            static_cast<std::uint64_t>(value(parameters, kSeed)),
+                                            unit(parameters, kGravity), tension, voices,
+                                            value(parameters, kInversionRange), strictness};
+            voicing = leadVoicing(settings, chord, 6);
+        } else {
+            voicing = plainVoicing(root, minor, tension, voices, inversion, false);
+        }
         for (int voice = 0; voice < voices; ++voice) {
-            int note = 48 + root + intervals[static_cast<std::size_t>(voice)];
-            if (voice < inversion)
-                note += 12;
-            if (unit(parameters, kVoiceLeading) > 0.5f && note > 72)
-                note -= 12;
-            note = std::clamp(note, 24, 96);
+            const int note = voicing.notes[static_cast<std::size_t>(voice)];
             state.activeNotes[static_cast<std::size_t>(state.activeCount++)] = note;
             const int velocity = std::clamp(76 + static_cast<int>(tension * 38.0f) - voice * 3, 1, 127);
             result.push(frame, downspout::generative::status(true, channel),

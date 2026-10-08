@@ -34,7 +34,7 @@ Current status:
 
 UI notes:
 
-- `Line Controls` contains root, register, range, leap, color, hold, accent,
+- `Line Controls` contains root, register, range, leap, inertia, color, hold, accent,
   density, rest, structure, cadence, follow, vary, length, phrase length, and
   seed sliders.
 - `Phrase Structure` contains scale, period, contour, answer, grid, and MIDI

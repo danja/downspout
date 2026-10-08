@@ -76,6 +76,7 @@ std::string serializeControls(const Controls& controls)
            "regularity=" + std::to_string(controls.regularity) + "\n"
            "reg=" + std::to_string(controls.reg) + "\n"
            "span=" + std::to_string(controls.span) + "\n"
+           "inertia=" + std::to_string(controls.inertia) + "\n"
            "gate=" + std::to_string(controls.gate) + "\n"
            "velocity_follow=" + std::to_string(controls.velocity_follow) + "\n"
            "pass_input=" + std::to_string(controls.pass_input ? 1 : 0) + "\n"
@@ -139,6 +140,8 @@ std::optional<Controls> deserializeControls(const std::string& text)
             controls.reg = intValue;
         else if (key == "span" && parseFloat(value, floatValue))
             controls.span = floatValue;
+        else if (key == "inertia" && parseFloat(value, floatValue))
+            controls.inertia = floatValue;
         else if (key == "gate" && parseFloat(value, floatValue))
             controls.gate = floatValue;
         else if (key == "velocity_follow" && parseFloat(value, floatValue))

@@ -583,10 +583,12 @@ public:
     {
     }
 
-    void noteOn(const int midiNote, const std::uint8_t velocity, const FloozyParams& params, const std::uint64_t age)
+    void noteOn(const int midiNote, const int channel, const float bendRatio, const std::uint8_t velocity,
+                const FloozyParams& params, const std::uint64_t age)
     {
         midiNote_ = midiNote;
-        frequency_ = midiNoteToFrequency(midiNote);
+        channel_ = channel;
+        frequency_ = midiNoteToFrequency(midiNote) * bendRatio;
         velocityGain_ = std::clamp(static_cast<float>(velocity) / 127.0f, 0.0f, 1.0f);
         age_ = age;
         active_ = true;
@@ -651,6 +653,14 @@ public:
     bool active() const { return active_; }
     bool releasing() const { return releasing_; }
     int note() const { return midiNote_; }
+    int channel() const { return channel_; }
+
+    // Channel pitch bend; the oscillator and body read frequency_ every sample.
+    void setBend(const float bendRatio)
+    {
+        if (midiNote_ >= 0)
+            frequency_ = midiNoteToFrequency(midiNote_) * bendRatio;
+    }
     std::uint64_t age() const { return age_; }
     float level() const { return lastLevel_; }
 
@@ -698,6 +708,7 @@ private:
     bool active_ = false;
     bool releasing_ = false;
     int midiNote_ = -1;
+    int channel_ = 0;
     std::uint64_t age_ = 0;
     std::uint64_t paramsVersion_ = 0;
     float prevDelay1_ = 0.0f;
@@ -736,6 +747,11 @@ public:
         reverbLeft_.reset();
         reverbRight_.reset();
         ageCounter_ = 0;
+        bendRatio_.fill(1.0f);
+        bendRange_.fill(2.0f);
+        bendValue_.fill(8192);
+        rpnMsb_.fill(127);
+        rpnLsb_.fill(127);
     }
 
     float getParameter(const std::uint32_t index) const
@@ -774,36 +790,50 @@ public:
         }
     }
 
-    void noteOn(const int midiNote, const std::uint8_t velocity)
+    // `channel` keys the voice with the note and selects the channel's pitch bend.
+    void noteOn(const int midiNote, const std::uint8_t velocity, const int channel = 0)
     {
         if (midiNote < 0 || midiNote > 127)
             return;
         if (velocity == 0)
         {
-            noteOff(midiNote);
+            noteOff(midiNote, channel);
             return;
         }
 
-        if (auto* existing = findVoiceByNote(midiNote))
+        const float bend = bendRatio_[static_cast<std::size_t>(channel & 15)];
+        if (auto* existing = findVoiceByNote(midiNote, channel))
         {
-            existing->noteOn(midiNote, velocity, params_, ++ageCounter_);
+            existing->noteOn(midiNote, channel, bend, velocity, params_, ++ageCounter_);
             return;
         }
 
         if (auto* idle = findIdleVoice())
         {
-            idle->noteOn(midiNote, velocity, params_, ++ageCounter_);
+            idle->noteOn(midiNote, channel, bend, velocity, params_, ++ageCounter_);
             return;
         }
 
         if (auto* victim = selectVoiceToSteal())
-            victim->noteOn(midiNote, velocity, params_, ++ageCounter_);
+            victim->noteOn(midiNote, channel, bend, velocity, params_, ++ageCounter_);
     }
 
-    void noteOff(const int midiNote)
+    // channel < 0 releases the first voice playing the note on any channel.
+    void noteOff(const int midiNote, const int channel = -1)
     {
-        if (auto* voice = findVoiceByNote(midiNote))
+        if (auto* voice = findVoiceByNote(midiNote, channel))
             voice->noteOff();
+    }
+
+    void pitchBend(const int channel, const int value14)
+    {
+        const auto ch = static_cast<std::size_t>(channel & 15);
+        bendValue_[ch] = value14;
+        const float semitones = (static_cast<float>(value14) - 8192.0f) / 8192.0f * bendRange_[ch];
+        bendRatio_[ch] = std::pow(2.0f, semitones / 12.0f);
+        for (std::size_t i = 0; i < activeNumVoices_; ++i)
+            if (voices_[i]->active() && voices_[i]->channel() == channel)
+                voices_[i]->setBend(bendRatio_[ch]);
     }
 
     void allNotesOff()
@@ -820,17 +850,32 @@ public:
         const std::uint8_t data1 = size > 1 ? data[1] : 0;
         const std::uint8_t data2 = size > 2 ? data[2] : 0;
 
+        const int channel = data[0] & 0x0f;
+        const auto ch = static_cast<std::size_t>(channel);
         switch (status)
         {
         case 0x80:
-            noteOff(data1);
+            noteOff(data1, channel);
             break;
         case 0x90:
-            noteOn(data1, data2);
+            noteOn(data1, data2, channel);
+            break;
+        case 0xe0:
+            pitchBend(channel, (data1 & 0x7F) | ((data2 & 0x7F) << 7));
             break;
         case 0xb0:
             if (data1 == 120 || data1 == 123)
                 allNotesOff();
+            else if (data1 == 101)
+                rpnMsb_[ch] = data2;
+            else if (data1 == 100)
+                rpnLsb_[ch] = data2;
+            else if (data1 == 6 && rpnMsb_[ch] == 0 && rpnLsb_[ch] == 0 && data2 >= 1)
+            {
+                // RPN 0: pitch bend range in semitones, per channel.
+                bendRange_[ch] = static_cast<float>(std::min<int>(data2, 48));
+                pitchBend(channel, bendValue_[ch]);
+            }
             break;
         default:
             break;
@@ -921,10 +966,11 @@ private:
         reverbRight_.setLevel(level);
     }
 
-    FloozyVoice* findVoiceByNote(const int midiNote)
+    FloozyVoice* findVoiceByNote(const int midiNote, const int channel)
     {
         for (std::size_t i = 0; i < activeNumVoices_; ++i)
-            if (voices_[i]->active() && voices_[i]->note() == midiNote)
+            if (voices_[i]->active() && voices_[i]->note() == midiNote
+                && (channel < 0 || voices_[i]->channel() == channel))
                 return voices_[i].get();
         return nullptr;
     }
@@ -971,6 +1017,12 @@ private:
     flues::pm::ReverbModule reverbLeft_;
     flues::pm::ReverbModule reverbRight_;
     std::uint64_t ageCounter_ = 0;
+    // Per-channel pitch bend (MPE-style one note per channel); range 2 semitones, RPN 0.
+    std::array<float, 16> bendRatio_ = [] { std::array<float, 16> a {}; a.fill(1.0f); return a; }();
+    std::array<float, 16> bendRange_ = [] { std::array<float, 16> a {}; a.fill(2.0f); return a; }();
+    std::array<int, 16> bendValue_ = [] { std::array<int, 16> a {}; a.fill(8192); return a; }();
+    std::array<std::uint8_t, 16> rpnMsb_ = [] { std::array<std::uint8_t, 16> a {}; a.fill(127); return a; }();
+    std::array<std::uint8_t, 16> rpnLsb_ = [] { std::array<std::uint8_t, 16> a {}; a.fill(127); return a; }();
     std::size_t activeNumVoices_ = 4;
 };
 

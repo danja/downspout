@@ -92,6 +92,8 @@ Current output filenames:
 - `lifeform.png`
 - `plank.png`
 - `pratt.png`
+- `retune.png`
+- `sprout.png`
 - `syrinx.png`
 - `tuney-vst.png`
 - `voxmod.png`

@@ -75,6 +75,10 @@ Row 16 (`pentatonic`) is a generic single-scale entry used by lifeform and luma 
 | bebopMinor | 22 | 22 | 22 | 23 | 23 | — | 15 | 15 | 23 |
 | **count** | **23** | **23** | **23** | **24** | **24** | **13** | **16** | **16** | **24** |
 
+Sprout (`plugins/sprout`) uses the same 24-scale canonical ordering as plank (0 = chromatic through 23 =
+bebopMinor, no separate `pentatonic` row) and its tests pin the ordinals and hold an independent copy of
+every scale's semitone set.
+
 ## Pitch content
 
 Ordinals are stable, but the notes under an ordinal are a separate matter. Every plugin's table

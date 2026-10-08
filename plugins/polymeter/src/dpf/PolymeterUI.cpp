@@ -41,8 +41,8 @@ private:
 
         for (int lane = 0; lane < kLaneCount; ++lane) {
             const float x = lane % 2 == 0 ? 24.0f : 547.0f;
-            const float y = lane < 2 ? 155.0f : 445.0f;
-            drawLane(lane, x, y, 509.0f, 276.0f);
+            const float y = lane < 2 ? 155.0f : 499.0f;
+            drawLane(lane, x, y, 509.0f, 334.0f);
         }
         endPanel();
     }
@@ -73,6 +73,8 @@ private:
                        "MIDI note emitted by this lane.");
         drawChannelSlider(laneParam(lane, kChannel), x + 253, y + 207, 242, "Channel",
                           "MIDI output channel; channel 10 is conventional drums.");
+        drawSlider(ruleParam(lane), x + 14, y + 263, 481, "Automaton rule", "",
+                   "0 = Euclidean. 1-255 plays a 1-D cellular automaton (Wolfram rule) seeded from Pulses/Length and advanced one generation per cycle.", 0);
     }
 
     void drawPattern(const int lane, const float x, const float y, const float w, const float h)
@@ -85,7 +87,12 @@ private:
         const float cell = w / static_cast<float>(length);
         for (int i = 0; i < length; ++i) {
             const int rotated = (i - rotation + length) % length;
-            const bool hit = pulses > 0 && (rotated * pulses) % length < pulses;
+            const int rule = static_cast<int>(std::lround(value(ruleParam(lane))));
+            const int seed = static_cast<int>(std::lround(value(kSeed)));
+            const int cycle = static_cast<int>(std::lround(value(kStatusStep))) / length;
+            const bool hit = rule > 0
+                ? caCell(length, pulses, rule, static_cast<std::uint64_t>(seed) + lane * 131 + 7, cycle % kCaGenerations, rotated)
+                : pulses > 0 && (rotated * pulses) % length < pulses;
             beginPath();
             if (i == current)
                 fc(t_.textPrimary);

@@ -40,6 +40,7 @@ enum ParameterIndex : uint32_t {
     kParamFollow,
     kParamColor,
     kParamConductorChannel,
+    kParamInertia,
     kParameterCount
 };
 
@@ -190,6 +191,7 @@ protected:
         case kParamVary: initFloat(parameter, "Vary", "vary", 0.0f, 100.0f, 0.0f); break;
         case kParamFollow: initFloat(parameter, "Follow", "follow", 0.0f, 1.0f, 0.0f); break;
         case kParamColor: initFloat(parameter, "Color", "color", 0.0f, 1.0f, 0.5f); break;
+        case kParamInertia: initFloat(parameter, "Inertia", "inertia", 0.0f, 1.0f, 0.0f); break;
         case kParamConductorChannel: initInteger(parameter, "Conductor Ch", "conductor_ch", 0.0f, 16.0f, 0.0f); break;
         case kParamActionNew:
         case kParamActionNotes:
@@ -245,6 +247,7 @@ protected:
         case kParamVary: return controls_.vary * 100.0f;
         case kParamFollow: return controls_.follow;
         case kParamColor: return controls_.color;
+        case kParamInertia: return controls_.inertia;
         case kParamConductorChannel: return static_cast<float>(conductorChannel_);
         case kParamActionNew:
         case kParamActionNotes:
@@ -280,6 +283,7 @@ protected:
         case kParamVary: controls_.vary = value / 100.0f; break;
         case kParamFollow: controls_.follow = value; break;
         case kParamColor: controls_.color = value; break;
+        case kParamInertia: controls_.inertia = value; break;
         case kParamConductorChannel: conductorChannel_ = static_cast<int>(value); break;
         case kParamActionNew: if (value > 0.5f) ++controls_.actionNew; break;
         case kParamActionNotes: if (value > 0.5f) ++controls_.actionNotes; break;

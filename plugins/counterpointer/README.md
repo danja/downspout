@@ -27,6 +27,10 @@ Current status:
   stable.
 - the `Color` control makes the generated counterline less strictly consonant
   and more chromatic/adventurous, especially on Jazz-capable scales.
+- the `Inertia` control (default 0, which leaves output unchanged) biases the
+  counterline after a leap of a fourth or more to turn back without overshooting,
+  and after a step to keep going, in the manner of Narmour's melodic implication.
+  The idea comes from Subsequence (see `docs/subsequent.md`).
 - strict, Bach-like answering is available through existing controls: high
   `Regularity`, high `Counter`, and low random amounts preserve learned subject
   intervals and answer them around the dominant.

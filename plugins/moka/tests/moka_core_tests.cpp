@@ -549,6 +549,62 @@ void malletBurstVariesWithTheNote()
 
 } // namespace
 
+float estimateHz(MokaEngine& engine)
+{
+    constexpr int warm = 2400, length = 16000;
+    std::vector<float> mono(length);
+    for (int i = 0; i < warm; ++i) (void)engine.processStereo();
+    for (int i = 0; i < length; ++i) {
+        const auto f = engine.processStereo();
+        mono[static_cast<std::size_t>(i)] = 0.5f * (f.left + f.right);
+    }
+    int bestLag = 48;
+    double best = -1.0e30;
+    for (int lag = 48; lag <= 480; ++lag) {
+        double sum = 0.0;
+        for (int i = 0; i + lag < length; ++i)
+            sum += static_cast<double>(mono[static_cast<std::size_t>(i)]) * mono[static_cast<std::size_t>(i + lag)];
+        if (sum > best) { best = sum; bestLag = lag; }
+    }
+    return 48000.0f / static_cast<float>(bestLag);
+}
+
+void midi3(MokaEngine& engine, int status, int a, int b)
+{
+    const std::uint8_t msg[3] = {static_cast<std::uint8_t>(status), static_cast<std::uint8_t>(a), static_cast<std::uint8_t>(b)};
+    engine.handleMidi(msg, 3);
+}
+
+void pitchBendIsPerChannel()
+{
+    MokaEngine plain {48000.0f};
+    midi3(plain, 0x91, 60, 100);
+    const float base = estimateHz(plain);
+
+    MokaEngine bent {48000.0f};
+    midi3(bent, 0xE2, 0x7F, 0x7F);  // full up on channel 3 before its note
+    midi3(bent, 0x92, 60, 100);
+    require(std::fabs(estimateHz(bent) / base - std::pow(2.0f, 2.0f / 12.0f)) < 0.05f, "moka should bend its own channel by 2 semitones");
+
+    MokaEngine other {48000.0f};
+    midi3(other, 0x91, 60, 100);
+    midi3(other, 0xE5, 0x7F, 0x7F);
+    require(std::fabs(estimateHz(other) / base - 1.0f) < 0.03f, "moka bend must stay on its channel");
+
+    MokaEngine ringing {48000.0f};
+    midi3(ringing, 0x93, 60, 100);
+    midi3(ringing, 0xE3, 0x7F, 0x7F);  // bend a note that is already ringing
+    require(std::fabs(estimateHz(ringing) / base - std::pow(2.0f, 2.0f / 12.0f)) < 0.05f, "moka should bend a ringing note");
+
+    MokaEngine pair {48000.0f};
+    pair.setParameter(ParamId::voices, 4.0f);
+    midi3(pair, 0x91, 60, 100);
+    midi3(pair, 0x92, 60, 100);
+    require(pair.activeVoiceCount() == 2, "moka should key voices by channel and note");
+    midi3(pair, 0x81, 60, 0);  // releases channel 2's note only
+    require(pair.activeVoiceCount() == 2, "moka voices keep ringing through release");
+}
+
 int main()
 {
     defaultsAndClamping();
@@ -570,6 +626,7 @@ int main()
     kalimbaPresetHasATineCharacter();
     modeWeightsAreShared();
     renderingIsDeterministic();
+    pitchBendIsPerChannel();
     malletBurstVariesWithTheNote();
 
     std::cout << "moka core tests passed\n";

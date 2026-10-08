@@ -29,8 +29,10 @@ public:
 
     // MIDI
     void handleMidi(const std::uint8_t* data, std::uint32_t size);
-    void handleNoteOn(std::uint8_t note, std::uint8_t velocity);
-    void handleNoteOff(std::uint8_t note);
+    void handleNoteOn(std::uint8_t note, std::uint8_t velocity, int channel = 0);
+    // channel < 0 releases the note on every channel.
+    void handleNoteOff(std::uint8_t note, int channel = -1);
+    void handlePitchBend(int channel, int value14);
     void handleCC(std::uint8_t cc, std::uint8_t value);
 
     [[nodiscard]] StereoFrame processStereo();
@@ -46,6 +48,14 @@ private:
     float sampleRate_;
     std::array<float, kParameterCount> params_{};
     std::uint32_t noiseStream_ = 0;
+
+    // Per-channel pitch bend (MPE-style one note per channel); range 2 semitones, RPN 0.
+    std::array<float, 16> bendRatio_ {};
+    std::array<float, 16> bendRange_ {};
+    std::array<int, 16> bendValue_ {};
+    std::array<std::uint8_t, 16> rpnMsb_ {};
+    std::array<std::uint8_t, 16> rpnLsb_ {};
+    void resetBend();
 
     std::array<SyrinxVoice, kMaxVoices> voices_;
 

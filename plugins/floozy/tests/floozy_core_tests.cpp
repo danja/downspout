@@ -458,6 +458,57 @@ void extremeParametersStayFinite()
     require(renderPeak(engine, 8192) <= 1.0f, "floozy output should remain bounded");
 }
 
+void pitchBendIsPerChannel()
+{
+    const auto make = [](FloozyEngine& engine) {
+        engine.setParameter(ParamId::interfaceType, 2.0f);
+        engine.setParameter(ParamId::sourceAlgorithm, 3.0f);
+        engine.setParameter(ParamId::sourceLevel, 0.70f);
+        engine.setParameter(ParamId::noiseLevel, 0.0f);
+        engine.setParameter(ParamId::reverbLevel, 0.0f);
+        engine.setParameter(ParamId::filterFrequency, 0.85f);
+        engine.setParameter(ParamId::filterQ, 0.10f);
+        engine.setParameter(ParamId::masterGain, 0.50f);
+    };
+    const auto midi3 = [](FloozyEngine& engine, int status, int a, int b) {
+        const std::uint8_t msg[3] = {static_cast<std::uint8_t>(status), static_cast<std::uint8_t>(a), static_cast<std::uint8_t>(b)};
+        engine.handleMidi(msg, 3);
+    };
+
+    FloozyEngine plain {48000.0f};
+    make(plain);
+    midi3(plain, 0x91, 60, 100);
+    const float base = estimateRenderedPitch(plain, 24000, 24000);
+
+    FloozyEngine bent {48000.0f};
+    make(bent);
+    midi3(bent, 0xE2, 0x7F, 0x7F);  // full up on channel 3, before its note
+    midi3(bent, 0x92, 60, 100);
+    require(std::fabs(estimateRenderedPitch(bent, 24000, 24000) / base - std::pow(2.0f, 2.0f / 12.0f)) < 0.03f,
+            "floozy should bend its own channel by 2 semitones");
+
+    FloozyEngine other {48000.0f};
+    make(other);
+    midi3(other, 0x91, 60, 100);
+    midi3(other, 0xE5, 0x7F, 0x7F);
+    require(std::fabs(estimateRenderedPitch(other, 24000, 24000) / base - 1.0f) < 0.02f, "floozy bend must stay on its channel");
+
+    FloozyEngine ringing {48000.0f};
+    make(ringing);
+    midi3(ringing, 0x93, 60, 100);
+    midi3(ringing, 0xE3, 0x7F, 0x7F);  // bend a held note
+    require(std::fabs(estimateRenderedPitch(ringing, 24000, 24000) / base - std::pow(2.0f, 2.0f / 12.0f)) < 0.03f,
+            "floozy should bend a held note");
+
+    FloozyEngine pair {48000.0f};
+    make(pair);
+    midi3(pair, 0x91, 60, 100);
+    midi3(pair, 0x92, 60, 100);
+    midi3(pair, 0x81, 60, 0);  // releases channel 2's note only
+    for (int i = 0; i < 96000; ++i) (void)pair.processStereo();
+    require(pair.activeVoiceCount() == 1, "floozy note-off must only release its own channel");
+}
+
 } // namespace
 
 int main()
@@ -477,6 +528,7 @@ int main()
     polyphonyIsCapped();
     processBlockSchedulesMidi();
     extremeParametersStayFinite();
+    pitchBendIsPerChannel();
 
     std::cout << "floozy core tests passed\n";
     return 0;

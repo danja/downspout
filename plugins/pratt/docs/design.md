@@ -1,6 +1,6 @@
 # Pratt: design notes
 
-Source: `~/github/pratt-synth` (offline Python MIDI-to-MP3 renderer,
+Source: [pratt-synth](https://github.com/githubuser1983/pratt-synth) (offline Python MIDI-to-MP3 renderer,
 `pratt_midi_synth.py`). This plugin is a real-time port. Status: portable core,
 engine (synth, filter, both), DPF wrapper, state and custom UI are written and build
 as VST3 and JACK standalone. Wired into the root build, install and release scripts,

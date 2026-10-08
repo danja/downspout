@@ -4,7 +4,8 @@ A number-theoretic synthesizer and filter. Both halves are built from the Pratt
 polynomials `f_n` (`f_p = 1 + f_{p-1}` for odd primes, multiplicative otherwise,
 `f_n(2) = n`) and the stable all-pole filter `H_n(s) = n / f_n(2 + s/w0)`.
 
-Ported from the offline renderer in `~/github/pratt-synth`.
+**Based on [pratt-synth](https://github.com/githubuser1983/pratt-synth)**, the original Pratt-polynomial MIDI synthesizer
+and sonification code. This plugin is a real-time port of that offline renderer.
 
 ![Pratt in Synth + Filter mode](docs/screenshot.png)
 

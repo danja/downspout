@@ -13,6 +13,7 @@ Engine::Engine(float sampleRate)
     , dcL_(0.999f)
     , dcR_(0.999f)
 {
+    resetBend();
     // Initialize parameters from defaults
     for (std::uint32_t i = 0; i < kParameterCount; ++i) {
         const auto spec = getParameterSpec(i);
@@ -69,22 +70,34 @@ void Engine::handleMidi(const std::uint8_t* data, std::uint32_t size)
 {
     if (!data || size < 2) return;
     const std::uint8_t cmd = data[0] & 0xf0u;
+    const int channel = data[0] & 0x0f;
+    const auto ch = static_cast<std::size_t>(channel);
     if (cmd == 0x90u && size >= 3) {
         if (data[2] > 0)
-            handleNoteOn(data[1], data[2]);
+            handleNoteOn(data[1], data[2], channel);
         else
-            handleNoteOff(data[1]);
+            handleNoteOff(data[1], channel);
     } else if (cmd == 0x80u && size >= 3) {
-        handleNoteOff(data[1]);
+        handleNoteOff(data[1], channel);
+    } else if (cmd == 0xe0u && size >= 3) {
+        handlePitchBend(channel, (data[1] & 0x7F) | ((data[2] & 0x7F) << 7));
     } else if (cmd == 0xb0u && size >= 3) {
         if (data[1] == 120 || data[1] == 123)
             reset();
-        else
+        else if (data[1] == 101)
+            rpnMsb_[ch] = data[2];
+        else if (data[1] == 100)
+            rpnLsb_[ch] = data[2];
+        else if (data[1] == 6 && rpnMsb_[ch] == 0 && rpnLsb_[ch] == 0 && data[2] >= 1) {
+            // RPN 0: pitch bend range in semitones, per channel.
+            bendRange_[ch] = static_cast<float>(std::min<int>(data[2], 48));
+            handlePitchBend(channel, bendValue_[ch]);
+        } else
             handleCC(data[1], data[2]);
     }
 }
 
-void Engine::handleNoteOn(std::uint8_t note, std::uint8_t velocity)
+void Engine::handleNoteOn(std::uint8_t note, std::uint8_t velocity, int channel)
 {
     const std::uint32_t preset = static_cast<std::uint32_t>(
         std::clamp(static_cast<int>(std::round(params_[kParamSelectedPreset])), 0, 9));
@@ -95,14 +108,35 @@ void Engine::handleNoteOn(std::uint8_t note, std::uint8_t velocity)
 
     const PresetParams pp = decodePreset(params_.data(), preset);
     const int vi = allocateVoice();
-    voices_[vi].trigger(note, static_cast<float>(velocity) / 127.0f, pp, noiseStream_++);
+    voices_[vi].trigger(note, static_cast<float>(velocity) / 127.0f, pp, noiseStream_++, channel,
+                        bendRatio_[static_cast<std::size_t>(channel & 15)]);
 }
 
-void Engine::handleNoteOff(std::uint8_t note)
+void Engine::handleNoteOff(std::uint8_t note, int channel)
 {
     for (auto& v : voices_)
-        if (v.isActive() && v.midiNote() == note)
+        if (v.isActive() && v.midiNote() == note && (channel < 0 || v.channel() == channel))
             v.release();
+}
+
+void Engine::handlePitchBend(int channel, int value14)
+{
+    const auto ch = static_cast<std::size_t>(channel & 15);
+    bendValue_[ch] = value14;
+    const float semitones = (static_cast<float>(value14) - 8192.0f) / 8192.0f * bendRange_[ch];
+    bendRatio_[ch] = std::pow(2.0f, semitones / 12.0f);
+    for (auto& v : voices_)
+        if (v.isActive() && v.channel() == channel)
+            v.setChannelBend(bendRatio_[ch]);
+}
+
+void Engine::resetBend()
+{
+    bendRatio_.fill(1.0f);
+    bendRange_.fill(2.0f);
+    bendValue_.fill(8192);
+    rpnMsb_.fill(127);
+    rpnLsb_.fill(127);
 }
 
 void Engine::handleCC(std::uint8_t cc, std::uint8_t value)

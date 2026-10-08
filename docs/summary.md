@@ -100,6 +100,25 @@ Density, Velocity and Drag read Drift CC 1-4 by default. Ghosts only fire
 while the transport runs. Natural partner: a dry drum bus into Ghost, with
 Ghost MIDI driving DrumKit layered under the original kit.
 
+### Sprout (`sprout.vst3`)
+
+L-system melody generator. Pick one of seven grammars (Plant, Koch, Dragon,
+Sierpinski, Cantor, Levy, Tree), a number of generations, a scale and a root; it plays
+the rewritten string as a monophonic line locked to the transport. With **Grow every**
+set it starts at generation 1 and gains a generation every N bars, so a piece thickens
+over time. Output is plain MIDI, so feed any instrument; Cantor gives rhythm on one
+pitch, Koch and Tree give melodic contour, and Plant gives long self-similar phrases.
+
+### Retune (`retune.vst3`)
+
+MIDI effect that retunes a note stream to a Scala (`.scl`) scale. Each held note is sent
+on its own channel (2-16) after a pitch bend that moves the nearest 12-TET key onto the
+scale degree, so put it between a generator (melgen, arpgen, cadence, ...) and an
+instrument that honours per-channel pitch bend at the same range (default 2 semitones,
+MPE-style). CC and program change reach every channel; incoming pitch bend and channel
+aftertouch are dropped. With no file loaded it passes 12-TET through unchanged. Use it with Canticle, Moka, Floozy, Syrinx or Pratt, which bend per channel; other
+instruments ignore the bend and will play 12-TET.
+
 ## Instruments
 
 ### DrumKit (`drumkit.vst3`)

@@ -6,6 +6,8 @@
 
 #include "downspout/test_assert.h"
 #include <cmath>
+#include <cstdint>
+#include <cstdlib>
 
 using namespace downspout::melgen;
 
@@ -318,6 +320,54 @@ void testSerializationRoundTrip()
 
 }  // namespace
 
+double leapReversalRate(float inertia)
+{
+    int leaps = 0;
+    int reversals = 0;
+    for (std::uint32_t seed = 1; seed <= 60; ++seed) {
+        Controls controls;
+        controls.lengthBeats = 32;
+        controls.period = PeriodId::free;
+        controls.contour = ContourId::wandering;
+        controls.structure = 0.1f;
+        controls.leap = 0.7f;
+        controls.density = 0.9f;
+        controls.rest = 0.0f;
+        controls.color = 0.0f;
+        controls.cadence = 0.0f;
+        controls.inertia = inertia;
+        controls.seed = seed;
+        PatternState pattern;
+        regeneratePattern(pattern, controls, ::downspout::Meter {}, true, true);
+        for (int i = 2; i < pattern.eventCount; ++i) {
+            const int first = pattern.events[i - 1].note - pattern.events[i - 2].note;
+            const int second = pattern.events[i].note - pattern.events[i - 1].note;
+            if (std::abs(first) >= 5) {
+                ++leaps;
+                if (second * first < 0) ++reversals;
+            }
+        }
+    }
+    assert(leaps > 50);
+    return static_cast<double>(reversals) / static_cast<double>(leaps);
+}
+
+void testInertiaReversesLeaps()
+{
+    const double off = leapReversalRate(0.0f);
+    const double on = leapReversalRate(1.0f);
+    assert(on > off + 0.15);
+
+    Controls controls;
+    controls.inertia = 0.37f;
+    const auto decoded = deserializeControls(serializeControls(controls));
+    assert(decoded.has_value());
+    assert(std::fabs(decoded->inertia - 0.37f) < 1e-4f);
+    // State saved before Inertia existed has no key and must still load, as off.
+    const auto legacy = deserializeControls("leap=0.5\n");
+    assert(legacy.has_value() && legacy->inertia == 0.0f);
+}
+
 int main()
 {
     testDeterministicGeneration();
@@ -330,5 +380,6 @@ int main()
     testEngineSchedulesMidi();
     testFollowInfluencesGeneratedNoteWithoutCopyingInput();
     testSerializationRoundTrip();
+    testInertiaReversesLeaps();
     return 0;
 }

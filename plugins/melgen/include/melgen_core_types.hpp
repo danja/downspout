@@ -111,6 +111,7 @@ struct Controls {
     float structure = 0.62f;
     float range = 0.45f;
     float leap = 0.28f;
+    float inertia = 0.0f;  // 0 = off; 1 = leaps reverse, steps continue
     float rest = 0.24f;
     float cadence = 0.55f;
     float color = 0.5f;

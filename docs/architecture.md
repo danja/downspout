@@ -256,6 +256,8 @@ The release script currently expects these bundles:
 - `lifeform.vst3`
 - `plank.vst3`
 - `pratt.vst3`
+- `retune.vst3`
+- `sprout.vst3`
 - `xoxolo.vst3`
 - `syrinx.vst3`
 - `tuney_vst.vst3`

@@ -29,6 +29,7 @@ enum Param : std::uint32_t {
     kConductorChannel,
     kStatusRoot,
     kStatusChord,
+    kGravity,  // appended after the original parameters so saved indices stay valid
     kParameterCount
 };
 
@@ -49,6 +50,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs {{
     {"conductor_ch", "Conductor Ch", 0, 16, 0, true},
     {"status_root", "Effective root", 0, 11, 0, true, true},
     {"status_chord", "Chord index", 0, 4096, 0, true, true},
+    {"gravity", "Gravity", 0, 1, 0},
 }};
 
 struct State {
@@ -63,6 +65,13 @@ struct State {
 };
 
 void reset(State& state) noexcept;
+
+// Root pitch class (0-11) of chord number `chord`. `gravity` 0 is the plain movement table; above
+// 0, each chord may be replaced by a stronger function relative to the chord before it (V goes
+// home, IV goes to V, and anything else is pulled to the tonic, IV or V), with probability
+// up to 0.85 at gravity 1. Cadence positions always land on the tonic. Pure function of its
+// arguments, so loops, jumps and offline renders agree.
+int chordRoot(int style, std::int64_t chord, int tonic, int cadence, std::uint64_t seed, float gravity) noexcept;
 MidiBlock process(State& state,
                   const std::array<float, kParameterCount>& parameters,
                   const Transport& transport,

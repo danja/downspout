@@ -249,6 +249,26 @@ main {
   color: var(--muted);
 }
 
+/* Source credit / callout, e.g. the link to the original code on the Pratt page. */
+.content-block blockquote {
+  margin: 0 0 28px;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.content-block blockquote p {
+  margin: 0;
+  color: var(--text);
+}
+
+.content-block blockquote a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .site-footer {
   padding: 30px 0 44px;
   border-top: 1px solid var(--line);

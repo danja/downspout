@@ -80,6 +80,7 @@ struct Controls {
     float regularity = 0.65f;
     int reg = REGISTER_MID;
     float span = 0.55f;
+    float inertia = 0.0f;  // 0 = off; 1 = leaps turn back, steps continue
     float gate = 0.72f;
     float velocity_follow = 0.65f;
     bool pass_input = true;
@@ -194,6 +195,7 @@ using ScheduledMidiEvent = MidiMessage;
     controls.regularity = clampf(controls.regularity, 0.0f, 1.0f);
     controls.reg = clampi(controls.reg, 0, 2);
     controls.span = clampf(controls.span, 0.0f, 1.0f);
+    controls.inertia = clampf(controls.inertia, 0.0f, 1.0f);
     controls.gate = clampf(controls.gate, 0.10f, 1.0f);
     controls.velocity_follow = clampf(controls.velocity_follow, 0.0f, 1.0f);
     controls.output_channel = clampi(controls.output_channel, 0, 16);
@@ -220,6 +222,7 @@ using ScheduledMidiEvent = MidiMessage;
            (a.embellish - b.embellish < 0.0001f && a.embellish - b.embellish > -0.0001f) &&
            (a.regularity - b.regularity < 0.0001f && a.regularity - b.regularity > -0.0001f) &&
            (a.span - b.span < 0.0001f && a.span - b.span > -0.0001f) &&
+           (a.inertia - b.inertia < 0.0001f && a.inertia - b.inertia > -0.0001f) &&
            (a.gate - b.gate < 0.0001f && a.gate - b.gate > -0.0001f) &&
            (a.velocity_follow - b.velocity_follow < 0.0001f && a.velocity_follow - b.velocity_follow > -0.0001f) &&
            a.response_mode == b.response_mode;

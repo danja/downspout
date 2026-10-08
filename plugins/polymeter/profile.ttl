@@ -15,4 +15,6 @@ dsp:polymeter a trn:PluginProfile ;
     trn:produces trn:Midi, trn:DrumMidi ;
     trn:requires trn:HostTransport ;
     trn:recommendedBefore dsp:drumkit ;
+    trn:parameter [ rdfs:label "Lane 1-4 CA rule" ; trn:symbol "l1_rule, l2_rule, l3_rule, l4_rule" ; trn:range "0-255" ;
+                    rdfs:comment "0 keeps the lane Euclidean. 1-255 plays a 1-D cellular automaton (Wolfram rule) seeded from Pulses/Length, one generation per lane cycle, 64-generation loop." ] ;
     pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

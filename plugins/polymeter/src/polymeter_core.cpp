@@ -6,6 +6,17 @@ namespace{float pv(const std::array<float,kParameterCount>&p,std::uint32_t i){re
 int iv(const std::array<float,kParameterCount>&p,std::uint32_t i){return static_cast<int>(std::lround(pv(p,i)));}
 void releaseLane(State&s,MidiBlock&o,int lane,std::uint32_t frame,const std::array<float,kParameterCount>&p){if(s.active[lane]>=0){o.push(frame,downspout::generative::status(false,iv(p,laneParam(lane,kChannel))),static_cast<std::uint8_t>(s.active[lane]),0);s.active[lane]=-1;}}
 }
+bool caCell(int length,int pulses,int rule,std::uint64_t seed,int generation,int index)noexcept{
+ length=std::clamp(length,1,32);if(index<0||index>=length||rule<=0)return false;
+ std::uint32_t row=0;const float density=static_cast<float>(std::clamp(pulses,0,length))/static_cast<float>(length);
+ for(int i=0;i<length;++i)if(downspout::generative::randomUnit(seed,static_cast<std::uint64_t>(i))<density)row|=1u<<i;
+ if(pulses>=length)row=length==32?0xffffffffu:((1u<<length)-1u);
+ const std::uint32_t mask=length==32?0xffffffffu:((1u<<length)-1u);
+ for(int g=0;g<std::clamp(generation,0,kCaGenerations-1);++g){std::uint32_t next=0;
+  for(int i=0;i<length;++i){const int l=(i+length-1)%length,r=(i+1)%length;const int pattern=(((row>>l)&1u)<<2)|(((row>>i)&1u)<<1)|((row>>r)&1u);
+   if((rule>>pattern)&1)next|=1u<<i;}
+  row=next&mask;}
+ return((row>>index)&1u)!=0;}
 void reset(State&s)noexcept{s={};s.active={{-1,-1,-1,-1}};s.lastStep=-1;}
 MidiBlock process(State&s,const std::array<float,kParameterCount>&p,const Transport&t,std::uint32_t frames,double sr)noexcept{
  MidiBlock out;s.statusEvents=0;if(!t.valid||!t.playing||frames==0){for(int l=0;l<kLaneCount;++l)releaseLane(s,out,l,0,p);s.havePosition=false;return out;}
@@ -17,7 +28,7 @@ MidiBlock process(State&s,const std::array<float,kParameterCount>&p,const Transp
   const auto baseFrame=downspout::generative::frameAt(boundary,start,qpf,frames);
   for(int lane=0;lane<kLaneCount;++lane){releaseLane(s,out,lane,baseFrame,p);const int length=iv(p,laneParam(lane,kLength)),pulses=std::min(length,iv(p,laneParam(lane,kPulses)));
    const int cycle=static_cast<int>(step/std::max(1,length));const int drift=static_cast<int>(std::floor(cycle*pv(p,laneParam(lane,kPhaseDrift))));
-   const int position=static_cast<int>((step+iv(p,laneParam(lane,kRotation))+drift)%length);const bool pulse=pulses>0&&((position*pulses)%length)<pulses;
+   const int position=static_cast<int>((step+iv(p,laneParam(lane,kRotation))+drift)%length);const int rule=iv(p,ruleParam(lane));const bool pulse=rule>0?caCell(length,pulses,rule,static_cast<std::uint64_t>(iv(p,kSeed))+lane*131+7,cycle%kCaGenerations,position):pulses>0&&((position*pulses)%length)<pulses;
    if(!pulse||downspout::generative::randomUnit(iv(p,kSeed)+lane*101,step)>pv(p,laneParam(lane,kProbability)))continue;
    const int ratchets=iv(p,laneParam(lane,kRatchets)),note=iv(p,laneParam(lane,kNote)),channel=iv(p,laneParam(lane,kChannel));
    const int velocity=std::clamp(58+static_cast<int>(pv(p,laneParam(lane,kAccent))*64)+(position==0?8:0),1,127);

@@ -68,6 +68,7 @@ std::string serializeControls(const Controls& controls)
     out << "structure=" << controls.structure << '\n';
     out << "range=" << controls.range << '\n';
     out << "leap=" << controls.leap << '\n';
+    out << "inertia=" << controls.inertia << '\n';
     out << "rest=" << controls.rest << '\n';
     out << "cadence=" << controls.cadence << '\n';
     out << "color=" << controls.color << '\n';
@@ -170,6 +171,8 @@ std::optional<Controls> deserializeControls(const std::string& text)
             controls.range = floatValue;
         } else if (key == "leap" && parseFloat(value, floatValue)) {
             controls.leap = floatValue;
+        } else if (key == "inertia" && parseFloat(value, floatValue)) {
+            controls.inertia = floatValue;
         } else if (key == "rest" && parseFloat(value, floatValue)) {
             controls.rest = floatValue;
         } else if (key == "cadence" && parseFloat(value, floatValue)) {

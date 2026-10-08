@@ -145,7 +145,7 @@ private:
 
         beginPanel();
 
-        drawSection(24, 104, 576, 240, "HARMONY", "what changes, and how often");
+        drawSection(24, 104, 576, 290, "HARMONY", "what changes, and how often");
         drawChoice(kStyle, 38, 136, 548, "Movement language", movements, 4,
                    "Select the harmonic movement family.");
         drawScaleSelector(38, 193, 548);
@@ -153,14 +153,16 @@ private:
                    "How many bars each chord lasts.", 0);
         drawSlider(kCadenceBars, 310, 253, 276, "Cadence every", " bars",
                    "How often the progression aims for a cadence.", 0);
+        drawPercentSlider(kGravity, 38, 309, 548, "Gravity",
+                          "Pull towards functional harmony: V resolves home, IV leads to V, other chords drift to I, IV or V. 0 is free movement.");
 
-        drawSection(24, 358, 576, 282, "VOICING", "shape and density");
-        drawPercentSlider(kTension, 38, 391, 264, "Tension", "Harmonic color and instability.");
-        drawPercentSlider(kVoiceLeading, 310, 391, 276, "Voice-leading", "Prefer smaller movements between chords.");
-        drawChoice(kInversionRange, 38, 447, 548, "Voicing spread", inversions, 4,
+        drawSection(24, 408, 576, 232, "VOICING", "shape and density");
+        drawPercentSlider(kTension, 38, 441, 264, "Tension", "Harmonic color and instability.");
+        drawPercentSlider(kVoiceLeading, 310, 441, 276, "Voice-leading", "Prefer smaller movements between chords.");
+        drawChoice(kInversionRange, 38, 497, 548, "Voicing spread", inversions, 4,
                    "Select how widely chord notes may be distributed.");
-        drawSlider(kVoiceCount, 38, 506, 264, "Chord voices", "", "Maximum chord-note count.", 0);
-        drawPercentSlider(kScaleNotes, 310, 506, 276, "Colour-note chance", "Chance of adding an in-scale colour note.");
+        drawSlider(kVoiceCount, 38, 556, 264, "Chord voices", "", "Maximum chord-note count.", 0);
+        drawPercentSlider(kScaleNotes, 310, 556, 276, "Colour-note chance", "Chance of adding an in-scale colour note.");
 
         drawSection(614, 104, 322, 300, "INPUT & ROUTING", "optional MIDI guidance");
         drawToggle(kFollowInput, 628, 137, 294, "Follow incoming pitch classes",

@@ -1,0 +1,28 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:retune a trn:PluginProfile ;
+    rdfs:label "Retune" ;
+    rdfs:comment "MIDI effect that retunes notes to a Scala .scl scale by sending each held note on its own channel (2-16) behind a per-note pitch bend." ;
+    trn:bundleName "retune.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/retune/> ;
+    trn:role trn:MidiProcessor ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Midi ;
+    trn:caution "The receiving synth must apply pitch bend per channel at the configured Bend range (MPE-style). Incoming pitch bend and channel aftertouch are dropped. The scale file path, not its contents, is saved with the session." ;
+    trn:parameter [ rdfs:label "Root note" ; trn:symbol "root" ; trn:range "0-127" ;
+                    rdfs:comment "MIDI note that plays the scale's 1/1; degrees repeat above and below it." ] ;
+    trn:parameter [ rdfs:label "Bend range" ; trn:symbol "bend_range" ; trn:range "1-24 semitones" ;
+                    rdfs:comment "Pitch bend range assumed for the receiving synth. Must match it." ] ;
+    trn:parameter [ rdfs:label "Scale degrees" ; trn:symbol "status_degrees" ; trn:range "0-1024" ;
+                    rdfs:comment "Read-only: degrees per period in the loaded scale." ] ;
+    trn:parameter [ rdfs:label "Sounding notes" ; trn:symbol "status_notes" ; trn:range "0-15" ;
+                    rdfs:comment "Read-only: notes currently held on output channels." ] ;
+    trn:parameter [ rdfs:label "Scale loaded" ; trn:symbol "status_loaded" ; trn:range "0-1" ;
+                    rdfs:comment "Read-only: 1 when a .scl file is loaded, 0 for 12-TET." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

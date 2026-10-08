@@ -10,6 +10,11 @@ capabilities: [audio input, audio output, MIDI note and CC input]
 summary: Eleven General MIDI voices and a stable all-pole filter, all shaped by the factorisation of an integer index — play it, filter audio with it, or both.
 ---
 
+> **Based on [pratt-synth](https://github.com/githubuser1983/pratt-synth)** — the original Pratt-polynomial MIDI
+> synthesizer and sonification code (Python, offline renderer, with the source
+> paper and example recordings). Pratt is a real-time port of that work; the
+> voice spectra match the original renderer to within 0.12 dB.
+
 ## Opinion
 
 An odd and likeable instrument: neighbouring keys have unrelated spectra because

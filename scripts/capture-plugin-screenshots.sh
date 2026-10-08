@@ -53,6 +53,8 @@ plugins=(
   "lifeform:lifeform"
   "plank:plank"
   "pratt:pratt"
+  "retune:retune"
+  "sprout:sprout"
   "tuney-vst:tuney_vst"
   "harmonic-atlas:harmonic_atlas"
   "conductor:conductor"

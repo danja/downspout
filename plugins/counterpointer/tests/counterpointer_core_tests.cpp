@@ -3,6 +3,7 @@
 #include "counterpointer_transport.hpp"
 
 #include <array>
+#include <cstdlib>
 #include "downspout/test_assert.h"
 
 using namespace downspout::counterpointer;
@@ -604,6 +605,79 @@ void testFreezeKeepsLearnedPhrase()
 
 }  // namespace
 
+double leapReversalRate(const float inertia)
+{
+    // A subject that itself leaps about, so the output has room to either follow it
+    // or settle by its own inertia. Counter and follow are zero so they do not decide.
+    const int subjectNotes[8] = {60, 72, 55, 67, 62, 74, 57, 69};
+    constexpr std::uint32_t beat = 24000;
+    int leaps = 0;
+    int reversals = 0;
+    for (int key = 0; key < 12; ++key)
+    {
+        EngineState state;
+        activate(state);
+        Controls controls = defaultControls();
+        controls.key = key;
+        controls.scale = SCALE_MAJOR;
+        controls.cycle_bars = 2;
+        controls.granularity = GRANULARITY_BEAT;
+        controls.pass_input = false;
+        controls.density = 1.0f;
+        controls.counter = 0.0f;
+        controls.follow = 0.0f;
+        controls.consonance = 0.0f;
+        controls.span = 1.0f;
+        controls.short_random = 0.8f;
+        controls.long_random = 0.0f;
+        controls.embellish = 0.0f;
+        controls.inertia = inertia;
+
+        std::array<InputMidiEvent, 16> input {};
+        for (int i = 0; i < 8; ++i)
+        {
+            input[static_cast<std::size_t>(i * 2)] = makeEvent(beat * i, 0x90, static_cast<std::uint8_t>(subjectNotes[i]), 100);
+            input[static_cast<std::size_t>(i * 2 + 1)] = makeEvent(beat * i + beat / 2, 0x80, static_cast<std::uint8_t>(subjectNotes[i]), 0);
+        }
+        (void)processBlock(state, controls, runningTransport(0.0), beat * 8, 48000.0, input.data(), input.size());
+        const PhraseState& phrase = state.playbackPhrase;
+        for (int i = 2; i < phrase.segmentCount; ++i)
+        {
+            const PhraseStep& a = phrase.steps[static_cast<std::size_t>(i - 2)];
+            const PhraseStep& b = phrase.steps[static_cast<std::size_t>(i - 1)];
+            const PhraseStep& c = phrase.steps[static_cast<std::size_t>(i)];
+            if (!a.active || !b.active || !c.active)
+                continue;
+            const int first = b.note - a.note;
+            const int second = c.note - b.note;
+            if (std::abs(first) >= 5)
+            {
+                ++leaps;
+                if (first * second < 0)
+                    ++reversals;
+            }
+        }
+    }
+    assert(leaps > 5);
+    return static_cast<double>(reversals) / static_cast<double>(leaps);
+}
+
+void testInertiaReversesLeaps()
+{
+    const double off = leapReversalRate(0.0f);
+    const double on = leapReversalRate(1.0f);
+    assert(on > off + 0.10);
+
+    Controls controls = defaultControls();
+    controls.inertia = 0.37f;
+    const auto decoded = deserializeControls(serializeControls(controls));
+    assert(decoded.has_value());
+    assert(decoded->inertia > 0.36f && decoded->inertia < 0.38f);
+    // State saved before Inertia existed has no key and must load as off.
+    const auto legacy = deserializeControls("follow=0.5\n");
+    assert(legacy.has_value() && legacy->inertia == 0.0f);
+}
+
 int main()
 {
     testTransportHelpers();
@@ -619,5 +693,6 @@ int main()
     testNewModalScalesConstrainGeneratedNotes();
     testEmbellishCanOutnumberInputNotes();
     testFreezeKeepsLearnedPhrase();
+    testInertiaReversesLeaps();
     return 0;
 }

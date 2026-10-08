@@ -44,6 +44,7 @@ enum ParameterIndex : uint32_t {
     kParamStatusOutput,
     kParamColor,
     kParamResponseMode,
+    kParamInertia,
     kParameterCount
 };
 
@@ -93,6 +94,7 @@ constexpr SliderDef kSliders[] = {
     {kParamShortRandom, "Short Rnd", 0.0f, 1.0f, false},
     {kParamLongRandom, "Long Rnd", 0.0f, 1.0f, false},
     {kParamSpan, "Span", 0.0f, 1.0f, false},
+    {kParamInertia, "Inertia", 0.0f, 1.0f, false},
     {kParamGate, "Gate", 0.10f, 1.0f, false},
     {kParamVelocityFollow, "Velocity", 0.0f, 1.0f, false},
 };
@@ -222,6 +224,7 @@ public:
         values_[kParamRegularity] = 0.65f;
         values_[kParamRegister] = 1.0f;
         values_[kParamSpan] = 0.55f;
+        values_[kParamInertia] = 0.0f;
         values_[kParamGate] = 0.72f;
         values_[kParamVelocityFollow] = 0.65f;
         values_[kParamPassInput] = 1.0f;
@@ -384,7 +387,7 @@ private:
 
         beginPath();
         fc(t_.panel);
-        rect(0.0f, 0.0f, width, height * 0.28f);
+        rect(0.0f, 0.0f, width, 20.0f + 72.0f + 10.0f);
         fill();
         closePath();
     }
@@ -511,9 +514,13 @@ private:
         fc(t_.textPrimary);
         text(x + 20.0f, y + 18.0f, "Routing", nullptr);
 
-        const float selectorH = 50.0f;
+        // Fit every selector plus the button row inside the panel: the nine
+        // selectors share whatever height is left, never more than 50 each.
+        const float selectorGap = 6.0f;
+        const float buttonReserve = 44.0f + 14.0f + 20.0f;
+        const float available = h - 54.0f - buttonReserve;
+        const float selectorH = std::min(50.0f, available / static_cast<float>(std::size(kSelectors)) - selectorGap);
         float cy = y + 54.0f;
-        const float selectorGap = 8.0f;
         for (std::size_t i = 0; i < std::size(kSelectors); ++i) {
             selectorRects_[i] = {x + 20.0f, cy, w - 40.0f, selectorH};
             drawSelector(kSelectors[i], selectorRects_[i], selectorValueForDisplay(kSelectors[i], values_[kSelectors[i].index]), static_cast<int>(i));
@@ -538,14 +545,15 @@ private:
         fill();
         closePath();
 
-        fontSize(12.0f);
+        fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fc(t_.textDim);
-        text(rect.x + 16.0f, rect.y + 12.0f, def.label, nullptr);
+        text(rect.x + 16.0f, rect.y + 6.0f, def.label, nullptr);
 
-        fontSize(19.0f);
+        fontSize(17.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         fc(t_.textPrimary);
-        text(rect.x + 16.0f, rect.y + 33.0f, def.items[clampi(value, 0, def.count - 1)], nullptr);
+        text(rect.x + 16.0f, rect.y + rect.h * 0.5f + 8.0f, def.items[clampi(value, 0, def.count - 1)], nullptr);
 
         fontSize(18.0f);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);

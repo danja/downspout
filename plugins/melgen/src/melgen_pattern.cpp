@@ -306,11 +306,15 @@ void appendMotifEvent(Motif& motif, const MotifEvent& event)
     return shortDur;
 }
 
+// A scale-degree interval of this size or larger counts as a leap for Inertia.
+constexpr int kInertiaLeapDegrees = 3;
+
 [[nodiscard]] int chooseNextDegree(Rng& rng,
                                    const Controls& controls,
                                    const int previous,
                                    const int target,
-                                   const int maxDegree)
+                                   const int maxDegree,
+                                   const int previousInterval)
 {
     const float structure = clampf(controls.structure, 0.0f, 1.0f);
     const float color = clampf(controls.color, 0.0f, 1.0f);
@@ -336,6 +340,25 @@ void appendMotifEvent(Motif& motif, const MotifEvent& event)
 
     if (rng.nextFloat() < color * (1.0f - structure) * 0.20f) {
         degree += rng.nextInt(-2, 2);
+    }
+
+    // Narmour-style inertia: a leap tends to be followed by a move back the other
+    // way, a step tends to be followed by another step in the same direction. The
+    // generator draws from the RNG only when Inertia is on, so Inertia = 0 gives
+    // exactly the pre-existing note sequences.
+    if (controls.inertia > 0.0f && previousInterval != 0) {
+        const int move = degree - previous;
+        const int sign = previousInterval > 0 ? 1 : -1;
+        if (std::abs(previousInterval) >= kInertiaLeapDegrees) {
+            if (rng.nextFloat() < controls.inertia * 0.85f) {
+                const int size = move == 0 ? 1 : std::min(std::abs(move), std::abs(previousInterval) - 1);
+                degree = previous - sign * std::max(1, size);
+            }
+        } else if (std::abs(previousInterval) == 1 && move != 0 && move * sign < 0) {
+            if (rng.nextFloat() < controls.inertia * 0.6f) {
+                degree = previous + sign * std::min(std::abs(move), 2);
+            }
+        }
     }
 
     return clampi(degree, 0, maxDegree);
@@ -380,6 +403,7 @@ void appendMotifEvent(Motif& motif, const MotifEvent& event)
     }
 
     int degree = contourTargetDegree(controls, phraseIndex % 2 == 0 ? 0.12f : 0.36f, maxDegree);
+    int lastInterval = 0;
 
     for (int step = 0; step < motif.lengthSteps;) {
         const float progress = motif.lengthSteps > 1 ? static_cast<float>(step) / static_cast<float>(motif.lengthSteps - 1) : 0.0f;
@@ -390,7 +414,9 @@ void appendMotifEvent(Motif& motif, const MotifEvent& event)
 
         if (rng.nextFloat() >= restChance && rng.nextFloat() < hitChance) {
             const int target = contourTargetDegree(controls, progress, maxDegree);
-            degree = chooseNextDegree(rng, controls, degree, target, maxDegree);
+            const int before = degree;
+            degree = chooseNextDegree(rng, controls, degree, target, maxDegree, lastInterval);
+            lastInterval = degree - before;
             const int accent = strong ? static_cast<int>(std::lround(controls.accent * 22.0f)) : 0;
             appendMotifEvent(motif, {step, duration, degree, 82 + accent + rng.nextInt(-6, 9)});
         }
@@ -534,6 +560,7 @@ Controls clampControls(const Controls& raw)
     controls.structure = clampf(controls.structure, 0.0f, 1.0f);
     controls.range = clampf(controls.range, 0.0f, 1.0f);
     controls.leap = clampf(controls.leap, 0.0f, 1.0f);
+    controls.inertia = clampf(controls.inertia, 0.0f, 1.0f);
     controls.rest = clampf(controls.rest, 0.0f, 1.0f);
     controls.cadence = clampf(controls.cadence, 0.0f, 1.0f);
     controls.color = clampf(controls.color, 0.0f, 1.0f);
@@ -560,6 +587,7 @@ bool structuralControlsChanged(const Controls& a, const Controls& b)
            a.structure != b.structure ||
            a.range != b.range ||
            a.leap != b.leap ||
+           a.inertia != b.inertia ||
            a.rest != b.rest ||
            a.cadence != b.cadence ||
            a.color != b.color ||

@@ -172,11 +172,13 @@ public:
         transientHp_.reset();
     }
 
-    void start(const int midiNote, const std::uint8_t velocity, const Params& params,
-               const std::uint64_t serial)
+    void start(const int midiNote, const int channel, const float bendRatio, const std::uint8_t velocity,
+               const Params& params, const std::uint64_t serial)
     {
         note_ = midiNote;
-        baseFrequency_ = midiNoteToFrequency(midiNote);
+        channel_ = channel;
+        bendRatio_ = bendRatio;
+        baseFrequency_ = midiNoteToFrequency(midiNote) * bendRatio;
         velocity_ = std::clamp(static_cast<float>(velocity) / 127.0f, 0.0f, 1.0f);
         serial_ = serial;
         age_ = 0;
@@ -346,6 +348,19 @@ public:
     bool active() const { return active_; }
     bool releasing() const { return releasing_; }
     int note() const { return note_; }
+    int channel() const { return channel_; }
+
+    // Channel pitch bend on a ringing voice: scale every mode's phase increment.
+    void setBend(const float bendRatio)
+    {
+        if (bendRatio_ <= 0.0f)
+            return;
+        const float scale = bendRatio / bendRatio_;
+        for (auto& mode : modes_)
+            mode.increment *= scale;
+        baseFrequency_ *= scale;
+        bendRatio_ = bendRatio;
+    }
     std::uint64_t serial() const { return serial_; }
 
 private:
@@ -360,6 +375,8 @@ private:
 
     float sampleRate_ = 44100.0f;
     int note_ = -1;
+    int channel_ = 0;
+    float bendRatio_ = 1.0f;
     float baseFrequency_ = 440.0f;
     float velocity_ = 0.0f;
     std::array<ModeState, kModeCount> modes_ {};
@@ -403,6 +420,11 @@ public:
         for (auto& voice : voices_)
             voice.reset();
         serialCounter_ = 0;
+        bendRatio_.fill(1.0f);
+        bendRange_.fill(2.0f);
+        bendValue_.fill(8192);
+        rpnMsb_.fill(127);
+        rpnLsb_.fill(127);
         dcX_ = 0.0f;
         dcY_ = 0.0f;
     }
@@ -440,19 +462,21 @@ public:
                        1, static_cast<int>(kMaxVoices)));
     }
 
-    void noteOn(const int midiNote, const std::uint8_t velocity)
+    // `channel` keys the voice with the note and selects the channel's pitch bend.
+    void noteOn(const int midiNote, const std::uint8_t velocity, const int channel = 0)
     {
         if (midiNote < 0 || midiNote > 127)
             return;
         if (velocity == 0)
         {
-            noteOff(midiNote);
+            noteOff(midiNote, channel);
             return;
         }
 
-        if (auto* existing = findVoiceByNote(midiNote))
+        const float bend = bendRatio_[static_cast<std::size_t>(channel & 15)];
+        if (auto* existing = findVoiceByNote(midiNote, channel))
         {
-            existing->start(midiNote, velocity, params_, ++serialCounter_);
+            existing->start(midiNote, channel, bend, velocity, params_, ++serialCounter_);
             return;
         }
 
@@ -460,21 +484,33 @@ public:
         Voice* voice = findFreeVoice();
         if (voice != nullptr && activeVoiceCount() < cap)
         {
-            voice->start(midiNote, velocity, params_, ++serialCounter_);
+            voice->start(midiNote, channel, bend, velocity, params_, ++serialCounter_);
             return;
         }
 
         voice = chooseVoiceToSteal();
         if (voice != nullptr)
-            voice->start(midiNote, velocity, params_, ++serialCounter_);
+            voice->start(midiNote, channel, bend, velocity, params_, ++serialCounter_);
     }
 
-    void noteOff(const int midiNote)
+    // channel < 0 releases the note on every channel.
+    void noteOff(const int midiNote, const int channel = -1)
     {
         const float t60 = releaseT60ForParam(params_.values[static_cast<std::size_t>(ParamId::release)]);
         for (auto& voice : voices_)
-            if (voice.active() && voice.note() == midiNote)
+            if (voice.active() && voice.note() == midiNote && (channel < 0 || voice.channel() == channel))
                 voice.release(t60);
+    }
+
+    void pitchBend(const int channel, const int value14)
+    {
+        const auto ch = static_cast<std::size_t>(channel & 15);
+        bendValue_[ch] = value14;
+        const float semitones = (static_cast<float>(value14) - 8192.0f) / 8192.0f * bendRange_[ch];
+        bendRatio_[ch] = std::pow(2.0f, semitones / 12.0f);
+        for (auto& voice : voices_)
+            if (voice.active() && voice.channel() == channel)
+                voice.setBend(bendRatio_[ch]);
     }
 
     void allNotesOff()
@@ -495,16 +531,33 @@ public:
         {
             const int note = data[1] & 0x7F;
             const std::uint8_t velocity = data[2] & 0x7F;
+            const int channel = data[0] & 0x0F;
             if (status == 0x90u && velocity > 0)
-                noteOn(note, velocity);
+                noteOn(note, velocity, channel);
             else
-                noteOff(note);
+                noteOff(note, channel);
+        }
+        else if (status == 0xE0u && size >= 3)
+        {
+            pitchBend(data[0] & 0x0F, (data[1] & 0x7F) | ((data[2] & 0x7F) << 7));
         }
         else if (status == 0xB0u && size >= 3)
         {
+            const auto ch = static_cast<std::size_t>(data[0] & 0x0F);
             const std::uint8_t cc = data[1] & 0x7F;
+            const std::uint8_t val = data[2] & 0x7F;
             if (cc == 120 || cc == 123)
                 allNotesOff();
+            else if (cc == 101)
+                rpnMsb_[ch] = val;
+            else if (cc == 100)
+                rpnLsb_[ch] = val;
+            else if (cc == 6 && rpnMsb_[ch] == 0 && rpnLsb_[ch] == 0 && val >= 1)
+            {
+                // RPN 0: pitch bend range in semitones, per channel.
+                bendRange_[ch] = static_cast<float>(std::min<int>(val, 48));
+                pitchBend(static_cast<int>(ch), bendValue_[ch]);
+            }
         }
     }
 
@@ -546,10 +599,10 @@ public:
     }
 
 private:
-    Voice* findVoiceByNote(const int midiNote)
+    Voice* findVoiceByNote(const int midiNote, const int channel)
     {
         for (auto& voice : voices_)
-            if (voice.active() && voice.note() == midiNote)
+            if (voice.active() && voice.note() == midiNote && voice.channel() == channel)
                 return &voice;
         return nullptr;
     }
@@ -595,6 +648,12 @@ private:
     float dcX_ = 0.0f;
     float dcY_ = 0.0f;
     std::uint64_t serialCounter_ = 0;
+    // Per-channel pitch bend (MPE-style one note per channel); range 2 semitones, RPN 0.
+    std::array<float, 16> bendRatio_ = [] { std::array<float, 16> a {}; a.fill(1.0f); return a; }();
+    std::array<float, 16> bendRange_ = [] { std::array<float, 16> a {}; a.fill(2.0f); return a; }();
+    std::array<int, 16> bendValue_ = [] { std::array<int, 16> a {}; a.fill(8192); return a; }();
+    std::array<std::uint8_t, 16> rpnMsb_ = [] { std::array<std::uint8_t, 16> a {}; a.fill(127); return a; }();
+    std::array<std::uint8_t, 16> rpnLsb_ = [] { std::array<std::uint8_t, 16> a {}; a.fill(127); return a; }();
 };
 
 MokaEngine::MokaEngine(const float sampleRate)

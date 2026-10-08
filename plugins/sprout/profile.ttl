@@ -1,0 +1,50 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:sprout a trn:PluginProfile ;
+    rdfs:label "Sprout" ;
+    rdfs:comment "L-system MIDI generator: seven grammars rewritten per generation, read as a turtle and played as a scale-quantised monophonic line locked to the transport." ;
+    trn:bundleName "sprout.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/sprout/> ;
+    trn:role trn:MidiGenerator ;
+    trn:produces trn:Midi ;
+    trn:requires trn:HostTransport ;
+    trn:caution "Silent while the transport is stopped. Expansions beyond 4096 symbols are not used; the deepest generation that fits plays instead." ;
+    trn:parameter [ rdfs:label "Grammar" ; trn:symbol "preset" ; trn:range "Plant, Koch, Dragon, Sierpinski, Cantor, Levy, Tree" ;
+                    rdfs:comment "Rewriting rules. F/G note, f rest, +/- pitch, [ ] branch." ] ;
+    trn:parameter [ rdfs:label "Generations" ; trn:symbol "generations" ; trn:range "1-7" ;
+                    rdfs:comment "Number of rewrites." ] ;
+    trn:parameter [ rdfs:label "Grow every" ; trn:symbol "grow_bars" ; trn:range "0-16 bars" ;
+                    rdfs:comment "0 plays the final generation; otherwise start at generation 1 and add one every N bars." ] ;
+    trn:parameter [ rdfs:label "Scale" ; trn:symbol "scale" ; trn:range "0-23" ;
+                    rdfs:comment "Canonical scale order from docs/scales.md (0 chromatic, 1 major, 3 minor, 23 bebop minor)." ] ;
+    trn:parameter [ rdfs:label "Root note" ; trn:symbol "root" ; trn:range "0-127" ;
+                    rdfs:comment "Pitch at the turtle's starting position." ] ;
+    trn:parameter [ rdfs:label "Step size" ; trn:symbol "step_size" ; trn:range "1-3 degrees" ;
+                    rdfs:comment "Scale degrees moved by each + or -." ] ;
+    trn:parameter [ rdfs:label "Range" ; trn:symbol "range" ; trn:range "3-28 degrees" ;
+                    rdfs:comment "Pitch folds back at this distance from the root." ] ;
+    trn:parameter [ rdfs:label "Step grid" ; trn:symbol "grid" ; trn:range "0.0625-2 quarter notes" ;
+                    rdfs:comment "Length of one step." ] ;
+    trn:parameter [ rdfs:label "Gate" ; trn:symbol "gate" ; trn:range "10-100 %" ;
+                    rdfs:comment "Fraction of the step the note is held." ] ;
+    trn:parameter [ rdfs:label "Probability" ; trn:symbol "probability" ; trn:range "0-100 %" ;
+                    rdfs:comment "Chance that a note step sounds; seeded and repeatable." ] ;
+    trn:parameter [ rdfs:label "Velocity" ; trn:symbol "velocity" ; trn:range "1-127" ;
+                    rdfs:comment "Base velocity; branches are 10 per level softer, the first step 10 louder." ] ;
+    trn:parameter [ rdfs:label "Channel" ; trn:symbol "channel" ; trn:range "1-16" ;
+                    rdfs:comment "MIDI output channel." ] ;
+    trn:parameter [ rdfs:label "Seed" ; trn:symbol "seed" ; trn:range "1-65535" ;
+                    rdfs:comment "Identity for the probability choices." ] ;
+    trn:parameter [ rdfs:label "Pattern steps" ; trn:symbol "status_length" ; trn:range "0-4096" ;
+                    rdfs:comment "Read-only: length of the pattern in steps." ] ;
+    trn:parameter [ rdfs:label "Generation" ; trn:symbol "status_generation" ; trn:range "0-7" ;
+                    rdfs:comment "Read-only: generation currently playing." ] ;
+    trn:parameter [ rdfs:label "Current step" ; trn:symbol "status_step" ; trn:range "0-4096" ;
+                    rdfs:comment "Read-only: playhead position in the pattern." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

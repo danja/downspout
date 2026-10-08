@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <vector>
 #include <cstdlib>
 #include <iostream>
 
@@ -201,6 +202,76 @@ void activeVoiceParameterChangesRemainBounded()
 
 } // namespace
 
+float estimateHz(CanticleEngine& engine)
+{
+    constexpr int warm = 12000, length = 24000;
+    std::vector<float> mono(length);
+    for (int i = 0; i < warm; ++i) (void)engine.processStereo();
+    for (int i = 0; i < length; ++i) {
+        const StereoFrame f = engine.processStereo();
+        mono[static_cast<std::size_t>(i)] = 0.5f * (f.left + f.right);
+    }
+    // Autocorrelation peak between 100 Hz and 1 kHz.
+    int bestLag = 48;
+    double best = -1.0e30;
+    for (int lag = 48; lag <= 480; ++lag) {
+        double sum = 0.0;
+        for (int i = 0; i + lag < length; ++i) sum += static_cast<double>(mono[static_cast<std::size_t>(i)]) * mono[static_cast<std::size_t>(i + lag)];
+        if (sum > best) { best = sum; bestLag = lag; }
+    }
+    return 48000.0f / static_cast<float>(bestLag);
+}
+
+void sendBend(CanticleEngine& engine, int channel, int value14)
+{
+    const std::uint8_t msg[3] = {static_cast<std::uint8_t>(0xE0 | channel), static_cast<std::uint8_t>(value14 & 0x7F), static_cast<std::uint8_t>(value14 >> 7)};
+    engine.handleMidi(msg, 3);
+}
+
+void sendNote(CanticleEngine& engine, bool on, int channel, int note)
+{
+    const std::uint8_t msg[3] = {static_cast<std::uint8_t>((on ? 0x90 : 0x80) | channel), static_cast<std::uint8_t>(note), static_cast<std::uint8_t>(on ? 100 : 0)};
+    engine.handleMidi(msg, 3);
+}
+
+void pitchBendIsPerChannel()
+{
+    CanticleEngine plain {48000.0f};
+    sendNote(plain, true, 1, 60);
+    const float base = estimateHz(plain);
+
+    // Bend set on the note's own channel before the note, as Retune sends it.
+    CanticleEngine bent {48000.0f};
+    sendBend(bent, 2, 16383);  // full up = +2 semitones by default
+    sendNote(bent, true, 2, 60);
+    const float up = estimateHz(bent);
+    require(std::fabs(up / base - std::pow(2.0f, 2.0f / 12.0f)) < 0.04f, "canticle should bend its own channel by 2 semitones");
+
+    // A bend on another channel must not touch the note.
+    CanticleEngine other {48000.0f};
+    sendNote(other, true, 1, 60);
+    sendBend(other, 5, 16383);
+    require(std::fabs(estimateHz(other) / base - 1.0f) < 0.02f, "canticle bend must stay on its channel");
+
+    // RPN 0 widens the range: +12 semitones doubles the frequency.
+    CanticleEngine wide {48000.0f};
+    const std::uint8_t rpn[4][3] = {{0xB3, 101, 0}, {0xB3, 100, 0}, {0xB3, 6, 12}, {0xB3, 101, 127}};
+    for (const auto& m : rpn) wide.handleMidi(m, 3);
+    sendBend(wide, 3, 16383);
+    sendNote(wide, true, 3, 60);
+    require(std::fabs(estimateHz(wide) / base - 2.0f) < 0.08f, "canticle RPN 0 should set the bend range");
+
+    // The same note on two channels is two voices, and releasing one keeps the other.
+    CanticleEngine pair {48000.0f};
+    sendNote(pair, true, 1, 60);
+    sendNote(pair, true, 2, 60);
+    require(pair.activeVoiceCount() == 2, "canticle should key voices by channel and note");
+    pair.setParameter(ParamId::release, 0.0f);
+    sendNote(pair, false, 1, 60);
+    for (int i = 0; i < 48000; ++i) (void)pair.processStereo();
+    require(pair.activeVoiceCount() == 1, "canticle note-off must only release its own channel");
+}
+
 int main()
 {
     defaultsAndClamping();
@@ -212,6 +283,7 @@ int main()
     outputIsBounded();
     metalAddsBrightEdge();
     activeVoiceParameterChangesRemainBounded();
+    pitchBendIsPerChannel();
 
     std::cout << "canticle core tests passed\n";
     return 0;

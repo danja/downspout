@@ -40,6 +40,7 @@ enum ParameterIndex : uint32_t {
     kParamFollow,
     kParamColor,
     kParamConductorChannel,
+    kParamInertia,
     kParameterCount
 };
 
@@ -68,6 +69,7 @@ struct SelectorDef {
     const char* label;
     const char* const* items;
     int count;
+    int base = 0;  // parameter value of the first item (Channel is 1-based)
 };
 
 struct ButtonDef {
@@ -119,11 +121,12 @@ constexpr const char* kCondChNames[] = {
     "9", "10", "11", "12", "13", "14", "15", "16"
 };
 
-constexpr std::array<SliderDef, 16> kSliders = {{
+constexpr std::array<SliderDef, 17> kSliders = {{
     {kParamRootNote, "Root", 0.0f, 127.0f, true},
     {kParamRegister, "Register", 0.0f, 4.0f, true},
     {kParamRange, "Range", 0.0f, 1.0f, false},
     {kParamLeap, "Leap", 0.0f, 1.0f, false},
+    {kParamInertia, "Inertia", 0.0f, 1.0f, false},
     {kParamColor, "Color", 0.0f, 1.0f, false},
     {kParamHold, "Hold", 0.0f, 1.0f, false},
     {kParamAccent, "Accent", 0.0f, 1.0f, false},
@@ -139,9 +142,9 @@ constexpr std::array<SliderDef, 16> kSliders = {{
 }};
 
 constexpr std::array<SliderGroup, 3> kSliderGroups = {{
-    {"Pitch", 0, 7},
-    {"Phrase", 7, 6},
-    {"Pattern", 13, 3},
+    {"Pitch", 0, 8},
+    {"Phrase", 8, 6},
+    {"Pattern", 14, 3},
 }};
 
 constexpr std::array<SelectorDef, 7> kSelectors = {{
@@ -150,7 +153,7 @@ constexpr std::array<SelectorDef, 7> kSelectors = {{
     {kParamContour, "Contour", kContourNames, 6},
     {kParamAnswer, "Answer", kAnswerNames, 6},
     {kParamSubdivision, "Grid", kSubdivisionNames, 4},
-    {kParamChannel, "Channel", kChannelNames, 16},
+    {kParamChannel, "Channel", kChannelNames, 16, 1},
     {kParamConductorChannel, "Conductor ch", kCondChNames, 17},
 }};
 
@@ -216,6 +219,7 @@ public:
         values_[kParamSeed] = 1.0f;
         values_[kParamVary] = 0.0f;
         values_[kParamConductorChannel] = 0.0f;
+        values_[kParamInertia] = 0.0f;
 
        #ifdef DGL_NO_SHARED_RESOURCES
         createFontFromFile("sans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
@@ -500,7 +504,7 @@ private:
     void drawSelector(const SelectorDef& def, const Rect& rect)
     {
         const auto& t = theme();
-        const int item = std::max(0, std::min(static_cast<int>(std::lround(values_[def.index])), def.count - 1));
+        const int item = std::max(0, std::min(static_cast<int>(std::lround(values_[def.index])) - def.base, def.count - 1));
         const bool open = openSelector_ >= 0 && kSelectors[openSelector_].index == def.index;
 
         beginPath();
@@ -598,7 +602,7 @@ private:
         closePath();
 
         const float colW = menu.w / static_cast<float>(layout.columns);
-        const int selected = static_cast<int>(std::lround(values_[def.index]));
+        const int selected = static_cast<int>(std::lround(values_[def.index])) - def.base;
         for (int i = 0; i < def.count; ++i) {
             const int col = i / layout.rows;
             const int row = i % layout.rows;
@@ -645,7 +649,7 @@ private:
         const int item = col * layout.rows + row;
         openSelector_ = -1;
         if (item < def.count) {
-            commit(def.index, static_cast<float>(item));
+            commit(def.index, static_cast<float>(item + def.base));
         } else {
             repaint();
         }

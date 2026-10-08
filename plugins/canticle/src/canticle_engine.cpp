@@ -322,10 +322,13 @@ public:
         openRangeBoost_ = 0.0f;
     }
 
-    void start(const int midiNote, const std::uint8_t velocity, const Params& params, const std::uint64_t serial)
+    void start(const int midiNote, const int channel, const float bendRatio, const std::uint8_t velocity,
+               const Params& params, const std::uint64_t serial)
     {
         note_ = midiNote;
-        frequency_ = midiNoteToFrequency(midiNote);
+        channel_ = channel;
+        bendRatio_ = bendRatio;
+        frequency_ = midiNoteToFrequency(midiNote) * bendRatio_;
         velocity_ = std::clamp(static_cast<float>(velocity) / 127.0f, 0.0f, 1.0f);
         serial_ = serial;
         age_ = 0;
@@ -341,6 +344,14 @@ public:
     void noteOff()
     {
         env_.gateOff();
+    }
+
+    // Channel pitch bend: a new frequency ratio for a sounding voice.
+    void setBend(const float bendRatio, const Params& params)
+    {
+        bendRatio_ = bendRatio;
+        frequency_ = midiNoteToFrequency(note_) * bendRatio_;
+        parametersChanged(params);
     }
 
     void parametersChanged(const Params& params)
@@ -429,6 +440,7 @@ public:
     bool active() const { return env_.active(); }
     bool releasing() const { return env_.releasing(); }
     int note() const { return note_; }
+    int channel() const { return channel_; }
     std::uint64_t serial() const { return serial_; }
     std::uint64_t age() const { return age_; }
 
@@ -474,6 +486,8 @@ private:
 
     float sampleRate_ = 44100.0f;
     int note_ = -1;
+    int channel_ = 0;
+    float bendRatio_ = 1.0f;
     float frequency_ = 440.0f;
     float phaseA_ = 0.0f;
     float phaseB_ = 0.0f;
@@ -518,6 +532,11 @@ public:
         for (auto& voice : voices_)
             voice.reset();
         serialCounter_ = 0;
+        bendRatio_.fill(1.0f);
+        bendRange_.fill(2.0f);
+        bendValue_.fill(8192);
+        rpnMsb_.fill(127);
+        rpnLsb_.fill(127);
         dcX_ = 0.0f;
         dcY_ = 0.0f;
     }
@@ -545,19 +564,22 @@ public:
                 voice.parametersChanged(params_);
     }
 
-    void noteOn(const int midiNote, const std::uint8_t velocity)
+    // `channel` keys the voice together with the note, and selects which channel's
+    // pitch bend applies. The channel-less overloads below use channel 0.
+    void noteOn(const int midiNote, const std::uint8_t velocity, const int channel = 0)
     {
         if (midiNote < 0 || midiNote > 127)
             return;
         if (velocity == 0)
         {
-            noteOff(midiNote);
+            noteOff(midiNote, channel);
             return;
         }
 
-        if (auto* existing = findVoiceByNote(midiNote))
+        const float bend = bendRatio_[static_cast<std::size_t>(channel & 15)];
+        if (auto* existing = findVoiceByNote(midiNote, channel))
         {
-            existing->start(midiNote, velocity, params_, ++serialCounter_);
+            existing->start(midiNote, channel, bend, velocity, params_, ++serialCounter_);
             return;
         }
 
@@ -565,14 +587,27 @@ public:
         if (voice == nullptr)
             voice = chooseVoiceToSteal();
         if (voice != nullptr)
-            voice->start(midiNote, velocity, params_, ++serialCounter_);
+            voice->start(midiNote, channel, bend, velocity, params_, ++serialCounter_);
     }
 
-    void noteOff(const int midiNote)
+    // channel < 0 releases the note on every channel.
+    void noteOff(const int midiNote, const int channel = -1)
     {
         for (auto& voice : voices_)
-            if (voice.active() && voice.note() == midiNote)
+            if (voice.active() && voice.note() == midiNote && (channel < 0 || voice.channel() == channel))
                 voice.noteOff();
+    }
+
+    void pitchBend(const int channel, const int value14)
+    {
+        const auto ch = static_cast<std::size_t>(channel & 15);
+        const float semitones = (static_cast<float>(value14) - 8192.0f) / 8192.0f * bendRange_[ch];
+        bendRatio_[ch] = std::pow(2.0f, semitones / 12.0f);
+        for (auto& voice : voices_)
+            if (voice.active() && voice.channel() == channel)
+                voice.setBend(bendRatio_[ch], params_);
+        // A bend sent before its note is applied when the note starts.
+        bendValue_[ch] = value14;
     }
 
     void allNotesOff()
@@ -591,16 +626,33 @@ public:
         {
             const int note = data[1] & 0x7F;
             const std::uint8_t velocity = data[2] & 0x7F;
+            const int channel = data[0] & 0x0F;
             if (status == 0x90u && velocity > 0)
-                noteOn(note, velocity);
+                noteOn(note, velocity, channel);
             else
-                noteOff(note);
+                noteOff(note, channel);
+        }
+        else if (status == 0xE0u && size >= 3)
+        {
+            pitchBend(data[0] & 0x0F, (data[1] & 0x7F) | ((data[2] & 0x7F) << 7));
         }
         else if (status == 0xB0u && size >= 3)
         {
+            const auto ch = static_cast<std::size_t>(data[0] & 0x0F);
             const std::uint8_t cc = data[1] & 0x7F;
+            const std::uint8_t val = data[2] & 0x7F;
             if (cc == 120 || cc == 123)
                 allNotesOff();
+            else if (cc == 101)
+                rpnMsb_[ch] = val;
+            else if (cc == 100)
+                rpnLsb_[ch] = val;
+            else if (cc == 6 && rpnMsb_[ch] == 0 && rpnLsb_[ch] == 0 && val >= 1)
+            {
+                // RPN 0: pitch bend range in semitones, per channel.
+                bendRange_[ch] = static_cast<float>(std::min<int>(val, 48));
+                pitchBend(static_cast<int>(ch), bendValue_[ch]);
+            }
         }
     }
 
@@ -642,10 +694,10 @@ public:
     }
 
 private:
-    Voice* findVoiceByNote(const int midiNote)
+    Voice* findVoiceByNote(const int midiNote, const int channel)
     {
         for (auto& voice : voices_)
-            if (voice.active() && voice.note() == midiNote)
+            if (voice.active() && voice.note() == midiNote && voice.channel() == channel)
                 return &voice;
         return nullptr;
     }
@@ -691,6 +743,16 @@ private:
     float dcX_ = 0.0f;
     float dcY_ = 0.0f;
     std::uint64_t serialCounter_ = 0;
+    // Per-channel pitch bend, so one-note-per-channel (MPE-style) input bends
+    // each note on its own. The range defaults to 2 semitones and follows RPN 0.
+    std::array<float, 16> bendRatio_ {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+                                      1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+    std::array<float, 16> bendRange_ {2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f,
+                                      2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f};
+    std::array<int, 16> bendValue_ {8192, 8192, 8192, 8192, 8192, 8192, 8192, 8192,
+                                    8192, 8192, 8192, 8192, 8192, 8192, 8192, 8192};
+    std::array<std::uint8_t, 16> rpnMsb_ {127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127};
+    std::array<std::uint8_t, 16> rpnLsb_ {127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127};
 };
 
 CanticleEngine::CanticleEngine(const float sampleRate)

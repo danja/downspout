@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdio>
+#include <vector>
 
 using namespace downspout::syrinx;
 
@@ -205,8 +206,53 @@ static void testTracheaCmZeroSimpleMix()
     CHECK(gotSound);
 }
 
+static float estimateHz(Engine& engine)
+{
+    constexpr int warm = 6000, length = 16000;
+    std::vector<float> mono(length);
+    for (int i = 0; i < warm; ++i) (void)engine.processStereo();
+    for (int i = 0; i < length; ++i) {
+        const auto f = engine.processStereo();
+        mono[static_cast<std::size_t>(i)] = 0.5f * (f.left + f.right);
+    }
+    int bestLag = 24;
+    double best = -1.0e30;
+    for (int lag = 24; lag <= 480; ++lag) {
+        double sum = 0.0;
+        for (int i = 0; i + lag < length; ++i)
+            sum += static_cast<double>(mono[static_cast<std::size_t>(i)]) * mono[static_cast<std::size_t>(i + lag)];
+        if (sum > best) { best = sum; bestLag = lag; }
+    }
+    return 48000.0f / static_cast<float>(bestLag);
+}
+
+static void midi3(Engine& engine, int status, int a, int b)
+{
+    const std::uint8_t msg[3] = {static_cast<std::uint8_t>(status), static_cast<std::uint8_t>(a), static_cast<std::uint8_t>(b)};
+    engine.handleMidi(msg, 3);
+}
+
+static void testPitchBendIsPerChannel()
+{
+    Engine plain(48000.0f);
+    midi3(plain, 0x91, 72, 100);
+    const float base = estimateHz(plain);
+
+    Engine bent(48000.0f);
+    midi3(bent, 0xE2, 0x7F, 0x7F);  // full up on channel 3 before its note
+    midi3(bent, 0x92, 72, 100);
+    CHECK(std::fabs(estimateHz(bent) / base - std::pow(2.0f, 2.0f / 12.0f)) < 0.06f);
+
+    Engine other(48000.0f);
+    midi3(other, 0x91, 72, 100);
+    midi3(other, 0xE5, 0x7F, 0x7F);  // a different channel
+    CHECK(std::fabs(estimateHz(other) / base - 1.0f) < 0.03f);
+
+}
+
 int main()
 {
+    testPitchBendIsPerChannel();
     testParameterDefaults();
     testParameterRoundtrip();
     testParameterClamping();

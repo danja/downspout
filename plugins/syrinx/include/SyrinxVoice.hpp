@@ -63,11 +63,15 @@ public:
     }
 
     // Trigger a new note. stream = unique noise stream id for xorshift.
-    void trigger(std::uint8_t midiNote, float velocity, const PresetParams& p, std::uint32_t stream)
+    void trigger(std::uint8_t midiNote, float velocity, const PresetParams& p, std::uint32_t stream,
+                 int channel = 0, float channelBend = 1.0f)
     {
-        // base pitch from MIDI + preset pitch offset
+        // base pitch from MIDI + preset pitch offset + the channel's pitch bend
         baseF0_  = 440.0f * std::pow(2.0f, (static_cast<float>(midiNote) - 69.0f) / 12.0f);
         baseF0_ *= std::pow(2.0f, p.pitchSemitones / 12.0f);
+        baseF0_ *= channelBend;
+        channel_ = channel;
+        channelBend_ = channelBend;
         midiNote_= midiNote;
         velocity_= velocity;
 
@@ -204,6 +208,15 @@ public:
     [[nodiscard]] bool isActive() const { return active_; }
     [[nodiscard]] bool isReleasing() const { return envState_ == EnvRelease; }
     [[nodiscard]] std::uint8_t midiNote() const { return midiNote_; }
+    [[nodiscard]] int channel() const { return channel_; }
+
+    // Channel pitch bend on a sounding voice: baseF0_ is read every sample.
+    void setChannelBend(float ratio)
+    {
+        if (channelBend_ > 0.0f)
+            baseF0_ *= ratio / channelBend_;
+        channelBend_ = ratio;
+    }
 
     float process()
     {
@@ -493,6 +506,8 @@ private:
     float coupling_, voiceOffset_, tracheaCm_;
 
     std::uint8_t midiNote_ = 0;
+    int channel_ = 0;
+    float channelBend_ = 1.0f;
     int sampleCount_   = 0;
     int filterCounter_ = 0;
     bool active_       = false;

@@ -104,6 +104,47 @@ Remaining:
   (see `MISTAKES.md`). Make it always use Xvfb. Shared script, needs approval.
 * Catalogue screenshot shows Synth mode (filter dimmed); consider a Synth + Filter capture.
 
+## Subsequence-inspired work (see `docs/subsequent.md`)
+
+* **melgen Inertia** is in and tested; screenshot recaptured. Not yet listened to in a
+  host. The Channel selector showed "2" for the default of 1; fixed (selector values are
+  now offset by their base).
+* **counterpointer Inertia** is in and tested (scoring term; Counterpoint mode only, not
+  Bass Descend). Its Routing-column layout was fixed (selectors now share the height so
+  Freeze is no longer covered by the buttons, and the header band ends under the header).
+* **Retune plugin** (`plugins/retune/`): wired into the root build, install/release
+  scripts, workflow, docs and Pages; core suite passes under ASan/UBSan. Remaining:
+  host validation, a catalogue screenshot with a real `.scl` loaded (the standalone
+  shows 12-TET), `.kbm` support, saving scale contents with the session (only the path
+  is saved), and an audition against a per-channel-bend synth.
+* **Per-channel pitch bend in existing instruments** (needed for Retune): Retune sends
+  one note per channel (2-16) with its own bend. Each instrument must apply pitch bend
+  per MIDI channel at a configurable range (default 2 semitones) instead of globally,
+  and must not treat different channels as separate parts. Audit and fix, one at a time,
+  with a test that two simultaneous notes on different channels bend independently.
+  **Done:** `canticle`, `moka`, `floozy` and `syrinx` (per-channel bend, RPN 0 range, voices
+  keyed by channel and note where they were keyed by note, tested). They default to a
+  2-semitone range, matching Retune. Still to do, none checked yet: `basilico` (mono),
+  `plank`, `gremlin`, `magneto`, `campione` (has some bend code), `mosaic`, and `drumkit`
+  (probably not needed). Not yet auditioned with Retune in a host. `pratt` already bends per
+  channel and has a Bend Range control (confirm its default suits Retune's 2 st). Also add a Bend
+  Range control where a synth has a fixed range, and note the result in each plugin's
+  README.
+* **Sprout** (`plugins/sprout/`, L-system generator): built, wired, documented, screenshot
+  taken. Remaining: host validation, a rule editor (grammars are built in), and listening
+  to which grammars sound good at which Step size.
+* **Magneto look and feel:** Retune and Sprout use a plugin-local `MagnetoKit.hpp` (identical
+  copies in `plugins/retune/src/dpf/` and `plugins/sprout/src/dpf/`) built on
+  `downspout/look_and_feel.hpp`, matching Pratt and Magneto. Moving it to a shared header
+  would remove the duplicate but is shared code and needs approval. Older generator
+  plugins still use `GenerativePanelUI` (mosaic, polymeter, etc.); restyle if wanted.
+* **Gravity** is in `harmonic-atlas`. `cadence` (learned harmony) has not had it; its progression
+  model is different, so decide whether a gravity bias on the learned transitions makes sense.
+* **Atlas voice-leading** is local to `harmonic-atlas`. Listen to it; the chords sit low (around
+  C3-C4) because only the bottom and top of the range are penalised, so consider a centre pull.
+* Later candidates: Markov melody generator, chord-graph walker. A shared voice-leading helper in
+  generative-common is only worth it if a second plugin needs it (shared code, needs approval).
+
 ## Evaluate Manually in Reaper
 
 * helterskelter
