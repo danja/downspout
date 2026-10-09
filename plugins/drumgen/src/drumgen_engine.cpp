@@ -1,4 +1,5 @@
 #include "drumgen_engine.hpp"
+#include "drumgen_automaton.hpp"
 
 #include "drumgen_pattern.hpp"
 #include "drumgen_transport.hpp"
@@ -197,6 +198,7 @@ void emitStepHits(EngineState& state,
                   BlockResult& result,
                   std::uint32_t frame,
                   int localStep,
+                  std::int64_t pass,
                   double samplesPerStep,
                   std::uint32_t nframes,
                   double sampleRate) {
@@ -206,7 +208,12 @@ void emitStepHits(EngineState& state,
 
     for (int lane = 0; lane < kLaneCount; ++lane) {
         const DrumStepCell& cell = state.pattern.lanes[lane].steps[localStep];
-        if (cell.velocity == 0) {
+        // The automaton layer replaces what a targeted lane plays on this pass.
+        const bool evolving = state.controls.caRule > 0 && caTargetsLane(state.controls.caTarget, lane);
+        const std::uint8_t velocity = evolving ? caVelocity(state.pattern.lanes[lane], state.pattern.totalSteps,
+                                                            state.controls.caRule, pass, localStep)
+                                               : cell.velocity;
+        if (velocity == 0) {
             continue;
         }
 
@@ -214,7 +221,7 @@ void emitStepHits(EngineState& state,
         const int onFrame = clampi(static_cast<int>(frame) + (lane == kLaneOpenHat ? kSafetyGapSamples : 0),
                                    0,
                                    static_cast<int>(nframes) - 1);
-        const std::uint8_t emitVel = cell.velocity;
+        const std::uint8_t emitVel = velocity;
         emitNoteOn(result, state, static_cast<std::uint32_t>(onFrame), note, emitVel);
 
         const int gateSamples = clampi(static_cast<int>(std::lround(samplesPerStep * (lane == kLaneCrash ? 0.60 : 0.35))),
@@ -240,10 +247,12 @@ void handleTransportRestart(EngineState& state,
     const double wrapped = localStepFromAbsolute(state.pattern, absStepsStart);
     const double frac = wrapped - std::floor(wrapped);
     if (frac < 1e-6 || frac > 1.0 - 1e-6) {
+        const auto absoluteStep = static_cast<std::int64_t>(std::floor(absStepsStart + 1e-6));
         emitStepHits(state,
                      result,
                      0,
                      static_cast<int>(std::floor(wrapped + 1e-6)) % state.pattern.totalSteps,
+                     caPassForStep(absoluteStep, state.pattern.totalSteps),
                      samplesPerStep,
                      nframes,
                      sampleRate);
@@ -265,7 +274,8 @@ void processBoundary(EngineState& state,
         clearPendingNoteOffs(state, result, frame);
     }
 
-    emitStepHits(state, result, frame, localStep, samplesPerStep, nframes, sampleRate);
+    emitStepHits(state, result, frame, localStep, caPassForStep(boundary, state.pattern.totalSteps), samplesPerStep,
+                 nframes, sampleRate);
 }
 
 }  // namespace

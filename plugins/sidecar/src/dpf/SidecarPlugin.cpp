@@ -630,7 +630,6 @@ private:
     void startServerRequest(const Controls& generationControls, const std::uint32_t seed)
     {
         if (worker_.joinable()) {
-            WorkerResult result {};
             bool hasFinishedWorker = false;
             {
                 std::lock_guard<std::mutex> lock(workerMutex_);

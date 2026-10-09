@@ -40,6 +40,7 @@ constexpr Persisted kPersisted[] = {
     {"running", kParamRunning},
     {"seed", kParamSeed},
     {"pass_input", kParamPassInput},
+    {"conductor_ch", kParamConductorCh},
 };
 
 struct Parsed {

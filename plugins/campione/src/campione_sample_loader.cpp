@@ -197,7 +197,9 @@ ZoneLoadResult loadWavZone(const std::string& path)
         } else if (std::strncmp(chunkId, "smpl", 4) == 0 && chunkSize >= 4u) {
             std::vector<unsigned char> smplBytes(chunkSize);
             if (readBytes(file, reinterpret_cast<char*>(smplBytes.data()), static_cast<std::streamsize>(chunkSize)))
-                parseSmplChunk(smplBytes, smpl);
+                // A header shorter than 36 bytes yields no root note or loop, which is the
+                // same as having no smpl chunk, so there is nothing to report.
+                (void)parseSmplChunk(smplBytes, smpl);
         } else {
             file.seekg(static_cast<std::streamoff>(chunkSize), std::ios::cur);
         }

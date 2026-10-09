@@ -1102,7 +1102,7 @@ void cadence_clear_capture(SegmentCapture* capture, int count) {
     if (!capture || count <= 0) {
         return;
     }
-    std::memset(capture, 0, sizeof(SegmentCapture) * (size_t)count);
+    std::memset(static_cast<void*>(capture), 0, sizeof(SegmentCapture) * (size_t)count);
 }
 
 void cadence_copy_capture(SegmentCapture* dst, const SegmentCapture* src, int count) {
@@ -1116,7 +1116,7 @@ void cadence_clear_progression(ChordSlot* slots, int count) {
     if (!slots || count <= 0) {
         return;
     }
-    std::memset(slots, 0, sizeof(ChordSlot) * (size_t)count);
+    std::memset(static_cast<void*>(slots), 0, sizeof(ChordSlot) * (size_t)count);
 }
 
 void cadence_copy_progression(ChordSlot* dst, const ChordSlot* src, int count) {

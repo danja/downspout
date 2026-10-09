@@ -23,6 +23,7 @@ enum ParameterIndex : uint32_t {
     kParamCCCutoff,
     kParamCCScream,
     kParamCCChannel,
+    kParamMorph,      // appended: indices above are saved in projects
     kParameterCount
 };
 
@@ -36,8 +37,9 @@ constexpr const char* kStateTrack      = "track";
 constexpr const char* kStateCCCutoff   = "cc_cutoff";
 constexpr const char* kStateCCScream   = "cc_scream";
 constexpr const char* kStateCCChannel  = "cc_channel";
+constexpr const char* kStateMorph      = "morph";
 
-constexpr uint32_t kStateCount = 10;
+constexpr uint32_t kStateCount = 11;
 
 using CoreParameters  = downspout::skream::Parameters;
 using CoreEngineState = downspout::skream::EngineState;
@@ -141,6 +143,11 @@ protected:
             parameter.hints  = kParameterIsInteger;
             parameter.ranges = { 1.0f, 16.0f, 1.0f };
             break;
+        case kParamMorph:
+            parameter.name   = "Morph";
+            parameter.symbol = "morph";
+            parameter.ranges = { -100.0f, 100.0f, 0.0f };
+            break;
         }
     }
 
@@ -158,6 +165,7 @@ protected:
             { kStateCCCutoff,   "CC Cutoff",   "1"    },
             { kStateCCScream,   "CC Scream",   "2"    },
             { kStateCCChannel,  "CC Channel",  "1"    },
+            { kStateMorph,      "Morph",       "0"    },
         };
         if (index < kStateCount) {
             state.key          = kInfo[index].key;
@@ -180,6 +188,7 @@ protected:
         case kParamCCCutoff:   return parameters_.ccCutoff;
         case kParamCCScream:   return parameters_.ccScream;
         case kParamCCChannel:  return parameters_.ccChannel;
+        case kParamMorph:      return parameters_.morph;
         default: return 0.0f;
         }
     }
@@ -210,6 +219,7 @@ protected:
         else if (std::strcmp(key, kStateCCCutoff)   == 0) return text(parameters_.ccCutoff);
         else if (std::strcmp(key, kStateCCScream)   == 0) return text(parameters_.ccScream);
         else if (std::strcmp(key, kStateCCChannel)  == 0) return text(parameters_.ccChannel);
+        else if (std::strcmp(key, kStateMorph)      == 0) return text(parameters_.morph);
         return String();
     }
 
@@ -227,6 +237,7 @@ protected:
         else if (std::strcmp(key, kStateCCCutoff)   == 0) { parameters_.ccCutoff   = f(); }
         else if (std::strcmp(key, kStateCCScream)   == 0) { parameters_.ccScream   = f(); }
         else if (std::strcmp(key, kStateCCChannel)  == 0) { parameters_.ccChannel  = f(); }
+        else if (std::strcmp(key, kStateMorph)      == 0) { parameters_.morph      = f(); }
         parameters_ = downspout::skream::clampParameters(parameters_);
     }
 

@@ -117,6 +117,9 @@ Pages catalog in sync in the same change:
   the UI screenshot review criteria above, then revise and recapture as needed;
 - update `docs/screenshots.md` and `docs/pages/README.md` when screenshot or
   Pages processes change;
+- add the plugin to `docs/pages/plugins-summary.md` (a paragraph plus a row in the
+  quick-reference table: ports, MIDI roles, CC map, key parameters). Update it too when
+  an existing plugin's ports, MIDI roles, CC map or key parameters change;
 - run at least the plugin core tests, the plugin VST3 target build, shell
   syntax checks for install/release scripts, and a static check that
   `scripts/package-release.sh` expected bundles match plugin CMake install

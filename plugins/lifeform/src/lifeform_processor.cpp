@@ -117,6 +117,7 @@ float Processor::parameterDefault(const std::uint32_t index) const noexcept
     case kParamRunning: return 1.0f;
     case kParamSeed: return 0.0f;
     case kParamPassInput: return 0.0f;
+    case kParamConductorCh: return 0.0f;
     default: return 0.0f;
     }
 }
@@ -157,6 +158,9 @@ void Processor::setParameter(const std::uint32_t index, float value)
         break;
     case kParamBaseChannel:
         value = static_cast<float>(clampValue(static_cast<int>(std::lround(value)), 1, 16));
+        break;
+    case kParamConductorCh:
+        value = static_cast<float>(clampValue(static_cast<int>(std::lround(value)), 0, 16));
         break;
     case kParamLedFeedback:
     case kParamRunning:
@@ -380,6 +384,26 @@ bool Processor::handleMidi(const MidiMessage& event, ProcessResult& result)
         if (data2 > 0u)
             return handleTopButton(data1, result, event.frame) || handleSideButton(data1);
         return false;
+    }
+
+    // Conductor CCs on the chosen channel steer the generator: CC 21 density, 22 energy (velocity),
+    // 23 mutation, 24 = 127 a fresh random pattern. CC 20 (scene) is not used. They still fall
+    // through to Pass Input below, so a Conductor feeding Lifeform can keep feeding what follows.
+    const int conductorChannel = static_cast<int>(std::lround(parameters_[kParamConductorCh]));
+    if (status == 0xb0u && conductorChannel > 0 && static_cast<int>(event.data[0] & 0x0fu) + 1 == conductorChannel)
+    {
+        const float unit = static_cast<float>(data2) / 127.0f;
+        switch (data1)
+        {
+        case 21: setParameter(kParamDensity, unit); break;
+        case 22: setParameter(kParamVelocity, unit); break;
+        case 23: setParameter(kParamMutation, unit); break;
+        case 24:
+            if (data2 == 127u)
+                setParameter(kParamRandomize, 1.0f);
+            break;
+        default: break;
+        }
     }
 
     if (parameters_[kParamPassInput] >= 0.5f && (status == 0x90u || status == 0x80u || status == 0xb0u))

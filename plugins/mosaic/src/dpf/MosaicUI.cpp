@@ -61,8 +61,10 @@ private:
                           "Chance that a triggered region plays backward.");
         drawSlider(kPitchRange, 240, 418, 200, "Pitch range", " semitones",
                    "Maximum deterministic pitch variation.", 0);
-        drawPercentSlider(kStereoSpread, 38, 474, 402, "Stereo spread",
+        drawPercentSlider(kStereoSpread, 38, 474, 194, "Stereo spread",
                           "Spread simultaneous voices across the stereo field.");
+        drawSlider(kBendRange, 240, 474, 200, "Pitch bend range", " semitones",
+                   "Range of MIDI pitch bend, per channel. Match Retune's Bend range. Pitch range must be 0 for notes to set pitch.", 0);
         drawSlider(kAttack, 38, 530, 194, "Attack", " sec", "Transient-safe fade-in.", 3);
         drawSlider(kRelease, 240, 530, 200, "Release", " sec", "Transient-safe fade-out.", 3);
 

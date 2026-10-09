@@ -30,6 +30,7 @@ using downspout::lifeform::kParamLedFeedback;
 using downspout::lifeform::kParamMutation;
 using downspout::lifeform::kParamOutputMode;
 using downspout::lifeform::kParamPanic;
+using downspout::lifeform::kParamConductorCh;
 using downspout::lifeform::kParamPassInput;
 using downspout::lifeform::kParamRandomize;
 using downspout::lifeform::kParamRootNote;
@@ -205,6 +206,13 @@ protected:
             commitParameter(kParamLedFeedback, values_[kParamLedFeedback] >= 0.5f ? 0.0f : 1.0f);
             return true;
         }
+        if (conductorRect_.contains(x, y))
+        {
+            // Off, then channels 1-16, wrapping.
+            const int next = (static_cast<int>(std::lround(values_[kParamConductorCh])) + 1) % 17;
+            commitParameter(kParamConductorCh, static_cast<float>(next));
+            return true;
+        }
         if (passRect_.contains(x, y))
         {
             commitParameter(kParamPassInput, values_[kParamPassInput] >= 0.5f ? 0.0f : 1.0f);
@@ -249,6 +257,7 @@ private:
     Rect ledRect_ {};
     Rect panicRect_ {};
     Rect passRect_ {};
+    Rect conductorRect_ {};
     int activeSlider_ = -1;
 
     [[nodiscard]] float padValue(const std::size_t index) const noexcept
@@ -483,6 +492,7 @@ private:
         clearRect_ = {x, y + 38.0f + rowGap, buttonW, 38.0f};
         panicRect_ = {x + buttonW + 8.0f, y + 38.0f + rowGap, buttonW, 38.0f};
         ledRect_ = {x + (buttonW + 8.0f) * 2.0f, y + 38.0f + rowGap, buttonW, 38.0f};
+        conductorRect_ = {x + (buttonW + 8.0f) * 3.0f, y + 38.0f + rowGap, buttonW, 38.0f};
         drawButton(runRect_, values_[kParamRunning] >= 0.5f ? "Run" : "Stop", 72, 188, 112, values_[kParamRunning] >= 0.5f);
         drawButton(stepRect_, "Step", 82, 143, 221, false);
         drawButton(randomRect_, "Random", 173, 92, 215, false);
@@ -490,6 +500,13 @@ private:
         drawButton(clearRect_, "Clear", 204, 76, 70, false);
         drawButton(panicRect_, "Panic", 232, 70, 58, false);
         drawButton(ledRect_, values_[kParamLedFeedback] >= 0.5f ? "LED" : "No LED", 75, 146, 214, values_[kParamLedFeedback] >= 0.5f);
+        const int conductor = static_cast<int>(std::lround(values_[kParamConductorCh]));
+        char conductorLabel[16];
+        if (conductor == 0)
+            std::snprintf(conductorLabel, sizeof(conductorLabel), "Cond off");
+        else
+            std::snprintf(conductorLabel, sizeof(conductorLabel), "Cond %d", conductor);
+        drawButton(conductorRect_, conductorLabel, 120, 126, 170, conductor > 0);
     }
 
     void drawButton(const Rect& rect, const char* label, const int r, const int g, const int b, const bool active)

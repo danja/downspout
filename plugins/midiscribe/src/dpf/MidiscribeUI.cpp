@@ -212,7 +212,7 @@ private:
         text(dotX + 9.0f, dotY, isPlaying ? "PLAYING" : "STOPPED", nullptr);
     }
 
-    void drawControls(float w)
+    void drawControls(float /*w*/)
     {
         constexpr float secY = 104.0f, secH = 76.0f, pad = 20.0f;
         constexpr float btnH = 48.0f;

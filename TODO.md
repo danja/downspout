@@ -17,13 +17,10 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
   approval and a full test run.
 * **Add `-Wall -Wextra` to `downspout-project-options`** and clear the remaining noise
   plugin by plugin so it cannot regress. Needs approval and a full 62-suite run.
-* **Make `scripts/check-plugin-state.sh` a blocking CI step** in `.github/workflows/ci.yml`.
-  It already exits 1 when a plugin declares `WANT_STATE` without `WANT_FULL_STATE`, and the
-  6 offenders are fixed, so it can gate now. Shared CI glue, so approval first.
 
 ## Session state (found 2026-10-06)
 
-`scripts/check-plugin-state.sh` reports **40 correct / 0 broken / 21 no state**. The six
+`scripts/check-plugin-state.sh` reports **42 correct / 0 broken / 22 no state** (see the note below: "no state" is not data loss). The six
 plugins that silently wrote their defaults into every project (chipper, damiano, ghost,
 helterskelter, skream, spliff) now have `WANT_FULL_STATE` and a `getState()`.
 
@@ -37,18 +34,25 @@ helterskelter, skream, spliff) now have `WANT_FULL_STATE` and a `getState()`.
       reseed over it); paunchlad's pad cells are momentary so only its nine settings
       are stored. Each got round-trip, rejection, trigger and host-activation tests.
       **Verify in a host**, as with the six above.
-- [ ] **21 plugins still have no session state at all**, so everything reverts to defaults
-      when a project is reopened: arpgen, basilico, canticle, conductor, drift, drumkit,
-      floozy, flues-synth-driver, gater, gremlin-driver, gremlin, guardian,
-      harmonic-atlas, m-mix, mixgen, moka, oracle, orbit, polymeter, resonance-garden,
-      syrinx. Each needs a serialisation format, which is real work. The lifeform, luma
-      and paunchlad state files (`*_serialization.cpp`) are small templates to copy.
-- [ ] **`gremlin`, `gremlin-driver` and `flues-synth-driver` reset every parameter when the
-      host changes sample rate**: `sampleRateChanged()` calls `processor_.init()`, which
-      restores defaults. The same bug fixed in plank, lifeform, luma and paunchlad. Give
-      them a `setSampleRate()` that keeps the patch (fold it into adding their state).
-- [ ] `gater` declares the state macros but has `stateCount` 0 (inert and misleading); give
-      it state or remove the macros.
+- [x] **gremlin, gremlin-driver and flues-synth-driver keep the patch** across host
+      activation and sample-rate change (2026-10-09); verify in a host when they get state.
+- [ ] **The "no session state" list needs an honest definition (found 2026-10-09).** DPF's
+      VST3 `getState` already saves every non-output, non-trigger *parameter* by symbol and the
+      host restores them through `setParameterValue` (`third_party/DPF/distrho/src/
+      DistrhoPluginVST3.cpp:1169`). So a plugin whose settings are all ordinary parameters
+      persists them with no `WANT_STATE`, and the old "everything reverts to defaults" for the
+      22 plugins `check-plugin-state.sh` lists as "no session state" (arpgen, basilico,
+      canticle, conductor, drift, drumkit, floozy, flues-synth-driver, gremlin-driver,
+      gremlin, guardian, harmonic-atlas, m-mix, mixgen, moka, oracle, orbit, polymeter,
+      resonance-garden, sprout, syrinx) was mostly caused by `activate()` resetting the patch,
+      now fixed for gremlin, gremlin-driver and flues-synth-driver. A quick scan of the
+      others found no user-authored data held outside parameters. Real state is only needed
+      for data that is not a parameter (patterns, sample paths, text), as in lifeform, luma,
+      paunchlad and plank. Still to do: confirm in a host that each of the 22 survives
+      save/reopen, then reword `scripts/check-plugin-state.sh` so "no WANT_STATE" is not
+      reported as data loss (shared script, needs approval). (`sprout` checked: its steps
+      are derived from the preset parameter, so it is fine.)
+- [x] `gater` state macros removed (2026-10-09): it has no parameters and only momentary MIDI state.
 - [ ] Re-run the `-Wall -Wextra` sweep after any state change: the wrapper callbacks are
       what the core tests never touch.
 
@@ -64,11 +68,11 @@ and others will not compile). No `-Wswitch` warnings remain. What was left on pu
   rather than the constructed default.
 * `mnemosyne`, `mosaic`: `-Wmisleading-indentation`. The cores are dense one-line
   statements; reformatting is churn, not a fix.
-* `campione/src/campione_sample_loader.cpp:200` ignores the `[[nodiscard]]` result of
-  `parseSmplChunk`. It only returns false for a truncated `smpl` chunk, so it is benign, but
-  a truncated chunk silently loses loop points on a sampler. The same function also reads
-  only the first of `numSampleLoops` loop records, despite the comment describing the
-  record layout. A behaviour question, not a warning to silence.
+* `campione` loader: the `smpl` loop end is inclusive in the WAV spec, but the engine wraps at
+  `position >= loopEnd`, so the last loop sample is skipped (one frame). Changing it means
+  adjusting load, save and the engine together; decide whether it is worth it. (The ignored
+  `parseSmplChunk` result is now explicit: a short chunk is the same as no chunk. Only the first
+  loop record is read, which is documented in the code.)
 
 ## Plank
 
@@ -83,6 +87,11 @@ and others will not compile). No `-Wswitch` warnings remain. What was left on pu
       "eight-string synthesizer". Shared docs; wording agreed, awaiting approval to change.
 
 ## Other
+
+* `skream` **Morph LP-HP** (bipolar, default off) is in and tested. Not yet listened to in a
+  host; try it with Drift on Cutoff. Decisions worth a listen: the morph weight follows
+  cutoff position linearly (t = 0.5 is a notch at the cutoff), and it only reshapes the
+  forward filter, not the Scream feedback high-pass.
 
 * `voxmod`: host validation in REAPER still pending.
 * `keyframe`: the leash diagram is static at unity rates because drift is genuinely ~0 there;
@@ -129,17 +138,32 @@ Remaining:
   with a test that two simultaneous notes on different channels bend independently.
   **Done:** `canticle`, `moka`, `floozy` and `syrinx` (per-channel bend, RPN 0 range, voices
   keyed by channel and note where they were keyed by note, tested). They default to a
-  2-semitone range, matching Retune. Still to do, none checked yet: `basilico` (mono),
-  `plank`, `gremlin`, `magneto`, `campione` (has some bend code), `mosaic`, and `drumkit`
-  (probably not needed). Not yet auditioned with Retune in a host. `pratt` already bends per
+  2-semitone range, matching Retune. Not applicable (checked 2026-10-09): `plank` (input is
+  Launchpad grid presses, not pitched notes) and `magneto` (a note sets engine RPM, no
+  pitched voice). **`basilico` done 2026-10-09** (mono: the sounding note's channel bend
+  applies, RPN 0 range, tested). **`gremlin` done 2026-10-09** (single source: the
+  last-played channel's bend, RPN 0). **`campione` done 2026-10-09** (per-voice, uses its Bend Range
+  control, no RPN; see `plugins/campione/docs/pitch-bend.md`). **`mosaic` done 2026-10-09** (per-channel bend with a Pitch bend range control; only
+  audible at Pitch range 0).
+  `drumkit` is not applicable (notes select unpitched drum pieces). Not yet auditioned with Retune in a host. `pratt` already bends per
   channel and has a Bend Range control (confirm its default suits Retune's 2 st). Also add a Bend
   Range control where a synth has a fixed range, and note the result in each plugin's
   README.
 * **Sprout** (`plugins/sprout/`, L-system generator): built, wired, documented, screenshot
   taken. Remaining: host validation, a rule editor (grammars are built in), and listening
   to which grammars sound good at which Step size.
-* **Magneto look and feel:** Retune and Sprout use a plugin-local `MagnetoKit.hpp` (identical
-  copies in `plugins/retune/src/dpf/` and `plugins/sprout/src/dpf/`) built on
+* **Sprout MIDI input** (held-notes pitch source, Drift CC 1-4, Conductor CC 21-24) is in and
+  tested under ASan/UBSan. Not yet auditioned in a host: try harmonic-atlas into Sprout with
+  Pitch source = Held notes, and Drift or Conductor into its CC channels. Pitch source has a Latched
+  mode (the chord survives note-off; the next fresh press replaces it). Open: MIDI is applied
+  at block start, not sample-accurately; no pass-through of incoming MIDI.
+* **CA lanes in `drumgen` and `xoxolo`** are in and tested. Not yet auditioned in a host: try Rule 90 and 30
+  on Hats in drumgen, and marking the hat and percussion lanes in xoxolo. The automaton arithmetic is now
+  shared (`include/downspout/cellular_automaton.hpp`, tested in `tests/cellular_automaton_tests.cpp`) and used
+  by `polymeter`, `drumgen` and `xoxolo`. Open: xoxolo's grid shows the programmed pattern, not the
+  evolved row now playing; drumgen exposes no "evolve every N loops" control (fixed at one generation per loop).
+* **Magneto look and feel:** Retune, Sprout and Markov use a plugin-local `MagnetoKit.hpp` (identical
+  copies in `plugins/retune/src/dpf/`, `plugins/sprout/src/dpf/` and `plugins/markov/src/dpf/`) built on
   `downspout/look_and_feel.hpp`, matching Pratt and Magneto. Moving it to a shared header
   would remove the duplicate but is shared code and needs approval. Older generator
   plugins still use `GenerativePanelUI` (mosaic, polymeter, etc.); restyle if wanted.
@@ -147,7 +171,16 @@ Remaining:
   model is different, so decide whether a gravity bias on the learned transitions makes sense.
 * **Atlas voice-leading** is local to `harmonic-atlas`. Listen to it; the chords sit low (around
   C3-C4) because only the bottom and top of the range are penalised, so consider a centre pull.
-* Later candidates: Markov melody generator, chord-graph walker. A shared voice-leading helper in
+* **Markov** (`plugins/markov/`, the Markov melody generator) is in and tested (core suite also under
+  ASan/UBSan: scales against the docs, walk statistics, order 2, learning, locate and block-size
+  independence, Conductor, state format). Not yet auditioned in a host: try each style, Order 2 after
+  learning a line, and Learned mix at 50%. Open: learning assumes one melodic line (chords blur the counts);
+  the matrix editor is click-to-cycle only (no drag-painting or right-click to decrement); the plugin does
+  not pass incoming MIDI through; the editor does not move while a CC drives a control.
+* **Conductor awareness** was added to `lifeform`, `polymeter` and `xoxolo` (off by default; not yet auditioned
+  in a host). Still without it among the generators: `arpgen`, `cadence`, `counterpointer`, `luma`,
+  `mnemosyne`, `m-mix`, `sidecar`, `tuney-vst`. Worth adding where a density or energy knob exists.
+* Later candidate: chord-graph walker. A shared voice-leading helper in
   generative-common is only worth it if a second plugin needs it (shared code, needs approval).
 
 ## Evaluate Manually in Reaper

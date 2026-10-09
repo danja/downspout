@@ -1,4 +1,5 @@
 add_library(downspout_drumgen_core STATIC
+    src/drumgen_automaton.cpp
     src/drumgen_engine.cpp
     src/drumgen_pattern.cpp
     src/drumgen_serialization.cpp

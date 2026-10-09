@@ -767,8 +767,9 @@ protected:
             const MidiEvent& src = midiEvents[i];
             const uint8_t* data = src.size > MidiEvent::kDataSize ? src.dataExt : src.data;
             coreMidi[i].frame = src.frame;
-            coreMidi[i].size  = static_cast<uint8_t>(src.size < 4 ? src.size : 4u);
-            for (uint8_t b = 0; b < coreMidi[i].size; ++b)
+            const uint32_t length = src.size < 4 ? src.size : 4u;
+            coreMidi[i].size  = static_cast<uint8_t>(length);
+            for (uint32_t b = 0; b < length; ++b)
                 coreMidi[i].data[b] = data[b];
         }
 

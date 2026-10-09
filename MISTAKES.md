@@ -64,7 +64,9 @@ affected plugin's tests after changing any parameter default.
 
 - **Session state (2026-10-06).** `WANT_STATE` without `WANT_FULL_STATE` makes the
   host save the *defaults* from `initState()` into every project, silently. 6
-  plugins had it (now fixed) and 24 have no state at all. Also: `Plugin`'s third
+  plugins had it (now fixed). Plugins with no state at all are not necessarily losing
+  data: DPF saves every ordinary parameter anyway (see TODO.md, 2026-10-09), so state is
+  only needed for data that is not a parameter. Also: `Plugin`'s third
   constructor argument is *stateCount*. `scripts/check-plugin-state.sh` detects all
   three classes. The core tests never touch the wrapper, so a green build proves
   nothing: change a setting, save, reopen.
@@ -72,11 +74,14 @@ affected plugin's tests after changing any parameter default.
   `sampleRateChanged()` called `init()`, resetting every parameter (including
   plank's `Engine`) whenever a host started playback. The Launchpad plugins
   (lifeform, luma, paunchlad) were copies of the same shape, and gremlin,
-  gremlin-driver and flues-synth-driver still reset on a rate change. Lifecycle
+  gremlin-driver and flues-synth-driver were too (fixed 2026-10-09; a scan of all
+  other wrappers and processors found no remaining `init()` in
+  `sampleRateChanged()` or defaults in `activate()`). Lifecycle
   callbacks must clear runtime state only; keep `init()` for first-time setup, and
   give each processor `activate()` / `setSampleRate()` that leave the patch alone.
   Old tests that used `activate()` to mean "back to defaults" must call `init()`.
-  `testHostActivationKeepsThePatch` in plank, lifeform, luma and paunchlad.
+  `testHostActivationKeepsThePatch` in plank, lifeform, luma and paunchlad; the same
+  check is in the gremlin, gremlin-driver and flues-synth-driver core suites.
 - **Denormals (2026-10-06).** Idle voices kept running recursive filters, decaying
   through the denormal range (4x CPU after one note). Skip idle voices, zero their
   state, flush tiny values per block, and time any new recursive DSP over a long

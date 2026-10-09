@@ -68,6 +68,11 @@ std::string serializeControls(const Controls& controls) {
     out << "actionNew=" << controls.actionNew << '\n';
     out << "actionMutate=" << controls.actionMutate << '\n';
     out << "actionFill=" << controls.actionFill << '\n';
+    // Written only when in use, so a project that never touches it saves exactly as before.
+    if (controls.caRule != 0) {
+        out << "caRule=" << controls.caRule << '\n';
+        out << "caTarget=" << controls.caTarget << '\n';
+    }
     return out.str();
 }
 
@@ -166,6 +171,10 @@ std::optional<Controls> deserializeControls(const std::string& text) {
             controls.actionMutate = intValue;
         } else if (key == "actionFill" && parseInteger(value, intValue)) {
             controls.actionFill = intValue;
+        } else if (key == "caRule" && parseInteger(value, intValue)) {
+            controls.caRule = intValue;
+        } else if (key == "caTarget" && parseInteger(value, intValue)) {
+            controls.caTarget = intValue;
         } else {
             return std::nullopt;
         }

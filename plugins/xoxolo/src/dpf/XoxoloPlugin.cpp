@@ -193,6 +193,44 @@ protected:
             parameter.ranges.max = static_cast<float>(downspout::xoxolo::kMaxSteps - 1);
             parameter.ranges.def = -1.0f;
             break;
+        case downspout::xoxolo::kParamCaRule:
+            parameter.name = "Evolve Rule";
+            parameter.symbol = "ca_rule";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 10.0f;  // 0 off, then rules 30 90 110 150 18 54 60 22 105 126
+            parameter.ranges.def = 0.0f;
+            break;
+        case downspout::xoxolo::kParamCaEvery:
+            parameter.name = "Evolve Every";
+            parameter.symbol = "ca_every";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 1.0f;
+            parameter.ranges.max = 8.0f;  // passes per generation
+            parameter.ranges.def = 1.0f;
+            break;
+        case downspout::xoxolo::kParamConductorCh:
+            parameter.name = "Conductor Ch";
+            parameter.symbol = "conductor_ch";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 16.0f;
+            parameter.ranges.def = 0.0f;
+            break;
+        case downspout::xoxolo::kParamDensity:
+            parameter.name = "Density";
+            parameter.symbol = "density";
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 1.0f;
+            break;
+        case downspout::xoxolo::kParamEnergy:
+            parameter.name = "Energy";
+            parameter.symbol = "energy";
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 1.0f;
+            break;
         default:
             break;
         }
@@ -219,6 +257,11 @@ protected:
         case downspout::xoxolo::kParamPreviewLane: return static_cast<float>(controls_.previewLane);
         case downspout::xoxolo::kParamPreview: return static_cast<float>(controls_.previewSerial);
         case downspout::xoxolo::kParamCurrentStep: return static_cast<float>(engine_.currentStep);
+        case downspout::xoxolo::kParamCaRule: return static_cast<float>(controls_.caRule);
+        case downspout::xoxolo::kParamCaEvery: return static_cast<float>(controls_.caEvery);
+        case downspout::xoxolo::kParamConductorCh: return static_cast<float>(controls_.conductorCh);
+        case downspout::xoxolo::kParamDensity: return controls_.density;
+        case downspout::xoxolo::kParamEnergy: return controls_.energy;
         default: return 0.0f;
         }
     }
@@ -253,6 +296,21 @@ protected:
             break;
         case downspout::xoxolo::kParamPreview:
             controls_.previewSerial = std::max(0, static_cast<int>(std::lround(value)));
+            break;
+        case downspout::xoxolo::kParamCaRule:
+            controls_.caRule = static_cast<int>(std::lround(value));
+            break;
+        case downspout::xoxolo::kParamCaEvery:
+            controls_.caEvery = static_cast<int>(std::lround(value));
+            break;
+        case downspout::xoxolo::kParamConductorCh:
+            controls_.conductorCh = static_cast<int>(std::lround(value));
+            break;
+        case downspout::xoxolo::kParamDensity:
+            controls_.density = value;
+            break;
+        case downspout::xoxolo::kParamEnergy:
+            controls_.energy = value;
             break;
         default:
             break;
@@ -294,10 +352,22 @@ protected:
         downspout::xoxolo::deactivate(engine_);
     }
 
-    void run(const float**, float** outputs, uint32_t frames) override
+    void run(const float**, float** outputs, uint32_t frames, const MidiEvent* midiEvents, uint32_t midiEventCount) override
     {
         std::fill_n(outputs[0], frames, 0.0f);
         std::fill_n(outputs[1], frames, 0.0f);
+
+        // Conductor CCs, applied at the start of the block and written into the controls.
+        std::array<downspout::xoxolo::MidiInputEvent, 128> input {};
+        const uint32_t inputCount = std::min<uint32_t>(midiEventCount, static_cast<uint32_t>(input.size()));
+        for (uint32_t i = 0; i < inputCount; ++i) {
+            const uint32_t length = std::min<uint32_t>(midiEvents[i].size, 4);
+            const uint8_t* data = midiEvents[i].size > MidiEvent::kDataSize ? midiEvents[i].dataExt : midiEvents[i].data;
+            input[i].frame = midiEvents[i].frame;
+            input[i].size = static_cast<uint8_t>(length);
+            std::copy_n(data, length, input[i].data.begin());
+        }
+        downspout::xoxolo::handleMidi(engine_, controls_, input.data(), inputCount);
 
         const BlockResult result = downspout::xoxolo::processBlock(engine_,
                                                                    controls_,

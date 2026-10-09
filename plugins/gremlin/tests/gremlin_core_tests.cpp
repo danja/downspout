@@ -194,6 +194,56 @@ Signature renderSceneSignature(const downspout::gremlin::SceneId scene)
     return measureRenderedSignature(left, right);
 }
 
+
+// Pitch bend is per MIDI channel (Retune sends one note per channel). Gremlin is a
+// single source, so the bend of the channel that played the note is the one heard.
+void checkPitchBendIsPerChannel()
+{
+    using downspout::gremlin::MidiMessage;
+    using downspout::gremlin::Processor;
+
+    const auto send = [](Processor& p, const std::uint8_t status, const std::uint8_t d1, const std::uint8_t d2) {
+        MidiMessage m {};
+        m.size = 3;
+        m.data[0] = status;
+        m.data[1] = d1;
+        m.data[2] = d2;
+        float l[16] {};
+        float r[16] {};
+        p.processBlock(l, r, 16, &m, 1);
+    };
+    const auto hz = [](const int note) { return 440.0f * std::pow(2.0f, (note - 69) / 12.0f); };
+    const float fullBend = std::pow(2.0f, 2.0f / 12.0f);
+
+    Processor p;
+    p.init(48000.0);
+
+    send(p, 0xE3, 127, 127);  // channel 4 full bend up, before its note
+    send(p, 0x93, 60, 100);
+    require(nearlyEqual(p.currentFrequency() / hz(60), fullBend, 0.002f),
+            "gremlin full bend up should raise the note by 2 semitones");
+
+    send(p, 0xE5, 0, 0);  // channel 6 full bend down: not the sounding channel
+    require(nearlyEqual(p.currentFrequency() / hz(60), fullBend, 0.002f),
+            "gremlin bend on another channel should not move the note");
+
+    send(p, 0x95, 62, 100);  // now channel 6 plays, with its own bend
+    require(nearlyEqual(p.currentFrequency() / hz(62), 1.0f / fullBend, 0.002f),
+            "gremlin should apply the bend of the channel that played the note");
+
+    // RPN 0 sets the range per channel.
+    send(p, 0xB5, 101, 0);
+    send(p, 0xB5, 100, 0);
+    send(p, 0xB5, 6, 12);
+    require(nearlyEqual(p.currentFrequency() / hz(62), 0.5f, 0.005f),
+            "gremlin RPN 0 should set the bend range");
+
+    // A note-off on another channel does not release the sounding note.
+    send(p, 0x84, 62, 0);
+    require(nearlyEqual(p.currentFrequency() / hz(62), 0.5f, 0.005f),
+            "gremlin note-off on another channel should be ignored");
+}
+
 }  // namespace
 
 int main()
@@ -330,6 +380,28 @@ int main()
         monoPeak = std::max(monoPeak, std::fabs(sample));
 
     require(monoPeak > 0.001f, "gremlin mono-output render should still emit audio");
+
+    // The host re-activates on playback start and changes sample rate: neither may
+    // discard the patch.
+    {
+        Processor patched;
+        patched.init(48000.0);
+        patched.setLiveParameter(LiveParamId::damage, 0.77f);
+        patched.setMasterTrim(0.31f);
+        patched.activate();
+        require(nearlyEqual(patched.getLiveParameter(LiveParamId::damage), 0.77f),
+                "gremlin activate should keep the patch");
+        patched.setSampleRate(96000.0);
+        require(nearlyEqual(patched.getLiveParameter(LiveParamId::damage), 0.77f),
+                "gremlin sample-rate change should keep the patch");
+        require(nearlyEqual(patched.getMasterTrim(), 0.31f),
+                "gremlin sample-rate change should keep master trim");
+        float l[128] {};
+        float r[128] {};
+        patched.processBlock(l, r, 128, nullptr, 0);
+    }
+
+    checkPitchBendIsPerChannel();
 
     return 0;
 }

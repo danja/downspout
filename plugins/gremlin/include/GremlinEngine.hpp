@@ -144,11 +144,20 @@ public:
 
     void setOutput(float value) { output_ = std::clamp(value, 0.0f, 1.0f); }
 
+    // Pitch bend as a frequency ratio (1 = unbent). Applies to the sounding note,
+    // including its release tail, and to the next note until changed.
+    void setBendRatio(float ratio) {
+        bendRatio_ = std::clamp(ratio, 0.25f, 4.0f);
+        baseFrequency_ = midiToHz(currentMidiNote_) * bendRatio_;
+    }
+
+    float baseFrequency() const { return baseFrequency_; }
+
     void noteOn(uint8_t midiNote, float velocity) {
         currentMidiNote_ = midiNote;
         gate_ = true;
         velocity_ = std::clamp(velocity, 0.0f, 1.0f);
-        baseFrequency_ = midiToHz(midiNote);
+        baseFrequency_ = midiToHz(midiNote) * bendRatio_;
         phaseA_ = 0.0f;
         phaseB_ = 0.125f;
         phaseC_ = 0.375f;
@@ -740,6 +749,7 @@ private:
     uint8_t currentMidiNote_ = 0;
     float velocity_ = 0.0f;
     float baseFrequency_ = 110.0f;
+    float bendRatio_ = 1.0f;
     float env_ = 0.0f;
     float transient_ = 0.0f;
     float attackStep_ = 0.01f;

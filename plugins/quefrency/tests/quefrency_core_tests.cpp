@@ -43,12 +43,6 @@ double goertzel(const std::vector<float>& buf, std::size_t start, std::size_t si
     return std::sqrt(s1 * s1 + s2 * s2 - 2.0 * cw * s1 * s2);
 }
 
-void fillSine(std::vector<float>& buf, float freq, double sr)
-{
-    for (std::size_t n = 0; n < buf.size(); ++n)
-        buf[n] = std::sin(2.0f * 3.14159265358979323846f * freq * static_cast<float>(n) / static_cast<float>(sr));
-}
-
 std::vector<float> noise(std::size_t length, std::uint32_t seed = 12345)
 {
     std::vector<float> out(length);

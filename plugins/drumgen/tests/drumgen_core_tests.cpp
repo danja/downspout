@@ -1,3 +1,4 @@
+#include "drumgen_automaton.hpp"
 #include "drumgen_engine.hpp"
 #include "drumgen_pattern.hpp"
 #include "drumgen_serialization.hpp"
@@ -8,6 +9,9 @@
 
 #include "downspout/test_assert.h"
 #include <cmath>
+#include <set>
+#include <vector>
+#include <string>
 
 using namespace downspout::drumgen;
 
@@ -982,9 +986,229 @@ void testNewGenreTemplatesCarryTheClave() {
     }
 }
 
+// ---- Cellular-automaton layer ----------------------------------------------------------------
+
+PatternState makeAutomatonPattern() {
+    PatternState pattern;
+    pattern.version = kPatternStateVersion;
+    pattern.bars = 1;
+    pattern.stepsPerBeat = 4;
+    pattern.stepsPerBar = 16;
+    pattern.totalSteps = 16;
+    pattern.generationSerial = 1;
+    pattern.meter = ::downspout::Meter {};
+    pattern.lanes[static_cast<int>(LaneId::kick)].midiNote = 36;
+    pattern.lanes[static_cast<int>(LaneId::closedHat)].midiNote = 42;
+    for (const int step : {0, 8}) {
+        pattern.lanes[static_cast<int>(LaneId::kick)].steps[step].velocity = 100;
+    }
+    for (const int step : {0, 4, 8, 12}) {
+        pattern.lanes[static_cast<int>(LaneId::closedHat)].steps[step].velocity = 90;
+    }
+    return pattern;
+}
+
+TransportSnapshot transportAtBar(double bar) {
+    TransportSnapshot transport = makePlayingTransport(0.0);
+    transport.bar = bar;
+    return transport;
+}
+
+// Hat note-on steps (0-15) on the pass that starts at `bar`, played from a cold start.
+std::set<int> hatStepsOnPass(int caRule, int caTarget, double bar) {
+    Controls controls;
+    controls.channel = 10;
+    controls.caRule = caRule;
+    controls.caTarget = caTarget;
+    EngineState state;
+    state.controls = clampControls(controls);
+    state.previousControls = state.controls;
+    state.pattern = makeAutomatonPattern();
+    state.patternValid = true;
+
+    // 120 bpm, 16 steps a bar: a step is 6000 frames. Stop just short of the next bar line.
+    const auto result = processBlock(state, controls, transportAtBar(bar), 95000, 48000.0);
+    std::set<int> steps;
+    for (int i = 0; i < result.eventCount; ++i) {
+        const ScheduledMidiEvent& e = result.events[i];
+        if (e.type == MidiEventType::noteOn && e.data1 == 42) {
+            steps.insert(static_cast<int>((e.frame + 3000) / 6000));
+        }
+    }
+    return steps;
+}
+
+void testAutomatonPureFunction() {
+    const PatternState pattern = makeAutomatonPattern();
+    const DrumLaneState& hats = pattern.lanes[static_cast<int>(LaneId::closedHat)];
+
+    // Rule index 2 is rule 90. Pass 0 is the pattern as generated.
+    for (int step = 0; step < 16; ++step) {
+        assert(caVelocity(hats, 16, 2, 0, step) == hats.steps[step].velocity);
+    }
+
+    // Generation 1 of rule 90 from hits on 0,4,8,12: every odd step, at the lane's average velocity.
+    for (int step = 0; step < 16; ++step) {
+        const bool odd = step % 2 == 1;
+        assert(caVelocity(hats, 16, 2, 1, step) == (odd ? 90 : 0));
+    }
+
+    // Generation 2 of rule 90 is empty again, and 64 passes later it is the pattern again.
+    for (int step = 0; step < 16; ++step) {
+        assert(caVelocity(hats, 16, 2, 2, step) == 0);
+        assert(caVelocity(hats, 16, 2, 64, step) == hats.steps[step].velocity);
+        assert(caVelocity(hats, 16, 2, 65, step) == caVelocity(hats, 16, 2, 1, step));
+    }
+
+    // Off (index 0) never changes anything, whatever the pass.
+    for (int step = 0; step < 16; ++step) {
+        assert(caVelocity(hats, 16, 0, 5, step) == hats.steps[step].velocity);
+    }
+
+    // A lane with no hits stays silent even under a rule that fills an empty row (105).
+    const DrumLaneState& empty = pattern.lanes[static_cast<int>(LaneId::clave)];
+    for (std::int64_t pass = 0; pass < 8; ++pass) {
+        for (int step = 0; step < 16; ++step) {
+            assert(caVelocity(empty, 16, 9, pass, step) == 0);
+        }
+    }
+
+    // Against an independent reference automaton: every rule, several generations, lengths that are
+    // not powers of two. Hits that survive keep their velocity; new ones take the lane's average.
+    for (const int length : {8, 12, 16, 31, 32, 100, 128}) {
+        DrumLaneState lane;
+        int sum = 0;
+        int hits = 0;
+        for (int i = 0; i < length; ++i) {
+            if ((i * 7 + length) % 5 == 0 || i == 0) {
+                lane.steps[i].velocity = static_cast<std::uint8_t>(50 + (i * 13) % 70);
+                sum += lane.steps[i].velocity;
+                ++hits;
+            }
+        }
+        for (int ruleIndex = 1; ruleIndex < kCaRuleCount; ++ruleIndex) {
+            for (const int generation : {1, 2, 3, 7, 20}) {
+                std::vector<int> row(static_cast<std::size_t>(length));
+                for (int i = 0; i < length; ++i) row[static_cast<std::size_t>(i)] = lane.steps[i].velocity > 0 ? 1 : 0;
+                for (int g = 0; g < generation; ++g) {
+                    std::vector<int> next(row.size());
+                    for (int i = 0; i < length; ++i) {
+                        const int idx = (row[static_cast<std::size_t>((i + length - 1) % length)] << 2) |
+                                        (row[static_cast<std::size_t>(i)] << 1) | row[static_cast<std::size_t>((i + 1) % length)];
+                        next[static_cast<std::size_t>(i)] = (kCaRules[static_cast<std::size_t>(ruleIndex)] >> idx) & 1;
+                    }
+                    row = next;
+                }
+                for (int i = 0; i < length; ++i) {
+                    const std::uint8_t got = caVelocity(lane, length, ruleIndex, generation, i);
+                    if (row[static_cast<std::size_t>(i)] == 0) {
+                        assert(got == 0);
+                    } else if (lane.steps[i].velocity > 0) {
+                        assert(got == lane.steps[i].velocity);
+                    } else {
+                        assert(got == sum / hits);
+                    }
+                }
+            }
+        }
+    }
+
+    // Passes of negative steps floor, and the pass number is the loop number.
+    assert(caPassForStep(0, 16) == 0);
+    assert(caPassForStep(15, 16) == 0);
+    assert(caPassForStep(16, 16) == 1);
+    assert(caPassForStep(-1, 16) == -1);
+    assert(caPassForStep(-16, 16) == -1);
+    assert(caPassForStep(-17, 16) == -2);
+}
+
+void testAutomatonTargets() {
+    assert(caTargetsLane(0, static_cast<int>(LaneId::closedHat)));
+    assert(caTargetsLane(0, static_cast<int>(LaneId::openHat)));
+    assert(!caTargetsLane(0, static_cast<int>(LaneId::kick)));
+    assert(!caTargetsLane(0, static_cast<int>(LaneId::snare)));
+    assert(caTargetsLane(1, static_cast<int>(LaneId::cowbell)));
+    assert(caTargetsLane(1, static_cast<int>(LaneId::clave)));
+    assert(!caTargetsLane(1, static_cast<int>(LaneId::closedHat)));
+    assert(caTargetsLane(2, static_cast<int>(LaneId::lowTom)));
+    assert(caTargetsLane(3, static_cast<int>(LaneId::closedHat)) && caTargetsLane(3, static_cast<int>(LaneId::highTom)) &&
+           caTargetsLane(3, static_cast<int>(LaneId::bash)));
+    assert(!caTargetsLane(3, static_cast<int>(LaneId::kick)) && !caTargetsLane(3, static_cast<int>(LaneId::snare)) &&
+           !caTargetsLane(3, static_cast<int>(LaneId::crash)));
+    for (int lane = 0; lane < kLaneCount; ++lane) {
+        assert(caTargetsLane(4, lane));
+    }
+}
+
+void testAutomatonInTheEngine() {
+    const std::set<int> original = {0, 4, 8, 12};
+
+    // Off: every pass plays the pattern.
+    assert(hatStepsOnPass(0, 0, 0.0) == original);
+    assert(hatStepsOnPass(0, 0, 1.0) == original);
+
+    // Rule 90 on hats: pass 0 is the pattern, pass 1 the odd steps, pass 2 silent.
+    assert(hatStepsOnPass(2, 0, 0.0) == original);
+    assert((hatStepsOnPass(2, 0, 1.0) == std::set<int>{1, 3, 5, 7, 9, 11, 13, 15}));
+    assert(hatStepsOnPass(2, 0, 2.0).empty());
+
+    // Playing straight into pass 1 from a cold start gives the same result as a restart there:
+    // the pass comes from the position, not from how long playback has run.
+    assert(hatStepsOnPass(2, 0, 1.0) == hatStepsOnPass(2, 0, 1.0));
+    assert(hatStepsOnPass(2, 0, 65.0) == hatStepsOnPass(2, 0, 1.0));
+
+    // Targeting percussion leaves the hats alone; the kick is never touched by a hats target.
+    assert(hatStepsOnPass(2, 1, 1.0) == original);
+    Controls controls;
+    controls.channel = 10;
+    controls.caRule = 2;
+    controls.caTarget = 0;
+    EngineState state;
+    state.controls = clampControls(controls);
+    state.previousControls = state.controls;
+    state.pattern = makeAutomatonPattern();
+    state.patternValid = true;
+    const auto result = processBlock(state, controls, transportAtBar(1.0), 95000, 48000.0);
+    std::set<int> kickSteps;
+    for (int i = 0; i < result.eventCount; ++i) {
+        const ScheduledMidiEvent& e = result.events[i];
+        if (e.type == MidiEventType::noteOn && e.data1 == 36) kickSteps.insert(static_cast<int>((e.frame + 3000) / 6000));
+    }
+    assert((kickSteps == std::set<int>{0, 8}));
+
+    // The layer does not touch the stored pattern.
+    assert(state.pattern.lanes[static_cast<int>(LaneId::closedHat)].steps[4].velocity == 90);
+    assert(state.pattern.lanes[static_cast<int>(LaneId::closedHat)].steps[1].velocity == 0);
+}
+
+void testAutomatonControlsStateAndClamp() {
+    Controls controls;
+    controls.caRule = 3;
+    controls.caTarget = 4;
+    const auto restored = deserializeControls(serializeControls(controls));
+    assert(restored.has_value());
+    assert(restored->caRule == 3 && restored->caTarget == 4);
+
+    // Unused, it is not written at all: a project that never touches it saves exactly as before.
+    assert(serializeControls(Controls {}).find("caRule") == std::string::npos);
+    const auto legacy = deserializeControls(serializeControls(Controls {}));
+    assert(legacy.has_value() && legacy->caRule == 0 && legacy->caTarget == 0);
+
+    Controls wild;
+    wild.caRule = 99;
+    wild.caTarget = -4;
+    const Controls clamped = clampControls(wild);
+    assert(clamped.caRule == kCaRuleCount - 1);
+    assert(clamped.caTarget == 0);
+}
+
 }  // namespace
 
 int main() {
+    testAutomatonPureFunction();
+    testAutomatonTargets();
+    testAutomatonInTheEngine();
+    testAutomatonControlsStateAndClamp();
     testDeterministicGeneration();
     testFillRefreshKeepsEarlierBars();
     testCompoundMeterShape();

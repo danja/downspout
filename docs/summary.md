@@ -108,6 +108,21 @@ the rewritten string as a monophonic line locked to the transport. With **Grow e
 set it starts at generation 1 and gains a generation every N bars, so a piece thickens
 over time. Output is plain MIDI, so feed any instrument; Cantor gives rhythm on one
 pitch, Koch and Tree give melodic contour, and Plant gives long self-similar phrases.
+Optional MIDI input (off by default): set **Pitch source** to Held (or Latched, which keeps the chord
+after release) to play the pattern over the chord on its input (put Harmonic Atlas, Cadence or ArpGen in front of it), or set a
+**CC channel** so Drift (CC 1-4) or Conductor (**Conductor ch**, CC 21-24) steers probability,
+gate, range, generations, velocity and seed.
+
+### Markov (`markov.vst3`)
+
+Markov-chain melody generator. The melody is a random walk over the twelve pitch classes through a
+12 x 12 transition matrix that you can see: brightness is each move's real chance and the digit is the
+weight you set, and clicking a cell changes it. Eight styles fill the matrix (Stepwise, Triadic, Fifths,
+Pentatonic, Blues, Chromatic, Tonic pull, Uniform), or switch **Learn** on and play a single line into
+its input and it counts which note follows which. **Scale** keeps any matrix in key, **Chaos** sharpens
+or flattens the favourites, **Order** 2 uses the two previous notes where it has learned them, and each
+phrase restarts from the tonic so loops and renders repeat exactly. Output is plain MIDI; pair it with
+Retune for microtonal Markov melodies.
 
 ### Retune (`retune.vst3`)
 

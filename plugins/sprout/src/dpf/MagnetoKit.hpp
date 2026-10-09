@@ -3,7 +3,7 @@
 // Magneto-style panel toolkit for a NanoVG DPF UI: flat surface panels with
 // accent-coloured headers, horizontal bar sliders, stepper and segmented
 // controls, and a dark/light theme toggle, all drawn from downspout/look_and_feel.hpp.
-// Plugin-local on purpose (shared code needs approval); retune and sprout keep
+// Plugin-local on purpose (shared code needs approval); retune, sprout and markov keep
 // identical copies of this file.
 
 #include "DistrhoUI.hpp"

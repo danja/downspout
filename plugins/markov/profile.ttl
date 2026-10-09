@@ -1,0 +1,60 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:markov a trn:PluginProfile ;
+    rdfs:label "Markov" ;
+    rdfs:comment "Markov-chain melody generator: a random walk over the twelve pitch classes through a visible 12x12 transition matrix that can be drawn, filled from a style, or learned from a melodic line on the MIDI input. Scale-masked, optionally second-order, locked to the transport and repeatable from any position." ;
+    trn:bundleName "markov.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/markov/> ;
+    trn:role trn:MidiGenerator ;
+    trn:accepts trn:Midi, trn:ControlMidi ;
+    trn:produces trn:Midi, trn:MelodyMidi ;
+    trn:requires trn:HostTransport ;
+    trn:conductorChannelParam "conductor_ch" ;
+    trn:caution "Silent while the transport is stopped. Learning expects one melodic line; chords blur the counts. The model (matrix and learned counts) is saved as plugin state." ;
+    trn:parameter [ rdfs:label "Root note" ; trn:symbol "root" ; trn:range "0-127" ;
+                    rdfs:comment "The tonic: matrix states are pitch classes counted from it." ] ;
+    trn:parameter [ rdfs:label "Scale" ; trn:symbol "scale" ; trn:range "0-23" ;
+                    rdfs:comment "Canonical scale order from docs/scales.md (0 chromatic, 1 major, 3 minor, 23 bebop minor). Notes outside it can never be chosen." ] ;
+    trn:parameter [ rdfs:label "Lowest note" ; trn:symbol "low" ; trn:range "12-96" ;
+                    rdfs:comment "Bottom of the register." ] ;
+    trn:parameter [ rdfs:label "Octaves" ; trn:symbol "octaves" ; trn:range "1-4" ;
+                    rdfs:comment "Width of the register; each note takes the octave nearest the previous one." ] ;
+    trn:parameter [ rdfs:label "Order" ; trn:symbol "order" ; trn:range "1-2" ;
+                    rdfs:comment "1 uses the previous note. 2 uses the two previous where learned data exists for that pair, and order 1 otherwise." ] ;
+    trn:parameter [ rdfs:label "Chaos" ; trn:symbol "chaos" ; trn:range "0-100 %" ;
+                    rdfs:comment "Exponent 2^(1-2c) on the weights: below 50% sharpens favourites, above flattens toward uniform, 50% leaves the matrix as drawn." ] ;
+    trn:parameter [ rdfs:label "Step grid" ; trn:symbol "grid" ; trn:range "1/32 to 1 bar" ;
+                    rdfs:comment "Length of one step as a note value (T triplet, . dotted); 1 bar follows the host time signature. Default 1/16." ] ;
+    trn:parameter [ rdfs:label "Gate" ; trn:symbol "gate" ; trn:range "10-100 %" ;
+                    rdfs:comment "Fraction of the step the note is held." ] ;
+    trn:parameter [ rdfs:label "Density" ; trn:symbol "density" ; trn:range "0-100 %" ;
+                    rdfs:comment "Chance a step sounds; seeded and repeatable. Conductor CC 21." ] ;
+    trn:parameter [ rdfs:label "Velocity" ; trn:symbol "velocity" ; trn:range "1-127" ;
+                    rdfs:comment "Base velocity; the first note of a phrase is 12 louder and notes on the beat 6 louder. Conductor CC 22." ] ;
+    trn:parameter [ rdfs:label "Channel" ; trn:symbol "channel" ; trn:range "1-16" ;
+                    rdfs:comment "MIDI output channel." ] ;
+    trn:parameter [ rdfs:label "Seed" ; trn:symbol "seed" ; trn:range "1-65535" ;
+                    rdfs:comment "Identity of the random draws." ] ;
+    trn:parameter [ rdfs:label "Phrase bars" ; trn:symbol "phrase_bars" ; trn:range "1-8" ;
+                    rdfs:comment "The walk restarts from the tonic every this many bars." ] ;
+    trn:parameter [ rdfs:label "Learn" ; trn:symbol "learn" ; trn:range "Off, On" ;
+                    rdfs:comment "Count note-to-note transitions on the MIDI input, relative to the Root." ] ;
+    trn:parameter [ rdfs:label "Learn channel" ; trn:symbol "learn_channel" ; trn:range "0-16" ;
+                    rdfs:comment "Channel learned from; 0 = all." ] ;
+    trn:parameter [ rdfs:label "Learned mix" ; trn:symbol "learned_mix" ; trn:range "0-100 %" ;
+                    rdfs:comment "Blend of the learned first-order counts into the matrix, row by row where a row has data." ] ;
+    trn:parameter [ rdfs:label "Clear learned" ; trn:symbol "clear_learned" ; trn:range "0-65535" ;
+                    rdfs:comment "A counter: any change forgets everything learned. The first value after load is adopted without clearing." ] ;
+    trn:parameter [ rdfs:label "Conductor ch" ; trn:symbol "conductor_ch" ; trn:range "0-16" ;
+                    rdfs:comment "Off at 0. Otherwise on that channel: CC 21 Density, CC 22 Velocity, CC 23 Chaos, CC 24 = 127 re-rolls the melody at the next bar line. CC 20 is not used." ] ;
+    trn:parameter [ rdfs:label "Current state" ; trn:symbol "status_state" ; trn:range "-1-11" ;
+                    rdfs:comment "Read-only: the pitch class (above the root) of the latest note; -1 when stopped." ] ;
+    trn:parameter [ rdfs:label "Learned transitions" ; trn:symbol "status_learned" ; trn:range "0-1000000" ;
+                    rdfs:comment "Read-only: how many transitions have been learned." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

@@ -27,6 +27,7 @@ public:
 
     void init(double sampleRate);
     void activate();
+    void setSampleRate(double sampleRate);
 
     void setLiveParameter(LiveParamId id, float value);
     void setHiddenParameter(HiddenParamId id, float value);
@@ -40,6 +41,8 @@ public:
     [[nodiscard]] bool getMomentary(MomentaryId id) const noexcept;
     [[nodiscard]] float getMasterTrim() const noexcept;
     [[nodiscard]] const Status& getStatus() const noexcept;
+    // Pitch of the source note including pitch bend, before the per-voice intervals.
+    [[nodiscard]] float currentFrequency() const noexcept { return engine_.baseFrequency(); }
 
     void loadScene(SceneId scene);
     void triggerAction(ActionId action);
@@ -54,7 +57,11 @@ public:
 
 private:
     void resetToDefaults();
+    void resetRuntime();
     void applyLiveState();
+    void pitchBend(int channel, int value14);
+    bool handleBendRpn(int channel, std::uint8_t cc, std::uint8_t value);
+    void resetBend();
     bool handleMidiMessage(const MidiMessage& message);
     bool handleControllerCC(std::uint8_t cc, std::uint8_t value);
     bool handleControllerButton(std::uint8_t note, bool pressed);
@@ -95,6 +102,12 @@ private:
     std::uint32_t rngState_ = 0x4d3c2b1au;
     std::uint32_t ledRefreshSamples_ = 0;
     int currentNote_ = -1;
+    int currentChannel_ = 0;
+    std::array<float, 16> bendRatio_ {};
+    std::array<float, 16> bendRange_ {};
+    std::array<int, 16> bendValue_ {};
+    std::array<std::uint8_t, 16> rpnMsb_ {};
+    std::array<std::uint8_t, 16> rpnLsb_ {};
     float postGain_ = 1.0f;
     bool soloHeld_ = false;
     bool ledInitialized_ = false;

@@ -39,9 +39,17 @@ private:
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         text(96, 116, status, nullptr);
 
+        drawSection(24, 155, 1032, 46, "CONDUCTOR");
+        drawSlider(kConductorCh, 130, 158, 250, "Conductor ch (0 = off)", "",
+                   "Listen for Conductor CCs on this channel: CC 21 Density, 22 Energy, 23 Seed, 24 = 127 restarts at the next bar.", 0);
+        drawPercentSlider(kDensity, 400, 158, 310, "Density",
+                          "Master probability scale across all lanes. Conductor CC 21 drives it. 100% leaves each lane as set.");
+        drawPercentSlider(kEnergy, 730, 158, 310, "Energy",
+                          "Master velocity scale across all lanes. Conductor CC 22 drives it. 100% leaves each lane as set.");
+
         for (int lane = 0; lane < kLaneCount; ++lane) {
             const float x = lane % 2 == 0 ? 24.0f : 547.0f;
-            const float y = lane < 2 ? 155.0f : 499.0f;
+            const float y = lane < 2 ? 211.0f : 555.0f;
             drawLane(lane, x, y, 509.0f, 334.0f);
         }
         endPanel();

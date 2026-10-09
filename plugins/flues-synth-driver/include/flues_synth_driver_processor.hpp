@@ -27,6 +27,7 @@ class Processor {
 public:
     void init(double sampleRate);
     void activate();
+    void setSampleRate(double sampleRate);
 
     // Setters called from DPF wrapper (audio thread)
     void setAlgorithm(int v);
@@ -80,6 +81,7 @@ public:
                                std::uint32_t inputEventCount);
 
 private:
+    void resetRuntime();
     void markDirty(std::size_t synthParamIndex);
     void emitCC(ProcessResult& result, std::uint32_t frame,
                 std::uint8_t ch, std::uint8_t cc, std::uint8_t value);

@@ -1,6 +1,7 @@
 #include "DistrhoUI.hpp"
 #include "downspout/look_and_feel.hpp"
 
+#include "xoxolo_automaton.hpp"
 #include "xoxolo_engine.hpp"
 #include "xoxolo_generator.hpp"
 #include "xoxolo_params.hpp"
@@ -58,7 +59,10 @@ enum class PatternMenuId {
     preset,
     steps,
     resolution,
-    channel
+    channel,
+    caRule,
+    caEvery,
+    conductor
 };
 
 }  // namespace
@@ -73,6 +77,9 @@ public:
         values_.fill(0.0f);
         values_[downspout::xoxolo::kParamSteps] = static_cast<float>(downspout::xoxolo::kDefaultSteps);
         values_[downspout::xoxolo::kParamResolution] = 2.0f;
+        values_[downspout::xoxolo::kParamCaEvery] = 1.0f;
+        values_[downspout::xoxolo::kParamDensity] = 1.0f;
+        values_[downspout::xoxolo::kParamEnergy] = 1.0f;
         values_[downspout::xoxolo::kParamChannel] = 10.0f;
         values_[downspout::xoxolo::kParamNotePreset] =
             static_cast<float>(static_cast<int>(downspout::xoxolo::NotePresetId::downspout));
@@ -144,10 +151,13 @@ protected:
         const float gridX = pad;
         const float gridY = 98.0f;
         const float gridW = width - controlsW - pad * 3.0f;
-        const float gridH = height - gridY - pad;
+        const float bandH = 92.0f;
+        const float bandGap = 14.0f;
+        const float gridH = height - gridY - pad - bandH - bandGap;
 
         drawGrid(gridX, gridY, gridW, gridH);
         drawControls(width - controlsW - pad, gridY, controlsW, gridH);
+        drawGenerateBand(pad, gridY + gridH + bandGap, width - pad * 2.0f, bandH);
         drawNoteMenu();
         drawStyleMenu();
         drawPatternMenu();
@@ -175,6 +185,14 @@ protected:
 
         const int laneCount = downspout::xoxolo::activeLaneCountForPreset(pattern_.notePreset);
         for (int lane = 0; lane < laneCount; ++lane) {
+            if (evolveRects_[static_cast<std::size_t>(lane)].contains(x, y)) {
+                auto& flag = pattern_.lanes[static_cast<std::size_t>(lane)].evolve;
+                flag = flag != 0 ? 0 : 1;
+                pushPatternState();
+                openNoteMenuLane_ = -1;
+                repaint();
+                return true;
+            }
             if (previewRects_[static_cast<std::size_t>(lane)].contains(x, y)) {
                 openNoteMenuLane_ = -1;
                 triggerPreview(lane);
@@ -218,6 +236,33 @@ protected:
         if (channelRect_.contains(x, y)) {
             openNoteMenuLane_ = -1;
             togglePatternMenu(PatternMenuId::channel);
+            return true;
+        }
+        if (caRuleRect_.contains(x, y)) {
+            openNoteMenuLane_ = -1;
+            togglePatternMenu(PatternMenuId::caRule);
+            return true;
+        }
+        if (caEveryRect_.contains(x, y)) {
+            openNoteMenuLane_ = -1;
+            togglePatternMenu(PatternMenuId::caEvery);
+            return true;
+        }
+        if (conductorRect_.contains(x, y)) {
+            openNoteMenuLane_ = -1;
+            togglePatternMenu(PatternMenuId::conductor);
+            return true;
+        }
+        if (hitDensityRect_.contains(x, y)) {
+            openNoteMenuLane_ = -1;
+            draggingGeneratorSlider_ = 2;
+            updateGeneratorSlider(2, x);
+            return true;
+        }
+        if (energyRect_.contains(x, y)) {
+            openNoteMenuLane_ = -1;
+            draggingGeneratorSlider_ = 3;
+            updateGeneratorSlider(3, x);
             return true;
         }
         if (clearRect_.contains(x, y)) {
@@ -335,6 +380,12 @@ private:
     std::array<std::array<Rect, downspout::xoxolo::kMaxSteps>, downspout::xoxolo::kLaneCount> cellRects_ {};
     std::array<Rect, downspout::xoxolo::kLaneCount> noteRects_ {};
     std::array<Rect, downspout::xoxolo::kLaneCount> previewRects_ {};
+    std::array<Rect, downspout::xoxolo::kLaneCount> evolveRects_ {};
+    Rect caRuleRect_ {};
+    Rect caEveryRect_ {};
+    Rect conductorRect_ {};
+    Rect hitDensityRect_ {};
+    Rect energyRect_ {};
     Rect presetRect_ {};
     Rect stepsRect_ {};
     Rect resolutionRect_ {};
@@ -392,13 +443,14 @@ private:
         const float labelW = pattern_.notePreset == downspout::xoxolo::NotePresetId::avlDrumkits ? 112.0f : 82.0f;
         const float noteW = 52.0f;
         const float previewW = 28.0f;
+        const float evolveW = 24.0f;
         const float gap = 6.0f;
         const float rowGap = laneCount > 16 ? 2.0f : 5.0f;
-        const float rowH = std::min(36.0f,
+        const float rowH = std::min(52.0f,
                                     (h - rowGap * static_cast<float>(laneCount - 1)) /
                                         static_cast<float>(laneCount));
         const float gridX = x + labelW;
-        const float rightW = noteW + previewW + gap * 2.0f;
+        const float rightW = noteW + previewW + evolveW + gap * 3.0f;
         const float stepGap = 3.0f;
         const float cellW = (w - labelW - rightW - stepGap * static_cast<float>(pattern_.totalSteps - 1)) /
                             static_cast<float>(pattern_.totalSteps);
@@ -420,7 +472,11 @@ private:
             for (int step = pattern_.totalSteps; step < downspout::xoxolo::kMaxSteps; ++step)
                 cellRects_[static_cast<std::size_t>(lane)][static_cast<std::size_t>(step)] = {};
 
-            const float previewX = gridX + static_cast<float>(pattern_.totalSteps) * (cellW + stepGap) + gap;
+            const float evolveX = gridX + static_cast<float>(pattern_.totalSteps) * (cellW + stepGap) + gap;
+            const float previewX = evolveX + evolveW + gap;
+            evolveRects_[static_cast<std::size_t>(lane)] = {evolveX, rowY, evolveW, rowH};
+            drawEvolve(evolveRects_[static_cast<std::size_t>(lane)],
+                       pattern_.lanes[static_cast<std::size_t>(lane)].evolve != 0);
             previewRects_[static_cast<std::size_t>(lane)] = {previewX, rowY, previewW, rowH};
             noteRects_[static_cast<std::size_t>(lane)] = {previewX + previewW + gap, rowY, noteW, rowH};
             drawPreview(previewRects_[static_cast<std::size_t>(lane)]);
@@ -431,6 +487,7 @@ private:
 
         for (int lane = laneCount; lane < downspout::xoxolo::kLaneCount; ++lane) {
             previewRects_[static_cast<std::size_t>(lane)] = {};
+            evolveRects_[static_cast<std::size_t>(lane)] = {};
             noteRects_[static_cast<std::size_t>(lane)] = {};
             for (int step = 0; step < downspout::xoxolo::kMaxSteps; ++step)
                 cellRects_[static_cast<std::size_t>(lane)][static_cast<std::size_t>(step)] = {};
@@ -500,6 +557,28 @@ private:
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
         fc(t_.textDim);
         text(rect.x + rect.w - 7.0f, rect.y + rect.h * 0.5f, open ? "^" : "v", nullptr);
+    }
+
+    // A lane's automaton switch. Lit when the lane is marked; it only does anything while an
+    // Evolve rule is chosen, so a marked lane with the rule off is shown dimmer.
+    void drawEvolve(const Rect& rect, const bool marked)
+    {
+        const bool live = marked && values_[downspout::xoxolo::kParamCaRule] > 0.5f;
+        beginPath();
+        roundedRect(rect.x, rect.y, rect.w, rect.h, 6.0f);
+        if (live)
+            fillColor(94, 158, 112, 255);
+        else if (marked)
+            fillColor(70, 100, 78, 255);
+        else
+            fc(t_.border);
+        fill();
+        closePath();
+
+        fontSize(18.0f);
+        textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+        fc(marked ? t_.textPrimary : t_.textDim);
+        text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f, "~", nullptr);
     }
 
     void drawPreview(const Rect& rect)
@@ -585,17 +664,21 @@ private:
         fill();
         closePath();
 
-        presetRect_ = {x + 14.0f, y + 38.0f, w - 28.0f, 40.0f};
-        stepsRect_ = {x + 14.0f, y + 88.0f, w - 28.0f, 40.0f};
-        resolutionRect_ = {x + 14.0f, y + 138.0f, w - 28.0f, 40.0f};
-        channelRect_ = {x + 14.0f, y + 188.0f, w - 28.0f, 40.0f};
-        clearRect_ = {x + 14.0f, y + 238.0f, w - 28.0f, 38.0f};
+        constexpr float itemH = 40.0f;
+        presetRect_ = {x + 14.0f, y + 38.0f, w - 28.0f, itemH};
+        stepsRect_ = {x + 14.0f, y + 94.0f, w - 28.0f, itemH};
+        resolutionRect_ = {x + 14.0f, y + 150.0f, w - 28.0f, itemH};
+        channelRect_ = {x + 14.0f, y + 206.0f, w - 28.0f, itemH};
+        clearRect_ = {x + 14.0f, y + 266.0f, w - 28.0f, 36.0f};
 
-        const float dividerY = y + 296.0f;
-        styleRect_ = {x + 14.0f, dividerY + 38.0f, w - 28.0f, 42.0f};
-        densityRect_ = {x + 14.0f, dividerY + 94.0f, w - 28.0f, 46.0f};
-        tensionRect_ = {x + 14.0f, dividerY + 154.0f, w - 28.0f, 46.0f};
-        goRect_ = {x + 14.0f, y + h - 58.0f, w - 28.0f, 42.0f};
+        const float evolveDividerY = y + 320.0f;
+        caRuleRect_ = {x + 14.0f, evolveDividerY + 36.0f, w - 28.0f, itemH};
+        caEveryRect_ = {x + 14.0f, evolveDividerY + 92.0f, w - 28.0f, itemH};
+
+        const float conductorDividerY = y + 472.0f;
+        conductorRect_ = {x + 14.0f, conductorDividerY + 36.0f, w - 28.0f, itemH};
+        hitDensityRect_ = {x + 14.0f, conductorDividerY + 90.0f, w - 28.0f, 40.0f};
+        energyRect_ = {x + 14.0f, conductorDividerY + 138.0f, w - 28.0f, 40.0f};
 
         fontSize(14.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
@@ -623,18 +706,79 @@ private:
                      patternMenuOpen_ == PatternMenuId::channel);
         drawButton(clearRect_, "Clear", pulseFrames_ > 0);
 
+        drawDivider(x, w, evolveDividerY);
+        fontSize(14.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fc(t_.textPrimary);
+        text(x + 14.0f, evolveDividerY + 12.0f, "Evolve  ~", nullptr);
+
+        drawSelector(caRuleRect_,
+                     "Rule",
+                     downspout::xoxolo::caRuleName(clampi(static_cast<int>(std::lround(values_[downspout::xoxolo::kParamCaRule])),
+                                                         0, downspout::xoxolo::kCaRuleCount - 1)),
+                     patternMenuOpen_ == PatternMenuId::caRule);
+        char everyValue[16];
+        std::snprintf(everyValue, sizeof(everyValue), "%d pass%s", caEveryValue(), caEveryValue() == 1 ? "" : "es");
+        drawSelector(caEveryRect_, "Generation lasts", everyValue, patternMenuOpen_ == PatternMenuId::caEvery);
+
+        drawDivider(x, w, conductorDividerY);
+        fontSize(14.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fc(t_.textPrimary);
+        text(x + 14.0f, conductorDividerY + 12.0f, "Conductor", nullptr);
+
+        const int conductor = conductorChannelValue();
+        char conductorText[16];
+        if (conductor == 0)
+            std::snprintf(conductorText, sizeof(conductorText), "Off");
+        else
+            std::snprintf(conductorText, sizeof(conductorText), "Channel %d", conductor);
+        drawSelector(conductorRect_, "Listen on", conductorText, patternMenuOpen_ == PatternMenuId::conductor);
+        drawGeneratorSlider(hitDensityRect_, "Hit density", values_[downspout::xoxolo::kParamDensity],
+                            draggingGeneratorSlider_ == 2);
+        drawGeneratorSlider(energyRect_, "Energy", values_[downspout::xoxolo::kParamEnergy], draggingGeneratorSlider_ == 3);
+    }
+
+    void drawDivider(const float x, const float w, const float y)
+    {
         beginPath();
-        moveTo(x + 14.0f, dividerY);
-        lineTo(x + w - 14.0f, dividerY);
+        moveTo(x + 14.0f, y);
+        lineTo(x + w - 14.0f, y);
         sc(t_.border);
         strokeWidth(1.0f);
         stroke();
         closePath();
+    }
+
+    // The pattern generator, as one row across the bottom: style, the two sliders, and Go.
+    void drawGenerateBand(const float x, const float y, const float w, const float h)
+    {
+        beginPath();
+        roundedRect(x, y, w, h, 8.0f);
+        fc(t_.panel);
+        fill();
+        closePath();
 
         fontSize(14.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         fc(t_.textPrimary);
-        text(x + 14.0f, dividerY + 12.0f, "Generate", nullptr);
+        text(x + 18.0f, y + h * 0.5f, "Generate", nullptr);
+
+        const float pad = 14.0f;
+        const float goW = 128.0f;
+        const float styleW = 200.0f;
+        const float labelW = 92.0f;
+        const float gap = 28.0f;
+        const float sliderW = (w - labelW - styleW - goW - gap * 4.0f - pad * 2.0f) * 0.5f;
+
+        float cx = x + labelW + pad;
+        styleRect_ = {cx, y + (h - 44.0f) * 0.5f, styleW, 44.0f};
+        cx += styleW + gap;
+        densityRect_ = {cx, y + (h - 46.0f) * 0.5f, sliderW, 46.0f};
+        cx += sliderW + gap;
+        tensionRect_ = {cx, y + (h - 46.0f) * 0.5f, sliderW, 46.0f};
+        cx += sliderW + gap;
+        goRect_ = {cx, y + (h - 46.0f) * 0.5f, goW, 46.0f};
 
         drawSelector(styleRect_,
                      "Style",
@@ -717,7 +861,7 @@ private:
     {
         constexpr float itemHeight = 28.0f;
         return {styleRect_.x,
-                styleRect_.y + styleRect_.h + 4.0f,
+                styleRect_.y - 4.0f - itemHeight * static_cast<float>(downspout::xoxolo::GenerationStyle::count),
                 styleRect_.w,
                 itemHeight * static_cast<float>(static_cast<int>(downspout::xoxolo::GenerationStyle::count))};
     }
@@ -779,6 +923,17 @@ private:
         return false;
     }
 
+    int conductorChannelValue() const
+    {
+        return clampi(static_cast<int>(std::lround(values_[downspout::xoxolo::kParamConductorCh])), 0, 16);
+    }
+
+    int caEveryValue() const
+    {
+        return clampi(static_cast<int>(std::lround(values_[downspout::xoxolo::kParamCaEvery])),
+                      downspout::xoxolo::kMinCaEvery, downspout::xoxolo::kMaxCaEvery);
+    }
+
     Rect patternMenuBaseRect() const
     {
         switch (patternMenuOpen_) {
@@ -786,6 +941,9 @@ private:
         case PatternMenuId::steps: return stepsRect_;
         case PatternMenuId::resolution: return resolutionRect_;
         case PatternMenuId::channel: return channelRect_;
+        case PatternMenuId::caRule: return caRuleRect_;
+        case PatternMenuId::caEvery: return caEveryRect_;
+        case PatternMenuId::conductor: return conductorRect_;
         case PatternMenuId::none: break;
         }
         return {};
@@ -802,6 +960,12 @@ private:
             return static_cast<int>(downspout::xoxolo::ResolutionId::count);
         case PatternMenuId::channel:
             return 16;
+        case PatternMenuId::caRule:
+            return downspout::xoxolo::kCaRuleCount;
+        case PatternMenuId::caEvery:
+            return downspout::xoxolo::kMaxCaEvery;
+        case PatternMenuId::conductor:
+            return 17;
         case PatternMenuId::none:
             break;
         }
@@ -819,6 +983,13 @@ private:
             return static_cast<int>(pattern_.resolution);
         case PatternMenuId::channel:
             return pattern_.channel - 1;
+        case PatternMenuId::caRule:
+            return clampi(static_cast<int>(std::lround(values_[downspout::xoxolo::kParamCaRule])), 0,
+                          downspout::xoxolo::kCaRuleCount - 1);
+        case PatternMenuId::caEvery:
+            return caEveryValue() - downspout::xoxolo::kMinCaEvery;
+        case PatternMenuId::conductor:
+            return conductorChannelValue();
         case PatternMenuId::none:
             break;
         }
@@ -827,7 +998,7 @@ private:
 
     int patternMenuColumns() const
     {
-        return patternMenuOpen_ == PatternMenuId::steps ? 2 : 1;
+        return patternMenuOpen_ == PatternMenuId::steps || patternMenuOpen_ == PatternMenuId::conductor ? 2 : 1;
     }
 
     Rect patternMenuRect() const
@@ -855,6 +1026,16 @@ private:
             return resolutionName(static_cast<downspout::xoxolo::ResolutionId>(index));
         case PatternMenuId::channel:
             std::snprintf(buffer, bufferSize, "%d", index + 1);
+            return buffer;
+        case PatternMenuId::caRule:
+            return downspout::xoxolo::caRuleName(index);
+        case PatternMenuId::caEvery:
+            std::snprintf(buffer, bufferSize, "%d pass%s", index + 1, index == 0 ? "" : "es");
+            return buffer;
+        case PatternMenuId::conductor:
+            if (index == 0)
+                return "Off";
+            std::snprintf(buffer, bufferSize, "Ch %d", index);
             return buffer;
         case PatternMenuId::none:
             break;
@@ -933,6 +1114,18 @@ private:
             pattern_.channel = index + 1;
             setParameter(downspout::xoxolo::kParamChannel, static_cast<float>(pattern_.channel));
             break;
+        case PatternMenuId::caRule:
+            values_[downspout::xoxolo::kParamCaRule] = static_cast<float>(index);
+            setParameter(downspout::xoxolo::kParamCaRule, static_cast<float>(index));
+            break;
+        case PatternMenuId::caEvery:
+            values_[downspout::xoxolo::kParamCaEvery] = static_cast<float>(index + 1);
+            setParameter(downspout::xoxolo::kParamCaEvery, static_cast<float>(index + 1));
+            break;
+        case PatternMenuId::conductor:
+            values_[downspout::xoxolo::kParamConductorCh] = static_cast<float>(index);
+            setParameter(downspout::xoxolo::kParamConductorCh, static_cast<float>(index));
+            break;
         case PatternMenuId::none:
             return;
         }
@@ -972,12 +1165,22 @@ private:
 
     void updateGeneratorSlider(const int slider, const float x)
     {
-        const Rect& rect = slider == 0 ? densityRect_ : tensionRect_;
+        // Sliders 0-1 are the generator's; 2 and 3 are the Conductor-driven hit density and energy, which are host
+        // parameters (so the panel, automation and the Conductor agree).
+        const Rect& rect = slider == 0 ? densityRect_
+                         : slider == 1 ? tensionRect_
+                         : slider == 2 ? hitDensityRect_
+                                       : energyRect_;
         const float value = std::max(0.0f, std::min(1.0f, (x - rect.x) / std::max(1.0f, rect.w)));
-        if (slider == 0)
+        if (slider == 0) {
             generationSettings_.density = value;
-        else
+        } else if (slider == 1) {
             generationSettings_.tension = value;
+        } else {
+            const std::uint32_t parameter = slider == 2 ? downspout::xoxolo::kParamDensity : downspout::xoxolo::kParamEnergy;
+            values_[parameter] = value;
+            setParameter(parameter, value);
+        }
         repaint();
     }
 

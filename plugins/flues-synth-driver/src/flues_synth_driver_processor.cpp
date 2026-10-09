@@ -32,18 +32,29 @@ std::uint8_t toCC(const SynthCC& spec, float value) noexcept
 void Processor::init(const double sampleRate)
 {
     sampleRate_ = sampleRate > 1.0 ? sampleRate : 44100.0;
-    activate();
+    for (std::size_t i = 0; i < kSynthParamCount; ++i)
+        params_[i] = kSynthCCs[i].defaultValue;
+    resetRuntime();
 }
 
+// The host calls this whenever processing starts, so it must keep the patch.
+// The CC cache is cleared and the settings re-sent so the synth matches.
 void Processor::activate()
+{
+    resetRuntime();
+}
+
+void Processor::setSampleRate(const double sampleRate)
+{
+    sampleRate_ = sampleRate > 1.0 ? sampleRate : 44100.0;
+    resetRuntime();
+}
+
+void Processor::resetRuntime()
 {
     lastCC_.fill(-1);
     midiActivity_ = 0.0f;
     panicPending_ = false;
-
-    // Load defaults
-    for (std::size_t i = 0; i < kSynthParamCount; ++i)
-        params_[i] = kSynthCCs[i].defaultValue;
 
     // Mark non-trajectory params dirty; trajectory params share CCs and
     // should only emit when explicitly set to avoid clobbering envelope/formants.

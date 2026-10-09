@@ -8,7 +8,8 @@
 dsp:drumgen a trn:PluginProfile ;
     rdfs:label "DrumGen" ;
     rdfs:comment """Transport- and meter-aware MIDI drum generator with fills, style modes,
-Breakbeat/Jazz/Fugue genres, sparse pulse options, and Conductor CC control.
+Breakbeat/Jazz/Fugue genres, sparse pulse options, Conductor CC control, and an optional
+cellular-automaton layer that evolves chosen lanes (hats, percussion, toms) each loop.
 Its stereo audio output is a silent compatibility stub; route MIDI output to DrumKit
 or another drum instrument.""" ;
     trn:bundleName "drumgen.vst3" ;

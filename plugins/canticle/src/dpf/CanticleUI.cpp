@@ -249,7 +249,7 @@ private:
         fill();
     }
 
-    void drawHeader(const float x, const float y, const float w, const float h)
+    void drawHeader(const float x, const float y, const float /*w*/, const float h)
     {
         beginPath();
         fc(t_.textPrimary);

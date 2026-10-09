@@ -12,6 +12,8 @@ dsp:polymeter a trn:PluginProfile ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/polymeter/> ;
     trn:role trn:MidiGenerator ;
+    trn:accepts trn:ControlMidi ;
+    trn:conductorChannelParam "conductor_ch" ;
     trn:produces trn:Midi, trn:DrumMidi ;
     trn:requires trn:HostTransport ;
     trn:recommendedBefore dsp:drumkit ;

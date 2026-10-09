@@ -75,6 +75,11 @@ struct Parameters {
 struct EngineState {
     std::array<Voice, kMaxVoices> voices {};
     std::uint64_t frameCounter = 0;
+    // Per-channel pitch bend, -1..1 (MIDI channel 1-16 at index 0-15). Each voice
+    // follows the bend of the channel its note arrived on, so a per-channel
+    // retuner such as Retune can bend simultaneous notes independently. The
+    // range is Parameters::pitchBendRange.
+    std::array<float, 16> channelBend {};
 };
 
 struct MidiInputEvent {

@@ -30,6 +30,7 @@ enum ParameterIndex : uint32_t {
     kParamCCCutoff,
     kParamCCScream,
     kParamCCChannel,
+    kParamMorph,
     kParameterCount
 };
 
@@ -48,9 +49,10 @@ struct SliderDef {
     const char* stateKey;
 };
 
-constexpr std::array<SliderDef, 7> kMainSliders = {{
+constexpr std::array<SliderDef, 8> kMainSliders = {{
     { kParamInputGain,  "Input Gain",  -24.0f,  24.0f, false, "input_gain"  },
     { kParamCutoff,     "Cutoff",        0.0f, 100.0f, false, "cutoff"      },
+    { kParamMorph,      "Morph LP-HP", -100.0f, 100.0f, false, "morph"      },
     { kParamScream,     "Scream",        0.0f, 100.0f, false, "scream"      },
     { kParamResonance,  "Resonance",     0.0f, 100.0f, false, "resonance"   },
     { kParamMix,        "Mix",           0.0f, 100.0f, false, "mix"         },
@@ -116,6 +118,10 @@ constexpr int kCreamB = 242;
     char buf[32];
     if (def.index == kParamInputGain || def.index == kParamOutputGain)
         std::snprintf(buf, sizeof(buf), "%+.1f dB", v);
+    else if (def.index == kParamMorph && std::fabs(v) < 0.5f)
+        std::snprintf(buf, sizeof(buf), "off");
+    else if (def.index == kParamMorph)
+        std::snprintf(buf, sizeof(buf), "%+.0f%%", v);
     else
         std::snprintf(buf, sizeof(buf), "%.1f%%", v);
     return buf;
@@ -197,6 +203,7 @@ public:
         values_[kParamCCCutoff]   = 1.0f;
         values_[kParamCCScream]   = 2.0f;
         values_[kParamCCChannel]  = 1.0f;
+        values_[kParamMorph]      = 0.0f;
 
        #ifdef DGL_NO_SHARED_RESOURCES
         createFontFromFile("sans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
@@ -225,6 +232,7 @@ protected:
         else if (std::strcmp(key, "cc_cutoff")   == 0) { values_[kParamCCCutoff]   = f; }
         else if (std::strcmp(key, "cc_scream")   == 0) { values_[kParamCCScream]   = f; }
         else if (std::strcmp(key, "cc_channel")  == 0) { values_[kParamCCChannel]  = f; }
+        else if (std::strcmp(key, "morph")       == 0) { values_[kParamMorph]      = f; }
         repaint();
     }
 
@@ -450,6 +458,7 @@ private:
         commitParam(kParamMix,        "mix",         p.mix);
         commitParam(kParamOutputGain, "output_gain", p.outputGain);
         commitParam(kParamTrack,      "track",       p.track);
+        commitParam(kParamMorph,      "morph",       p.morph);
     }
 
     [[nodiscard]] bool dropScrollable() const noexcept
@@ -651,7 +660,25 @@ private:
             fc(t.controlTrack);
             fill();
             closePath();
-            if (norm > 0.0f) {
+            if (def.index == kParamMorph) {
+                // Bipolar: the fill grows from the centre, a tick marks 0 (off).
+                const float mid = tr.x + tr.w * 0.5f;
+                const float end = tr.x + tr.w * norm;
+                const float x0  = std::min(mid, end);
+                const float w0  = std::max(std::fabs(end - mid), 0.0f);
+                if (w0 > 0.5f) {
+                    beginPath();
+                    roundedRect(x0, tr.y, w0, tr.h, 4.0f);
+                    fillColor(kMainAccent.r, kMainAccent.g, kMainAccent.b, 255);
+                    fill();
+                    closePath();
+                }
+                beginPath();
+                rect(mid - 0.5f, tr.y - 2.0f, 1.0f, tr.h + 4.0f);
+                fc(t.textDim);
+                fill();
+                closePath();
+            } else if (norm > 0.0f) {
                 beginPath();
                 roundedRect(tr.x, tr.y, std::max(tr.h, tr.w * norm), tr.h, 7.0f);
                 fillColor(kMainAccent.r, kMainAccent.g, kMainAccent.b, 255);
@@ -742,6 +769,7 @@ private:
         fc(t.textDisabled);
         text(kMainX, y, "Scream is HP feedback cutoff \xc2\xb7 Track locks harmonics.", nullptr);
         text(kMainX, y + 14.0f, "Cut before compressors \xc2\xb7 mind the resonance.", nullptr);
+        text(kMainX, y + 28.0f, "Morph +: low-pass turns high-pass as Cutoff rises \xc2\xb7 \xe2\x88\x92: the reverse.", nullptr);
     }
 
     void drawPopup(float W, float H)

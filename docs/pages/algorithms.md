@@ -18,7 +18,10 @@ current Downspout plugins.
   Fugue subject/answer bass behavior.
 - `DrumGen`: transport-aware drum pattern generation with fill logic, style
   modes, genre vocabularies, pattern mutation around the current cycle, and a
-  sparse Fugue pulse mode.
+  sparse Fugue pulse mode. An optional Automaton layer treats the generated
+  pattern as generation 0 and, on later loop passes, replaces the hits of chosen
+  lanes (hats, percussion, toms) with the next row of a cellular automaton
+  seeded from the lane (see "Cellular automata" below).
 - `MelGen`: phrase-aware monophonic melody generation with contour, call and
   answer, structure, range, color, follow controls, and a high-structure
   Fugue-friendly subject/dominant-answer region. An optional Inertia control
@@ -43,6 +46,11 @@ current Downspout plugins.
   density is Pulses/Length and advances one generation per cycle of the lane,
   returning after 64 generations. All choices are pure functions of the step
   position and seed, so block size and loops do not change the output.
+- `Xoxolo`: a step-grid drum sequencer for programmed patterns. Any lane can be
+  marked to evolve: the programmed row is generation 0 and each later pass plays
+  the next row of a cellular automaton seeded from it (rule chosen from ten
+  classics, a generation held for 1 to 8 passes), while unmarked lanes keep
+  their grid. The grid itself is never altered.
 - `Harmonic Atlas`: seeded chord progressions from four movement tables.
   Gravity replaces chords with functional targets chosen from the previous
   chord (V goes home, IV goes to V, I moves to IV, V or vi, anything else
@@ -51,10 +59,31 @@ current Downspout plugins.
   chord, itself voiced six chords back so that any position renders the same.
 - `Sprout`: an L-system sequencer. Seven grammars (Plant, Koch, Dragon,
   Sierpinski, Cantor, Levy, Tree) are rewritten for N generations, capped at
-  4096 symbols, and read as a turtle: F/G play a note, f rests, + and - move the
+  131,072 symbols (a longer expansion falls back to the deepest generation that
+  fits), and read as a turtle: F/G play a note, f rests, + and - move the
   pitch by scale degrees, brackets branch and return, other letters only grow.
   Pitch folds back at a set range, branch depth lowers velocity, and Grow adds
-  one generation every N bars, restarting the pattern at each change.
+  one generation every N bars, restarting the pattern at each change. The
+  generation count is read once per bar, so any change lands on a bar line.
+  With the optional MIDI input the pitch source can be the notes held (or
+  latched) on the input instead of a scale: degree 0 is the lowest note and
+  degrees are spread across the held tones at about seven per octave, so the
+  grammar's contour follows a chord. Two CC sets (the Drift and Conductor
+  conventions) can steer probability, gate, range, generations, velocity and
+  seed, and a Conductor reset restarts the pattern at the next bar line.
+- `Markov`: a Markov-chain melody. The state is the pitch class above the root
+  and a 12 x 12 matrix of weights (0-8) gives, for each state, how likely each
+  state is to come next. Notes outside the chosen scale are zeroed before
+  sampling, Chaos is an exponent `2^(1 - 2c)` on the weights (so 50% is the
+  matrix as drawn), and an empty row falls back to every allowed note. Each
+  phrase restarts the walk from the tonic, seeded by (seed, phrase), so a note
+  is a pure function of its position. The matrix can be filled from a style,
+  edited, or learned: transitions between successive note-ons on the input are
+  counted relative to the root (first order for every pair, second order for
+  every triple), and a Learned mix blends them in row by row where a row has data.
+  With Order 2 the next note is drawn from the learned second-order counts for
+  the last two notes when there are any, and from the ordinary row otherwise.
+  Each note takes the octave nearest the previous one inside the register.
 - `Lifeform`: Conway's Game of Life drives the MIDI output, advancing the grid
   one beat at a time and turning active cells into musical events.
 - `Luma`: an 8x8 Launchpad grid drives a small set of musical agents where
@@ -120,6 +149,25 @@ on its own.
   into a band-limited table; the filter mode factors the roots into biquads and
   crossfades old and new cascades when index or cutoff changes. Based on the
   original [pratt-synth](https://github.com/githubuser1983/pratt-synth).
+
+## Cellular automata
+
+Polymeter, DrumGen and Xoxolo share one piece of arithmetic
+(`include/downspout/cellular_automaton.hpp`): a row of cells, each on or off, is
+advanced by a Wolfram elementary rule. A cell's next state is bit
+`(left << 2) | (self << 1) | right` of the rule number, and the row wraps at its
+ends. Rule 90 turns a single hit into Sierpinski's triangle (1, 101, 10001,
+1010101); rule 30 is chaotic; 110 is busy but structured; 150 and 105 fill in
+densely. The generation to play is a pure function of the loop pass (the
+absolute step divided by the pattern length), so playback, restarts and offline
+renders agree, and after 64 generations the row returns to its start.
+
+The three plugins differ in what the row means. Polymeter seeds each lane from a
+random row of density Pulses/Length. DrumGen and Xoxolo seed from the lane's own
+hits, with the pattern as generation 0, so the first pass is always what was
+generated or programmed; a lane with no hits stays silent, and in DrumGen new hits
+take the lane's average velocity while surviving hits keep theirs. Only what is
+played changes, never the stored pattern.
 
 ## How the site treats these methods
 

@@ -45,7 +45,8 @@ std::string serializeParameters(const Parameters& p)
            "track="       + std::to_string(p.track)       + "\n"
            "cc_cutoff="   + std::to_string(p.ccCutoff)    + "\n"
            "cc_scream="   + std::to_string(p.ccScream)    + "\n"
-           "cc_channel="  + std::to_string(p.ccChannel)   + "\n";
+           "cc_channel="  + std::to_string(p.ccChannel)   + "\n"
+           "morph="       + std::to_string(p.morph)       + "\n";
 }
 
 std::optional<Parameters> deserializeParameters(const std::string& text)
@@ -71,6 +72,7 @@ std::optional<Parameters> deserializeParameters(const std::string& text)
         else if (key == "cc_cutoff"   && parseFloat(value, v)) { p.ccCutoff   = v; }
         else if (key == "cc_scream"   && parseFloat(value, v)) { p.ccScream   = v; }
         else if (key == "cc_channel"  && parseFloat(value, v)) { p.ccChannel  = v; }
+        else if (key == "morph"       && parseFloat(value, v)) { p.morph      = v; }
         else { continue; }  // unknown keys are ignored for forward compatibility
     }
     return clampParameters(p);

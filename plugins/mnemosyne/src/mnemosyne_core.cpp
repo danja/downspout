@@ -30,7 +30,8 @@ MidiBlock process(State&s,const std::array<float,kParameterCount>&p,const Transp
  if(serial!=s.phraseSerial){commit(s);release(s,out,0,ch);s.phraseSerial=serial;}
  for(std::uint32_t i=0;i<inputCount;++i){
   const auto&e=input[i];if(iv(p,kPassInput)!=0&&out.count<out.events.size())out.events[out.count++]=e;
-  if(e.size<3)continue;const int kind=e.data[0]&0xf0,note=e.data[1]&127;const bool on=kind==0x90&&e.data[2]>0;
+  if(e.size<3)continue;
+  const int kind=e.data[0]&0xf0,note=e.data[1]&127;const bool on=kind==0x90&&e.data[2]>0;
   const double q=start+std::min(e.frame,frames-1u)*qpf;const int step=std::clamp(static_cast<int>(std::floor(std::fmod(std::max(0.0,q),phraseLen)/phraseLen*16.0)),0,15);
   if(on&&s.capture.count<kEventCapacity){const int idx=s.capture.count++;s.capture.notes[static_cast<std::size_t>(idx)]={static_cast<std::uint8_t>(note),e.data[2],static_cast<std::uint8_t>(step),1};s.captureIndex[static_cast<std::size_t>(note)]=idx;}
   else if(!on&&s.captureIndex[static_cast<std::size_t>(note)]>=0){auto&n=s.capture.notes[static_cast<std::size_t>(s.captureIndex[static_cast<std::size_t>(note)])];n.duration=static_cast<std::uint8_t>(std::clamp(step-static_cast<int>(n.step),1,15));s.captureIndex[static_cast<std::size_t>(note)]=-1;}

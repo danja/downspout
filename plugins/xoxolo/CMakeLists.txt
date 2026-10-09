@@ -1,4 +1,5 @@
 add_library(downspout_xoxolo_core STATIC
+    src/xoxolo_automaton.cpp
     src/xoxolo_engine.cpp
     src/xoxolo_generator.cpp
     src/xoxolo_serialization.cpp

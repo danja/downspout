@@ -75,6 +75,7 @@ option(DOWNSPOUT_BUILD_PLANK "Configure the Plank string synth instrument target
 option(DOWNSPOUT_BUILD_PRATT "Configure the Pratt number-theoretic synth and filter target" ON)
 option(DOWNSPOUT_BUILD_RETUNE "Configure the Retune Scala microtuning MIDI effect target" ON)
 option(DOWNSPOUT_BUILD_SPROUT "Configure the Sprout L-system MIDI generator target" ON)
+option(DOWNSPOUT_BUILD_MARKOV "Configure the Markov melody generator target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 option(DOWNSPOUT_BUILD_SCREENSHOT_APPS "Build DPF standalone apps for documentation screenshots" OFF)
 
@@ -92,6 +93,24 @@ target_include_directories(downspout-project-options INTERFACE
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 target_compile_features(downspout-project-options INTERFACE cxx_std_20)
+
+# Warnings on Downspout's own targets (DPF and other vendored code do not link
+# this target, so they are unaffected). Not -Werror by default: set
+# DOWNSPOUT_WARNINGS_AS_ERRORS=ON to make a new warning fail the build.
+option(DOWNSPOUT_WARNINGS_AS_ERRORS "Treat warnings in Downspout targets as errors" OFF)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(downspout-project-options INTERFACE -Wall -Wextra)
+    if(DOWNSPOUT_WARNINGS_AS_ERRORS)
+        target_compile_options(downspout-project-options INTERFACE -Werror)
+    endif()
+endif()
+# GCC 12 and 13 report bogus -Warray-bounds from inside libstdc++'s std::sort on
+# the small fixed-size arrays used for chords and phrase steps (indices such as
+# [9, 192153584101141163] against a 1-element object). The element counts are
+# bounded by construction, so silence it rather than contort the call sites.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14)
+    target_compile_options(downspout-project-options INTERFACE -Wno-array-bounds)
+endif()
 
 set(DOWNSPOUT_DPF_DIR "")
 if(DEFINED DPF_ROOT AND EXISTS "${DPF_ROOT}/CMakeLists.txt")
@@ -169,6 +188,20 @@ endif()
 
 if(DOWNSPOUT_BUILD_LIGHTVERB)
     add_subdirectory(plugins/lightverb)
+endif()
+
+# Shared header-only code under include/downspout has its own suite here.
+if(BUILD_TESTING)
+    add_executable(downspout_cellular_automaton_tests tests/cellular_automaton_tests.cpp)
+    target_link_libraries(downspout_cellular_automaton_tests PRIVATE downspout-project-options)
+    # Release adds -DNDEBUG, which compiles every assert() out and lets the
+    # suite pass while testing nothing.
+    if(MSVC)
+        target_compile_options(downspout_cellular_automaton_tests PRIVATE /UNDEBUG)
+    else()
+        target_compile_options(downspout_cellular_automaton_tests PRIVATE -UNDEBUG)
+    endif()
+    add_test(NAME downspout_cellular_automaton_tests COMMAND downspout_cellular_automaton_tests)
 endif()
 
 if(BUILD_TESTING AND TARGET downspout_mixgen_core AND TARGET downspout_t_mix_core
@@ -406,4 +439,8 @@ endif()
 
 if(DOWNSPOUT_BUILD_SPROUT)
     add_subdirectory(plugins/sprout)
+endif()
+
+if(DOWNSPOUT_BUILD_MARKOV)
+    add_subdirectory(plugins/markov)
 endif()

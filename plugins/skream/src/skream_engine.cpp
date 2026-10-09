@@ -174,6 +174,19 @@ static SvfCoeffs svfLP(float fc, float Q, double sampleRate) noexcept
     return { a1, a2, a3, 0.0f, 0.0f, 1.0f };
 }
 
+// LP -> HP morph of the same SVF. With weight t the output is (1-t)*LP + t*HP, which in
+// the Cytomic form is m0 = t, m1 = -k*t, m2 = 1 - 2t. t = 0 is exactly svfLP, t = 1 is
+// exactly svfHP, and t = 0.5 is a notch at the cutoff.
+static SvfCoeffs svfMorph(float fc, float Q, float t, double sampleRate) noexcept
+{
+    SvfCoeffs c = svfLP(fc, Q, sampleRate);
+    const float k = 1.0f / Q;
+    c.m0 = t;
+    c.m1 = -k * t;
+    c.m2 = 1.0f - 2.0f * t;
+    return c;
+}
+
 static SvfCoeffs svfHP(float fc, float Q, double sampleRate) noexcept
 {
     const float g  = std::tan(kPif * fc / static_cast<float>(sampleRate));
@@ -214,6 +227,7 @@ Parameters clampParameters(const Parameters& p) noexcept
     out.ccCutoff   = safe(p.ccCutoff,    0.0f, 127.0f,   0.0f);
     out.ccScream   = safe(p.ccScream,    0.0f, 127.0f,   0.0f);
     out.ccChannel  = safe(p.ccChannel,   1.0f,  16.0f,   1.0f);
+    out.morph      = safe(p.morph,    -100.0f, 100.0f,   0.0f);
     return out;
 }
 
@@ -265,8 +279,16 @@ void processBlock(EngineState&      state,
     const float hpQ          = lerpf(res, kSqrtHalf, kSqrt2);
     const float feedbackGain = dbToGain(lerpf(res, -18.0f, -6.0f));
 
+    // Shape morph: how far the forward filter has moved from low-pass towards high-pass.
+    // It follows the effective cutoff (panel or CC), so modulating the cutoff sweeps the
+    // shape as well as the frequency. 0 % leaves the filter a plain low-pass.
+    const float morphAmount = params.morph / 100.0f;
+    const float cutoffPos   = std::clamp(effectiveCutoff / 100.0f, 0.0f, 1.0f);
+    const float morphT      = morphAmount >= 0.0f ? morphAmount * cutoffPos
+                                                  : -morphAmount * (1.0f - cutoffPos);
+
     // SVF coefficients (constant per block)
-    const SvfCoeffs lpC = svfLP(lpHz, lpQ, sampleRate);
+    const SvfCoeffs lpC = svfMorph(lpHz, lpQ, morphT, sampleRate);
     const SvfCoeffs hpC = svfHP(hpHz, hpQ, sampleRate);
 
     // Feedback gate time constants (1-sample attack, 1ms release)

@@ -7,11 +7,13 @@
 
 dsp:xoxolo a trn:PluginProfile ;
     rdfs:label "Xoxolo" ;
-    rdfs:comment "Explicit x0x-style drum sequencer with 11 DrumKit-oriented lanes and patterns up to 32 steps." ;
+    rdfs:comment "Explicit x0x-style drum sequencer with 11 DrumKit-oriented lanes and patterns up to 32 steps. An optional cellular-automaton layer lets any lane evolve from its programmed pattern." ;
     trn:bundleName "xoxolo.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/xoxolo/> ;
     trn:role trn:MidiGenerator ;
+    trn:accepts trn:ControlMidi ;
+    trn:conductorChannelParam "conductor_ch" ;
     trn:produces trn:Midi, trn:DrumMidi ;
     trn:requires trn:HostTransport ;
     trn:recommendedBefore dsp:drumkit ;

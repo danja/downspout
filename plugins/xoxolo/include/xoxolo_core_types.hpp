@@ -111,11 +111,22 @@ struct Controls {
     int clearSerial = 0;
     int previewLane = 0;
     int previewSerial = 0;
+    // Cellular-automaton layer (xoxolo_automaton.hpp): rule index (0 = off) and how many passes a
+    // generation lasts. Appended; applies to the lanes marked "evolve" in the pattern.
+    int caRule = 0;
+    int caEvery = 1;
+    // Conductor (see handleMidi in xoxolo_engine.hpp): the channel to listen on (0 = off) and the three
+    // things its CCs drive. Appended; the defaults leave the pattern exactly as programmed.
+    int conductorCh = 0;
+    float density = 1.0f;  // hit probability; CC 21
+    float energy = 1.0f;   // velocity scale; CC 22
+    int caShift = 0;       // generations added to the evolve layer; CC 23 (not saved: it is performance state)
 };
 
 struct LaneState {
     std::int32_t midiNote = 0;
     std::array<std::uint8_t, kMaxSteps> steps {};
+    std::uint8_t evolve = 0;  // 1: this lane plays the automaton's generations instead of the grid
 };
 
 struct PatternState {
@@ -129,6 +140,13 @@ struct PatternState {
     std::int32_t totalSteps = kDefaultSteps;
     ::downspout::Meter meter {};
     std::array<LaneState, kLaneCount> lanes {};
+};
+
+// A MIDI message arriving on the plugin's input (the Conductor CCs).
+struct MidiInputEvent {
+    std::uint32_t frame = 0;
+    std::uint8_t size = 0;
+    std::array<std::uint8_t, 4> data {};
 };
 
 struct TransportSnapshot {

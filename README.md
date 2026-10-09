@@ -118,6 +118,7 @@ installed bundle.
 | [plank](plugins/plank/README.md) | `plank.vst3` | Instrument | Eight-string synthesizer derived from Plinky, with one voice per Launchpad grid column. |
 | [pratt](plugins/pratt/README.md) | `pratt.vst3` | Instrument/Audio effect | Number-theoretic synthesizer and filter built from Pratt polynomials: eleven GM voices, a stable all-pole Pratt filter with two cascading index controls, or both. |
 | [retune](plugins/retune/README.md) | `retune.vst3` | MIDI effect | Retunes any note stream to a Scala `.scl` scale with one pitch bend and one output channel per note, for synths with per-channel bend (MPE-style). |
+| [markov](plugins/markov/README.md) | `markov.vst3` | MIDI generator | Markov-chain melody generator: a random walk through a visible 12x12 transition matrix that you draw, fill from one of eight styles, or learn from a line you play; scale-masked, optional second order, repeatable from any position. |
 | [sprout](plugins/sprout/README.md) | `sprout.vst3` | MIDI generator | L-system melody generator: seven grammars (Plant, Koch, Dragon, Sierpinski, Cantor, Levy, Tree) rewritten per generation and played as a scale-quantised line, optionally growing one generation every N bars. |
 | [xoxolo](plugins/xoxolo/README.md) | `xoxolo.vst3` | MIDI generator | Simple x0x-style drum pattern editor with 11 drumkit lanes and a 32-step maximum. |
 | [Harmonic Atlas](plugins/harmonic-atlas/README.md) | `harmonic_atlas.vst3` | MIDI generator | Autonomous tonal, modal, chromatic-mediant, and neo-Riemannian-inspired harmony. |
@@ -166,6 +167,9 @@ while deeper pickup, phrase-ending, and folk-idiom behavior remains future work.
 
 ## Reference Docs
 
+- [docs/pages/plugins-summary.md](docs/pages/plugins-summary.md): dense per-plugin
+  capability reference for automated agents (ports, MIDI roles, CC maps, wiring);
+  also published on the Pages site as "Reference".
 - [docs/process.md](docs/process.md): AI-assisted development workflow,
   instructions and skills, testing, builds, publishing, and definition of done.
 - [docs/architecture.md](docs/architecture.md): build graph, layering, state,

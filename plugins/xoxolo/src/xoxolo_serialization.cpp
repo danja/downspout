@@ -43,6 +43,9 @@ std::string serializePatternState(const PatternState& rawPattern)
         for (int step = 0; step < pattern.totalSteps; ++step)
             out << (laneState.steps[static_cast<std::size_t>(step)] != 0 ? '1' : '0');
         out << '\n';
+        // Only lanes that evolve are written, so a pattern that never uses it saves exactly as before.
+        if (laneState.evolve != 0)
+            out << "evolve=" << lane << ",1\n";
     }
 
     return out.str();
@@ -118,6 +121,17 @@ std::optional<PatternState> deserializePatternState(const std::string& text)
                 return std::nullopt;
             }
             pattern.lanes[static_cast<std::size_t>(lane)].midiNote = note;
+        } else if (key == "evolve") {
+            const std::size_t comma = value.find(',');
+            if (comma == std::string_view::npos)
+                return std::nullopt;
+            int lane = 0;
+            int flag = 0;
+            if (!parseInteger(value.substr(0, comma), lane) || !parseInteger(value.substr(comma + 1), flag) ||
+                lane < 0 || lane >= kLaneCount) {
+                return std::nullopt;
+            }
+            pattern.lanes[static_cast<std::size_t>(lane)].evolve = flag != 0 ? 1 : 0;
         } else if (key == "steps") {
             const std::size_t comma = value.find(',');
             if (comma == std::string_view::npos) {

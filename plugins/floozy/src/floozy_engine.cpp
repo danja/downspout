@@ -53,11 +53,6 @@ float outputGainFromParameter(const float value)
     return clampUnit(value) * 2.0f;
 }
 
-float expoMap(const float value, const float minimum, const float maximum)
-{
-    return minimum * std::pow(maximum / minimum, clampUnit(value));
-}
-
 int quantizedTuneSemitone(const float value)
 {
     return static_cast<int>(std::lround((clampUnit(value) - 0.5f) * 48.0f));

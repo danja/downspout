@@ -203,6 +203,14 @@ Progress as of 2026-05-27:
   change are broadcast to the pool, poly aftertouch follows its note, and incoming pitch
   bend and channel aftertouch are dropped. It has a deterministic core suite (also run
   under ASan/UBSan), a VST3 wrapper with a scale map UI, and awaits host validation;
+- `markov` now exists as an original Markov-chain melody generator: a random walk over the twelve
+  pitch classes through a 12 x 12 transition matrix that is drawn on screen and can be edited, filled
+  from one of eight styles, or learned from a melodic line on the MIDI input (first-order counts for
+  every pair, second-order counts for every triple). The scale masks the matrix, Chaos reshapes it, and
+  each phrase restarts the walk from the tonic so any position renders the same notes. It has a
+  deterministic core suite (also run under ASan/UBSan) including locate and block-size independence,
+  Conductor CC support, and a VST3 wrapper with a Magneto-look matrix editor; host validation is
+  pending;
 - `sprout` now exists as an original L-system MIDI generator: seven grammars (Plant,
   Koch, Dragon, Sierpinski, Cantor, Levy, Tree) are rewritten per generation, read
   as a turtle (F/G note, f rest, +/- degree, brackets branch) and played as a
@@ -279,7 +287,7 @@ Current main gap:
   `cadence.vst3`, `arpgen.vst3`, `counterpointer.vst3`, `sidecar.vst3`, `gremlin.vst3`,
   `gremlin_driver.vst3`, `ground.vst3`, `floozy.vst3`, `basilico.vst3`,
   `canticle.vst3`, `moka.vst3`, `luma.vst3`, `paunchlad.vst3`, `lifeform.vst3`,
-  `plank.vst3`, `pratt.vst3`, `retune.vst3`, `sprout.vst3`, and
+  `plank.vst3`, `pratt.vst3`, `retune.vst3`, `sprout.vst3`, `markov.vst3`, and
   `xoxolo.vst3`, `syrinx.vst3`, `tuney_vst.vst3`, `harmonic_atlas.vst3`,
   `conductor.vst3`, `drift.vst3`, `mnemosyne.vst3`, `polymeter.vst3`,
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,

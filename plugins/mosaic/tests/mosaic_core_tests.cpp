@@ -149,11 +149,65 @@ static void testReversePositionAtEnd()
     assert(foundReverse);
 }
 
+// ── per-channel pitch bend ───────────────────────────────────────────────────
+
+// Retune sends one note per channel with its own bend, so two simultaneous notes
+// on different channels must bend independently.
+static void testPitchBendIsPerChannel()
+{
+    auto p = defaultParams();
+    p[kMode] = 0;            // MIDI triggers only
+    p[kPitchRange] = 0;      // pitch follows the note, so bend is audible
+    p[kReverseChance] = 0;
+    p[kSliceSize] = 1;
+    Pool pool;
+    pool.samples[0] = makeSineSample(220.0, 48000.0, 5.0);
+
+    MidiEvent bend {}, plain {}, noteA {}, noteB {};
+    bend.size = 3;   bend.data = {0xE0, 127, 127, 0};   // channel 1 full bend up
+    plain.size = 3;  plain.data = {0xE1, 0, 64, 0};     // channel 2 centred
+    noteA.size = 3;  noteA.data = {0x90, 60, 100, 0};
+    noteB.size = 3;  noteB.data = {0x91, 60, 100, 0};
+    const MidiEvent start[4] = {bend, plain, noteA, noteB};
+
+    State st;
+    std::array<float, 256> l {}, r {};
+    process(st, p, {}, l.size(), 48000, &pool, start, 4, l.data(), r.data());
+
+    const Voice* a = nullptr;
+    const Voice* b = nullptr;
+    for (const Voice& v : st.voices)
+    {
+        if (!v.active) continue;
+        if (v.channel == 0) a = &v;
+        if (v.channel == 1) b = &v;
+    }
+    assert(a && b && "both channel voices should be active");
+
+    const double aBefore = a->position, bBefore = b->position;
+    process(st, p, {}, l.size(), 48000, &pool, nullptr, 0, l.data(), r.data());
+    const double aRate = (a->position - aBefore) / l.size();
+    const double bRate = (b->position - bBefore) / l.size();
+    assert(std::fabs(bRate - 1.0) < 1e-6 && "unbent channel should play at the note's rate");
+    assert(std::fabs(aRate - std::pow(2.0, 2.0 / 12.0)) < 1e-3 && "full bend up should raise by the bend range");
+
+    // Bending channel 2 down moves only channel 2.
+    MidiEvent down {};
+    down.size = 3;
+    down.data = {0xE1, 0, 0, 0};
+    const double a2 = a->position, b2 = b->position;
+    process(st, p, {}, l.size(), 48000, &pool, &down, 1, l.data(), r.data());
+    assert(std::fabs((a->position - a2) / l.size() - aRate) < 1e-3 && "bend on one channel should not move another");
+    assert(std::fabs((b->position - b2) / l.size() - std::pow(2.0, -2.0 / 12.0)) < 1e-3
+           && "full bend down should lower by the bend range");
+}
+
 int main()
 {
     testSmoke();
     testVoiceStartAtZeroCrossing();
     testForwardPositionMatchesStart();
     testReversePositionAtEnd();
+    testPitchBendIsPerChannel();
     return 0;
 }

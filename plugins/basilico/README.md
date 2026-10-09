@@ -35,3 +35,11 @@ wobble signal can start at a 0-360 degree cycle offset and can drive amplitude,
 filter cutoff pitch, and stereo phase/flange motion. `Squelch` is an acid-style
 macro over filter envelope, resonance, and drive. The DPF layer is
 intentionally thin and exposes one MIDI input with stereo audio output.
+
+**Pitch bend** is tracked per MIDI channel, so Basilico follows a per-channel
+retuner such as Retune. The bend of the channel the sounding note arrived on
+applies (default range 2 semitones, set per channel with RPN 0); a bend on any
+other channel is kept for that channel's next note. Basilico is monophonic, so
+only one note sounds at a time, and a bend on the sounding channel takes effect
+immediately rather than gliding. Notes are held per channel and note number, so
+releasing one falls back to the previous held note with its own bend.

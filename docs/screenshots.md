@@ -94,6 +94,7 @@ Current output filenames:
 - `pratt.png`
 - `retune.png`
 - `sprout.png`
+- `markov.png`
 - `syrinx.png`
 - `tuney-vst.png`
 - `voxmod.png`

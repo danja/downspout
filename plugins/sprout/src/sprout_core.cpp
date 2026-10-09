@@ -244,6 +244,126 @@ double gridQuarters(const int grid, const double barQuarters) noexcept
 
 void reset(State& s) noexcept { s = {}; }
 
+namespace {
+
+std::int64_t floorDiv(const std::int64_t a, const std::int64_t b) noexcept
+{
+    std::int64_t q = a / b;
+    if ((a % b != 0) && ((a < 0) != (b < 0))) --q;
+    return q;
+}
+
+// Linear 0-127 -> [min, max] for a parameter, with the spec's own clamping and rounding.
+float fromCc(const Param id, const std::uint8_t value) noexcept
+{
+    const ParamSpec& spec = kParameterSpecs[id];
+    const float t = static_cast<float>(std::min<int>(value, 127)) / 127.0f;
+    return downspout::generative::clampParam(spec.minimum + t * (spec.maximum - spec.minimum), spec);
+}
+
+void setSlot(std::array<bool, 128>& set, int& count, const int note, const bool on) noexcept
+{
+    auto& slot = set[static_cast<std::size_t>(note)];
+    if (slot == on) return;
+    slot = on;
+    count += on ? 1 : -1;
+}
+
+void clearHeld(State& s) noexcept
+{
+    s.held.fill(false);
+    s.heldCount = 0;
+}
+
+void clearAll(State& s) noexcept
+{
+    clearHeld(s);
+    s.down.fill(false);
+    s.downCount = 0;
+}
+
+void noteEvent(State& s, const int note, const bool on, const bool latch) noexcept
+{
+    if (note < 0 || note > 127) return;
+    if (on) {
+        // The first note after every key was released starts a new latched chord.
+        if (latch && s.downCount == 0) clearHeld(s);
+        setSlot(s.down, s.downCount, note, true);
+        setSlot(s.held, s.heldCount, note, true);
+    } else {
+        setSlot(s.down, s.downCount, note, false);
+        if (!latch) setSlot(s.held, s.heldCount, note, false);
+    }
+}
+
+}  // namespace
+
+void handleMidi(State& s, std::array<float, kParameterCount>& params, const MidiEvent* events, const std::uint32_t count) noexcept
+{
+    const bool latch = iv(params, kPitchSource) == kPitchLatched;
+    if (!latch && s.held != s.down) {
+        // Leaving Latched (or any other drift): the chord is just the keys that are down.
+        s.held = s.down;
+        s.heldCount = s.downCount;
+    }
+    if (events == nullptr) return;
+    for (std::uint32_t i = 0; i < count; ++i) {
+        const MidiEvent& e = events[i];
+        if (e.size < 2) continue;
+        const int kind = e.data[0] & 0xf0;
+        const int channel = (e.data[0] & 0x0f) + 1;
+        const std::uint8_t d1 = e.data[1] & 0x7f;
+        const std::uint8_t d2 = e.size > 2 ? static_cast<std::uint8_t>(e.data[2] & 0x7f) : 0;
+
+        const int inputChannel = iv(params, kInputChannel);
+        const bool noteChannel = inputChannel == 0 || channel == inputChannel;
+
+        if (kind == 0x90 || kind == 0x80) {
+            if (noteChannel) noteEvent(s, d1, kind == 0x90 && d2 > 0, latch);
+        } else if (kind == 0xb0) {
+            if (noteChannel && (d1 == 120 || d1 == 123)) clearAll(s);
+
+            const int ccChannel = iv(params, kCcChannel);
+            if (ccChannel > 0 && channel == ccChannel) {
+                switch (d1) {
+                case 1: params[kProbability] = fromCc(kProbability, d2); break;
+                case 2: params[kGate] = fromCc(kGate, d2); break;
+                case 3: params[kRange] = fromCc(kRange, d2); break;
+                case 4: params[kGenerations] = fromCc(kGenerations, d2); break;
+                default: break;
+                }
+            }
+
+            const int conductorChannel = iv(params, kConductorCh);
+            if (conductorChannel > 0 && channel == conductorChannel) {
+                switch (d1) {
+                case 21: params[kProbability] = fromCc(kProbability, d2); break;
+                case 22: params[kVelocity] = fromCc(kVelocity, d2); break;
+                case 23: params[kSeed] = fromCc(kSeed, d2); break;
+                case 24: if (d2 == 127) s.restartPending = true; break;
+                default: break;
+                }
+            }
+        }
+    }
+}
+
+int heldDegreeToNote(const State& s, const int degree) noexcept
+{
+    if (s.heldCount <= 0) return -1;
+    const std::int64_t n = s.heldCount;
+    const std::int64_t tone = floorDiv(static_cast<std::int64_t>(degree) * n, 7);
+    const std::int64_t octave = floorDiv(tone, n);
+    const auto index = static_cast<int>(tone - octave * n);
+    int seen = 0;
+    for (int note = 0; note < 128; ++note) {
+        if (!s.held[static_cast<std::size_t>(note)]) continue;
+        if (seen++ == index)
+            return static_cast<int>(std::clamp<std::int64_t>(note + 12 * octave, 0, 127));
+    }
+    return -1;
+}
+
 MidiBlock process(State& s, const std::array<float, kParameterCount>& p, const Transport& t, const std::uint32_t frames,
                   const double sampleRate) noexcept
 {
@@ -252,6 +372,9 @@ MidiBlock process(State& s, const std::array<float, kParameterCount>& p, const T
         release(s, out, 0);
         s.havePosition = false;
         s.lastStep = -1;
+        s.lastBar = -1;
+        s.restartPending = false;
+        s.restartStep = 0;
         return out;
     }
 
@@ -264,6 +387,9 @@ MidiBlock process(State& s, const std::array<float, kParameterCount>& p, const T
     if (downspout::generative::isDiscontinuity(s.havePosition, s.previousEnd, start)) {
         release(s, out, 0);
         s.lastStep = -1;
+        s.lastBar = -1;
+        s.restartPending = false;
+        s.restartStep = 0;
     }
 
     // A held note whose gate ends inside this block.
@@ -274,12 +400,12 @@ MidiBlock process(State& s, const std::array<float, kParameterCount>& p, const T
     double boundary = step * grid;
 
     const int preset = iv(p, kPreset);
-    const int generations = iv(p, kGenerations);
     const int growBars = iv(p, kGrowBars);
     const int stepSize = iv(p, kStepSize);
     const int range = iv(p, kRange);
     const int scale = iv(p, kScale);
     const int root = iv(p, kRoot);
+    const bool heldPitch = iv(p, kPitchSource) >= kPitchHeld;
     const int channel = iv(p, kChannel);
     const int baseVelocity = iv(p, kVelocity);
     const float probability = pv(p, kProbability);
@@ -291,14 +417,27 @@ MidiBlock process(State& s, const std::array<float, kParameterCount>& p, const T
         release(s, out, frame);
 
         const auto bar = static_cast<std::int64_t>(std::floor((boundary + 1e-8) / barQ));
-        const int wanted = generationAtBar(usableGeneration(preset, generations), growBars, bar);
+        // Once per bar: take in the generation count, and honour a pending restart.
+        bool restartNow = false;
+        if (bar != s.lastBar) {
+            s.lastBar = bar;
+            s.latchedGenerations = iv(p, kGenerations);
+            restartNow = s.restartPending;
+            s.restartPending = false;
+        }
+        const int wanted = generationAtBar(usableGeneration(preset, s.latchedGenerations), growBars, bar);
+        if (wanted != s.lastGeneration) {
+            s.lastGeneration = wanted;
+            s.restartStep = 0;  // a new generation restarts the pattern by itself
+        }
         const Sequence& seq = sequenceFor(preset, wanted);
         const auto total = static_cast<std::int64_t>(seq.steps.size());
         if (total > 0) {
             // The pattern restarts each time a new generation begins.
             const std::int64_t startBar = growBars > 0 ? static_cast<std::int64_t>(wanted - 1) * growBars : 0;
             const auto startStep = static_cast<std::int64_t>(std::llround(static_cast<double>(startBar) * barQ / grid));
-            std::int64_t pos = (step - startStep) % total;
+            if (restartNow) s.restartStep = step - startStep;
+            std::int64_t pos = (step - startStep - s.restartStep) % total;
             if (pos < 0) pos += total;
             const Step& cell = seq.steps[static_cast<std::size_t>(pos)];
             s.statusLength = static_cast<int>(total);
@@ -307,15 +446,17 @@ MidiBlock process(State& s, const std::array<float, kParameterCount>& p, const T
 
             if (cell.note && downspout::generative::randomUnit(seed, static_cast<std::uint64_t>(step)) <= probability) {
                 const int degree = foldDegree(cell.unit * stepSize, range);
-                const int note = degreeToNote(scale, root, degree);
-                const int velocity = std::clamp(baseVelocity - cell.depth * 10 + (pos == 0 ? 10 : 0), 1, 127);
-                out.push(frame, downspout::generative::status(true, channel), static_cast<std::uint8_t>(note),
-                         static_cast<std::uint8_t>(velocity));
-                s.activeNote = note;
-                s.activeChannel = channel;
-                s.offQuarter = boundary + grid * gate;
-                if (s.offQuarter < end)
-                    release(s, out, downspout::generative::frameAt(s.offQuarter, start, qpf, frames));
+                const int note = heldPitch ? heldDegreeToNote(s, degree) : degreeToNote(scale, root, degree);
+                if (note >= 0) {  // held-notes mode with nothing held is a rest
+                    const int velocity = std::clamp(baseVelocity - cell.depth * 10 + (pos == 0 ? 10 : 0), 1, 127);
+                    out.push(frame, downspout::generative::status(true, channel), static_cast<std::uint8_t>(note),
+                             static_cast<std::uint8_t>(velocity));
+                    s.activeNote = note;
+                    s.activeChannel = channel;
+                    s.offQuarter = boundary + grid * gate;
+                    if (s.offQuarter < end)
+                        release(s, out, downspout::generative::frameAt(s.offQuarter, start, qpf, frames));
+                }
             }
         }
         s.lastStep = step;

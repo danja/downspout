@@ -81,6 +81,7 @@ Downspout is a suite of VST3 plugins for autonomous music generation and process
 | [Syrinx](plugins/syrinx/) | Polyphonic avian vocal synthesizer using Mindlin-Laje ODE models | [profile.ttl](plugins/syrinx/profile.ttl) |
 | [Pratt](plugins/pratt/) | Number-theoretic synthesizer and filter: Pratt-polynomial voices, cascading Pratt filter, or both | [profile.ttl](plugins/pratt/profile.ttl) |
 | [Retune](plugins/retune/) | MIDI effect: retunes notes to a Scala `.scl` scale using per-note channels and pitch bend | [profile.ttl](plugins/retune/profile.ttl) |
+| [Markov](plugins/markov/) | MIDI generator: Markov-chain melody through a visible, editable, learnable transition matrix | [profile.ttl](plugins/markov/profile.ttl) |
 | [Sprout](plugins/sprout/) | MIDI generator: L-system grammars rewritten per generation and played as a melody, optionally growing over bars | [profile.ttl](plugins/sprout/profile.ttl) |
 | [Plank](plugins/plank/) | Eight-string synthesizer derived from Plinky, one voice per Launchpad column | [profile.ttl](plugins/plank/profile.ttl) |
 

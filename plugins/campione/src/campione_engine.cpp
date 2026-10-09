@@ -123,6 +123,7 @@ void activate(EngineState& state)
 {
     for (Voice& v : state.voices) v = {};
     state.frameCounter = 0;
+    state.channelBend.fill(0.0f);
 }
 
 void processBlock(EngineState& state,
@@ -139,6 +140,14 @@ void processBlock(EngineState& state,
 
     std::uint32_t midiIdx = 0;
 
+    // Playback-rate multiplier per channel, refreshed when a bend arrives.
+    std::array<double, 16> bendRatio {};
+    const auto updateBendRatio = [&](const std::size_t ch) {
+        bendRatio[ch] = std::pow(2.0, static_cast<double>(state.channelBend[ch])
+                                          * static_cast<double>(params.pitchBendRange) / 12.0);
+    };
+    for (std::size_t ch = 0; ch < bendRatio.size(); ++ch) updateBendRatio(ch);
+
     for (std::uint32_t f = 0; f < frames; ++f) {
         // Dispatch MIDI events for this frame
         while (midiIdx < midiCount && midiEvents[midiIdx].frame <= f) {
@@ -153,7 +162,15 @@ void processBlock(EngineState& state,
             const int globalCh = static_cast<int>(std::lround(params.midiChannel));
             if (globalCh > 0 && static_cast<int>(channel) != globalCh) continue;
 
-            if (status == 0x90u && vel > 0u) {  // note-on
+            if (status == 0xE0u) {  // pitch bend, 14-bit, centre 8192
+                if (ev.size >= 3) {
+                    const int value14 = static_cast<int>(note & 0x7Fu) | (static_cast<int>(vel & 0x7Fu) << 7);
+                    const auto ch = static_cast<std::size_t>(channel - 1);
+                    state.channelBend[ch] = std::clamp((static_cast<float>(value14) - 8192.0f) / 8192.0f,
+                                                       -1.0f, 1.0f);
+                    updateBendRatio(ch);
+                }
+            } else if (status == 0x90u && vel > 0u) {  // note-on
                 const int zoneIdx = findZone(zones, note, channel);
                 if (zoneIdx >= 0 && !zones[static_cast<std::size_t>(zoneIdx)].muted) {
                     const std::uint64_t now = state.frameCounter + f;
@@ -297,9 +314,10 @@ void processBlock(EngineState& state,
             if (audio.outputs[0]) audio.outputs[0][f] += outL * gain * panL;
             if (hasStereo && audio.outputs[1]) audio.outputs[1][f] += outR * gain * panR;
 
-            // Advance positions
-            v.position += v.playbackRate;
-            if (v.inCrossfade) v.crossfadePosition += v.playbackRate;
+            // Advance positions, following the pitch bend of the voice's channel
+            const double rate = v.playbackRate * bendRatio[static_cast<std::size_t>(v.midiChannel - 1)];
+            v.position += rate;
+            if (v.inCrossfade) v.crossfadePosition += rate;
 
             // Loop wrap
             if (loopValid && v.position >= static_cast<double>(zone.loopEnd)) {

@@ -38,6 +38,8 @@ enum ParameterIndex : uint32_t {
     kParamMetalAmount,
     kParamVary,
     kParamConductorChannel,
+    kParamCaRule,
+    kParamCaTarget,
     kParameterCount
 };
 
@@ -126,13 +128,24 @@ constexpr const char* kConductorChNames[] = {
     "9", "10", "11", "12", "13", "14", "15", "16"
 };
 
-constexpr std::array<SelectorDef, 7> kSelectors = {{
+constexpr const char* kCaRuleNames[] = {
+    "Off", "Rule 30", "Rule 90", "Rule 110", "Rule 150", "Rule 18",
+    "Rule 54", "Rule 60", "Rule 22", "Rule 105", "Rule 126"
+};
+
+constexpr const char* kCaTargetNames[] = {
+    "Hats", "Percussion", "Toms", "Hats + perc + toms", "All lanes"
+};
+
+constexpr std::array<SelectorDef, 9> kSelectors = {{
     {kParamGenre, "Genre", kGenreNames, 17, 0},
     {kParamStyleMode, "Style", kStyleNames, 7, 0},
     {kParamKitMap, "Kit Map", kKitMapNames, 2, 0},
     {kParamResolution, "Resolution", kResolutionNames, 4, 0},
     {kParamBars, "Bars", kBarNames, 4, 1},
     {kParamChannel, "Channel", kChannelNames, 16, 1},
+    {kParamCaRule, "Automaton rule", kCaRuleNames, 11, 0},
+    {kParamCaTarget, "Automaton plays on", kCaTargetNames, 5, 0},
     {kParamConductorChannel, "Conductor Ch", kConductorChNames, 17, 0},
 }};
 
@@ -502,6 +515,14 @@ private:
 
         float cy = y + 48.0f;
         for (std::size_t i = 0; i < kSelectors.size(); ++i) {
+            if (i == kSelectors.size() - 3) {
+                cy += 4.0f;
+                fontSize(11.0f);
+                textAlign(ALIGN_LEFT | ALIGN_TOP);
+                fillColor(150, 190, 160, 200);
+                text(x + 20.0f, cy, "Automaton \xc2\xb7 evolves each loop from the pattern", nullptr);
+                cy += 14.0f;
+            }
             if (i == kSelectors.size() - 1) {
                 cy += 4.0f;
                 fontSize(11.0f);

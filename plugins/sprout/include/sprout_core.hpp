@@ -10,6 +10,7 @@
 namespace downspout::sprout {
 
 using downspout::generative::MidiBlock;
+using downspout::generative::MidiEvent;
 using downspout::generative::ParamSpec;
 using downspout::generative::Transport;
 
@@ -45,6 +46,11 @@ enum Param : std::uint32_t {
     kStatusLength,
     kStatusGeneration,
     kStatusStep,
+    // Appended (after the status outputs) so saved projects keep their meaning.
+    kPitchSource,    // 0 = Scale (the original behaviour), 1 = held notes, 2 = latched notes (MIDI input)
+    kInputChannel,   // channel whose notes count as held; 0 = all
+    kCcChannel,      // channel listened to for the Drift CC set (CC 1-4); 0 = off
+    kConductorCh,    // channel listened to for the Conductor CC set (CC 21-24); 0 = off
     kParameterCount
 };
 
@@ -65,7 +71,15 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs {{
     {"status_length", "Pattern steps", 0, static_cast<float>(kMaxSymbols), 0, true, true},
     {"status_generation", "Generation", 0, kMaxGeneration, 0, true, true},
     {"status_step", "Current step", 0, static_cast<float>(kMaxSymbols), 0, true, true},
+    {"pitch_source", "Pitch source", 0, 2, 0, true},
+    {"input_channel", "Input channel", 0, 16, 0, true},
+    {"cc_channel", "CC channel", 0, 16, 0, true},
+    {"conductor_ch", "Conductor ch", 0, 16, 0, true},
 }};
+
+inline constexpr int kPitchScale = 0;
+inline constexpr int kPitchHeld = 1;     // the notes held down right now
+inline constexpr int kPitchLatched = 2;  // like held, but the chord stays after the keys are released
 
 // One time step of a pattern. `unit` is the turtle's pitch in +/- units (the
 // Step size control scales it to scale degrees), `depth` is the bracket nesting.
@@ -117,6 +131,23 @@ int usableGeneration(int preset, int generations) noexcept;
 int generationAtBar(int generations, int growBars, std::int64_t bar) noexcept;
 
 struct State {
+    // The chord the pitch source plays (on the Input channel). In Held mode it is the keys down
+    // now. In Latched mode it survives note-off: it is replaced by the first note pressed after
+    // every key was released, like an arpeggiator's latch.
+    std::array<bool, 128> held {};
+    int heldCount = 0;
+    // Keys physically down, so a fresh press can be told from a note added to a chord.
+    std::array<bool, 128> down {};
+    int downCount = 0;
+    // Bar the previous step fell in; the generation count is latched once per bar so a
+    // change (panel, automation or CC) takes effect on a bar line.
+    std::int64_t lastBar = -1;
+    int latchedGenerations = 0;
+    int lastGeneration = -1;
+    // Conductor CC 24 asks for a restart at the next bar line; restartStep then offsets the
+    // pattern so that bar begins at its first step.
+    bool restartPending = false;
+    std::int64_t restartStep = 0;
     int activeNote = -1;
     int activeChannel = 1;
     double offQuarter = 0.0;
@@ -129,6 +160,22 @@ struct State {
 };
 
 void reset(State&) noexcept;
+
+// Applies a block's incoming MIDI before process(): tracks held notes, and turns the two CC
+// sets into parameter writes on `params` (which the caller owns and which the host then
+// sees). Both CC sets are off until their channel parameter is non-zero.
+//   CC channel   (Drift convention): CC 1 Probability, 2 Gate, 3 Range, 4 Generations.
+//   Conductor ch: CC 21 Probability, 22 Velocity, 23 Seed, 24 = 127 restarts the pattern at the
+//                 next bar line. CC 20 (Scene) is not used.
+// Events are applied at the start of the block, so a note or CC takes effect on the first
+// step that starts in that block or later.
+void handleMidi(State& s, std::array<float, kParameterCount>& params, const MidiEvent* events,
+                std::uint32_t count) noexcept;
+
+// The note for a scale degree when the pitch source is the held notes: degree 0 is the lowest
+// held note and degrees are spread across the held tones (about seven degrees per octave, so
+// Range spans a similar number of octaves whatever the chord size). -1 when nothing is held.
+int heldDegreeToNote(const State& s, int degree) noexcept;
 
 MidiBlock process(State&, const std::array<float, kParameterCount>&, const Transport&, std::uint32_t frames,
                   double sampleRate) noexcept;

@@ -104,6 +104,10 @@ struct Controls {
     int actionNew = 0;
     int actionMutate = 0;
     int actionFill = 0;
+    // Cellular-automaton layer (see drumgen_automaton.hpp). Index into kCaRules; 0 = off. Appended
+    // so saved controls keep their meaning, and not part of pattern generation.
+    int caRule = 0;
+    int caTarget = 0;
 };
 
 struct DrumStepCell {

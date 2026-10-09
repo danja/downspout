@@ -13,6 +13,11 @@ enum ParameterIndex : std::uint32_t {
     kParamPreviewLane,
     kParamPreview,
     kParamCurrentStep,
+    kParamCaRule,   // appended: indices above are saved in projects
+    kParamCaEvery,
+    kParamConductorCh,  // appended: Conductor channel (0 = off) and the two controls its CCs drive
+    kParamDensity,
+    kParamEnergy,
     kParameterCount
 };
 

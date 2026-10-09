@@ -28,6 +28,7 @@ struct Event {
     long long frame;
     int status, d1, d2;
     bool operator<(const Event& o) const { return std::tie(frame, status, d1, d2) < std::tie(o.frame, o.status, o.d1, o.d2); }
+    bool operator==(const Event& o) const { return std::tie(frame, status, d1, d2) == std::tie(o.frame, o.status, o.d1, o.d2); }
 };
 
 // Runs `bars` bars at 120 bpm in blocks of `block` frames at 48 kHz.
@@ -392,8 +393,395 @@ void testDeepGenerations()
 
 }  // namespace
 
+
+// ---- MIDI input: held-note pitch source, CC sets, restart ----------------------------------
+
+constexpr long long kBarFrames = 96000;  // one 4/4 bar at 120 bpm, 48 kHz
+
+struct BlockTrace {
+    long long pos;
+    int step;
+    int generation;
+};
+
+// Like run(), but calls `hook(pos, params, state)` before each block so a test can inject MIDI
+// (via handleMidi) or change parameters at an exact position, and records where the pattern is.
+template <typename Hook>
+std::vector<Event> runWith(Params p, const int bars, const std::uint32_t block, State& state, Hook hook,
+                           std::vector<BlockTrace>* trace = nullptr)
+{
+    constexpr double sr = 48000.0;
+    constexpr double bpm = 120.0;
+    const long long total = static_cast<long long>(bars) * kBarFrames;
+    std::vector<Event> events;
+    for (long long pos = 0; pos < total; pos += block) {
+        hook(pos, p, state);
+        const double quarter = static_cast<double>(pos) / sr * bpm / 60.0;
+        downspout::generative::Transport t;
+        t.valid = true;
+        t.playing = true;
+        t.bpm = bpm;
+        t.bar = std::floor(quarter / 4.0);
+        t.barBeat = quarter - t.bar * 4.0;
+        const auto out = process(state, p, t, block, sr);
+        for (std::uint32_t i = 0; i < out.count; ++i)
+            events.push_back({pos + out.events[i].frame, out.events[i].data[0], out.events[i].data[1], out.events[i].data[2]});
+        if (trace != nullptr) trace->push_back({pos, state.statusStep, state.statusGeneration});
+    }
+    return events;
+}
+
+void send(State& s, Params& p, const int status, const int d1, const int d2)
+{
+    downspout::generative::MidiEvent e;
+    e.size = 3;
+    e.data = {static_cast<std::uint8_t>(status), static_cast<std::uint8_t>(d1), static_cast<std::uint8_t>(d2), 0};
+    handleMidi(s, p, &e, 1);
+}
+
+std::vector<int> noteOns(const std::vector<Event>& events)
+{
+    std::vector<int> notes;
+    for (const Event& e : events)
+        if ((e.status & 0xf0) == 0x90 && e.d2 > 0) notes.push_back(e.d1);
+    return notes;
+}
+
+void testHeldNotePitchSource()
+{
+    prepare();
+    Params p = defaults();
+    p[kPreset] = 5;  // Levy wanders widely at generation 5 (Cantor stays on one pitch)
+    p[kGenerations] = 5;
+    p[kPitchSource] = kPitchHeld;
+
+    // A held C major triad: every note Sprout plays is a chord tone, in several octaves.
+    State s;
+    const auto events = runWith(p, 2, 1000, s, [](long long pos, Params& q, State& st) {
+        if (pos == 0) {
+            send(st, q, 0x90, 60, 100);
+            send(st, q, 0x90, 64, 100);
+            send(st, q, 0x90, 67, 100);
+        }
+    });
+    const auto notes = noteOns(events);
+    assert(notes.size() > 4);
+    int lowest = 127, highest = 0;
+    for (const int n : notes) {
+        const int pc = n % 12;
+        assert(pc == 0 || pc == 4 || pc == 7);
+        lowest = std::min(lowest, n);
+        highest = std::max(highest, n);
+    }
+    assert(highest - lowest >= 12);  // the contour spans octaves, not just the triad
+
+    // With nothing held it rests; the scale is NOT used as a fallback.
+    State silent;
+    assert(noteOns(runWith(p, 2, 1000, silent, [](long long, Params&, State&) {})).empty());
+
+    // Notes arriving later start the line: nothing in bar 0, notes in bar 1.
+    State late;
+    const auto lateEvents = runWith(p, 2, 1000, late, [](long long pos, Params& q, State& st) {
+        if (pos == kBarFrames) send(st, q, 0x90, 60, 100);
+    });
+    assert(!noteOns(lateEvents).empty());
+    for (const Event& e : lateEvents) assert(e.frame >= kBarFrames);
+}
+
+void testScaleSourceIgnoresHeldNotes()
+{
+    prepare();
+    Params p = defaults();
+    p[kPreset] = 1;
+    p[kGenerations] = 3;
+    State plain;
+    const auto without = runWith(p, 2, 1000, plain, [](long long, Params&, State&) {});
+    State withNotes;
+    const auto with = runWith(p, 2, 1000, withNotes, [](long long pos, Params& q, State& st) {
+        if (pos == 0) {
+            send(st, q, 0x90, 40, 100);
+            send(st, q, 0x90, 47, 100);
+        }
+    });
+    assert(!without.empty());
+    assert(std::set<Event>(without.begin(), without.end()) == std::set<Event>(with.begin(), with.end()));
+}
+
+void testHeldNoteTrackingAndChannel()
+{
+    Params p = defaults();
+    State s;
+    send(s, p, 0x90, 60, 100);
+    send(s, p, 0x90, 64, 100);
+    assert(s.heldCount == 2);
+    send(s, p, 0x90, 64, 100);  // a repeated note-on does not count twice
+    assert(s.heldCount == 2);
+    send(s, p, 0x80, 64, 0);
+    assert(s.heldCount == 1);
+    send(s, p, 0x90, 67, 0);  // velocity 0 is a note-off
+    assert(s.heldCount == 1);
+    send(s, p, 0x90, 60, 0);
+    assert(s.heldCount == 0);
+    send(s, p, 0x90, 60, 100);
+    send(s, p, 0x90, 62, 100);
+    send(s, p, 0xb0, 123, 0);  // all notes off
+    assert(s.heldCount == 0);
+
+    // Input channel filter: only channel 2 counts.
+    p[kInputChannel] = 2;
+    send(s, p, 0x90, 60, 100);  // channel 1
+    assert(s.heldCount == 0);
+    send(s, p, 0x91, 60, 100);  // channel 2
+    assert(s.heldCount == 1);
+    send(s, p, 0xb0, 123, 0);   // channel 1 all-notes-off must not clear channel 2
+    assert(s.heldCount == 1);
+    send(s, p, 0xb1, 123, 0);
+    assert(s.heldCount == 0);
+
+    // Degree mapping: degree 0 is the lowest held note, and it wraps by octaves.
+    State chord;
+    Params q = defaults();
+    send(chord, q, 0x90, 67, 100);
+    send(chord, q, 0x90, 60, 100);
+    send(chord, q, 0x90, 64, 100);
+    assert(heldDegreeToNote(chord, 0) == 60);
+    assert(heldDegreeToNote(chord, 7) == 72);    // seven degrees up is the next octave
+    assert(heldDegreeToNote(chord, -7) == 48);
+    assert(heldDegreeToNote(chord, 3) == 64);    // 3 triad tones spread across 7 degrees
+    assert(heldDegreeToNote(chord, 5) == 67);
+    State none;
+    assert(heldDegreeToNote(none, 0) == -1);
+}
+
+void testDriftCcSet()
+{
+    State s;
+    Params p = defaults();
+
+    // Off by default: CC on any channel is ignored.
+    send(s, p, 0xb0, 1, 0);
+    assert(std::fabs(p[kProbability] - 1.0f) < 1e-6f);
+
+    p[kCcChannel] = 3;
+    send(s, p, 0xb2, 1, 0);      // channel 3: CC 1 -> Probability 0
+    assert(std::fabs(p[kProbability]) < 1e-6f);
+    send(s, p, 0xb2, 1, 127);
+    assert(std::fabs(p[kProbability] - 1.0f) < 1e-6f);
+    send(s, p, 0xb2, 1, 64);
+    assert(std::fabs(p[kProbability] - 64.0f / 127.0f) < 1e-5f);
+
+    send(s, p, 0xb0, 1, 0);      // channel 1 is not the CC channel
+    assert(std::fabs(p[kProbability] - 64.0f / 127.0f) < 1e-5f);
+
+    send(s, p, 0xb2, 2, 0);      // Gate spans 0.1 .. 1.0
+    assert(std::fabs(p[kGate] - 0.1f) < 1e-6f);
+    send(s, p, 0xb2, 2, 127);
+    assert(std::fabs(p[kGate] - 1.0f) < 1e-6f);
+    send(s, p, 0xb2, 3, 0);      // Range 3 .. 28, integer
+    assert(p[kRange] == 3.0f);
+    send(s, p, 0xb2, 3, 127);
+    assert(p[kRange] == 28.0f);
+    send(s, p, 0xb2, 4, 0);      // Generations 1 .. 16
+    assert(p[kGenerations] == 1.0f);
+    send(s, p, 0xb2, 4, 127);
+    assert(p[kGenerations] == 16.0f);
+
+    // Unmapped CCs and the Conductor CCs do nothing on this channel set.
+    const Params before = p;
+    send(s, p, 0xb2, 21, 0);
+    send(s, p, 0xb2, 7, 0);
+    assert(p == before);
+}
+
+void testConductorCcSet()
+{
+    State s;
+    Params p = defaults();
+    send(s, p, 0xbf, 21, 0);     // off until Conductor ch is set
+    assert(std::fabs(p[kProbability] - 1.0f) < 1e-6f);
+
+    p[kConductorCh] = 16;
+    send(s, p, 0xbf, 21, 30);    // Density -> Probability
+    assert(std::fabs(p[kProbability] - 30.0f / 127.0f) < 1e-5f);
+    send(s, p, 0xbf, 22, 127);   // Energy -> Velocity
+    assert(p[kVelocity] == 127.0f);
+    send(s, p, 0xbf, 22, 0);
+    assert(p[kVelocity] == 1.0f);
+    send(s, p, 0xbf, 23, 0);     // Mutation -> Seed
+    assert(p[kSeed] == 1.0f);
+    send(s, p, 0xbf, 23, 127);
+    assert(p[kSeed] == 65535.0f);
+    send(s, p, 0xbf, 20, 64);    // Scene is unused
+    send(s, p, 0xb0, 21, 5);     // wrong channel
+    assert(std::fabs(p[kProbability] - 30.0f / 127.0f) < 1e-5f);
+
+    assert(!s.restartPending);
+    send(s, p, 0xbf, 24, 100);   // only 127 restarts
+    assert(!s.restartPending);
+    send(s, p, 0xbf, 24, 127);
+    assert(s.restartPending);
+}
+
+void testConductorRestartAtNextBar()
+{
+    prepare();
+    Params p = defaults();
+    p[kPreset] = 4;       // Cantor: 81 steps at generation 4, so bar 1 starts mid-pattern
+    p[kGenerations] = 4;
+    p[kConductorCh] = 16;
+
+    State baseline;
+    std::vector<BlockTrace> base;
+    runWith(p, 3, 1000, baseline, [](long long, Params&, State&) {}, &base);
+    const auto stepAt = [](const std::vector<BlockTrace>& t, const long long pos) {
+        for (const BlockTrace& b : t)
+            if (b.pos == pos) return b.step;
+        return -1;
+    };
+    assert(stepAt(base, kBarFrames) == 16);  // the pattern simply runs on: 16 steps per bar
+
+    // CC 24 = 127 during bar 0: bar 1 starts the pattern again from its first step.
+    State s;
+    std::vector<BlockTrace> trace;
+    runWith(p, 3, 1000, s, [](long long pos, Params& q, State& st) {
+        if (pos == 40000) send(st, q, 0xbf, 24, 127);
+    }, &trace);
+    assert(stepAt(trace, 39000) == stepAt(base, 39000));  // nothing changes before the bar line
+    assert(stepAt(trace, kBarFrames) == 0);
+    assert(stepAt(trace, kBarFrames + 6000) == 1);
+    assert(stepAt(trace, 2 * kBarFrames) == 16);          // one restart only, not a loop
+
+    // A restart that never reached a bar line is dropped when the transport stops.
+    State stopped;
+    Params q = p;
+    send(stopped, q, 0xbf, 24, 127);
+    downspout::generative::Transport stoppedT;
+    stoppedT.valid = true;
+    stoppedT.playing = false;
+    (void)process(stopped, q, stoppedT, 1000, 48000.0);
+    assert(!stopped.restartPending);
+}
+
+void testGenerationChangeLandsOnBarLine()
+{
+    prepare();
+    Params p = defaults();
+    p[kPreset] = 4;
+    p[kGenerations] = 2;
+    State s;
+    std::vector<BlockTrace> trace;
+    runWith(p, 3, 1000, s, [](long long pos, Params& q, State&) {
+        if (pos == 50000) q[kGenerations] = 4;  // mid-bar 0
+    }, &trace);
+    const auto generationAt = [&](const long long pos) {
+        for (const BlockTrace& b : trace)
+            if (b.pos == pos) return b.generation;
+        return -1;
+    };
+    assert(generationAt(60000) == 2);               // still bar 0: not yet applied
+    assert(generationAt(kBarFrames - 1000) == 2);
+    assert(generationAt(kBarFrames + 6000) == 4);   // bar 1: applied on the bar line
+}
+
+void testMidiInputIsOffByDefault()
+{
+    // The new parameters default to the original behaviour.
+    const Params p = defaults();
+    assert(p[kPitchSource] == 0.0f);
+    assert(p[kInputChannel] == 0.0f);
+    assert(p[kCcChannel] == 0.0f);
+    assert(p[kConductorCh] == 0.0f);
+}
+
+void testLatchedPitchSource()
+{
+    prepare();
+    Params p = defaults();
+    p[kPitchSource] = kPitchLatched;
+    State s;
+
+    send(s, p, 0x90, 60, 100);
+    send(s, p, 0x90, 64, 100);
+    assert(s.heldCount == 2);
+    send(s, p, 0x80, 60, 0);
+    send(s, p, 0x80, 64, 0);
+    assert(s.heldCount == 2 && s.downCount == 0);  // the chord survives the release
+
+    send(s, p, 0x90, 67, 100);                     // a fresh press replaces it...
+    assert(s.heldCount == 1 && heldDegreeToNote(s, 0) == 67);
+    send(s, p, 0x90, 71, 100);                     // ...but notes added while a key is down join it
+    assert(s.heldCount == 2);
+    send(s, p, 0x80, 67, 0);
+    send(s, p, 0x80, 71, 0);
+    send(s, p, 0x90, 71, 0);                       // note-on velocity 0 is a note-off too
+    assert(s.heldCount == 2);
+
+    send(s, p, 0xb0, 123, 0);                      // all notes off is a real panic: it clears the latch
+    assert(s.heldCount == 0 && s.downCount == 0);
+
+    // Leaving Latched drops the latched chord (no key is down), without waiting for a note-off.
+    send(s, p, 0x90, 60, 100);
+    send(s, p, 0x80, 60, 0);
+    assert(s.heldCount == 1);
+    p[kPitchSource] = kPitchHeld;
+    handleMidi(s, p, nullptr, 0);
+    assert(s.heldCount == 0);
+
+    // Held mode is unchanged: the chord is just the keys down.
+    send(s, p, 0x90, 60, 100);
+    send(s, p, 0x80, 60, 0);
+    assert(s.heldCount == 0);
+
+    // It plays on after the keys are gone: notes in bar 1 although every key was released in bar 0.
+    Params q = defaults();
+    q[kPreset] = 5;
+    q[kGenerations] = 5;
+    q[kPitchSource] = kPitchLatched;
+    State chord;
+    const auto events = runWith(q, 2, 1000, chord, [](long long pos, Params& r, State& st) {
+        if (pos == 0) {
+            send(st, r, 0x90, 60, 100);
+            send(st, r, 0x90, 64, 100);
+            send(st, r, 0x90, 67, 100);
+        }
+        if (pos == 20000) {
+            send(st, r, 0x80, 60, 0);
+            send(st, r, 0x80, 64, 0);
+            send(st, r, 0x80, 67, 0);
+        }
+    });
+    int inSecondBar = 0;
+    for (const Event& e : events) {
+        if ((e.status & 0xf0) != 0x90 || e.d2 == 0) continue;
+        const int pc = e.d1 % 12;
+        assert(pc == 0 || pc == 4 || pc == 7);
+        if (e.frame >= kBarFrames) ++inSecondBar;
+    }
+    assert(inSecondBar > 0);
+
+    // The same keys in Held mode go quiet once released.
+    Params r2 = q;
+    r2[kPitchSource] = kPitchHeld;
+    State gone;
+    const auto goneEvents = runWith(r2, 2, 1000, gone, [](long long pos, Params& r, State& st) {
+        if (pos == 0) send(st, r, 0x90, 60, 100);
+        if (pos == 20000) send(st, r, 0x80, 60, 0);
+    });
+    for (const Event& e : goneEvents)
+        if ((e.status & 0xf0) == 0x90 && e.d2 > 0) assert(e.frame < 20000 + 1000);
+}
+
 int main()
 {
+    testMidiInputIsOffByDefault();
+    testHeldNotePitchSource();
+    testScaleSourceIgnoresHeldNotes();
+    testHeldNoteTrackingAndChannel();
+    testLatchedPitchSource();
+    testDriftCcSet();
+    testConductorCcSet();
+    testConductorRestartAtNextBar();
+    testGenerationChangeLandsOnBarLine();
     testExpansions();
     testTurtleInterpretation();
     testSizeCapAndFallback();

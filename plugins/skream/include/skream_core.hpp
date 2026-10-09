@@ -38,6 +38,11 @@ struct Parameters {
     float ccCutoff   =  1.0f;   // 0-127 CC# for cutoff (0 = off); default 1 = Drift lane 1
     float ccScream   =  2.0f;   // 0-127 CC# for scream (0 = off); default 2 = Drift lane 2
     float ccChannel  =  1.0f;   // 1-16 MIDI channel
+    // Filter shape morph, -100..+100 % (0 = off: a plain low-pass, unchanged output).
+    // Positive: the forward filter is low-pass at a low cutoff and becomes high-pass as
+    // the cutoff rises. Negative: high-pass at a low cutoff, low-pass at a high one.
+    // Appended last so presets and saved projects keep their meaning.
+    float morph      =  0.0f;
 };
 
 struct AudioBlock {

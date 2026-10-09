@@ -7,11 +7,12 @@
 
 dsp:sprout a trn:PluginProfile ;
     rdfs:label "Sprout" ;
-    rdfs:comment "L-system MIDI generator: seven grammars rewritten per generation, read as a turtle and played as a scale-quantised monophonic line locked to the transport." ;
+    rdfs:comment "L-system MIDI generator: seven grammars rewritten per generation, read as a turtle and played as a scale-quantised (or held-note) monophonic line locked to the transport. Optional MIDI input: held notes as the pitch source, and the Drift and Conductor CC sets." ;
     trn:bundleName "sprout.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/sprout/> ;
     trn:role trn:MidiGenerator ;
+    trn:accepts trn:Midi, trn:ControlMidi ;
     trn:produces trn:Midi ;
     trn:requires trn:HostTransport ;
     trn:caution "Silent while the transport is stopped. Expansions beyond 131072 symbols are not used; the deepest generation that fits plays instead." ;
@@ -47,4 +48,12 @@ dsp:sprout a trn:PluginProfile ;
                     rdfs:comment "Read-only: generation currently playing." ] ;
     trn:parameter [ rdfs:label "Current step" ; trn:symbol "status_step" ; trn:range "0-131072" ;
                     rdfs:comment "Read-only: playhead position in the pattern." ] ;
+    trn:parameter [ rdfs:label "Pitch source" ; trn:symbol "pitch_source" ; trn:range "Scale, Held, Latched" ;
+                    rdfs:comment "Scale (default) is the original behaviour. Held and Latched map the turtle's degrees onto the notes currently held on the MIDI input: degree 0 is the lowest held note and degrees are spread across the held tones (about seven per octave). Nothing held is a rest. Held plays the keys down now; Latched keeps the chord after the keys are released and replaces it with the first note pressed once every key is up." ] ;
+    trn:parameter [ rdfs:label "Input channel" ; trn:symbol "input_channel" ; trn:range "0-16" ;
+                    rdfs:comment "Channel whose notes count as held; 0 = all channels." ] ;
+    trn:parameter [ rdfs:label "CC channel" ; trn:symbol "cc_channel" ; trn:range "0-16" ;
+                    rdfs:comment "Off at 0. Otherwise on that channel (Drift convention): CC 1 Probability, CC 2 Gate, CC 3 Range, CC 4 Generations, each scaled 0-127 across the parameter's range and written through to the parameter." ] ;
+    trn:parameter [ rdfs:label "Conductor ch" ; trn:symbol "conductor_ch" ; trn:range "0-16" ;
+                    rdfs:comment "Off at 0. Otherwise on that channel (Conductor protocol): CC 21 Density to Probability, CC 22 Energy to Velocity, CC 23 Mutation to Seed, CC 24 = 127 restarts the pattern at the next bar line. CC 20 is not used." ] ;
     pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

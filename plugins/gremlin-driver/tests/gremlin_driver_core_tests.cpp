@@ -111,5 +111,18 @@ int main()
     }
     require(!foundBlockedInput, "gremlin-driver pass input switch should block incoming MIDI");
 
+    // Host re-activation and sample-rate changes must not discard the patch.
+    {
+        Processor patched;
+        patched.init(48000.0);
+        patched.setBpm(97.0f);
+        patched.setLaneRate(0, 0.35f);
+        patched.activate();
+        require(nearlyEqual(patched.getBpm(), 97.0f), "gremlin-driver activate should keep the patch");
+        patched.setSampleRate(96000.0);
+        require(nearlyEqual(patched.getBpm(), 97.0f), "gremlin-driver sample-rate change should keep bpm");
+        require(nearlyEqual(patched.getLane(0).rate, 0.35f), "gremlin-driver sample-rate change should keep lanes");
+    }
+
     return 0;
 }

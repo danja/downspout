@@ -60,15 +60,6 @@ constexpr std::array<SliderDef, 5> kSliders = {{
     return std::max(minValue, std::min(value, maxValue));
 }
 
-[[nodiscard]] const SliderDef* sliderDefForIndex(const uint32_t index)
-{
-    for (const SliderDef& def : kSliders) {
-        if (def.index == index)
-            return &def;
-    }
-    return nullptr;
-}
-
 [[nodiscard]] std::string formatInteger(const float value)
 {
     char buf[32];
@@ -463,7 +454,7 @@ private:
         closePath();
     }
 
-    void drawVisuals(const float x, const float y, const float w, const float h)
+    void drawVisuals(const float x, const float y, const float w, const float /*h*/)
     {
         const CoreParameters parameters = currentParameters();
 

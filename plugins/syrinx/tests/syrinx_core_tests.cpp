@@ -79,10 +79,10 @@ static void testNoteOffEntersRelease()
     const std::uint8_t noteOn[]  = { 0x90, 60, 100 };
     const std::uint8_t noteOff[] = { 0x80, 60,   0 };
     engine.handleMidi(noteOn, 3);
-    for (int i = 0; i < 2048; ++i) engine.processStereo();
+    for (int i = 0; i < 2048; ++i) (void)engine.processStereo();
     engine.handleMidi(noteOff, 3);
     // After a long silence the voice should die
-    for (int i = 0; i < 48000; ++i) engine.processStereo();
+    for (int i = 0; i < 48000; ++i) (void)engine.processStereo();
     const auto frame = engine.processStereo();
     CHECK(std::abs(frame.left) < 1e-3f);
 }

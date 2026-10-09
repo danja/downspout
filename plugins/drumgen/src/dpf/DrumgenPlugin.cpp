@@ -33,6 +33,8 @@ enum ParameterIndex : uint32_t {
     kParamMetalAmount,
     kParamVary,
     kParamConductorChannel,
+    kParamCaRule,    // appended: indices above are saved in projects
+    kParamCaTarget,
     kParameterCount
 };
 
@@ -312,6 +314,22 @@ protected:
             parameter.ranges.max = 16.0f;
             parameter.ranges.def = 0.0f;
             break;
+        case kParamCaRule:
+            parameter.name = "Automaton";
+            parameter.symbol = "ca_rule";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 10.0f;  // 0 off, then rules 30 90 110 150 18 54 60 22 105 126
+            parameter.ranges.def = 0.0f;
+            break;
+        case kParamCaTarget:
+            parameter.name = "Automaton On";
+            parameter.symbol = "ca_target";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 4.0f;  // hats, percussion, toms, all colour lanes, every lane
+            parameter.ranges.def = 0.0f;
+            break;
         }
     }
 
@@ -365,6 +383,8 @@ protected:
         case kParamMetalAmount: return controls_.metalAmt;
         case kParamVary: return controls_.vary * 100.0f;
         case kParamConductorChannel: return static_cast<float>(conductorChannel_);
+        case kParamCaRule: return static_cast<float>(controls_.caRule);
+        case kParamCaTarget: return static_cast<float>(controls_.caTarget);
         case kParamActionNew:
         case kParamActionMutate:
         case kParamActionFill:
@@ -396,6 +416,8 @@ protected:
         case kParamMetalAmount: controls_.metalAmt = value; break;
         case kParamVary: controls_.vary = value / 100.0f; break;
         case kParamConductorChannel: conductorChannel_ = static_cast<int>(value); break;
+        case kParamCaRule: controls_.caRule = static_cast<int>(value); break;
+        case kParamCaTarget: controls_.caTarget = static_cast<int>(value); break;
         case kParamActionNew: if (value > 0.5f) ++controls_.actionNew; break;
         case kParamActionMutate: if (value > 0.5f) ++controls_.actionMutate; break;
         case kParamActionFill: if (value > 0.5f) ++controls_.actionFill; break;

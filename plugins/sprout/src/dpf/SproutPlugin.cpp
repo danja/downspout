@@ -80,10 +80,25 @@ protected:
 
     void activate() override { core::reset(state_); }
 
-    void run(const float**, float** outputs, uint32_t frames) override
+    void run(const float**, float** outputs, uint32_t frames, const MidiEvent* midiEvents, uint32_t midiEventCount) override
     {
         std::fill_n(outputs[0], frames, 0.0f);
         std::fill_n(outputs[1], frames, 0.0f);
+
+        // Incoming notes and CC: held notes for the Pitch source, and the two CC sets, which
+        // write straight into the parameter values (like magneto) so panel, automation and
+        // controller agree on what the plugin is using.
+        std::array<downspout::generative::MidiEvent, 256> input {};
+        const std::uint32_t inputCount = std::min<std::uint32_t>(midiEventCount, static_cast<std::uint32_t>(input.size()));
+        for (std::uint32_t i = 0; i < inputCount; ++i) {
+            const std::uint32_t length = std::min<std::uint32_t>(midiEvents[i].size, 4);
+            const std::uint8_t* data = midiEvents[i].size > MidiEvent::kDataSize ? midiEvents[i].dataExt : midiEvents[i].data;
+            input[i].frame = midiEvents[i].frame;
+            input[i].size = static_cast<std::uint8_t>(length);
+            std::copy_n(data, length, input[i].data.begin());
+        }
+        core::handleMidi(state_, values_, input.data(), inputCount);
+
         const auto block = core::process(state_, values_, toTransport(getTimePosition()), frames, getSampleRate());
         for (std::uint32_t i = 0; i < block.count; ++i) {
             MidiEvent ev {};

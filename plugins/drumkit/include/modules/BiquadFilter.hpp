@@ -46,6 +46,7 @@ private:
 
         switch (filterType) {
             case Type::Bandpass:
+            default:
                 // Bandpass (constant 0 dB peak gain)
                 a0_raw = 1.0f + alpha;
                 a1_raw = -2.0f * cs;

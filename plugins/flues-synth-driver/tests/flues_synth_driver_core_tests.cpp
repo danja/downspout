@@ -244,6 +244,24 @@ static void testProgramChange()
     CHECK(hasCC(r2, 73, 0), "F1=min → CC73=0 in prog3");
 }
 
+static void testPatchSurvivesActivateAndSampleRate()
+{
+    Processor p;
+    p.init(44100.0);
+    p.setGain(0.8f);
+    p.setTuning(5.0f);
+
+    p.activate();
+    CHECK(p.getSynthParam(kParamGain) == 0.8f, "activate keeps gain");
+    p.setSampleRate(96000.0);
+    CHECK(p.getSynthParam(kParamGain) == 0.8f, "sample-rate change keeps gain");
+    CHECK(p.getSynthParam(kParamTuning) == 5.0f, "sample-rate change keeps tuning");
+
+    // The synth is re-synced: the first block after re-activation re-sends the sliders.
+    const auto r = runBlock(p);
+    CHECK(r.eventCount > 0, "re-activation re-sends CCs");
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 int main()
@@ -258,6 +276,7 @@ int main()
     testOutputChannel();
     testCCConversionLinear();
     testProgramChange();
+    testPatchSurvivesActivateAndSampleRate();
 
     std::printf("flues-synth-driver core: %d passed, %d failed\n", passed, failed);
     return failed == 0 ? 0 : 1;

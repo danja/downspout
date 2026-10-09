@@ -40,6 +40,7 @@ class Processor {
 public:
     void init(double sampleRate);
     void activate();
+    void setSampleRate(double sampleRate);
 
     void setClockMode(int mode);
     void setBpm(float bpm);
@@ -75,6 +76,7 @@ private:
     };
 
     void resetToDefaults();
+    void resetRuntime();
     void appendEvent(ProcessResult& result,
                      std::uint32_t frame,
                      std::uint8_t status,

@@ -28,8 +28,9 @@ public:
     float getParameter(ParamId id) const;
     void setParameter(ParamId id, float value);
 
-    void noteOn(int midiNote, std::uint8_t velocity);
-    void noteOff(int midiNote);
+    // `channel` (0-15) selects which channel's pitch bend and RPN 0 range apply.
+    void noteOn(int midiNote, std::uint8_t velocity, int channel = 0);
+    void noteOff(int midiNote, int channel = 0);
     void allNotesOff();
     void handleMidi(const std::uint8_t* data, std::uint32_t size);
 

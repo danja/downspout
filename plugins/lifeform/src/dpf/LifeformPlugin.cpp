@@ -29,6 +29,7 @@ using downspout::lifeform::kParamBaseChannel;
 using downspout::lifeform::kParamCellStart;
 using downspout::lifeform::kParamClear;
 using downspout::lifeform::kParamClockMode;
+using downspout::lifeform::kParamConductorCh;
 using downspout::lifeform::kParamDensity;
 using downspout::lifeform::kParamEmitMode;
 using downspout::lifeform::kParamGate;
@@ -309,6 +310,14 @@ protected:
             parameter.ranges.min = 0.0f;
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = 1.0f;
+            break;
+        case kParamConductorCh:
+            parameter.name = "Conductor Ch";
+            parameter.symbol = "conductor_ch";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 16.0f;
+            parameter.ranges.def = 0.0f;
             break;
         case kParamPassInput:
             parameter.name = "Pass Input";

@@ -126,6 +126,64 @@ CC→control mapping:
 
 CC 20 (Scene) is not mapped — mode selection is a manual arrangement decision.
 
+## Lifeform mapping
+
+Lifeform gains one parameter, **Conductor Ch** (`conductor_ch`, 0-16, default 0 = off). The control sits in the
+bottom button row of the panel (click to cycle Off, then channels 1-16).
+
+| CC | Conductor name | Lifeform control | Notes |
+|----|---------------|------------------|-------|
+| 21 | Density | `density` | How full a random pattern is |
+| 22 | Energy | `velocity` | Note velocity |
+| 23 | Mutation | `mutation` | Chance cells flip each generation |
+| 24 | Reset | randomise (trigger) | Fires when CC value = 127; draws a fresh random pattern at the current density |
+
+CC 20 (Scene) is not mapped. The Conductor CCs still pass through when **Pass Input** is on, so a Conductor feeding
+Lifeform can keep feeding what follows. Launchpad button CCs (91-99 and 19-89) are unaffected.
+
+## Polymeter mapping
+
+Polymeter gains a MIDI input and three parameters: **Conductor ch** (`conductor_ch`, 0-16, default 0 = off) and two
+master controls the CCs drive, **Density** (`density`, 0-1, default 1) and **Energy** (`energy`, 0-1, default 1). Both
+masters default to "no change", so a project that does not use them plays exactly as before.
+
+| CC | Conductor name | Polymeter control | Notes |
+|----|---------------|-------------------|-------|
+| 21 | Density | `density` | Multiplies every lane's Probability |
+| 22 | Energy | `energy` | Scales every lane's velocity (100% = as set, 0% = 40% of it) |
+| 23 | Mutation | `seed` | Spans the whole seed range, so it re-rolls the probability choices and the automaton rows |
+| 24 | Reset | restart (trigger) | Fires when CC value = 127; every lane restarts from its first step at the next bar line |
+
+CC 20 (Scene) is not mapped. The restart waits for a bar line, so a restart sent mid-bar takes effect when the bar
+changes. A transport stop or jump discards a pending restart.
+
+## Xoxolo mapping
+
+Xoxolo gains a MIDI input and three parameters: **Conductor Ch** (`conductor_ch`, 0-16, default 0 = off), **Density**
+(`density`, shown as "Hit density") and **Energy** (`energy`), both 0-1 with a default of 1 = no change.
+
+| CC | Conductor name | Xoxolo control | Notes |
+|----|---------------|----------------|-------|
+| 21 | Density | `density` | Probability that a programmed hit plays (seeded by step and lane, so repeatable) |
+| 22 | Energy | `energy` | Velocity: 100% plays the programmed 100, 0% plays 40 |
+| 23 | Mutation | evolve generation | Adds 0-63 generations to the Evolve layer (see the Evolve controls); has no effect on lanes that are not marked or while the rule is off |
+| 24 | Reset | restart (trigger) | Fires when CC value = 127; the pattern and the evolve generation are counted from the next bar line |
+
+CC 20 (Scene) is not mapped. The mutation shift is performance state and is not saved with the project.
+
+## Markov mapping
+
+Markov has one parameter for Conductor reception, **Conductor ch** (`conductor_ch`, 0-16, default 0 = off).
+
+| CC | Conductor name | Markov control | Notes |
+|----|---------------|----------------|-------|
+| 21 | Density | `density` | Chance a step sounds |
+| 22 | Energy | `velocity` | Base velocity, 1-127 |
+| 23 | Mutation | `chaos` | 0 sharpens the favourites, 1 flattens toward uniform |
+| 24 | Reset | re-roll (trigger) | Fires when CC value = 127; at the next bar line the phrase count starts again with a new random draw |
+
+CC 20 (Scene) is not mapped. A pending re-roll is dropped when the transport stops or jumps.
+
 ## Magneto mapping
 
 Magneto is not a Conductor receiver. It takes ordinary controller and note
@@ -164,4 +222,5 @@ speed, so it stays truthful under MIDI, automation or tempo control.
 ## Behaviour when disabled
 
 When **Conductor Ch** = 0, all CC scanning is skipped and existing Note On follow/dodge
-behaviour (BassGen) or fully generative behaviour (DrumGen) is unchanged.
+behaviour (BassGen) or fully generative behaviour (DrumGen) is unchanged. The same holds for Lifeform, Polymeter and
+Xoxolo: with the channel off, and the masters at their defaults, output is bit-for-bit what it was before.

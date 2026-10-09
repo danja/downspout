@@ -169,10 +169,6 @@ struct StylePulseInfo {
     }
 }
 
-[[nodiscard]] int quarterBeatStartStep(const PatternState& pattern, const int quarterSlot) {
-    return mappedQuarterBeatIndex(pattern.meter, quarterSlot) * pattern.stepsPerBeat;
-}
-
 [[nodiscard]] int collectBackbeatBeats(const ::downspout::Meter& meter, std::array<int, ::downspout::kMaxMeterGroups>& beats) {
     const ::downspout::Meter normalized = ::downspout::sanitizeMeter(meter);
     int count = 0;
@@ -1882,7 +1878,7 @@ void clearBarHits(PatternState& pattern, int barIndex) {
 }
 
 void clearPattern(PatternState& pattern, const Controls& controls) {
-    std::memset(&pattern, 0, sizeof(PatternState));
+    std::memset(static_cast<void*>(&pattern), 0, sizeof(PatternState));
     pattern.version = kPatternStateVersion;
     pattern.bars = controls.bars;
     pattern.stepsPerBeat = stepsPerBeatForResolution(controls.resolution);
@@ -2288,6 +2284,8 @@ Controls clampControls(const Controls& raw) {
     controls.actionNew = clampi(controls.actionNew, 0, 1048576);
     controls.actionMutate = clampi(controls.actionMutate, 0, 1048576);
     controls.actionFill = clampi(controls.actionFill, 0, 1048576);
+    controls.caRule = clampi(controls.caRule, 0, 10);    // kCaRuleCount - 1
+    controls.caTarget = clampi(controls.caTarget, 0, 4);  // kCaTargetCount - 1
     return controls;
 }
 

@@ -72,7 +72,9 @@ inline constexpr std::uint32_t kParamStatusActive = 81;
 inline constexpr std::uint32_t kParamStatusGeneration = 82;
 inline constexpr std::uint32_t kParamStatusCellStart = 83;
 inline constexpr std::uint32_t kParamPassInput = kParamStatusCellStart + static_cast<std::uint32_t>(kCellCount);
-inline constexpr std::uint32_t kParameterCount = kParamPassInput + 1;
+// Appended after the last parameter so saved projects keep their meaning.
+inline constexpr std::uint32_t kParamConductorCh = kParamPassInput + 1;  // 0 = off, 1-16
+inline constexpr std::uint32_t kParameterCount = kParamConductorCh + 1;
 
 inline constexpr std::array<const char*, static_cast<std::size_t>(ScaleId::count)> kScaleNames = {{
     "Chromatic",

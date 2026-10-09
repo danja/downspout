@@ -1,4 +1,5 @@
 #include "xoxolo_engine.hpp"
+#include "xoxolo_automaton.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -98,6 +99,22 @@ void enqueueNoteOff(EngineState& state, const int note, const int channel, const
     }
 }
 
+// A repeatable pseudo-random number in [0, 1) for (step, lane): splitmix64 on the pair.
+[[nodiscard]] float thinningUnit(const std::int64_t step, const int lane)
+{
+    std::uint64_t z = static_cast<std::uint64_t>(step) * 0x9e3779b97f4a7c15ull + static_cast<std::uint64_t>(lane) * 0xbf58476d1ce4e5b9ull + 0x94d049bb133111ebull;
+    z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ull;
+    z = (z ^ (z >> 27)) * 0x94d049bb133111ebull;
+    z ^= z >> 31;
+    return static_cast<float>(static_cast<double>(z >> 11) / 9007199254740992.0);
+}
+
+// Energy 1 is the programmed velocity of 100; lower values play softer, down to 40 %.
+[[nodiscard]] int velocityForEnergy(const float energy)
+{
+    return clampi(static_cast<int>(std::lround(100.0 * (0.4 + 0.6 * static_cast<double>(energy)))), 1, 127);
+}
+
 void emitNotePair(EngineState& state,
                   BlockResult& result,
                   const std::uint32_t frame,
@@ -150,6 +167,8 @@ void emitStep(EngineState& state,
               BlockResult& result,
               const std::uint32_t frame,
               const int localStep,
+              const std::int64_t pass,
+              const std::int64_t absoluteStep,
               const std::uint32_t nframes,
               const double sampleRate)
 {
@@ -158,13 +177,18 @@ void emitStep(EngineState& state,
 
     const int laneCount = activeLaneCountForPreset(state.pattern.notePreset);
     for (int lane = 0; lane < laneCount; ++lane) {
-        if (state.pattern.lanes[static_cast<std::size_t>(lane)].steps[static_cast<std::size_t>(localStep)] == 0)
+        // A lane marked "evolve" plays the automaton's generation for this pass instead of its grid.
+        if (!caStepActive(state.pattern.lanes[static_cast<std::size_t>(lane)], state.pattern.totalSteps,
+                          state.controls.caRule, state.controls.caEvery, pass, localStep, state.controls.caShift))
+            continue;
+        // Density thins the hits, seeded by the absolute step and lane so a render is repeatable.
+        if (state.controls.density < 1.0f && thinningUnit(absoluteStep, lane) > state.controls.density)
             continue;
         emitNotePair(state,
                      result,
                      frame,
                      state.pattern.lanes[static_cast<std::size_t>(lane)].midiNote,
-                     100,
+                     velocityForEnergy(state.controls.energy),
                      state.controls.channel,
                      nframes,
                      sampleRate);
@@ -240,6 +264,12 @@ Controls clampControls(const Controls& controls)
     result.channel = clampi(result.channel, 1, 16);
     result.notePreset = clampNotePreset(result.notePreset);
     result.previewLane = clampi(result.previewLane, 0, activeLaneCountForPreset(result.notePreset) - 1);
+    result.caRule = clampi(result.caRule, 0, kCaRuleCount - 1);
+    result.caEvery = clampi(result.caEvery, kMinCaEvery, kMaxCaEvery);
+    result.conductorCh = clampi(result.conductorCh, 0, 16);
+    result.density = std::isfinite(result.density) ? std::clamp(result.density, 0.0f, 1.0f) : 1.0f;
+    result.energy = std::isfinite(result.energy) ? std::clamp(result.energy, 0.0f, 1.0f) : 1.0f;
+    result.caShift = clampi(result.caShift, 0, kCaGenerations - 1);
     return result;
 }
 
@@ -258,6 +288,8 @@ void sanitizePattern(PatternState& pattern)
     pattern.resolution = clampResolution(pattern.resolution);
     pattern.channel = clampi(pattern.channel, 1, 16);
     pattern.notePreset = clampNotePreset(pattern.notePreset);
+    for (LaneState& lane : pattern.lanes)
+        lane.evolve = lane.evolve != 0 ? 1 : 0;
     pattern.stepsPerBeat = stepsPerBeatForResolution(pattern.resolution);
     pattern.meter = ::downspout::sanitizeMeter(pattern.meter);
     pattern.stepsPerBar = clampi(stepsPerBarForMeter(pattern.meter, pattern.resolution), 1, kMaxSteps);
@@ -317,6 +349,29 @@ void clearPattern(PatternState& pattern)
         lane.steps.fill(0);
 }
 
+void handleMidi(EngineState& state, Controls& controls, const MidiInputEvent* events, const std::uint32_t count)
+{
+    if (events == nullptr || controls.conductorCh <= 0)
+        return;
+    for (std::uint32_t i = 0; i < count; ++i) {
+        const MidiInputEvent& e = events[i];
+        if (e.size < 3 || (e.data[0] & 0xf0) != 0xb0 || (e.data[0] & 0x0f) + 1 != controls.conductorCh)
+            continue;
+        const int value = e.data[2] & 0x7f;
+        const float unit = static_cast<float>(value) / 127.0f;
+        switch (e.data[1]) {
+        case 21: controls.density = unit; break;
+        case 22: controls.energy = unit; break;
+        case 23: controls.caShift = clampi(static_cast<int>(std::lround(unit * (kCaGenerations - 1))), 0, kCaGenerations - 1); break;
+        case 24:
+            if (value == 127)
+                state.restartPending = true;
+            break;
+        default: break;
+        }
+    }
+}
+
 void activate(EngineState& state, const Controls& controls)
 {
     state.controls = clampControls(controls);
@@ -324,6 +379,9 @@ void activate(EngineState& state, const Controls& controls)
     state.wasPlaying = false;
     state.lastTransportStep = -1;
     state.currentStep = -1;
+    state.restartPending = false;
+    state.restartStep = 0;
+    state.lastBar = -1;
     state.previousClearSerial = state.controls.clearSerial;
     state.previousPreviewSerial = state.controls.previewSerial;
     sanitizePattern(state.pattern);
@@ -373,6 +431,9 @@ BlockResult processBlock(EngineState& state,
         state.wasPlaying = false;
         state.lastTransportStep = -1;
         state.currentStep = -1;
+        state.restartPending = false;
+        state.restartStep = 0;
+        state.lastBar = -1;
         result.currentStep = -1;
         return result;
     }
@@ -385,25 +446,47 @@ BlockResult processBlock(EngineState& state,
     const bool restarted = !state.wasPlaying || (state.lastTransportStep >= 0 && startFloor < state.lastTransportStep);
 
     if (restarted) {
+        // A new start or a loop jump: the pattern is counted from the host position again.
+        state.restartPending = false;
+        state.restartStep = 0;
+        state.lastBar = -1;
         clearPendingNoteOffs(state, result, 0);
         const double local = localStepFromAbsolute(state.pattern, absStepsStart);
         const double frac = local - std::floor(local);
         if (frac < 1e-6 || frac > 1.0 - 1e-6)
-            emitStep(state, result, 0, static_cast<int>(std::floor(local + 1e-6)), nframes, sampleRate);
+            emitStep(state, result, 0, static_cast<int>(std::floor(local + 1e-6)),
+                     caPassForStep(static_cast<std::int64_t>(std::floor(absStepsStart + 1e-6)), state.pattern.totalSteps),
+                     static_cast<std::int64_t>(std::floor(absStepsStart + 1e-6)), nframes, sampleRate);
     }
 
     state.wasPlaying = true;
     state.lastTransportStep = startFloor;
-    state.currentStep = static_cast<int>(std::floor(localStepFromAbsolute(state.pattern, absStepsStart)));
+    state.currentStep = static_cast<int>(std::floor(
+        localStepFromAbsolute(state.pattern, absStepsStart - static_cast<double>(state.restartStep))));
     result.currentStep = state.currentStep;
 
     std::int64_t boundary = static_cast<std::int64_t>(std::floor(absStepsStart)) + 1;
     const std::int64_t boundaryEnd = static_cast<std::int64_t>(std::floor(absStepsEnd + 1e-9));
     while (boundary <= boundaryEnd) {
+        // A Conductor reset waits for a bar line, then the pattern and the evolve generation count from there.
+        const std::int64_t stepsPerBar = std::max(1, state.pattern.stepsPerBar);
+        std::int64_t bar = boundary / stepsPerBar;
+        if (boundary % stepsPerBar != 0 && boundary < 0)
+            --bar;
+        if (bar != state.lastBar) {
+            state.lastBar = bar;
+            if (state.restartPending) {
+                state.restartStep = boundary;
+                state.restartPending = false;
+            }
+        }
+        const std::int64_t relative = boundary - state.restartStep;
         emitStep(state,
                  result,
                  frameForBoundary(absStepsStart, absStepsEnd, nframes, boundary),
-                 localStepForBoundary(state.pattern, boundary),
+                 localStepForBoundary(state.pattern, relative),
+                 caPassForStep(relative, state.pattern.totalSteps),
+                 boundary,
                  nframes,
                  sampleRate);
         ++boundary;

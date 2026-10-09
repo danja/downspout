@@ -102,15 +102,6 @@ constexpr std::array<SliderDef, 15> kSliders = {{
     return std::max(minValue, std::min(value, maxValue));
 }
 
-[[nodiscard]] const SliderDef* sliderForIndex(const std::uint32_t index)
-{
-    for (const SliderDef& slider : kSliders) {
-        if (slider.index == index)
-            return &slider;
-    }
-    return nullptr;
-}
-
 [[nodiscard]] float normalizedFromValue(const SliderDef& slider, const float value)
 {
     if (slider.max <= slider.min)

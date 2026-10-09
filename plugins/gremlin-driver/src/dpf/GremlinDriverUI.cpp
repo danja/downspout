@@ -658,7 +658,7 @@ private:
         text(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f + 1.0f, value.c_str(), nullptr);
     }
 
-    void drawVerticalSlider(const int sliderIndex,
+    void drawVerticalSlider(const int /*sliderIndex*/,
                             const SliderBinding& binding,
                             const Rect& rect,
                             const int r,

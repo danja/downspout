@@ -1,6 +1,6 @@
 #include "downspout/sampleprofile.h"
+#include "downspout/test_assert.h"
 
-#include <cassert>
 #include <cmath>
 #include <cstdio>
 #include <random>

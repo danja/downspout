@@ -12,7 +12,8 @@ dsp:lifeform a trn:PluginProfile ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/lifeform/> ;
     trn:role trn:MidiGenerator, trn:Controller ;
-    trn:accepts trn:Midi ;
+    trn:accepts trn:Midi, trn:ControlMidi ;
+    trn:conductorChannelParam "conductor_ch" ;
     trn:produces trn:Midi, trn:MelodyMidi, trn:DrumMidi ;
     trn:requires trn:HostTransport, trn:Launchpad ;
     pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

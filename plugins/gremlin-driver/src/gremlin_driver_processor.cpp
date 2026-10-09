@@ -28,17 +28,32 @@ void Processor::init(const double sampleRate)
 {
     sampleRate_ = sampleRate > 1.0 ? sampleRate : 44100.0;
     engine_.init(sampleRate_);
-    activate();
+    resetToDefaults();
+    resetRuntime();
 }
 
+// The host calls this whenever processing starts, so it must keep the patch.
 void Processor::activate()
+{
+    resetRuntime();
+}
+
+void Processor::setSampleRate(const double sampleRate)
+{
+    sampleRate_ = sampleRate > 1.0 ? sampleRate : 44100.0;
+    engine_.init(sampleRate_);
+    resetRuntime();
+}
+
+// Engine phase, RNG and the CC cache: everything that belongs to a running
+// session rather than to the patch. Clock mode, lanes and triggers stay.
+void Processor::resetRuntime()
 {
     engine_.reset();
     refreshSamples_ = 0;
     randomState_ = 0x3c6ef372u;
     randomizeBlocksRemaining_ = 0;
     lastSentCc_.fill(-1);
-    resetToDefaults();
 }
 
 void Processor::resetToDefaults()

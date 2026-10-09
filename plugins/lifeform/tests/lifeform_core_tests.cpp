@@ -242,8 +242,81 @@ void testHostActivationKeepsThePatch()
     require(cellsOf(processor) == pattern, "a rate change must not reset the pattern");
 }
 
+
+void testConductorCcSet()
+{
+    using namespace downspout::lifeform;
+
+    const auto send = [](Processor& processor, const int status, const int d1, const int d2) {
+        MidiMessage m {};
+        m.size = 3;
+        m.data[0] = static_cast<std::uint8_t>(status);
+        m.data[1] = static_cast<std::uint8_t>(d1);
+        m.data[2] = static_cast<std::uint8_t>(d2);
+        TransportSnapshot transport {};
+        return processor.processBlock(64, transport, &m, 1);
+    };
+    const auto liveCells = [](const Processor& processor) {
+        int count = 0;
+        for (const bool c : cellsOf(processor))
+            count += c ? 1 : 0;
+        return count;
+    };
+
+    Processor processor;
+    processor.init(48000.0);
+    processor.setParameter(kParamLedFeedback, 0.0f);
+    processor.setParameter(kParamRunning, 0.0f);
+
+    // Off by default: the CCs do nothing.
+    require(processor.getParameter(kParamConductorCh) == 0.0f, "conductor channel defaults to off");
+    const float density = processor.getParameter(kParamDensity);
+    send(processor, 0xbf, 21, 127);
+    require(processor.getParameter(kParamDensity) == density, "conductor CC ignored while off");
+
+    processor.setParameter(kParamConductorCh, 16.0f);
+    send(processor, 0xbf, 21, 127);  // Density
+    require(processor.getParameter(kParamDensity) == 1.0f, "CC 21 sets density");
+    send(processor, 0xbf, 21, 0);
+    require(processor.getParameter(kParamDensity) == 0.0f, "CC 21 spans 0 to 1");
+    send(processor, 0xbf, 22, 127);  // Energy -> Velocity
+    require(processor.getParameter(kParamVelocity) == 1.0f, "CC 22 sets velocity");
+    send(processor, 0xbf, 23, 0);    // Mutation
+    require(processor.getParameter(kParamMutation) == 0.0f, "CC 23 sets mutation");
+    send(processor, 0xbf, 23, 127);
+    require(processor.getParameter(kParamMutation) == 1.0f, "CC 23 reaches 1");
+
+    // Other channels and unused CCs are ignored.
+    const float before = processor.getParameter(kParamVelocity);
+    send(processor, 0xb0, 22, 0);   // channel 1
+    send(processor, 0xbf, 20, 0);   // scene is unused
+    require(processor.getParameter(kParamVelocity) == before, "other channels and CC 20 do nothing");
+
+    // CC 24 only acts at 127, and then draws a fresh random pattern at the current density.
+    processor.setParameter(kParamClear, 1.0f);
+    require(liveCells(processor) == 0, "cleared");
+    send(processor, 0xbf, 21, 127);
+    send(processor, 0xbf, 24, 100);
+    require(liveCells(processor) == 0, "CC 24 below 127 does nothing");
+    send(processor, 0xbf, 24, 127);
+    require(liveCells(processor) > 0, "CC 24 = 127 randomises the pattern");
+
+    // Conductor CCs still pass through when Pass Input is on.
+    processor.setParameter(kParamPassInput, 1.0f);
+    const auto passed = send(processor, 0xbf, 21, 50);
+    require(containsMidi(passed, 0xbf, 21, 50), "conductor CC is passed on with Pass Input");
+
+    // The channel is saved with the settings.
+    processor.setParameter(kParamConductorCh, 7.0f);
+    Processor restored;
+    restored.init(48000.0);
+    require(restored.deserializeParameters(processor.serializeParameters()), "state restores");
+    require(restored.getParameter(kParamConductorCh) == 7.0f, "conductor channel is saved");
+}
+
 int main()
 {
+    testConductorCcSet();
     testStateRoundTripsSettingsAndPattern();
     testRestoringSeedDoesNotClobberThePattern();
     testStateNeverStoresTriggers();

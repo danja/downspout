@@ -102,7 +102,7 @@ protected:
             input[i].frame = midiEvents[i].frame;
             input[i].size = static_cast<std::uint8_t>(std::min<std::uint32_t>(midiEvents[i].size, 4));
             const auto* data = midiEvents[i].size > MidiEvent::kDataSize ? midiEvents[i].dataExt : midiEvents[i].data;
-            for (std::uint8_t byte = 0; byte < input[i].size; ++byte) input[i].data[byte] = data[byte];
+            std::copy_n(data, std::min<std::uint32_t>(midiEvents[i].size, 4), input[i].data.begin());
         }
         const auto block = process(state_, parameters_, transportFrom(getTimePosition()),
                                    frames, getSampleRate(), input.data(), count);

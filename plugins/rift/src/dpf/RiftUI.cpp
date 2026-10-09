@@ -143,16 +143,6 @@ constexpr std::size_t kPreviewBlockCount = static_cast<std::size_t>(kSequenceCel
     return std::max(minValue, std::min(value, maxValue));
 }
 
-[[nodiscard]] const SliderDef* sliderDefForIndex(const uint32_t index)
-{
-    for (const SliderDef& def : kSliders) {
-        if (def.index == index) {
-            return &def;
-        }
-    }
-    return nullptr;
-}
-
 [[nodiscard]] std::string formatValue(const SliderDef& def, const float value)
 {
     char buf[64];
@@ -645,7 +635,7 @@ private:
         }
     }
 
-    void drawSampleLoader(const float x, const float y, const float w, const float h)
+    void drawSampleLoader(const float x, const float y, const float /*w*/, const float h)
     {
         sampleLoadRect_ = {x, y, 112.0f, h};
 

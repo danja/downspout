@@ -121,15 +121,6 @@ double strongestBin(const std::vector<float>& buf, const std::vector<float>& inp
     return bestHz;
 }
 
-// First sample index whose absolute value exceeds `level`, or size().
-std::size_t firstActive(const std::vector<float>& buf, const float level)
-{
-    for (std::size_t n = 0; n < buf.size(); ++n)
-        if (std::fabs(buf[n]) > level)
-            return n;
-    return buf.size();
-}
-
 }  // namespace
 
 int main()
@@ -185,7 +176,7 @@ int main()
         CHECK(peak < 1.0e-6f, "silence stays silent");
 
         // Block boundaries still produce keyframes, so playback has windows.
-        CHECK(keyframeCount(*st) >= silence.size() / kAnalysisBlock,
+        CHECK(static_cast<std::size_t>(keyframeCount(*st)) >= silence.size() / kAnalysisBlock,
               "block boundaries force keyframes during silence");
     }
 

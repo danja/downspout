@@ -9,5 +9,10 @@ protected:const char*getLabel()const override{return"Polymeter";}const char*getD
 void initParameter(std::uint32_t i,Parameter&q)override{auto&s=kParameterSpecs[i];q.name=s.name;q.symbol=s.symbol;q.hints=s.output?kParameterIsOutput:kParameterIsAutomatable;if(s.integer)q.hints|=kParameterIsInteger;q.ranges={s.defaultValue,s.minimum,s.maximum};}
 float getParameterValue(std::uint32_t i)const override{if(i==kStatusStep)return static_cast<float>(std::max<std::int64_t>(0,s_.lastStep));if(i==kStatusEvents)return s_.statusEvents;return p_[i];}
 void setParameterValue(std::uint32_t i,float v)override{if(i<kParameterCount&&!kParameterSpecs[i].output)p_[i]=downspout::generative::clampParam(v,kParameterSpecs[i]);}
-void activate()override{reset(s_);}void run(const float**,float**o,std::uint32_t n)override{std::fill_n(o[0],n,0);std::fill_n(o[1],n,0);auto b=process(s_,p_,ct(getTimePosition()),n,getSampleRate());for(std::uint32_t i=0;i<b.count;++i){MidiEvent e{};e.frame=b.events[i].frame;e.size=3;e.data[0]=b.events[i].data[0];e.data[1]=b.events[i].data[1];e.data[2]=b.events[i].data[2];writeMidiEvent(e);}}
+void activate()override{reset(s_);}void run(const float**,float**o,std::uint32_t n,const MidiEvent*in,std::uint32_t inCount)override{std::fill_n(o[0],n,0);std::fill_n(o[1],n,0);
+ // Incoming CC for the Conductor set; applied at the start of the block, written into the parameter values.
+ std::array<downspout::generative::MidiEvent,128>ev{};const std::uint32_t evCount=std::min<std::uint32_t>(inCount,static_cast<std::uint32_t>(ev.size()));
+ for(std::uint32_t i=0;i<evCount;++i){const std::uint32_t len=std::min<std::uint32_t>(in[i].size,4);const std::uint8_t*d=in[i].size>MidiEvent::kDataSize?in[i].dataExt:in[i].data;ev[i].frame=in[i].frame;ev[i].size=static_cast<std::uint8_t>(len);std::copy_n(d,len,ev[i].data.begin());}
+ handleMidi(s_,p_,ev.data(),evCount);
+ auto b=process(s_,p_,ct(getTimePosition()),n,getSampleRate());for(std::uint32_t i=0;i<b.count;++i){MidiEvent e{};e.frame=b.events[i].frame;e.size=3;e.data[0]=b.events[i].data[0];e.data[1]=b.events[i].data[1];e.data[2]=b.events[i].data[2];writeMidiEvent(e);}}
 private:std::array<float,kParameterCount>p_{};downspout::polymeter::State s_{};DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PolymeterPlugin)};Plugin*createPlugin(){return new PolymeterPlugin();}END_NAMESPACE_DISTRHO

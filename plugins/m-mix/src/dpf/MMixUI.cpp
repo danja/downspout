@@ -82,16 +82,6 @@ constexpr std::array<ToggleDef, 2> kToggles = {{
     return std::max(minValue, std::min(value, maxValue));
 }
 
-[[nodiscard]] const SliderDef* sliderDefForIndex(const uint32_t index)
-{
-    for (const SliderDef& def : kSliders) {
-        if (def.index == index) {
-            return &def;
-        }
-    }
-    return nullptr;
-}
-
 [[nodiscard]] float controlMax(const SliderDef& def, const std::array<float, kParameterCount>& values)
 {
     switch (def.index) {

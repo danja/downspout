@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <vector>
@@ -546,6 +547,87 @@ void extremeParametersStayFinite()
 
 } // namespace
 
+void sendMidi(BasilicoEngine& engine, const std::uint8_t status, const std::uint8_t d1, const std::uint8_t d2)
+{
+    const std::uint8_t bytes[3] {status, d1, d2};
+    engine.handleMidi(bytes, 3);
+}
+
+// Full bend up is 0x3fff: LSB 127, MSB 127.
+void bendUp(BasilicoEngine& engine, const int channel)
+{
+    sendMidi(engine, static_cast<std::uint8_t>(0xe0 | channel), 127, 127);
+}
+
+// Pitch bend is per MIDI channel (Retune sends one note per channel), so a bend
+// moves only the note that arrived on its channel.
+void pitchBendIsPerChannel()
+{
+    const float semitone = std::pow(2.0f, 1.0f / 12.0f);
+    const float fullBend = std::pow(2.0f, 2.0f / 12.0f);
+
+    // Bend set before the note applies to that note at the default 2 st range.
+    {
+        BasilicoEngine engine {48000.0f};
+        bendUp(engine, 3);
+        sendMidi(engine, 0x93, 40, 100);
+        require(std::fabs(engine.currentFrequency() / expectedFrequency(40) - fullBend) < 0.002f,
+                "basilico full bend up should raise the note by 2 semitones");
+    }
+
+    // A bend on another channel leaves the sounding note alone.
+    {
+        BasilicoEngine engine {48000.0f};
+        sendMidi(engine, 0x93, 40, 100);
+        bendUp(engine, 5);
+        require(std::fabs(engine.currentFrequency() - expectedFrequency(40)) < 0.01f,
+                "basilico bend on another channel should not move the note");
+    }
+
+    // A bend on the sounding channel moves at once, even with a long glide.
+    {
+        BasilicoEngine engine {48000.0f};
+        engine.setParameter(ParamId::glide, 0.9f);
+        sendMidi(engine, 0x93, 40, 100);
+        bendUp(engine, 3);
+        require(std::fabs(engine.currentFrequency() / expectedFrequency(40) - fullBend) < 0.002f,
+                "basilico bend should not be smoothed by glide");
+    }
+
+    // RPN 0 sets the range per channel: 12 semitones makes full bend an octave.
+    {
+        BasilicoEngine engine {48000.0f};
+        engine.setParameter(ParamId::glide, 0.0f);
+        sendMidi(engine, 0xb3, 101, 0);
+        sendMidi(engine, 0xb3, 100, 0);
+        sendMidi(engine, 0xb3, 6, 12);
+        sendMidi(engine, 0x93, 40, 100);
+        bendUp(engine, 3);
+        require(std::fabs(engine.currentFrequency() / expectedFrequency(40) - 2.0f) < 0.005f,
+                "basilico RPN 0 should set the bend range");
+        sendMidi(engine, 0x94, 41, 100);
+        bendUp(engine, 4);
+        require(std::fabs(engine.currentFrequency() / expectedFrequency(41) - fullBend) < 0.002f,
+                "basilico RPN 0 range should apply only to its own channel");
+    }
+
+    // Two held notes on different channels bend independently: releasing the
+    // later one returns to the earlier note with its own bend.
+    {
+        BasilicoEngine engine {48000.0f};
+        engine.setParameter(ParamId::glide, 0.0f);
+        bendUp(engine, 1);
+        sendMidi(engine, 0x91, 40, 100);
+        sendMidi(engine, 0x92, 43, 100);
+        require(std::fabs(engine.currentFrequency() - expectedFrequency(43)) < 0.01f,
+                "basilico unbent channel should keep its own pitch");
+        sendMidi(engine, 0x82, 43, 0);
+        (void)engine.processStereo();
+        require(std::fabs(engine.currentFrequency() / semitone / semitone / expectedFrequency(40) - 1.0f) < 0.002f,
+                "basilico released note should fall back to the held note with its bend");
+    }
+}
+
 int main()
 {
     defaultsAndClamping();
@@ -567,6 +649,7 @@ int main()
     tempoSyncChangesWobbleRate();
     squelchChangesAcidTone();
     extremeParametersStayFinite();
+    pitchBendIsPerChannel();
 
     std::cout << "basilico core tests passed\n";
     return 0;

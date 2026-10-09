@@ -44,16 +44,40 @@ int findIndex(const std::array<std::uint8_t, Count>& ids, const std::uint8_t val
 void Processor::init(const double sampleRate)
 {
     sampleRate_ = sampleRate > 1.0 ? sampleRate : 48000.0;
-    engine_ = flues::gremlin::GremlinEngine(static_cast<float>(sampleRate_));
-    activate();
+    resetToDefaults();
+    resetRuntime();
 }
 
+// The host calls this whenever processing starts, so it must keep the patch.
 void Processor::activate()
+{
+    resetRuntime();
+}
+
+void Processor::setSampleRate(const double sampleRate)
+{
+    sampleRate_ = sampleRate > 1.0 ? sampleRate : 48000.0;
+    resetRuntime();
+}
+
+// Audio engine, RNG, note and LED state: everything that belongs to a running
+// session rather than to the patch. Parameters, macros and master trim stay.
+void Processor::resetRuntime()
 {
     engine_ = flues::gremlin::GremlinEngine(static_cast<float>(sampleRate_));
     rngState_ = 0x4d3c2b1au;
     currentNote_ = -1;
-    resetToDefaults();
+    currentChannel_ = 0;
+    resetBend();
+    lastMuteLeds_.fill(0u);
+    lastSoloMuteLeds_.fill(0u);
+    lastRecArmLeds_.fill(0u);
+    lastBankLeds_.fill(0u);
+    momentary_.fill(false);
+    soloHeld_ = false;
+    status_.soloHeld = false;
+    ledInitialized_ = false;
+    ledRefreshSamples_ = 0;
     applyLiveState();
 }
 
@@ -470,6 +494,7 @@ bool Processor::handleMidiMessage(const MidiMessage& message)
         return false;
 
     const std::uint8_t status = message.data[0] & 0xF0u;
+    const int channel = message.data[0] & 0x0F;
     const std::uint8_t data1 = message.size > 1 ? message.data[1] : 0u;
     const std::uint8_t data2 = message.size > 2 ? message.data[2] : 0u;
 
@@ -481,7 +506,7 @@ bool Processor::handleMidiMessage(const MidiMessage& message)
             if (isControllerButtonNote(data1))
                 return handleControllerButton(data1, false);
 
-            if (currentNote_ == static_cast<int>(data1))
+            if (currentNote_ == static_cast<int>(data1) && currentChannel_ == channel)
             {
                 engine_.noteOff(data1);
                 currentNote_ = -1;
@@ -492,6 +517,8 @@ bool Processor::handleMidiMessage(const MidiMessage& message)
         if (data1 <= kSoloNote && data2 == 127u && isControllerButtonNote(data1))
             return handleControllerButton(data1, true);
 
+        currentChannel_ = channel;
+        engine_.setBendRatio(bendRatio_[static_cast<std::size_t>(channel)]);
         engine_.noteOn(data1, static_cast<float>(data2) / 127.0f);
         currentNote_ = static_cast<int>(data1);
         return false;
@@ -499,11 +526,15 @@ bool Processor::handleMidiMessage(const MidiMessage& message)
         if (isControllerButtonNote(data1))
             return handleControllerButton(data1, false);
 
-        if (currentNote_ == static_cast<int>(data1))
+        if (currentNote_ == static_cast<int>(data1) && currentChannel_ == channel)
         {
             engine_.noteOff(data1);
             currentNote_ = -1;
         }
+        return false;
+    case 0xE0:
+        if (message.size > 2)
+            pitchBend(channel, (data1 & 0x7F) | ((data2 & 0x7F) << 7));
         return false;
     case 0xB0:
         if (data1 == 120u || data1 == 123u)
@@ -512,10 +543,52 @@ bool Processor::handleMidiMessage(const MidiMessage& message)
             currentNote_ = -1;
             return false;
         }
+        if (handleBendRpn(channel, data1, data2))
+            return false;
         return handleControllerCC(data1, data2);
     default:
         return false;
     }
+}
+
+// Per-channel pitch bend (MPE-style one note per channel). Gremlin is a single
+// source, so the bend of the channel that played the last note is the one heard;
+// bends on other channels are kept for that channel's next note.
+void Processor::pitchBend(const int channel, const int value14)
+{
+    const auto ch = static_cast<std::size_t>(channel & 15);
+    bendValue_[ch] = value14;
+    const float semitones = (static_cast<float>(value14) - 8192.0f) / 8192.0f * bendRange_[ch];
+    bendRatio_[ch] = std::pow(2.0f, semitones / 12.0f);
+    if (static_cast<int>(ch) == currentChannel_)
+        engine_.setBendRatio(bendRatio_[ch]);
+}
+
+// RPN 0 (CC 101/100 select, CC 6 data): pitch bend range in semitones.
+bool Processor::handleBendRpn(const int channel, const std::uint8_t cc, const std::uint8_t value)
+{
+    const auto ch = static_cast<std::size_t>(channel & 15);
+    if (cc == 101u)
+        rpnMsb_[ch] = value;
+    else if (cc == 100u)
+        rpnLsb_[ch] = value;
+    else if (cc == 6u && rpnMsb_[ch] == 0u && rpnLsb_[ch] == 0u && value >= 1u)
+    {
+        bendRange_[ch] = static_cast<float>(std::min<int>(value, 48));
+        pitchBend(channel, bendValue_[ch]);
+    }
+    else
+        return false;
+    return true;
+}
+
+void Processor::resetBend()
+{
+    bendRatio_.fill(1.0f);
+    bendRange_.fill(2.0f);
+    bendValue_.fill(8192);
+    rpnMsb_.fill(127u);
+    rpnLsb_.fill(127u);
 }
 
 bool Processor::handleControllerCC(const std::uint8_t cc, const std::uint8_t value)

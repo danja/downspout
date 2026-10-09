@@ -244,6 +244,64 @@ static void testMidiChannelFilter()
     std::puts("PASS: MIDI channel filter");
 }
 
+static const Voice* voiceOnChannel(const EngineState& state, int channel)
+{
+    for (const Voice& v : state.voices)
+        if (v.active && v.midiChannel == channel) return &v;
+    return nullptr;
+}
+
+// Pitch bend is per MIDI channel (Retune sends one note per channel): two
+// simultaneous notes on different channels bend independently, by the Bend Range.
+static void testPitchBendIsPerChannel()
+{
+    const std::vector<SampleZone> zones = { makeToneZone(60, 0, 127, 44100.0, 65536) };
+    EngineState state;
+    Parameters params;  // pitchBendRange defaults to 2 semitones
+    activate(state);
+
+    // Channel 1 full bend up (0x3fff), channel 2 centred, then a note on each.
+    const std::vector<MidiInputEvent> start = {
+        { 0, 3, {0xE0, 127, 127, 0} },
+        { 0, 3, {0xE1, 0, 64, 0} },
+        { 0, 3, {0x90, 60, 100, 0} },
+        { 0, 3, {0x91, 60, 100, 0} },
+    };
+    runBlock(state, params, zones, start, 100);
+
+    const Voice* bent = voiceOnChannel(state, 1);
+    const Voice* plain = voiceOnChannel(state, 2);
+    assert(bent && plain && "both channel voices should be active");
+    assert(std::fabs(plain->position - 100.0) < 0.01 && "unbent channel should play at the root rate");
+    assert(std::fabs(bent->position / plain->position - std::pow(2.0, 2.0 / 12.0)) < 0.002
+           && "full bend up should raise a channel by the bend range");
+
+    // Bending channel 2 down moves only channel 2; channel 1 keeps its rate.
+    const double bentBefore = bent->position;
+    const double plainBefore = plain->position;
+    const std::vector<MidiInputEvent> down = { { 0, 3, {0xE1, 0, 0, 0} } };
+    runBlock(state, params, zones, down, 100);
+    bent = voiceOnChannel(state, 1);
+    plain = voiceOnChannel(state, 2);
+    assert(std::fabs((bent->position - bentBefore) / 100.0 - std::pow(2.0, 2.0 / 12.0)) < 0.002
+           && "bend on one channel should not change another");
+    assert(std::fabs((plain->position - plainBefore) / 100.0 - std::pow(2.0, -2.0 / 12.0)) < 0.002
+           && "full bend down should lower a channel by the bend range");
+
+    // The Bend Range control scales it: 12 semitones makes full bend an octave.
+    EngineState wide;
+    Parameters octave;
+    octave.pitchBendRange = 12.0f;
+    activate(wide);
+    const std::vector<MidiInputEvent> up = {
+        { 0, 3, {0xE0, 127, 127, 0} },
+        { 0, 3, {0x90, 60, 100, 0} },
+    };
+    runBlock(wide, octave, zones, up, 100);
+    assert(std::fabs(voiceOnChannel(wide, 1)->position - 200.0) < 0.5 && "bend range should scale the bend");
+    std::puts("PASS: pitch bend is per channel");
+}
+
 int main()
 {
     testNoteOnProducesAudio();
@@ -256,6 +314,7 @@ int main()
     testParamsSerializationRoundTrip();
     testEmptyZonesDeserialization();
     testMidiChannelFilter();
+    testPitchBendIsPerChannel();
     testLoadRex2ZonesMissingFile();
 
     std::puts("All campione core tests passed.");

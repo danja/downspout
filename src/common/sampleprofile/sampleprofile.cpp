@@ -348,7 +348,6 @@ sp_profile_t sp_analyse(
     };
     int s_t0   = to_samp(t0);
     int s_tend = to_samp(t_end);
-    int s_peak = to_samp(t_pk);
 
     prof.effective_duration_seconds = t_end - t0;
     prof.attack_time_seconds        = t_pk  - t0;

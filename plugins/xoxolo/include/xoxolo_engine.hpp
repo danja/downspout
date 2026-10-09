@@ -16,6 +16,11 @@ struct EngineState {
     int previousClearSerial = 0;
     int previousPreviewSerial = 0;
     int currentStep = -1;
+    // Conductor reset (CC 24 = 127): applied at the next bar line, after which pattern position and the
+    // evolve generation are counted from that bar. restartStep is the absolute step it began on.
+    bool restartPending = false;
+    std::int64_t restartStep = 0;
+    std::int64_t lastBar = -1;
 };
 
 struct BlockResult {
@@ -36,6 +41,11 @@ void resizePattern(PatternState& pattern, int steps, ResolutionId resolution, co
 void setCell(PatternState& pattern, int lane, int step, bool active);
 [[nodiscard]] bool cellActive(const PatternState& pattern, int lane, int step);
 void clearPattern(PatternState& pattern);
+
+// Applies a block's incoming MIDI before processBlock(). With controls.conductorCh set, on that channel:
+// CC 21 Density, CC 22 Energy, CC 23 Mutation (shifts the evolve generation), CC 24 = 127 restarts the
+// pattern and the evolve generation at the next bar line. CC 20 (Scene) is not used. Writes into `controls`.
+void handleMidi(EngineState& state, Controls& controls, const MidiInputEvent* events, std::uint32_t count);
 
 void activate(EngineState& state, const Controls& controls);
 void deactivate(EngineState& state);

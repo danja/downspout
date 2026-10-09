@@ -19,6 +19,10 @@ constexpr kit::Accent kPatternAccent {92, 140, 156};  // cold steel
 constexpr kit::Accent kPitchAccent {176, 112, 62};    // copper
 constexpr kit::Accent kTimeAccent {198, 132, 58};     // amber
 
+constexpr kit::Accent kMidiAccent {120, 126, 170};    // slate violet
+
+constexpr const char* kPitchSourceNames[3] = {"Scale", "Held", "Latched"};
+
 constexpr const char* kPresetNames[core::kPresetCount] = {"Plant", "Koch", "Dragon", "Sierpinski", "Cantor", "Levy", "Tree"};
 
 struct Tables {
@@ -67,11 +71,12 @@ protected:
         drawGrammarPanel({24.0f, 108.0f, width - 48.0f, 118.0f});
         drawPatternPanel({24.0f, 238.0f, width - 48.0f, 168.0f});
 
-        const float y = 418.0f, h = height - y - 18.0f, gap = 16.0f;
+        const float y = 418.0f, h = 224.0f, gap = 16.0f;
         const float w = (width - 48.0f - 2.0f * gap) / 3.0f;
         drawGrowthPanel({24.0f, y, w, h});
         drawPitchPanel({24.0f + w + gap, y, w, h});
         drawTimingPanel({24.0f + 2.0f * (w + gap), y, w, h});
+        drawMidiPanel({24.0f, y + h + gap, width - 48.0f, height - (y + h + gap) - 18.0f});
     }
 
 private:
@@ -200,11 +205,57 @@ private:
         drawStepper(core::kScale, "Scale", core::scaleName(intValue(core::kScale)), {b.x + 14.0f, b.y + 42.0f, b.w - 28.0f, 40.0f});
         const std::string root = noteName(intValue(core::kRoot));
         char buf[32];
-        drawSlider(core::kRoot, "Root note", root.c_str(), {b.x + 14.0f, b.y + 92.0f, b.w - 28.0f, 34.0f}, kPitchAccent);
+        const bool held = intValue(core::kPitchSource) >= core::kPitchHeld;
+        drawSlider(core::kRoot, "Root note", held ? "lowest held note" : root.c_str(), {b.x + 14.0f, b.y + 92.0f, b.w - 28.0f, 34.0f},
+                   kPitchAccent);
         std::snprintf(buf, sizeof(buf), "%d degree%s", intValue(core::kStepSize), intValue(core::kStepSize) == 1 ? "" : "s");
         drawSlider(core::kStepSize, "Step size (+ / -)", buf, {b.x + 14.0f, b.y + 134.0f, b.w - 28.0f, 34.0f}, kPitchAccent);
         std::snprintf(buf, sizeof(buf), "+/- %d degrees", intValue(core::kRange));
         drawSlider(core::kRange, "Range (folds back)", buf, {b.x + 14.0f, b.y + 176.0f, b.w - 28.0f, 34.0f}, kPitchAccent);
+    }
+
+    void drawMidiPanel(const Rect b)
+    {
+        drawPanel(b, "MIDI INPUT", kMidiAccent, "held notes as the pitch source, and two CC sets; the CC sets are off until a channel is chosen");
+        const float gap = 16.0f;
+        const float w = (b.w - 28.0f - 3.0f * gap) / 4.0f;
+        const float x0 = b.x + 14.0f, top = b.y + 38.0f;
+
+        label(x0, top, "Pitch source", true, 11.5f);
+        drawSegments(core::kPitchSource, kPitchSourceNames, 3, {x0, top + 18.0f, w, 30.0f}, kMidiAccent);
+
+        char buf[48];
+        const int input = intValue(core::kInputChannel);
+        if (input == 0)
+            std::snprintf(buf, sizeof(buf), "all channels");
+        else
+            std::snprintf(buf, sizeof(buf), "Ch %d", input);
+        drawSlider(core::kInputChannel, "Note channel", buf, {x0 + (w + gap), top, w, 34.0f}, kMidiAccent);
+
+        const int cc = intValue(core::kCcChannel);
+        if (cc == 0)
+            std::snprintf(buf, sizeof(buf), "off");
+        else
+            std::snprintf(buf, sizeof(buf), "Ch %d", cc);
+        drawSlider(core::kCcChannel, "Drift CC channel", buf, {x0 + 2.0f * (w + gap), top, w, 34.0f}, kMidiAccent);
+
+        const int cond = intValue(core::kConductorCh);
+        if (cond == 0)
+            std::snprintf(buf, sizeof(buf), "off");
+        else
+            std::snprintf(buf, sizeof(buf), "Ch %d", cond);
+        drawSlider(core::kConductorCh, "Conductor CC channel", buf, {x0 + 3.0f * (w + gap), top, w, 34.0f},
+                   kMidiAccent);
+
+        // What each CC does, under its channel control.
+        const float hint = top + 44.0f;
+        label(x0, top + 54.0f, "Latched keeps the chord after release", true, 10.0f);
+        label(x0 + (w + gap), hint, "applies to Held and Latched notes;", true, 10.0f);
+        label(x0 + (w + gap), hint + 14.0f, "degree 0 = the lowest note", true, 10.0f);
+        label(x0 + 2.0f * (w + gap), hint, "CC 1 probability  2 gate", true, 10.0f);
+        label(x0 + 2.0f * (w + gap), hint + 14.0f, "CC 3 range  4 generations", true, 10.0f);
+        label(x0 + 3.0f * (w + gap), hint, "CC 21 probability  22 velocity  23 seed", true, 10.0f);
+        label(x0 + 3.0f * (w + gap), hint + 14.0f, "CC 24 = 127 restarts at the next bar", true, 10.0f);
     }
 
     void drawTimingPanel(const Rect b)

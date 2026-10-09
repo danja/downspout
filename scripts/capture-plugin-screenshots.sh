@@ -55,6 +55,7 @@ plugins=(
   "pratt:pratt"
   "retune:retune"
   "sprout:sprout"
+  "markov:markov"
   "tuney-vst:tuney_vst"
   "harmonic-atlas:harmonic_atlas"
   "conductor:conductor"

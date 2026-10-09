@@ -394,7 +394,7 @@ protected:
 
     void sampleRateChanged(double newSampleRate) override
     {
-        processor_.init(newSampleRate);
+        processor_.setSampleRate(newSampleRate);
     }
 
     void run(const float**,

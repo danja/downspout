@@ -4,6 +4,7 @@
 #include "basilico_modulation.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
 #include <vector>
@@ -352,7 +353,9 @@ public:
         wobble_.reset();
         flanger_.reset();
         heldNotes_.clear();
+        resetBend();
         currentNote_ = -1;
+        currentChannel_ = 0;
         targetFrequency_ = 55.0f;
         currentFrequency_ = 55.0f;
         phase_ = 0.0f;
@@ -392,7 +395,7 @@ public:
             reset();
     }
 
-    void noteOn(const int midiNote, const std::uint8_t velocity)
+    void noteOn(const int midiNote, const std::uint8_t velocity, const int channel)
     {
         if (bypassed())
             return;
@@ -400,18 +403,20 @@ public:
             return;
         if (velocity == 0)
         {
-            noteOff(midiNote);
+            noteOff(midiNote, channel);
             return;
         }
 
+        const int ch = channel & 15;
         const bool hadHeldNotes = !heldNotes_.empty();
-        removeHeld(midiNote);
-        heldNotes_.push_back(midiNote);
+        removeHeld(midiNote, ch);
+        heldNotes_.push_back({midiNote, ch});
 
         const bool canGlide = glideEnabled() && currentNote_ >= 0;
         const bool legatoGlide = canGlide && hadHeldNotes;
         currentNote_ = midiNote;
-        targetFrequency_ = midiNoteToFrequency(midiNote);
+        currentChannel_ = ch;
+        targetFrequency_ = midiNoteToFrequency(midiNote) * bendRatio_[static_cast<std::size_t>(ch)];
         if (!canGlide)
         {
             currentFrequency_ = targetFrequency_;
@@ -433,13 +438,15 @@ public:
         velocity_ = std::clamp(static_cast<float>(velocity) / 127.0f, 0.0f, 1.0f);
     }
 
-    void noteOff(const int midiNote)
+    void noteOff(const int midiNote, const int channel)
     {
-        removeHeld(midiNote);
+        removeHeld(midiNote, channel & 15);
         if (!heldNotes_.empty())
         {
-            currentNote_ = heldNotes_.back();
-            targetFrequency_ = midiNoteToFrequency(currentNote_);
+            currentNote_ = heldNotes_.back().note;
+            currentChannel_ = heldNotes_.back().channel;
+            targetFrequency_ = midiNoteToFrequency(currentNote_)
+                               * bendRatio_[static_cast<std::size_t>(currentChannel_)];
             return;
         }
 
@@ -460,6 +467,7 @@ public:
             return;
 
         const std::uint8_t status = data[0] & 0xf0U;
+        const int channel = data[0] & 0x0f;
         const std::uint8_t note = size > 1 ? data[1] : 0;
         const std::uint8_t value = size > 2 ? data[2] : 0;
 
@@ -473,14 +481,20 @@ public:
         switch (status)
         {
         case 0x80:
-            noteOff(note);
+            noteOff(note, channel);
             break;
         case 0x90:
-            noteOn(note, value);
+            noteOn(note, value, channel);
+            break;
+        case 0xe0:
+            if (size > 2)
+                pitchBend(channel, (note & 0x7f) | ((value & 0x7f) << 7));
             break;
         case 0xb0:
             if (note == 120 || note == 123)
                 allNotesOff();
+            else
+                handleBendRpn(channel, note, value);
             break;
         default:
             break;
@@ -754,9 +768,56 @@ private:
         return output;
     }
 
-    void removeHeld(const int midiNote)
+    void removeHeld(const int midiNote, const int channel)
     {
-        heldNotes_.erase(std::remove(heldNotes_.begin(), heldNotes_.end(), midiNote), heldNotes_.end());
+        heldNotes_.erase(std::remove_if(heldNotes_.begin(), heldNotes_.end(),
+                                        [&](const HeldNote& held) {
+                                            return held.note == midiNote && held.channel == channel;
+                                        }),
+                         heldNotes_.end());
+    }
+
+    // Per-channel pitch bend (MPE-style one note per channel). The bend of the
+    // channel the sounding note arrived on applies; bends on other channels are
+    // remembered for their next note. A bend on the sounding channel moves the
+    // pitch at once rather than gliding, so it follows a wheel or a retuner.
+    void pitchBend(const int channel, const int value14)
+    {
+        const auto ch = static_cast<std::size_t>(channel & 15);
+        bendValue_[ch] = value14;
+        const float semitones = (static_cast<float>(value14) - 8192.0f) / 8192.0f * bendRange_[ch];
+        const float oldRatio = bendRatio_[ch];
+        bendRatio_[ch] = std::pow(2.0f, semitones / 12.0f);
+        if (currentNote_ >= 0 && static_cast<std::size_t>(currentChannel_) == ch)
+        {
+            const float scale = bendRatio_[ch] / oldRatio;
+            targetFrequency_ *= scale;
+            currentFrequency_ *= scale;
+        }
+    }
+
+    // RPN 0 (CC 101/100 select, CC 6 data): pitch bend range in semitones.
+    void handleBendRpn(const int channel, const std::uint8_t controller, const std::uint8_t value)
+    {
+        const auto ch = static_cast<std::size_t>(channel & 15);
+        if (controller == 101)
+            rpnMsb_[ch] = value;
+        else if (controller == 100)
+            rpnLsb_[ch] = value;
+        else if (controller == 6 && rpnMsb_[ch] == 0 && rpnLsb_[ch] == 0 && value >= 1)
+        {
+            bendRange_[ch] = static_cast<float>(std::min<int>(value, 48));
+            pitchBend(channel, bendValue_[ch]);
+        }
+    }
+
+    void resetBend()
+    {
+        bendRatio_.fill(1.0f);
+        bendRange_.fill(2.0f);
+        bendValue_.fill(8192);
+        rpnMsb_.fill(127);
+        rpnLsb_.fill(127);
     }
 
     float sampleRate_ = 44100.0f;
@@ -768,7 +829,17 @@ private:
     BiquadBandpass bodyHigh_;
     WobbleModulator wobble_;
     BasilicoFlanger flanger_;
-    std::vector<int> heldNotes_;
+    struct HeldNote {
+        int note;
+        int channel;
+    };
+    std::vector<HeldNote> heldNotes_;
+    std::array<float, 16> bendRatio_ {};
+    std::array<float, 16> bendRange_ {};
+    std::array<int, 16> bendValue_ {};
+    std::array<std::uint8_t, 16> rpnMsb_ {};
+    std::array<std::uint8_t, 16> rpnLsb_ {};
+    int currentChannel_ = 0;
     int currentNote_ = -1;
     float targetFrequency_ = 55.0f;
     float currentFrequency_ = 55.0f;
@@ -826,14 +897,14 @@ void BasilicoEngine::setParameter(const ParamId id, const float value)
     setParameter(static_cast<std::uint32_t>(id), value);
 }
 
-void BasilicoEngine::noteOn(const int midiNote, const std::uint8_t velocity)
+void BasilicoEngine::noteOn(const int midiNote, const std::uint8_t velocity, const int channel)
 {
-    impl_->noteOn(midiNote, velocity);
+    impl_->noteOn(midiNote, velocity, channel);
 }
 
-void BasilicoEngine::noteOff(const int midiNote)
+void BasilicoEngine::noteOff(const int midiNote, const int channel)
 {
-    impl_->noteOff(midiNote);
+    impl_->noteOff(midiNote, channel);
 }
 
 void BasilicoEngine::allNotesOff()
