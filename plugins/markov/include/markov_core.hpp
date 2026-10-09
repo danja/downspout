@@ -93,6 +93,8 @@ void loadStyle(Model& model, int style) noexcept;       // replaces `base`; lear
 void clearBase(Model& model) noexcept;                  // all zero: every row falls back to "any note in the scale"
 void randomiseBase(Model& model, std::uint64_t seed) noexcept;
 void bumpCell(Model& model, int from, int to) noexcept; // +1, wrapping from kMaxWeight back to 0
+// Sets one cell's weight (clamped to 0..kMaxWeight); returns the weight now stored, or -1 for a cell out of range.
+int setCell(Model& model, int from, int to, int weight) noexcept;
 void clearLearned(Model& model) noexcept;
 
 // ---- Scales and grid (the same tables as Sprout: docs/scales.md) ---------------------------------------------

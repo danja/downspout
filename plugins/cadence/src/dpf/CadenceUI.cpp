@@ -34,6 +34,7 @@ enum ParameterIndex : uint32_t {
     kParamArpeggio,
     kParamStatusInput,
     kParamStatusOutput,
+    kParamConductorChannel,
     kParameterCount
 };
 
@@ -120,6 +121,11 @@ constexpr const char* kOutputChannelNames[] = {
     "9", "10", "11", "12", "13", "14", "15", "16"
 };
 
+constexpr const char* kConductorChNames[] = {
+    "Off", "1", "2", "3", "4", "5", "6", "7", "8",
+    "9", "10", "11", "12", "13", "14", "15", "16"
+};
+
 constexpr SelectorDef kSelectors[] = {
     {kParamKey, "Key", kNoteNames, 12, 0},
     {kParamScale, "Scale", kScaleNames, 24, 0},
@@ -129,6 +135,7 @@ constexpr SelectorDef kSelectors[] = {
     {kParamRegister, "Register", kRegisterNames, 3, 0},
     {kParamPassInput, "Pass Input", kToggleNames, 2, 0},
     {kParamOutputChannel, "Output", kOutputChannelNames, 17, 0},
+    {kParamConductorChannel, "Conductor Ch", kConductorChNames, 17, 0},
 };
 
 constexpr ButtonDef kButtons[] = {

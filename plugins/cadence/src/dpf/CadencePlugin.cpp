@@ -31,6 +31,7 @@ enum ParameterIndex : uint32_t {
     kParamArpeggio,
     kParamStatusInput,
     kParamStatusOutput,
+    kParamConductorChannel,
     kParameterCount
 };
 
@@ -272,6 +273,14 @@ protected:
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = 1.0f;
             break;
+        case kParamConductorChannel:
+            parameter.name = "Conductor Ch";
+            parameter.symbol = "conductor_ch";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 16.0f;
+            parameter.ranges.def = 0.0f;
+            break;
         case kParamOutputChannel:
             parameter.name = "Output Channel";
             parameter.symbol = "output_channel";
@@ -383,6 +392,7 @@ protected:
         case kParamSpread: return controls_.spread;
         case kParamPassInput: return controls_.pass_input ? 1.0f : 0.0f;
         case kParamOutputChannel: return static_cast<float>(controls_.output_channel);
+        case kParamConductorChannel: return static_cast<float>(conductorChannel_);
         case kParamVary: return controls_.vary * 100.0f;
         case kParamComp: return controls_.comp * 100.0f;
         case kParamColor: return controls_.color;
@@ -412,6 +422,7 @@ protected:
         case kParamSpread: controls_.spread = value; break;
         case kParamPassInput: controls_.pass_input = value >= 0.5f; break;
         case kParamOutputChannel: controls_.output_channel = static_cast<int>(value); break;
+        case kParamConductorChannel: conductorChannel_ = static_cast<int>(value); break;
         case kParamActionLearn: if (value > 0.5f) ++controls_.action_learn; break;
         case kParamVary: controls_.vary = value / 100.0f; break;
         case kParamComp: controls_.comp = value / 100.0f; break;
@@ -514,6 +525,16 @@ protected:
         for (uint32_t i = 0; i < eventCount; ++i)
             inputEvents[i] = toCoreMidiEvent(midiEvents[i]);
 
+        // Conductor CCs on the chosen channel steer the controls; applied at the start of the block.
+        if (conductorChannel_ > 0 && midiEvents != nullptr) {
+            for (uint32_t i = 0; i < midiEventCount; ++i) {
+                const MidiEvent& ev = midiEvents[i];
+                if (ev.size >= 3 && (ev.data[0] & 0xf0) == 0xb0 && (ev.data[0] & 0x0f) == conductorChannel_ - 1)
+                    static_cast<void>(downspout::cadence::applyConductorCc(controls_, ev.data[1], ev.data[2]));
+            }
+            controls_ = downspout::cadence::clampControls(controls_);
+        }
+
         const downspout::cadence::BlockResult result =
             downspout::cadence::processBlock(engine_,
                                              controls_,
@@ -541,6 +562,7 @@ protected:
     }
 
 private:
+    int conductorChannel_ = 0;  // 0 = off; the CC set is in applyConductorCc (core types header)
     CoreControls controls_ {};
     CoreEngineState engine_ {};
     float readyStatus_ = 0.0f;

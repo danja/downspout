@@ -175,11 +175,13 @@ Remaining:
   ASan/UBSan: scales against the docs, walk statistics, order 2, learning, locate and block-size
   independence, Conductor, state format). Not yet auditioned in a host: try each style, Order 2 after
   learning a line, and Learned mix at 50%. Open: learning assumes one melodic line (chords blur the counts);
-  the matrix editor is click-to-cycle only (no drag-painting or right-click to decrement); the plugin does
+  the matrix editor has click-to-cycle, drag-to-paint and right-click-to-zero but no undo; the plugin does
   not pass incoming MIDI through; the editor does not move while a CC drives a control.
 * **Conductor awareness** was added to `lifeform`, `polymeter` and `xoxolo` (off by default; not yet auditioned
-  in a host). Still without it among the generators: `arpgen`, `cadence`, `counterpointer`, `luma`,
-  `mnemosyne`, `m-mix`, `sidecar`, `tuney-vst`. Worth adding where a density or energy knob exists.
+  in a host). `counterpointer` and `cadence` followed (the CC mapping is a tested pure function,
+  `applyConductorCc`, in their core-types headers; CC 24 relearns). Still without it among the generators:
+  `arpgen`, `luma`, `mnemosyne`, `m-mix`, `sidecar` (its wrapper is tangled up with the server path),
+  `tuney-vst`. Worth adding where a density or energy knob exists.
 * Later candidate: chord-graph walker. A shared voice-leading helper in
   generative-common is only worth it if a second plugin needs it (shared code, needs approval).
 

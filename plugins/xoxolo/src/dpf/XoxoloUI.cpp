@@ -1007,10 +1007,11 @@ private:
         const Rect base = patternMenuBaseRect();
         const int columns = patternMenuColumns();
         const int rows = (patternMenuItemCount() + columns - 1) / columns;
-        return {base.x,
-                base.y + base.h + 4.0f,
-                base.w,
-                itemHeight * static_cast<float>(rows)};
+        const float menuHeight = itemHeight * static_cast<float>(rows);
+        // Below the selector when it fits in the window, otherwise above it (the Conductor menu is long and sits low).
+        const float below = base.y + base.h + 4.0f;
+        const float y = below + menuHeight <= static_cast<float>(getHeight()) - 8.0f ? below : std::max(8.0f, base.y - 4.0f - menuHeight);
+        return {base.x, y, base.w, menuHeight};
     }
 
     const char* patternMenuItemName(const int index, char* buffer, const std::size_t bufferSize) const

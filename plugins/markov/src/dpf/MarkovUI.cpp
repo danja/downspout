@@ -23,7 +23,6 @@ constexpr kit::Accent kConductorAccent {120, 126, 170};  // slate violet
 constexpr const char* kStateKeyModel = "model";
 constexpr const char* kStateKeyEdit = "edit";
 
-constexpr const char* kLearnNames[2] = {"Off", "On"};
 
 // Button ids: 0-7 load a style, then the editing actions.
 constexpr int kActionClear = 100;
@@ -101,28 +100,58 @@ protected:
     // The matrix cells are not kit controls, so they are handled here once the kit has had its turn.
     bool onMouse(const MouseEvent& ev) override
     {
+        if (!ev.press) {
+            painting_ = false;
+            return MagnetoUI::onMouse(ev);
+        }
+        // Right-click zeroes a cell.
+        if (ev.button == 3) {
+            const int cell = cellAt(static_cast<float>(ev.pos.getX()), static_cast<float>(ev.pos.getY()));
+            if (cell < 0) return false;
+            core::setCell(model_, cell / core::kStates, cell % core::kStates, 0);
+            pushEdit();
+            repaint();
+            return true;
+        }
+        if (ev.button == 1 && handleDropdownMouse(static_cast<float>(ev.pos.getX()), static_cast<float>(ev.pos.getY())))
+            return true;
         if (MagnetoUI::onMouse(ev))
             return true;
-        if (ev.button != 1 || !ev.press)
+        if (ev.button != 1)
             return false;
-        const float mx = static_cast<float>(ev.pos.getX());
-        const float my = static_cast<float>(ev.pos.getY());
-        for (int from = 0; from < core::kStates; ++from) {
-            for (int to = 0; to < core::kStates; ++to) {
-                if (cells_[static_cast<std::size_t>(from * core::kStates + to)].contains(mx, my)) {
-                    core::bumpCell(model_, from, to);
-                    pushEdit();
-                    repaint();
-                    return true;
-                }
-            }
-        }
-        return false;
+        // A click cycles the cell's weight; dragging on from there paints that weight into the cells it crosses.
+        const int cell = cellAt(static_cast<float>(ev.pos.getX()), static_cast<float>(ev.pos.getY()));
+        if (cell < 0)
+            return false;
+        core::bumpCell(model_, cell / core::kStates, cell % core::kStates);
+        paintWeight_ = model_.base[static_cast<std::size_t>(cell)];
+        paintedCell_ = cell;
+        painting_ = true;
+        pushEdit();
+        repaint();
+        return true;
+    }
+
+    bool onMotion(const MotionEvent& ev) override
+    {
+        if (MagnetoUI::onMotion(ev))
+            return true;
+        if (!painting_)
+            return false;
+        const int cell = cellAt(static_cast<float>(ev.pos.getX()), static_cast<float>(ev.pos.getY()));
+        if (cell < 0 || cell == paintedCell_)
+            return true;
+        paintedCell_ = cell;
+        core::setCell(model_, cell / core::kStates, cell % core::kStates, paintWeight_);
+        pushEdit();
+        repaint();
+        return true;
     }
 
     void onNanoDisplay() override
     {
         beginFrame();
+        dropdownCount_ = 0;
         drawHeader("Markov", "Markov-chain melody generator",
                    "each note is chosen from the row of the matrix for the note before it. Draw the matrix, pick a style, or learn it from a line you play.");
         drawMatrixPanel({24.0f, 108.0f, 912.0f, 482.0f});
@@ -132,12 +161,35 @@ protected:
         drawMelodyPanel({24.0f, y, w, h});
         drawTimingPanel({24.0f + w + gap, y, w, h});
         drawLearnPanel({24.0f + 2.0f * (w + gap), y, w, h});
+        drawOpenDropdown();
     }
 
 private:
     core::Model model_ {};
     std::array<Rect, core::kCells> cells_ {};
     std::uint32_t randomSerial_ = 0;
+
+    // Painting the matrix: a click sets the weight, then dragging copies it into the cells crossed.
+    bool painting_ = false;
+    int paintWeight_ = 0;
+    int paintedCell_ = -1;
+
+    [[nodiscard]] int cellAt(const float mx, const float my) const
+    {
+        for (int i = 0; i < core::kCells; ++i)
+            if (cells_[static_cast<std::size_t>(i)].contains(mx, my))
+                return i;
+        return -1;
+    }
+
+    // Drop-down lists for every choice. The kit has none, so they live here (the kit copies stay identical).
+    struct Dropdown {
+        std::uint32_t parameter = 0;
+        Rect box {};
+    };
+    std::array<Dropdown, 16> dropdowns_ {};
+    std::size_t dropdownCount_ = 0;
+    int openDropdown_ = -1;  // index into dropdowns_, or -1
 
     [[nodiscard]] core::Params currentParams() const
     {
@@ -167,7 +219,7 @@ private:
 
     void drawMatrixPanel(const Rect b)
     {
-        drawPanel(b, "TRANSITIONS", kMatrixAccent, "row = the note just played, column = the note that may follow; click a cell to change its weight (0-8)");
+        drawPanel(b, "TRANSITIONS", kMatrixAccent, "row = the note just played, column = the note that may follow; click to change a weight (0-8), drag to paint, right-click to zero");
         const auto& t = theme();
 
         const core::Params params = currentParams();
@@ -265,81 +317,231 @@ private:
         label(b.x, textY + 67.0f, "An empty row plays any note in the scale.", true, 11.0f);
     }
 
+    // ---- Drop-down lists ---------------------------------------------------------------------------------------
+
+    static int itemCount(const std::uint32_t parameter)
+    {
+        switch (parameter) {
+        case core::kScale: return core::kScaleCount;
+        case core::kGrid: return core::kGridCount;
+        case core::kOrder: return 2;
+        case core::kLearn: return 2;
+        case core::kLearnChannel: return 17;
+        case core::kConductorCh: return 17;
+        case core::kChannel: return 16;
+        default: return 0;
+        }
+    }
+
+    // The parameter value of the first item (Order and Channel start at 1, the others at 0).
+    static int itemOffset(const std::uint32_t parameter)
+    {
+        return parameter == core::kOrder || parameter == core::kChannel ? 1 : 0;
+    }
+
+    static const char* itemText(const std::uint32_t parameter, const int index, char* buffer, const std::size_t size)
+    {
+        switch (parameter) {
+        case core::kScale: return core::scaleName(index);
+        case core::kGrid: return core::gridName(index);
+        case core::kOrder: return index == 0 ? "1 note back" : "2 notes back";
+        case core::kLearn: return index == 0 ? "Off" : "On";
+        case core::kLearnChannel:
+            if (index == 0) return "All channels";
+            break;
+        case core::kConductorCh:
+            if (index == 0) return "Off";
+            break;
+        default: break;
+        }
+        const int channel = parameter == core::kChannel ? index + 1 : index;
+        std::snprintf(buffer, size, "Ch %d", channel);
+        return buffer;
+    }
+
+    void drawDropdown(const std::uint32_t parameter, const char* name, const Rect b)
+    {
+        const auto& t = theme();
+        label(b.x, b.y, name);
+        const Rect box {b.x, b.y + 15.0f, b.w, 22.0f};
+        const int index = std::clamp(intValue(parameter) - itemOffset(parameter), 0, itemCount(parameter) - 1);
+        char buffer[16];
+        beginPath();
+        fc(t.buttonFace);
+        roundedRect(box.x, box.y, box.w, box.h, laf::kRadiusSmall);
+        fill();
+        beginPath();
+        sc(t.border);
+        strokeWidth(1.0f);
+        roundedRect(box.x, box.y, box.w, box.h, laf::kRadiusSmall);
+        stroke();
+        fc(t.textPrimary);
+        fontSize(12.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        text(box.x + 8.0f, box.y + box.h * 0.5f, itemText(parameter, index, buffer, sizeof(buffer)), nullptr);
+        fc(t.textDim);
+        textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
+        text(box.x + box.w - 8.0f, box.y + box.h * 0.5f, "v", nullptr);
+        if (dropdownCount_ < dropdowns_.size())
+            dropdowns_[dropdownCount_++] = {parameter, box};
+    }
+
+    // Where the open list goes: below its box when it fits in the window, otherwise above it.
+    [[nodiscard]] Rect dropdownPopup(const Dropdown& d) const
+    {
+        const int count = itemCount(d.parameter);
+        const int columns = count > 12 ? 2 : 1;
+        const int rows = (count + columns - 1) / columns;
+        constexpr float itemH = 24.0f;
+        const float columnW = d.parameter == core::kScale ? 138.0f : std::max(d.box.w, 112.0f);
+        const float w = columnW * static_cast<float>(columns);
+        const float h = itemH * static_cast<float>(rows) + 8.0f;
+        const float x = std::clamp(d.box.x, 8.0f, static_cast<float>(getWidth()) - w - 8.0f);
+        const float below = d.box.y + d.box.h + 3.0f;
+        const float y = below + h <= static_cast<float>(getHeight()) - 8.0f ? below : std::max(8.0f, d.box.y - 3.0f - h);
+        return {x, y, w, h};
+    }
+
+    void drawOpenDropdown()
+    {
+        if (openDropdown_ < 0 || openDropdown_ >= static_cast<int>(dropdownCount_))
+            return;
+        const auto& t = theme();
+        const Dropdown& d = dropdowns_[static_cast<std::size_t>(openDropdown_)];
+        const Rect popup = dropdownPopup(d);
+        const int count = itemCount(d.parameter);
+        const int columns = count > 12 ? 2 : 1;
+        const int rows = (count + columns - 1) / columns;
+        const float columnW = popup.w / static_cast<float>(columns);
+        const int selected = intValue(d.parameter) - itemOffset(d.parameter);
+
+        beginPath();
+        fc(t.surface);
+        roundedRect(popup.x, popup.y, popup.w, popup.h, laf::kRadiusSmall);
+        fill();
+        beginPath();
+        sc(t.border);
+        strokeWidth(1.0f);
+        roundedRect(popup.x, popup.y, popup.w, popup.h, laf::kRadiusSmall);
+        stroke();
+
+        char buffer[16];
+        fontSize(12.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        for (int i = 0; i < count; ++i) {
+            const Rect item {popup.x + static_cast<float>(i / rows) * columnW + 4.0f, popup.y + 4.0f + static_cast<float>(i % rows) * 24.0f,
+                             columnW - 8.0f, 24.0f};
+            if (i == selected) {
+                beginPath();
+                fillColor(kMatrixAccent.r, kMatrixAccent.g, kMatrixAccent.b, 255);
+                roundedRect(item.x, item.y + 1.0f, item.w, item.h - 2.0f, 4.0f);
+                fill();
+                fillColor(250, 248, 242, 255);
+            } else {
+                fc(t.textPrimary);
+            }
+            text(item.x + 8.0f, item.y + item.h * 0.5f, itemText(d.parameter, i, buffer, sizeof(buffer)), nullptr);
+        }
+    }
+
+    // A click while a list is open picks an item or closes it; a click on a closed box opens its list.
+    bool handleDropdownMouse(const float mx, const float my)
+    {
+        if (openDropdown_ >= 0 && openDropdown_ < static_cast<int>(dropdownCount_)) {
+            const Dropdown d = dropdowns_[static_cast<std::size_t>(openDropdown_)];
+            const Rect popup = dropdownPopup(d);
+            openDropdown_ = -1;
+            if (popup.contains(mx, my)) {
+                const int count = itemCount(d.parameter);
+                const int columns = count > 12 ? 2 : 1;
+                const int rows = (count + columns - 1) / columns;
+                const float columnW = popup.w / static_cast<float>(columns);
+                const int column = std::clamp(static_cast<int>((mx - popup.x) / columnW), 0, columns - 1);
+                const int row = std::clamp(static_cast<int>((my - popup.y - 4.0f) / 24.0f), 0, rows - 1);
+                const int index = column * rows + row;
+                if (index < count)
+                    commit(d.parameter, static_cast<float>(index + itemOffset(d.parameter)));
+            }
+            repaint();
+            return true;  // the click that closes a list does nothing else
+        }
+        for (std::size_t i = 0; i < dropdownCount_; ++i) {
+            if (dropdowns_[i].box.contains(mx, my)) {
+                openDropdown_ = static_cast<int>(i);
+                repaint();
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ---- Controls --------------------------------------------------------------------------------------------
 
-    void slider(const std::uint32_t param, const char* name, const char* shown, const Rect panel, const int column, const int row, const Accent accent)
+    // A grid cell of a panel: column 0 or 1, row from the top.
+    [[nodiscard]] static Rect cellOf(const Rect panel, const int column, const int row)
     {
         const float colW = (panel.w - 28.0f - 12.0f) * 0.5f;
-        drawSlider(param, name, shown, {panel.x + 14.0f + static_cast<float>(column) * (colW + 12.0f), panel.y + 46.0f + static_cast<float>(row) * 56.0f, colW, 40.0f}, accent);
+        return {panel.x + 14.0f + static_cast<float>(column) * (colW + 12.0f), panel.y + 46.0f + static_cast<float>(row) * 56.0f, colW, 40.0f};
     }
 
     void drawMelodyPanel(const Rect b)
     {
         drawPanel(b, "MELODY", kMelodyAccent);
-        const float colW = (b.w - 28.0f - 12.0f) * 0.5f;
-        const std::string root = noteName(intValue(core::kRoot));
-        slider(core::kRoot, "Root note", root.c_str(), b, 0, 0, kMelodyAccent);
-        drawStepper(core::kScale, "Scale", core::scaleName(intValue(core::kScale)), {b.x + 14.0f, b.y + 46.0f + 56.0f, colW, 40.0f});
-        char orderText[8];
-        std::snprintf(orderText, sizeof(orderText), "%d", intValue(core::kOrder));
-        drawStepper(core::kOrder, "Order (notes of history)", orderText, {b.x + 14.0f, b.y + 46.0f + 112.0f, colW, 40.0f});
-
         char buf[32];
+        const std::string root = noteName(intValue(core::kRoot));
+        drawSlider(core::kRoot, "Root note", root.c_str(), cellOf(b, 0, 0), kMelodyAccent);
+        drawDropdown(core::kScale, "Scale", cellOf(b, 0, 1));
+        drawDropdown(core::kOrder, "Order (notes of history)", cellOf(b, 0, 2));
+
         std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::lround(value(core::kChaos) * 100.0f)));
-        slider(core::kChaos, "Chaos", buf, b, 1, 0, kMelodyAccent);
+        drawSlider(core::kChaos, "Chaos", buf, cellOf(b, 1, 0), kMelodyAccent);
         const std::string low = noteName(intValue(core::kLow));
-        slider(core::kLow, "Lowest note", low.c_str(), b, 1, 1, kMelodyAccent);
+        drawSlider(core::kLow, "Lowest note", low.c_str(), cellOf(b, 1, 1), kMelodyAccent);
         std::snprintf(buf, sizeof(buf), "%d", intValue(core::kOctaves));
-        slider(core::kOctaves, "Octaves", buf, b, 1, 2, kMelodyAccent);
+        drawSlider(core::kOctaves, "Octaves", buf, cellOf(b, 1, 2), kMelodyAccent);
     }
 
     void drawTimingPanel(const Rect b)
     {
         drawPanel(b, "TIMING AND DYNAMICS", kTimingAccent);
-        const float colW = (b.w - 28.0f - 12.0f) * 0.5f;
         char buf[32];
-        drawStepper(core::kGrid, "Step grid", core::gridName(intValue(core::kGrid)), {b.x + 14.0f, b.y + 46.0f, colW, 40.0f});
+        drawDropdown(core::kGrid, "Step grid", cellOf(b, 0, 0));
         std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::lround(value(core::kGate) * 100.0f)));
-        slider(core::kGate, "Gate", buf, b, 0, 1, kTimingAccent);
+        drawSlider(core::kGate, "Gate", buf, cellOf(b, 0, 1), kTimingAccent);
         std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::lround(value(core::kDensity) * 100.0f)));
-        slider(core::kDensity, "Density", buf, b, 0, 2, kTimingAccent);
+        drawSlider(core::kDensity, "Density", buf, cellOf(b, 0, 2), kTimingAccent);
 
         std::snprintf(buf, sizeof(buf), "%d", intValue(core::kVelocity));
-        slider(core::kVelocity, "Velocity", buf, b, 1, 0, kTimingAccent);
+        drawSlider(core::kVelocity, "Velocity", buf, cellOf(b, 1, 0), kTimingAccent);
         std::snprintf(buf, sizeof(buf), "%d bar%s", intValue(core::kPhraseBars), intValue(core::kPhraseBars) == 1 ? "" : "s");
-        slider(core::kPhraseBars, "Phrase length", buf, b, 1, 1, kTimingAccent);
+        drawSlider(core::kPhraseBars, "Phrase length", buf, cellOf(b, 1, 1), kTimingAccent);
         std::snprintf(buf, sizeof(buf), "%d", intValue(core::kSeed));
-        slider(core::kSeed, "Seed", buf, b, 1, 2, kTimingAccent);
-        std::snprintf(buf, sizeof(buf), "Ch %d", intValue(core::kChannel));
-        drawSlider(core::kChannel, "MIDI channel", buf, {b.x + 14.0f, b.y + 46.0f + 168.0f, b.w - 28.0f, 40.0f}, kTimingAccent);
+        drawSlider(core::kSeed, "Seed", buf, cellOf(b, 1, 2), kTimingAccent);
+
+        Rect channel = cellOf(b, 0, 3);
+        channel.w = b.w - 28.0f;
+        drawDropdown(core::kChannel, "MIDI output channel", channel);
     }
 
     void drawLearnPanel(const Rect b)
     {
         drawPanel(b, "LEARN AND CONDUCTOR", kLearnAccent);
-        const float colW = (b.w - 28.0f - 12.0f) * 0.5f;
-        label(b.x + 14.0f, b.y + 46.0f, "Learn from MIDI input", true, 12.0f);
-        drawSegments(core::kLearn, kLearnNames, 2, {b.x + 14.0f, b.y + 64.0f, colW, 26.0f}, kLearnAccent);
         char buf[48];
+        drawDropdown(core::kLearn, "Learn from MIDI input", cellOf(b, 0, 0));
         std::snprintf(buf, sizeof(buf), "%u transition%s heard", static_cast<unsigned>(model_.learnedTotal), model_.learnedTotal == 1 ? "" : "s");
-        label(b.x + 14.0f + colW + 12.0f, b.y + 70.0f, buf, true, 11.0f);
+        const Rect heard = cellOf(b, 1, 0);
+        label(heard.x, heard.y + 19.0f, buf, true, 11.0f);
 
-        if (intValue(core::kLearnChannel) == 0)
-            std::snprintf(buf, sizeof(buf), "all");
-        else
-            std::snprintf(buf, sizeof(buf), "Ch %d", intValue(core::kLearnChannel));
-        slider(core::kLearnChannel, "Learn channel", buf, b, 0, 1, kLearnAccent);
+        drawDropdown(core::kLearnChannel, "Learn channel", cellOf(b, 0, 1));
         std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::lround(value(core::kLearnedMix) * 100.0f)));
-        slider(core::kLearnedMix, "Learned mix", buf, b, 1, 1, kLearnAccent);
-        drawButton(kActionClearLearned, "Clear learned", {b.x + 14.0f, b.y + 46.0f + 112.0f, colW, 30.0f}, kLearnAccent, false);
+        drawSlider(core::kLearnedMix, "Learned mix", buf, cellOf(b, 1, 1), kLearnAccent);
 
-        if (intValue(core::kConductorCh) == 0)
-            std::snprintf(buf, sizeof(buf), "off");
-        else
-            std::snprintf(buf, sizeof(buf), "Ch %d", intValue(core::kConductorCh));
-        drawSlider(core::kConductorCh, "Conductor ch", buf, {b.x + 14.0f + colW + 12.0f, b.y + 46.0f + 108.0f, colW, 40.0f}, kConductorAccent);
-        label(b.x + 14.0f, b.y + 46.0f + 160.0f, "Conductor: CC 21 density, 22 velocity, 23 chaos,", true, 10.5f);
-        label(b.x + 14.0f, b.y + 46.0f + 174.0f, "24 = 127 re-rolls the melody at the next bar.", true, 10.5f);
+        const Rect clear = cellOf(b, 0, 2);
+        drawButton(kActionClearLearned, "Clear learned", {clear.x, clear.y + 6.0f, clear.w, 30.0f}, kLearnAccent, false);
+        drawDropdown(core::kConductorCh, "Conductor ch", cellOf(b, 1, 2));
+
+        label(b.x + 14.0f, b.y + 46.0f + 3.0f * 56.0f, "Conductor: CC 21 density, 22 velocity, 23 chaos,", true, 10.5f);
+        label(b.x + 14.0f, b.y + 46.0f + 3.0f * 56.0f + 14.0f, "24 = 127 re-rolls the melody at the next bar.", true, 10.5f);
     }
 };
 

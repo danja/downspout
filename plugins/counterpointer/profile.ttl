@@ -12,7 +12,8 @@ dsp:counterpointer a trn:PluginProfile ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/counterpointer/> ;
     trn:role trn:MidiProcessor ;
-    trn:accepts trn:Midi ;
+    trn:accepts trn:Midi, trn:ControlMidi ;
+    trn:conductorChannelParam "conductor_ch" ;
     trn:produces trn:Midi, trn:MelodyMidi ;
     trn:recommendedBefore dsp:canticle ;
     pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

@@ -146,6 +146,17 @@ void testStylesAndModelEditing()
     bumpCell(m, 0, 12);
     assert(m.base == before);
 
+    // Setting a cell directly: clamped, reports what it stored, ignores cells out of range, touches only that cell.
+    clearBase(m);
+    assert(setCell(m, 2, 9, 5) == 5 && m.base[2 * 12 + 9] == 5);
+    assert(setCell(m, 2, 9, 99) == kMaxWeight && m.base[2 * 12 + 9] == kMaxWeight);
+    assert(setCell(m, 2, 9, -3) == 0 && m.base[2 * 12 + 9] == 0);
+    assert(setCell(m, 12, 0, 4) == -1 && setCell(m, 0, -1, 4) == -1);
+    setCell(m, 11, 11, 7);
+    int nonZero = 0;
+    for (const std::uint8_t w : m.base) nonZero += w != 0 ? 1 : 0;
+    assert(nonZero == 1 && m.base[11 * 12 + 11] == 7);
+
     // Randomise is repeatable, seed dependent, within range, and leaves some moves at zero.
     Model a, b, c;
     randomiseBase(a, 11);

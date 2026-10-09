@@ -1,3 +1,4 @@
+#include <cmath>
 #include "counterpointer_engine.hpp"
 #include "counterpointer_serialization.hpp"
 #include "counterpointer_transport.hpp"
@@ -678,8 +679,45 @@ void testInertiaReversesLeaps()
     assert(legacy.has_value() && legacy->inertia == 0.0f);
 }
 
+void testConductorCcSet()
+{
+    using namespace downspout::counterpointer;
+    Controls controls;
+    const Controls defaults = controls;
+
+    // CC 21-23 write their control across 0..1; the value is clamped; unused CCs are reported as not handled.
+    assert(applyConductorCc(controls, 21, 0) && controls.density == 0.0f);
+    assert(applyConductorCc(controls, 21, 127) && controls.density == 1.0f);
+    assert(applyConductorCc(controls, 21, 64) && std::fabs(controls.density - 64.0f / 127.0f) < 1e-6f);
+    assert(applyConductorCc(controls, 22, 127) && controls.embellish == 1.0f);
+    assert(applyConductorCc(controls, 23, 127) && controls.short_random == 1.0f);
+    assert(applyConductorCc(controls, 21, 500) && controls.density == 1.0f);
+    assert(applyConductorCc(controls, 21, -5) && controls.density == 0.0f);
+    assert(!applyConductorCc(controls, 20, 64));  // Scene is not used
+    assert(!applyConductorCc(controls, 7, 64));
+
+    // The other controls are untouched by those three.
+    Controls only = defaults;
+    assert(applyConductorCc(only, 22, 100));
+    assert(only.density == defaults.density && only.short_random == defaults.short_random && only.key == defaults.key);
+
+    // CC 24 relearns, and only at 127.
+    Controls reset = defaults;
+    assert(applyConductorCc(reset, 24, 100) && reset.action_learn == defaults.action_learn);
+    assert(applyConductorCc(reset, 24, 127) && reset.action_learn == defaults.action_learn + 1);
+    assert(applyConductorCc(reset, 24, 127) && reset.action_learn == defaults.action_learn + 2);
+
+    // After clamping, every written control is still in range.
+    Controls wild = defaults;
+    assert(applyConductorCc(wild, 21, 127));
+    assert(applyConductorCc(wild, 22, 0));
+    const Controls clamped = clampControls(wild);
+    assert(clamped.density == 1.0f && clamped.embellish == 0.0f);
+}
+
 int main()
 {
+    testConductorCcSet();
     testTransportHelpers();
     testStoppedTransportPassThrough();
     testRunningTransportPassThroughBeforePhraseReady();

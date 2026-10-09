@@ -594,8 +594,45 @@ void testArpeggioCanEmitSingleNotes()
 
 }  // namespace
 
+void testConductorCcSet()
+{
+    using namespace downspout::cadence;
+    Controls controls;
+    const Controls defaults = controls;
+
+    // CC 21-23 write their control across 0..1; the value is clamped; unused CCs are reported as not handled.
+    assert(applyConductorCc(controls, 21, 0) && controls.complexity == 0.0f);
+    assert(applyConductorCc(controls, 21, 127) && controls.complexity == 1.0f);
+    assert(applyConductorCc(controls, 21, 64) && std::fabs(controls.complexity - 64.0f / 127.0f) < 1e-6f);
+    assert(applyConductorCc(controls, 22, 127) && controls.movement == 1.0f);
+    assert(applyConductorCc(controls, 23, 127) && controls.vary == 1.0f);
+    assert(applyConductorCc(controls, 21, 500) && controls.complexity == 1.0f);
+    assert(applyConductorCc(controls, 21, -5) && controls.complexity == 0.0f);
+    assert(!applyConductorCc(controls, 20, 64));  // Scene is not used
+    assert(!applyConductorCc(controls, 7, 64));
+
+    // The other controls are untouched by those three.
+    Controls only = defaults;
+    assert(applyConductorCc(only, 22, 100));
+    assert(only.complexity == defaults.complexity && only.vary == defaults.vary && only.key == defaults.key);
+
+    // CC 24 relearns, and only at 127.
+    Controls reset = defaults;
+    assert(applyConductorCc(reset, 24, 100) && reset.action_learn == defaults.action_learn);
+    assert(applyConductorCc(reset, 24, 127) && reset.action_learn == defaults.action_learn + 1);
+    assert(applyConductorCc(reset, 24, 127) && reset.action_learn == defaults.action_learn + 2);
+
+    // After clamping, every written control is still in range.
+    Controls wild = defaults;
+    assert(applyConductorCc(wild, 21, 127));
+    assert(applyConductorCc(wild, 22, 0));
+    const Controls clamped = clampControls(wild);
+    assert(clamped.complexity == 1.0f && clamped.movement == 0.0f);
+}
+
 int main()
 {
+    testConductorCcSet();
     testHarmonyBuildFromCapture();
     testSerializationRoundTrip();
     testHighColorFavorsJazzCadenceRoles();

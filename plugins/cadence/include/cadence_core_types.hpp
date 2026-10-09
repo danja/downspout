@@ -208,6 +208,23 @@ using ScheduledMidiEvent = MidiMessage;
     return controls;
 }
 
+// Conductor CC set (docs/midi-mapping.md): CC 21 Density -> complexity, 22 Energy -> movement, 23 Mutation -> vary, and
+// CC 24 = 127 (Reset) relearns from the input. CC 20 (Scene) is not used. Returns true when `cc` is one of these.
+[[nodiscard]] inline bool applyConductorCc(Controls& controls, const int cc, const int value) noexcept
+{
+    const int clamped = value < 0 ? 0 : (value > 127 ? 127 : value);
+    const float unit = static_cast<float>(clamped) / 127.0f;
+    switch (cc) {
+    case 21: controls.complexity = unit; return true;
+    case 22: controls.movement = unit; return true;
+    case 23: controls.vary = unit; return true;
+    case 24:
+        if (clamped == 127) ++controls.action_learn;
+        return true;
+    default: return false;
+    }
+}
+
 [[nodiscard]] inline bool harmonyControlsMatch(const Controls& a, const Controls& b) noexcept
 {
     return a.key == b.key &&

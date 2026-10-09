@@ -24,6 +24,13 @@ introduced.
 back after a leap of a fourth or more and to keep going after a step. It applies in
 Counterpoint mode, not Bass Descend. Idea from [Subsequence](https://subsystem.co/subsequence).
 
+### Conductor integration
+
+Set **Conductor** (0 = off, 1-16) to the channel Conductor uses (default 16). CC 21 drives Density, CC 22
+Embellish (how much ornament surrounds the line), CC 23 Short Rnd (how often it deviates), and CC 24 (value
+127) relearns, so each new section starts by listening afresh. CC 20 (Scene) is not used. Conductor CCs
+are not mistaken for notes to learn. See [MIDI Mapping](../../midi-mapping.md).
+
 ### Status
 
 Functional, as far as it goes, but could maybe be improved with more deterministic patterns. 

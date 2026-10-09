@@ -171,6 +171,32 @@ Xoxolo gains a MIDI input and three parameters: **Conductor Ch** (`conductor_ch`
 
 CC 20 (Scene) is not mapped. The mutation shift is performance state and is not saved with the project.
 
+## Counterpointer mapping
+
+Counterpointer gains one parameter, **Conductor** (`conductor_ch`, 0-16, default 0 = off).
+
+| CC | Conductor name | Counterpointer control | Notes |
+|----|---------------|------------------------|-------|
+| 21 | Density | `density` | How often the counter-line plays |
+| 22 | Energy | `embellish` | Ornamentation around the line |
+| 23 | Mutation | `short_random` | Short-range randomness |
+| 24 | Reset | relearn (trigger) | Fires when CC value = 127; learns the incoming line afresh |
+
+CC 20 (Scene) is not mapped.
+
+## Cadence mapping
+
+Cadence gains one parameter, **Conductor Ch** (`conductor_ch`, 0-16, default 0 = off).
+
+| CC | Conductor name | Cadence control | Notes |
+|----|---------------|-----------------|-------|
+| 21 | Density | `complexity` | Harmonic richness |
+| 22 | Energy | `movement` | How much the harmony moves |
+| 23 | Mutation | `vary` | Variation |
+| 24 | Reset | relearn (trigger) | Fires when CC value = 127; learns the incoming harmony afresh |
+
+CC 20 (Scene) is not mapped.
+
 ## Markov mapping
 
 Markov has one parameter for Conductor reception, **Conductor ch** (`conductor_ch`, 0-16, default 0 = off).

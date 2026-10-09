@@ -34,7 +34,8 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
   chipper, damiano, skream, spliff, helterskelter, treatment, magneto and ghost read those
   by default so Drift needs no configuration. Conductor emits CC 20-24 on channel 16
   (Scene, Density, Energy, Mutation, Reset); bassgen, drumgen, ground, melgen, worms, bubbles,
-  floozy, harmonic-atlas, sprout, lifeform, polymeter and xoxolo listen through a **Conductor Ch**
+  floozy, harmonic-atlas, sprout, lifeform, polymeter, xoxolo, markov, counterpointer
+  and cadence listen through a **Conductor Ch**
   parameter (0 = off). Mixgen drives T-Mix with CC
   20-27 (strips 1-8), Loopdelay with CC 30/31, Lightverb with CC 32/33; CC 19 claims or
   releases the producer bus. Details: `docs/midi-mapping.md`,
@@ -289,11 +290,13 @@ orders. Latch and capture state are internal. Requires transport.
 Transport-aware harmoniser and comping generator that learns harmony from incoming MIDI
 (learned transition model) and emits chord/comping MIDI. No gravity control yet; a
 progression chosen by learned transitions, not a functional-harmony graph. Persistent state.
+**Conductor Ch** (0 = off): CC 21 Complexity, 22 Movement, 23 Variation, CC 24 = 127 relearns.
 
 ### counterpointer
 Learns incoming MIDI and emits a monophonic counter-melody. Counterpoint mode and Bass
 Descend mode; **Inertia** (default 0 = unchanged) is a scoring term in Counterpoint mode
-only. Routing column provides Freeze and channel selectors. Persistent state.
+only. Routing column provides Freeze and channel selectors. Persistent state. **Conductor** (0 = off):
+CC 21 Density, 22 Embellish, 23 Short Rnd, CC 24 = 127 relearns.
 
 ### mnemosyne
 Phrase memory. Stores eight bounded phrases, accompanies incoming MIDI, or generates from

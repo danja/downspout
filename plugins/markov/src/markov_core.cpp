@@ -183,6 +183,14 @@ void bumpCell(Model& model, const int from, const int to) noexcept
     w = static_cast<std::uint8_t>((w + 1) % (kMaxWeight + 1));
 }
 
+int setCell(Model& model, const int from, const int to, const int weight) noexcept
+{
+    if (from < 0 || from >= kStates || to < 0 || to >= kStates) return -1;
+    auto& w = model.base[static_cast<std::size_t>(from * kStates + to)];
+    w = clampWeight(weight);
+    return w;
+}
+
 void clearLearned(Model& model) noexcept
 {
     model.learned1.fill(0);

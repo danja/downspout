@@ -45,6 +45,7 @@ enum ParameterIndex : uint32_t {
     kParamColor,
     kParamResponseMode,
     kParamInertia,
+    kParamConductorChannel,
     kParameterCount
 };
 
@@ -141,6 +142,11 @@ constexpr const char* kOutputChannelNames[] = {
     "9", "10", "11", "12", "13", "14", "15", "16"
 };
 
+constexpr const char* kConductorChNames[] = {
+    "Off", "1", "2", "3", "4", "5", "6", "7", "8",
+    "9", "10", "11", "12", "13", "14", "15", "16"
+};
+
 constexpr SelectorDef kSelectors[] = {
     {kParamKey, "Key", kNoteNames, 12},
     {kParamScale, "Scale", kScaleNames, downspout::counterpointer::SCALE_COUNT},
@@ -150,6 +156,7 @@ constexpr SelectorDef kSelectors[] = {
     {kParamRegister, "Register", kRegisterNames, 3},
     {kParamPassInput, "Pass", kToggleNames, 2},
     {kParamOutputChannel, "Channel", kOutputChannelNames, 17},
+    {kParamConductorChannel, "Conductor", kConductorChNames, 17},
     {kParamFreeze, "Freeze", kToggleNames, 2},
 };
 

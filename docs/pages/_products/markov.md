@@ -26,7 +26,7 @@ The melody is a random walk over the twelve pitch classes, counted from the **Ro
 matrix on screen has a row for the note just played and a column for each note that may follow it;
 each cell's weight (0 to 8) says how likely that move is. Brightness shows the chance each move
 actually has once the scale, anything learned and **Chaos** are applied, and the digit shows the
-weight you set. Click a cell to cycle its weight. The outlined row is the one being used right now.
+weight you set. Click a cell to cycle its weight, drag on from a click to paint that weight into the cells you cross, and right-click a cell to zero it. The outlined row is the one being used right now.
 
 **Style** replaces the matrix with a ready-made habit: Stepwise (seconds, with some thirds),
 Triadic (thirds and fifths), Fifths (fourths and fifths), Pentatonic, Blues (minor thirds and flat
@@ -73,6 +73,8 @@ line the phrase count starts again with a new random draw. CC 20 (Scene) is not 
 [MIDI Mapping](../../midi-mapping.md).
 
 ### Notes
+
+- Every choice (Scale, Step grid, Order, Learn, Learn channel, Conductor ch and the MIDI output channel) is a drop-down list; the numeric controls are sliders.
 
 - The editor does not move while a CC is driving a control (DPF has no DSP-to-panel path for that);
   the learned counts do update, a few times a second.
