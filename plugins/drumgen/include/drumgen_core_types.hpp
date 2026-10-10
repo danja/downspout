@@ -108,6 +108,7 @@ struct Controls {
     // so saved controls keep their meaning, and not part of pattern generation.
     int caRule = 0;
     int caTarget = 0;
+    int caEvery = 1;  // loops per automaton generation, 1-8
 };
 
 struct DrumStepCell {

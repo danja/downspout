@@ -36,22 +36,14 @@ helterskelter, skream, spliff) now have `WANT_FULL_STATE` and a `getState()`.
       **Verify in a host**, as with the six above.
 - [x] **gremlin, gremlin-driver and flues-synth-driver keep the patch** across host
       activation and sample-rate change (2026-10-09); verify in a host when they get state.
-- [ ] **The "no session state" list needs an honest definition (found 2026-10-09).** DPF's
-      VST3 `getState` already saves every non-output, non-trigger *parameter* by symbol and the
-      host restores them through `setParameterValue` (`third_party/DPF/distrho/src/
-      DistrhoPluginVST3.cpp:1169`). So a plugin whose settings are all ordinary parameters
-      persists them with no `WANT_STATE`, and the old "everything reverts to defaults" for the
-      22 plugins `check-plugin-state.sh` lists as "no session state" (arpgen, basilico,
-      canticle, conductor, drift, drumkit, floozy, flues-synth-driver, gremlin-driver,
+- [ ] **Confirm in a host that the 22 "parameters only" plugins survive save/reopen** (arpgen,
+      basilico, canticle, conductor, drift, drumkit, floozy, flues-synth-driver, gremlin-driver,
       gremlin, guardian, harmonic-atlas, m-mix, mixgen, moka, oracle, orbit, polymeter,
-      resonance-garden, sprout, syrinx) was mostly caused by `activate()` resetting the patch,
-      now fixed for gremlin, gremlin-driver and flues-synth-driver. A quick scan of the
-      others found no user-authored data held outside parameters. Real state is only needed
-      for data that is not a parameter (patterns, sample paths, text), as in lifeform, luma,
-      paunchlad and plank. Still to do: confirm in a host that each of the 22 survives
-      save/reopen, then reword `scripts/check-plugin-state.sh` so "no WANT_STATE" is not
-      reported as data loss (shared script, needs approval). (`sprout` checked: its steps
-      are derived from the preset parameter, so it is fine.)
+      resonance-garden, sprout, syrinx). DPF's VST3 `getState` saves every non-output,
+      non-trigger parameter by symbol (`third_party/DPF/distrho/src/DistrhoPluginVST3.cpp:1169`),
+      so they need no `WANT_STATE`; `scripts/check-plugin-state.sh` now reports them as
+      "parameters only" rather than data loss (2026-10-09). Real state is only needed for data
+      outside parameters (patterns, sample paths, text), as in lifeform, luma, paunchlad, plank.
 - [x] `gater` state macros removed (2026-10-09): it has no parameters and only momentary MIDI state.
 - [ ] Re-run the `-Wall -Wextra` sweep after any state change: the wrapper callbacks are
       what the core tests never touch.
@@ -157,11 +149,12 @@ Remaining:
   Pitch source = Held notes, and Drift or Conductor into its CC channels. Pitch source has a Latched
   mode (the chord survives note-off; the next fresh press replaces it). Open: MIDI is applied
   at block start, not sample-accurately; no pass-through of incoming MIDI.
+* **drumgen** has a **Generation every** (1-8 loops, `ca_every`) control for its automaton; tested, not yet listened to.
 * **CA lanes in `drumgen` and `xoxolo`** are in and tested. Not yet auditioned in a host: try Rule 90 and 30
   on Hats in drumgen, and marking the hat and percussion lanes in xoxolo. The automaton arithmetic is now
   shared (`include/downspout/cellular_automaton.hpp`, tested in `tests/cellular_automaton_tests.cpp`) and used
   by `polymeter`, `drumgen` and `xoxolo`. Open: xoxolo's grid shows the programmed pattern, not the
-  evolved row now playing; drumgen exposes no "evolve every N loops" control (fixed at one generation per loop).
+  evolved row now playing.
 * **Magneto look and feel:** Retune, Sprout and Markov use a plugin-local `MagnetoKit.hpp` (identical
   copies in `plugins/retune/src/dpf/`, `plugins/sprout/src/dpf/` and `plugins/markov/src/dpf/`) built on
   `downspout/look_and_feel.hpp`, matching Pratt and Magneto. Moving it to a shared header
@@ -177,10 +170,10 @@ Remaining:
   learning a line, and Learned mix at 50%. Open: learning assumes one melodic line (chords blur the counts);
   the matrix editor has click-to-cycle, drag-to-paint and right-click-to-zero but no undo; the plugin does
   not pass incoming MIDI through; the editor does not move while a CC drives a control.
-* **Conductor awareness** was added to `lifeform`, `polymeter` and `xoxolo` (off by default; not yet auditioned
+* **Conductor awareness** was added to `lifeform`, `luma`, `polymeter` and `xoxolo` (off by default; not yet auditioned
   in a host). `counterpointer` and `cadence` followed (the CC mapping is a tested pure function,
   `applyConductorCc`, in their core-types headers; CC 24 relearns). Still without it among the generators:
-  `arpgen`, `luma`, `mnemosyne`, `m-mix`, `sidecar` (its wrapper is tangled up with the server path),
+  `arpgen`, `mnemosyne` (only Novelty and a seed re-roll would fit, and its core takes parameters const, so it needs wrapper-level handling), `m-mix`, `sidecar` (its wrapper is tangled up with the server path),
   `tuney-vst`. Worth adding where a density or energy knob exists.
 * Later candidate: chord-graph walker. A shared voice-leading helper in
   generative-common is only worth it if a second plugin needs it (shared code, needs approval).

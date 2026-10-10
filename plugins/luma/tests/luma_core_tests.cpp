@@ -154,8 +154,72 @@ void testHostActivationKeepsThePatch()
     require(cellsOf(processor) == pattern, "a rate change must not reset the pattern");
 }
 
+void testConductorCcSet()
+{
+    using namespace downspout::luma;
+    const auto send = [](Processor& processor, const int status, const int d1, const int d2) {
+        MidiMessage m {};
+        m.size = 3;
+        m.data[0] = static_cast<std::uint8_t>(status);
+        m.data[1] = static_cast<std::uint8_t>(d1);
+        m.data[2] = static_cast<std::uint8_t>(d2);
+        TransportSnapshot transport {};
+        return processor.processBlock(64, transport, &m, 1);
+    };
+    const auto live = [](const Processor& processor) {
+        int count = 0;
+        for (std::uint32_t i = 0; i < kCellCount; ++i)
+            count += processor.getParameter(kParamCellStart + i) >= 0.5f ? 1 : 0;
+        return count;
+    };
+
+    Processor processor;
+    processor.init(48000.0);
+    processor.setParameter(kParamLedFeedback, 0.0f);
+
+    require(processor.getParameter(kParamConductorCh) == 0.0f, "luma conductor channel defaults to off");
+    const float density = processor.getParameter(kParamDensity);
+    send(processor, 0xbf, 21, 127);
+    require(processor.getParameter(kParamDensity) == density, "luma conductor CC ignored while off");
+
+    processor.setParameter(kParamConductorCh, 16.0f);
+    send(processor, 0xbf, 21, 127);
+    require(processor.getParameter(kParamDensity) == 1.0f, "luma CC 21 sets density");
+    send(processor, 0xbf, 21, 0);
+    require(processor.getParameter(kParamDensity) == 0.0f, "luma CC 21 spans 0 to 1");
+    send(processor, 0xbf, 22, 127);
+    require(processor.getParameter(kParamEnergy) == 1.0f, "luma CC 22 sets energy");
+
+    // Other channels and unused CCs are ignored.
+    const float energy = processor.getParameter(kParamEnergy);
+    send(processor, 0xb0, 22, 0);
+    require(processor.getParameter(kParamEnergy) == energy, "luma conductor CC on another channel is ignored");
+    send(processor, 0xbf, 23, 0);
+    send(processor, 0xbf, 20, 0);
+    require(processor.getParameter(kParamEnergy) == energy, "luma CC 20 and 23 are unused");
+
+    // CC 24 scatters only at 127.
+    processor.setParameter(kParamClear, 1.0f);
+    require(live(processor) == 0, "luma clear empties the grid");
+    send(processor, 0xbf, 24, 100);
+    require(live(processor) == 0, "luma CC 24 below 127 does nothing");
+    for (int i = 0; i < 4 && live(processor) == 0; ++i)
+        send(processor, 0xbf, 24, 127);
+    require(live(processor) > 0, "luma CC 24 = 127 scatters a new pattern");
+
+    // The channel is clamped, saved, and the setting round-trips.
+    processor.setParameter(kParamConductorCh, 99.0f);
+    require(processor.getParameter(kParamConductorCh) == 16.0f, "luma conductor channel clamps to 16");
+    processor.setParameter(kParamConductorCh, 5.0f);
+    Processor restored;
+    restored.init(48000.0);
+    require(restored.deserializeParameters(processor.serializeParameters()), "luma state with conductor channel loads");
+    require(restored.getParameter(kParamConductorCh) == 5.0f, "luma conductor channel survives state");
+}
+
 int main()
 {
+    testConductorCcSet();
     testStateRoundTripsSettingsAndPattern();
     testStateNeverStoresTriggers();
     testStateRejectsGarbage();

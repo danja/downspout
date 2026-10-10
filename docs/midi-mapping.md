@@ -141,6 +141,20 @@ bottom button row of the panel (click to cycle Off, then channels 1-16).
 CC 20 (Scene) is not mapped. The Conductor CCs still pass through when **Pass Input** is on, so a Conductor feeding
 Lifeform can keep feeding what follows. Launchpad button CCs (91-99 and 19-89) are unaffected.
 
+## Luma mapping
+
+Luma gains one parameter, **Conductor Ch** (`conductor_ch`, 0-16, default 0 = off), the **Cond** button at the right
+of the bottom button row.
+
+| CC | Conductor name | Luma control | Notes |
+|----|---------------|--------------|-------|
+| 21 | Density | `density` | How full a scattered pattern is |
+| 22 | Energy | `energy` | Note energy |
+| 24 | Reset | scatter (trigger) | Fires when CC value = 127 |
+
+CC 20 (Scene) and CC 23 (Mutation) are not mapped. The CCs still pass through when **Pass** is on. Launchpad button
+CCs are unaffected.
+
 ## Polymeter mapping
 
 Polymeter gains a MIDI input and three parameters: **Conductor ch** (`conductor_ch`, 0-16, default 0 = off) and two

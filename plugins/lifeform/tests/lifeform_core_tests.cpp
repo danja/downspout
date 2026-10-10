@@ -314,8 +314,57 @@ void testConductorCcSet()
     require(restored.getParameter(kParamConductorCh) == 7.0f, "conductor channel is saved");
 }
 
+void testGliderTravelsAcrossEveryEdge()
+{
+    // Independent torus reference: a glider must cross all four edges and keep matching it.
+    using namespace downspout::lifeform;
+    Processor processor;
+    processor.init(48000.0);
+    processor.setParameter(kParamLedFeedback, 0.0f);
+    processor.setParameter(kParamRunning, 0.0f);
+    std::array<bool, 64> ref {};
+    for (std::uint32_t i = 0; i < 64; ++i)
+        processor.setParameter(kParamCellStart + i, 0.0f);
+    const int glider[5][2] = {{0, 1}, {1, 2}, {2, 0}, {2, 1}, {2, 2}};
+    for (const auto& c : glider)
+    {
+        processor.setParameter(kParamCellStart + static_cast<std::uint32_t>(cellIndex(c[0], c[1])), 1.0f);
+        ref[cellIndex(c[0], c[1])] = true;
+    }
+    processor.setParameter(kParamRunning, 1.0f);
+    processor.setParameter(kParamClockMode, 2.0f);
+    TransportSnapshot transport {};
+    unsigned refGeneration = 0;
+    for (int block = 0; block < 4000 && refGeneration < 80; ++block)
+    {
+        processor.processBlock(512, transport, nullptr, 0);
+        const auto generation = static_cast<unsigned>(processor.getParameter(kParamStatusGeneration));
+        for (; refGeneration < generation; ++refGeneration)
+        {
+            std::array<bool, 64> next {};
+            for (int r = 0; r < 8; ++r)
+                for (int c = 0; c < 8; ++c)
+                {
+                    int n = 0;
+                    for (int dr = -1; dr <= 1; ++dr)
+                        for (int dc = -1; dc <= 1; ++dc)
+                            if (dr != 0 || dc != 0)
+                                n += ref[static_cast<std::size_t>(((r + dr + 8) % 8) * 8 + (c + dc + 8) % 8)] ? 1 : 0;
+                    const bool alive = ref[static_cast<std::size_t>(r * 8 + c)];
+                    next[static_cast<std::size_t>(r * 8 + c)] = alive ? (n == 2 || n == 3) : n == 3;
+                }
+            ref = next;
+        }
+        for (std::uint32_t i = 0; i < 64; ++i)
+            require((processor.getParameter(kParamStatusCellStart + i) >= 0.5f) == ref[i],
+                    "lifeform glider should match a wrapping 8x8 reference across every edge");
+    }
+    require(refGeneration >= 80, "lifeform glider test should run 80 generations");
+}
+
 int main()
 {
+    testGliderTravelsAcrossEveryEdge();
     testConductorCcSet();
     testStateRoundTripsSettingsAndPattern();
     testRestoringSeedDoesNotClobberThePattern();

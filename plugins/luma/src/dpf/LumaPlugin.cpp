@@ -32,6 +32,7 @@ using downspout::luma::kParamEnergy;
 using downspout::luma::kParamGate;
 using downspout::luma::kParamLedFeedback;
 using downspout::luma::kParamOutputMode;
+using downspout::luma::kParamConductorCh;
 using downspout::luma::kParamPassInput;
 using downspout::luma::kParamRandomize;
 using downspout::luma::kParamRootNote;
@@ -291,6 +292,14 @@ protected:
             parameter.hints |= kParameterIsBoolean | kParameterIsInteger;
             parameter.ranges.min = 0.0f;
             parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.0f;
+            break;
+        case kParamConductorCh:
+            parameter.name = "Conductor Ch";
+            parameter.symbol = "conductor_ch";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 16.0f;
             parameter.ranges.def = 0.0f;
             break;
         case kParamRandomize:

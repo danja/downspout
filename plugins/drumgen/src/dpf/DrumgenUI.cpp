@@ -40,6 +40,7 @@ enum ParameterIndex : uint32_t {
     kParamConductorChannel,
     kParamCaRule,
     kParamCaTarget,
+    kParamCaEvery,
     kParameterCount
 };
 
@@ -137,7 +138,11 @@ constexpr const char* kCaTargetNames[] = {
     "Hats", "Percussion", "Toms", "Hats + perc + toms", "All lanes"
 };
 
-constexpr std::array<SelectorDef, 9> kSelectors = {{
+constexpr const char* kCaEveryNames[] = {
+    "1 loop", "2 loops", "3 loops", "4 loops", "5 loops", "6 loops", "7 loops", "8 loops"
+};
+
+constexpr std::array<SelectorDef, 10> kSelectors = {{
     {kParamGenre, "Genre", kGenreNames, 17, 0},
     {kParamStyleMode, "Style", kStyleNames, 7, 0},
     {kParamKitMap, "Kit Map", kKitMapNames, 2, 0},
@@ -146,6 +151,7 @@ constexpr std::array<SelectorDef, 9> kSelectors = {{
     {kParamChannel, "Channel", kChannelNames, 16, 1},
     {kParamCaRule, "Automaton rule", kCaRuleNames, 11, 0},
     {kParamCaTarget, "Automaton plays on", kCaTargetNames, 5, 0},
+    {kParamCaEvery, "Generation every", kCaEveryNames, 8, 1},
     {kParamConductorChannel, "Conductor Ch", kConductorChNames, 17, 0},
 }};
 
@@ -233,6 +239,7 @@ public:
         values_[kParamKitMap] = 0.0f;
         values_[kParamBars] = 2.0f;
         values_[kParamResolution] = 1.0f;
+        values_[kParamCaEvery] = 1.0f;
         values_[kParamDensity] = 0.58f;
         values_[kParamVariation] = 0.35f;
         values_[kParamFillAmount] = 0.30f;
@@ -515,12 +522,12 @@ private:
 
         float cy = y + 48.0f;
         for (std::size_t i = 0; i < kSelectors.size(); ++i) {
-            if (i == kSelectors.size() - 3) {
+            if (i == kSelectors.size() - 4) {
                 cy += 4.0f;
                 fontSize(11.0f);
                 textAlign(ALIGN_LEFT | ALIGN_TOP);
                 fillColor(150, 190, 160, 200);
-                text(x + 20.0f, cy, "Automaton \xc2\xb7 evolves each loop from the pattern", nullptr);
+                text(x + 20.0f, cy, "Automaton \xc2\xb7 steps one generation every N loops", nullptr);
                 cy += 14.0f;
             }
             if (i == kSelectors.size() - 1) {

@@ -20,6 +20,8 @@ namespace downspout::drumgen {
 inline constexpr int kCaRuleCount = downspout::ca::kNamedRuleCount;
 inline constexpr int kCaTargetCount = 5;
 inline constexpr int kCaGenerations = downspout::ca::kGenerations;
+inline constexpr int kCaMinEvery = 1;
+inline constexpr int kCaMaxEvery = 8;
 
 // Rule index (the Automaton selector / parameter) -> Wolfram rule number. Index 0 is off.
 inline constexpr const std::array<int, kCaRuleCount>& kCaRules = downspout::ca::kNamedRules;
@@ -34,9 +36,9 @@ inline constexpr const std::array<int, kCaRuleCount>& kCaRules = downspout::ca::
 // The pass (loop number) an absolute step falls in.
 [[nodiscard]] std::int64_t caPassForStep(std::int64_t absoluteStep, int totalSteps) noexcept;
 
-// Velocity of `step` of `lane` on the given pass: 0 for a rest. Pass 0 (and every 64th) is the
-// pattern itself. New hits take the lane's average velocity; hits that survive keep theirs.
+// Velocity of `step` of `lane` on the given pass: 0 for a rest. `every` loops share one generation
+// (1-8). Generation 0 (and every 64th) is the pattern itself. New hits take the lane's average velocity; hits that survive keep theirs.
 [[nodiscard]] std::uint8_t caVelocity(const DrumLaneState& lane, int totalSteps, int ruleIndex, std::int64_t pass,
-                                      int step) noexcept;
+                                      int step, int every = 1) noexcept;
 
 }  // namespace downspout::drumgen

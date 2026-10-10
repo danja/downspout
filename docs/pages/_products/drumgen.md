@@ -46,7 +46,9 @@ never touched unless you choose All lanes.
 The pass number comes from the playback position, so loops, restarts and offline renders agree, and
 the stored pattern is never altered (New, Mutate and Vary all still work on it). Rule 90 gives
 symmetric, self-similar shapes, 30 and 110 are busier and less predictable, and 150 and 105 are
-dense. Both selectors are appended host parameters (`ca_rule`, `ca_target`), off by default.
+dense. **Generation every** (1-8 loops) holds each generation for that many loops, so the pattern changes
+slowly enough to hear each shape. The selectors are appended host parameters (`ca_rule`, `ca_target`,
+`ca_every`), off by default.
 
 ### Status
 

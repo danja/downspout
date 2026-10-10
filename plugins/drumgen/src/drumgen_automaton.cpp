@@ -40,14 +40,14 @@ std::int64_t caPassForStep(const std::int64_t absoluteStep, const int totalSteps
 }
 
 std::uint8_t caVelocity(const DrumLaneState& lane, const int totalSteps, const int ruleIndex, const std::int64_t pass,
-                        const int step) noexcept
+                        const int step, const int every) noexcept
 {
     const int n = std::clamp(totalSteps, 1, kMaxPatternSteps);
     if (step < 0 || step >= n) return 0;
     const std::uint8_t own = lane.steps[static_cast<std::size_t>(step)].velocity;
 
     const int rule = downspout::ca::namedRule(ruleIndex);
-    const int generation = downspout::ca::generationForPass(pass);
+    const int generation = downspout::ca::generationForPass(pass, std::clamp(every, kCaMinEvery, kCaMaxEvery));
     if (rule <= 0 || generation == 0) return own;
 
     std::array<std::uint8_t, downspout::ca::kMaxCells> row {};

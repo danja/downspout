@@ -35,6 +35,7 @@ enum ParameterIndex : uint32_t {
     kParamConductorChannel,
     kParamCaRule,    // appended: indices above are saved in projects
     kParamCaTarget,
+    kParamCaEvery,
     kParameterCount
 };
 
@@ -330,6 +331,14 @@ protected:
             parameter.ranges.max = 4.0f;  // hats, percussion, toms, all colour lanes, every lane
             parameter.ranges.def = 0.0f;
             break;
+        case kParamCaEvery:
+            parameter.name = "Automaton Every";
+            parameter.symbol = "ca_every";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges.min = 1.0f;
+            parameter.ranges.max = 8.0f;  // loops per automaton generation
+            parameter.ranges.def = 1.0f;
+            break;
         }
     }
 
@@ -385,6 +394,7 @@ protected:
         case kParamConductorChannel: return static_cast<float>(conductorChannel_);
         case kParamCaRule: return static_cast<float>(controls_.caRule);
         case kParamCaTarget: return static_cast<float>(controls_.caTarget);
+        case kParamCaEvery: return static_cast<float>(controls_.caEvery);
         case kParamActionNew:
         case kParamActionMutate:
         case kParamActionFill:
@@ -418,6 +428,7 @@ protected:
         case kParamConductorChannel: conductorChannel_ = static_cast<int>(value); break;
         case kParamCaRule: controls_.caRule = static_cast<int>(value); break;
         case kParamCaTarget: controls_.caTarget = static_cast<int>(value); break;
+        case kParamCaEvery: controls_.caEvery = static_cast<int>(value); break;
         case kParamActionNew: if (value > 0.5f) ++controls_.actionNew; break;
         case kParamActionMutate: if (value > 0.5f) ++controls_.actionMutate; break;
         case kParamActionFill: if (value > 0.5f) ++controls_.actionFill; break;

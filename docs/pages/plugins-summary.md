@@ -34,7 +34,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
   chipper, damiano, skream, spliff, helterskelter, treatment, magneto and ghost read those
   by default so Drift needs no configuration. Conductor emits CC 20-24 on channel 16
   (Scene, Density, Energy, Mutation, Reset); bassgen, drumgen, ground, melgen, worms, bubbles,
-  floozy, harmonic-atlas, sprout, lifeform, polymeter, xoxolo, markov, counterpointer
+  floozy, harmonic-atlas, sprout, lifeform, luma, polymeter, xoxolo, markov, counterpointer
   and cadence listen through a **Conductor Ch**
   parameter (0 = off). Mixgen drives T-Mix with CC
   20-27 (strips 1-8), Loopdelay with CC 30/31, Lightverb with CC 32/33; CC 19 claims or
@@ -140,8 +140,8 @@ includes Breakbeat, Amen, Jungle and Hip Hop. Emits drum MIDI (default channel 1
 aimed at drumkit's note map; MIDI input exists only for control (Conductor CCs).
 **Conductor Ch** maps CC 21 to density, 22 to variation, 23 to mutation rate and CC 24 =
 127 to a new pattern. Persistent patterns. Requires transport. **Automaton layer** (off by default;
-appended parameters `ca_rule` 0-10, `ca_target` 0-4): the generated pattern is generation 0, then on each
-loop pass the targeted lanes (hats, percussion, toms, all three, or every lane) play the next row of a
+appended parameters `ca_rule` 0-10, `ca_target` 0-4, `ca_every` 1-8 loops per generation): the generated
+pattern is generation 0, then on each generation the targeted lanes (hats, percussion, toms, all three, or every lane) play the next row of a
 1-D cellular automaton (rules 30, 90, 110, 150, 18, 54, 60, 22, 105, 126; wrapping edges) seeded from the
 lane's own hits; the pass comes from the playback position, the stored pattern is untouched, empty lanes
 stay silent, and after 64 generations a lane returns to the pattern.
@@ -257,7 +257,8 @@ when Pass Input is on.
 ### luma
 Launchpad performance generator: lit grid cells drive coordinated bass, chord, melody and
 drum agents, with transport-clocked or free-running steps, multi-part MIDI output and LED
-feedback. Pattern state is saved.
+feedback. Pattern state is saved. **Conductor Ch** (`conductor_ch` 0-16, default 0 = off) maps CC 21 to
+density, CC 22 to energy and CC 24 = 127 to scatter; CC 20 and 23 are unused.
 
 ### sidecar
 Phrase player for generated solo material. Deterministic local generation, with an

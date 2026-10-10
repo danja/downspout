@@ -21,6 +21,14 @@ fragments and drum sparks, and the plugin sends LED feedback back to the
 controller when the host routes its MIDI output to the Launchpad. Unhandled
 input MIDI is blocked by default, with a `Pass` switch for deliberate forwarding.
 
+### Conductor integration
+
+The **Cond** button (click to cycle Off, then channels 1-16) sets the channel Luma listens to for
+Conductor (default 16). CC 21 drives Density, CC 22 Energy, and CC 24 (value 127) scatters a fresh
+pattern. CC 20 (Scene) and CC 23 (Mutation) are not used, since Luma has no mutation control. The
+Conductor CCs still pass through when Pass is on. Off by default; the setting is saved
+(`conductor_ch`). See [MIDI Mapping](../../midi-mapping.md).
+
 ### Status
 
 Basically functional but so far of limited practical use.

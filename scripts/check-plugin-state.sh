@@ -19,6 +19,10 @@
 # Nothing in the build or the core test suites can detect this: the suites test
 # the portable core, never the wrapper, and the plugin compiles cleanly.
 #
+# "Absent" plugins are not necessarily losing anything: DPF's VST3 getState saves
+# every non-output, non-trigger parameter by symbol (DistrhoPluginVST3.cpp:1169), so a
+# plugin whose settings are all parameters persists them with no WANT_STATE.
+#
 # Usage:
 #   scripts/check-plugin-state.sh            # report, exit 1 if any plugin is broken
 #   scripts/check-plugin-state.sh --report   # report, exit 0 (informational)
@@ -98,7 +102,7 @@ total=$((ok_count + broken_count + absent_count))
 printf "Session state audit over %d plugins\n" "$total"
 printf "  correct (saves and restores) : %d\n" "$ok_count"
 printf "  BROKEN (silently writes defaults) : %d\n" "$broken_count"
-printf "  no session state at all     : %d\n\n" "$absent_count"
+printf "  parameters only (no extra state)  : %d\n\n" "$absent_count"
 
 if [[ ${#broken[@]} -gt 0 ]]; then
   echo "BROKEN -- these write their defaults into every host project:"
@@ -107,7 +111,9 @@ if [[ ${#broken[@]} -gt 0 ]]; then
 fi
 
 if [[ ${#absent[@]} -gt 0 ]]; then
-  echo "NO SESSION STATE -- everything reverts to defaults on reopen:"
+  echo "PARAMETERS ONLY -- no WANT_STATE. Not data loss: DPF saves every non-output,"
+  echo "non-trigger parameter itself. Only data held outside parameters (patterns, paths,"
+  echo "text) would need real state. Confirm in a host that these reopen intact:"
   printf '  %s\n' "${absent[@]}" | fold -s -w 78 | sed 's/^/  /'
   echo
 fi

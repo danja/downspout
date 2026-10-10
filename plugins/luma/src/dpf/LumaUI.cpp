@@ -27,6 +27,7 @@ using downspout::luma::kParamEnergy;
 using downspout::luma::kParamGate;
 using downspout::luma::kParamLedFeedback;
 using downspout::luma::kParamOutputMode;
+using downspout::luma::kParamConductorCh;
 using downspout::luma::kParamPassInput;
 using downspout::luma::kParamRandomize;
 using downspout::luma::kParamRootNote;
@@ -116,6 +117,7 @@ public:
         values_[kParamBaseChannel] = 1.0f;
         values_[kParamLedFeedback] = 1.0f;
         values_[kParamPassInput] = 0.0f;
+        values_[kParamConductorCh] = 0.0f;
 
        #ifdef DGL_NO_SHARED_RESOURCES
         createFontFromFile("sans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
@@ -192,6 +194,12 @@ protected:
             commitParameter(kParamLedFeedback, values_[kParamLedFeedback] >= 0.5f ? 0.0f : 1.0f);
             return true;
         }
+        if (conductorRect_.contains(x, y))
+        {
+            const int next = (static_cast<int>(std::lround(values_[kParamConductorCh])) + 1) % 17;
+            commitParameter(kParamConductorCh, static_cast<float>(next));
+            return true;
+        }
         if (passRect_.contains(x, y))
         {
             commitParameter(kParamPassInput, values_[kParamPassInput] >= 0.5f ? 0.0f : 1.0f);
@@ -234,6 +242,7 @@ private:
     Rect clearRect_ {};
     Rect ledRect_ {};
     Rect passRect_ {};
+    Rect conductorRect_ {};
     int activeSlider_ = -1;
 
     [[nodiscard]] float padValue(const std::size_t index) const noexcept
@@ -465,15 +474,23 @@ private:
 
     void drawButtons(const float x, const float y, const float w)
     {
-        const float buttonW = (w - 24.0f) / 4.0f;
+        const float buttonW = (w - 32.0f) / 5.0f;
         scatterRect_ = {x, y, buttonW, 42.0f};
         clearRect_ = {x + buttonW + 8.0f, y, buttonW, 42.0f};
         ledRect_ = {x + (buttonW + 8.0f) * 2.0f, y, buttonW, 42.0f};
         passRect_ = {x + (buttonW + 8.0f) * 3.0f, y, buttonW, 42.0f};
+        conductorRect_ = {x + (buttonW + 8.0f) * 4.0f, y, buttonW, 42.0f};
         drawButton(scatterRect_, "Scatter", 211, 151, 66, false);
         drawButton(clearRect_, "Clear", 206, 80, 74, false);
         drawButton(ledRect_, values_[kParamLedFeedback] >= 0.5f ? "LED On" : "LED Off", 78, 147, 210, values_[kParamLedFeedback] >= 0.5f);
         drawButton(passRect_, values_[kParamPassInput] >= 0.5f ? "Pass" : "Block", 83, 166, 113, values_[kParamPassInput] >= 0.5f);
+        const int conductor = static_cast<int>(std::lround(values_[kParamConductorCh]));
+        char conductorLabel[16];
+        if (conductor == 0)
+            std::snprintf(conductorLabel, sizeof(conductorLabel), "Cond off");
+        else
+            std::snprintf(conductorLabel, sizeof(conductorLabel), "Cond %d", conductor);
+        drawButton(conductorRect_, conductorLabel, 120, 126, 170, conductor > 0);
     }
 
     void drawButton(const Rect& rect, const char* label, const int r, const int g, const int b, const bool active)

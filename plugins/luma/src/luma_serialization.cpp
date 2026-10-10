@@ -36,6 +36,7 @@ constexpr Persisted kPersisted[] = {
     {"base_channel", kParamBaseChannel},
     {"led_feedback", kParamLedFeedback},
     {"pass_input", kParamPassInput},
+    {"conductor_ch", kParamConductorCh},
 };
 
 struct Parsed {

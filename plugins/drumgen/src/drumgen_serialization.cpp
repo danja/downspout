@@ -72,6 +72,7 @@ std::string serializeControls(const Controls& controls) {
     if (controls.caRule != 0) {
         out << "caRule=" << controls.caRule << '\n';
         out << "caTarget=" << controls.caTarget << '\n';
+        if (controls.caEvery != 1) out << "caEvery=" << controls.caEvery << '\n';
     }
     return out.str();
 }
@@ -175,6 +176,8 @@ std::optional<Controls> deserializeControls(const std::string& text) {
             controls.caRule = intValue;
         } else if (key == "caTarget" && parseInteger(value, intValue)) {
             controls.caTarget = intValue;
+        } else if (key == "caEvery" && parseInteger(value, intValue)) {
+            controls.caEvery = intValue;
         } else {
             return std::nullopt;
         }

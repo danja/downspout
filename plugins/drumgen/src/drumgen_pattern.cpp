@@ -2286,6 +2286,7 @@ Controls clampControls(const Controls& raw) {
     controls.actionFill = clampi(controls.actionFill, 0, 1048576);
     controls.caRule = clampi(controls.caRule, 0, 10);    // kCaRuleCount - 1
     controls.caTarget = clampi(controls.caTarget, 0, 4);  // kCaTargetCount - 1
+    controls.caEvery = clampi(controls.caEvery, 1, 8);    // kCaMinEvery..kCaMaxEvery
     return controls;
 }
 

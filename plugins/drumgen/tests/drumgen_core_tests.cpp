@@ -1181,6 +1181,36 @@ void testAutomatonInTheEngine() {
     assert(state.pattern.lanes[static_cast<int>(LaneId::closedHat)].steps[1].velocity == 0);
 }
 
+void testAutomatonEveryNLoops() {
+    const PatternState pattern = makeAutomatonPattern();
+    const DrumLaneState& hats = pattern.lanes[static_cast<int>(LaneId::closedHat)];
+
+    // Every 3 loops share one generation: passes 0-2 are the pattern, 3-5 generation 1, 6-8 generation 2.
+    for (int step = 0; step < 16; ++step) {
+        for (int pass = 0; pass < 3; ++pass) {
+            assert(caVelocity(hats, 16, 2, pass, step, 3) == hats.steps[step].velocity);
+            assert(caVelocity(hats, 16, 2, pass + 3, step, 3) == caVelocity(hats, 16, 2, 1, step, 1));
+            assert(caVelocity(hats, 16, 2, pass + 6, step, 3) == 0);
+        }
+        // Every 1 (the default) and out-of-range values behave as before / clamp.
+        assert(caVelocity(hats, 16, 2, 1, step) == caVelocity(hats, 16, 2, 1, step, 1));
+        assert(caVelocity(hats, 16, 2, 1, step, 0) == caVelocity(hats, 16, 2, 1, step, 1));
+        assert(caVelocity(hats, 16, 2, 8, step, 99) == caVelocity(hats, 16, 2, 1, step, 1));
+    }
+
+    Controls controls;
+    controls.caRule = 2;
+    controls.caEvery = 5;
+    const auto restored = deserializeControls(serializeControls(controls));
+    assert(restored.has_value() && restored->caEvery == 5);
+    assert(serializeControls(Controls {}).find("caEvery") == std::string::npos);
+    Controls wild;
+    wild.caEvery = 99;
+    assert(clampControls(wild).caEvery == 8);
+    wild.caEvery = -3;
+    assert(clampControls(wild).caEvery == 1);
+}
+
 void testAutomatonControlsStateAndClamp() {
     Controls controls;
     controls.caRule = 3;
@@ -1209,6 +1239,7 @@ int main() {
     testAutomatonTargets();
     testAutomatonInTheEngine();
     testAutomatonControlsStateAndClamp();
+    testAutomatonEveryNLoops();
     testDeterministicGeneration();
     testFillRefreshKeepsEarlierBars();
     testCompoundMeterShape();

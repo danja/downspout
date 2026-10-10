@@ -211,7 +211,8 @@ void emitStepHits(EngineState& state,
         // The automaton layer replaces what a targeted lane plays on this pass.
         const bool evolving = state.controls.caRule > 0 && caTargetsLane(state.controls.caTarget, lane);
         const std::uint8_t velocity = evolving ? caVelocity(state.pattern.lanes[lane], state.pattern.totalSteps,
-                                                            state.controls.caRule, pass, localStep)
+                                                            state.controls.caRule, pass, localStep,
+                                                            state.controls.caEvery)
                                                : cell.velocity;
         if (velocity == 0) {
             continue;
