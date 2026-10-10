@@ -211,6 +211,34 @@ Cadence gains one parameter, **Conductor Ch** (`conductor_ch`, 0-16, default 0 =
 
 CC 20 (Scene) is not mapped.
 
+## Arpgen mapping
+
+Arpgen gains one parameter, **Conductor Ch** (`conductor_ch`, 0-16, default 0 = off), appended after
+its status outputs. The CCs set the controls directly, as if you had moved them, so a later change on
+the panel or from host automation takes over until the next CC arrives.
+
+| CC | Conductor name | Arpgen control | Notes |
+|----|---------------|----------------|-------|
+| 21 | Density | `octaves` | 1-4, four equal steps over 0-127 |
+| 22 | Energy | `rate` | 1/4, 1/8, 1/8T, 1/16, 1/16T, 1/32: six equal steps, slow to fast |
+
+CC 20 (Scene), 23 (Mutation) and 24 (Reset) are not mapped. With **Pass Input** on, the Conductor's CCs
+are passed through with the rest of the input.
+
+## M-Mix mapping
+
+M-Mix gains one parameter, **Conductor Ch** (`conductor_ch`, 0-16, default 0 = off), appended after
+Mute. As with Arpgen the CCs move the controls directly, so a later panel or automation change takes
+over until the next CC.
+
+| CC | Conductor name | M-Mix control | Notes |
+|----|---------------|---------------|-------|
+| 21 | Density | `bias` (Open Bias) | 0-100%: the chance a gate change opens, so higher density passes more notes |
+| 22 | Energy | `maintain`, inverted | 100% to 0%: higher energy holds the gate state less often, so it changes more |
+
+CC 20 (Scene), 23 (Mutation) and 24 (Reset) are not mapped. Non-note MIDI already passes through
+M-Mix, so the Conductor's CCs continue downstream.
+
 ## Markov mapping
 
 Markov has one parameter for Conductor reception, **Conductor ch** (`conductor_ch`, 0-16, default 0 = off).

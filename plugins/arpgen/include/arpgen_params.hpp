@@ -21,6 +21,7 @@ enum ParameterIndex : std::uint32_t {
     kParamStatusNote,
     kParamStatusInput,
     kParamStatusOutput,
+    kParamConductorChannel,  // appended after the status outputs so existing indices stay put
     kParameterCount
 };
 

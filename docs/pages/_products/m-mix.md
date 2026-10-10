@@ -19,6 +19,10 @@ M-Mix processes incoming MIDI notes rather than audio. Notes pass only when the
 current probability and Euclidean gates are open, making it useful for rhythmic
 note thinning, comping variation, and transport-locked MIDI movement.
 
+### Conductor
+
+Set **Conductor Ch** to the channel Conductor sends on (it defaults to 16; 0 is off). CC 21 (Density) sets Open Bias, so denser sections let more notes through, and CC 22 (Energy) sets Maintain inverted, so more energetic sections change the gate more often. The CCs move the sliders as if you had, so you can still override them by hand.
+
 ### Status
 
 Functional but awaiting review in practical application.

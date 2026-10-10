@@ -28,6 +28,19 @@ struct Parameters {
     float mute = 0.0f;
 };
 
+// Conductor CC set (docs/midi-mapping.md): CC 21 Density -> Open Bias (the chance a gate change opens,
+// 0-100%) and CC 22 Energy -> Maintain, inverted (higher energy means the gate holds its state less
+// often, so it changes more). CC 20, 23 and 24 are not used. Returns true when `cc` is one of the two used.
+[[nodiscard]] inline bool applyConductorCc(Parameters& parameters, const int cc, const int value) noexcept {
+    const int clamped = value < 0 ? 0 : (value > 127 ? 127 : value);
+    const float unit = static_cast<float>(clamped) / 127.0f;
+    switch (cc) {
+    case 21: parameters.bias = unit * 100.0f; return true;
+    case 22: parameters.maintain = (1.0f - unit) * 100.0f; return true;
+    default: return false;
+    }
+}
+
 struct TransportSnapshot {
     bool valid = false;
     bool playing = false;

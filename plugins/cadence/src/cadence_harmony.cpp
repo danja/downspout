@@ -1116,7 +1116,7 @@ void cadence_clear_progression(ChordSlot* slots, int count) {
     if (!slots || count <= 0) {
         return;
     }
-    std::memset(static_cast<void*>(slots), 0, sizeof(ChordSlot) * (size_t)count);
+    std::fill(slots, slots + count, ChordSlot {});
 }
 
 void cadence_copy_progression(ChordSlot* dst, const ChordSlot* src, int count) {

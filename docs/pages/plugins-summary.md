@@ -35,7 +35,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
   by default so Drift needs no configuration. Conductor emits CC 20-24 on channel 16
   (Scene, Density, Energy, Mutation, Reset); bassgen, drumgen, ground, melgen, worms, bubbles,
   floozy, harmonic-atlas, sprout, lifeform, luma, polymeter, xoxolo, markov, counterpointer
-  and cadence listen through a **Conductor Ch**
+  cadence, arpgen and m-mix listen through a **Conductor Ch**
   parameter (0 = off). Mixgen drives T-Mix with CC
   20-27 (strips 1-8), Loopdelay with CC 30/31, Lightverb with CC 32/33; CC 19 claims or
   releases the producer bus. Details: `docs/midi-mapping.md`,
@@ -285,7 +285,8 @@ alters the host graph. Targets: bassgen, drumgen, ground, worms, bubbles.
 Transport-synced arpeggiator. **Chord** mode captures incoming chord slices; **Scale**
 mode derives scale runs, triads or sevenths from held register anchors. Rates quarter
 through thirty-second, straight and triplet; one to four octaves; up, down and alternating
-orders. Latch and capture state are internal. Requires transport.
+orders. Latch and capture state are internal. Requires transport. **Conductor Ch** (0 = off):
+CC 21 Density sets Octaves (1-4), CC 22 Energy sets Rate (1/4 up to 1/32).
 
 ### cadence
 Transport-aware harmoniser and comping generator that learns harmony from incoming MIDI
@@ -306,7 +307,8 @@ Persistent motif state; requires transport.
 
 ### m-mix
 Transport-aware MIDI gate combining probabilistic P-Mix-style transitions with E-Mix-style
-Euclidean blocks: removes or passes notes before they reach an instrument.
+Euclidean blocks: removes or passes notes before they reach an instrument. **Conductor Ch**
+(0 = off): CC 21 Density sets Open Bias, CC 22 Energy sets Maintain inverted (busier gating).
 
 ### retune
 MIDI effect that retunes a note stream to a Scala `.scl` scale. For each held note it
@@ -496,8 +498,11 @@ selectable channel; CC 0 disables) so Drift drives it directly.
 ### damiano
 Six-mode stereo distortion (Soft, Tanh, Fuzz, Overdrive, Tube, Wavefold) with Drive 1-10,
 Tone (one-pole high shelf before the shaper, about 3 kHz, 50% = flat), Folds 1-8
-(Wavefold only), Mix and Output Gain (+-24 dB). One selectable CC number overrides Drive
-in real time.
+(Wavefold only), Mix and Output Gain (+-24 dB). **Stereo Linked/Split** (default Linked,
+identical to before): Split gives the right channel its own Mode, Drive, Tone and Folds
+for a binaural effect. Selectable CC numbers (all on one CC channel, 0 = off): CC Drive and
+CC Shape (waveshaper mode in six steps) for the left or both channels, and CC Drive R and CC Shape R
+for the right channel (Split only), so two Drift lanes can modulate the channels independently.
 
 ### skream
 Scream filter: input through an ADAA2 anti-aliased tanh saturator and an SVF low-pass,

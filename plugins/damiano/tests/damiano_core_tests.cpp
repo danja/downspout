@@ -1,5 +1,6 @@
 #include "damiano_core.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdio>
@@ -250,6 +251,185 @@ static void testOutputGain()
     }
 }
 
+// ── Stereo split ─────────────────────────────────────────────────────────────
+
+struct StereoRun {
+    std::array<float, 256> inL{}, inR{}, outL{}, outR{};
+};
+
+static StereoRun runStereo(const downspout::damiano::Parameters& p,
+                           const downspout::damiano::LiveControl& live)
+{
+    using namespace downspout::damiano;
+    StereoRun r;
+    for (std::size_t i = 0; i < r.inL.size(); ++i) {
+        const float v = 0.6f * std::sin(2.0f * 3.14159f * static_cast<float>(i) / 32.0f);
+        r.inL[i] = v;
+        r.inR[i] = v;  // identical input: any difference is the processing
+    }
+    std::array<const float*, kMaxChannels> ins{};
+    std::array<float*, kMaxChannels>       outs{};
+    ins[0] = r.inL.data(); ins[1] = r.inR.data();
+    outs[0] = r.outL.data(); outs[1] = r.outR.data();
+    AudioBlock audio;
+    audio.inputs = ins; audio.outputs = outs; audio.channelCount = 2;
+    EngineState state;
+    processBlock(state, p, static_cast<std::uint32_t>(r.inL.size()), 44100.0, audio, live);
+    return r;
+}
+
+static float maxDiff(const std::array<float, 256>& a, const std::array<float, 256>& b)
+{
+    float d = 0.0f;
+    for (std::size_t i = 0; i < a.size(); ++i) d = std::max(d, std::abs(a[i] - b[i]));
+    return d;
+}
+
+static void testLinkedMirrorsLeft()
+{
+    using namespace downspout::damiano;
+    Parameters p;           // stereo defaults to linked
+    p.driveR = 9.0f;        // would be audible if it leaked through
+    p.modeR  = static_cast<float>(kModeFuzz);
+    LiveControl live;
+    live.driveR = 9.0f;
+    live.modeR  = 2.0f;
+    const StereoRun r = runStereo(p, live);
+    check("linked: R equals L despite R settings", maxDiff(r.outL, r.outR) == 0.0f);
+}
+
+static void testLegacyOverloadUnchanged()
+{
+    using namespace downspout::damiano;
+    // The short processBlock must give exactly what the live-control form gives
+    // with only driveL set (the pre-split behaviour).
+    Parameters p;
+    p.mode = static_cast<float>(kModeOverdrive);
+    StereoRun a = runStereo(p, LiveControl{6.5f, -1.0f, -1.0f, -1.0f});
+
+    StereoRun b;
+    for (std::size_t i = 0; i < b.inL.size(); ++i) {
+        b.inL[i] = a.inL[i]; b.inR[i] = a.inR[i];
+    }
+    std::array<const float*, kMaxChannels> ins{};
+    std::array<float*, kMaxChannels>       outs{};
+    ins[0] = b.inL.data(); ins[1] = b.inR.data();
+    outs[0] = b.outL.data(); outs[1] = b.outR.data();
+    AudioBlock audio;
+    audio.inputs = ins; audio.outputs = outs; audio.channelCount = 2;
+    EngineState state;
+    processBlock(state, p, 256, 44100.0, audio, 6.5f);
+    check("legacy overload L matches", maxDiff(a.outL, b.outL) == 0.0f);
+    check("legacy overload R matches", maxDiff(a.outR, b.outR) == 0.0f);
+}
+
+static void testSplitIndependentDrive()
+{
+    using namespace downspout::damiano;
+    Parameters p;
+    p.stereo = 1.0f;
+    p.driveR = 9.0f;        // L stays at 2
+    const StereoRun r = runStereo(p, LiveControl{});
+    check("split: channels differ", maxDiff(r.outL, r.outR) > 0.01f);
+
+    // Left must be identical to a linked run: the right settings cannot touch it.
+    Parameters linked = p;
+    linked.stereo = 0.0f;
+    const StereoRun l = runStereo(linked, LiveControl{});
+    check("split: L unchanged by R settings", maxDiff(r.outL, l.outL) == 0.0f);
+    // Right must equal a linked run whose left settings are the right ones.
+    Parameters swapped;
+    swapped.drive = 9.0f;
+    const StereoRun s = runStereo(swapped, LiveControl{});
+    check("split: R behaves as L would with R settings", maxDiff(r.outR, s.outL) == 0.0f);
+}
+
+static void testSplitIndependentMode()
+{
+    using namespace downspout::damiano;
+    Parameters p;
+    p.stereo = 1.0f;
+    p.mode   = static_cast<float>(kModeSoft);
+    p.modeR  = static_cast<float>(kModeFuzz);
+    const StereoRun r = runStereo(p, LiveControl{});
+    check("split mode: channels differ", maxDiff(r.outL, r.outR) > 0.01f);
+}
+
+static void testLiveControlPerChannel()
+{
+    using namespace downspout::damiano;
+    Parameters p;
+    p.stereo = 1.0f;
+    // A CC on the right drive must move only the right channel.
+    const StereoRun base = runStereo(p, LiveControl{});
+    const StereoRun moved = runStereo(p, LiveControl{-1.0f, 10.0f, -1.0f, -1.0f});
+    check("live driveR leaves L alone", maxDiff(base.outL, moved.outL) == 0.0f);
+    check("live driveR moves R",        maxDiff(base.outR, moved.outR) > 0.01f);
+    // And a CC on the left mode only the left.
+    const StereoRun shaped = runStereo(p, LiveControl{-1.0f, -1.0f, 2.0f, -1.0f});
+    check("live modeL leaves R alone", maxDiff(base.outR, shaped.outR) == 0.0f);
+    check("live modeL moves L",        maxDiff(base.outL, shaped.outL) > 0.01f);
+}
+
+static void testCcMapping()
+{
+    using namespace downspout::damiano;
+    check("cc 0 -> drive 1",    nearlyEqual(driveFromCc(0),   1.0f));
+    check("cc 127 -> drive 10", nearlyEqual(driveFromCc(127), 10.0f));
+    check("cc drive clamps",    nearlyEqual(driveFromCc(500), 10.0f));
+    check("cc 0 -> mode 0",     modeFromCc(0)   == 0.0f);
+    check("cc 127 -> last mode", modeFromCc(127) == static_cast<float>(kModeCount - 1));
+    bool monotonic = true, covered[kModeCount] = {};
+    float prev = -1.0f;
+    for (int v = 0; v < 128; ++v) {
+        const float m = modeFromCc(v);
+        monotonic = monotonic && m >= prev;
+        prev = m;
+        covered[static_cast<int>(m)] = true;
+    }
+    check("cc shape monotonic", monotonic);
+    bool all = true;
+    for (bool c : covered) all = all && c;
+    check("cc shape reaches every mode", all);
+}
+
+static void testSplitSerialization()
+{
+    using namespace downspout::damiano;
+    Parameters p;
+    p.stereo = 1.0f; p.driveR = 7.5f; p.modeR = 4.0f; p.toneR = 20.0f;
+    p.foldCountR = 5.0f; p.ccDriveR = 12.0f; p.ccShape = 13.0f; p.ccShapeR = 14.0f;
+    const auto r = deserializeParameters(serializeParameters(p));
+    check("split round-trip valid", r.has_value());
+    if (r) {
+        check("rt stereo",     nearlyEqual(r->stereo, 1.0f));
+        check("rt driveR",     nearlyEqual(r->driveR, 7.5f));
+        check("rt modeR",      nearlyEqual(r->modeR, 4.0f));
+        check("rt toneR",      nearlyEqual(r->toneR, 20.0f));
+        check("rt foldCountR", nearlyEqual(r->foldCountR, 5.0f));
+        check("rt ccDriveR",   nearlyEqual(r->ccDriveR, 12.0f));
+        check("rt ccShape",    nearlyEqual(r->ccShape, 13.0f));
+        check("rt ccShapeR",   nearlyEqual(r->ccShapeR, 14.0f));
+    }
+    // A pre-split document (no R keys) loads with the linked defaults.
+    const auto old = deserializeParameters(
+        "version=1\nmode=3.0\ndrive=4.0\ntone=50.0\nfold_count=2.0\nmix=100.0\n"
+        "output_gain=0.0\ncc_drive=1.0\ncc_channel=1.0\n");
+    check("pre-split state loads", old.has_value());
+    if (old) {
+        check("pre-split is linked", old->stereo == 0.0f);
+        check("pre-split keeps drive", nearlyEqual(old->drive, 4.0f));
+    }
+    Parameters extreme;
+    extreme.stereo = 7.0f; extreme.driveR = 99.0f; extreme.modeR = 99.0f;
+    extreme.ccShape = 500.0f;
+    const Parameters c = clampParameters(extreme);
+    check("clamp stereo", c.stereo <= 1.0f);
+    check("clamp driveR", c.driveR <= 10.0f);
+    check("clamp modeR",  c.modeR <= 5.0f);
+    check("clamp ccShape", c.ccShape <= 127.0f);
+}
+
 int main()
 {
     testSilence();
@@ -258,6 +438,13 @@ int main()
     testClamp();
     testSerialization();
     testOutputGain();
+    testLinkedMirrorsLeft();
+    testLegacyOverloadUnchanged();
+    testSplitIndependentDrive();
+    testSplitIndependentMode();
+    testLiveControlPerChannel();
+    testCcMapping();
+    testSplitSerialization();
 
     std::printf("\n%d passed, %d failed\n", gPassed, gFailed);
     return gFailed == 0 ? 0 : 1;

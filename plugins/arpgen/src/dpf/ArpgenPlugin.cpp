@@ -173,6 +173,10 @@ protected:
             parameter.name = "Output Channel"; parameter.symbol = "output_channel";
             parameter.hints |= kParameterIsInteger;
             parameter.ranges = {0.0f, 0.0f, 16.0f}; break;
+        case kParamConductorChannel:
+            parameter.name = "Conductor Ch"; parameter.symbol = "conductor_ch";
+            parameter.hints |= kParameterIsInteger;
+            parameter.ranges = {0.0f, 0.0f, 16.0f}; break;
         case kParamStatusMaterial:
             parameter.name = "Material Notes"; parameter.symbol = "status_material";
             parameter.hints = kParameterIsOutput | kParameterIsInteger;
@@ -205,6 +209,7 @@ protected:
         case kParamVelocityFollow: return controls_.velocityFollow;
         case kParamPassInput: return controls_.passInput ? 1.0f : 0.0f;
         case kParamOutputChannel: return controls_.outputChannel;
+        case kParamConductorChannel: return static_cast<float>(conductorChannel_);
         case kParamStatusMaterial: return materialStatus_;
         case kParamStatusNote: return noteStatus_;
         case kParamStatusInput: return inputStatus_;
@@ -228,6 +233,7 @@ protected:
         case kParamVelocityFollow: controls_.velocityFollow = value; break;
         case kParamPassInput: controls_.passInput = value >= 0.5f; break;
         case kParamOutputChannel: controls_.outputChannel = std::lround(value); break;
+        case kParamConductorChannel: conductorChannel_ = std::clamp(static_cast<int>(std::lround(value)), 0, 16); return;
         default: return;
         }
         controls_ = clampControls(controls_);
@@ -247,6 +253,15 @@ protected:
         for (std::uint32_t i = 0; i < count; ++i)
             input[i] = toCoreMidi(midiEvents[i]);
 
+        // A Conductor channel of 0 is off. The CCs set Octaves and Rate directly, like moving the controls.
+        if (conductorChannel_ > 0) {
+            for (std::uint32_t i = 0; i < count; ++i) {
+                const InputMidiEvent& ev = input[i];
+                if (ev.size >= 3 && (ev.data[0] & 0xf0) == 0xb0 && (ev.data[0] & 0x0f) == conductorChannel_ - 1)
+                    static_cast<void>(applyConductorCc(controls_, ev.data[1], ev.data[2]));
+            }
+        }
+
         const BlockResult result = processBlock(engine_, controls_, toCoreTransport(getTimePosition()),
                                                 frames, getSampleRate(), input.data(), count);
         const float decay = static_cast<float>(frames / std::max(1.0, getSampleRate() * 0.18));
@@ -262,6 +277,7 @@ protected:
 
 private:
     Controls controls_ {};
+    int conductorChannel_ = 0;  // 0 = off; the CC set is applyConductorCc (arpgen_core.hpp)
     EngineState engine_ {};
     float materialStatus_ = 0.0f;
     float noteStatus_ = -1.0f;

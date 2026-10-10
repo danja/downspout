@@ -20,7 +20,26 @@ Parameters clampParameters(const Parameters& p) noexcept
     out.outputGain = safe(out.outputGain, -24.0f, 24.0f, 0.0f);
     out.ccDrive    = safe(out.ccDrive,    0.0f, 127.0f, 0.0f);
     out.ccChannel  = safe(out.ccChannel,  1.0f,  16.0f, 1.0f);
+    out.stereo     = safe(out.stereo,     0.0f,  1.0f,  0.0f);
+    out.driveR     = safe(out.driveR,     1.0f, 10.0f,  2.0f);
+    out.modeR      = safe(out.modeR,      0.0f,  5.0f,  1.0f);
+    out.toneR      = safe(out.toneR,      0.0f, 100.0f, 50.0f);
+    out.foldCountR = safe(out.foldCountR, 1.0f,  8.0f,  2.0f);
+    out.ccDriveR   = safe(out.ccDriveR,   0.0f, 127.0f, 0.0f);
+    out.ccShape    = safe(out.ccShape,    0.0f, 127.0f, 0.0f);
+    out.ccShapeR   = safe(out.ccShapeR,   0.0f, 127.0f, 0.0f);
     return out;
+}
+
+float driveFromCc(int value) noexcept
+{
+    return 1.0f + (static_cast<float>(std::clamp(value, 0, 127)) / 127.0f) * 9.0f;
+}
+
+float modeFromCc(int value) noexcept
+{
+    const int v = std::clamp(value, 0, 127);
+    return static_cast<float>(std::min(kModeCount - 1, v * kModeCount / 128));
 }
 
 namespace {
@@ -114,6 +133,30 @@ float processSample(float x, Mode mode, float drive, float tanhComp, int foldCou
 
 }  // namespace
 
+namespace {
+
+struct ChannelSettings {
+    Mode  mode;
+    float drive;
+    float tanhComp;
+    int   foldCount;
+    float toneAmount;  // -0.8 (dark) to +0.8 (bright), 0 at tone 50
+};
+
+ChannelSettings makeChannel(float mode, float drive, float tone, float foldCount) noexcept
+{
+    drive = std::clamp(std::isfinite(drive) ? drive : 2.0f, 1.0f, 10.0f);
+    ChannelSettings c;
+    c.mode       = static_cast<Mode>(std::clamp(static_cast<int>(std::round(mode)), 0, kModeCount - 1));
+    c.drive      = drive;
+    c.tanhComp   = 1.0f / std::tanh(drive);  // drive >= 1, so tanh(drive) > 0.76
+    c.foldCount  = static_cast<int>(std::round(foldCount));
+    c.toneAmount = ((tone - 50.0f) / 50.0f) * 0.8f;
+    return c;
+}
+
+}  // namespace
+
 void processBlock(EngineState&      state,
                   const Parameters& params,
                   std::uint32_t     frames,
@@ -121,27 +164,38 @@ void processBlock(EngineState&      state,
                   const AudioBlock& audio,
                   float             effectiveDrive) noexcept
 {
-    effectiveDrive = std::clamp(effectiveDrive, 1.0f, 10.0f);
+    LiveControl live;
+    live.driveL = effectiveDrive;
+    processBlock(state, params, frames, sampleRate, audio, live);
+}
 
-    // Update tanh compensation cache when drive changes
-    if (effectiveDrive != state.cachedDrive) {
-        state.tanhComp = (effectiveDrive > 0.001f)
-                            ? 1.0f / std::tanh(effectiveDrive)
-                            : 1.0f;
-        state.cachedDrive = effectiveDrive;
-    }
+void processBlock(EngineState&       state,
+                  const Parameters&  params,
+                  std::uint32_t      frames,
+                  double             sampleRate,
+                  const AudioBlock&  audio,
+                  const LiveControl& live) noexcept
+{
+    const bool split = params.stereo >= 0.5f;
+    const auto pick = [](float liveValue, float stored) noexcept {
+        return liveValue >= 0.0f ? liveValue : stored;
+    };
 
-    const auto mode = static_cast<Mode>(static_cast<int>(std::round(params.mode)));
-    const int  foldCount = static_cast<int>(std::round(params.foldCount));
+    // Channel 0 is left; in Linked mode every channel uses the left settings.
+    const ChannelSettings left = makeChannel(pick(live.modeL, params.mode),
+                                             pick(live.driveL, params.drive),
+                                             params.tone, params.foldCount);
+    const ChannelSettings right = split
+        ? makeChannel(pick(live.modeR, params.modeR), pick(live.driveR, params.driveR),
+                      params.toneR, params.foldCountR)
+        : left;
+
     const float wetMix  = params.mix / 100.0f;
     const float dryMix  = 1.0f - wetMix;
     float outGain = std::pow(10.0f, params.outputGain / 20.0f);
     if (!std::isfinite(outGain)) outGain = 1.0f;
 
-    // Tone shelf: one-pole high-shelf via low-pass subtraction
-    // toneAmount: -0.8 (dark) to +0.8 (bright), 0 at 50
-    const float toneAmount = ((params.tone - 50.0f) / 50.0f) * 0.8f;
-    // Crossover ~3 kHz
+    // Tone shelf: one-pole high shelf via low-pass subtraction, crossover ~3 kHz
     const float toneAlpha = std::exp(-2.0f * static_cast<float>(M_PI) * 3000.0f
                                      / static_cast<float>(sampleRate));
 
@@ -151,6 +205,8 @@ void processBlock(EngineState&      state,
         const float* in  = audio.inputs[c];
         float*       out = audio.outputs[c];
         if (!in || !out) continue;
+
+        const ChannelSettings& cs = (c == 1) ? right : left;
 
         // Reset LP state if it became non-finite (NaN/Inf from a bad input block)
         float lp = state.toneLp[c];
@@ -162,10 +218,9 @@ void processBlock(EngineState&      state,
             if (!std::isfinite(dry)) dry = 0.0f;
 
             lp = toneAlpha * lp + (1.0f - toneAlpha) * dry;
-            float toned = dry + toneAmount * (dry - lp);
+            float toned = dry + cs.toneAmount * (dry - lp);
 
-            float wet = processSample(toned, mode, effectiveDrive,
-                                      state.tanhComp, foldCount);
+            float wet = processSample(toned, cs.mode, cs.drive, cs.tanhComp, cs.foldCount);
             // Final guard: no mode should produce non-finite output, but be safe
             if (!std::isfinite(wet)) wet = 0.0f;
 

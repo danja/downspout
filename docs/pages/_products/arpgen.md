@@ -21,6 +21,10 @@ Scale mode uses held notes as register anchors for in-key runs, triads, or
 sevenths. Both modes support one to four octaves, velocity following, gate
 control, straight and triplet rates, and endpoint-safe alternating patterns.
 
+### Conductor
+
+Set **Conductor Ch** to the channel Conductor sends on (it defaults to 16; 0 is off) and Conductor shapes the arpeggio over the song: CC 21 (Density) sets Octaves from 1 to 4 and CC 22 (Energy) steps Rate from 1/4 up to 1/32. The CCs move the controls as if you had, so you can still override them by hand.
+
 ### Status
 
 The portable core, deterministic tests, VST3 wrapper, and custom UI are in

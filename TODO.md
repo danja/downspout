@@ -15,8 +15,6 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
   either. Low urgency, since `include/downspout/test_assert.h` already makes a lost
   `-UNDEBUG` a compile error. Touches root glue and ~36 plugin CMake files, so it needs
   approval and a full test run.
-* **Add `-Wall -Wextra` to `downspout-project-options`** and clear the remaining noise
-  plugin by plugin so it cannot regress. Needs approval and a full 62-suite run.
 
 ## Session state (found 2026-10-06)
 
@@ -54,12 +52,9 @@ Standalone `g++ -std=c++20 -Wall -Wextra -fsyntax-only` over `plugins/*/src/*.cp
 `-Iplugins/generative-common/include` or conductor, drift, ghost, guardian, harmonic-atlas
 and others will not compile). No `-Wswitch` warnings remain. What was left on purpose:
 
-* `cadence` (2) and `drumgen` (1): `-Wclass-memaccess` on `memset` of structs with default
-  member initialisers. Safe in practice. One wrinkle to decide: `cadence_clear_progression`
-  zeroes `ChordSlot`, whose `velocity` defaults to 96, so a cleared slot has velocity 0
-  rather than the constructed default.
-* `mnemosyne`, `mosaic`: `-Wmisleading-indentation`. The cores are dense one-line
-  statements; reformatting is churn, not a fix.
+* `cadence` and `drumgen` `memset` calls are `void*`-cast, so they no longer warn. (Re-swept
+  2026-10-10: zero warnings across `plugins/*/src/*.cpp`.) `cadence_clear_progression` now
+  resets slots to `ChordSlot{}` (velocity 96) instead of zeroing; cadence tests pass.
 * `campione` loader: the `smpl` loop end is inclusive in the WAV spec, but the engine wraps at
   `position >= loopEnd`, so the last loop sample is skipped (one frame). Changing it means
   adjusting load, save and the engine together; decide whether it is worth it. (The ignored
@@ -85,6 +80,12 @@ and others will not compile). No `-Wswitch` warnings remain. What was left on pu
   cutoff position linearly (t = 0.5 is a notch at the cutoff), and it only reshapes the
   forward filter, not the Scream feedback high-pass.
 
+* **Damiano Linked/Split stereo** is in and tested (per-channel Mode, Drive, Tone, Folds; CC Drive and
+  CC Shape per channel on a shared CC channel; see `plugins/damiano/docs/porting-notes.md`). Not yet
+  auditioned in a host: try Split with Soft left and Fuzz right, and two Drift lanes on CC Drive / CC
+  Drive R. Verify an old project (pre-split state) loads Linked. Open: "shape" is the stepped waveshaper
+  mode; a continuous shape (asymmetry/bias) would be new DSP. Tone and Folds are not CC-controlled.
+
 * `voxmod`: host validation in REAPER still pending.
 * `keyframe`: the leash diagram is static at unity rates because drift is genuinely ~0 there;
   a splice halo was added so it reads live during crossfades. If it still reads dead at
@@ -99,8 +100,8 @@ Remaining:
 * **Verify in a host (REAPER):** load, play notes, filter an audio track, save/reopen state.
   Nothing has been listened to. Also confirm the host accepts an instrument with audio inputs.
 * Listen to drum levels (normalised per hit, consistent at ~0.15); check voice-stealing clicks.
-* GM Program mode warms only the last requested voice; other voices build on first note
-  (~1.9 ms). Warm several if this is audible.
+* GM Program mode now queues a warm-up per Program Change (last 8 voices); host-check that
+  switching programs on several channels no longer glitches on first notes. Offline-tested only.
 * `scripts/capture-plugin-screenshots.sh` captures the real desktop if `DISPLAY` is set
   (see `MISTAKES.md`). Make it always use Xvfb. Shared script, needs approval.
 * Catalogue screenshot shows Synth mode (filter dimmed); consider a Synth + Filter capture.
@@ -155,11 +156,11 @@ Remaining:
   shared (`include/downspout/cellular_automaton.hpp`, tested in `tests/cellular_automaton_tests.cpp`) and used
   by `polymeter`, `drumgen` and `xoxolo`. Open: xoxolo's grid shows the programmed pattern, not the
   evolved row now playing.
-* **Magneto look and feel:** Retune, Sprout and Markov use a plugin-local `MagnetoKit.hpp` (identical
-  copies in `plugins/retune/src/dpf/`, `plugins/sprout/src/dpf/` and `plugins/markov/src/dpf/`) built on
-  `downspout/look_and_feel.hpp`, matching Pratt and Magneto. Moving it to a shared header
-  would remove the duplicate but is shared code and needs approval. Older generator
-  plugins still use `GenerativePanelUI` (mosaic, polymeter, etc.); restyle if wanted.
+* **Magneto look and feel:** the kit is now shared, `include/downspout/dpf/MagnetoKit.hpp`, used by
+  Retune, Sprout, Markov and Damiano (new hooks: overridable `sendValue()` for plugins that carry
+  values as state, `setValue()` and `setDim()`). Older generator plugins still use
+  `GenerativePanelUI` (mosaic, polymeter, etc.); restyle if wanted. Retune, Sprout and Markov were
+  rebuilt against the shared header but not re-screenshotted; confirm they look unchanged.
 * **Gravity** is in `harmonic-atlas`. `cadence` (learned harmony) has not had it; its progression
   model is different, so decide whether a gravity bias on the learned transitions makes sense.
 * **Atlas voice-leading** is local to `harmonic-atlas`. Listen to it; the chords sit low (around
@@ -172,8 +173,10 @@ Remaining:
   not pass incoming MIDI through; the editor does not move while a CC drives a control.
 * **Conductor awareness** was added to `lifeform`, `luma`, `polymeter` and `xoxolo` (off by default; not yet auditioned
   in a host). `counterpointer` and `cadence` followed (the CC mapping is a tested pure function,
-  `applyConductorCc`, in their core-types headers; CC 24 relearns). Still without it among the generators:
-  `arpgen`, `mnemosyne` (only Novelty and a seed re-roll would fit, and its core takes parameters const, so it needs wrapper-level handling), `m-mix`, `sidecar` (its wrapper is tangled up with the server path),
+  `applyConductorCc`, in their core-types headers; CC 24 relearns). `arpgen` followed (CC 21 Density -> Octaves,
+  CC 22 Energy -> Rate; `applyConductorCc` in `arpgen_core.hpp`, tested; screenshot recaptured; not yet auditioned
+  in a host). `m-mix` followed (CC 21 Density -> Open Bias, CC 22 Energy -> Maintain inverted; tested; UI slider added and
+  the window made taller because its sixth slider row had been hidden under the toggles). Still without it among the generators: `mnemosyne` (only Novelty and a seed re-roll would fit, and its core takes parameters const, so it needs wrapper-level handling), `sidecar` (its wrapper is tangled up with the server path),
   `tuney-vst`. Worth adding where a density or energy knob exists.
 * Later candidate: chord-graph walker. A shared voice-leading helper in
   generative-common is only worth it if a second plugin needs it (shared code, needs approval).

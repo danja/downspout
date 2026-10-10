@@ -186,6 +186,35 @@ void serialization_round_trips_parameters() {
 
 }  // namespace
 
+void conductor_cc_mapping() {
+    Parameters p;
+    assert(applyConductorCc(p, 21, 0) && p.bias == 0.0f);
+    assert(applyConductorCc(p, 21, 127) && p.bias == 100.0f);
+    assert(applyConductorCc(p, 21, 500) && p.bias == 100.0f);
+    assert(applyConductorCc(p, 22, 0) && p.maintain == 100.0f);
+    assert(applyConductorCc(p, 22, 127) && p.maintain == 0.0f);
+    assert(applyConductorCc(p, 22, -9) && p.maintain == 100.0f);
+
+    // Always a valid parameter set, and monotonic in the value.
+    float previousBias = -1.0f, previousMaintain = 101.0f;
+    for (int v = 0; v < 128; ++v) {
+        assert(applyConductorCc(p, 21, v) && applyConductorCc(p, 22, v));
+        const Parameters clamped = clampParameters(p);
+        assert(clamped.bias == p.bias && clamped.maintain == p.maintain);
+        assert(p.bias >= previousBias && p.maintain <= previousMaintain);
+        previousBias = p.bias;
+        previousMaintain = p.maintain;
+    }
+
+    // Scene, Mutation, Reset and unrelated CCs change nothing.
+    Parameters untouched;
+    Parameters probe = untouched;
+    for (const int cc : {0, 7, 20, 23, 24, 64}) {
+        assert(!applyConductorCc(probe, cc, 100));
+    }
+    assert(probe.bias == untouched.bias && probe.maintain == untouched.maintain);
+}
+
 int main() {
     stopped_transport_passes_through();
     euclidean_blocks_inactive_blocks();
@@ -194,5 +223,6 @@ int main() {
     probabilistic_cut_can_close_gate();
     gate_closure_releases_held_notes();
     serialization_round_trips_parameters();
+    conductor_cc_mapping();
     return 0;
 }

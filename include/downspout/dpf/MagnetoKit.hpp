@@ -3,8 +3,13 @@
 // Magneto-style panel toolkit for a NanoVG DPF UI: flat surface panels with
 // accent-coloured headers, horizontal bar sliders, stepper and segmented
 // controls, and a dark/light theme toggle, all drawn from downspout/look_and_feel.hpp.
-// Plugin-local on purpose (shared code needs approval); retune, sprout and markov keep
-// identical copies of this file.
+// Shared by retune, sprout, markov and damiano. This header depends on DPF, which is why
+// it lives under downspout/dpf/ rather than beside the portable headers.
+//
+// A plugin derives from MagnetoUI, calls beginFrame()/drawHeader()/drawPanel() and the
+// draw* controls from onNanoDisplay(), and handles buttons in onAction(). By default a
+// control change goes to the host with setParameterValue(); override sendValue() when a
+// plugin carries its values some other way (damiano sends state keys).
 
 #include "DistrhoUI.hpp"
 
@@ -77,6 +82,9 @@ protected:
     // A button, stepper half or segment was pressed. `id` is the caller's own number.
     virtual void onAction(int id) = 0;
 
+    // Delivers a value the user just set. Default: a host parameter change.
+    virtual void sendValue(const std::uint32_t parameter, const float v) { setParameterValue(parameter, v); }
+
     bool onMouse(const MouseEvent& ev) override
     {
         if (ev.button != 1)
@@ -141,9 +149,22 @@ protected:
         if (r.integer)
             v = std::round(v);
         values_[parameter] = v;
-        setParameterValue(parameter, v);
+        sendValue(parameter, v);
         repaint();
     }
+
+    // Updates the displayed value without sending it anywhere (for state or host echoes).
+    void setValue(const std::uint32_t parameter, const float v)
+    {
+        if (parameter < count_) {
+            values_[parameter] = v;
+            repaint();
+        }
+    }
+
+    // Fades everything drawn until the next call, to show a control or panel is inactive.
+    // Controls drawn while dimmed still respond to the mouse.
+    void setDim(const bool dim) { globalAlpha(dim ? 0.38f : 1.0f); }
 
     // ── Frame ───────────────────────────────────────────────────────────────
 

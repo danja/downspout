@@ -27,14 +27,17 @@ catalogue and docs (2026-10-07). Not yet listened to in a host.
   - the audio thread only `try_lock`s a mutex the worker holds for a few instructions,
     never waits and never signals a condition variable; a request that finds the lock
     busy is retried on the next block; the worker polls every 20 ms when idle;
-  - a voice request preempts background work (roots, drums); a newer request abandons
-    the current one; pitches are built middle-outwards (C4 first), range 12-108;
+  - a voice request preempts background work (roots, drums); requests queue newest
+    first (up to 8 voices, so Program Changes on several channels each get warmed); a
+    newer request abandons the build in progress, which goes to the back of the queue and
+    resumes from its cached tables; pitches are built middle-outwards (C4 first), range
+    12-108;
   - stale tables from a previous tuning are dropped on the worker (`trimTables`, freed
     outside the lock); the cache is capped at 4096 tables (about 64 MB) and past the cap
     new tables are built but not cached, so the audio thread never frees a big cache;
   - heavy work (table synthesis, root finding) runs outside every lock;
-  - no warm-up in Filter mode; in GM Program mode only the most recently requested
-    voice is warmed, others build on first use (about 1.9 ms per note).
+  - no warm-up in Filter mode; in GM Program mode each Program Change queues its voice
+    (the last 8 are kept), anything older builds on first use (about 1.9 ms per note).
   `tests/pratt_threading_tests.cpp` replays this pattern and is clean under
   ThreadSanitizer (see the file header for the command).
 - Parameters are written from the host thread and read on the audio thread without

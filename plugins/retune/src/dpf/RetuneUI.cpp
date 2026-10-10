@@ -1,4 +1,4 @@
-#include "MagnetoKit.hpp"
+#include "downspout/dpf/MagnetoKit.hpp"
 
 #include "retune_params.hpp"
 #include "retune_scale.hpp"

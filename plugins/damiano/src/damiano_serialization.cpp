@@ -42,7 +42,15 @@ std::string serializeParameters(const Parameters& p)
            "mix="         + std::to_string(p.mix)        + "\n"
            "output_gain=" + std::to_string(p.outputGain) + "\n"
            "cc_drive="    + std::to_string(p.ccDrive)    + "\n"
-           "cc_channel="  + std::to_string(p.ccChannel)  + "\n";
+           "cc_channel="  + std::to_string(p.ccChannel)  + "\n"
+           "stereo="      + std::to_string(p.stereo)     + "\n"
+           "drive_r="     + std::to_string(p.driveR)     + "\n"
+           "mode_r="      + std::to_string(p.modeR)      + "\n"
+           "tone_r="      + std::to_string(p.toneR)      + "\n"
+           "fold_count_r=" + std::to_string(p.foldCountR) + "\n"
+           "cc_drive_r="  + std::to_string(p.ccDriveR)   + "\n"
+           "cc_shape="    + std::to_string(p.ccShape)    + "\n"
+           "cc_shape_r="  + std::to_string(p.ccShapeR)   + "\n";
 }
 
 std::optional<Parameters> deserializeParameters(const std::string& text)
@@ -67,6 +75,14 @@ std::optional<Parameters> deserializeParameters(const std::string& text)
         else if   (key == "output_gain" && parseFloat(value, v)) { p.outputGain = v; }
         else if   (key == "cc_drive"    && parseFloat(value, v)) { p.ccDrive    = v; }
         else if   (key == "cc_channel"  && parseFloat(value, v)) { p.ccChannel  = v; }
+        else if   (key == "stereo"       && parseFloat(value, v)) { p.stereo     = v; }
+        else if   (key == "drive_r"      && parseFloat(value, v)) { p.driveR     = v; }
+        else if   (key == "mode_r"       && parseFloat(value, v)) { p.modeR      = v; }
+        else if   (key == "tone_r"       && parseFloat(value, v)) { p.toneR      = v; }
+        else if   (key == "fold_count_r" && parseFloat(value, v)) { p.foldCountR = v; }
+        else if   (key == "cc_drive_r"   && parseFloat(value, v)) { p.ccDriveR   = v; }
+        else if   (key == "cc_shape"     && parseFloat(value, v)) { p.ccShape    = v; }
+        else if   (key == "cc_shape_r"   && parseFloat(value, v)) { p.ccShapeR   = v; }
         else { return std::nullopt; }
     }
     return clampParameters(p);

@@ -7,6 +7,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstring>
+#include <deque>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -37,7 +38,10 @@ enum StateIndex : uint32_t {
 //    sleeps 1 ms so it never hogs a core. A superseded or abandoned preload stops
 //    within about one step, so destruction (host close, scan, sample-rate change)
 //    joins promptly;
-//  * a voice request has priority over the background work (roots, drum filters).
+//  * a voice request has priority over the background work (roots, drum filters);
+//  * requests queue newest first (up to kMaxQueued voices, GM Program Changes on
+//    several channels each want theirs). A newer request abandons the build in
+//    progress, which goes to the back of the queue and resumes from its cached tables.
 class Warmer {
 public:
     explicit Warmer(core::Engine& engine)
@@ -60,17 +64,45 @@ public:
         std::unique_lock<std::mutex> lock(mutex_, std::try_to_lock);
         if (!lock.owns_lock())
             return false;
-        preset_ = preset;
-        tuning_ = tuning;
-        pending_ = true;
+        enqueueFront({preset, tuning});
+        ++generation_;
         return true;
     }
 
 private:
-    bool interrupted()
+    static constexpr std::size_t kMaxQueued = 8;
+
+    struct Request {
+        int preset;
+        core::VoiceTuning tuning;
+        bool operator==(const Request& o) const
+        {
+            return preset == o.preset && tuning.base == o.tuning.base && tuning.xiScale == o.tuning.xiScale &&
+                   tuning.rollOffset == o.tuning.rollOffset && tuning.timbre == o.tuning.timbre;
+        }
+    };
+
+    // Caller holds mutex_.
+    void enqueueFront(const Request& r)
+    {
+        for (auto it = queue_.begin(); it != queue_.end(); ++it)
+        {
+            if (*it == r)
+            {
+                queue_.erase(it);
+                break;
+            }
+        }
+        queue_.push_front(r);
+        if (queue_.size() > kMaxQueued)
+            queue_.pop_back();
+    }
+
+    // True when asked to quit or when a request arrived since `generation`.
+    bool interrupted(const unsigned long generation)
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        return quit_ || pending_;
+        return quit_ || generation_ != generation;
     }
 
     void pause(const std::chrono::milliseconds length)
@@ -79,7 +111,8 @@ private:
         wake_.wait_for(lock, length, [this] { return quit_; });
     }
 
-    void buildVoice(const int preset, const core::VoiceTuning& tuning)
+    // Returns false if it stopped early (shutdown or a newer request).
+    bool buildVoice(const int preset, const core::VoiceTuning& tuning, const unsigned long generation)
     {
         engine_.trimTables(tuning);
         // Middle outwards: the notes most likely to be played first.
@@ -91,12 +124,13 @@ private:
                     continue;
                 if (pitch < 12 || pitch > 108)
                     continue;
-                if (interrupted())
-                    return;
+                if (interrupted(generation))
+                    return false;
                 engine_.preload(preset, tuning, pitch, pitch);
                 pause(std::chrono::milliseconds(1));
             }
         }
+        return true;
     }
 
     void run()
@@ -105,25 +139,37 @@ private:
         int nextDrum = 27;
         for (;;)
         {
-            int preset = 0;
-            core::VoiceTuning tuning;
+            Request current{};
+            unsigned long generation = 0;
             bool haveRequest = false;
             {
                 std::lock_guard<std::mutex> lock(mutex_);
                 if (quit_)
                     return;
-                if (pending_)
+                if (!queue_.empty())
                 {
-                    preset = preset_;
-                    tuning = tuning_;
-                    pending_ = false;
+                    current = queue_.front();
+                    queue_.pop_front();
+                    generation = generation_;
                     haveRequest = true;
                 }
             }
 
             if (haveRequest)
             {
-                buildVoice(preset, tuning);
+                if (!buildVoice(current.preset, current.tuning, generation))
+                {
+                    // Abandoned for a newer request: finish it after the others.
+                    std::lock_guard<std::mutex> lock(mutex_);
+                    if (!quit_ && queue_.size() < kMaxQueued)
+                    {
+                        bool present = false;
+                        for (const Request& q : queue_)
+                            present = present || q == current;
+                        if (!present)
+                            queue_.push_back(current);
+                    }
+                }
                 continue;
             }
             if (nextDrum <= 87)
@@ -147,9 +193,8 @@ private:
     core::Engine& engine_;
     std::mutex mutex_;
     std::condition_variable wake_;
-    int preset_ = 0;
-    core::VoiceTuning tuning_;
-    bool pending_ = false;
+    std::deque<Request> queue_;
+    unsigned long generation_ = 0;  // bumped by every request
     bool quit_ = false;
     std::thread thread_;  // last: starts after the other members exist
 };

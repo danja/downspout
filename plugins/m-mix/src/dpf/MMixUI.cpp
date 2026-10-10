@@ -27,6 +27,7 @@ enum ParameterIndex : uint32_t {
     kParamBias,
     kParamVelocityFades,
     kParamMute,
+    kParamConductorChannel,
     kParameterCount
 };
 
@@ -58,7 +59,7 @@ struct ToggleDef {
     const char* onLabel;
 };
 
-constexpr std::array<SliderDef, 11> kSliders = {{
+constexpr std::array<SliderDef, 12> kSliders = {{
     {kParamTotalBars, "Total Bars", "Transport cycle length", 1.0f, 4096.0f, true},
     {kParamDivision, "Division", "Blocks in the cycle", 1.0f, 512.0f, true},
     {kParamSteps, "Steps", "Active Euclidean blocks", 0.0f, 512.0f, true},
@@ -70,6 +71,7 @@ constexpr std::array<SliderDef, 11> kSliders = {{
     {kParamCut, "Cut", "Hard switch to next state", 0.0f, 100.0f, false},
     {kParamFadeDurMax, "Fade Dur Max", "Longest probabilistic fade share", 0.125f, 1.0f, false},
     {kParamBias, "Open Bias", "Chance the next state is pass", 0.0f, 100.0f, false},
+    {kParamConductorChannel, "Conductor Ch", "CC 21 Open Bias, CC 22 Maintain; 0 = off", 0.0f, 16.0f, true},
 }};
 
 constexpr std::array<ToggleDef, 2> kToggles = {{
@@ -101,6 +103,8 @@ constexpr std::array<ToggleDef, 2> kToggles = {{
         std::snprintf(buf, sizeof(buf), "%.3f", value);
     } else if (def.index == kParamFadeBars) {
         std::snprintf(buf, sizeof(buf), "%.2f bars", value);
+    } else if (def.index == kParamConductorChannel && std::lround(value) == 0) {
+        return "off";
     } else {
         std::snprintf(buf, sizeof(buf), "%d", static_cast<int>(std::lround(value)));
     }

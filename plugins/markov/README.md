@@ -20,9 +20,8 @@ Full description, controls and the learning workflow: `docs/pages/_products/mark
 - `src/dpf/MarkovPlugin.cpp`: thin DPF wrapper. Settings are parameters; the model is the
   `model` state, and the editor sends matrix edits through a separate `edit` state so it cannot
   overwrite what is being learned.
-- `src/dpf/MarkovUI.cpp`, `src/dpf/MagnetoKit.hpp`: the editor, in the Magneto look. The kit is a
-  plugin-local copy shared in content with retune and sprout (moving it to a shared header needs
-  approval).
+- `src/dpf/MarkovUI.cpp`: the editor, in the Magneto look, built on the shared kit
+  `include/downspout/dpf/MagnetoKit.hpp` (also used by retune, sprout and damiano).
 - `tests/markov_core_tests.cpp`: deterministic tests: scales against `docs/scales.md`, the walk and
   its statistics, order 2, learning, locate and block-size independence, the Conductor CCs and
   restart, and the state format.

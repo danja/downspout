@@ -29,6 +29,26 @@ overrides the drive parameter for that and subsequent blocks until CC is disable
 | 4 | Tube      | Asymmetric: tanh positive half, `x/√(1+x²)` negative  |
 | 5 | Wavefold  | Triangle wavefolder applied `foldCount` times          |
 
+## Stereo split (binaural)
+
+`stereo` (0 = linked, default; 1 = split) chooses whether the right channel mirrors
+the left settings or uses its own `mode_r`, `drive_r`, `tone_r`, `fold_count_r`.
+Mix, output gain and the CC channel are shared. Channel 0 is left, channel 1 right;
+channels beyond 1 (core only; the wrapper is stereo) use the left settings.
+
+CC control is per channel and all on `cc_channel`: `cc_drive` / `cc_drive_r` map
+CC 0-127 to drive 1-10, `cc_shape` / `cc_shape_r` map it to a mode in six equal steps
+(`mode = value * 6 / 128`). Each number is independent and 0 disables it and releases
+its override. In linked mode the R numbers are ignored and the left overrides apply to
+both channels. The core takes the live values as `LiveControl` (negative = use the
+stored parameter); the older `processBlock(..., effectiveDrive)` form is kept and
+equals `LiveControl{effectiveDrive}`, so linked output is bit-identical to before.
+
+Assumption: "shape" is the waveshaper mode (stepped), not a continuous parameter; Tone
+and Folds are per channel but not CC-controlled. Parameters were appended, so existing
+indices and state keys are unchanged and a state saved before the split loads as linked.
+The wrapper's parameter, state-key and save/restore code is one table (`kParams`).
+
 ## Tone control
 
 One-pole high-shelf per channel. Crossover at ~3 kHz.  
@@ -61,3 +81,12 @@ Positive half uses `tanh(x*drive)/tanh(drive)` (symmetric tanh, odd harmonics).
 Negative half uses `x/√(1+x²)` (algebraic sigmoid, different spectral character).  
 The mismatch between half-cycles introduces even harmonics, mimicking class A
 amplifier topology where the operating point is asymmetric around the bias point.
+
+## UI
+
+`src/dpf/DamianoUI.cpp` is built on the shared Magneto kit (`include/downspout/dpf/MagnetoKit.hpp`):
+a Stereo-and-Output panel (Linked/Split, Mix, Output Gain, CC Channel) above Left and Right channel
+panels (mode buttons, Drive, Tone, Folds, CC Drive, CC Shape). While Linked the right panel is
+muted and faded but still editable. Plugin values are carried as state keys, not host parameters, so
+the UI overrides the kit's `sendValue()` to call `setState()` and ignores `parameterChanged()`
+(see the REAPER Write/Latch note in `DamianoPlugin.cpp`). The window is 900x570.

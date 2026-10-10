@@ -1,4 +1,4 @@
-#include "MagnetoKit.hpp"
+#include "downspout/dpf/MagnetoKit.hpp"
 
 #include "markov_core.hpp"
 

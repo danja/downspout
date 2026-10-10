@@ -25,6 +25,7 @@ enum ParameterIndex : uint32_t {
     kParamBias,
     kParamVelocityFades,
     kParamMute,
+    kParamConductorChannel,  // appended so existing indices stay put
     kParameterCount
 };
 
@@ -202,6 +203,9 @@ protected:
         case kParamMute:
             initMMixParameter(parameter, "Mute", "mute", 0.0f, 1.0f, parameters_.mute, true, true);
             break;
+        case kParamConductorChannel:
+            initMMixParameter(parameter, "Conductor Ch", "conductor_ch", 0.0f, 16.0f, 0.0f, true);
+            break;
         default:
             break;
         }
@@ -223,6 +227,7 @@ protected:
         case kParamBias: return parameters_.bias;
         case kParamVelocityFades: return parameters_.velocityFades;
         case kParamMute: return parameters_.mute;
+        case kParamConductorChannel: return static_cast<float>(conductorChannel_);
         default: return 0.0f;
         }
     }
@@ -243,6 +248,9 @@ protected:
         case kParamBias: parameters_.bias = value; break;
         case kParamVelocityFades: parameters_.velocityFades = value; break;
         case kParamMute: parameters_.mute = value; break;
+        case kParamConductorChannel:
+            conductorChannel_ = std::clamp(static_cast<int>(std::lround(value)), 0, 16);
+            return;
         default: break;
         }
         parameters_ = downspout::mmix::clampParameters(parameters_);
@@ -269,6 +277,17 @@ protected:
             inputEvents[i] = toCoreMidiEvent(midiEvents[i]);
         }
 
+        // A Conductor channel of 0 is off. The CCs set Open Bias and Maintain directly, like moving
+        // the sliders, so a later panel or automation change takes over until the next CC.
+        if (conductorChannel_ > 0) {
+            for (uint32_t i = 0; i < eventCount; ++i) {
+                const CoreMidiEvent& ev = inputEvents[i];
+                if (ev.size >= 3 && (ev.data[0] & 0xf0) == 0xb0 && (ev.data[0] & 0x0f) == conductorChannel_ - 1) {
+                    static_cast<void>(downspout::mmix::applyConductorCc(parameters_, ev.data[1], ev.data[2]));
+                }
+            }
+        }
+
         const downspout::mmix::BlockResult result =
             downspout::mmix::processBlock(engine_,
                                           parameters_,
@@ -285,6 +304,7 @@ protected:
 
 private:
     CoreParameters parameters_ {};
+    int conductorChannel_ = 0;  // 0 = off; the CC set is applyConductorCc (m_mix_core_types.hpp)
     CoreEngineState engine_ {};
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MMixPlugin)

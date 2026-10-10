@@ -6,7 +6,7 @@ kind: Audio effect
 category: processor
 role: Stereo distortion
 screenshot: /assets/plugins/damiano.png
-summary: Six-mode stereo distortion with drive, tone shelf, wet/dry mix, output gain, and real-time MIDI CC override of drive from Drift or any CC source.
+summary: Six-mode stereo distortion with drive, tone shelf, wet/dry mix and output gain. Linked or Split left/right processing for a binaural effect, with Drift CC control of each channel's drive and shape.
 ---
 
 ## Opinion
@@ -37,8 +37,12 @@ Damiano is a stereo distortion with six selectable waveshaping modes. Each mode 
 | Folds       | 1–8            | 2       | Cascade depth in Wavefold mode; greyed out in other modes          |
 | Mix         | 0–100 %        | 100 %   | Wet/dry blend                                                      |
 | Output Gain | −24 to +24 dB  | 0 dB    | Post-distortion level trim                                         |
-| CC Number   | off / 1–127    | off     | Which MIDI CC number overrides Drive in real time                  |
-| CC Channel  | 1–16           | 1       | MIDI channel to listen on                                          |
+| CC Drive    | off / 1–127    | off     | MIDI CC number that overrides Drive in real time (left, or both when Linked) |
+| CC Shape    | off / 1–127    | off     | MIDI CC number that selects the Mode in six steps (left, or both when Linked) |
+| CC Channel  | 1–16           | 1       | MIDI channel to listen on (shared)                                 |
+| Stereo      | Linked / Split | Linked  | Split enables the right-channel settings below                     |
+| Right Mode, Drive, Tone, Folds | as left | Tanh, 2, 50 %, 2 | Used only in Split                         |
+| CC Drive R, CC Shape R | off / 1–127 | off | Right-channel CC numbers (Split only)                         |
 
 ### Tone shelf
 
@@ -50,10 +54,19 @@ When CC Number is set to anything other than off, incoming MIDI CC messages on t
 
 This is designed to work directly with the Drift MIDI modulator. Route Drift's MIDI output to Damiano's MIDI input and assign the same CC number in both.
 
+### Stereo: Linked and Split
+
+The **Stereo** switch chooses how the two channels are processed.
+
+- **Linked** (default): the right channel mirrors the left settings. This is the behaviour of earlier versions, and old sessions load as Linked.
+- **Split**: the right channel has its own Mode, Drive, Tone and Folds, so each ear can be distorted differently. Fed the same signal on both sides, a Split setting such as Soft on the left and Fuzz on the right widens and detunes the image. Mix, Output Gain and the CC channel stay shared.
+
+Each channel has its own **CC Drive** and **CC Shape** numbers (off / 1-127), all read on the shared CC Channel. CC Shape selects the waveshaper mode: the 0-127 range is divided into six equal steps (Soft, Tanh, Fuzz, Overdrive, Tube, Wavefold). In Linked mode the left CC numbers drive both channels and the right ones are ignored. Point two Drift lanes at the two CC Drive numbers to modulate the channels independently; a slow lane on one and a fast lane on the other gives a moving binaural beat.
+
 ### Wavefold notes
 
 The triangle wavefolder applies the fold transfer function in series, re-driving the signal at each stage. High Drive combined with many Folds produces dense harmonic content that can sound noise-like at extreme settings — this is the intended character of the mode rather than an artefact. For cleaner folding tones, keep Drive below 5 and Folds at 2–4.
 
 ### Status
 
-All six distortion modes and the MIDI CC drive link are functional and tested. A fresh screenshot is needed.
+All six distortion modes, the MIDI CC drive link and the Linked/Split stereo processing are functional and covered by core tests (channel independence, CC mapping, state round-trip, pre-split state loading). The screenshot shows Split mode. Not yet auditioned in a host.

@@ -335,6 +335,43 @@ void testContiguousBarBoundaryDoesNotResetPattern()
     assert(noteOns(after).front() == 64);
 }
 
+void testConductorCc()
+{
+    Controls c;
+    assert(applyConductorCc(c, 21, 0) && c.octaves == 1);
+    assert(applyConductorCc(c, 21, 127) && c.octaves == 4);
+    assert(applyConductorCc(c, 21, 500) && c.octaves == 4);
+    assert(applyConductorCc(c, 21, -5) && c.octaves == 1);
+    assert(applyConductorCc(c, 22, 0) && c.rate == RATE_QUARTER);
+    assert(applyConductorCc(c, 22, 127) && c.rate == RATE_THIRTY_SECOND);
+
+    // Every octave count and every rate is reachable, in order, and always valid.
+    bool octaves[5] = {}, rates[RATE_COUNT] = {};
+    int previousOctaves = 0, previousRate = 0;
+    for (int v = 0; v < 128; ++v) {
+        assert(applyConductorCc(c, 21, v) && applyConductorCc(c, 22, v));
+        assert(c.octaves >= previousOctaves && c.rate >= previousRate);
+        previousOctaves = c.octaves;
+        previousRate = c.rate;
+        const Controls clamped = clampControls(c);
+        assert(clamped.octaves == c.octaves && clamped.rate == c.rate);
+        octaves[c.octaves] = true;
+        rates[c.rate] = true;
+    }
+    for (int o = 1; o <= 4; ++o) assert(octaves[o]);
+    for (int r = 0; r < RATE_COUNT; ++r) assert(rates[r]);
+
+    // Scene, Mutation, Reset and unrelated CCs are not used and change nothing.
+    Controls before;
+    before.octaves = 3;
+    before.rate = RATE_EIGHTH;
+    Controls after = before;
+    for (const int cc : {0, 7, 20, 23, 24, 64}) {
+        assert(!applyConductorCc(after, cc, 100));
+    }
+    assert(after.octaves == before.octaves && after.rate == before.rate);
+}
+
 }  // namespace
 
 int main()
@@ -352,6 +389,7 @@ int main()
     testNonFourFourBarFractions();
     testTempoChangeKeepsGridAndRescalesFrames();
     testContiguousBarBoundaryDoesNotResetPattern();
+    testConductorCc();
     std::cout << "arpgen core tests passed\n";
     return 0;
 }

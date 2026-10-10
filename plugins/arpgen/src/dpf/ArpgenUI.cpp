@@ -62,6 +62,11 @@ constexpr const char* kChannels[] = {
     "9", "10", "11", "12", "13", "14", "15", "16"
 };
 
+constexpr const char* kConductorChannels[] = {
+    "Off", "1", "2", "3", "4", "5", "6", "7", "8",
+    "9", "10", "11", "12", "13", "14", "15", "16"
+};
+
 constexpr std::array<Choice, 7> kChoices {{
     {kParamOrder, "ORDER", kOrders, 4, 0.0f},
     {kParamRate, "RATE", kRates, 6, 0.0f},
@@ -178,6 +183,11 @@ protected:
             repaint();
             return true;
         }
+        if (conductorRect_.contains(x, y)) {
+            openSelector_ = kConductorSelectorIndex;
+            repaint();
+            return true;
+        }
         return false;
     }
 
@@ -206,6 +216,12 @@ protected:
             cycleOutputChannel(direction);
             return true;
         }
+        if (conductorRect_.contains(x, y)) {
+            openSelector_ = -1;
+            const int current = clampi(static_cast<int>(std::lround(values_[kParamConductorChannel])), 0, 16);
+            setValue(kParamConductorChannel, static_cast<float>(clampi(current + direction, 0, 16)));
+            return true;
+        }
         return false;
     }
 
@@ -220,10 +236,12 @@ private:
     std::array<Rect, kSliders.size()> sliderRects_ {};
     Rect passRect_ {};
     Rect channelRect_ {};
+    Rect conductorRect_ {};
     int dragging_ = -1;
     int openSelector_ = -1;
 
     static constexpr int kOutputSelectorIndex = static_cast<int>(kChoices.size());
+    static constexpr int kConductorSelectorIndex = kOutputSelectorIndex + 1;
     static constexpr int kSelectorMenuMaxRows = 10;
     static constexpr float kSelectorItemHeight = 26.0f;
 
@@ -412,7 +430,7 @@ private:
     {
         drawBand(x, y, w, h, "PERFORMANCE");
         const float contentY = y + 42.0f;
-        const float sliderW = w * 0.25f;
+        const float sliderW = w * 0.20f;
         drawSlider(0, {x + 16.0f, contentY, sliderW, 42.0f});
         drawSlider(1, {x + 32.0f + sliderW, contentY, sliderW, 42.0f});
         passRect_ = {x + w - 326.0f, contentY, 132.0f, 50.0f};
@@ -420,6 +438,10 @@ private:
         drawSmallChoice(passRect_, "PASS INPUT", kPass[values_[kParamPassInput] >= 0.5f ? 1 : 0], values_[kParamPassInput] >= 0.5f);
         const int channel = clampi(static_cast<int>(std::lround(values_[kParamOutputChannel])), 0, 16);
         drawSmallChoice(channelRect_, "OUTPUT", kChannels[channel], openSelector_ == kOutputSelectorIndex);
+        conductorRect_ = {x + w - 476.0f, contentY, 138.0f, 50.0f};
+        const int conductor = clampi(static_cast<int>(std::lround(values_[kParamConductorChannel])), 0, 16);
+        drawSmallChoice(conductorRect_, "CONDUCTOR CH", kConductorChannels[conductor],
+                        conductor > 0 || openSelector_ == kConductorSelectorIndex);
 
         const float keyboardY = y + h - 32.0f;
         const float keyW = (w - 32.0f) / 12.0f;
@@ -450,6 +472,8 @@ private:
 
     [[nodiscard]] int selectorCount(const int selectorIndex) const
     {
+        if (selectorIndex == kConductorSelectorIndex)
+            return static_cast<int>(std::size(kConductorChannels));
         return selectorIndex == kOutputSelectorIndex
             ? static_cast<int>(std::size(kChannels))
             : kChoices[static_cast<std::size_t>(selectorIndex)].count;
@@ -457,13 +481,15 @@ private:
 
     [[nodiscard]] float selectorMinimum(const int selectorIndex) const
     {
-        return selectorIndex == kOutputSelectorIndex
+        return selectorIndex >= kOutputSelectorIndex
             ? 0.0f
             : kChoices[static_cast<std::size_t>(selectorIndex)].minimum;
     }
 
     [[nodiscard]] std::uint32_t selectorParameter(const int selectorIndex) const
     {
+        if (selectorIndex == kConductorSelectorIndex)
+            return kParamConductorChannel;
         return selectorIndex == kOutputSelectorIndex
             ? kParamOutputChannel
             : kChoices[static_cast<std::size_t>(selectorIndex)].parameter;
@@ -471,6 +497,8 @@ private:
 
     [[nodiscard]] const char* selectorItem(const int selectorIndex, const int item) const
     {
+        if (selectorIndex == kConductorSelectorIndex)
+            return kConductorChannels[item];
         return selectorIndex == kOutputSelectorIndex
             ? kChannels[item]
             : kChoices[static_cast<std::size_t>(selectorIndex)].values[item];
@@ -478,6 +506,8 @@ private:
 
     [[nodiscard]] const Rect& selectorBaseRect(const int selectorIndex) const
     {
+        if (selectorIndex == kConductorSelectorIndex)
+            return conductorRect_;
         return selectorIndex == kOutputSelectorIndex
             ? channelRect_
             : choiceRects_[static_cast<std::size_t>(selectorIndex)];

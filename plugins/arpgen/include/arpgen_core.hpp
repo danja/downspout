@@ -80,6 +80,19 @@ struct Controls {
     int outputChannel = 0;
 };
 
+// Conductor CC set (docs/midi-mapping.md): CC 21 Density -> Octaves (1-4) and CC 22 Energy -> Rate
+// (1/4 up to 1/32, in the enum's order from slow to fast). CC 20, 23 and 24 are not used.
+// Returns true when `cc` is one of the two used. Values outside 0-127 are clamped.
+[[nodiscard]] inline bool applyConductorCc(Controls& controls, const int cc, const int value) noexcept
+{
+    const int clamped = value < 0 ? 0 : (value > 127 ? 127 : value);
+    switch (cc) {
+    case 21: controls.octaves = 1 + (clamped * 4) / 128; return true;
+    case 22: controls.rate = (clamped * RATE_COUNT) / 128; return true;
+    default: return false;
+    }
+}
+
 struct TransportSnapshot {
     bool valid = false;
     bool playing = false;

@@ -7,7 +7,7 @@
 
 dsp:damiano a trn:PluginProfile ;
     rdfs:label "Damiano" ;
-    rdfs:comment "Stereo distortion with six modes (soft clip, tanh, fuzz, overdrive, tube, wavefold) and MIDI CC control of drive via Drift." ;
+    rdfs:comment "Stereo distortion with six modes (soft clip, tanh, fuzz, overdrive, tube, wavefold), optional split left/right processing for a binaural effect, and MIDI CC control of drive and shape per channel via Drift." ;
     trn:bundleName "damiano.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/damiano/> ;
@@ -54,6 +54,46 @@ dsp:damiano trn:hasParameter [
     trn:symbol "cc_channel" ;
     trn:label "CC Channel" ;
     trn:minimum 1 ; trn:maximum 16 ; trn:default 1 ;
-    rdfs:comment "MIDI channel to listen on for drive CC"
+    rdfs:comment "MIDI channel to listen on for all drive and shape CCs"
+], [
+    trn:symbol "stereo" ;
+    trn:label "Stereo Split" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "0=Linked (right mirrors left), 1=Split (right uses the R settings)"
+], [
+    trn:symbol "drive_r" ;
+    trn:label "Drive R" ;
+    trn:minimum 1.0 ; trn:maximum 10.0 ; trn:default 2.0 ;
+    rdfs:comment "Right-channel drive (Split only)"
+], [
+    trn:symbol "mode_r" ;
+    trn:label "Mode R" ;
+    trn:minimum 0 ; trn:maximum 5 ; trn:default 1 ;
+    rdfs:comment "Right-channel mode, same values as mode (Split only)"
+], [
+    trn:symbol "tone_r" ;
+    trn:label "Tone R" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 50.0 ;
+    rdfs:comment "Right-channel tone (Split only)"
+], [
+    trn:symbol "fold_count_r" ;
+    trn:label "Fold Count R" ;
+    trn:minimum 1 ; trn:maximum 8 ; trn:default 2 ;
+    rdfs:comment "Right-channel fold count, Wavefold only (Split only)"
+], [
+    trn:symbol "cc_drive_r" ;
+    trn:label "CC Drive R" ;
+    trn:minimum 0 ; trn:maximum 127 ; trn:default 0 ;
+    rdfs:comment "MIDI CC number that modulates right-channel drive (0 = disabled; Split only)"
+], [
+    trn:symbol "cc_shape" ;
+    trn:label "CC Shape" ;
+    trn:minimum 0 ; trn:maximum 127 ; trn:default 0 ;
+    rdfs:comment "MIDI CC number that selects the mode in six steps (0 = disabled); left, or both channels when Linked"
+], [
+    trn:symbol "cc_shape_r" ;
+    trn:label "CC Shape R" ;
+    trn:minimum 0 ; trn:maximum 127 ; trn:default 0 ;
+    rdfs:comment "MIDI CC number that selects the right-channel mode (0 = disabled; Split only)"
 ] ;
     pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .
