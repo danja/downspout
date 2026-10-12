@@ -2,9 +2,6 @@
 
 Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 
-* check builds for warning messages. Any that can be resolved in the local codebase should be
-  (the `-Wall -Wextra` sweep below is the current state of this).
-
 ## Needs your approval first (shared or root code)
 
 * **Promote the shared `OnePoleLowpass` / `DCBlocker` / `BiquadFilter` duplicates into
@@ -178,6 +175,8 @@ Remaining:
   in a host). `m-mix` followed (CC 21 Density -> Open Bias, CC 22 Energy -> Maintain inverted; tested; UI slider added and
   the window made taller because its sixth slider row had been hidden under the toggles). Still without it among the generators: `mnemosyne` (only Novelty and a seed re-roll would fit, and its core takes parameters const, so it needs wrapper-level handling), `sidecar` (its wrapper is tangled up with the server path),
   `tuney-vst`. Worth adding where a density or energy knob exists.
+* **Jig port (from Farelo, `#jigdaw`):** port Sprout, Markov and Moka from Downspout to Jig
+  format. Lives outside this repo; keep their portable cores free of DPF code so they move cleanly.
 * Later candidate: chord-graph walker. A shared voice-leading helper in
   generative-common is only worth it if a second plugin needs it (shared code, needs approval).
 

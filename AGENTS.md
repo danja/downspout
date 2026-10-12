@@ -21,6 +21,37 @@
 - periodically check the `dim` MCP tools (`dim_endpoints`, `dim_search`, `dim_get`) for any Farelo tasks relevant to Downspout, and fold them into TODO.md as appropriate. DIM writes are real, so treat it as read-only for this check unless the user asks otherwise
 - All new plugins will have the basic look & feel of plugins/magneto with the choice of switches, dropdown select lists, rotary knobs, sliders, x-y controls or novel editable components decided on a case-by-case basis
 
+## Lessons from past mistakes
+
+Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MISTAKES.md first and promote them here.
+
+**Tests**
+- Assert the observable effect, not an intermediate (e.g. the emitted note, not `noteForCell`). To make a parameter inert, assert its default is inert rather than zeroing it. Test that every control has an audible/visible effect.
+- Re-run a plugin's tests after changing any parameter default.
+- Table-driven data (scales, ladders): hold an independent expected set in the test, diff against existing tables elsewhere in the repo first, and generate docs from the source enum, not from the reference it was derived from.
+- Transport-quantised emitters need a schedule queue in absolute quarters; events outside the current block must not be dropped.
+- Probes must advance the input pointer per block, and be sanity-checked against the raw input.
+- A doc that quotes a "worst case over a range" needs a test sweeping the whole range, asserting the documented bound.
+- Measure before building: write the accuracy probe (pitch ratio, filter response across the whole parameter space) before wiring DSP. Use a Goertzel magnitude, not zero-crossings, on spliced signals. Read the reference function (e.g. `plinky.c` `stride()`) before describing it.
+- Build output: filter with `grep -E "error:|Error [0-9]"` and check the exit status. After adding a test, confirm it actually ran (count/runtime changed) before saying it passes.
+
+**Host lifecycle and state**
+- `WANT_STATE` without `WANT_FULL_STATE` makes the host save defaults from `initState()` into every project. `Plugin`'s third constructor argument is *stateCount*. Run `scripts/check-plugin-state.sh`. DPF already saves ordinary parameters, so state is only for non-parameter data.
+- `activate()` and `sampleRateChanged()` must clear runtime state only, never call `init()` or reset the patch. Cover with a `testHostActivationKeepsThePatch`-style test.
+- Core tests never touch the DPF wrapper, so a green build proves nothing about state or lifecycle: change a setting, save, reopen in a host.
+- Recursive filters on idle voices decay into denormals (4x CPU): skip idle voices, zero their state, flush tiny values per block, and time new recursive DSP over a long decay.
+
+**Screenshots and UI**
+- Run the capture script as `env -u DISPLAY scripts/capture-plugin-screenshots.sh <plugin>` (it otherwise captures the user's real desktop, which has happened twice). Capture into the scratchpad, open the image at full resolution, and only then copy it into the repo.
+- Capture by PID or window id, never `xdotool search --name` (substring match). `identify` the PNG against `DISTRHO_UI_DEFAULT_WIDTH/HEIGHT`. A blank grey capture means raise `DOWNSPOUT_SCREENSHOT_SETTLE_SECONDS`.
+- Generate stepper label tables from the value and clamp the index; give an empty state no mark. Derive plot shapes numerically and compare with the image.
+
+**Process**
+- Never `pkill -f` / `pgrep -f` with a pattern that appears in your own command line; use `ps` or the bracket trick (`foo[.]bar`).
+- Scripted batch edits: `continue` in every branch, diff the result. For non-unique lines anchor on context, not first match.
+- Port a DSP core a function at a time and build after each; do not draft the whole thing in one pass.
+- Cross-repo scripts: read the dataclass before constructing it positionally, and distrust a large mismatch on only some cases.
+
 ## Repository shape
 
 - `plugins/<plugin>/src/`
