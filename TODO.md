@@ -202,6 +202,11 @@ Remaining:
 * plank
 * tuney-vst
 * worms
+* **Beards host validation and follow-ups.** Load `beards.vst3` in REAPER, route Drift (CC 1-4)
+  and Conductor (ch 16) into it, and listen: the DSP is a port but has only been checked
+  by core tests and a headless UI capture. Not ported from Beads: delay (multitap) mode,
+  CV/gate inputs, wow and flutter, 24 kHz Tape rate. The reverb is a new Griesinger tank,
+  not Beads' `fx_engine`. See `plugins/beards/docs/design.md`.
 
 ## Recurring - check periodically
 

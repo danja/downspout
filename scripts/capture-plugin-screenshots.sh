@@ -33,6 +33,7 @@ plugins=(
   "orchid:orchid"
   "drumgen:drumgen"
   "voxmod:voxmod"
+  "beards:beards"
   "drumkit:drumkit"
   "syrinx:syrinx"
   "xoxolo:xoxolo"

@@ -1,0 +1,55 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:beards a trn:PluginProfile ;
+    rdfs:label "Beards" ;
+    rdfs:comment "Granular texture processor after Mutable Instruments Beads: a 4 second stereo buffer replayed by up to 32 grains, with feedback, freeze and reverb. Controllable from Drift and Conductor." ;
+    trn:bundleName "beards.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/beards/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio, trn:ControlMidi ;
+    trn:produces trn:Audio ;
+    trn:caution "Feedback and Reverb can build up; the output limiter catches peaks but trim output. Density 48-52% plays no automatic grains. The Beads delay mode and CV/gate inputs are not ported." ;
+    trn:recommendedAfter dsp:drift, dsp:conductor ;
+    trn:parameter [ rdfs:label "Position" ; trn:symbol "position" ; trn:range "0-100" ;
+                    rdfs:comment "How far back in the buffer grains start. MIDI CC 1." ] ;
+    trn:parameter [ rdfs:label "Size" ; trn:symbol "size" ; trn:range "0-100" ;
+                    rdfs:comment "Grain length; below one third grains play backwards. MIDI CC 2." ] ;
+    trn:parameter [ rdfs:label "Shape" ; trn:symbol "shape" ; trn:range "0-100" ;
+                    rdfs:comment "Grain envelope from square through decay and bell to reverse. MIDI CC 5." ] ;
+    trn:parameter [ rdfs:label "Pitch" ; trn:symbol "pitch" ; trn:range "-24 to 24 st" ;
+                    rdfs:comment "Grain transposition. MIDI CC 6." ] ;
+    trn:parameter [ rdfs:label "Density" ; trn:symbol "density" ; trn:range "0-100" ;
+                    rdfs:comment "Grain rate: steady clock below 48%, random above 52%, no automatic grains between. MIDI CC 3; Conductor CC 21." ] ;
+    trn:parameter [ rdfs:label "Feedback" ; trn:symbol "feedback" ; trn:range "0-100" ;
+                    rdfs:comment "Wet signal recirculated into the buffer. MIDI CC 7." ] ;
+    trn:parameter [ rdfs:label "Dry/Wet" ; trn:symbol "dry_wet" ; trn:range "0-100" ;
+                    rdfs:comment "Dry to wet balance. MIDI CC 4; Conductor CC 22 (Energy)." ] ;
+    trn:parameter [ rdfs:label "Reverb" ; trn:symbol "reverb" ; trn:range "0-100" ;
+                    rdfs:comment "Reverb amount and time. MIDI CC 8." ] ;
+    trn:parameter [ rdfs:label "Freeze" ; trn:symbol "freeze" ; trn:range "off, on" ;
+                    rdfs:comment "Stops recording so the buffer holds. MIDI CC 64 (64 or more freezes)." ] ;
+    trn:parameter [ rdfs:label "Position scatter" ; trn:symbol "time_rand" ; trn:range "0-100" ;
+                    rdfs:comment "Per-grain random Position. MIDI CC 10; Conductor CC 23 (Mutation)." ] ;
+    trn:parameter [ rdfs:label "Size scatter" ; trn:symbol "size_rand" ; trn:range "0-100" ;
+                    rdfs:comment "Per-grain random Size. MIDI CC 11." ] ;
+    trn:parameter [ rdfs:label "Shape scatter" ; trn:symbol "shape_rand" ; trn:range "0-100" ;
+                    rdfs:comment "Per-grain random Shape. MIDI CC 12." ] ;
+    trn:parameter [ rdfs:label "Pitch scatter" ; trn:symbol "pitch_rand" ; trn:range "0-100" ;
+                    rdfs:comment "Per-grain random pitch, up to +/-24 st. MIDI CC 9; Conductor CC 23 at half value." ] ;
+    trn:parameter [ rdfs:label "Quality" ; trn:symbol "quality" ; trn:range "Digital, Vintage, Tape" ;
+                    rdfs:comment "Storage fidelity: float, 12 bit, 8 bit mu-law, with Beads' per-quality feedback behaviour." ] ;
+    trn:parameter [ rdfs:label "Grain" ; trn:symbol "grain" ; trn:range "trigger" ;
+                    rdfs:comment "Fires one grain. Also fired by Conductor CC 24 = 127." ] ;
+    trn:parameter [ rdfs:label "MIDI in" ; trn:symbol "midi_ch" ; trn:range "Off, 1-16, All" ;
+                    rdfs:comment "Channel for the controller map (CC 1-12, 64). Drift lanes default to CC 1-4." ] ;
+    trn:parameter [ rdfs:label "Conductor" ; trn:symbol "conductor_ch" ; trn:range "Off, 1-16" ;
+                    rdfs:comment "Channel for Conductor CC 21-24 (default Conductor channel is 16)." ] ;
+    trn:parameter [ rdfs:label "Active grains" ; trn:symbol "out_grains" ; trn:range "0-32" ;
+                    rdfs:comment "Read-only status: grains currently sounding." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

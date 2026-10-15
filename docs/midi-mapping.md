@@ -287,6 +287,36 @@ A controller moves the engine but not the on-screen slider — DPF has no
 DSP-side path back to the panel. The tachometer reads the processor's live
 speed, so it stays truthful under MIDI, automation or tempo control.
 
+## Beards mapping
+
+Beards is both a Drift receiver and a Conductor receiver, on two separate channel
+parameters (each 0 = off): **MIDI in** (`midi_ch`, 0-17, 17 = all) and **Conductor**
+(`conductor_ch`, 0-16). The CCs set the controls directly, as if you had moved them; a
+later panel or automation change takes over until the next CC. The panel does not
+follow CC changes (DPF has no DSP-to-UI path for that).
+
+| CC (MIDI in) | Beards control | Notes |
+|:---:|----------------|-------|
+| 1 | Position | Drift lane 1 default |
+| 2 | Size | Drift lane 2 default |
+| 3 | Density | Drift lane 3 default; 48-52% is silent |
+| 4 | Dry/Wet | Drift lane 4 default |
+| 5 | Shape | |
+| 6 | Pitch | 0-127 spans -24 to +24 semitones |
+| 7 | Feedback | |
+| 8 | Reverb | |
+| 9-12 | Pitch, Position, Size, Shape scatter | |
+| 64 | Freeze | 64 or more freezes, 63 or less releases |
+
+| CC (Conductor) | Conductor name | Beards control | Notes |
+|:---:|---------------|----------------|-------|
+| 21 | Density | `density` | Grain rate |
+| 22 | Energy | `dry_wet` | More energy, more wet |
+| 23 | Mutation | Position scatter, and Pitch scatter at half the value | Pitch scatter is halved so full mutation is not a 24 semitone spray |
+| 24 | Reset | grain (trigger) | Fires when CC value = 127; one grain at the start of the next block |
+
+CC 20 (Scene) is not mapped. Conductor's CCs are not passed through (Beards has no MIDI output).
+
 ## Behaviour when disabled
 
 When **Conductor Ch** = 0, all CC scanning is skipped and existing Note On follow/dodge

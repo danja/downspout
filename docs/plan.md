@@ -232,6 +232,10 @@ Progress as of 2026-05-27:
   instrument/MIDI generator with portable mapping, tuning, free-time
   scheduling, synthesis, versioned text state, deterministic tests, and a DPF UI;
 - `campione` now exists as an original multi-zone sampler instrument with per-note MIDI mapping, WAV file loading, REX2 slice import (via VelociLoops), Serum/clm wavetable auto-detection, audio recording with auto-pitch detection, pitch-shift gap fill, zero-crossing loop snap, crossfade looping, deterministic core, and a first VST3 wrapper target with UI via vendored DPF;
+- `beards` is a port of the Mutable Instruments Beads granular processor (grain engine,
+  feedback, freeze, reverb, three storage qualities) with Drift CC 1-12 and Conductor CC
+  21-24 control; the Beads delay mode and CV/gate inputs are not ported (see
+  `plugins/beards/docs/design.md`). Host validation in REAPER remains.
 - `magneto` now exists as an original physically informed combustion engine
   sound generator ported from Baldan et al., SIVE'15: four-stroke cycle
   functions, per-cylinder digital waveguides with valve-modulated feedback and
@@ -293,7 +297,7 @@ Current main gap:
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
   `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`,
-  `treatment.vst3`, `voxmod.vst3`, and `keyframe.vst3` bundles.
+  `treatment.vst3`, `voxmod.vst3`, `keyframe.vst3`, and `beards.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of

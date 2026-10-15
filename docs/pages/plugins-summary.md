@@ -31,11 +31,11 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 - **Determinism.** Generators derive random choices from a seed plus absolute musical
   position (not wall clock), so loops, restarts and offline renders reproduce.
 - **Control-change conventions.** Drift lanes default to CC 1-4; the audio effects
-  chipper, damiano, skream, spliff, helterskelter, treatment, magneto and ghost read those
-  by default so Drift needs no configuration. Conductor emits CC 20-24 on channel 16
+  chipper, damiano, skream, spliff, helterskelter, treatment, magneto, beards and ghost read
+  those by default so Drift needs no configuration. Conductor emits CC 20-24 on channel 16
   (Scene, Density, Energy, Mutation, Reset); bassgen, drumgen, ground, melgen, worms, bubbles,
   floozy, harmonic-atlas, sprout, lifeform, luma, polymeter, xoxolo, markov, counterpointer
-  cadence, arpgen and m-mix listen through a **Conductor Ch**
+  cadence, arpgen, m-mix and beards listen through a **Conductor Ch**
   parameter (0 = off). Mixgen drives T-Mix with CC
   20-27 (strips 1-8), Loopdelay with CC 30/31, Lightverb with CC 32/33; CC 19 claims or
   releases the producer bus. Details: `docs/midi-mapping.md`,
@@ -56,6 +56,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | basilico | basilico.vst3 | instrument (mono bass) | 0/2 | yes/no | yes |
 | bassgen | bassgen.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | bassops | bassops.vst3 | audio effect (sidechain) | 4/2 | yes/no | no |
+| beards | beards.vst3 | audio effect (granular) | 2/2 | yes/no | no |
 | bubbles | bubbles.vst3 | instrument (water) | 0/2 | yes/no | yes |
 | cadence | cadence.vst3 | MIDI processor | 0/2 | yes/yes | yes |
 | campione | campione.vst3 | instrument (sampler) | 2/2 | yes/no | no |
@@ -551,6 +552,18 @@ look-ahead limiter with attack/release, clipper shape (none through gentle tanh 
 hard clip), DC removal, true-peak guard, silence detection, bypass and latched fault
 diagnostics. Reports ceiling and latency to the host. No MIDI. Place last.
 
+### beards
+Granular texture processor after Mutable Instruments Beads: stereo input is recorded
+into a 4 second buffer and replayed by up to 32 overlapping grains, with Position, Size
+(below a third reads backwards), Shape, Pitch and Density, four scatter amounts,
+Feedback, Dry/Wet, a Griesinger reverb, Freeze, a Grain button and a Quality setting
+(Digital, Vintage 12 bit, Tape 8 bit mu-law). Density 48-52% is a silent dead zone.
+CC 1 Position, 2 Size, 3 Density, 4 Dry/Wet (Drift defaults), 5 Shape, 6 Pitch,
+7 Feedback, 8 Reverb, 9-12 scatter, 64 Freeze on the **MIDI in** channel; Conductor CC
+21 Density, 22 Energy (Dry/Wet), 23 Mutation (scatter), 24 Reset (fires a grain) on
+**Conductor**. Settings are ordinary parameters; the buffer is not saved. Feedback and
+reverb can build up; trim output. The Beads delay mode and CV/gate inputs are not ported.
+
 ### rift
 Transport-locked live/sample buffer disruptor: WAV loading, chop and stutter repeats,
 reverse, skip, smear and pitch-slip actions, for fills, transitions and glitches. Sample
@@ -656,7 +669,7 @@ a note-on), so it does not follow other channels.
   (birds), pratt (GM voices), floozy, gremlin (glitch), campione / mosaic (samples),
   tuney-vst. Bend-aware: see the per-channel list at the top.
 - **Need an unpitched sound:** drumkit, magneto, bubbles.
-- **Need audio processing:** distortion (damiano, skream, chipper), time/pitch (keyframe,
+- **Need audio processing:** distortion (damiano, skream, chipper), granular (beards), time/pitch (keyframe,
   primefold, quefrency), space (lightverb, loopdelay, orbit, treatment, ambo),
   rhythm/gating (e-mix, p-mix, orchid, rift), tone/dynamics (bassops, spliff,
   helterskelter, guardian), spectral (voxmod, resonance-garden).

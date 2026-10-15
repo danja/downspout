@@ -1,0 +1,30 @@
+#ifndef DOWNSPOUT_BEARDS_DISTRHO_PLUGIN_INFO_H_INCLUDED
+#define DOWNSPOUT_BEARDS_DISTRHO_PLUGIN_INFO_H_INCLUDED
+
+#define DISTRHO_PLUGIN_BRAND   "Downspout"
+#define DISTRHO_PLUGIN_NAME    "Beards"
+#define DISTRHO_PLUGIN_URI     "https://danja.github.io/downspout/plugins/beards"
+#define DISTRHO_PLUGIN_CLAP_ID "it.hyperdata.downspout.beards"
+
+#define DISTRHO_PLUGIN_BRAND_ID DnSp
+#define DISTRHO_PLUGIN_UNIQUE_ID Bdrd
+
+#define DOWNSPOUT_PLUGIN_VERSION_MAJOR  0
+#define DOWNSPOUT_PLUGIN_VERSION_MINOR  1
+#define DOWNSPOUT_PLUGIN_VERSION_PATCH  0
+#define DOWNSPOUT_PLUGIN_VERSION_STRING "v0.1.0"
+
+// Every setting is an ordinary parameter, which DPF already saves; state would
+// only make the host record defaults (see scripts/check-plugin-state.sh).
+#define DISTRHO_PLUGIN_HAS_UI           1
+#define DISTRHO_PLUGIN_IS_RT_SAFE       1
+#define DISTRHO_PLUGIN_NUM_INPUTS       2
+#define DISTRHO_PLUGIN_NUM_OUTPUTS      2
+#define DISTRHO_PLUGIN_WANT_MIDI_INPUT  1
+#define DISTRHO_PLUGIN_VST3_CATEGORIES  "Fx"
+#define DISTRHO_UI_DEFAULT_WIDTH        900
+#define DISTRHO_UI_DEFAULT_HEIGHT       600
+#define DISTRHO_UI_USE_NANOVG           1
+#define DISTRHO_UI_FILE_BROWSER         0
+
+#endif

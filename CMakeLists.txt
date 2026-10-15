@@ -68,6 +68,7 @@ option(DOWNSPOUT_BUILD_SPLIFF "Configure the spliff transient processor target" 
 option(DOWNSPOUT_BUILD_HELTERSKELTER "Configure the helterskelter auto-wah target" ON)
 option(DOWNSPOUT_BUILD_TREATMENT "Configure the Treatment acoustic-panel target" ON)
 option(DOWNSPOUT_BUILD_VOXMOD "Configure the Voxmod vocoder/ring-mod target" ON)
+option(DOWNSPOUT_BUILD_BEARDS "Configure the Beards granular texture processor target" ON)
 option(DOWNSPOUT_BUILD_PRIMEFOLD "Configure the primefold prime-harmonic shifter target" ON)
 option(DOWNSPOUT_BUILD_QUEFRENCY "Configure the quefrency cepstral shifter target" ON)
 option(DOWNSPOUT_BUILD_KEYFRAME "Configure the keyframe extrema time-stretch target" ON)
@@ -443,4 +444,8 @@ endif()
 
 if(DOWNSPOUT_BUILD_MARKOV)
     add_subdirectory(plugins/markov)
+endif()
+
+if(DOWNSPOUT_BUILD_BEARDS)
+    add_subdirectory(plugins/beards)
 endif()

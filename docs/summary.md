@@ -152,6 +152,15 @@ Twelve-voice instrument covering keys, reed, pad, pluck, and glass timbres. Desi
 
 Eight-voice hybrid physical/modulation synthesizer derived from `floozy-poly`. Suitable for expressive leads, plucks, and unusual synthetic textures.
 
+### Beards (`beards.vst3`)
+
+Granular texture processor, a port of the Mutable Instruments Beads grain engine.
+Stereo audio in; Position, Size, Shape, Pitch and Density shape the grains, Feedback,
+Freeze, Reverb and Dry/Wet shape the result. Use it on pads, drum loops or vocals as a
+send-style texture. Drift lanes default to CC 1-4 (Position, Size, Density, Dry/Wet);
+Conductor drives Density, Dry/Wet and scatter on its channel and fires a grain on Reset.
+Density 48-52% is silent, and Feedback plus Reverb can build up, so trim output.
+
 ### Magneto (`magneto.vst3`)
 
 Physically informed combustion engine generator. A four-stroke cycle drives
@@ -287,6 +296,8 @@ Facing Mass and Flow Resist by default.
 - Number-theoretic colour: any synth or loop -> Pratt in Filter mode; try Index A 3 or 5
   with Index B 1 for a gentle slope, then raise B to cascade more poles. Or play it
   directly from a keyboard or generator with Voice set to GM Program.
+- Hands-off texture: Drift -> Beards (CC 1-4 are Position, Size, Density, Dry/Wet) on a
+  pad or drum loop; Conductor on its own channel thins and thickens it by section.
 - Hands-off engine modulation: Drift -> Magneto. Drift's four lanes default to
   CC 1-4, which Magneto reads as Throttle, RPM, Silencing and Growl.
 - Living drums: dry drum bus -> Ghost, Ghost MIDI -> DrumKit for the ghost

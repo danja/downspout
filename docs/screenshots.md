@@ -83,6 +83,7 @@ Current output filenames:
 - `basilico.png`
 - `canticle.png`
 - `magneto.png`
+- `beards.png`
 - `primefold.png`
 - `quefrency.png`
 - `keyframe.png`
