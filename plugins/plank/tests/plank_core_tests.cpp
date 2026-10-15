@@ -342,6 +342,19 @@ void testLatchKeepsStringRinging()
     require(stopped.result.status.activeStrings == 0.0f, "re-tapping a latched cell should stop it");
 }
 
+void testRepeatedNoteOnRetriggersTheString()
+{
+    Processor processor;
+    processor.init(48000.0);
+    processor.setParameter(static_cast<std::uint32_t>(ParamId::ledFeedback), 0.0f);
+    processor.setParameter(static_cast<std::uint32_t>(ParamId::midiThru), 1.0f);
+
+    const MidiMessage note[] = { noteOn(gridToNote(3, 2)) };
+    require(containsNoteOn(renderBlocks(processor, 2, note, 1u).result), "first note-on should pluck");
+    // No note-off in between: the second note-on must pluck again, not be swallowed.
+    require(containsNoteOn(renderBlocks(processor, 2, note, 1u).result), "a repeated note-on should pluck again");
+}
+
 // ── Tone shaping ────────────────────────────────────────────────────────────
 
 void testMorphCrossfadesIntoWavetables()
@@ -1616,6 +1629,7 @@ int main()
     testAllEightColumnsSoundTogether();
     testReleaseStopsTheString();
     testLatchKeepsStringRinging();
+    testRepeatedNoteOnRetriggersTheString();
     testMorphCrossfadesIntoWavetables();
     testWavetablesAreGeneratedAndBandLimited();
     testFilterAndDriveChangeTheSound();

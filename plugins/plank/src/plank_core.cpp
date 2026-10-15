@@ -415,11 +415,12 @@ void Processor::pressGrid(const std::size_t row, const std::size_t col, ProcessR
     const bool latched = parameters_[static_cast<std::size_t>(ParamId::latch)] >= 0.5f;
 
     // With latch engaged a string keeps ringing after the pad is released, so a
-    // second tap on the same cell is how you silence it.
-    if (voice.sounding && voice.degree == row)
+    // second tap on the same cell is how you silence it. Without latch, a second
+    // note-on for a string that is still held (no note-off yet, e.g. back-to-back
+    // notes from a sequencer) plucks it again rather than being ignored.
+    if (voice.sounding && voice.degree == row && latched)
     {
-        if (latched)
-            stopNote(voice, col, result, frame, true);
+        stopNote(voice, col, result, frame, true);
         return;
     }
 
