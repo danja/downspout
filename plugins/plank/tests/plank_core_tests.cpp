@@ -353,6 +353,53 @@ void testRepeatedNoteOnRetriggersTheString()
     require(containsNoteOn(renderBlocks(processor, 2, note, 1u).result), "first note-on should pluck");
     // No note-off in between: the second note-on must pluck again, not be swallowed.
     require(containsNoteOn(renderBlocks(processor, 2, note, 1u).result), "a repeated note-on should pluck again");
+    const Render again = renderBlocks(processor, 8, note, 1u);
+    require(!again.silent() && again.peak > 1.0e-4f, "a retriggered string should make sound");
+    require(again.result.status.activeStrings >= 1.0f, "a retriggered string should stay active");
+}
+
+void testRepeatedNotesAlwaysSound()
+{
+    // Same note struck repeatedly with various gaps and with/without note-offs:
+    // every strike must produce audio and the output must stay finite.
+    for (const bool withOff : {false, true})
+    {
+        for (const std::uint32_t gap : {1u, 3u, 10u, 40u, 400u})
+        {
+            Processor processor;
+            processor.init(48000.0);
+            const MidiMessage on[] = { noteOn(gridToNote(3, 2)) };
+            const MidiMessage off[] = { noteOff(gridToNote(3, 2)) };
+            for (int strike = 0; strike < 6; ++strike)
+            {
+                const Render hit = renderBlocks(processor, gap, on, 1u);
+                require(hit.peak > 1.0e-4f && std::isfinite(hit.peak), "every strike should sound");
+                if (withOff)
+                    renderBlocks(processor, 1, off, 1u);
+            }
+        }
+    }
+}
+
+void testOverlappingRepeatSurvivesTheFirstNoteOff()
+{
+    // A host can send the next note's on before the previous note's off (on, on, off, off).
+    // The first off must not kill the string the second on just plucked.
+    Processor processor;
+    processor.init(48000.0);
+    processor.setParameter(static_cast<std::uint32_t>(ParamId::ledFeedback), 0.0f);
+    processor.setParameter(static_cast<std::uint32_t>(ParamId::envRelease), 5.0f);
+
+    const MidiMessage cell = noteOn(gridToNote(3, 2));
+    const MidiMessage first[] = { cell };
+    renderBlocks(processor, 4, first, 1u);
+    const MidiMessage overlap[] = { cell, noteOff(gridToNote(3, 2)) };
+    const Render held = renderBlocks(processor, 8, overlap, 2u);
+    require(held.result.status.activeStrings == 1.0f, "the second note should still be held after one note-off");
+
+    const MidiMessage last[] = { noteOff(gridToNote(3, 2)) };
+    const Render gone = renderBlocks(processor, 64, last, 1u);
+    require(gone.result.status.activeStrings == 0.0f, "the last note-off should release the string");
 }
 
 // ── Tone shaping ────────────────────────────────────────────────────────────
@@ -1630,6 +1677,8 @@ int main()
     testReleaseStopsTheString();
     testLatchKeepsStringRinging();
     testRepeatedNoteOnRetriggersTheString();
+    testRepeatedNotesAlwaysSound();
+    testOverlappingRepeatSurvivesTheFirstNoteOff();
     testMorphCrossfadesIntoWavetables();
     testWavetablesAreGeneratedAndBandLimited();
     testFilterAndDriveChangeTheSound();

@@ -106,6 +106,7 @@ void Processor::resetRuntime()
 
     for (Voice& voice : voices_)
         voice.reset();
+    holdCount_.fill(0);
     for (Lfo& lfo : lfos_)
         lfo.reset();
 
@@ -398,6 +399,8 @@ void Processor::stopNote(Voice& voice,
     voice.modulation.gateOff();
     voice.held = false;
     voice.sounding = false;
+    if (col < kStringCount)
+        holdCount_[col] = 0;
 
     if (col < kStringCount)
         parameters_[kCellParameterStart + cellIndex(row, col)] = 0.0f;
@@ -424,7 +427,9 @@ void Processor::pressGrid(const std::size_t row, const std::size_t col, ProcessR
         return;
     }
 
+    const std::uint8_t previous = (voice.held && voice.degree == row) ? holdCount_[col] : 0;
     startNote(voice, col, row, result, frame);
+    holdCount_[col] = static_cast<std::uint8_t>(std::min(previous + 1, 255));
 }
 
 void Processor::releaseGrid(const std::size_t row, const std::size_t col, ProcessResult& result, const std::uint32_t frame)
@@ -435,6 +440,13 @@ void Processor::releaseGrid(const std::size_t row, const std::size_t col, Proces
 
     if (parameters_[static_cast<std::size_t>(ParamId::latch)] >= 0.5f)
         return;  // latched: keep ringing
+
+    // An overlapping repeat of the same note: only the last note-off releases.
+    if (holdCount_[col] > 1)
+    {
+        --holdCount_[col];
+        return;
+    }
 
     stopNote(voice, col, result, frame, false);
 }

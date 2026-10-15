@@ -171,6 +171,9 @@ private:
     double sampleRate_ = 48000.0;
     std::array<float, kParameterCount> parameters_ {};
     std::array<Voice, kStringCount> voices_ {};
+    // Note-ons received for the string's current cell without a matching note-off,
+    // so overlapping repeats of one note (on, on, off, off) keep it held until the last off.
+    std::array<std::uint8_t, kStringCount> holdCount_ {};
     std::array<Lfo, 2> lfos_ {};
 
     // Delay line, stereo.
