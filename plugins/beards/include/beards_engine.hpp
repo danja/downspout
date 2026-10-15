@@ -30,6 +30,15 @@ void activate(EngineState& state, double sampleRate);
 void processBlock(EngineState& state, const Parameters& params, std::uint32_t frames,
                   const float* inL, const float* inR, float* outL, float* outR);
 
+// Host transport at the start of a block. `quarters` is the absolute position
+// in quarter notes (from BBT), `bpm` the tempo. Set before each processBlock.
+struct Transport {
+    bool playing = false;
+    double quarters = 0.0;
+    double bpm = 120.0;
+};
+void setTransport(EngineState& state, const Transport& transport);
+
 // Applies one raw MIDI message (status + data bytes) to the parameters:
 // controller map on MIDI in, Conductor CCs on the Conductor channel.
 // Returns true when a parameter changed or a grain was requested.

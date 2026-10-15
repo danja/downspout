@@ -557,7 +557,8 @@ Granular texture processor after Mutable Instruments Beads: stereo input is reco
 into a 4 second buffer and replayed by up to 32 overlapping grains, with Position, Size
 (below a third reads backwards), Shape, Pitch and Density, four scatter amounts,
 Feedback, Dry/Wet, a Griesinger reverb, Freeze, a Grain button and a Quality setting
-(Digital, Vintage 12 bit, Tape 8 bit mu-law). Density 48-52% is a silent dead zone.
+(Digital, Vintage 12 bit, Tape 8 bit mu-law). Density 48-52% is a silent dead zone. **Transport sync** (1/1 to 1/32) fires a grain on every
+host bar/beat grid line while the transport plays, replacing the random clock.
 CC 1 Position, 2 Size, 3 Density, 4 Dry/Wet (Drift defaults), 5 Shape, 6 Pitch,
 7 Feedback, 8 Reverb, 9-12 scatter, 64 Freeze on the **MIDI in** channel; Conductor CC
 21 Density, 22 Energy (Dry/Wet), 23 Mutation (scatter), 24 Reset (fires a grain) on

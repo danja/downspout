@@ -98,6 +98,18 @@ protected:
             break;
         }
 
+        case core::ParamId::sync:
+        {
+            static ParameterEnumerationValue values[7];
+            for (int i = 0; i < 7; ++i)
+            {
+                values[i].value = static_cast<float>(i);
+                values[i].label = core::kSyncNames[static_cast<std::size_t>(i)];
+            }
+            setEnumerations(parameter, values, 7);
+            break;
+        }
+
         case core::ParamId::conductorCh:
         {
             static ParameterEnumerationValue values[17];
@@ -147,6 +159,21 @@ protected:
             if (event.size >= 3)
                 core::applyMidi(parameters_, engineState_, event.data, event.size);
         }
+
+        core::Transport transport;
+        const TimePosition& pos = getTimePosition();
+        if (pos.playing && pos.bbt.valid && pos.bbt.beatType > 0.0f)
+        {
+            // BBT beats are in units of the time signature denominator.
+            const double beatsToQuarters = 4.0 / static_cast<double>(pos.bbt.beatType);
+            const double beatInBar = static_cast<double>(pos.bbt.beat - 1) +
+                                     (pos.bbt.ticksPerBeat > 0.0 ? pos.bbt.tick / pos.bbt.ticksPerBeat : 0.0);
+            transport.playing = true;
+            transport.quarters =
+                (static_cast<double>(pos.bbt.bar - 1) * pos.bbt.beatsPerBar + beatInBar) * beatsToQuarters;
+            transport.bpm = pos.bbt.beatsPerMinute > 0.0 ? pos.bbt.beatsPerMinute : 120.0;
+        }
+        core::setTransport(engineState_, transport);
 
         core::processBlock(engineState_, parameters_, frames, inputs[0], inputs[1], outputs[0], outputs[1]);
     }

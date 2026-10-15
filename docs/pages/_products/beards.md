@@ -25,7 +25,8 @@ Position seconds back, with a length set by Size (below a third it plays backwar
 envelope set by Shape, a transposition set by Pitch, and a stereo pan. Density sets the
 grain rate: a steady clock below 48%, random clouds above 52%, and nothing between
 (use the Grain button). Four scatter controls randomise Position, Size, Shape and Pitch
-per grain. Feedback recirculates the wet signal into the buffer, Freeze stops
+per grain. Transport sync (1/1 to 1/32) instead fires a grain on every bar/beat
+grid line while the host transport plays, locking the cloud to the tempo. Feedback recirculates the wet signal into the buffer, Freeze stops
 recording, and Quality chooses Digital, Vintage (12 bit) or Tape (8 bit mu-law).
 
 **Control from Drift and Conductor.** On the **MIDI in** channel, CC 1 Position, 2 Size,

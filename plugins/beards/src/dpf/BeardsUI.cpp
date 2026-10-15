@@ -20,6 +20,7 @@ using downspout::beards::kMidiChannelNames;
 using downspout::beards::kParameterCount;
 using downspout::beards::kParameterSpecs;
 using downspout::beards::kQualityNames;
+using downspout::beards::kSyncNames;
 using downspout::beards::ParamId;
 
 struct Rect {
@@ -492,16 +493,18 @@ private:
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         text(left, top + 5.0f * rowH - 6.0f, "Below 48% a steady clock, above 52% random clouds.", nullptr);
 
-        drawEnvelope({right, top - 2.0f, colW, 62.0f});
+        drawEnvelope({right, top - 2.0f, colW, 44.0f});
 
-        const float scatterTop = top + 74.0f;
-        const float scatterRow = 38.0f;
+        const float scatterTop = top + 52.0f;
+        const float scatterRow = 36.0f;
         drawSlider(ParamId::timeRand, "Position scatter", {right, scatterTop, colW, scatterRow}, kGrainAccent);
         drawSlider(ParamId::sizeRand, "Size scatter", {right, scatterTop + scatterRow, colW, scatterRow}, kGrainAccent);
         drawSlider(ParamId::shapeRand, "Shape scatter", {right, scatterTop + 2.0f * scatterRow, colW, scatterRow},
                    kGrainAccent);
         drawSlider(ParamId::pitchRand, "Pitch scatter", {right, scatterTop + 3.0f * scatterRow, colW, scatterRow},
                    kGrainAccent);
+        drawStepper(ParamId::sync, "Transport sync  (grain per beat division)",
+                    {right, scatterTop + 4.0f * scatterRow + 4.0f, colW, 44.0f}, kSyncNames.data());
     }
 
     // The grain envelope for the current Shape, so the control reads as a curve.

@@ -14,6 +14,10 @@ replayed by up to 32 overlapping grains.
   channel (CC 21 Density, 22 Energy to Dry/Wet, 23 Mutation to scatter, 24 Reset fires a
   grain). Both are off by default. See `docs/midi-mapping.md`.
 
+**Transport sync** (Off, 1/1 to 1/32) fires a grain on every grid line of the host's bar
+and beat position while the transport plays, in place of the random clock, so grains
+lock to the tempo. Needs a host that reports time position (REAPER does).
+
 Density between 48% and 52% plays no automatic grains (use the Grain button or
 Conductor Reset). Feedback and Reverb can build up; trim output. See `docs/design.md`
 for what was and was not carried over from Beads.

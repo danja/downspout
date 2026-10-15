@@ -168,6 +168,7 @@ void testEveryControlHasAnEffect()
         {ParamId::sizeRand, 0.8f},  {ParamId::shapeRand, 0.8f}, {ParamId::pitchRand, 0.8f},
         {ParamId::quality, 1.0f},   {ParamId::quality, 2.0f},
     };
+    // sync is covered by the transport tests: it needs a playing transport to do anything.
     for (const Change& c : changes)
     {
         auto s = makeEngine();
@@ -333,6 +334,101 @@ void testGrainParameterFiresOnRisingEdge()
     assert(energy(render(*s, p, 0.2, 1.0f, n)) < 1.0e-9);
 }
 
+// Renders with the transport playing from `startQuarters`, as a host would: the
+// position is handed over at the top of every block. Returns the left channel.
+std::vector<float> renderPlaying(EngineState& state, const Parameters& p, const double seconds, const double bpm,
+                                 double startQuarters, Noise& noise, const bool playing = true)
+{
+    const std::size_t frames = static_cast<std::size_t>(seconds * kSampleRate);
+    std::vector<float> inL(frames), inR(frames), outL(frames), outR(frames);
+    for (std::size_t i = 0; i < frames; ++i)
+    {
+        inL[i] = noise.next();
+        inR[i] = noise.next();
+    }
+    std::size_t done = 0;
+    while (done < frames)
+    {
+        const std::size_t n = std::min<std::size_t>(256, frames - done);
+        Transport t;
+        t.playing = playing;
+        t.bpm = bpm;
+        t.quarters = startQuarters + static_cast<double>(done) * bpm / 60.0 / kSampleRate;
+        setTransport(state, t);
+        processBlock(state, p, static_cast<std::uint32_t>(n), inL.data() + done, inR.data() + done,
+                     outL.data() + done, outR.data() + done);
+        done += n;
+    }
+    return outL;
+}
+
+void testTransportSyncFiresGrainsOnTheGrid()
+{
+    // 120 bpm: a quarter note is 0.5 s. Density 0.5 is the no-automatic-grains dead zone.
+    Parameters p = wetPatch();
+    p[ParamId::density] = 0.5f;
+    p[ParamId::size] = 0.3f;  // short grains so each trigger is a distinct burst
+
+    for (const bool syncOn : {false, true})
+    {
+        auto s = makeEngine();
+        Noise n;
+        render(*s, p, 3.0, 1.0f, n);  // fill the buffer, transport stopped
+        p[ParamId::sync] = syncOn ? 3.0f : 0.0f;  // 1/4
+        const auto out = renderPlaying(*s, p, 2.0, 120.0, 0.0, n);
+        if (!syncOn)
+        {
+            assert(energy(out) < 1.0e-9);
+            continue;
+        }
+        // Grid lines at 0, 0.5, 1.0, 1.5 s: every half second window has a burst starting at its head.
+        for (int beat = 0; beat < 4; ++beat)
+        {
+            const std::size_t from = static_cast<std::size_t>(beat) * 24000;
+            assert(energy(out, from, from + 2400) > 1.0e-5);
+        }
+
+        // Starting part-way through a beat: silent until the next line, then a burst.
+        auto late = makeEngine();
+        Noise n2;
+        render(*late, p, 3.0, 1.0f, n2);
+        const auto lateOut = renderPlaying(*late, p, 1.0, 120.0, 0.25, n2);  // next line at 1.0 = 18000 samples in
+        assert(energy(lateOut, 0, 17000) < 1.0e-9);
+        assert(energy(lateOut, 18000, 20400) > 1.0e-5);
+    }
+}
+
+void testTransportSyncNeedsAPlayingTransport()
+{
+    auto s = makeEngine();
+    Noise n;
+    Parameters p = wetPatch();
+    p[ParamId::density] = 0.5f;
+    p[ParamId::sync] = 5.0f;  // 1/16
+    render(*s, p, 3.0, 1.0f, n);
+    assert(energy(renderPlaying(*s, p, 1.0, 120.0, 0.0, n, false)) < 1.0e-9);
+}
+
+void testTransportSyncDivisionsScaleTheRate()
+{
+    // Count distinct grain starts through the active-grain count rising from zero would be
+    // brittle; compare energy instead: 1/16 notes give more grains than 1/4 notes.
+    double e[2] = {};
+    int i = 0;
+    for (const float division : {3.0f, 5.0f})
+    {
+        auto s = makeEngine();
+        Noise n;
+        Parameters p = wetPatch();
+        p[ParamId::density] = 0.5f;
+        p[ParamId::size] = 0.3f;
+        p[ParamId::sync] = division;
+        render(*s, p, 3.0, 1.0f, n);
+        e[i++] = energy(renderPlaying(*s, p, 2.0, 120.0, 8.0, n));
+    }
+    assert(e[1] > 1.5 * e[0]);
+}
+
 void testHostActivationKeepsThePatch()
 {
     auto s = makeEngine();
@@ -376,6 +472,9 @@ int main()
     testConductorMapping();
     testConductorResetFiresAGrain();
     testGrainParameterFiresOnRisingEdge();
+    testTransportSyncFiresGrainsOnTheGrid();
+    testTransportSyncNeedsAPlayingTransport();
+    testTransportSyncDivisionsScaleTheRate();
     testHostActivationKeepsThePatch();
     std::puts("beards core tests passed");
     return 0;

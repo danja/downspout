@@ -35,6 +35,14 @@ rewritten in `src/beards_engine.cpp`.
 - **Seed button and gate input.** Beards has no gate input. The clock free-runs from the
   first sample; the **Grain** button, CC 24 on the Conductor channel, and the Grain
   parameter's rising edge fire one grain at the start of the next block.
+- **Transport sync (addition).** The `sync` parameter (Off, 1/1 to 1/32) fires a grain on
+  every grid line of the host's BBT position (converted to quarter notes using the time
+  signature denominator) while the transport is playing. The engine then free-runs from
+  the block-start position at the host tempo and resyncs on start or a jump of more than
+  0.05 quarter notes. A grid line exactly at the start position fires. While sync is
+  active and the transport plays, the internal clock is muted so the pattern is the grid;
+  stopped transport, or Off, uses the internal clock as before. The Grain button and
+  Conductor Reset still fire on top.
 - **Not ported:** the delay (multitap) mode, the CV inputs and attenuverter polarity
   (random-walk modulation, negative attenuverters), the divider mode driven by an
   external gate, the output-gate mode, mono buffer mode and the gain calibration.

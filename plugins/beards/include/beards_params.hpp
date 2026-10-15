@@ -30,12 +30,13 @@ enum class ParamId : std::uint32_t {
     grain,          // momentary: fire one grain now
     midiCh,         // Drift / controller CC channel (0 off, 1-16, 17 all)
     conductorCh,    // Conductor CC channel (0 off, 1-16)
+    sync,           // transport grid for grain triggers (0 off, see kSyncNames)
     // Read-only status
     outGrains,
 };
 
-inline constexpr std::size_t kParameterCount = 18;
-inline constexpr std::size_t kInputParameterCount = 17;
+inline constexpr std::size_t kParameterCount = 19;
+inline constexpr std::size_t kInputParameterCount = 18;
 
 struct ParamSpec {
     const char* symbol;
@@ -67,10 +68,16 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"grain", "Grain", "", 0.0f, 1.0f, 0.0f, true, false},
     {"midi_ch", "MIDI in", "", 0.0f, 17.0f, 0.0f, true, false},
     {"conductor_ch", "Conductor", "", 0.0f, 16.0f, 0.0f, true, false},
+    {"sync", "Transport sync", "", 0.0f, 6.0f, 0.0f, true, false},
     {"out_grains", "Active grains", "", 0.0f, 32.0f, 0.0f, true, true},
 }};
 
 inline constexpr std::array<const char*, 3> kQualityNames = {"Digital", "Vintage", "Tape"};
+
+// Transport sync: a grain fires on every grid line of the host's BBT position
+// while the transport is playing. Grid spacing in quarter notes per index.
+inline constexpr std::array<const char*, 7> kSyncNames = {"Off", "1/1", "1/2", "1/4", "1/8", "1/16", "1/32"};
+inline constexpr std::array<double, 7> kSyncQuarters = {0.0, 4.0, 2.0, 1.0, 0.5, 0.25, 0.125};
 
 inline constexpr std::array<const char*, 18> kMidiChannelNames = {
     "Off", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "All"};

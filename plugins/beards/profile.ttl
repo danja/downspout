@@ -50,6 +50,8 @@ dsp:beards a trn:PluginProfile ;
                     rdfs:comment "Channel for the controller map (CC 1-12, 64). Drift lanes default to CC 1-4." ] ;
     trn:parameter [ rdfs:label "Conductor" ; trn:symbol "conductor_ch" ; trn:range "Off, 1-16" ;
                     rdfs:comment "Channel for Conductor CC 21-24 (default Conductor channel is 16)." ] ;
+    trn:parameter [ rdfs:label "Transport sync" ; trn:symbol "sync" ; trn:range "Off, 1/1, 1/2, 1/4, 1/8, 1/16, 1/32" ;
+                    rdfs:comment "Fires a grain on every grid line of the host BBT position while the transport plays; replaces the random clock then. Needs host time position." ] ;
     trn:parameter [ rdfs:label "Active grains" ; trn:symbol "out_grains" ; trn:range "0-32" ;
                     rdfs:comment "Read-only status: grains currently sounding." ] ;
     pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

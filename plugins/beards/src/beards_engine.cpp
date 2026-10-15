@@ -815,6 +815,15 @@ struct EngineImpl {
     bool pendingGrain = false;
     bool grainParamWas = false;
     int quality = 0;
+
+    // Transport sync: free-runs from the host position at block start, and
+    // resyncs when the transport starts or jumps.
+    Transport transport;
+    bool transportWasPlaying = false;
+    bool syncResync = true;
+    double syncPos = 0.0;
+    double syncIndex = 0.0;
+    double syncStepUsed = 0.0;
 };
 
 EngineState::EngineState() : impl(std::make_unique<EngineImpl>()) {}
@@ -840,6 +849,21 @@ void activate(EngineState& state, const double sampleRate)
     e.wet = 0.0f;
     e.pendingGrain = false;
     e.grainParamWas = false;
+    e.transport = {};
+    e.transportWasPlaying = false;
+    e.syncResync = true;
+}
+
+void setTransport(EngineState& state, const Transport& transport)
+{
+    EngineImpl& e = *state.impl;
+    const bool jumped = e.transportWasPlaying && std::fabs(transport.quarters - e.syncPos) > 0.05;
+    if (transport.playing && (!e.transportWasPlaying || jumped))
+        e.syncResync = true;
+    e.transportWasPlaying = transport.playing;
+    e.transport = transport;
+    if (e.syncResync)
+        e.syncPos = transport.quarters;
 }
 
 int activeGrains(const EngineState& state) { return state.impl->player.countActive(); }
@@ -858,6 +882,18 @@ void processBlock(EngineState& state, const Parameters& params, const std::uint3
     e.quality = quality;
     const bool frozen = params[ParamId::freeze] >= 0.5f;
     const float density = params[ParamId::density];
+
+    const int syncMode = std::clamp(static_cast<int>(std::lround(params[ParamId::sync])), 0, 6);
+    const double syncStep = kSyncQuarters[static_cast<std::size_t>(syncMode)];
+    const bool syncActive = syncStep > 0.0 && e.transport.playing;
+    const double quartersPerSample = e.transport.bpm / 60.0 / static_cast<double>(e.sampleRate);
+    if (e.syncResync || syncStep != e.syncStepUsed)
+    {
+        // A grid line exactly at the start position counts as upcoming.
+        e.syncIndex = std::ceil(e.syncPos / std::max(syncStep, 1.0e-6) - 1.0e-6) - 1.0;
+        e.syncStepUsed = syncStep;
+        e.syncResync = false;
+    }
 
     GrainParams gp;
     gp.time = {params[ParamId::position], params[ParamId::timeRand]};
@@ -904,7 +940,22 @@ void processBlock(EngineState& state, const Parameters& params, const std::uint3
             Frame input {sanitize(inL[idx]), sanitize(inR[idx])};
 
             Trigger trigger = e.triggers.tick(density, e.rng);
-            if (e.pendingGrain)
+            bool syncFire = false;
+            if (syncActive)
+            {
+                // Transport owns the clock while it plays; the random clock is muted.
+                trigger = Trigger {};
+                e.syncPos += quartersPerSample;
+                const double index = std::floor(e.syncPos / syncStep + 1.0e-9);
+                if (index > e.syncIndex)
+                {
+                    e.syncIndex = index;
+                    syncFire = true;
+                }
+            }
+            else if (e.transport.playing)
+                e.syncPos += quartersPerSample;
+            if (e.pendingGrain || syncFire)
             {
                 trigger.trigger = true;
                 trigger.fractionalSample = 0.0f;
