@@ -161,6 +161,17 @@ send-style texture. Drift lanes default to CC 1-4 (Position, Size, Density, Dry/
 Conductor drives Density, Dry/Wet and scatter on its channel and fires a grain on Reset.
 Density 48-52% is silent, and Feedback plus Reverb can build up, so trim output.
 
+### Trajectory (`trajectory.vst3`)
+
+Eight-voice polygon-bounce synthesiser: a point bounces inside a regular 3-12 sided
+polygon and its x/y position, mixed by **X Level** and **Y Level**, is the waveform.
+**Sides**, **Start Position**, **Launch Angle** and **Bounce Jitter** reshape the orbit from
+stable to quasi-chaotic; a full ADSR shapes each voice. Edgy, buzzy, metallic leads, basses
+and drones; triangles are brightest, high side counts mellower. Pitch follows the note
+but a shape sets how far from concert pitch it lands (a square at 45 degrees is in tune).
+The six oscillator controls answer CC 1-6 in order and CC 7 is Level, so Drift's four lanes
+modulate Sides, Start Position, Launch Angle and Bounce Jitter without configuration.
+
 ### Magneto (`magneto.vst3`)
 
 Physically informed combustion engine generator. A four-stroke cycle drives
@@ -300,6 +311,9 @@ Facing Mass and Flow Resist by default.
   pad or drum loop; Conductor on its own channel thins and thickens it by section.
 - Hands-off engine modulation: Drift -> Magneto. Drift's four lanes default to
   CC 1-4, which Magneto reads as Throttle, RPM, Silencing and Growl.
+- Hands-off oscillator morphing: Drift -> Trajectory. Drift's lanes default to CC 1-4,
+  which Trajectory reads as Sides, Start Position, Launch Angle and Bounce Jitter; point a
+  lane at CC 5 or 6 to move X Level or Y Level.
 - Living drums: dry drum bus -> Ghost, Ghost MIDI -> DrumKit for the ghost
   layer; Drift -> Ghost modulates Sensitivity, Density, Velocity and Drag.
 - De-click and lift: Spliff in Cut after vocals, in Boost before drums

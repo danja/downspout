@@ -31,7 +31,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 - **Determinism.** Generators derive random choices from a seed plus absolute musical
   position (not wall clock), so loops, restarts and offline renders reproduce.
 - **Control-change conventions.** Drift lanes default to CC 1-4; the audio effects
-  chipper, damiano, skream, spliff, helterskelter, treatment, magneto, beards and ghost read
+  chipper, damiano, skream, spliff, helterskelter, treatment, magneto, beards, ghost and trajectory read
   those by default so Drift needs no configuration. Conductor emits CC 20-24 on channel 16
   (Scene, Density, Energy, Mutation, Reset); bassgen, drumgen, ground, melgen, worms, bubbles,
   floozy, harmonic-atlas, sprout, lifeform, luma, polymeter, xoxolo, markov, counterpointer
@@ -112,6 +112,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | sprout | sprout.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | syrinx | syrinx.vst3 | instrument (birdsong) | 0/2 | yes/no | no |
 | t-mix | t_mix.vst3 | audio mixer | 8/2 | yes/yes | no |
+| trajectory | trajectory.vst3 | instrument (polygon bounce) | 0/2 | yes/no | no |
 | treatment | treatment.vst3 | audio effect (acoustic) | 2/2 | yes/no | no |
 | tuney-vst | tuney_vst.vst3 | instrument + MIDI | 0/2 | yes/yes | yes |
 | voxmod | voxmod.vst3 | audio effect (vocoder) | 4/2 | yes/no | no |
@@ -434,6 +435,18 @@ rpm limit) and velocity sets Throttle; note-off is ignored. CC 1 throttle, 2 RPM
 silencing, 4 growl, 5 pipe, 6 turbulence, 7 output. **Speed source** Host Sync locks the
 engine cycle to tempo and idles when the transport stops. Sounds immediately at 850 rpm
 idle. Not a pitched voice: pitch bend is not applicable.
+
+### trajectory
+Eight-voice synthesiser whose oscillator is a point bouncing inside a regular polygon
+(3-12 sides); the waveform is the point's x and y position, mixed. Ported from the Flues
+Trajectory experiment with the reverb dropped and the attack/release envelope widened to a
+full ADSR (per voice). Six oscillator controls: **Sides**, **Start Position**, **Launch
+Angle**, **Bounce Jitter**, **X Level**, **Y Level**; plus Attack, Decay, Sustain, Release,
+Velocity, Level. Notes play it (note-on re-seats and relaunches the point); pitch follows
+the note proportionally but the absolute pitch depends on the shape (a square at 45 degrees
+is in tune, a dodecagon about a fourth flat). The six oscillator controls are CC 1-6 and
+CC 7 is Level, so Drift's default lanes (CC 1-4) drive Sides, Start Position, Launch Angle
+and Bounce Jitter with no setup. A CC moves the sound but not the on-screen slider.
 
 ### bubbles
 Water sound generator, stereo, continuous without MIDI (note-on/off optionally gates and

@@ -1,0 +1,47 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:trajectory a trn:PluginProfile ;
+    rdfs:label "Trajectory" ;
+    rdfs:comment "Eight-voice polygon-bounce synthesizer: the oscillator is a point bouncing inside a regular 3-12 sided polygon, its x and y position mixed into the waveform, shaped by a full ADSR envelope. Ported from the Flues Trajectory experiment." ;
+    trn:bundleName "trajectory.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/trajectory/> ;
+    trn:role trn:InstrumentPlugin ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Audio ;
+    trn:caution "Pitch follows the note proportionally, but the absolute pitch depends on the polygon (a square launched at 45 degrees is in tune, a dodecagon is about a fourth flat). The oscillator is not band-limited, so high notes alias. X Level and Y Level both at zero is silent." ;
+    trn:recommendedAfter dsp:drift ;
+    trn:parameter [ rdfs:label "Sides" ; trn:symbol "sides" ; trn:range "3-12" ;
+                    rdfs:comment "Polygon edge count. MIDI CC 1." ] ;
+    trn:parameter [ rdfs:label "Start Position" ; trn:symbol "start_position" ; trn:range "0-360 deg" ;
+                    rdfs:comment "Angle from the centre to where the point begins on the boundary. Read at note-on. MIDI CC 2." ] ;
+    trn:parameter [ rdfs:label "Launch Angle" ; trn:symbol "launch_angle" ; trn:range "0-360 deg" ;
+                    rdfs:comment "Direction the point sets off in. A change turns the heading of sounding voices without moving them. MIDI CC 3." ] ;
+    trn:parameter [ rdfs:label "Bounce Jitter" ; trn:symbol "bounce_jitter" ; trn:range "0-10 deg" ;
+                    rdfs:comment "Random turn of up to this angle applied to the heading at each bounce; seeded and repeatable. MIDI CC 4." ] ;
+    trn:parameter [ rdfs:label "X Level" ; trn:symbol "mix_x" ; trn:range "0-100" ;
+                    rdfs:comment "Amount of the point's x position in the output. MIDI CC 5." ] ;
+    trn:parameter [ rdfs:label "Y Level" ; trn:symbol "mix_y" ; trn:range "0-100" ;
+                    rdfs:comment "Amount of the point's y position in the output. MIDI CC 6." ] ;
+    trn:parameter [ rdfs:label "Attack" ; trn:symbol "attack" ; trn:range "1-1000 ms" ;
+                    rdfs:comment "Time for a full-scale attack ramp." ] ;
+    trn:parameter [ rdfs:label "Decay" ; trn:symbol "decay" ; trn:range "5-3000 ms" ;
+                    rdfs:comment "Time for a full-scale decay ramp; the fall from peak to Sustain takes (1 - Sustain) of it." ] ;
+    trn:parameter [ rdfs:label "Sustain" ; trn:symbol "sustain" ; trn:range "0-100" ;
+                    rdfs:comment "Level held while the key is down." ] ;
+    trn:parameter [ rdfs:label "Release" ; trn:symbol "release" ; trn:range "10-4000 ms" ;
+                    rdfs:comment "Time for a full-scale release ramp." ] ;
+    trn:parameter [ rdfs:label "Velocity" ; trn:symbol "velocity" ; trn:range "0-100" ;
+                    rdfs:comment "How far note velocity scales a voice: 0 ignores it, 100 is fully proportional." ] ;
+    trn:parameter [ rdfs:label "Level" ; trn:symbol "level" ; trn:range "0-100" ;
+                    rdfs:comment "Output level. MIDI CC 7." ] ;
+    trn:parameter [ rdfs:label "MIDI In" ; trn:symbol "midi_ch" ; trn:range "Off, 1-16, All" ;
+                    rdfs:comment "Channel filter for notes and controllers. CC 1-6 oscillator controls in order, 7 level, 120 all sound off, 123 all notes off." ] ;
+    trn:parameter [ rdfs:label "Active Voices" ; trn:symbol "out_voices" ; trn:range "0-8" ;
+                    rdfs:comment "Read-only: voices currently sounding, for the panel." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

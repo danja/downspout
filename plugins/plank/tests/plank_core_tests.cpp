@@ -841,6 +841,30 @@ void testCellParametersStayInStepWithHardware()
             "a hardware release should clear its cell parameter");
 }
 
+void testStaleHostEchoDoesNotSilenceAHardwareRepeat()
+{
+    // A host reads the cell parameter after the pad is released (0) and may write
+    // that value back after the next press has already set it to 1. The stale
+    // falling edge must not kill a note the hardware is holding.
+    Processor processor;
+    processor.init(48000.0);
+    processor.setParameter(static_cast<std::uint32_t>(ParamId::ledFeedback), 0.0f);
+
+    processor.setParameter(static_cast<std::uint32_t>(ParamId::envRelease), 5.0f);
+
+    const auto cell = static_cast<std::uint32_t>(kCellParameterStart + cellIndex(2, 3));
+    const MidiMessage on[] = { noteOn(gridToNote(2, 3)) };
+    const MidiMessage off[] = { noteOff(gridToNote(2, 3)) };
+
+    renderBlocks(processor, 4, on, 1u);
+    renderBlocks(processor, 4, off, 1u);
+    renderBlocks(processor, 2, on, 1u);
+    processor.setParameter(cell, 0.0f);  // stale echo of the release
+    const Render held = renderBlocks(processor, 64);
+    require(held.result.status.activeStrings >= 1.0f && held.peak > 1.0e-4f,
+            "a stale host echo must not silence a repeated hardware press");
+}
+
 void testCellParametersAreEdgeTriggered()
 {
     Processor processor;
@@ -1677,6 +1701,7 @@ int main()
     testReleaseStopsTheString();
     testLatchKeepsStringRinging();
     testRepeatedNoteOnRetriggersTheString();
+    testStaleHostEchoDoesNotSilenceAHardwareRepeat();
     testRepeatedNotesAlwaysSound();
     testOverlappingRepeatSurvivesTheFirstNoteOff();
     testMorphCrossfadesIntoWavetables();

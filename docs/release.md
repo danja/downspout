@@ -44,6 +44,7 @@ downspout-<version>-<platform>-vst3.zip
 ├── canticle.vst3/
 ├── magneto.vst3/
 ├── beards.vst3/
+├── trajectory.vst3/
 ├── primefold.vst3/
 ├── quefrency.vst3/
 ├── keyframe.vst3/

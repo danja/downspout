@@ -107,6 +107,7 @@ void Processor::resetRuntime()
     for (Voice& voice : voices_)
         voice.reset();
     holdCount_.fill(0);
+    cellPlucked_.fill(false);
     for (Lfo& lfo : lfos_)
         lfo.reset();
 
@@ -153,8 +154,14 @@ void Processor::setParameter(const std::uint32_t index, const float value)
         if (on != wasOn)
         {
             if (on)
+            {
                 startNote(voices_[col], col, row, scratch_, 0);
-            else if (voices_[col].held && voices_[col].degree == row)
+                cellPlucked_[col] = true;
+            }
+            // A host may write back a stale 0 after a pad has already re-plucked
+            // the string (cell parameters mirror hardware state), so a cell write
+            // only releases strings that a cell write started.
+            else if (voices_[col].held && voices_[col].degree == row && cellPlucked_[col])
                 stopNote(voices_[col], col, scratch_, 0, false);
 
             // Preserve any MIDI that the note produced, to be emitted next block.
@@ -429,6 +436,7 @@ void Processor::pressGrid(const std::size_t row, const std::size_t col, ProcessR
 
     const std::uint8_t previous = (voice.held && voice.degree == row) ? holdCount_[col] : 0;
     startNote(voice, col, row, result, frame);
+    cellPlucked_[col] = false;
     holdCount_[col] = static_cast<std::uint8_t>(std::min(previous + 1, 255));
 }
 

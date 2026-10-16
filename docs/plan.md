@@ -236,6 +236,11 @@ Progress as of 2026-05-27:
   feedback, freeze, reverb, three storage qualities) with Drift CC 1-12 and Conductor CC
   21-24 control; the Beads delay mode and CV/gate inputs are not ported (see
   `plugins/beards/docs/design.md`). Host validation in REAPER remains.
+- `trajectory` is a port of the Flues Trajectory polygon-bounce oscillator as an
+  eight-voice VST3 instrument in the Magneto look: the oscillator and its six controls are
+  kept (mapped to CC 1-6, aligned with Drift's default lane CCs), the reverb is dropped and
+  the attack/release envelope is widened to ADSR. See `plugins/trajectory/docs/design.md`.
+  Host validation in REAPER remains.
 - `magneto` now exists as an original physically informed combustion engine
   sound generator ported from Baldan et al., SIVE'15: four-stroke cycle
   functions, per-cylinder digital waveguides with valve-modulated feedback and
@@ -297,7 +302,7 @@ Current main gap:
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
   `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`,
-  `treatment.vst3`, `voxmod.vst3`, `keyframe.vst3`, and `beards.vst3` bundles.
+  `treatment.vst3`, `voxmod.vst3`, `keyframe.vst3`, `beards.vst3`, and `trajectory.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of

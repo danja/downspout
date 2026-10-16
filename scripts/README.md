@@ -80,3 +80,10 @@ build directory without requiring a full install step.
 Launches each plugin in the DPF standalone runner, captures a screenshot with
 `scrot`, and writes it to `docs/pages/assets/plugins/<name>.png`.  Requires a
 display (real or virtual).  Called during the new-plugin completion checklist.
+
+### `create-trance-reaper-project.py`
+
+Writes an original 96-bar, 138 BPM A-minor trance arrangement (DrumKit, Basilico,
+Canticle arp and pad, Floozy lead, Guardian on the master) to
+`artifacts/reaper/trance-original.RPP`, using the header of `mosaic-showcase.RPP`.
+Plugin patches are left at their defaults.

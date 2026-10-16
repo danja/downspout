@@ -84,6 +84,7 @@ Current output filenames:
 - `canticle.png`
 - `magneto.png`
 - `beards.png`
+- `trajectory.png`
 - `primefold.png`
 - `quefrency.png`
 - `keyframe.png`

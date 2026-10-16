@@ -287,6 +287,37 @@ A controller moves the engine but not the on-screen slider — DPF has no
 DSP-side path back to the panel. The tachometer reads the processor's live
 speed, so it stays truthful under MIDI, automation or tempo control.
 
+## Trajectory mapping
+
+Trajectory is not a Conductor receiver. It takes ordinary note and controller messages
+on the channel chosen by its **MIDI in** parameter (`midi_ch`; 0 = off, 1-16 = that
+channel only, 17 = all).
+
+A note starts a voice (eight, with voice stealing); note-on re-seats the bouncing point at
+**Start Position** and launches it along **Launch Angle**. Velocity scales the voice by
+the **Velocity** parameter (0 ignores velocity, 1 is fully proportional). Note-off
+releases the voice. CC 123 releases every held note; CC 120 silences all voices at once.
+
+| CC | Trajectory control | Range |
+|----|--------------------|-------|
+| 1 | Sides | 3-12 (rounded) |
+| 2 | Start Position | 0-360 deg |
+| 3 | Launch Angle | 0-360 deg |
+| 4 | Bounce Jitter | 0-10 deg |
+| 5 | X Level | 0-100% |
+| 6 | Y Level | 0-100% |
+| 7 | Level | 0-100% |
+
+CC 1-6 are the six oscillator controls in panel order, and CC 1-4 are the numbers
+[Drift](../plugins/drift/) emits from its four lanes by default, so routing Drift into
+Trajectory modulates the oscillator without configuration. Retarget a lane to CC 5 or 6
+to reach X Level or Y Level. Start Position only takes effect on the next note; Sides and
+Launch Angle also act on sounding voices (Launch Angle turns the point's heading without
+moving it, so a sweep does not click).
+
+A controller moves the sound but not the on-screen slider, since DPF has no DSP-side
+path back to the panel.
+
 ## Beards mapping
 
 Beards is both a Drift receiver and a Conductor receiver, on two separate channel

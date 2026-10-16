@@ -34,6 +34,7 @@ plugins=(
   "drumgen:drumgen"
   "voxmod:voxmod"
   "beards:beards"
+  "trajectory:trajectory"
   "drumkit:drumkit"
   "syrinx:syrinx"
   "xoxolo:xoxolo"

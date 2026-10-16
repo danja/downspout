@@ -174,6 +174,9 @@ private:
     // Note-ons received for the string's current cell without a matching note-off,
     // so overlapping repeats of one note (on, on, off, off) keep it held until the last off.
     std::array<std::uint8_t, kStringCount> holdCount_ {};
+    // True while a string was plucked through its cell parameter (UI or host
+    // automation) rather than by a pad, so only that route can release it.
+    std::array<bool, kStringCount> cellPlucked_ {};
     std::array<Lfo, 2> lfos_ {};
 
     // Delay line, stereo.
