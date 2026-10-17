@@ -35,6 +35,7 @@ plugins=(
   "voxmod:voxmod"
   "beards:beards"
   "trajectory:trajectory"
+  "fathom:fathom"
   "drumkit:drumkit"
   "syrinx:syrinx"
   "xoxolo:xoxolo"

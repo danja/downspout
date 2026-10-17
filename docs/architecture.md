@@ -249,6 +249,7 @@ The release script currently expects these bundles:
 - `magneto.vst3`
 - `beards.vst3`
 - `trajectory.vst3`
+- `fathom.vst3`
 - `primefold.vst3`
 - `quefrency.vst3`
 - `keyframe.vst3`

@@ -287,6 +287,40 @@ A controller moves the engine but not the on-screen slider — DPF has no
 DSP-side path back to the panel. The tachometer reads the processor's live
 speed, so it stays truthful under MIDI, automation or tempo control.
 
+## Fathom mapping
+
+Fathom is not a Conductor receiver. It takes ordinary note, controller and pitch-bend
+messages on the channel chosen by its **MIDI in** parameter (`midi_ch`; 0 = off, 1-16 =
+that channel only, 17 = all).
+
+A note starts one of four voices (voice stealing; a repeated note reuses its voice).
+Velocity shades the level between 60% and 100%. Note-off releases the voice unless
+**Hold** is on; CC 64 (sustain pedal, 64 and above = on) drives Hold, and letting it go
+releases voices whose keys are up. CC 123 releases every note, held or not; CC 120
+silences everything at once and clears the delay network. Pitch bend is +-2 semitones.
+
+| CC | Fathom control | Range |
+|----|----------------|-------|
+| 1 | Warp | 0-100% |
+| 2 | Span | 0-100% |
+| 3 | Morph | 0-100% |
+| 4 | Seed | 0-100% |
+| 5 | Fuse | 0-100% |
+| 6 | Field | 40 Hz-20 kHz |
+| 7 | Level | 0-100% |
+| 8 | Notch | 0-100% |
+| 9 | Mix | 0-100% |
+| 10 | Time | 10 ms-0.8 s |
+| 11 | Form | 0-100% |
+| 12 | Feed | 0-100% |
+| 13 | Shift | -500 to +500 Hz (centre off) |
+| 14 | Basis | -24 to +24 semitones |
+
+CC 1-4 are the numbers [Drift](../plugins/drift/) emits from its four lanes by default, so
+routing Drift into Fathom moves Warp, Span, Morph and Seed without configuration. A
+controller moves the sound but not the on-screen slider, since DPF has no DSP-side path back
+to the panel.
+
 ## Trajectory mapping
 
 Trajectory is not a Conductor receiver. It takes ordinary note and controller messages

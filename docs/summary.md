@@ -172,6 +172,16 @@ but a shape sets how far from concert pitch it lands (a square at 45 degrees is 
 The six oscillator controls answer CC 1-6 in order and CC 7 is Level, so Drift's four lanes
 modulate Sides, Start Position, Launch Angle and Bounce Jitter without configuration.
 
+### Fathom (`fathom.vst3`)
+
+Four-voice drone synthesiser: a generator (five algorithms: Analog, Shaper, Sines, Table,
+Cluster), a per-voice notch filter, then a delay network (Metallic or Diffuse) with a
+frequency shifter in its feedback loop, so every repeat climbs or falls in pitch. Long
+attack and release, **Hold** on the sustain pedal and **Glide** make it a drone instrument;
+the four voices are panned apart for a wide chord. CC 1-4 are Warp, Span, Morph and Seed
+(Drift's default lanes), so Drift animates the timbre unconfigured; CC 5 Fuse, 6 Field,
+7 Level, 8 Notch, 9 Mix, 10 Time, 11 Form, 12 Feed, 13 Shift, 14 Basis.
+
 ### Magneto (`magneto.vst3`)
 
 Physically informed combustion engine generator. A four-stroke cycle drives
@@ -314,6 +324,8 @@ Facing Mass and Flow Resist by default.
 - Hands-off oscillator morphing: Drift -> Trajectory. Drift's lanes default to CC 1-4,
   which Trajectory reads as Sides, Start Position, Launch Angle and Bounce Jitter; point a
   lane at CC 5 or 6 to move X Level or Y Level.
+- Hands-off drone timbre: Drift -> Fathom. Drift's lanes default to CC 1-4, which Fathom
+  reads as Warp, Span, Morph and Seed; hold a chord with the sustain pedal and let it move.
 - Living drums: dry drum bus -> Ghost, Ghost MIDI -> DrumKit for the ghost
   layer; Drift -> Ghost modulates Sensitivity, Density, Velocity and Drag.
 - De-click and lift: Spliff in Cut after vocals, in Boost before drums

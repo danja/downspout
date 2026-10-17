@@ -120,6 +120,7 @@ The repository currently installs sixty-one real wrapper targets:
 - `magneto.vst3` with UI
 - `beards.vst3` with UI
 - `trajectory.vst3` with UI
+- `fathom.vst3` with UI
 - `primefold.vst3` with UI
 - `quefrency.vst3` with UI
 - `ghost.vst3` with UI

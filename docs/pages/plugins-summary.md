@@ -31,7 +31,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 - **Determinism.** Generators derive random choices from a seed plus absolute musical
   position (not wall clock), so loops, restarts and offline renders reproduce.
 - **Control-change conventions.** Drift lanes default to CC 1-4; the audio effects
-  chipper, damiano, skream, spliff, helterskelter, treatment, magneto, beards, ghost and trajectory read
+  chipper, damiano, skream, spliff, helterskelter, treatment, magneto, beards, ghost, trajectory and fathom read
   those by default so Drift needs no configuration. Conductor emits CC 20-24 on channel 16
   (Scene, Density, Energy, Mutation, Reset); bassgen, drumgen, ground, melgen, worms, bubbles,
   floozy, harmonic-atlas, sprout, lifeform, luma, polymeter, xoxolo, markov, counterpointer
@@ -113,6 +113,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | syrinx | syrinx.vst3 | instrument (birdsong) | 0/2 | yes/no | no |
 | t-mix | t_mix.vst3 | audio mixer | 8/2 | yes/yes | no |
 | trajectory | trajectory.vst3 | instrument (polygon bounce) | 0/2 | yes/no | no |
+| fathom | fathom.vst3 | instrument (drone) | 0/2 | yes/no | no |
 | treatment | treatment.vst3 | audio effect (acoustic) | 2/2 | yes/no | no |
 | tuney-vst | tuney_vst.vst3 | instrument + MIDI | 0/2 | yes/yes | yes |
 | voxmod | voxmod.vst3 | audio effect (vocoder) | 4/2 | yes/no | no |
@@ -447,6 +448,18 @@ the note proportionally but the absolute pitch depends on the shape (a square at
 is in tune, a dodecagon about a fourth flat). The six oscillator controls are CC 1-6 and
 CC 7 is Level, so Drift's default lanes (CC 1-4) drive Sides, Start Position, Launch Angle
 and Bounce Jitter with no setup. A CC moves the sound but not the on-screen slider.
+
+### fathom
+Four-voice drone synthesiser modelled on the Vhikk X algorithm reference: a generator, a
+per-voice notch filter, then a delay network with a frequency shifter in its feedback loop.
+Five generator algorithms (**Analog**, **Shaper**, **Sines**, **Table**, **Cluster**) share
+five controls (**Warp**, **Span**, **Morph**, **Seed**, **Fuse**) that mean something
+different in each; two processors (**Metallic**, **Diffuse**) with **Time**, **Form**,
+**Feed**, **Shift** and **Mix**. Attack and Release are long by default, **Hold** (sustain
+pedal, CC 64) keeps notes sounding, **Glide** slides between notes. Stereo out, the four
+voices panned apart. CC 1-4 are Warp, Span, Morph, Seed (Drift's default lanes), 5 Fuse,
+6 Field, 7 Level, 8 Notch, 9 Mix, 10 Time, 11 Form, 12 Feed, 13 Shift, 14 Basis. A CC moves
+the sound but not the on-screen slider.
 
 ### bubbles
 Water sound generator, stereo, continuous without MIDI (note-on/off optionally gates and

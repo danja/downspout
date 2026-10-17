@@ -73,6 +73,7 @@ Downspout is a suite of VST3 plugins for autonomous music generation and process
 | [Basilico](plugins/basilico/) | Monophonic bass instrument with upright, electric, dub, acid, and industrial models | [profile.ttl](plugins/basilico/profile.ttl) |
 | [DrumKit](plugins/drumkit/) | Stereo synthesised drum instrument and natural sound source | [profile.ttl](plugins/drumkit/profile.ttl) |
 | [Canticle](plugins/canticle/) | Twelve-voice keys, reed, pad, pluck, and glass instrument | [profile.ttl](plugins/canticle/profile.ttl) |
+| [Fathom](plugins/fathom/) | Four-voice drone synthesizer: five generator algorithms, notch filter, delay network with a frequency shifter in the loop; modelled on the Vhikk X algorithm reference | [profile.ttl](plugins/fathom/profile.ttl) |
 | [Trajectory](plugins/trajectory/) | Eight-voice polygon-bounce synthesizer (point bouncing in a regular polygon) with ADSR, ported from Flues | [profile.ttl](plugins/trajectory/profile.ttl) |
 | [Magneto](plugins/magneto/) | Physically informed combustion engine sound generator | [profile.ttl](plugins/magneto/profile.ttl) |
 | [Moka](plugins/moka/) | Modal hit-object instrument with selectable 1–12 voice polyphony | [profile.ttl](plugins/moka/profile.ttl) |

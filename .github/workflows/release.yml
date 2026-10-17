@@ -261,6 +261,7 @@ jobs:
             echo "- voxmod.vst3"
             echo "- beards.vst3"
             echo "- trajectory.vst3"
+            echo "- fathom.vst3"
             echo
             echo "Sidecar is currently Linux-only and is omitted from macOS and Windows release assets."
             echo "macOS and Windows release builds are best-effort and do not block Linux publication."

@@ -69,6 +69,7 @@ option(DOWNSPOUT_BUILD_HELTERSKELTER "Configure the helterskelter auto-wah targe
 option(DOWNSPOUT_BUILD_TREATMENT "Configure the Treatment acoustic-panel target" ON)
 option(DOWNSPOUT_BUILD_VOXMOD "Configure the Voxmod vocoder/ring-mod target" ON)
 option(DOWNSPOUT_BUILD_TRAJECTORY "Configure the Trajectory polygon-bounce synthesizer target" ON)
+option(DOWNSPOUT_BUILD_FATHOM "Configure the Fathom drone synthesizer target" ON)
 option(DOWNSPOUT_BUILD_BEARDS "Configure the Beards granular texture processor target" ON)
 option(DOWNSPOUT_BUILD_PRIMEFOLD "Configure the primefold prime-harmonic shifter target" ON)
 option(DOWNSPOUT_BUILD_QUEFRENCY "Configure the quefrency cepstral shifter target" ON)
@@ -453,4 +454,8 @@ endif()
 
 if(DOWNSPOUT_BUILD_TRAJECTORY)
     add_subdirectory(plugins/trajectory)
+endif()
+
+if(DOWNSPOUT_BUILD_FATHOM)
+    add_subdirectory(plugins/fathom)
 endif()

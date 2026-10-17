@@ -21,7 +21,7 @@ required_bundles=(
   harmonic_atlas.vst3 conductor.vst3 drift.vst3 mnemosyne.vst3
   polymeter.vst3 oracle.vst3 mosaic.vst3 resonance_garden.vst3 orbit.vst3
   guardian.vst3 chipper.vst3 skream.vst3 worms.vst3 magneto.vst3
-  primefold.vst3 quefrency.vst3 ghost.vst3 spliff.vst3 helterskelter.vst3 trajectory.vst3
+  primefold.vst3 quefrency.vst3 ghost.vst3 spliff.vst3 helterskelter.vst3 trajectory.vst3 fathom.vst3
 )
 if [[ "$sidecar_build" == "ON" ]]; then
   required_bundles=(
@@ -35,7 +35,7 @@ if [[ "$sidecar_build" == "ON" ]]; then
     harmonic_atlas.vst3 conductor.vst3 drift.vst3 mnemosyne.vst3
     polymeter.vst3 oracle.vst3 mosaic.vst3 resonance_garden.vst3 orbit.vst3
     guardian.vst3 chipper.vst3 skream.vst3 worms.vst3 magneto.vst3
-    primefold.vst3 quefrency.vst3 ghost.vst3 spliff.vst3 helterskelter.vst3 trajectory.vst3
+    primefold.vst3 quefrency.vst3 ghost.vst3 spliff.vst3 helterskelter.vst3 trajectory.vst3 fathom.vst3
   )
 fi
 

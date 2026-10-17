@@ -1,0 +1,63 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:fathom a trn:PluginProfile ;
+    rdfs:label "Fathom" ;
+    rdfs:comment "Four-voice drone synthesizer: a five-algorithm generator, a per-voice notch filter, then a delay network (metallic or diffuse) with a frequency shifter in its feedback loop. Stereo out. Modelled on the signal flow of the Vhikk X algorithm reference." ;
+    trn:bundleName "fathom.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/fathom/> ;
+    trn:role trn:InstrumentPlugin ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Audio ;
+    trn:caution "Changing Algorithm or Processor while sounding clicks. Feed near 100% with a Shift makes long, spiralling tails; Level and Mix are the safeguards. The wavetable algorithm is band-limited in coarse steps, so very high notes are plainer." ;
+    trn:recommendedAfter dsp:drift ;
+    trn:parameter [ rdfs:label "Algorithm" ; trn:symbol "algorithm" ; trn:range "Analog, Shaper, Sines, Table, Cluster" ;
+                    rdfs:comment "Generator algorithm." ] ;
+    trn:parameter [ rdfs:label "Warp" ; trn:symbol "warp" ; trn:range "0-100" ;
+                    rdfs:comment "Cross-modulation: FM (Analog), phase modulation (Shaper), bit crush (Sines), neighbour phase modulation (Table), ring modulation (Cluster). MIDI CC 1." ] ;
+    trn:parameter [ rdfs:label "Span" ; trn:symbol "span" ; trn:range "0-100" ;
+                    rdfs:comment "Spread and tuning: pulse detune, modulator ratio, partial drift, tuning fan, interval width. MIDI CC 2." ] ;
+    trn:parameter [ rdfs:label "Morph" ; trn:symbol "morph" ; trn:range "0-100" ;
+                    rdfs:comment "Timbral scan: waveform to sine, ring-mod blend, spectral tilt, wavetable frame, cluster window. MIDI CC 3." ] ;
+    trn:parameter [ rdfs:label "Seed" ; trn:symbol "seed" ; trn:range "0-100" ;
+                    rdfs:comment "Smoothly scanned random offsets for partials, frames and intervals; unused by Analog and Shaper. MIDI CC 4." ] ;
+    trn:parameter [ rdfs:label "Fuse" ; trn:symbol "fuse" ; trn:range "0-100" ;
+                    rdfs:comment "Algorithm-dependent colour: pulse width, wavefold, saturation, sine-to-saw. MIDI CC 5." ] ;
+    trn:parameter [ rdfs:label "Field" ; trn:symbol "field" ; trn:range "40 Hz-20 kHz" ;
+                    rdfs:comment "Low-pass centre, per voice; the notches follow it. MIDI CC 6." ] ;
+    trn:parameter [ rdfs:label "Notch" ; trn:symbol "notch" ; trn:range "0-100" ;
+                    rdfs:comment "Depth of two notches below the Field frequency. MIDI CC 8." ] ;
+    trn:parameter [ rdfs:label "Processor" ; trn:symbol "processor" ; trn:range "Metallic, Diffuse" ;
+                    rdfs:comment "Metallic: four-line feedback delay network. Diffuse: stereo ping-pong delay through allpass diffusers." ] ;
+    trn:parameter [ rdfs:label "Time" ; trn:symbol "time" ; trn:range "10 ms-0.8 s" ;
+                    rdfs:comment "Base delay length; the lines are fixed multiples of it. MIDI CC 10." ] ;
+    trn:parameter [ rdfs:label "Form" ; trn:symbol "form" ; trn:range "0-100" ;
+                    rdfs:comment "From distinct echoes to a diffuse wash: matrix mixing, diffusion and delay modulation. MIDI CC 11." ] ;
+    trn:parameter [ rdfs:label "Feed" ; trn:symbol "feed" ; trn:range "0-100" ;
+                    rdfs:comment "Feedback, capped below unity. MIDI CC 12." ] ;
+    trn:parameter [ rdfs:label "Shift" ; trn:symbol "shift" ; trn:range "-500 to +500 Hz" ;
+                    rdfs:comment "Frequency shift applied to every repeat in the feedback loop; the centre is off. MIDI CC 13." ] ;
+    trn:parameter [ rdfs:label "Mix" ; trn:symbol "mix" ; trn:range "0-100" ;
+                    rdfs:comment "Dry to wet. MIDI CC 9." ] ;
+    trn:parameter [ rdfs:label "Basis" ; trn:symbol "basis" ; trn:range "-24 to +24 st" ;
+                    rdfs:comment "Transposition of every note. MIDI CC 14." ] ;
+    trn:parameter [ rdfs:label "Glide" ; trn:symbol "glide" ; trn:range "0-2000 ms" ;
+                    rdfs:comment "Portamento time between notes; 0 is off." ] ;
+    trn:parameter [ rdfs:label "Attack" ; trn:symbol "attack" ; trn:range "5-5000 ms" ;
+                    rdfs:comment "Voice fade-in time." ] ;
+    trn:parameter [ rdfs:label "Release" ; trn:symbol "release" ; trn:range "10-10000 ms" ;
+                    rdfs:comment "Voice fade-out time." ] ;
+    trn:parameter [ rdfs:label "Hold" ; trn:symbol "hold" ; trn:range "Off, On" ;
+                    rdfs:comment "Keeps voices sounding after their keys come up; releasing it frees voices whose keys are up. MIDI CC 64 (sustain pedal)." ] ;
+    trn:parameter [ rdfs:label "Level" ; trn:symbol "level" ; trn:range "0-100" ;
+                    rdfs:comment "Output level. MIDI CC 7." ] ;
+    trn:parameter [ rdfs:label "MIDI In" ; trn:symbol "midi_ch" ; trn:range "Off, 1-16, All" ;
+                    rdfs:comment "Channel filter for notes, controllers and pitch bend. CC 1-14 as listed, 64 hold, 120 all sound off, 123 all notes off." ] ;
+    trn:parameter [ rdfs:label "Active Voices" ; trn:symbol "out_voices" ; trn:range "0-4" ;
+                    rdfs:comment "Read-only: voices currently sounding, for the panel." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .
