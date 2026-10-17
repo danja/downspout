@@ -638,8 +638,8 @@ enum class TopButton : std::size_t {
     latch,
     driveUp,
     resonanceUp,
-    ledFeedback,
     panic,
+    spare,  // 99 is the logo button on some units and absent on others
 };
 
 // Programmer-mode LED colours, matching lifeform's palette.

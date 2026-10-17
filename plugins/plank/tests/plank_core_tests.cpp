@@ -726,6 +726,28 @@ void testTopButtonsAndSideButtons()
     require(processor.getParameter(p(ParamId::latch)) == 1.0f, "CC 95 should engage latch");
 }
 
+void testPanicIsOnButton98()
+{
+    Processor processor;
+    processor.init(48000.0);
+    processor.setParameter(static_cast<std::uint32_t>(ParamId::ledFeedback), 0.0f);
+
+    const MidiMessage play[] = { noteOn(gridToNote(5, 3)) };
+    renderBlocks(processor, 4, play, 1u);
+    require(processor.getStatus().activeStrings >= 1.0f, "a string should be sounding");
+
+    // 99 is absent on some Launchpads and does nothing now.
+    const MidiMessage logo[] = { controlChange(99, 127) };
+    renderBlocks(processor, 2, logo, 1u);
+    require(processor.getStatus().activeStrings >= 1.0f, "CC 99 should not panic");
+
+    const MidiMessage panic[] = { controlChange(98, 127) };
+    renderBlocks(processor, 2, panic, 1u);
+    require(processor.getStatus().activeStrings == 0.0f, "CC 98 should panic");
+    require(processor.getParameter(static_cast<std::uint32_t>(ParamId::ledFeedback)) == 0.0f,
+            "CC 98 should no longer toggle LED feedback");
+}
+
 void testPanicClearsEverything()
 {
     Processor processor;
@@ -1737,6 +1759,7 @@ int main()
     testPadReleaseIsNotEchoed();
     testUnhandledInputIsBlockedByDefault();
     testTopButtonsAndSideButtons();
+    testPanicIsOnButton98();
     testPanicClearsEverything();
     testPanicResetsTuningChanges();
     testStatusParametersAreReadOnly();

@@ -557,11 +557,10 @@ bool Processor::handleTopButton(const std::uint8_t cc, ProcessResult& result, co
     case TopButton::resonanceUp:
         setParameter(p(ParamId::resonance), parameters_[p(ParamId::resonance)] + 0.05f);
         break;
-    case TopButton::ledFeedback:
-        setParameter(p(ParamId::ledFeedback), parameters_[p(ParamId::ledFeedback)] >= 0.5f ? 0.0f : 1.0f);
-        break;
     case TopButton::panic:
         requestPanic();
+        break;
+    case TopButton::spare:
         break;
     }
 
@@ -1115,7 +1114,7 @@ void Processor::emitLedFeedback(ProcessResult& result, const bool force)
 
     static constexpr std::array<std::uint8_t, kTopButtonCCs.size()> kTopColors = {{
         kLedBlue, kLedBlue, kLedPurple, kLedPurple, kLedDim,
-        kLedOrange, kLedCyan, kLedDim, kLedRed,
+        kLedOrange, kLedCyan, kLedRed, kLedOff,
     }};
 
     const bool latched = parameters_[p(ParamId::latch)] >= 0.5f;

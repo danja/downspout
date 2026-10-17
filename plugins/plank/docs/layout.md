@@ -54,8 +54,8 @@ Buttons `91` to `99`, left to right. They act on press; the release is ignored.
 | 95 | Latch | toggle `Latch` | - | - |
 | 96 | Drive up | `Drive` + 0.05 | 5% | 1 |
 | 97 | Resonance up | `Resonance` + 0.05 | 5% | 1 |
-| 98 | LED feedback | toggle `LED` | - | - |
-| 99 | Panic | stop everything | - | - |
+| 98 | Panic | stop everything | - | - |
+| 99 | (unused) | none | - | - |
 
 Notes:
 
@@ -69,8 +69,9 @@ Notes:
   so bring them back from the plugin UI or the host. They stop at their maximum
   rather than wrapping.
 - **LED feedback off** stops all LED updates. The grid and buttons keep whatever
-  they last showed, which can be stale, so turn it back on from the UI or `98`.
-- **Panic** (the logo button) releases every voice, re-sends the programmer-mode
+  they last showed, which can be stale, so turn it back on from the UI or the host
+  (there is no Launchpad button for it).
+- **Panic** (`98`) releases every voice, re-sends the programmer-mode
   SysEx and clears the LEDs.
 
 ## Side column
@@ -115,8 +116,8 @@ white.
 | 95 latch | yellow when on, dim when off |
 | 96 | orange |
 | 97 | cyan |
-| 98 LED | dim, always (it does not show its state) |
-| 99 panic | red |
+| 98 panic | red |
+| 99 | off |
 
 **Side column.** The selected scale pink, the rest dim.
 

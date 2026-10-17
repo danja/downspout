@@ -145,8 +145,8 @@ Top-row buttons:
 - `95`: latch on/off
 - `96`: drive up
 - `97`: resonance up
-- `98`: LED feedback on/off
-- `99`: panic; stop every string, re-enter programmer mode, clear the LEDs
+- `98`: panic; stop every string, re-enter programmer mode, clear the LEDs
+- `99`: unused (absent on some Launchpads). LED feedback is a UI/host parameter only.
 
 Side buttons `19` through `89` select a performance scale: Chromatic, Major,
 Minor, Dorian, Mixolydian, Pentatonic Major, Blues, Whole Tone.
