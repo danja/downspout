@@ -136,6 +136,7 @@ private:
     [[nodiscard]] Modulation computeModulation() const noexcept;
     [[nodiscard]] std::uint32_t oscillatorIncrement(float semitones) const noexcept;
     [[nodiscard]] float envelopeStep(float milliseconds) const noexcept;
+    [[nodiscard]] std::uint32_t padOwnWindow() const noexcept;
     [[nodiscard]] std::uint8_t midiNoteFor(const Voice& voice) const noexcept;
     [[nodiscard]] std::uint8_t baseChannel() const noexcept;
 
@@ -177,6 +178,10 @@ private:
     // True while a string was plucked through its cell parameter (UI or host
     // automation) rather than by a pad, so only that route can release it.
     std::array<bool, kStringCount> cellPlucked_ {};
+    // Samples left in which a string's cell parameter is still owned by the pad that
+    // last moved it. A host echoes cell values back one or two blocks late, so an
+    // opposing write inside this window is that echo, not a UI click.
+    std::array<std::uint32_t, kStringCount> padOwnedSamples_ {};
     std::array<Lfo, 2> lfos_ {};
 
     // Delay line, stereo.

@@ -108,6 +108,7 @@ void Processor::resetRuntime()
         voice.reset();
     holdCount_.fill(0);
     cellPlucked_.fill(false);
+    padOwnedSamples_.fill(0u);
     for (Lfo& lfo : lfos_)
         lfo.reset();
 
@@ -150,6 +151,13 @@ void Processor::setParameter(const std::uint32_t index, const float value)
         const std::size_t col = cell % kGridWidth;
         const bool on = value > 0.5f;
         const bool wasOn = parameters_[index] > 0.5f;
+
+        // A pad moved this string a moment ago, so a write that disagrees with the
+        // mirrored state is the host echoing an older value. Taking it would
+        // re-pluck a released string (it then rings until a later echo) or kill a
+        // held one.
+        if (on != wasOn && padOwnedSamples_[col] > 0u)
+            return;
 
         if (on != wasOn)
         {
@@ -356,6 +364,11 @@ float Processor::envelopeStep(const float milliseconds) const noexcept
     return 1.0f / static_cast<float>(std::max(1.0, seconds * sampleRate_));
 }
 
+std::uint32_t Processor::padOwnWindow() const noexcept
+{
+    return static_cast<std::uint32_t>(sampleRate_ * 0.15);
+}
+
 // ── String control ──────────────────────────────────────────────────────────
 
 void Processor::startNote(Voice& voice,
@@ -423,6 +436,7 @@ void Processor::pressGrid(const std::size_t row, const std::size_t col, ProcessR
 {
     Voice& voice = voices_[col];
     const bool latched = parameters_[static_cast<std::size_t>(ParamId::latch)] >= 0.5f;
+    padOwnedSamples_[col] = padOwnWindow();
 
     // With latch engaged a string keeps ringing after the pad is released, so a
     // second tap on the same cell is how you silence it. Without latch, a second
@@ -443,6 +457,7 @@ void Processor::pressGrid(const std::size_t row, const std::size_t col, ProcessR
 void Processor::releaseGrid(const std::size_t row, const std::size_t col, ProcessResult& result, const std::uint32_t frame)
 {
     Voice& voice = voices_[col];
+    padOwnedSamples_[col] = padOwnWindow();
     if (!voice.sounding || voice.degree != row)
         return;
 
@@ -1329,6 +1344,9 @@ void Processor::process(float* left,
         if (handleMidi(inputEvents[i], result))
             forceLeds = true;
     }
+
+    for (std::uint32_t& owned : padOwnedSamples_)
+        owned -= std::min(owned, frameCount);
 
     advanceLfos(frameCount);
     const Modulation modulation = computeModulation();

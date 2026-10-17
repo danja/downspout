@@ -865,6 +865,27 @@ void testStaleHostEchoDoesNotSilenceAHardwareRepeat()
             "a stale host echo must not silence a repeated hardware press");
 }
 
+void testStaleHostEchoDoesNotLatchAReleasedPad()
+{
+    // The host echoes the press (1) back a block or two late. By then the pad is
+    // released, and taking the echo would re-pluck the string and hold it.
+    Processor processor;
+    processor.init(48000.0);
+    processor.setParameter(static_cast<std::uint32_t>(ParamId::ledFeedback), 0.0f);
+    processor.setParameter(static_cast<std::uint32_t>(ParamId::envRelease), 5.0f);
+
+    const auto cell = static_cast<std::uint32_t>(kCellParameterStart + cellIndex(2, 3));
+    const MidiMessage on[] = { noteOn(gridToNote(2, 3)) };
+    const MidiMessage off[] = { noteOff(gridToNote(2, 3)) };
+
+    renderBlocks(processor, 1, on, 1u);
+    renderBlocks(processor, 1, off, 1u);
+    processor.setParameter(cell, 1.0f);  // late echo of the press
+    const Render after = renderBlocks(processor, 200);
+    require(after.result.status.activeStrings < 0.5f,
+            "a late host echo of the press must not latch a released pad");
+}
+
 void testCellParametersAreEdgeTriggered()
 {
     Processor processor;
@@ -1702,6 +1723,7 @@ int main()
     testLatchKeepsStringRinging();
     testRepeatedNoteOnRetriggersTheString();
     testStaleHostEchoDoesNotSilenceAHardwareRepeat();
+    testStaleHostEchoDoesNotLatchAReleasedPad();
     testRepeatedNotesAlwaysSound();
     testOverlappingRepeatSurvivesTheFirstNoteOff();
     testMorphCrossfadesIntoWavetables();
