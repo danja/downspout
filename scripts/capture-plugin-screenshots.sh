@@ -84,6 +84,7 @@ plugins=(
   "helterskelter:helterskelter"
   "treatment:treatment"
   "keyframe:keyframe"
+  "qune:qune"
   )
 
 

@@ -46,6 +46,7 @@ downspout-<version>-<platform>-vst3.zip
 ├── beards.vst3/
 ├── trajectory.vst3/
 ├── fathom.vst3/
+├── qune.vst3/
 ├── primefold.vst3/
 ├── quefrency.vst3/
 ├── keyframe.vst3/

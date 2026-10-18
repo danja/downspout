@@ -387,3 +387,20 @@ CC 20 (Scene) is not mapped. Conductor's CCs are not passed through (Beards has 
 When **Conductor Ch** = 0, all CC scanning is skipped and existing Note On follow/dodge
 behaviour (BassGen) or fully generative behaviour (DrumGen) is unchanged. The same holds for Lifeform, Polymeter and
 Xoxolo: with the channel off, and the masters at their defaults, output is bit-for-bit what it was before.
+
+## Qune mapping
+
+Qune is an audio effect with one MIDI input. Notes are *targets*, not voices: nothing is
+generated. The channel filter is **MIDI In** (`midi_ch`; 0 = all, 1-16 = that channel only).
+
+| Message | Effect |
+|---------|--------|
+| Note on / off | Adds or releases a target note. In **MIDI chord** mode the nearest held pitch class (any octave) is the target; in **MIDI note** mode the last held note |
+| Pitch bend | Moves MIDI targets by up to **Bend Range** semitones (`bend_range`, default 2) |
+| CC 64 | Sustain: released notes stay held while the pedal is down |
+| CC 120, 123 | Clear every held note |
+
+Everything else, including Amount, Glide, Quality and Formant, is a host parameter and has no
+CC. Notes are only used when **Target** is MIDI chord or MIDI note; in Scale mode they are
+ignored. **When no key is held** chooses between leaving the voice alone and falling back to
+the scale. Held notes are runtime state and are not saved with the project.

@@ -246,6 +246,13 @@ Progress as of 2026-05-27:
   shifter in its feedback loop). Five generator algorithms, two processor structures, Hold
   and glide for drones; CC 1-4 align with Drift's default lanes. See
   `plugins/fathom/docs/design.md`. Host validation in REAPER remains.
+- `qune` is a stereo pitch quantiser in the Magneto look: a McLeod/NSDF tracker finds the
+  input pitch and one of three shifters (a pitch-synchronous splice delay line, PSOLA, or a
+  peak-locked phase vocoder with cepstral formants) moves it to the nearest note of a chosen
+  scale or to incoming MIDI notes, with optional glide and formant preservation. Uses the
+  canonical 24-scale ordering. No plugin state: every setting is a parameter. See
+  `plugins/qune/docs/design.md`. Host validation in REAPER and listening tests on real
+  voices remain.
 - `magneto` now exists as an original physically informed combustion engine
   sound generator ported from Baldan et al., SIVE'15: four-stroke cycle
   functions, per-cylinder digital waveguides with valve-modulated feedback and
@@ -307,7 +314,7 @@ Current main gap:
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
   `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`,
-  `treatment.vst3`, `voxmod.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, and `fathom.vst3` bundles.
+  `treatment.vst3`, `voxmod.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, and `qune.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of

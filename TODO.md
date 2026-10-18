@@ -58,6 +58,23 @@ and others will not compile). No `-Wswitch` warnings remain. What was left on pu
   `parseSmplChunk` result is now explicit: a short chunk is the same as no chunk. Only the first
   loop record is read, which is documented in the code.)
 
+## Qune
+
+- [ ] **Listen to it.** Every number in `plugins/qune/docs/design.md` is from synthetic vowels,
+      noise and silence. Run a real vocal, a bass and a lead through all three tiers and
+      judge the artefacts the tests cannot: smearing in Good on low notes, a "tube" sound in
+      Best, Fast's splices on voice. Then tune the tracker defaults (Voicing 50 %, Stickiness
+      15 cents, the 0.95 lobe tolerance, the 2-hop jump confirmation) on that material.
+- [ ] **Host validation in REAPER.** Latency reporting while Quality or Range changes under
+      automation, MIDI note/bend/pedal input, sample-rate change, project save and reopen (all
+      settings are parameters, so no state to verify beyond that). The core tests never touch
+      the wrapper.
+- [ ] The pitch trace is untested against a host that never refreshes output parameters
+      (it would stay empty, with its "feed a voice" hint); try Bitwig and Ardour as well.
+- [ ] Good tier latency is 2.4 periods of the range floor (28 ms for Voice). Ideas to lower
+      it: shorter asymmetric grains, or choosing the floor from the first tracked pitch.
+- [ ] Optional: a per-note enable mask on top of the 24 scales; a manual "hold this note" key.
+
 ## Plank
 
 - [ ] Host validation in REAPER, especially the resonator engines: CPU load, audio out, and

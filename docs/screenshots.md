@@ -86,6 +86,7 @@ Current output filenames:
 - `beards.png`
 - `trajectory.png`
 - `fathom.png`
+- `qune.png`
 - `primefold.png`
 - `quefrency.png`
 - `keyframe.png`

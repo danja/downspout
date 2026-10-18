@@ -40,6 +40,12 @@ current Downspout plugins.
   reverse, skip, smear, and pitch-slip actions.
 - `PaunchLad`: a dub-style performance effect built around delay throws,
   sirens, spring splashes, dropouts, and rhythmic chops.
+- `Qune`: pitch quantiser. A normalised-square-difference pitch tracker (decimated
+  search, full-rate refinement, octave-error checks) picks a target note from a scale or
+  from held MIDI notes; the shift is smoothed by an optional glide and applied by one of
+  three shifters: a pitch-synchronous splice delay line (Fast), time-domain PSOLA with
+  fractional pitch marks (Good), or a peak-locked phase vocoder with cepstral formant
+  correction (Best).
 
 ## MIDI effects
 

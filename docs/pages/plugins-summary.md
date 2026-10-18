@@ -102,6 +102,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | pratt | pratt.vst3 | instrument + filter | 2/2 | yes/no | no |
 | primefold | primefold.vst3 | audio effect (pitch) | 2/2 | yes/no | no |
 | quefrency | quefrency.vst3 | audio effect (formant) | 2/2 | yes/no | no |
+| qune | qune.vst3 | audio effect (pitch quantiser) | 2/2 | yes/no | no |
 | resonance-garden | resonance_garden.vst3 | audio effect (resonators) | 2/2 | yes/no | no |
 | retune | retune.vst3 | MIDI processor (tuning) | 0/2 | yes/yes | no |
 | rift | rift.vst3 | audio effect (buffer) | 2/2 | yes/no | yes |
@@ -460,6 +461,22 @@ pedal, CC 64) keeps notes sounding, **Glide** slides between notes. Stereo out, 
 voices panned apart. CC 1-4 are Warp, Span, Morph, Seed (Drift's default lanes), 5 Fuse,
 6 Field, 7 Level, 8 Notch, 9 Mix, 10 Time, 11 Form, 12 Feed, 13 Shift, 14 Basis. A CC moves
 the sound but not the on-screen slider.
+
+### qune
+Stereo pitch quantiser. Tracks one pitch from the L+R sum (McLeod NSDF, 4 ms hop) and
+moves it to the nearest note of **Scale** (24 scales in the canonical ordering, **Root**) or
+to MIDI notes: **Target** = Scale, MIDI chord (nearest held pitch class, any octave) or MIDI
+note (last note played, plus pitch bend of **Bend Range**). **No Notes** chooses Bypass or
+Use scale while no key is held; **MIDI In** is All or one channel. **Amount**, **Glide**
+(0 = stepped, longer = slide), **Stickiness** (cents of hysteresis) and **Transpose**
+(whole semitones) shape the shift. **Quality** picks Fast (splice delay line, about 4 ms,
+formants follow pitch), Good (PSOLA, 2.4 periods of the **Range** floor: 16/28/61 ms for
+Lead/Voice/Bass at 48 kHz) or Best (phase vocoder, about 43 ms); Good and Best take
+**Formant** (Follow pitch / Preserve) and **Formant Shift**. **Voicing**, **Mix**, **Level**.
+Unvoiced input passes through. Latency is reported to the host (it changes with Quality and
+Range) and an output parameter shows it. MIDI maps only notes, pitch bend, CC 64 (hold) and
+CC 120/123 (clear); everything else is a host parameter. No plugin state. Monophonic: one
+pitch at a time.
 
 ### bubbles
 Water sound generator, stereo, continuous without MIDI (note-on/off optionally gates and

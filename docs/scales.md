@@ -78,6 +78,11 @@ Row 16 (`pentatonic`) is a generic single-scale entry used by lifeform and luma 
 Markov (`plugins/markov`) uses the same 24-scale ordering and masks its transition matrix with the scale; its
 tests hold an independent copy of every scale's semitone set.
 
+Qune (`plugins/qune`) uses the same 24-scale canonical ordering as plank (0 = chromatic through
+23 = bebopMinor, no separate `pentatonic` row), applies the scale as a pitch-class mask to
+pitch correction, and its tests pin the ordinals and hold an independent copy of every scale's
+semitone set. Its scale list is a dropdown, as in bassgen.
+
 Sprout (`plugins/sprout`) uses the same 24-scale canonical ordering as plank (0 = chromatic through 23 =
 bebopMinor, no separate `pentatonic` row) and its tests pin the ordinals and hold an independent copy of
 every scale's semitone set.
@@ -123,6 +128,8 @@ These assertions exist to catch mid-enum insertions. They must remain passing:
 - `bassgen`: `ScaleId::minor == 2`, `ScaleId::bebopMinor == 22`, `ScaleId::count == 23`
 - `counterpointer`: `SCALE_BEBOP_MINOR == 23`, `SCALE_COUNT == 24`
 - `plank`: `ScaleId::minor == 3`, `ScaleId::bebopMinor == 23`, `ScaleId::count == 24`
+- `qune`: `ScaleId::minor == 3`, `ScaleId::bebopMinor == 23`, `ScaleId::count == 24`
+  (same canonical ordering as plank)
   (plank uses the canonical 0-based ordering, so its ordinals line up with the
   table above rather than being offset like lifeform's)
 

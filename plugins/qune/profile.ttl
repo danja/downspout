@@ -1,0 +1,60 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:qune a trn:PluginProfile ;
+    rdfs:label "Qune" ;
+    rdfs:comment "Stereo pitch quantiser. Tracks the pitch of a voice or monophonic instrument and moves it to the nearest note of one of 24 scales, or to held MIDI notes. Three quality tiers (splice delay line, PSOLA, phase vocoder), optional glide, formant preservation and formant shift." ;
+    trn:bundleName "qune.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/qune/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio, trn:Midi ;
+    trn:produces trn:Audio ;
+    trn:caution "Monophonic: one pitch is tracked from the L+R sum and applied to both channels. Latency depends on Quality and Pitch range (Fast about 4 ms, Good 16-61 ms, Best about 43 ms) and is reported to the host. MIDI notes are targets, not voices: nothing is generated. Changing Quality or Pitch range ducks the output for about 10 ms." ;
+    trn:parameter [ rdfs:label "Root" ; trn:symbol "root" ; trn:range "C-B" ;
+                    rdfs:comment "Key of the scale." ] ;
+    trn:parameter [ rdfs:label "Scale" ; trn:symbol "scale" ; trn:range "0-23" ;
+                    rdfs:comment "Canonical 24-scale ordering (docs/scales.md): chromatic, major, ionian, minor, harmonic minor, melodic minor, dorian, phrygian, lydian, mixolydian, locrian, phrygian dominant, neapolitan major, neapolitan minor, pentatonic major, pentatonic minor, blues, whole tone, altered, half-whole diminished, whole-half diminished, bebop dominant, bebop major, bebop minor." ] ;
+    trn:parameter [ rdfs:label "Target" ; trn:symbol "source" ; trn:range "Scale, MIDI chord, MIDI note" ;
+                    rdfs:comment "Where the target note comes from. MIDI chord snaps to the nearest held pitch class in any octave; MIDI note sings the last note played." ] ;
+    trn:parameter [ rdfs:label "No Notes" ; trn:symbol "no_notes" ; trn:range "Bypass, Use scale" ;
+                    rdfs:comment "Behaviour in the MIDI modes while no key is held." ] ;
+    trn:parameter [ rdfs:label "MIDI In" ; trn:symbol "midi_ch" ; trn:range "All, 1-16" ;
+                    rdfs:comment "Channel filter for notes, pedal and pitch bend." ] ;
+    trn:parameter [ rdfs:label "Bend Range" ; trn:symbol "bend_range" ; trn:range "0-24 st" ;
+                    rdfs:comment "Semitones of MIDI pitch bend applied to MIDI targets." ] ;
+    trn:parameter [ rdfs:label "Amount" ; trn:symbol "amount" ; trn:range "0-100" ;
+                    rdfs:comment "Fraction of the way to the target. 0 leaves the pitch alone." ] ;
+    trn:parameter [ rdfs:label "Glide" ; trn:symbol "glide" ; trn:range "0-1000 ms" ;
+                    rdfs:comment "One-pole smoothing of the shift. Off steps between notes at once; longer slides and keeps some vibrato." ] ;
+    trn:parameter [ rdfs:label "Stickiness" ; trn:symbol "stickiness" ; trn:range "0-50 cents" ;
+                    rdfs:comment "Hysteresis: how far past the halfway point the pitch must go before the target moves to the neighbouring note." ] ;
+    trn:parameter [ rdfs:label "Transpose" ; trn:symbol "transpose" ; trn:range "-24 to +24 st" ;
+                    rdfs:comment "Whole semitones added to the target. With Amount 0 this is a plain pitch shifter." ] ;
+    trn:parameter [ rdfs:label "Quality" ; trn:symbol "quality" ; trn:range "Fast, Good, Best" ;
+                    rdfs:comment "Splice delay line, PSOLA, or phase vocoder. Sets latency." ] ;
+    trn:parameter [ rdfs:label "Range" ; trn:symbol "range" ; trn:range "Bass, Voice, Lead, Wide" ;
+                    rdfs:comment "Pitch detection band: 40-400, 90-900, 160-1600 or 40-1600 Hz. In Good it also sets the latency." ] ;
+    trn:parameter [ rdfs:label "Voicing" ; trn:symbol "voicing" ; trn:range "0-100" ;
+                    rdfs:comment "Tolerance for noisy pitch; higher accepts less clear sounds as pitched." ] ;
+    trn:parameter [ rdfs:label "Formant" ; trn:symbol "formant_mode" ; trn:range "Follow pitch, Preserve" ;
+                    rdfs:comment "Good and Best only. Fast always follows pitch." ] ;
+    trn:parameter [ rdfs:label "Formant Shift" ; trn:symbol "formant_shift" ; trn:range "-12 to +12 st" ;
+                    rdfs:comment "Moves the spectral envelope on top of the formant mode. Good and Best only." ] ;
+    trn:parameter [ rdfs:label "Mix" ; trn:symbol "mix" ; trn:range "0-100" ;
+                    rdfs:comment "Dry/corrected balance. The dry path is delayed by the reported latency." ] ;
+    trn:parameter [ rdfs:label "Level" ; trn:symbol "level" ; trn:range "-24 to +12 dB" ;
+                    rdfs:comment "Output gain." ] ;
+    trn:parameter [ rdfs:label "Detected" ; trn:symbol "out_pitch" ; trn:range "0-127 (MIDI note, 0 = none)" ;
+                    rdfs:comment "Read-only status for the panel." ] ;
+    trn:parameter [ rdfs:label "Target Note" ; trn:symbol "out_target" ; trn:range "0-127 (0 = none)" ;
+                    rdfs:comment "Read-only status for the panel." ] ;
+    trn:parameter [ rdfs:label "Shift" ; trn:symbol "out_shift" ; trn:range "-48 to +48 st" ;
+                    rdfs:comment "Read-only status for the panel." ] ;
+    trn:parameter [ rdfs:label "Latency" ; trn:symbol "out_latency" ; trn:range "0-200 ms" ;
+                    rdfs:comment "Read-only: processing delay in use." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

@@ -182,6 +182,17 @@ the four voices are panned apart for a wide chord. CC 1-4 are Warp, Span, Morph 
 (Drift's default lanes), so Drift animates the timbre unconfigured; CC 5 Fuse, 6 Field,
 7 Level, 8 Notch, 9 Mix, 10 Time, 11 Form, 12 Feed, 13 Shift, 14 Basis.
 
+### Qune (`qune.vst3`)
+
+Pitch quantiser for a voice or any single-note audio: it tracks the pitch and moves it to the
+nearest note of a chosen scale (24 scales, any root) or to MIDI notes. Put it on a vocal, bass
+or lead track as an insert; to make a voice follow a melody or chord, set **Target** to MIDI
+note or MIDI chord and route a MIDI track (an arpeggiator, Melgen, Cadence) to it. **Glide** off
+gives the stepped, hard-tuned sound; a longer glide and a lower **Amount** nudges a performance.
+**Quality** trades latency (Fast about 4 ms, Good 16-61 ms, Best about 43 ms) for smoothness
+and formant control; the host is told the latency, so it compensates. One pitch at a time:
+not for chords or full mixes.
+
 ### Magneto (`magneto.vst3`)
 
 Physically informed combustion engine generator. A four-stroke cycle drives
