@@ -28,6 +28,15 @@ struct NoteChoice {
 inline constexpr int kSubBlock = 32;
 inline constexpr std::size_t kMaxHeldNotes = 32;
 
+// A note message for the host, `frame` counted from the start of the
+// processBlock call that produced it.
+struct MidiOutEvent {
+    std::uint32_t frame = 0;
+    std::uint8_t data[3] = {0, 0, 0};
+};
+
+inline constexpr std::size_t kMidiOutCapacity = 64;
+
 struct EngineState {
     double sampleRate = 48000.0;
     bool prepared = false;
@@ -56,6 +65,13 @@ struct EngineState {
     float shiftSmoothed = 0.0f;
     float lastPeriod = 0.0f;
 
+    // MIDI out: the one note currently sounding downstream (-1 = none).
+    int outNote = -1;  // candidate for the current target
+    int soundingNote = -1;
+    int soundingChannel = 0;
+    std::array<MidiOutEvent, kMidiOutCapacity> midiOut {};
+    std::size_t midiOutCount = 0;
+
     // Quality / range changes fade the wet signal out, swap, and fade back in.
     int activeQuality = 1;
     int activeRange = -1;
@@ -83,6 +99,11 @@ void midiEvent(EngineState& state, const Parameters& parameters, const std::uint
 
 void processBlock(EngineState& state, const Parameters& parameters, const float* inLeft, const float* inRight,
                   float* outLeft, float* outRight, std::uint32_t frames);
+
+// Note-on / note-off messages produced by the last processBlock call, in frame
+// order. They are cleared at the start of each call, so drain after every call.
+[[nodiscard]] inline const MidiOutEvent* midiOutEvents(const EngineState& s) noexcept { return s.midiOut.data(); }
+[[nodiscard]] inline std::size_t midiOutCount(const EngineState& s) noexcept { return s.midiOutCount; }
 
 [[nodiscard]] int latencySamples(const EngineState& state);
 [[nodiscard]] int latencySamplesFor(const EngineState& state, int quality);

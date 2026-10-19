@@ -19,6 +19,8 @@
 #define DISTRHO_PLUGIN_NUM_INPUTS       2
 #define DISTRHO_PLUGIN_NUM_OUTPUTS      2
 #define DISTRHO_PLUGIN_WANT_MIDI_INPUT  1
+// Note-on/off for the quantised pitch, one note at a time.
+#define DISTRHO_PLUGIN_WANT_MIDI_OUTPUT 1
 // Quality and range set the processing delay; the host is told when it changes.
 #define DISTRHO_PLUGIN_WANT_LATENCY     1
 // Every setting is a parameter, which DPF saves by symbol. No plugin state.

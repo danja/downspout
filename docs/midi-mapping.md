@@ -390,8 +390,8 @@ Xoxolo: with the channel off, and the masters at their defaults, output is bit-f
 
 ## Qune mapping
 
-Qune is an audio effect with one MIDI input. Notes are *targets*, not voices: nothing is
-generated. The channel filter is **MIDI In** (`midi_ch`; 0 = all, 1-16 = that channel only).
+Qune is an audio effect with one MIDI input and one MIDI output. Input notes are *targets*,
+not voices. The output sends the quantised target as note-on/note-off (see below). The channel filter is **MIDI In** (`midi_ch`; 0 = all, 1-16 = that channel only).
 
 | Message | Effect |
 |---------|--------|
@@ -399,6 +399,12 @@ generated. The channel filter is **MIDI In** (`midi_ch`; 0 = all, 1-16 = that ch
 | Pitch bend | Moves MIDI targets by up to **Bend Range** semitones (`bend_range`, default 2) |
 | CC 64 | Sustain: released notes stay held while the pedal is down |
 | CC 120, 123 | Clear every held note |
+
+Output (`midi_out` on/off, `out_channel` 1-16, `out_velocity` 1-127): one note at a time, the
+whole-semitone target including Transpose (pitch bend is not sent). On a change the new
+note-on precedes the old note-off (legato). The note is released when the input stops being
+pitched, when MIDI Out is switched off, when the channel changes and on reset. Sent at
+detection time, so it leads the delayed audio by the reported latency.
 
 Everything else, including Amount, Glide, Quality and Formant, is a host parameter and has no
 CC. Notes are only used when **Target** is MIDI chord or MIDI note; in Scale mode they are

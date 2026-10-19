@@ -57,6 +57,15 @@ Per hop: detected MIDI note `m`; target `t` is one of
 - the nearest held pitch class, any octave (MIDI chord);
 - the last held note (MIDI note), plus pitch bend.
 
+**MIDI out.** The same hop that sets the target sets the note to send: the chosen integer
+note (the held key in MIDI-note mode) plus Transpose, bend excluded. `syncMidiOut` keeps the
+note sounding downstream equal to it, emitting note-on then note-off (legato) at the hop's
+sub-block, and a note-off when the voice goes unvoiced, MIDI Out turns off, the channel
+changes, or after `reset` (the sounding note survives `reset` so the next block releases it).
+Events are queued per `processBlock` call (capacity 64, drained by the wrapper after every
+call); if the queue is too full to take a change it is skipped and retried so a note-off is
+never lost. Timing is detection time, which leads the delayed audio by the latency.
+
 Stickiness keeps the previous target while it is a neighbour of the best note and less than
 the stickiness further from `m`. The shift is `amount * (t - m) + transpose`. A one-pole
 filter on the shift implements **Glide**; because it smooths the shift rather than the target,

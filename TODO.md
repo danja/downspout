@@ -69,6 +69,11 @@ and others will not compile). No `-Wswitch` warnings remain. What was left on pu
       automation, MIDI note/bend/pedal input, sample-rate change, project save and reopen (all
       settings are parameters, so no state to verify beyond that). The core tests never touch
       the wrapper.
+- [ ] **MIDI out in a host.** Core tests cover the messages; check that REAPER routes the
+      output to a synth, that legato note-on-before-note-off behaves on a mono synth, and
+      whether the detection-time timing wants an optional delay to match the audio latency.
+      Possible extras: velocity from input level, a minimum note length, a pitch-bend output
+      for the cents the audio still differs from the note (Amount < 100 %).
 - [ ] The pitch trace is untested against a host that never refreshes output parameters
       (it would stay empty, with its "feed a voice" hint); try Bitwig and Ardour as well.
 - [ ] Good tier latency is 2.4 periods of the range floor (28 ms for Voice). Ideas to lower

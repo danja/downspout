@@ -6,7 +6,7 @@ kind: Audio effect
 category: processor
 role: Pitch quantiser
 screenshot: /assets/plugins/qune.png
-capabilities: [audio input, audio output, MIDI note input, reported latency]
+capabilities: [audio input, audio output, MIDI note input, MIDI note output, reported latency]
 summary: Tracks the pitch of a voice or single-note instrument and moves it to the nearest note of one of 24 scales, or to MIDI notes you hold. Three quality tiers, glide, formant preserve and shift.
 ---
 
@@ -48,6 +48,12 @@ released notes, CC 120/123 clear them. **When no key is held** chooses between l
 voice alone and falling back to the scale. No other CCs are mapped; automate the host
 parameters.
 
+**MIDI out.** While a pitch is being corrected, Qune also sends the note it is moving it to
+as MIDI note-on/note-off, one note at a time and legato (the new note-on goes out before the
+old note-off). That makes it a voice-to-MIDI converter that snaps to the scale: route it to
+a synth. The note is the whole-semitone target including Transpose; pitch bend is not sent.
+It is timed when the pitch is detected, so it leads the delayed audio by the reported latency.
+
 ### Parameters
 
 | Parameter | Range | Default | Notes |
@@ -69,6 +75,9 @@ parameters.
 | Formant Shift | -12 to +12 st | 0 | Good and Best |
 | Mix | 0-100 % | 100 % | |
 | Level | -24 to +12 dB | 0 | |
+| MIDI Out | Off, On | On | Target note as note-on/off |
+| Out Channel | 1-16 | 1 | |
+| Out Velocity | 1-127 | 100 | Fixed |
 
 ### Status
 

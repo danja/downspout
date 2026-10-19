@@ -36,6 +36,7 @@ constexpr EnumTable enumFor(const core::ParamId id)
     case core::ParamId::midiCh: return table(core::kMidiChannelNames);
     case core::ParamId::quality: return table(core::kQualityNames);
     case core::ParamId::formantMode: return table(core::kFormantNames);
+    case core::ParamId::midiOut: return table(core::kMidiOutNames);
     default: return {nullptr, 0};
     }
 }
@@ -181,6 +182,7 @@ protected:
             {
                 core::processBlock(engine_, parameters_, inputs[0] + done, inputs[1] + done, outputs[0] + done,
                                    outputs[1] + done, at - done);
+                forwardMidi(done);
                 done = at;
             }
             if (event.size <= MidiEvent::kDataSize)
@@ -190,6 +192,7 @@ protected:
         {
             core::processBlock(engine_, parameters_, inputs[0] + done, inputs[1] + done, outputs[0] + done,
                                outputs[1] + done, frames - done);
+            forwardMidi(done);
         }
 
         outPitch_ = core::detectedNote(engine_);
@@ -199,6 +202,19 @@ protected:
     }
 
 private:
+    void forwardMidi(const uint32_t base)
+    {
+        const core::MidiOutEvent* events = core::midiOutEvents(engine_);
+        for (std::size_t i = 0; i < core::midiOutCount(engine_); ++i)
+        {
+            MidiEvent out {};
+            out.frame = base + events[i].frame;
+            out.size = 3;
+            std::memcpy(out.data, events[i].data, 3);
+            writeMidiEvent(out);
+        }
+    }
+
     void applyConfiguration()
     {
         core::configure(engine_, parameters_);

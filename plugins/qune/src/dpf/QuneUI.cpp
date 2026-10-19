@@ -19,6 +19,7 @@ namespace {
 
 using downspout::qune::kFormantNames;
 using downspout::qune::kMidiChannelNames;
+using downspout::qune::kMidiOutNames;
 using downspout::qune::kNoNotesNames;
 using downspout::qune::kNoteNames;
 using downspout::qune::kParameterCount;
@@ -105,6 +106,9 @@ std::string formatValue(const std::uint32_t parameter, const float value)
     case ParamId::transpose:
         std::snprintf(buffer, sizeof(buffer), "%+d st", static_cast<int>(std::lround(value)));
         break;
+    case ParamId::outVelocity:
+        std::snprintf(buffer, sizeof(buffer), "%d", static_cast<int>(std::lround(value)));
+        break;
     case ParamId::bendRange:
         std::snprintf(buffer, sizeof(buffer), "+/-%d st", static_cast<int>(std::lround(value)));
         break;
@@ -136,6 +140,8 @@ NameList namesFor(const ParamId id)
     case ParamId::source: return {kSourceNames.data(), static_cast<int>(kSourceNames.size())};
     case ParamId::noNotes: return {kNoNotesNames.data(), static_cast<int>(kNoNotesNames.size())};
     case ParamId::midiCh: return {kMidiChannelNames.data(), static_cast<int>(kMidiChannelNames.size())};
+    case ParamId::midiOut: return {kMidiOutNames.data(), static_cast<int>(kMidiOutNames.size())};
+    case ParamId::outChannel: return {kMidiChannelNames.data(), static_cast<int>(kMidiChannelNames.size())};
     case ParamId::quality: return {kQualityNames.data(), static_cast<int>(kQualityNames.size())};
     case ParamId::formantMode: return {kFormantNames.data(), static_cast<int>(kFormantNames.size())};
     default: return {nullptr, 0};
@@ -940,12 +946,12 @@ private:
 
         const float x = bounds.x + 14.0f;
         const float w = bounds.w - 28.0f;
-        const float rowH = 40.0f;
+        const float rowH = 34.0f;
         float y = bounds.y + 42.0f;
 
         drawSlider(ParamId::amount, "Amount (strength)", {x, y, w, rowH}, kCorrectAccent);
         y += rowH;
-        drawSlider(ParamId::glide, "Glide (slide time)", {x, y, w, rowH}, kCorrectAccent);
+        drawSlider(ParamId::glide, "Glide (off = steps at once)", {x, y, w, rowH}, kCorrectAccent);
         y += rowH;
         drawSlider(ParamId::stickiness, "Stickiness (hold the note)", {x, y, w, rowH}, kCorrectAccent);
         y += rowH;
@@ -954,9 +960,12 @@ private:
         drawSlider(ParamId::voicing, "Voicing (breath tolerance)", {x, y, w, rowH}, kCorrectAccent);
         y += rowH + 4.0f;
 
-        note(x, y, "Glide off: notes step at once (hard-tuned).");
-        note(x, y + 13.0f, "Longer glide: slides, keeps some vibrato.");
-        note(x, y + 26.0f, "Breath and consonants pass through as they are.");
+        const float half = (w - 12.0f) * 0.5f;
+        const bool sending = intValue(ParamId::midiOut) != 0;
+        drawStepper(ParamId::midiOut, "MIDI out (target notes)", {x, y, half, 40.0f});
+        drawStepper(ParamId::outChannel, "Out channel", {x + half + 12.0f, y, half, 40.0f}, sending);
+        y += 42.0f;
+        drawSlider(ParamId::outVelocity, "Out velocity", {x, y, w, 36.0f}, kCorrectAccent, sending);
     }
 
     // ── Engine panel ───────────────────────────────────────────────────────

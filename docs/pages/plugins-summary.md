@@ -102,7 +102,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | pratt | pratt.vst3 | instrument + filter | 2/2 | yes/no | no |
 | primefold | primefold.vst3 | audio effect (pitch) | 2/2 | yes/no | no |
 | quefrency | quefrency.vst3 | audio effect (formant) | 2/2 | yes/no | no |
-| qune | qune.vst3 | audio effect (pitch quantiser) | 2/2 | yes/no | no |
+| qune | qune.vst3 | audio effect (pitch quantiser) | 2/2 | yes/yes | no |
 | resonance-garden | resonance_garden.vst3 | audio effect (resonators) | 2/2 | yes/no | no |
 | retune | retune.vst3 | MIDI processor (tuning) | 0/2 | yes/yes | no |
 | rift | rift.vst3 | audio effect (buffer) | 2/2 | yes/no | yes |
@@ -474,8 +474,9 @@ formants follow pitch), Good (PSOLA, 2.4 periods of the **Range** floor: 16/28/6
 Lead/Voice/Bass at 48 kHz) or Best (phase vocoder, about 43 ms); Good and Best take
 **Formant** (Follow pitch / Preserve) and **Formant Shift**. **Voicing**, **Mix**, **Level**.
 Unvoiced input passes through. Latency is reported to the host (it changes with Quality and
-Range) and an output parameter shows it. MIDI maps only notes, pitch bend, CC 64 (hold) and
-CC 120/123 (clear); everything else is a host parameter. No plugin state. Monophonic: one
+Range) and an output parameter shows it. MIDI in maps only notes, pitch bend, CC 64 (hold)
+and CC 120/123 (clear). MIDI out (**MIDI Out**, **Out Channel**, **Out Velocity**) sends the
+quantised target as legato note-on/note-off; everything else is a host parameter. No plugin state. Monophonic: one
 pitch at a time.
 
 ### bubbles

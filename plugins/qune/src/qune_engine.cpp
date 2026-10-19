@@ -56,6 +56,46 @@ void applyRange(EngineState& s, const int range)
     s.lastHop = s.tracker.result().hop;
 }
 
+void pushMidi(EngineState& s, const std::uint32_t frame, const std::uint8_t status, const int note,
+              const int velocity)
+{
+    MidiOutEvent& e = s.midiOut[s.midiOutCount++];
+    e.frame = frame;
+    e.data[0] = status;
+    e.data[1] = static_cast<std::uint8_t>(note);
+    e.data[2] = static_cast<std::uint8_t>(velocity);
+}
+
+// Keeps the note sounding downstream equal to the current target. The new note
+// goes on before the old one comes off so a mono synth plays legato. If the
+// queue could overflow nothing changes and the next call retries, so a note-off
+// is never lost.
+void syncMidiOut(EngineState& s, const Parameters& p, const std::uint32_t frame)
+{
+    const int channel = clampInt(p.outChannel, 1, 16) - 1;
+    const int wanted = (clampInt(p.midiOut, 0, 1) == 1 && s.voiced && s.hasTarget) ? s.outNote : -1;
+    if (wanted == s.soundingNote && (wanted < 0 || channel == s.soundingChannel))
+        return;
+    if (s.midiOutCount + 2 > kMidiOutCapacity)
+        return;
+
+    const int velocity = clampInt(p.outVelocity, 1, 127);
+    if (wanted >= 0 && s.soundingNote >= 0 && channel == s.soundingChannel)
+    {
+        pushMidi(s, frame, static_cast<std::uint8_t>(0x90 | channel), wanted, velocity);
+        pushMidi(s, frame, static_cast<std::uint8_t>(0x80 | s.soundingChannel), s.soundingNote, 0);
+    }
+    else
+    {
+        if (s.soundingNote >= 0)
+            pushMidi(s, frame, static_cast<std::uint8_t>(0x80 | s.soundingChannel), s.soundingNote, 0);
+        if (wanted >= 0)
+            pushMidi(s, frame, static_cast<std::uint8_t>(0x90 | channel), wanted, velocity);
+    }
+    s.soundingNote = wanted;
+    s.soundingChannel = channel;
+}
+
 void resetShifters(EngineState& s)
 {
     s.fast.reset();
@@ -136,6 +176,10 @@ void updateControl(EngineState& s, const Parameters& p)
         return;
     }
 
+    // The note sent downstream is the whole-semitone target; bend stays in the audio.
+    s.outNote = std::clamp((chosen >= 0 ? chosen : static_cast<int>(s.noteStack[s.noteCount - 1])) +
+                               static_cast<int>(std::lround(p.transpose)),
+                           0, 127);
     s.targetNote = target + p.transpose;
     s.shiftTarget = std::clamp(p.amount * (target - detected) + p.transpose, -kMaxShift, kMaxShift);
 
@@ -217,6 +261,9 @@ void reset(EngineState& s)
     s.lastPeriod = 0.0f;
     s.switching = false;
     s.switchGain = 1.0f;
+    // The sounding note survives so the next block can release it.
+    s.outNote = -1;
+    s.midiOutCount = 0;
 }
 
 void configure(EngineState& s, const Parameters& rawParameters)
@@ -316,6 +363,7 @@ int latencySamples(const EngineState& s)
 void processBlock(EngineState& s, const Parameters& rawParameters, const float* inLeft, const float* inRight,
                   float* outLeft, float* outRight, const std::uint32_t frames)
 {
+    s.midiOutCount = 0;
     if (!s.prepared)
         return;
 
@@ -326,6 +374,7 @@ void processBlock(EngineState& s, const Parameters& rawParameters, const float* 
     const float sr = static_cast<float>(s.sampleRate);
 
     s.tracker.setVoicing(p.voicing);
+    syncMidiOut(s, p, 0);  // releases a note left over from reset or a setting change
 
     if (s.activeRange < 0)
     {
@@ -353,6 +402,7 @@ void processBlock(EngineState& s, const Parameters& rawParameters, const float* 
         {
             s.lastHop = s.tracker.result().hop;
             updateControl(s, p);
+            syncMidiOut(s, p, offset);
         }
 
         // Glide: one pole on the shift, so a note change slides and vibrato is

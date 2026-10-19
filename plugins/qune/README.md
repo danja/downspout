@@ -29,6 +29,7 @@ pitch.
 | When no key is held | **Bypass** leaves the voice alone, **Use scale** falls back to the scale |
 | MIDI input | All channels, or one |
 | Pitch bend range | Semitones for MIDI pitch bend (applied to MIDI targets) |
+| MIDI out | Sends the target note as MIDI note-on/note-off while a pitch is corrected, one note at a time, legato. Channel and a fixed velocity are set alongside |
 | Amount | 0 leaves the pitch alone, 100 % lands it on the note |
 | Glide | 0 = off (notes step at once); longer times slide between notes and let some vibrato through |
 | Stickiness | Cents a pitch must travel past the halfway point before the target moves to the next note |
@@ -54,9 +55,15 @@ change, because it changes the latency of both paths.
 
 ## MIDI
 
-Notes: a note is a target, never a voice, so nothing is generated. Pitch bend moves MIDI
+Notes in: a note is a target, never a voice, so nothing is generated. Pitch bend moves MIDI
 targets. CC 64 (sustain) holds released notes. CC 120 and 123 clear held notes. There are
 no other CC mappings; every control is a host parameter, so automate those.
+
+Notes out: the whole-semitone target (including Transpose, excluding pitch bend) is sent as a
+note-on when it is first found or changes, with the new note-on placed before the old
+note-off so a mono synth plays legato. Note-off follows when the sound stops being pitched,
+and when MIDI Out is turned off, the channel changes, or the plugin is reset. The message is
+timed at detection, so it leads the delayed audio by the reported latency.
 
 ## Documented assumptions
 

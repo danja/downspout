@@ -154,6 +154,8 @@ inline constexpr std::array<const char*, 2> kFormantNames = {{"Follow pitch", "P
 enum class Source : int { scale = 0, midiNearest = 1, midiExact = 2 };
 inline constexpr std::array<const char*, 3> kSourceNames = {{"Scale", "MIDI chord", "MIDI note"}};
 
+inline constexpr std::array<const char*, 2> kMidiOutNames = {{"Off", "On"}};
+
 inline constexpr std::array<const char*, 2> kNoNotesNames = {{"Bypass", "Use scale"}};
 
 inline constexpr std::array<const char*, 12> kNoteNames = {{
@@ -190,6 +192,10 @@ enum class ParamId : std::uint32_t {
     // Output
     mix,
     level,
+    // MIDI output
+    midiOut,
+    outChannel,
+    outVelocity,
     // Read-only status
     outPitch,
     outTarget,
@@ -197,8 +203,8 @@ enum class ParamId : std::uint32_t {
     outLatency,
 };
 
-inline constexpr std::size_t kParameterCount = 21;
-inline constexpr std::size_t kInputParameterCount = 17;
+inline constexpr std::size_t kParameterCount = 24;
+inline constexpr std::size_t kInputParameterCount = 20;
 
 struct ParamSpec {
     const char* symbol;
@@ -233,6 +239,10 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"mix", "Mix", "", 0.0f, 1.0f, 1.0f, false, false},
     {"level", "Level", "dB", -24.0f, 12.0f, 0.0f, false, false},
 
+    {"midi_out", "MIDI Out", "", 0.0f, 1.0f, 1.0f, true, false},
+    {"out_channel", "Out Channel", "", 1.0f, 16.0f, 1.0f, true, false},
+    {"out_velocity", "Out Velocity", "", 1.0f, 127.0f, 100.0f, true, false},
+
     {"out_pitch", "Detected", "", 0.0f, 127.0f, 0.0f, false, true},
     {"out_target", "Target Note", "", 0.0f, 127.0f, 0.0f, false, true},
     {"out_shift", "Shift", "st", -48.0f, 48.0f, 0.0f, false, true},
@@ -260,6 +270,10 @@ struct Parameters {
 
     float mix = 1.0f;
     float level = 0.0f;
+
+    float midiOut = 1.0f;
+    float outChannel = 1.0f;
+    float outVelocity = 100.0f;
 };
 
 // Address of each host-writable field, in ParamId order.
@@ -281,6 +295,9 @@ inline constexpr std::array<float Parameters::*, kInputParameterCount> kParamete
     &Parameters::formantShift,
     &Parameters::mix,
     &Parameters::level,
+    &Parameters::midiOut,
+    &Parameters::outChannel,
+    &Parameters::outVelocity,
 }};
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -327,6 +344,9 @@ inline constexpr std::array<float Parameters::*, kInputParameterCount> kParamete
     clampField(p.formantShift, ParamId::formantShift);
     clampField(p.mix, ParamId::mix);
     clampField(p.level, ParamId::level);
+    clampField(p.midiOut, ParamId::midiOut);
+    clampField(p.outChannel, ParamId::outChannel);
+    clampField(p.outVelocity, ParamId::outVelocity);
     return p;
 }
 

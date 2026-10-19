@@ -191,8 +191,21 @@ struct Rig {
         {
             const auto n = static_cast<std::uint32_t>(std::min<std::size_t>(block, total - i));
             processBlock(state, p, &left[i], &right[i], &outLeft[i], &outRight[i], n);
+            for (std::size_t e = 0; e < midiOutCount(state); ++e)
+            {
+                const MidiOutEvent& event = midiOutEvents(state)[e];
+                sent.push_back({i + event.frame, event.data[0], event.data[1], event.data[2]});
+            }
         }
     }
+
+    struct Sent {
+        std::size_t frame;
+        int status;
+        int note;
+        int velocity;
+    };
+    std::vector<Sent> sent;
 
     std::vector<float> run(const std::vector<float>& mono, const std::uint32_t block = 480)
     {
@@ -1576,8 +1589,102 @@ void testEveryControlHasAnEffect()
         covered[static_cast<std::size_t>(probe.id)] = true;
     covered[static_cast<std::size_t>(ParamId::voicing)] = true;
     covered[static_cast<std::size_t>(ParamId::stickiness)] = true;
+    // The MIDI Out controls act on the messages, not the audio: testMidiOutFollowsTheTargetNotes.
+    covered[static_cast<std::size_t>(ParamId::midiOut)] = true;
+    covered[static_cast<std::size_t>(ParamId::outChannel)] = true;
+    covered[static_cast<std::size_t>(ParamId::outVelocity)] = true;
     for (std::size_t i = 0; i < kInputParameterCount; ++i)
         check(covered[i], std::string("effect test exists for '") + kParameterSpecs[i].name + "'");
+}
+
+// Note messages the host would receive: the quantised notes, one at a time.
+void testMidiOutFollowsTheTargetNotes()
+{
+    auto x = sequence({{200.0, 0.4}, {300.0, 0.4}}, 48000.0);
+    x.resize(x.size() + 14400, 0.0f);
+
+    // G3 and D4 are both in C major; each is 35 cents sharp of the note it snaps to.
+    Rig rig;
+    rig.p.scale = 1.0f;
+    rig.p.outChannel = 5.0f;
+    rig.p.outVelocity = 80.0f;
+    rig.run(x);
+
+    std::vector<Rig::Sent> on, off;
+    for (const auto& e : rig.sent)
+        (e.status >= 0x90 ? on : off).push_back(e);
+    check(on.size() == 2 && off.size() == 2, "two notes: two note-ons and two note-offs");
+    if (on.size() == 2 && off.size() == 2)
+    {
+        check(on[0].note == 55 && on[1].note == 62, "note-ons are the snapped notes");
+        check(on[0].status == 0x94 && off[0].status == 0x84, "messages use the chosen channel");
+        check(on[0].velocity == 80 && off[0].velocity == 0, "velocity as set");
+        check(off[0].note == 55 && off[1].note == 62, "each note is released");
+        check(off[0].frame == on[1].frame, "legato: new note-on at the same frame as the old note-off");
+        check(rig.sent[1].status >= 0x90 && rig.sent[2].status < 0x90, "new note-on goes before the old note-off");
+        check(on[0].frame > 0.01 * 48000.0 && on[0].frame < 0.2 * 48000.0, "first note-on arrives shortly after onset");
+        check(on[1].frame > 0.4 * 48000.0 && on[1].frame < 0.6 * 48000.0, "second note-on follows the second pitch");
+        check(off[1].frame > 0.8 * 48000.0 && off[1].frame < 0.95 * 48000.0, "release follows the end of the sound");
+    }
+
+    // Transpose moves the sent notes with the audio.
+    Rig up;
+    up.p.transpose = 12.0f;
+    up.run(x);
+    check(!up.sent.empty() && up.sent[0].note == 67, "transpose applies to the MIDI note");
+
+    // MIDI note mode sends the held key, bend or not.
+    Rig held;
+    held.p.source = 2.0f;
+    held.note(64);
+    held.bend(16383);
+    held.run(x);
+    check(!held.sent.empty() && held.sent[0].note == 64, "held key is sent, without the bend");
+
+    // Switched off: nothing.
+    Rig off_;
+    off_.p.midiOut = 0.0f;
+    off_.run(x);
+    check(off_.sent.empty(), "MIDI Out off sends nothing");
+
+    // Switching off mid-note releases it; so does a channel change.
+    Rig mid;
+    const std::size_t half = 12000;
+    const std::vector<float> first(x.begin(), x.begin() + static_cast<std::ptrdiff_t>(half));
+    const std::vector<float> rest(x.begin() + static_cast<std::ptrdiff_t>(half), x.end());
+    mid.run(first);
+    check(mid.sent.size() == 1 && mid.sent[0].status == 0x90, "one note sounding");
+    mid.p.midiOut = 0.0f;
+    mid.run(rest);
+    check(mid.sent.size() >= 2 && mid.sent[1].status == 0x80 && mid.sent[1].note == mid.sent[0].note,
+          "turning it off releases the sounding note");
+
+    Rig move;
+    move.run(first);
+    move.p.outChannel = 9.0f;
+    move.run(rest);
+    check(move.sent.size() >= 3 && move.sent[1].status == 0x80 && move.sent[2].status == 0x98,
+          "a channel change releases on the old channel and starts on the new");
+
+    // A reset (transport stop, re-activation) releases the note at the next block.
+    Rig stop;
+    stop.run(first);
+    reset(stop.state);
+    stop.run(rest);
+    check(stop.sent.size() >= 2 && stop.sent[1].status == 0x80, "reset releases the sounding note");
+
+    // Every on is matched by an off, whatever the material.
+    const auto balanced = [](const Rig& r) {
+        int sounding = 0;
+        for (const auto& e : r.sent)
+        {
+            sounding += (e.status >= 0x90) ? 1 : -1;
+            if (sounding < 0 || sounding > 2)
+                return false;
+        }
+        return sounding == 0;
+    };
+    check(balanced(rig), "notes are balanced");
 }
 
 }  // namespace
@@ -1611,6 +1718,7 @@ int main()
     testMidiSustainPedal();
     testMidiChannelFilter();
     testNoteStackOverflowDropsTheOldest();
+    testMidiOutFollowsTheTargetNotes();
 
     testFormantPreserveKeepsTheEnvelope();
     testFormantShiftMovesTheEnvelope();
