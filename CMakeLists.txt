@@ -68,6 +68,7 @@ option(DOWNSPOUT_BUILD_SPLIFF "Configure the spliff transient processor target" 
 option(DOWNSPOUT_BUILD_HELTERSKELTER "Configure the helterskelter auto-wah target" ON)
 option(DOWNSPOUT_BUILD_TREATMENT "Configure the Treatment acoustic-panel target" ON)
 option(DOWNSPOUT_BUILD_VOXMOD "Configure the Voxmod vocoder/ring-mod target" ON)
+option(DOWNSPOUT_BUILD_SINEVOX "Configure the Sinevox formant vocoder / sine-wave-speech target" ON)
 option(DOWNSPOUT_BUILD_TRAJECTORY "Configure the Trajectory polygon-bounce synthesizer target" ON)
 option(DOWNSPOUT_BUILD_FATHOM "Configure the Fathom drone synthesizer target" ON)
 option(DOWNSPOUT_BUILD_QUNE "Configure the Qune pitch quantiser target" ON)
@@ -415,6 +416,10 @@ endif()
 
 if(DOWNSPOUT_BUILD_VOXMOD)
     add_subdirectory(plugins/voxmod)
+endif()
+
+if(DOWNSPOUT_BUILD_SINEVOX)
+    add_subdirectory(plugins/sinevox)
 endif()
 
 if(DOWNSPOUT_BUILD_PRIMEFOLD)

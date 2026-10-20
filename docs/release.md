@@ -78,6 +78,7 @@ downspout-<version>-<platform>-vst3.zip
 ├── helterskelter.vst3/
 ├── treatment.vst3/
 ├── voxmod.vst3/
+├── sinevox.vst3/
 ├── LICENSE
 └── README.md
 ```

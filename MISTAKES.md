@@ -30,3 +30,8 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 - **What happened:** The click test failed with a 0.21 step against a 0.02 input step when Quality changed.
 - **Root cause:** Only the wet signal was faded, but a quality change also changes the latency of the dry path, which then jumped.
 - **Prevention:** When a parameter changes latency, fade the whole output, not one path, and test every transition (quality and range) for continuity.
+
+## Sinevox: formant tracker read F1 12 % high on a flat test source (2026-10-20)
+- **What happened:** The LPC tracker put a 700 Hz resonance at 790 Hz (Q 3.4 instead of ~8) in the first test run. Changing the window length did nothing; changing the pre-emphasis coefficient moved it.
+- **Root cause:** The test vowel was an impulse train through resonators, which has a flat spectrum. The analyser assumes speech's ~-6 dB/oct tilt (glottal slope plus lip radiation) and pre-emphasises to flatten it, so on a flat source it over-tilts and biases the lowest formant upward.
+- **Prevention:** Give synthetic test signals the spectral character the algorithm assumes (here a one-pole tilt on the pulse train) and say so in the generator. Vary one assumption at a time (window, pre-emphasis) in a throwaway probe before touching the algorithm. Also: a "silent after release" test must wait long enough for the release to cross the idle threshold (about 12 time constants), not 7.

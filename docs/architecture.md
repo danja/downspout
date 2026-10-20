@@ -282,6 +282,7 @@ The release script currently expects these bundles:
 - `helterskelter.vst3`
 - `treatment.vst3`
 - `voxmod.vst3`
+- `sinevox.vst3`
 
 This list should match the bundles installed by `install.sh`; if a plugin is
 added to the local install path, release packaging should be updated in the same

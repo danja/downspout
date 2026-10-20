@@ -259,6 +259,7 @@ jobs:
             echo "- helterskelter.vst3"
             echo "- treatment.vst3"
             echo "- voxmod.vst3"
+            echo "- sinevox.vst3"
             echo "- beards.vst3"
             echo "- trajectory.vst3"
             echo "- fathom.vst3"

@@ -146,6 +146,7 @@ installed bundle.
 | [HelterSkelter](plugins/helterskelter/README.md) | `helterskelter.vst3` | Audio effect | Automatic wah pedal: resonant lowpass driven by the input envelope and/or a BBT-synced ADSR cycle, with Drift CC control. |
 | [Treatment](plugins/treatment/README.md) | `treatment.vst3` | Audio effect | Physically modelled acoustic treatment panel: a mass-air-mass absorber whose resonance and absorption come from real cavity, gap, facing mass and flow resistivity, with a seeded Randomise and five Drift CC lanes. |
 | [Voxmod](plugins/voxmod/README.md) | `voxmod.vst3` | Audio effect | Combined vocoder and ring modulator: a filter-bank vocoder analysing inputs 1/2 colours the modulator on 3/4, in parallel with a band-limited ring modulator, blended by Mix. |
+| [Sinevox](plugins/sinevox/README.md) | `sinevox.vst3` | Audio effect | Formant tracker with two voices: speech on inputs 1/2 is analysed for up to eight formants (frequency, Q, amplitude) that drive a band-pass vocoder bank on 3/4 or a bank of sine oscillators (sine-wave speech). MIDI CC and note control, formants out as CCs or notes. |
 | [Keyframe](plugins/keyframe/README.md) | `keyframe.vst3` | Audio effect | Extrema-sampling time stretch after DAFx26: the input reduces to timestamped local extrema whose spacing drives the overlap-add splice length. No transient detector. |
 
 ## Architecture

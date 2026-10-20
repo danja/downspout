@@ -106,6 +106,13 @@ and others will not compile). No `-Wswitch` warnings remain. What was left on pu
   mode; a continuous shape (asymmetry/bias) would be new DSP. Tone and Folds are not CC-controlled.
 
 * `voxmod`: host validation in REAPER still pending.
+* `sinevox`: host validation in REAPER pending, in particular (1) that the host routes
+  MIDI out from an effect, (2) the 4-in layout (speech 1/2, carrier 3/4) and (3) that
+  saved projects restore the patch. Not yet auditioned on real speech: high voices
+  (f0 > ~300 Hz) may lock onto harmonics; fricatives give wide unsteady tracks. Ideas:
+  pitch-aware analysis window, a fixed per-formant frequency range, an optional noise
+  source for unvoiced frames in vocoder mode, panel following CC changes (needs an
+  output mirror parameter).
 * `keyframe`: the leash diagram is static at unity rates because drift is genuinely ~0 there;
   a splice halo was added so it reads live during crossfades. If it still reads dead at
   defaults, the diagram needs a rethink, not another lamp.

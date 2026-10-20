@@ -129,6 +129,7 @@ The repository currently installs sixty-one real wrapper targets:
 - `helterskelter.vst3` with UI
 - `treatment.vst3` with UI
 - `voxmod.vst3` with UI
+- `sinevox.vst3` with UI
 - `keyframe.vst3` with UI
 
 The next install-related validation is host-side confirmation that all bundles behave correctly in `Release` builds.

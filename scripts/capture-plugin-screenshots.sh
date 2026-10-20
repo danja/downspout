@@ -11,6 +11,9 @@ wait_seconds="${DOWNSPOUT_SCREENSHOT_WAIT_SECONDS:-15}"
 settle_seconds="${DOWNSPOUT_SCREENSHOT_SETTLE_SECONDS:-1}"
 screen_geometry="${DOWNSPOUT_SCREENSHOT_SCREEN:-1920x1400x24}"
 start_jack="${DOWNSPOUT_SCREENSHOT_START_JACK:-1}"
+# Lets a UI that needs signal to look meaningful (e.g. sinevox) show sample data.
+export DOWNSPOUT_SCREENSHOT_DEMO=1
+
 app_args=()
 if [[ -n "${DOWNSPOUT_SCREENSHOT_APP_ARGS:-}" ]]; then
   read -r -a app_args <<< "$DOWNSPOUT_SCREENSHOT_APP_ARGS"
@@ -33,6 +36,7 @@ plugins=(
   "orchid:orchid"
   "drumgen:drumgen"
   "voxmod:voxmod"
+  "sinevox:sinevox"
   "beards:beards"
   "trajectory:trajectory"
   "fathom:fathom"

@@ -275,6 +275,13 @@ Progress as of 2026-05-27:
   and the tests assert the cascade never boosts anywhere in the parameter
   space; deterministic tests, and a first VST3 wrapper target with UI via
   vendored DPF;
+- `sinevox` now exists as a formant tracker with two voices: an LPC analysis (order
+  2N+2 on a ~16 kHz decimated mono sum of inputs 1/2, 5 ms hop) yields up to eight
+  persistent tracks of frequency, Q and amplitude, which drive either a parallel
+  band-pass bank on inputs 3/4 (vocoder) or a bank of sines (sine-wave speech).
+  Shift, Q Scale and Tilt reshape the tracks; MIDI CC and held notes control it;
+  the tracks can be emitted as CCs or notes. All settings are parameters, so it has
+  no plugin state. Design notes in `plugins/sinevox/docs/design.md`.
 - `voxmod` now exists as a combined vocoder and ring modulator sharing one
   four-input bus: a filter-bank vocoder that analyses the carrier on inputs 1/2
   and re-imposes its spectral envelope on the modulator from 3/4, running in
@@ -314,7 +321,7 @@ Current main gap:
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
   `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`,
-  `treatment.vst3`, `voxmod.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, and `qune.vst3` bundles.
+  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, and `qune.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of

@@ -20,6 +20,9 @@ By default this:
 - launches each UI under Xvfb when no `DISPLAY` is already available;
 - captures each window with ImageMagick;
 - writes PNGs to `docs/pages/assets/plugins/`.
+- exports `DOWNSPOUT_SCREENSHOT_DEMO=1`. A standalone has no audio, so a panel that
+  only means something with signal (currently `sinevox`, whose plot is the tracked
+  formants) reads this and shows sample data. Hosts never set it.
 
 To capture only selected plugins:
 
@@ -102,6 +105,7 @@ Current output filenames:
 - `syrinx.png`
 - `tuney-vst.png`
 - `voxmod.png`
+- `sinevox.png`
 
 This list is out of date in places: it predates several plugins, and
 `docs/pages/_products/*.md` is the authoritative record of which catalog

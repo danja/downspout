@@ -117,6 +117,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | fathom | fathom.vst3 | instrument (drone) | 0/2 | yes/no | no |
 | treatment | treatment.vst3 | audio effect (acoustic) | 2/2 | yes/no | no |
 | tuney-vst | tuney_vst.vst3 | instrument + MIDI | 0/2 | yes/yes | yes |
+| sinevox | sinevox.vst3 | audio effect (formant vocoder / sine wave speech) | 4/2 | yes/yes | no |
 | voxmod | voxmod.vst3 | audio effect (vocoder) | 4/2 | yes/no | no |
 | worms | worms.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | xoxolo | xoxolo.vst3 | MIDI generator | 0/2 | yes/yes | yes |
@@ -655,6 +656,17 @@ Spread octaves with asymmetric envelope followers; Sync feeds the ring-modulated
 back as the vocoder carrier. MIDI CC input. A panel XY pad maps X to Mix, Y to ring
 frequency. Needs a modulator with harmonics.
 
+### sinevox
+Formant tracker with two voices. Inputs 1-2 (speech) are summed to mono and analysed
+by LPC for up to eight formants (default four): centre frequency, Q and amplitude each.
+Mode picks Vocoder (a parallel band-pass bank on inputs 3-4 follows the formants), Sine
+Speech (one sine per formant) or Both. Shift, Q Scale, Tilt, Gate, BW Limit, Glide,
+Attack/Release, Level, Speech Mix, Carrier Norm, Sine Spread. MIDI in on one channel:
+CC 1-5 = Shift, Q Scale, Formants, Tilt, Mode; Note Shift makes the held note transpose
+the formants from middle C. MIDI out (off by default): formant frequency on CC 20-27 and
+level on CC 102-109, or one note per formant. Panel x-y pad: X Shift, Y Q Scale. Vocoder
+mode needs a carrier with harmonics.
+
 ### resonance-garden
 Eight bounded damped resonators tuned by held MIDI notes (HarmonyMidi) or an internal
 scale, turning arbitrary audio into pitched evolving material: damping, inharmonicity,
@@ -717,4 +729,4 @@ a note-on), so it does not follow other channels.
 - **Need audio processing:** distortion (damiano, skream, chipper), granular (beards), time/pitch (keyframe,
   primefold, quefrency), space (lightverb, loopdelay, orbit, treatment, ambo),
   rhythm/gating (e-mix, p-mix, orchid, rift), tone/dynamics (bassops, spliff,
-  helterskelter, guardian), spectral (voxmod, resonance-garden).
+  helterskelter, guardian), spectral (voxmod, sinevox, resonance-garden).
