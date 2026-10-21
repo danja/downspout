@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -14,7 +15,13 @@ using downspout::generative::MidiEvent;
 using downspout::generative::ParamSpec;
 using downspout::generative::Transport;
 
-inline constexpr int kPresetCount = 7;
+inline constexpr int kBuiltinPresetCount = 7;
+// The last preset plays the user's own grammar (see CustomGrammar); appended so saved
+// projects keep their meaning.
+inline constexpr int kPresetCustom = kBuiltinPresetCount;
+inline constexpr int kPresetCount = kBuiltinPresetCount + 1;
+inline constexpr std::size_t kMaxCustomText = 240;
+inline constexpr std::size_t kMaxCustomRules = 16;
 // Scales use the canonical ordering in docs/scales.md (the same 24 as plank, 0 =
 // chromatic, append-only).
 inline constexpr int kScaleCount = 24;
@@ -95,9 +102,26 @@ struct Sequence {
 };
 
 const char* presetName(int preset) noexcept;
-const char* presetRules(int preset) noexcept;  // axiom and rules, for display
+// Axiom and rules, for display. For the Custom preset this is the starting text of the editor.
+const char* presetRules(int preset) noexcept;
 const char* scaleName(int scale) noexcept;
 const char* gridName(int grid) noexcept;  // "1/16", "1/8T", "1/4.", "1 bar"
+
+// A grammar typed by the user, in the same notation presetRules() shows: the starting string,
+// then rules, separated by ';' or a new line, e.g. "F; F -> F+F-F-F+F". A rule's left side is
+// one letter, its right side any of letters + - [ ] (an empty right side deletes the letter).
+// Every generation that fits kMaxSymbols is expanded up front, so the audio thread only reads.
+struct CustomGrammar {
+    std::string text;                // the text it was built from
+    std::vector<Sequence> sequences;  // by generation; never empty
+};
+
+struct CustomParse {
+    std::unique_ptr<CustomGrammar> grammar;  // null when `error` is set
+    std::string error;                       // what to fix, in plain words
+};
+
+CustomParse parseCustom(const std::string& text);
 
 // Length of a grid step in quarter notes; `barQuarters` is the bar length in the
 // host's time signature (used by "1 bar").
@@ -106,9 +130,10 @@ double gridQuarters(int grid, double barQuarters) noexcept;
 // The turtle interpretation of generation `generation` of `preset`. If the
 // expansion would exceed kMaxSymbols the deepest generation that fits is returned.
 // The result lives for the program's lifetime and is safe to read from any thread.
-const Sequence& sequenceFor(int preset, int generation) noexcept;
+// For kPresetCustom the grammar comes from `custom`; with none it is an empty pattern.
+const Sequence& sequenceFor(int preset, int generation, const CustomGrammar* custom = nullptr) noexcept;
 
-// The symbol string itself, mainly for tests.
+// The symbol string itself, mainly for tests (built-in presets only).
 std::string expansion(int preset, int generation);
 
 // Builds the tables now so no allocation happens in process().
@@ -124,7 +149,7 @@ int degreeToNote(int scale, int root, int degree) noexcept;
 const std::uint8_t* scaleIntervals(int scale, int& count) noexcept;
 
 // The deepest generation of `preset` that fits kMaxSymbols, at most `generations`.
-int usableGeneration(int preset, int generations) noexcept;
+int usableGeneration(int preset, int generations, const CustomGrammar* custom = nullptr) noexcept;
 
 // Generation in force during `bar` when growing: 1 at bar 0, one more every
 // `growBars` bars, up to `generations`. growBars == 0 means always `generations`.
@@ -177,7 +202,8 @@ void handleMidi(State& s, std::array<float, kParameterCount>& params, const Midi
 // Range spans a similar number of octaves whatever the chord size). -1 when nothing is held.
 int heldDegreeToNote(const State& s, int degree) noexcept;
 
+// `custom` is the grammar the Custom preset plays; it must outlive the call.
 MidiBlock process(State&, const std::array<float, kParameterCount>&, const Transport&, std::uint32_t frames,
-                  double sampleRate) noexcept;
+                  double sampleRate, const CustomGrammar* custom = nullptr) noexcept;
 
 }  // namespace downspout::sprout

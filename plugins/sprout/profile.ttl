@@ -7,7 +7,7 @@
 
 dsp:sprout a trn:PluginProfile ;
     rdfs:label "Sprout" ;
-    rdfs:comment "L-system MIDI generator: seven grammars rewritten per generation, read as a turtle and played as a scale-quantised (or held-note) monophonic line locked to the transport. Optional MIDI input: held notes as the pitch source, and the Drift and Conductor CC sets." ;
+    rdfs:comment "L-system MIDI generator: seven grammars, or a typed Custom one, rewritten per generation, read as a turtle and played as a scale-quantised (or held-note) monophonic line locked to the transport. Optional MIDI input: held notes as the pitch source, and the Drift and Conductor CC sets." ;
     trn:bundleName "sprout.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/sprout/> ;
@@ -16,8 +16,8 @@ dsp:sprout a trn:PluginProfile ;
     trn:produces trn:Midi ;
     trn:requires trn:HostTransport ;
     trn:caution "Silent while the transport is stopped. Expansions beyond 131072 symbols are not used; the deepest generation that fits plays instead." ;
-    trn:parameter [ rdfs:label "Grammar" ; trn:symbol "preset" ; trn:range "Plant, Koch, Dragon, Sierpinski, Cantor, Levy, Tree" ;
-                    rdfs:comment "Rewriting rules. F/G note, f rest, +/- pitch, [ ] branch." ] ;
+    trn:parameter [ rdfs:label "Grammar" ; trn:symbol "preset" ; trn:range "Plant, Koch, Dragon, Sierpinski, Cantor, Levy, Tree, Custom" ;
+                    rdfs:comment "Rewriting rules. F/G note, f rest, +/- pitch, [ ] branch. Custom plays the text of the grammar state (start string, then rules such as F -> F+F, separated by ;)." ] ;
     trn:parameter [ rdfs:label "Generations" ; trn:symbol "generations" ; trn:range "1-16" ;
                     rdfs:comment "Number of rewrites." ] ;
     trn:parameter [ rdfs:label "Grow every" ; trn:symbol "grow_bars" ; trn:range "0-16 bars" ;

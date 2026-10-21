@@ -103,7 +103,9 @@ Ghost MIDI driving DrumKit layered under the original kit.
 ### Sprout (`sprout.vst3`)
 
 L-system melody generator. Pick one of seven grammars (Plant, Koch, Dragon,
-Sierpinski, Cantor, Levy, Tree), a number of generations, a scale and a root; it plays
+Sierpinski, Cantor, Levy, Tree) or choose **Custom** and type your own rules into the
+Rules field (`F; F -> F[+F]F`: start string, then rules separated by `;`), a number of
+generations, a scale and a root; it plays
 the rewritten string as a monophonic line locked to the transport. With **Grow every**
 set it starts at generation 1 and gains a generation every N bars, so a piece thickens
 over time. Output is plain MIDI, so feed any instrument; Cantor gives rhythm on one

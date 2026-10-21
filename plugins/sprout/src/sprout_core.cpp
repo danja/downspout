@@ -17,7 +17,7 @@ struct PresetDef {
 
 // F and G are notes, f is a rest, + and - move the pitch, [ and ] branch. Every
 // other symbol is a variable that expands but sounds nothing.
-constexpr std::array<PresetDef, kPresetCount> kPresets {{
+constexpr std::array<PresetDef, kBuiltinPresetCount> kPresets {{
     {"Plant", "X; F -> FF; X -> F+[[X]-X]-F[-FX]+X", "X", {'F', 'X', 0}, {"FF", "F+[[X]-X]-F[-FX]+X", ""}},
     {"Koch", "F; F -> F+F-F-F+F", "F", {'F', 0, 0}, {"F+F-F-F+F", "", ""}},
     {"Dragon", "FX; X -> X+YF+; Y -> -FX-Y", "FX", {'X', 'Y', 0}, {"X+YF+", "-FX-Y", ""}},
@@ -65,14 +65,24 @@ constexpr std::array<std::uint8_t, kScaleCount> kDegreeCount {{
     12, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 5, 5, 6, 6, 7, 8, 8, 8, 8, 8,
 }};
 
-std::string expandOnce(const PresetDef& def, const std::string& in)
+using Rules = std::vector<std::pair<char, std::string>>;
+
+Rules rulesOf(const PresetDef& def)
+{
+    Rules rules;
+    for (int r = 0; r < 3; ++r)
+        if (def.lhs[r] != 0) rules.emplace_back(def.lhs[r], def.rhs[r]);
+    return rules;
+}
+
+std::string expandOnce(const Rules& rules, const std::string& in)
 {
     std::string out;
     for (const char c : in) {
-        const char* replacement = nullptr;
-        for (int r = 0; r < 3; ++r)
-            if (def.lhs[r] != 0 && def.lhs[r] == c) replacement = def.rhs[r];
-        if (replacement != nullptr) out += replacement;
+        const std::string* replacement = nullptr;
+        for (const auto& rule : rules)
+            if (rule.first == c) replacement = &rule.second;
+        if (replacement != nullptr) out += *replacement;
         else out += c;
     }
     return out;
@@ -108,24 +118,32 @@ Sequence interpret(const std::string& symbols, const int generation)
     return seq;
 }
 
+// Expands `axiom` generation by generation while the result still fits kMaxSymbols, appending
+// each generation's sequence (and, when asked, its symbol string).
+void buildLadder(const std::string& axiom, const Rules& rules, std::vector<Sequence>& sequences,
+                 std::vector<std::string>* strings)
+{
+    std::string current = axiom;
+    for (int g = 0; g <= kMaxGeneration; ++g) {
+        if (g > 0) current = expandOnce(rules, current);
+        if (current.size() > kMaxSymbols) break;
+        auto seq = interpret(current, g);
+        if (seq.steps.size() > kMaxSymbols) break;
+        if (strings != nullptr) strings->push_back(current);
+        sequences.push_back(std::move(seq));
+    }
+}
+
 struct Tables {
     // [preset][generation] -> symbol string and sequence, for the generations that fit.
-    std::array<std::vector<std::string>, kPresetCount> strings;
-    std::array<std::vector<Sequence>, kPresetCount> sequences;
+    std::array<std::vector<std::string>, kBuiltinPresetCount> strings;
+    std::array<std::vector<Sequence>, kBuiltinPresetCount> sequences;
+    Sequence empty;  // what the Custom preset plays when it has no grammar
 
     Tables()
     {
-        for (int p = 0; p < kPresetCount; ++p) {
-            std::string current = kPresets[static_cast<std::size_t>(p)].axiom;
-            for (int g = 0; g <= kMaxGeneration; ++g) {
-                if (g > 0) current = expandOnce(kPresets[static_cast<std::size_t>(p)], current);
-                if (current.size() > kMaxSymbols) break;
-                auto seq = interpret(current, g);
-                if (seq.steps.size() > kMaxSymbols) break;
-                strings[static_cast<std::size_t>(p)].push_back(current);
-                sequences[static_cast<std::size_t>(p)].push_back(std::move(seq));
-            }
-        }
+        for (std::size_t p = 0; p < kPresets.size(); ++p)
+            buildLadder(kPresets[p].axiom, rulesOf(kPresets[p]), sequences[p], &strings[p]);
     }
 };
 
@@ -157,12 +175,14 @@ void release(State& s, MidiBlock& out, const std::uint32_t frame)
 
 const char* presetName(const int preset) noexcept
 {
-    return kPresets[static_cast<std::size_t>(std::clamp(preset, 0, kPresetCount - 1))].name;
+    if (preset >= kPresetCustom) return "Custom";
+    return kPresets[static_cast<std::size_t>(std::max(preset, 0))].name;
 }
 
 const char* presetRules(const int preset) noexcept
 {
-    return kPresets[static_cast<std::size_t>(std::clamp(preset, 0, kPresetCount - 1))].rules;
+    if (preset >= kPresetCustom) return "F; F -> F+F-F-F+F";
+    return kPresets[static_cast<std::size_t>(std::max(preset, 0))].rules;
 }
 
 const char* scaleName(const int scale) noexcept
@@ -172,15 +192,110 @@ const char* scaleName(const int scale) noexcept
 
 void prepare() { (void)tables(); }
 
-const Sequence& sequenceFor(const int preset, const int generation) noexcept
+namespace {
+
+bool isLetter(const char c) noexcept { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
+
+bool isSpace(const char c) noexcept { return c == ' ' || c == '\t' || c == '\r'; }
+
+std::string stripSpaces(const std::string& in)
 {
-    const auto& list = tables().sequences[static_cast<std::size_t>(std::clamp(preset, 0, kPresetCount - 1))];
-    return list[static_cast<std::size_t>(std::clamp(generation, 0, static_cast<int>(list.size()) - 1))];
+    std::string out;
+    for (const char c : in)
+        if (!isSpace(c)) out += c;
+    return out;
+}
+
+// Returns the first character of `s` that cannot appear in a symbol string, or 0.
+char badSymbol(const std::string& s) noexcept
+{
+    for (const char c : s)
+        if (!isLetter(c) && c != '+' && c != '-' && c != '[' && c != ']') return c;
+    return 0;
+}
+
+std::string quoted(const char c)
+{
+    return std::string("'") + c + "'";
+}
+
+}  // namespace
+
+CustomParse parseCustom(const std::string& text)
+{
+    CustomParse result;
+    const auto fail = [&result](std::string message) {
+        result.error = std::move(message);
+        return std::move(result);
+    };
+    if (text.size() > kMaxCustomText) return fail("too long: at most " + std::to_string(kMaxCustomText) + " characters");
+
+    std::vector<std::string> statements;
+    std::string current;
+    for (const char c : text) {
+        if (c == ';' || c == '\n') {
+            statements.push_back(current);
+            current.clear();
+        } else {
+            current += c;
+        }
+    }
+    statements.push_back(current);
+
+    std::string axiom;
+    bool haveAxiom = false;
+    Rules rules;
+    for (const std::string& raw : statements) {
+        const std::string statement = stripSpaces(raw);
+        if (statement.empty()) continue;
+        std::size_t arrow = statement.find("->");
+        std::size_t arrowLength = 2;
+        if (arrow == std::string::npos) {
+            arrow = statement.find('=');
+            arrowLength = 1;
+        }
+        if (arrow == std::string::npos) {
+            if (haveAxiom) return fail("only one starting string; a rule is written F -> F+F");
+            if (const char bad = badSymbol(statement); bad != 0) return fail("unexpected " + quoted(bad) + " in the starting string");
+            axiom = statement;
+            haveAxiom = true;
+            continue;
+        }
+        if (!haveAxiom) return fail("start with the starting string, e.g. F, then a ; and the rules");
+        const std::string left = statement.substr(0, arrow);
+        const std::string right = statement.substr(arrow + arrowLength);
+        if (left.size() != 1 || !isLetter(left[0])) return fail("the left side of a rule is one letter, e.g. F -> F+F");
+        if (const char bad = badSymbol(right); bad != 0) return fail("unexpected " + quoted(bad) + " in the rule for " + left);
+        for (const auto& rule : rules)
+            if (rule.first == left[0]) return fail(left + " has two rules");
+        if (rules.size() >= kMaxCustomRules) return fail("at most " + std::to_string(kMaxCustomRules) + " rules");
+        rules.emplace_back(left[0], right);
+    }
+    if (!haveAxiom) return fail("type a starting string, e.g. F; F -> F+F-F-F+F");
+
+    auto grammar = std::make_unique<CustomGrammar>();
+    grammar->text = text;
+    buildLadder(axiom, rules, grammar->sequences, nullptr);
+    if (grammar->sequences.empty()) return fail("the starting string is too long");
+    result.grammar = std::move(grammar);
+    return result;
+}
+
+const Sequence& sequenceFor(const int preset, const int generation, const CustomGrammar* custom) noexcept
+{
+    const std::vector<Sequence>* list = nullptr;
+    if (preset >= kPresetCustom) {
+        if (custom == nullptr || custom->sequences.empty()) return tables().empty;
+        list = &custom->sequences;
+    } else {
+        list = &tables().sequences[static_cast<std::size_t>(std::max(preset, 0))];
+    }
+    return (*list)[static_cast<std::size_t>(std::clamp(generation, 0, static_cast<int>(list->size()) - 1))];
 }
 
 std::string expansion(const int preset, const int generation)
 {
-    const auto& list = tables().strings[static_cast<std::size_t>(std::clamp(preset, 0, kPresetCount - 1))];
+    const auto& list = tables().strings[static_cast<std::size_t>(std::clamp(preset, 0, kBuiltinPresetCount - 1))];
     return list[static_cast<std::size_t>(std::clamp(generation, 0, static_cast<int>(list.size()) - 1))];
 }
 
@@ -214,9 +329,9 @@ int degreeToNote(const int scale, const int root, const int degree) noexcept
     return std::clamp(root + 12 * octave + intervals[index], 0, 127);
 }
 
-int usableGeneration(const int preset, const int generations) noexcept
+int usableGeneration(const int preset, const int generations, const CustomGrammar* custom) noexcept
 {
-    return sequenceFor(preset, std::clamp(generations, 0, kMaxGeneration)).generation;
+    return sequenceFor(preset, std::clamp(generations, 0, kMaxGeneration), custom).generation;
 }
 
 int generationAtBar(const int generations, const int growBars, const std::int64_t bar) noexcept
@@ -365,7 +480,7 @@ int heldDegreeToNote(const State& s, const int degree) noexcept
 }
 
 MidiBlock process(State& s, const std::array<float, kParameterCount>& p, const Transport& t, const std::uint32_t frames,
-                  const double sampleRate) noexcept
+                  const double sampleRate, const CustomGrammar* custom) noexcept
 {
     MidiBlock out;
     if (!t.valid || !t.playing || frames == 0) {
@@ -425,12 +540,12 @@ MidiBlock process(State& s, const std::array<float, kParameterCount>& p, const T
             restartNow = s.restartPending;
             s.restartPending = false;
         }
-        const int wanted = generationAtBar(usableGeneration(preset, s.latchedGenerations), growBars, bar);
+        const int wanted = generationAtBar(usableGeneration(preset, s.latchedGenerations, custom), growBars, bar);
         if (wanted != s.lastGeneration) {
             s.lastGeneration = wanted;
             s.restartStep = 0;  // a new generation restarts the pattern by itself
         }
-        const Sequence& seq = sequenceFor(preset, wanted);
+        const Sequence& seq = sequenceFor(preset, wanted, custom);
         const auto total = static_cast<std::int64_t>(seq.steps.size());
         if (total > 0) {
             // The pattern restarts each time a new generation begins.

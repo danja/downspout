@@ -22,7 +22,7 @@ the randomness of most generators.
 
 ## Functionality
 
-Choose one of seven grammars and a number of generations. Each generation rewrites every
+Choose one of seven grammars (or write your own, below) and a number of generations. Each generation rewrites every
 symbol by the grammar's rules, and the final string is read like a turtle: `F` and `G`
 play a note, `f` is a rest, `+` and `-` move the pitch up or down by **Step size** scale
 degrees, `[` and `]` start and end a branch that returns to the pitch it left, and any
@@ -37,6 +37,20 @@ grammar stops at the deepest generation that fits and Grow stops there too. Most
 Pattern plot condenses long patterns to one column of pitch range per few pixels.
 
 Scales use the canonical order in `docs/scales.md`.
+
+### Writing your own grammar
+
+Choose **Custom** and the Rules field becomes an editor. Click it and type: the starting
+string first, then the rules, separated by `;`, for example `F; F -> F[+F]F`. A rule's
+left side is one letter and its right side any of the letters and `+ - [ ]`, so
+`X; F -> FF; X -> F+[[X]-X]-F[-FX]+X` is the Plant grammar. Clicking the rules of a
+built-in grammar copies them into the editor, which is the quickest way to start from
+something that works and change it.
+
+It applies as you type, and the Pattern plot shows the result straight away. Text that
+does not parse is flagged in red under the field and ignored, so the last valid grammar
+keeps playing. The text is saved with the project. Up to 16 rules and 240 characters;
+Ctrl+V pastes, and Enter or a click elsewhere finishes editing.
 
 ### MIDI input
 

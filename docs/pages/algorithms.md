@@ -42,7 +42,7 @@ current Downspout plugins.
   MIDI input and blends them in row by row. Each phrase restarts from the tonic, seeded,
   so a note is a pure function of its position.
 - [`Sprout`]({{ '/plugins/sprout/' | relative_url }}): L-system melody. Seven built-in grammars (Plant, Koch, Dragon, Sierpinski,
-  Cantor, Levy, Tree) are expanded to a symbol-count cap, falling back to the deepest
+  Cantor, Levy, Tree), or a user-typed Custom one, are expanded to a symbol-count cap, falling back to the deepest
   generation that fits; tables are prebuilt, so nothing allocates in the audio thread.
   Symbols map to scale steps or rests on a transport grid; Grow Every adds a generation
   every N bars. Optionally the pitch source is the held input notes.

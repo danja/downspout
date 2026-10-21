@@ -5,6 +5,10 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <cstring>
+#include <memory>
+#include <string>
+#include <vector>
 
 START_NAMESPACE_DISTRHO
 
@@ -33,12 +37,15 @@ core::Transport toTransport(const TimePosition& x)
 // run() only reads them.
 class SproutPlugin : public Plugin {
 public:
-    SproutPlugin() : Plugin(core::kParameterCount, 0, 0)
+    SproutPlugin() : Plugin(core::kParameterCount, 0, 1)
     {
         core::prepare();
         for (std::uint32_t i = 0; i < core::kParameterCount; ++i)
             values_[i] = core::kParameterSpecs[i].defaultValue;
+        applyGrammar(core::presetRules(core::kPresetCustom));
     }
+
+    ~SproutPlugin() override { delete active_.load(); }
 
 protected:
     const char* getLabel() const override { return "Sprout"; }
@@ -60,6 +67,28 @@ protected:
         parameter.ranges.min = spec.minimum;
         parameter.ranges.max = spec.maximum;
         parameter.ranges.def = spec.defaultValue;
+    }
+
+    // The one piece of non-parameter data: the text of the Custom grammar.
+    void initState(uint32_t index, State& state) override
+    {
+        if (index != 0) return;
+        state.key = kGrammarKey;
+        state.label = "Custom grammar";
+        state.defaultValue = core::presetRules(core::kPresetCustom);
+        state.hints = kStateIsHostWritable;
+    }
+
+    String getState(const char* key) const override
+    {
+        if (key != nullptr && std::strcmp(key, kGrammarKey) == 0) return String(grammarText_.c_str());
+        return String();
+    }
+
+    // Text that does not parse is ignored, so the grammar in force is always a valid one.
+    void setState(const char* key, const char* value) override
+    {
+        if (key != nullptr && value != nullptr && std::strcmp(key, kGrammarKey) == 0) applyGrammar(value);
     }
 
     float getParameterValue(uint32_t index) const override
@@ -99,7 +128,15 @@ protected:
         }
         core::handleMidi(state_, values_, input.data(), inputCount);
 
-        const auto block = core::process(state_, values_, toTransport(getTimePosition()), frames, getSampleRate());
+        // Take the grammar for this block, announcing it in inUse_ so applyGrammar() does not
+        // free it underneath us; the re-check covers a swap between the load and the store.
+        const core::CustomGrammar* grammar = nullptr;
+        do {
+            grammar = active_.load();
+            inUse_.store(grammar);
+        } while (grammar != active_.load());
+        const auto block = core::process(state_, values_, toTransport(getTimePosition()), frames, getSampleRate(), grammar);
+        inUse_.store(nullptr);
         for (std::uint32_t i = 0; i < block.count; ++i) {
             MidiEvent ev {};
             ev.frame = block.events[i].frame;
@@ -115,6 +152,27 @@ protected:
     }
 
 private:
+    static constexpr const char* kGrammarKey = "grammar";
+
+    // Builds the grammar off the audio thread and swaps it in. The old one is freed once the
+    // audio thread is not using it (on a later call, if it is right now).
+    void applyGrammar(const char* text)
+    {
+        auto parsed = core::parseCustom(text);
+        if (!parsed.grammar) return;
+        grammarText_ = parsed.grammar->text;
+        const core::CustomGrammar* old = active_.exchange(parsed.grammar.release());
+        if (old != nullptr) retired_.emplace_back(old);
+        const core::CustomGrammar* busy = inUse_.load();
+        retired_.erase(std::remove_if(retired_.begin(), retired_.end(),
+                                      [busy](const std::unique_ptr<const core::CustomGrammar>& g) { return g.get() != busy; }),
+                       retired_.end());
+    }
+
+    std::atomic<const core::CustomGrammar*> active_ {nullptr};
+    std::atomic<const core::CustomGrammar*> inUse_ {nullptr};
+    std::vector<std::unique_ptr<const core::CustomGrammar>> retired_;  // main thread only
+    std::string grammarText_;                                            // main thread only
     std::array<float, core::kParameterCount> values_ {};
     core::State state_ {};
     std::atomic<int> length_ {0};

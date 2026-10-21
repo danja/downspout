@@ -205,14 +205,18 @@ CC 24 = 127 re-rolls the melody at the next bar line. Pair with retune for micro
 ### sprout
 L-system melody generator. MIDI input is optional and off by default (see below); output is
 a monophonic line. Seven grammars (Plant, Koch, Dragon,
-Sierpinski, Cantor, Levy, Tree), a generation count, scale and root, played as a
+Sierpinski, Cantor, Levy, Tree) plus **Custom** (preset 7), a generation count, scale and root, played as a
 monophonic line locked to the transport on a grid from 1/16 up to 1 bar (bar length from
 the host time signature). **Grow every** N bars starts at generation 1 and adds one
 generation per N bars. Expansion is capped at a fixed symbol count and falls back to the
 deepest generation that fits; tables are prebuilt, so no allocation occurs in the audio
 thread. Cantor yields rhythm on one pitch, Koch/Tree contour, Plant long self-similar
-phrases. Settings are parameters only (steps derive from the preset). Grammars are built
-in; there is no rule editor. **MIDI input:** **Pitch source** = Held or Latched (default Scale,
+phrases. Settings are parameters, except the Custom grammar text, which is plugin state
+`grammar` (default `F; F -> F+F-F-F+F`): the start string, then rules `X -> rhs`, separated by `;`
+or a new line (one letter on the left, letters and `+ - [ ]` on the right, at most 16 rules and
+240 characters). The panel's Rules field edits it live (click it, type; a click on a built-in's rules
+copies them in to tweak); text that does not parse is ignored, so the plugin keeps playing the last
+valid grammar. **MIDI input:** **Pitch source** = Held or Latched (default Scale,
 unchanged) maps degrees onto the notes held on the input (degree 0 = lowest held note, spread
 over the held tones at about seven degrees per octave; nothing held = rest; **Input channel**
 0 = all) so it can follow harmonic-atlas, cadence or arpgen. Latched keeps the chord after the keys

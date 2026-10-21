@@ -32,7 +32,8 @@ struct Event {
 };
 
 // Runs `bars` bars at 120 bpm in blocks of `block` frames at 48 kHz.
-std::vector<Event> run(const Params& p, const int bars, const std::uint32_t block, State& state, int* lastGeneration = nullptr)
+std::vector<Event> run(const Params& p, const int bars, const std::uint32_t block, State& state, int* lastGeneration = nullptr,
+                       const CustomGrammar* custom = nullptr)
 {
     constexpr double sr = 48000.0;
     constexpr double bpm = 120.0;
@@ -46,7 +47,7 @@ std::vector<Event> run(const Params& p, const int bars, const std::uint32_t bloc
         t.bpm = bpm;
         t.bar = std::floor(quarter / 4.0);
         t.barBeat = quarter - t.bar * 4.0;
-        const auto out = process(state, p, t, block, sr);
+        const auto out = process(state, p, t, block, sr, custom);
         for (std::uint32_t i = 0; i < out.count; ++i)
             events.push_back({pos + out.events[i].frame, out.events[i].data[0], out.events[i].data[1], out.events[i].data[2]});
         if (lastGeneration != nullptr) *lastGeneration = state.statusGeneration;
@@ -94,7 +95,7 @@ void testTurtleInterpretation()
 
 void testSizeCapAndFallback()
 {
-    for (int preset = 0; preset < kPresetCount; ++preset) {
+    for (int preset = 0; preset < kBuiltinPresetCount; ++preset) {
         std::size_t previous = 0;
         for (int g = 0; g <= kMaxGeneration; ++g) {
             const Sequence& seq = sequenceFor(preset, g);
@@ -359,7 +360,7 @@ void testDeepGenerations()
 {
     static_assert(kMaxGeneration >= 16 && kMaxSymbols >= 131072);
     int slowest = 0;
-    for (int preset = 0; preset < kPresetCount; ++preset) {
+    for (int preset = 0; preset < kBuiltinPresetCount; ++preset) {
         const int usable = usableGeneration(preset, kMaxGeneration);
         assert(usable >= 4 && usable <= kMaxGeneration);
         assert(usableGeneration(preset, 2) == 2);
@@ -771,8 +772,122 @@ void testLatchedPitchSource()
         if ((e.status & 0xf0) == 0x90 && e.d2 > 0) assert(e.frame < 20000 + 1000);
 }
 
+bool sameSteps(const Sequence& a, const Sequence& b)
+{
+    if (a.generation != b.generation || a.steps.size() != b.steps.size()) return false;
+    for (std::size_t i = 0; i < a.steps.size(); ++i)
+        if (a.steps[i].unit != b.steps[i].unit || a.steps[i].depth != b.steps[i].depth || a.steps[i].note != b.steps[i].note) return false;
+    return true;
+}
+
+// Typing a built-in's own rules into the Custom editor gives that built-in, generation by
+// generation, however the text is spaced or separated.
+void testCustomMatchesBuiltins()
+{
+    for (int preset = 0; preset < kBuiltinPresetCount; ++preset) {
+        const auto parsed = parseCustom(presetRules(preset));
+        assert(parsed.grammar && parsed.error.empty());
+        for (int g = 0; g <= kMaxGeneration; ++g)
+            assert(sameSteps(sequenceFor(kPresetCustom, g, parsed.grammar.get()), sequenceFor(preset, g)));
+    }
+    const auto spaced = parseCustom("  F \n F=F+F-F-F+F  ;");
+    assert(spaced.grammar);
+    for (int g = 0; g <= kMaxGeneration; ++g)
+        assert(sameSteps(sequenceFor(kPresetCustom, g, spaced.grammar.get()), sequenceFor(1, g)));
+    assert(spaced.grammar->text == "  F \n F=F+F-F-F+F  ;");
+    // The editor opens on a grammar that works.
+    assert(parseCustom(presetRules(kPresetCustom)).grammar);
+    assert(std::string(presetName(kPresetCustom)) == "Custom");
+}
+
+void testCustomRules()
+{
+    // An empty right side deletes the letter: FfF with f -> nothing is FF after one rewrite.
+    const auto deleting = parseCustom("FfF; f ->");
+    assert(deleting.grammar);
+    assert(deleting.grammar->sequences[0].steps.size() == 3);
+    assert(deleting.grammar->sequences[1].steps.size() == 2);
+    // Rules apply to the previous generation in parallel, not to each other's output.
+    const auto swap = parseCustom("AB; A -> B; B -> A");
+    assert(swap.grammar);
+    // A grammar that only has variables is silent but valid.
+    assert(sequenceFor(kPresetCustom, 3, swap.grammar.get()).steps.empty());
+    // A rule that does not grow still gives every generation, all equal.
+    const auto flat = parseCustom("F; F -> F");
+    assert(flat.grammar && flat.grammar->sequences.size() == static_cast<std::size_t>(kMaxGeneration) + 1);
+    // A rule that explodes stops at the deepest generation that fits.
+    const auto big = parseCustom("F; F -> FFFFFFFF");
+    assert(big.grammar);
+    assert(usableGeneration(kPresetCustom, kMaxGeneration, big.grammar.get()) == 5);
+    assert(sequenceFor(kPresetCustom, 5, big.grammar.get()).steps.size() == 32768);
+    // No grammar at all is an empty pattern, not a crash.
+    assert(sequenceFor(kPresetCustom, 4, nullptr).steps.empty());
+    assert(usableGeneration(kPresetCustom, 4, nullptr) == 0);
+}
+
+void testCustomErrorsSayWhatToFix()
+{
+    const char* bad[] = {
+        "",                       // nothing typed
+        "   ;  \n ",              // only separators
+        "F -> F+F",               // rule before any starting string
+        "F; G; F -> FF",          // two starting strings
+        "F; FF -> F",             // left side is not one letter
+        "F; + -> F",              // left side is not a letter
+        "F; F -> F?",             // a character that means nothing
+        "F1; F -> FF",            // ... in the starting string
+        "F; F -> FF; F -> F+F",   // the same letter twice
+        "F; ->F",                 // no left side
+    };
+    for (const char* text : bad) {
+        const auto parsed = parseCustom(text);
+        assert(!parsed.grammar);
+        assert(!parsed.error.empty());
+    }
+    std::string tooLong = "F; F -> ";
+    tooLong.append(kMaxCustomText, 'F');
+    assert(!parseCustom(tooLong).grammar);
+    std::string exact = "F; F -> ";
+    exact.append(kMaxCustomText - exact.size(), 'F');
+    assert(parseCustom(exact).grammar);
+    std::string manyRules = "F";
+    for (std::size_t i = 0; i <= kMaxCustomRules; ++i) manyRules += std::string("; ") + static_cast<char>('a' + i) + " -> F";
+    assert(!parseCustom(manyRules).grammar);
+    assert(parseCustom("F; ").error.empty() && parseCustom("F; ").grammar);  // an axiom alone is fine
+}
+
+// The Custom preset is audible: it plays what the same grammar does as a built-in, and
+// changing the text changes the notes.
+void testCustomPlaysTheTypedGrammar()
+{
+    Params p = defaults();
+    p[kGenerations] = 3;
+    State builtin {};
+    p[kPreset] = 1;  // Koch
+    const auto expected = run(p, 4, 480, builtin);
+    assert(!expected.empty());
+
+    const auto koch = parseCustom("F; F -> F+F-F-F+F");
+    p[kPreset] = kPresetCustom;
+    State custom {};
+    assert(run(p, 4, 480, custom, nullptr, koch.grammar.get()) == expected);
+
+    const auto other = parseCustom("F; F -> F+F+f");
+    State changed {};
+    const auto different = run(p, 4, 480, changed, nullptr, other.grammar.get());
+    assert(!different.empty() && different != expected);
+
+    // With no grammar the Custom preset is silent.
+    State none {};
+    assert(run(p, 4, 480, none).empty());
+}
+
 int main()
 {
+    testCustomMatchesBuiltins();
+    testCustomRules();
+    testCustomErrorsSayWhatToFix();
+    testCustomPlaysTheTypedGrammar();
     testMidiInputIsOffByDefault();
     testHeldNotePitchSource();
     testScaleSourceIgnoresHeldNotes();
