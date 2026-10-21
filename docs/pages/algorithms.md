@@ -18,15 +18,12 @@ current Downspout plugins.
   Fugue subject/answer bass behavior.
 - `DrumGen`: transport-aware drum pattern generation with fill logic, style
   modes, genre vocabularies, pattern mutation around the current cycle, and a
-  sparse Fugue pulse mode. An optional Automaton layer treats the generated
-  pattern as generation 0 and, on later loop passes, replaces the hits of chosen
-  lanes (hats, percussion, toms) with the next row of a cellular automaton
-  seeded from the lane (see "Cellular automata" below).
+  sparse Fugue pulse mode. An optional automaton layer treats the generated pattern as
+  generation 0 and plays the targeted lanes (hats, percussion, toms) as successive rows
+  of a 1-D cellular automaton (rules 30, 90, 110, 150, ...), as in `Xoxolo`.
 - `MelGen`: phrase-aware monophonic melody generation with contour, call and
   answer, structure, range, color, follow controls, and a high-structure
-  Fugue-friendly subject/dominant-answer region. An optional Inertia control
-  applies Narmour-style implication: after a leap the next move tends to turn
-  back without overshooting, after a step it tends to continue.
+  Fugue-friendly subject/dominant-answer region.
 - `Ground`: longer-horizon bass generation that plans phrase roles, movement,
   cadences, pedal phrases, color, and high-sequence subject/answer forms across
   sections rather than just local bars, with explicit Dub and Jazz styles and
@@ -37,57 +34,43 @@ current Downspout plugins.
   dominant support.
 - `Counterpointer`: learns an incoming MIDI line and answers it with a
   monophonic complementary line that can lean into contrary motion, chromatic
-  color, rhythmic response, and strict dominant-answer imitation. Its Inertia
-  control adds a scoring term that favours turning back after a leap and
-  continuing after a step (Counterpoint mode only).
-- `Polymeter`: four lanes of different lengths on one transport, each lane
-  either a Euclidean pattern or a one-dimensional cellular automaton. The
-  automaton (Wolfram rule 1-255, wrapping edges) starts from a seeded row whose
-  density is Pulses/Length and advances one generation per cycle of the lane,
-  returning after 64 generations. All choices are pure functions of the step
-  position and seed, so block size and loops do not change the output.
-- `Xoxolo`: a step-grid drum sequencer for programmed patterns. Any lane can be
-  marked to evolve: the programmed row is generation 0 and each later pass plays
-  the next row of a cellular automaton seeded from it (rule chosen from ten
-  classics, a generation held for 1 to 8 passes), while unmarked lanes keep
-  their grid. The grid itself is never altered.
-- `Harmonic Atlas`: seeded chord progressions from four movement tables.
-  Gravity replaces chords with functional targets chosen from the previous
-  chord (V goes home, IV goes to V, I moves to IV, V or vi, anything else
-  drifts to I, IV or V). Voice-leading above 50% voices each chord by choosing
-  the inversion and octave whose sorted voices move least from the previous
-  chord, itself voiced six chords back so that any position renders the same.
-- `Sprout`: an L-system sequencer. Seven grammars (Plant, Koch, Dragon,
-  Sierpinski, Cantor, Levy, Tree) are rewritten for N generations, capped at
-  131,072 symbols (a longer expansion falls back to the deepest generation that
-  fits), and read as a turtle: F/G play a note, f rests, + and - move the
-  pitch by scale degrees, brackets branch and return, other letters only grow.
-  Pitch folds back at a set range, branch depth lowers velocity, and Grow adds
-  one generation every N bars, restarting the pattern at each change. The
-  generation count is read once per bar, so any change lands on a bar line.
-  With the optional MIDI input the pitch source can be the notes held (or
-  latched) on the input instead of a scale: degree 0 is the lowest note and
-  degrees are spread across the held tones at about seven per octave, so the
-  grammar's contour follows a chord. Two CC sets (the Drift and Conductor
-  conventions) can steer probability, gate, range, generations, velocity and
-  seed, and a Conductor reset restarts the pattern at the next bar line.
-- `Markov`: a Markov-chain melody. The state is the pitch class above the root
-  and a 12 x 12 matrix of weights (0-8) gives, for each state, how likely each
-  state is to come next. Notes outside the chosen scale are zeroed before
-  sampling, Chaos is an exponent `2^(1 - 2c)` on the weights (so 50% is the
-  matrix as drawn), and an empty row falls back to every allowed note. Each
-  phrase restarts the walk from the tonic, seeded by (seed, phrase), so a note
-  is a pure function of its position. The matrix can be filled from a style,
-  edited, or learned: transitions between successive note-ons on the input are
-  counted relative to the root (first order for every pair, second order for
-  every triple), and a Learned mix blends them in row by row where a row has data.
-  With Order 2 the next note is drawn from the learned second-order counts for
-  the last two notes when there are any, and from the ordinary row otherwise.
-  Each note takes the octave nearest the previous one inside the register.
-- `Lifeform`: Conway's Game of Life drives the MIDI output, advancing the grid
-  one beat at a time and turning active cells into musical events.
-- `Luma`: an 8x8 Launchpad grid drives a small set of musical agents where
-  cells can act as bass, chord, melody, or drum sources.
+  color, rhythmic response, and strict dominant-answer imitation.
+- `Markov`: a walk over the twelve pitch classes from Root through a 12 x 12
+  transition matrix (weights 0-8, editable, or replaced by a Style preset). Out-of-scale
+  columns are zeroed, Chaos applies the exponent `2^(1-2c)` to the weights, and Order 2
+  uses learned second-order pair data where it exists. Learn counts transitions on the
+  MIDI input and blends them in row by row. Each phrase restarts from the tonic, seeded,
+  so a note is a pure function of its position.
+- `Sprout`: L-system melody. Seven built-in grammars (Plant, Koch, Dragon, Sierpinski,
+  Cantor, Levy, Tree) are expanded to a symbol-count cap, falling back to the deepest
+  generation that fits; tables are prebuilt, so nothing allocates in the audio thread.
+  Symbols map to scale steps or rests on a transport grid; Grow Every adds a generation
+  every N bars. Optionally the pitch source is the held input notes.
+- `Worms` (ToneWorm): Paterson's Worm on a Tonnetz lattice. Six directional rules each
+  choose among L120, L60, Straight, R60, R120; the visited lattice points are quantised
+  to the scale and register, with loop-boundary variation. Randomize and Mutate make new
+  rule sets.
+- `Polymeter`: four lanes, each a Euclidean pattern (length, pulses, rotation) with
+  ratchets, probability and accent. Coprime lengths drift against each other. A lane
+  can instead run a 1-D cellular automaton (rule 1-255) whose row evolves each lane
+  cycle, with Pulses setting the initial density.
+- `Xoxolo`: x0x step sequencer, 11 drum lanes, up to 32 steps. An optional Evolve layer
+  plays marked lanes as successive rows of a 1-D cellular automaton seeded from the
+  programmed grid (the pass number comes from playback position, returning to the grid
+  after 64 generations).
+- `Harmonic Atlas`: autonomous chord generator over four movement families (tonal,
+  modal, chromatic-mediant, neo-Riemannian). Gravity swaps a chord for a functional
+  target (V to I, IV to V, ...) with probability up to 85%; voice-leading picks
+  inversion and octave by a sorted-voice-distance search against the previous chord.
+- `Sidecar`: phrase player with deterministic local generation, and an optional
+  localhost coordinator mode that accepts phrases from an external process.
+- `Tuney-vst`: text-to-music. Unicode text is mapped through configurable alphabets,
+  scales and microtonal tunings to seeded free-time phrasing, played by a small internal
+  synth and emitted as MIDI.
+- `Conductor`: arrangement controller. A fixed form (Intro, Develop, Break, Reprise,
+  Coda) or seeded weighted section selection with bounded durations; at each section
+  boundary it emits bar-aligned notes and CC 20-24 (Scene, Density, Energy, Mutation,
+  Reset) that the other generators read through their Conductor channel.
 
 ## Audio effects
 
@@ -96,8 +79,62 @@ current Downspout plugins.
   using density, block, and fade controls.
 - `Rift`: short-buffer capture and disruption with chop/stutter repeats,
   reverse, skip, smear, and pitch-slip actions.
-- `PaunchLad`: a dub-style performance effect built around delay throws,
-  sirens, spring splashes, dropouts, and rhythmic chops.
+- `Qune`: pitch quantiser. A normalised-square-difference pitch tracker (decimated
+  search, full-rate refinement, octave-error checks) picks a target note from a scale or
+  from held MIDI notes; the shift is smoothed by an optional glide and applied by one of
+  three shifters: a pitch-synchronous splice delay line (Fast), time-domain PSOLA with
+  fractional pitch marks (Good), or a peak-locked phase vocoder with cepstral formant
+  correction (Best).
+- `Ambo`: four rearrangeable module chains (granular smear, frozen-band motion, tape
+  colour, shimmer, ping-pong echo, saturation, regenerative feedback).
+- `Chipper`: sample-and-hold rate reduction (divider 1-64, optional jitter) followed by
+  midtread bit quantisation (1-16 bits).
+- `Damiano`: six waveshapers (Soft, Tanh, Fuzz, Overdrive, Tube, Wavefold) behind a
+  one-pole high-shelf tone control; the right channel can take its own settings.
+- `Skream`: ADAA2 anti-aliased tanh saturator into an SVF low-pass, with a high-passed,
+  saturated feedback path gated by an envelope-follower expander. Morph crossfades the
+  forward SVF between low-pass and high-pass by cutoff position.
+- `BassOps`: sidechain envelope follower ducks the main signal, which is then summed to
+  mono; a waveshaper's added harmonics, high-passed at the cutoff, form the side signal.
+- `T-Mix`: eight-input mixer with level, pan, mute, solo and meters; Mixgen CCs apply
+  click-smoothed transient gain multipliers over the saved faders.
+- `Loopdelay`: stereo delay and capture looper, time free (20-4000 ms) or BBT-synced.
+- `Lightverb`: fixed-cost stereo feedback-delay-network reverb.
+- `Guardian`: output safety chain: gain, look-ahead limiter, selectable clipper, DC
+  removal, true-peak guard, silence detection and latched fault diagnostics.
+- `Beards`: granular processor after Mutable Instruments Beads. Input is recorded into
+  a 4 s buffer and replayed by up to 32 overlapping grains (position, size, shape,
+  pitch, density, scatter), with feedback, a Griesinger reverb, freeze, and optional
+  host-grid grain triggering.
+- `Orchid`: voiced freeze. Autocorrelation capture and grid-synchronised loop holds turn
+  incoming material into sustained rhythmic freezes.
+- `Keyframe`: extrema-sampling time stretch (Nielsen, DAFx26). Input becomes
+  timestamped local extrema whose spacing sets content-adaptive overlap-add splices;
+  no transient detector.
+- `Quefrency`: cepstral formant and harmonic shifter. Each frame is split via the
+  cepstrum into formant envelope and harmonic excitation, shifted and reshaped
+  independently, then multiplied back.
+- `Primefold`: direct 2x, 3x, 5x pitch voices (dual-tap resamplers) recirculated
+  all-to-all through a short delay and damping low-pass, so 4x, 6x, 8x, 9x, 10x emerge
+  from feedback. Feedback is capped at 0.90.
+- `Voxmod`: a filter-bank vocoder and a band-limited ring modulator in parallel, blended
+  by Mix; Sync feeds the ring-modulated signal back as the vocoder carrier.
+- `Sinevox`: LPC analysis of the speech input finds up to eight formants; these drive a
+  parallel band-pass vocoder bank on the carrier, one sine per formant (sine-wave
+  speech), or both.
+- `Resonance Garden`: eight bounded damped resonators tuned by held notes or an internal
+  scale, with inharmonicity, freeze and bounded feedback.
+- `Orbit`: seeded orbit, pendulum, random-walk and figure-eight trajectories applied as
+  stereo placement, distance filtering and conservative Doppler. No HRTF.
+- `Helterskelter`: automatic wah; a resonant low-pass whose cutoff follows the input
+  envelope and/or a BBT-synced ADSR cycle.
+- `Spliff`: 3-band transient detector applies dynamic cuts or boosts only at
+  transients (mono detector, so the image is preserved).
+- `Treatment`: acoustic panel model: facing mass, porous fill and air gap form a
+  mass-air-mass resonator, `w0 = c * sqrt(rho0 / (m D))`, with an impedance match at
+  `r = rho0 c`.
+- `Gater`: routes a stereo input to one of two output pairs by incoming note parity
+  (even to Output 1, odd to Output 2).
 
 ## MIDI effects
 
@@ -108,20 +145,26 @@ current Downspout plugins.
 - `Cadence`: input-aware MIDI harmonizing and comping that learns a cycle,
   rebuilds voicings from captured material, and can thin or break chords with
   `Spread` and `Arpeggio`.
-
-- `Retune`: Scala microtuning. A `.scl` file (cents or ratio lines) gives the
-  scale; each note is rounded to the nearest 12-tone key and corrected by a
-  14-bit pitch bend sent on its own output channel (2-16) ahead of the note-on,
-  with oldest-note stealing. CC and program change are broadcast to the pool,
-  polyphonic aftertouch follows its note, incoming pitch bend and channel
-  aftertouch are dropped. The receiving synth must bend per channel.
+- `ArpGen`: transport-synced arpeggiator. Chord mode captures incoming chord slices;
+  Scale mode derives runs, triads or sevenths from held register anchors; up, down and
+  alternating orders over one to four octaves.
+- `Mnemosyne`: phrase memory of eight bounded phrases; accompanies input or generates
+  from recalled and transformed material, with an internal motif for an empty reservoir.
+- `Retune`: sends one note per MIDI channel (2-16) with a pitch bend that moves the
+  nearest 12-TET key onto the Scala scale degree.
+- `Midiscribe`: records MIDI into a rolling window and exports a Type 0 SMF at 480 PPQ.
+- `Flues Synth Driver`: converts plugin parameters to CCs for the Flues synth with 31
+  programs; only changed parameters are sent.
+- `Drift`: four lanes, each an LFO, sample-and-hold, bounded random walk, deterministic
+  chaos source or audio envelope follower, emitting CC (default 1-4).
+- `Mixgen`: eight repeatable gain lanes (random, low-discrepancy or Euclidean) sending
+  CC 20-27 to T-Mix, plus macros for Loopdelay and Lightverb.
+- `Oracle`: bounded analysis of level, onset, brightness, density and pitch class,
+  mapped to rate-limited CC and note responses with a refractory interval.
+- `Ghost`: audio-triggered ghost notes quantised to the transport 16th grid; onsets
+  accent, quieter fills land on off-16th slots by Density and Drag.
 
 ## Instruments
-
-Canticle, Moka, Floozy, Syrinx and Pratt apply pitch bend per MIDI channel
-(range 2 semitones by default, set per channel by RPN 0) and key their voices by
-channel and note, so one-note-per-channel input such as Retune's bends each note
-on its own.
 
 - `Basilico`: a monophonic bass synth with glide, accent, body, drive,
   tempo-aware wobble modulation for amplitude/filter/phase movement, and acid
@@ -132,45 +175,238 @@ on its own.
   excitation, feedback, filtering, modulation, and reverb.
 - `Gremlin`: a chaotic glitch synth with sound modes, scenes, fader macros,
   performance actions, hold pads, and MIDI LED feedback.
+- `Magneto`: a physically informed four-stroke engine. A phasor at `RPM/120`
+  Hz drives intake-valve, exhaust-valve, piston and ignition functions; each
+  cylinder is a digital waveguide whose feedback follows its valves and whose
+  length follows its piston; cylinders feed intake runners and extractors, and
+  the extractors feed a straight pipe, a four-element muffler and a tailpipe.
+  Intake, block vibration and tailpipe are mixed for a listening position.
 - `Canticle`: a 12-voice tonal synth for readable keys, reed, pad, pluck, and
   glass parts driven by melody, counterpoint, and harmony generators.
+- `Pratt`: Pratt polynomials `f_1 = 1`, `f_2 = x`, `f_p = 1 + f_{p-1}` (odd prime p),
+  `f_n = prod f_p^v`, so `f_n(2) = n` and `f_mn = f_m f_n`. The filter
+  `H_n(s) = n / f_n(2 + s/w0)` is all-pole, unity at DC and strictly stable (every
+  pole has `Re(s/w0) < -0.997` for n up to 8192; degree at most 13). Cascading two
+  filters is the product of indices, `H_m H_n = H_mn`. Voices sum partial k with
+  weight `k^-roll * H_n(i xi k)` for `n = (note + 1) x base` into a band-limited
+  table; the filter mode factors the roots into biquads (bilinear transform, no
+  prewarp) and crossfades old and new cascades when index or cutoff changes. An
+  optional Timbre Index `t` multiplies one more fixed response `H_t` onto every
+  voice (cascade, not a combined index), applied while the table is built and
+  skipped at `t = 1`.
+
+## Launchpad plugins
+
+Plugins driven by, or giving LED feedback to, a Launchpad grid.
+
+- `Lifeform`: Conway's Game of Life drives the MIDI output, advancing the grid
+  one beat at a time and turning active cells into musical events.
+- `Luma`: an 8x8 Launchpad grid drives a small set of musical agents where
+  cells can act as bass, chord, melody, or drum sources.
 - `Plank`: eight strings, one per Launchpad grid column. Each column's eight
   rows are one octave of the current scale. Two 32-bit phase oscillators are
   summed as a polyBLEP saw pair with the second inverted; a morph axis
   crossfades that into a band-limited wavetable pair read at a quarter-cycle
   offset, and the result feeds a two-pole resonant filter whose coefficient is
   modulated by a second envelope.
+- `Moka`: modal "hit object" synth; eight damped modes per voice from six instrument
+  tables, with the onset ramped over the mallet contact time.
+- `Syrinx`: Mindlin-Laje syrinx ODE solved per voice at audio rate (optional
+  oversampling), a pitch-tracking vocal-tract band-pass, formant bank, respiration and
+  roughness modifiers.
+- `Bubbles`: subtractive noise layers plus physical models (up to 36 bubble voices, 16
+  drip voices, modal body resonances) in seven water modes.
+- `Campione`: multi-zone sampler with pitch-shifting to target, per-zone ADSR and
+  biquad, crossfaded loops, REX2 slices and wavetable import.
+- `Mosaic`: four-slot WAV sampler with seeded slice selection, zero-crossing snapping,
+  reverse chance and autonomous triggering.
+- `Trajectory`: the oscillator is a point bouncing inside a regular polygon (3-12
+  sides); the waveform is its x and y position, mixed.
+- `Fathom`: four-voice drone: a generator (Analog, Shaper, Sines, Table, Cluster), a
+  per-voice notch, then a delay network with a frequency shifter in its feedback loop.
+- `PaunchLad`: a dub-style performance effect built around delay throws,
+  sirens, spring splashes, dropouts, and rhythmic chops.
 
-- `Pratt`: Pratt polynomials `f_1 = 1`, `f_2 = x`, `f_p = 1 + f_{p-1}` (odd prime
-  p), `f_n = prod f_p^v`, so `f_n(2) = n` and `f_mn = f_m f_n`. The filter
-  `H_n(s) = n / f_n(2 + s/w0)` is all-pole, unity at DC and strictly stable.
-  Cascading two filters multiplies the indices, `H_m H_n = H_mn`. Voices sum
-  partial k with weight `k^-roll * H_n(i xi k)` for `n = (note + 1) x base`
-  into a band-limited table; the filter mode factors the roots into biquads and
-  crossfades old and new cascades when index or cutoff changes. Based on the
-  original [pratt-synth](https://github.com/githubuser1983/pratt-synth).
+## Appendix: Ground Algorithm Detail
 
-## Cellular automata
+Ground generates a monophonic bass part in three passes: first it plans the
+form, then it generates phrase-local note events, then it folds the resulting
+notes into a guarded bass register.
 
-Polymeter, DrumGen and Xoxolo share one piece of arithmetic
-(`include/downspout/cellular_automaton.hpp`): a row of cells, each on or off, is
-advanced by a Wolfram elementary rule. A cell's next state is bit
-`(left << 2) | (self << 1) | right` of the rule number, and the row wraps at its
-ends. Rule 90 turns a single hit into Sierpinski's triangle (1, 101, 10001,
-1010101); rule 30 is chaotic; 110 is busy but structured; 150 and 105 fill in
-densely. The generation to play is a pure function of the loop pass (the
-absolute step divided by the pattern length), so playback, restarts and offline
-renders agree, and after 64 generations the row returns to its start.
+### 1. Form And Phrase Planning
 
-The three plugins differ in what the row means. Polymeter seeds each lane from a
-random row of density Pulses/Length. DrumGen and Xoxolo seed from the lane's own
-hits, with the pattern as generation 0, so the first pass is always what was
-generated or programmed; a lane with no hits stays silent, and in DrumGen new hits
-take the lane's average velocity while surviving hits keep theirs. Only what is
-played changes, never the stored pattern.
+The structural grid comes from `Form Shape`, `Form`, `Phrase`, and the current
+meter. With `Form Shape = Free`, Ground uses the user-selected `Form` and
+`Phrase` lengths directly. A common setting is `Form = 16` and `Phrase = 4`,
+which creates four four-bar phrase slots. Named shapes such as blues, fugue,
+AABA, dub, ambient, and rondo override those lengths with fixed templates.
 
-## How the site treats these methods
+Each phrase receives a `PhraseRoleId`:
 
-The plugin cards on the GitHub Pages site stay short on purpose. This page is
-the place to read the implementation patterns in one place when comparing
-generators, effects, and instruments.
+- `Statement`: introduces or restates the bass idea.
+- `Answer`: responds to a previous phrase.
+- `Climb`: raises intensity and usually lifts register/root target.
+- `Pedal`: stabilizes around a low anchor.
+- `Breakdown`: thins the line.
+- `Cadence`: aims at a stronger ending.
+- `Release`: relaxes or resolves with less force than a cadence.
+
+For `Free` shapes, the first phrase is normally `Statement`, the final phrase is
+usually `Cadence` or `Release`, and the middle phrase roles are chosen from
+`Tension`, `Cadence`, `Sequence`, phrase position, and deterministic seeded
+randomness. Manual phrase-role overrides bypass that role choice for selected
+phrase slots while keeping the rest of the phrase generation pipeline intact.
+
+After role selection, each phrase stores:
+
+- a root scale degree target;
+- a register offset from the long-form `Register Arc`;
+- a role intensity that affects density and velocity;
+- a motion bias derived from `Motion`, role, and sometimes `Color`.
+
+### 2. Scale Degrees And Root Movement
+
+Ground works in scale degrees first, not raw MIDI notes. For F harmonic minor,
+the pitch collection is:
+
+```text
+degree: 0  1  2   3   4  5   6
+pitch:  F  G  Ab  Bb  C  Db  E
+```
+
+Degrees can move outside `0..6`. For example, degree `-1` is the E below F,
+degree `7` is the next F, and degree `8` is the next G. Only after the degree
+is chosen does Ground convert it to a MIDI note using the selected root,
+register, phrase register offset, and octave.
+
+Phrase roles choose different root targets. In the generic planner:
+
+- `Statement` tends to target degree `0` or `2` (F or Ab in F harmonic minor).
+- `Answer` tends toward degree `3` or `4` (Bb or C).
+- `Climb` tends toward degree `4` or `5` (C or Db).
+- `Pedal` favors degree `0` or `4` (F or C).
+- `Cadence` tends toward degree `4` or `5` (C or Db).
+- `Release` tends toward degree `0` or `2` (F or Ab).
+
+The exact choice is seeded, so the same saved state reproduces the same result.
+
+### 3. Rhythm And Onset Generation
+
+Each phrase builds a small boolean onset grid. Ground uses four internal steps
+per beat, so a normal 4/4 bar has 16 steps. The `Style` control lays down the
+basic rhythmic feel, then the role adds pickups, cadential hits, or extra
+off-beat material.
+
+For `Style = Descend`, each bar starts with anchors at:
+
+```text
+step 0  : bar start
+step 8  : half-bar
+step 12 : late-bar anchor when Motion is high enough, or for cadences
+step 4  : optional beat-2 anchor, based on Density and Motion
+step 14 : optional late pickup when Color or cadence behavior asks for it
+```
+
+`Statement`, `Climb`, `Cadence`, and `Release` then adjust that grid. For
+example, `Climb` may add a mid-bar push at step 6 or 14, while `Release` may
+keep the phrase more open.
+
+### 4. Degree Choice Inside A Descending Phrase
+
+For the Descend style, the pitch contour is explicitly falling through the
+phrase. Ground computes phrase progress from the local step, then derives a
+`descent` amount from `Motion`, `Color`, and elapsed phrase position.
+
+In simplified terms:
+
+```text
+descent ~= floor(progress * (3 + Motion * 3 + Color * 1.5))
+```
+
+The role then modifies that falling line:
+
+- `Statement`: starts at the phrase root target and descends from it.
+- `Answer`: starts about two scale degrees above the phrase root target, then
+  descends.
+- `Climb`: starts with a lift, then descends more slowly; the role still feels
+  energized even though the style is descending.
+- `Pedal`: mostly repeats the phrase root target, with occasional lower motion.
+- `Breakdown`: limits descent to a smaller range.
+- `Cadence`: approaches stronger ending tones and can resolve to degree `0`.
+- `Release`: descends more gently and may continue relaxing every few notes.
+
+This is why a Descending style does not simply override every role into the
+same falling scale. Role still matters; Descend changes how each role moves.
+
+### 5. Duration, Legato, And Register Guard
+
+Once an onset has a degree, Ground chooses a duration up to the next onset.
+`Note Length` sets the cap, `Note Length Variation` adds seeded variation, and
+style/role modify the preferred value. Descend leans longer than ostinato,
+march, jazz, or rock. `Release`, `Pedal`, and `Cadence` also get extra legato.
+
+Adjacent repeated notes can be merged into a longer event. After all events are
+generated, notes are folded into the selected bass lane:
+
+- `Register` chooses the base octave lane.
+- `Register Arc` permits phrase-level lift across the form.
+- `Clamp` octave-folds notes into a fixed semitone range above the selected
+  root in that register.
+
+This final pass is why a high computed degree may still sound as a controlled
+bass-register pitch.
+
+### Example: F Harmonic Minor, Free Shape, Descending Style
+
+Assume:
+
+```text
+Root: F
+Scale: Harmonic Minor
+Style: Descend
+Shape: Free
+Form: 16 bars
+Phrase: 4 bars
+Phrase roles: Statement, Climb, Climb, Release
+```
+
+With four-bar phrases, the 16-bar form has four phrase slots:
+
+```text
+bars  1-4  : Statement
+bars  5-8  : Climb
+bars  9-12 : Climb
+bars 13-16 : Release
+```
+
+One seeded form might choose root degree targets like this:
+
+```text
+Phrase 1 Statement: degree 0  -> F
+Phrase 2 Climb    : degree 4  -> C
+Phrase 3 Climb    : degree 5  -> Db
+Phrase 4 Release  : degree 0  -> F
+```
+
+The exact targets can vary by seed, but the role pools stay the same. In F
+harmonic minor, the useful degrees around those targets are:
+
+```text
+around F : F, E, Db, C, Bb, Ab
+around C : C, Bb, Ab, G, F, E
+around Db: Db, C, Bb, Ab, G, F
+```
+
+So the example has this larger shape:
+
+- Phrase 1 states a falling F-minor bass idea.
+- Phrase 2 raises the target area to C, then lets Descend pull the line down.
+- Phrase 3 raises the target area again to Db, creating more tension before
+  falling.
+- Phrase 4 releases back toward F and relaxes the motion.
+
+At a phrase level, this can sound like a bass that keeps falling locally while
+the form itself still rises into the two Climb phrases before settling. That is
+the intended interaction between `Role = Climb` and `Style = Descend`: the role
+sets phrase energy and target area, while the style determines the local
+contour.
