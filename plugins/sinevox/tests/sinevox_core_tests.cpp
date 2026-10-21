@@ -836,6 +836,107 @@ void testIdleVoicesLeaveNoDenormals()
     }
 }
 
+void testFundamentalTracking()
+{
+    // The reading must hold across pitch and sample rate. 2 % is about a third
+    // of a semitone, well inside what a sine needs to sound in tune.
+    for (const double sr : {44100.0, 48000.0, 96000.0}) {
+        for (const double f0 : {85.0, 110.0, 150.0, 220.0, 330.0}) {
+            Rig rig(sr);
+            rig.run(makeVowel(static_cast<std::size_t>(sr), sr, kVowel, f0));
+            std::printf("  f0 %.0f at %.0f Hz -> %.1f\n", f0, sr, static_cast<double>(rig.state.outF0));
+            assert(std::fabs(rig.state.outF0 - f0) / f0 < 0.02);
+        }
+    }
+
+    // Different vowel, same pitch: the fundamental is not a formant.
+    Rig other;
+    other.run(makeVowel(48000, 48000.0, {{300.0, 60.0}, {2300.0, 120.0}, {3000.0, 150.0}}, 140.0));
+    assert(std::fabs(other.state.outF0 - 140.0f) / 140.0f < 0.02);
+
+    // Noise and silence have no pitch.
+    Rig noise;
+    noise.run(makeNoise(48000, 0.1f));
+    assert(noise.state.outF0 == 0.0f);
+    Rig quiet;
+    quiet.run(silence(48000));
+    assert(quiet.state.outF0 == 0.0f);
+
+    // Below the gate the pitch is not reported either.
+    Rig gated;
+    gated.run(makeVowel(48000, 48000.0, kVowel, 110.0, 0.0005));  // about -66 dB
+    assert(gated.state.outF0 == 0.0f);
+
+    // A pitch glide is followed.
+    Rig glide;
+    glide.run(makeVowel(24000, 48000.0, kVowel, 100.0));
+    glide.run(makeVowel(24000, 48000.0, kVowel, 160.0));
+    assert(std::fabs(glide.state.outF0 - 160.0f) / 160.0f < 0.03);
+}
+
+void testFundamentalMix()
+{
+    const Signal vowel = makeVowel(48000, 48000.0, kVowel, 110.0);
+    const std::size_t n = 12000;
+
+    // Inert at the default: a vocoder with no carrier makes no sound.
+    Rig off;
+    assert(off.p.f0Mix == 0.0f);
+    off.run(vowel);
+    assert(tailRms(off.outL, n) < 1.0e-6);
+
+    // Fully mixed in: a sine at the speaker's pitch, in every mode.
+    for (const float mode : {0.0f, 1.0f, 2.0f}) {
+        Rig on;
+        on.p.mode = mode;
+        on.p.f0Mix = 100.0f;
+        on.run(vowel);
+        const double atF0 = goertzel(on.outL, n, 110.0, 48000.0);
+        assert(atF0 > 0.02);
+        // ...and not at a neighbouring pitch a fifth away.
+        assert(atF0 > 8.0 * goertzel(on.outL, n, 165.0, 48000.0));
+        // Centre-panned (the sines of the other modes are spread, so only check the vocoder).
+        if (mode == 0.0f)
+            assert(std::fabs(rmsOf(on.outL, 36000, 48000) - rmsOf(on.outR, 36000, 48000)) < 1.0e-6);
+    }
+
+    // The slider is a level control.
+    Rig full, half;
+    full.p.f0Mix = 100.0f;
+    half.p.f0Mix = 50.0f;
+    full.run(vowel);
+    half.run(vowel);
+    const double ratio = tailRms(half.outL, n) / tailRms(full.outL, n);
+    assert(ratio > 0.45 && ratio < 0.55);
+
+    // It follows Level and is bypassed with the rest of the effect.
+    Rig loud;
+    loud.p.f0Mix = 100.0f;
+    loud.p.levelDb = 6.0f;
+    loud.run(vowel);
+    const double lr = tailRms(loud.outL, n) / tailRms(full.outL, n);
+    assert(lr > 1.9 && lr < 2.1);
+    Rig bypass;
+    bypass.p.f0Mix = 100.0f;
+    bypass.p.bypass = 1.0f;
+    bypass.p.dry = 0.0f;
+    bypass.run(vowel);
+    assert(std::fabs(tailRms(bypass.outL, n) - 0.1) < 0.01);  // the speech, not a sine added
+
+    // Shift transposes formants, not the speaker's pitch.
+    Rig shifted;
+    shifted.p.f0Mix = 100.0f;
+    shifted.p.shift = 7.0f;
+    shifted.run(vowel);
+    assert(goertzel(shifted.outL, n, 110.0, 48000.0) > 0.02);
+
+    // After the speech stops the sine dies away rather than sticking.
+    Rig tail;
+    tail.p.f0Mix = 100.0f;
+    tail.run(concat(vowel, silence(48000)));
+    assert(tailRms(tail.outL, n) < 1.0e-5);
+}
+
 void testRealtimeCost()
 {
     // Four seconds of speech must analyse and synthesise far faster than real time.
@@ -883,6 +984,8 @@ int main()
     testMidiOutControllers();
     testMidiOutNotes();
     testActivateClearsRuntimeOnly();
+    testFundamentalTracking();
+    testFundamentalMix();
     testIdleVoicesLeaveNoDenormals();
     testRealtimeCost();
     std::printf("sinevox core tests passed\n");

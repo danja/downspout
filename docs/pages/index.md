@@ -26,6 +26,7 @@ description: Screenshots and short notes for the Downspout VST3 plugin set.
     <a href="#midi">MIDI</a>
     <a href="#instrument">Instruments</a>
     <a href="#processor">Processors</a>
+    <a href="#launchpad">Launchpad</a>
   </nav>
 </section>
 
@@ -82,6 +83,22 @@ description: Screenshots and short notes for the Downspout VST3 plugin set.
   <p class="section-blurb">Audio effects, mixers and analyzers for shaping sound.</p>
   <div class="plugin-grid">
     {% assign products = site.products | where: "category", "processor" | sort: "order" %}
+    {% for plugin in products %}
+      <a class="plugin-card" href="{{ plugin.url | relative_url }}">
+        <img src="{{ plugin.screenshot | relative_url }}" alt="{{ plugin.title }} plugin interface">
+        <span class="plugin-kind">{{ plugin.kind }}</span>
+        <strong>{{ plugin.title }}</strong>
+        <span>{{ plugin.summary }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="plugin-section" aria-label="Launchpad plugins" id="launchpad">
+  <h3>Launchpad</h3>
+  <p class="section-blurb">Plugins built around a Launchpad grid, with pad input and LED feedback.</p>
+  <div class="plugin-grid">
+    {% assign products = site.products | where: "category", "launchpad" | sort: "order" %}
     {% for plugin in products %}
       <a class="plugin-card" href="{{ plugin.url | relative_url }}">
         <img src="{{ plugin.screenshot | relative_url }}" alt="{{ plugin.title }} plugin interface">

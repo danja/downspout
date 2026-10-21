@@ -14,10 +14,10 @@ namespace {
     return v < lo ? lo : (v > hi ? hi : v);
 }
 
-// Build Hann-windowed sinc HP coefficients.
-// The mid channel is delayed by kMidDelayLen samples (the FIR group delay) so
-// that delayed_mid + HP(side) is time-aligned. This avoids the signal loss that
-// LP(mid)+HP(side) causes for mono content above the cutoff.
+// Build Hann-windowed sinc LP/HP coefficients.
+// The LP kernel is normalised to unity DC gain. A 129-tap Hann sinc at a low
+// cutoff is truncated well short of its first zero crossings and sums to about
+// 0.5, which made the old HP = delta - LP pass half of every bass note.
 void recomputeFir(FirBank& fir, float cutoffHz, float sampleRate)
 {
     const float fc = clampf(cutoffHz / sampleRate, 0.001f, 0.499f);
@@ -32,6 +32,13 @@ void recomputeFir(FirBank& fir, float cutoffHz, float sampleRate)
             : std::sin(2.0f * pi * fc * x) / (pi * x);
         const float window = 0.5f * (1.0f - std::cos(2.0f * pi * static_cast<float>(n) / static_cast<float>(M)));
         fir.lp[static_cast<std::size_t>(n)] = sinc * window;
+    }
+    float sum = 0.0f;
+    for (std::uint32_t n = 0; n < kFirTaps; ++n)
+        sum += fir.lp[n];
+    if (sum > 1.0e-6f) {
+        for (std::uint32_t n = 0; n < kFirTaps; ++n)
+            fir.lp[n] /= sum;
     }
 
     // HP = delta[M/2] - LP
@@ -70,6 +77,9 @@ void recomputeFir(FirBank& fir, float cutoffHz, float sampleRate)
     return clipped / drive;
 }
 
+constexpr float kMainEnvCoeff = 0.001f;  // about 20 ms at 48 kHz
+constexpr float kSilentEnv    = 1.0e-6f; // -120 dB
+
 }  // namespace
 
 Parameters clampParameters(const Parameters& raw)
@@ -86,7 +96,7 @@ Parameters clampParameters(const Parameters& raw)
 
 void activate(EngineState& state)
 {
-    state.env.envelope = 0.0f;
+    state.env = {};
     state.fir.bufMid.fill(0.0f);
     state.fir.bufSide.fill(0.0f);
     state.fir.dryDelayL.fill(0.0f);
@@ -186,8 +196,18 @@ void processBlock(EngineState& state,
 
         lastDuckGain = 1.0f - duckScale * env;
 
-        const float inL = audio.mainL ? audio.mainL[frame] : 0.0f;
-        const float inR = audio.mainR ? audio.mainR[frame] : 0.0f;
+        float inL = audio.mainL ? audio.mainL[frame] : 0.0f;
+        float inR = audio.mainR ? audio.mainR[frame] : 0.0f;
+
+        // A mono track only feeds one of the two main inputs. Treat a silent
+        // side as a copy of the other, or the mono sum is 6 dB down and the
+        // dry path comes out of one channel only.
+        state.env.mainEnvL += (std::fabs(inL) - state.env.mainEnvL) * kMainEnvCoeff;
+        state.env.mainEnvR += (std::fabs(inR) - state.env.mainEnvR) * kMainEnvCoeff;
+        if (state.env.mainEnvR < kSilentEnv && state.env.mainEnvL >= kSilentEnv)
+            inR = inL;
+        else if (state.env.mainEnvL < kSilentEnv && state.env.mainEnvR >= kSilentEnv)
+            inL = inR;
 
         const float absL = std::fabs(inL);
         const float absR = std::fabs(inR);
@@ -197,19 +217,22 @@ void processBlock(EngineState& state,
         const float dL = inL * lastDuckGain;
         const float dR = inR * lastDuckGain;
 
-        // New routing: mono sum → LP for mid (clean bass), distorted mono → HP for side (harmonic width)
-        // At shape=0: LP(x)+HP(x) = delayed(x), so outL=outR=delayed mono (perfect reconstruction, phase-coherent)
-        // At shape>0: distortion adds harmonics to side, creating stereo width above cutoff
+        // Routing: the mono sum, delayed by the FIR latency, is the mid. The side is only
+        // what the waveshaper adds above the cutoff: HP(shaped - mono). Decoded as
+        // L = mid + side, R = mid - side, so the full-range mono signal (bass included)
+        // is identical in both channels, and at shape=0 the side is exactly zero.
         const float mono = (dL + dR) * 0.5f;
 
-        // LP path (clean mid)
         state.fir.bufMid[state.fir.pos] = mono;
-        const float midF = firConvolve(state.fir.lp, state.fir.bufMid, state.fir.pos);
+        const float midF = state.fir.bufMid[(state.fir.pos + kFirTaps - kMidDelayLen) % kFirTaps];
 
-        // Distort + HP path (harmonic side)
-        const float shaped = sideShapeNorm > 0.0f ? shapeSide(mono, shapeDrive, shapeHardMix) : mono;
-        state.fir.bufSide[state.fir.pos] = shaped;
-        const float sideF = firConvolve(state.fir.hp, state.fir.bufSide, state.fir.pos);
+        float sideF = 0.0f;
+        if (sideShapeNorm > 0.0f) {
+            state.fir.bufSide[state.fir.pos] = shapeSide(mono, shapeDrive, shapeHardMix) - mono;
+            sideF = firConvolve(state.fir.hp, state.fir.bufSide, state.fir.pos);
+        } else {
+            state.fir.bufSide[state.fir.pos] = 0.0f;
+        }
 
         state.fir.pos = (state.fir.pos + 1) % kFirTaps;
 

@@ -6,7 +6,7 @@ kind: Audio effect
 category: processor
 role: Sidechain ducker / stereo synthesiser
 screenshot: /assets/plugins/bassops.png
-summary: Four-input sidechain ducker with optional harmonic stereo synthesis. A control signal (typically a kick-drum send) ducks the main stereo signal; the ducked result is summed to mono and split by a complementary LP/HP FIR pair. Distorting the HP path before decoding generates stereo width above the crossover from harmonic content.
+summary: Four-input sidechain ducker with optional harmonic stereo synthesis. A control signal (typically a kick-drum send) ducks the main stereo signal; the ducked result is summed to mono and the harmonics added by a waveshaper, high-passed at the cutoff, are decoded as a side signal that generates stereo width above it. The bass stays clean mono.
 ---
 
 ## Opinion
@@ -23,18 +23,19 @@ release shape how fast the duck opens and closes. Duck Depth sets the maximum
 gain reduction at full sidechain amplitude.
 
 **Mono split and stereo synthesis** — after ducking, the stereo signal is summed
-to mono. A complementary LP/HP linear-phase FIR pair then splits that mono signal
-at a shared M/S Cutoff frequency:
+to mono (a mono track that only feeds one main input is treated as dual mono, so it
+is not 6 dB down). The delayed full-range mono is the centre of both output channels.
 
-- The LP output carries the clean bass centre component below the cutoff.
-- An optional waveshaper distorts the mono signal before the HP convolution.
-  The distorted HP output becomes the stereo-difference component after M/S decoding,
-  creating stereo width above the cutoff from the added harmonics.
+- An optional waveshaper distorts the mono signal. The harmonics it adds, high-passed
+  by a linear-phase FIR at the M/S Cutoff, become the stereo-difference component
+  after M/S decoding, creating stereo width above the cutoff.
 
-At Side Shape 0 % the waveshaper is bypassed; LP and HP reconstruct a phase-coherent
-mono signal so both output channels are identical. Increasing Side Shape progressively
-drives the HP path into saturation and hard-clipping, producing increasing stereo
-width above the cutoff. The bass content below the cutoff is always clean.
+At Side Shape 0 % there is no side component, so both output channels are identical
+copies of the mono signal at unity gain. Increasing Side Shape progressively drives
+the shaper into saturation and hard-clipping, producing increasing stereo width above
+the cutoff. The bass is always the clean mono signal. The cutoff is soft at low
+settings (129 taps), so it sets where the added harmonics start rather than a sharp
+crossover.
 
 A Wet control blends the processed signal against the latency-compensated dry
 stereo input. This is the only route to preserve the original stereo content of

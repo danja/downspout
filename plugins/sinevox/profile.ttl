@@ -7,7 +7,7 @@
 
 dsp:sinevox a trn:PluginProfile ;
     rdfs:label "Sinevox" ;
-    rdfs:comment "Formant tracker with two voices. Speech on inputs 1/2 is analysed for up to eight formants (centre frequency, Q, amplitude). Vocoder mode drives a parallel band-pass bank on inputs 3/4; sine wave speech mode drives a bank of sine oscillators. MIDI CC 1-5 control Shift, Q Scale, Formants, Tilt and Mode; held notes can transpose the formants; the tracked formants can be sent out as CC 20-27 / 102-109 or as notes." ;
+    rdfs:comment "Formant tracker with two voices. Speech on inputs 1/2 is analysed for up to eight formants (centre frequency, Q, amplitude). Vocoder mode drives a parallel band-pass bank on inputs 3/4; sine wave speech mode drives a bank of sine oscillators. MIDI CC 1-5 control Shift, Q Scale, Formants, Tilt and Mode; held notes can transpose the formants; the speech fundamental is tracked and a sine at that pitch can be mixed in (Fundamental slider); the tracked formants can be sent out as CC 20-27 / 102-109 or as notes." ;
     trn:bundleName "sinevox.vst3" ;
     trn:vendor "danja" ;
     trn:role trn:AudioEffect ;

@@ -39,6 +39,7 @@ enum class ParamId : std::uint32_t {
     dry,             // % of the speech input mixed into the output
     carrierNorm,     // % of carrier level normalisation (vocoder)
     spread,          // % stereo spread of the sines (SWS)
+    f0Mix,           // % level of a sine at the tracked fundamental
 
     // MIDI
     noteShift,       // 0/1, held MIDI note transposes the formants
@@ -54,13 +55,14 @@ enum class ParamId : std::uint32_t {
     // Read-only status
     outLevelDb,
     outActive,
+    outF0,
     outFreq1, outFreq2, outFreq3, outFreq4, outFreq5, outFreq6, outFreq7, outFreq8,
     outAmp1, outAmp2, outAmp3, outAmp4, outAmp5, outAmp6, outAmp7, outAmp8,
     outQ1, outQ2, outQ3, outQ4, outQ5, outQ6, outQ7, outQ8,
 };
 
-inline constexpr std::size_t kParameterCount = 50;
-inline constexpr std::size_t kInputParameterCount = 24;
+inline constexpr std::size_t kParameterCount = 52;
+inline constexpr std::size_t kInputParameterCount = 25;
 inline constexpr int kMaxFormants = 8;
 
 struct ParamSpec {
@@ -92,6 +94,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"dry", "Speech", "%", 0.0f, 100.0f, 0.0f, false, false},
     {"carrier_norm", "Carrier Norm", "%", 0.0f, 100.0f, 100.0f, false, false},
     {"spread", "Sine Spread", "%", 0.0f, 100.0f, 30.0f, false, false},
+    {"f0_mix", "Fundamental", "%", 0.0f, 100.0f, 0.0f, false, false},
 
     {"note_shift", "Note Shift", "", 0.0f, 1.0f, 0.0f, true, false},
     {"midi_out", "MIDI Out", "", 0.0f, 2.0f, 0.0f, true, false},
@@ -105,6 +108,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
 
     {"out_level_db", "Input Level", "dB", -90.0f, 0.0f, -90.0f, false, true},
     {"out_active", "Active", "", 0.0f, 8.0f, 0.0f, true, true},
+    {"out_f0", "Fundamental Freq", "Hz", 0.0f, 1000.0f, 0.0f, false, true},
     {"out_freq_1", "F1 Freq", "Hz", 0.0f, 20000.0f, 0.0f, false, true},
     {"out_freq_2", "F2 Freq", "Hz", 0.0f, 20000.0f, 0.0f, false, true},
     {"out_freq_3", "F3 Freq", "Hz", 0.0f, 20000.0f, 0.0f, false, true},
@@ -168,6 +172,10 @@ inline constexpr float kNoteOnDb = -50.0f;
 {
     return static_cast<std::uint32_t>(id);
 }
+
+// The fundamental (F0) is tracked separately from the formants, by normalised
+// autocorrelation of the speech input. Fundamental Mix adds a sine at that pitch
+// to the output in every mode; 0 % (the default) leaves the output unchanged.
 
 // Bus layout: 0,1 speech, 2,3 carrier. Two outputs.
 inline constexpr std::size_t kAudioInputs = 4;

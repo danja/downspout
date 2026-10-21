@@ -4,6 +4,7 @@
 #include <array>
 #include "downspout/test_assert.h"
 #include <cmath>
+#include <vector>
 
 using namespace downspout::bassops;
 
@@ -158,6 +159,62 @@ void testDuckingReducesLevel()
     assert(avgLate < 0.4f);  // appreciably less than 0.5 (ducked)
 }
 
+// RMS (relative to the input RMS) of one output channel for a sine, after the FIR has filled.
+double sineGainDb(const double hz, const bool monoOnLeft, const Parameters& p, const bool right,
+                  const bool useDiff = false)
+{
+    constexpr std::uint32_t kN = 48000;
+    std::vector<float> l(kN), r(kN), zero(kN, 0.0f), oL(kN), oR(kN);
+    for (std::uint32_t i = 0; i < kN; ++i) {
+        l[i] = 0.5f * static_cast<float>(std::sin(2.0 * 3.14159265358979 * hz * i / 48000.0));
+        r[i] = monoOnLeft ? 0.0f : l[i];
+    }
+    EngineState state;
+    activate(state);
+    AudioBlock audio;
+    audio.mainL = l.data();
+    audio.mainR = r.data();
+    audio.controlL = zero.data();
+    audio.controlR = zero.data();
+    audio.outL = oL.data();
+    audio.outR = oR.data();
+    processBlock(state, p, BusParameters{}, kN, 48000.0, audio);
+    double ss = 0.0;
+    for (std::uint32_t i = kN / 2; i < kN; ++i) {
+        const double v = useDiff ? 0.5 * (oL[i] - oR[i]) : (right ? oR[i] : oL[i]);
+        ss += v * v;
+    }
+    return 20.0 * std::log10(std::sqrt(ss / (kN / 2)) / (0.5 / std::sqrt(2.0)) + 1.0e-12);
+}
+
+// Regression: on the defaults a bass note must come out of both channels at its
+// input level. The right channel used to be LP - HP of a short, un-normalised
+// FIR, which removed most of everything below the cutoff.
+void testDefaultsKeepBass()
+{
+    for (const double hz : {30.0, 50.0, 80.0, 120.0, 200.0, 1000.0}) {
+        for (const bool monoOnLeft : {false, true}) {
+            assert(std::fabs(sineGainDb(hz, monoOnLeft, Parameters{}, false)) < 0.1);
+            assert(std::fabs(sineGainDb(hz, monoOnLeft, Parameters{}, true)) < 0.1);
+        }
+    }
+}
+
+// With the waveshaper on, the bass is still clean mono in both channels (the added
+// harmonics live in the side), and distorted material above the cutoff goes to the side.
+void testShapeKeepsBassMonoAndWidensHighs()
+{
+    Parameters p;
+    p.sideShape = 100.0f;
+    p.cutoffHz = 200.0f;
+    // A bass sine is not in the side channel at all.
+    assert(sineGainDb(60.0, false, p, false, true) < -20.0);
+    // A loud midrange sine is clipped, so the side carries its harmonics.
+    assert(sineGainDb(1000.0, false, p, false, true) > -12.0);
+    // At shape 0 there is no side at all: the outputs are identical.
+    assert(sineGainDb(1000.0, false, Parameters{}, false, true) < -100.0);
+}
+
 }  // namespace
 
 int main()
@@ -168,5 +225,7 @@ int main()
     testSilencePassThrough();
     testNoDuckingWithNoSidechain();
     testDuckingReducesLevel();
+    testDefaultsKeepBass();
+    testShapeKeepsBassMonoAndWidensHighs();
     return 0;
 }

@@ -28,6 +28,7 @@ struct Parameters {
     float dry = 0.0f;
     float carrierNorm = 100.0f;
     float spread = 30.0f;
+    float f0Mix = 0.0f;
 
     float noteShift = 0.0f;
     float midiOut = 0.0f;
@@ -69,6 +70,8 @@ struct Analyzer {
     int rootOrder = 0;
     bool haveRoots = false;
     float levelDb = -90.0f;   // last frame's input level
+    float f0Hz = 0.0f;        // last frame's fundamental, 0 when unvoiced
+    float f0Level = 0.0f;     // last frame's RMS when voiced
 };
 
 // One tracked formant. The `tgt` values are what the last analysis frame asked
@@ -112,6 +115,11 @@ struct EngineState {
     std::array<Formant, kMaxFormants> formants {};
     double sampleRate = 0.0;
 
+    // Fundamental sine.
+    float f0SmLogFreq = 0.0f;
+    float f0SmAmp = 0.0f;
+    double f0Phase = 0.0;
+
     // Smoothers.
     float shiftSmooth = 0.0f;       // semitones, includes the held-note offset
     float carrierEnv = 0.0f;        // mean square of the carrier
@@ -133,6 +141,7 @@ struct EngineState {
     // Measured outputs the wrapper publishes as status parameters.
     float outLevelDb = -90.0f;
     int outActive = 0;
+    float outF0 = 0.0f;
     std::array<float, kMaxFormants> outFreq {};
     std::array<float, kMaxFormants> outAmpDb {};
     std::array<float, kMaxFormants> outQ {};

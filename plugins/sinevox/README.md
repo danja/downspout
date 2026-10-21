@@ -29,6 +29,12 @@ their identity from frame to frame, so a formant glides rather than jumping slot
   amplitude. Summed, spread across the stereo field.
 - **Both** — the two outputs summed.
 
+Separately, the **fundamental** (F0) of the speech is tracked by normalised
+autocorrelation over about 40 ms, 60–500 Hz. The Fundamental slider adds a sine at
+that pitch, centred, to the output in every mode; it is off by default. Its level
+follows the voiced input and it falls silent on noise, silence and below the Gate.
+Shift does not move it: Shift changes the vocal tract, the pitch stays the speaker's.
+
 ## Controls
 
 | Control | Range | Default | Notes |
@@ -46,6 +52,7 @@ their identity from frame to frame, so a formant glides rather than jumping slot
 | Speech Mix | 0–100 % | 0 | Dry speech added to the output |
 | Carrier Norm | 0–100 % | 100 | Divides band gain by carrier level so a hot carrier does not blow up |
 | Sine Spread | 0–100 % | 30 | Low formants left, high right |
+| Fundamental | 0–100 % | 0 | Level of a sine at the tracked pitch, all modes; the panel shows the detected F0 |
 | Bypass | off / on | off | Speech passes straight through |
 
 The panel's x-y pad puts Shift on X and Q Scale on Y.
@@ -80,6 +87,8 @@ into a chord stream (route to Magneto, Fathom or any synth).
 
 ## Limits
 
+- The pitch tracker is monophonic and tuned for 60–500 Hz speech. Creaky voice, very
+  breathy voice and fast pitch jumps can read an octave off for a few frames.
 - Tracks are LPC resonances, so they follow the *envelope*, not the pitch. A very
   high voice (f0 above ~300 Hz) can lock onto harmonics rather than formants.
 - Fricatives are noisy and wide; raise BW Limit to let them through, and expect

@@ -207,6 +207,7 @@ private:
         p.dry = values_[index(ParamId::dry)];
         p.carrierNorm = values_[index(ParamId::carrierNorm)];
         p.spread = values_[index(ParamId::spread)];
+        p.f0Mix = values_[index(ParamId::f0Mix)];
         p.noteShift = values_[index(ParamId::noteShift)];
         p.midiOut = values_[index(ParamId::midiOut)];
         p.outChannel = values_[index(ParamId::outChannel)];
@@ -232,6 +233,7 @@ private:
     {
         values_[index(ParamId::outLevelDb)] = engine_.outLevelDb;
         values_[index(ParamId::outActive)] = static_cast<float>(engine_.outActive);
+        values_[index(ParamId::outF0)] = engine_.outF0;
         for (int i = 0; i < kMaxFormants; ++i) {
             const auto idx = static_cast<std::size_t>(i);
             values_[index(ParamId::outFreq1) + idx] = engine_.outFreq[idx];

@@ -23,6 +23,11 @@ constexpr double kMinFormantHz = 90.0;
 constexpr float kMinQ = 0.7f;
 constexpr float kMaxQ = 60.0f;
 constexpr float kMaxVoxScale = 200.0f;
+constexpr double kF0WindowSeconds = 0.04;
+constexpr double kF0MinHz = 60.0;
+constexpr double kF0MaxHz = 500.0;
+constexpr float kF0Voicing = 0.5f;      // normalised autocorrelation needed to call a frame voiced
+constexpr float kF0Octave = 0.88f;      // a shorter lag this close to the best peak wins (no octave drops)
 constexpr float kIdleAmp = 1.0e-5f;  // -100 dB: below this a released formant is switched off
 
 constexpr std::array<float, kMaxFormants> kNominalHz = {
@@ -57,7 +62,7 @@ template <typename T>
 {
     return {p.mode, p.formants, p.bypass, p.gateDb, p.bwLimit, p.glideMs, p.attackMs,
             p.releaseMs, p.shift, p.qScale, p.tilt, p.levelDb, p.dry, p.carrierNorm,
-            p.spread, p.noteShift, p.midiOut, p.outChannel, p.ccChannel, p.ccShift,
+            p.spread, p.f0Mix, p.noteShift, p.midiOut, p.outChannel, p.ccChannel, p.ccShift,
             p.ccQ, p.ccFormants, p.ccTilt, p.ccMode};
 }
 
@@ -67,9 +72,9 @@ template <typename T>
     p.mode = a[0]; p.formants = a[1]; p.bypass = a[2]; p.gateDb = a[3];
     p.bwLimit = a[4]; p.glideMs = a[5]; p.attackMs = a[6]; p.releaseMs = a[7];
     p.shift = a[8]; p.qScale = a[9]; p.tilt = a[10]; p.levelDb = a[11];
-    p.dry = a[12]; p.carrierNorm = a[13]; p.spread = a[14]; p.noteShift = a[15];
-    p.midiOut = a[16]; p.outChannel = a[17]; p.ccChannel = a[18]; p.ccShift = a[19];
-    p.ccQ = a[20]; p.ccFormants = a[21]; p.ccTilt = a[22]; p.ccMode = a[23];
+    p.dry = a[12]; p.carrierNorm = a[13]; p.spread = a[14]; p.f0Mix = a[15];
+    p.noteShift = a[16]; p.midiOut = a[17]; p.outChannel = a[18]; p.ccChannel = a[19];
+    p.ccShift = a[20]; p.ccQ = a[21]; p.ccFormants = a[22]; p.ccTilt = a[23]; p.ccMode = a[24];
     return p;
 }
 
@@ -266,6 +271,72 @@ bool analyseFrame(Analyzer& an, const Parameters& params, Frame& frame) noexcept
     return true;
 }
 
+// Fundamental by normalised autocorrelation of the (unemphasised) input over
+// ~40 ms. Takes the shortest lag whose peak is close to the best one, so that
+// an octave-down peak does not win, and refines it by parabolic interpolation.
+void analyseF0(Analyzer& an, const Parameters& params) noexcept
+{
+    an.f0Hz = 0.0f;
+    an.f0Level = 0.0f;
+    if (an.levelDb < params.gateDb)
+        return;
+
+    const int W = clampT(static_cast<int>(std::lround(kF0WindowSeconds * an.rate)), 64,
+                         std::min(an.filled, kMaxAnalysisWindow));
+    const int minLag = std::max(2, static_cast<int>(an.rate / kF0MaxHz) - 1);
+    const int maxLag = static_cast<int>(an.rate / kF0MinHz) + 1;
+    if (maxLag * 2 > W)
+        return;
+
+    std::array<float, kMaxAnalysisWindow> x {};
+    double mean = 0.0;
+    for (int n = 0; n < W; ++n) {
+        const int idx = (an.pos - W + n + kMaxAnalysisWindow) % kMaxAnalysisWindow;
+        x[static_cast<std::size_t>(n)] = an.raw[static_cast<std::size_t>(idx)];
+        mean += x[static_cast<std::size_t>(n)];
+    }
+    mean /= W;
+    // Prefix sums of squares for the two energy terms of each lag.
+    std::array<double, kMaxAnalysisWindow + 1> cum {};
+    for (int n = 0; n < W; ++n) {
+        const double v = x[static_cast<std::size_t>(n)] - mean;
+        x[static_cast<std::size_t>(n)] = static_cast<float>(v);
+        cum[static_cast<std::size_t>(n + 1)] = cum[static_cast<std::size_t>(n)] + v * v;
+    }
+    if (cum[static_cast<std::size_t>(W)] < 1.0e-12)
+        return;
+
+    std::array<float, kMaxAnalysisWindow> nac {};
+    float best = 0.0f;
+    for (int lag = minLag - 1; lag <= maxLag + 1; ++lag) {
+        double num = 0.0;
+        for (int n = 0; n + lag < W; ++n)
+            num += static_cast<double>(x[static_cast<std::size_t>(n)]) * x[static_cast<std::size_t>(n + lag)];
+        const double e1 = cum[static_cast<std::size_t>(W - lag)];
+        const double e2 = cum[static_cast<std::size_t>(W)] - cum[static_cast<std::size_t>(lag)];
+        const float v = static_cast<float>(num / std::sqrt(std::max(e1 * e2, 1.0e-20)));
+        nac[static_cast<std::size_t>(lag)] = v;
+        if (lag >= minLag && lag <= maxLag)
+            best = std::max(best, v);
+    }
+    if (best < kF0Voicing)
+        return;
+
+    for (int lag = minLag; lag <= maxLag; ++lag) {
+        const float v = nac[static_cast<std::size_t>(lag)];
+        if (v >= kF0Octave * best && v >= nac[static_cast<std::size_t>(lag - 1)]
+            && v >= nac[static_cast<std::size_t>(lag + 1)]) {
+            const float a = nac[static_cast<std::size_t>(lag - 1)];
+            const float c = nac[static_cast<std::size_t>(lag + 1)];
+            const float denom = a - 2.0f * v + c;
+            const float frac = std::fabs(denom) > 1.0e-9f ? clampT(0.5f * (a - c) / denom, -0.5f, 0.5f) : 0.0f;
+            an.f0Hz = static_cast<float>(an.rate / (static_cast<double>(lag) + frac));
+            an.f0Level = std::sqrt(static_cast<float>(cum[static_cast<std::size_t>(W)] / W));
+            return;
+        }
+    }
+}
+
 // Assigns candidates to persistent slots so a formant keeps its identity, and
 // therefore its oscillator and filter, from frame to frame.
 void trackFormants(EngineState& st, const Parameters& params, Frame& frame) noexcept
@@ -345,6 +416,7 @@ void pushAnalysis(EngineState& st, const Parameters& params, const float mono) n
     Frame frame;
     if (analyseFrame(an, params, frame))
         trackFormants(st, params, frame);
+    analyseF0(an, params);
 }
 
 // ── Synthesis ──────────────────────────────────────────────────────────────
@@ -491,6 +563,7 @@ void processBlock(EngineState& state,
     const float aCarFall = onePole(400.0f, sampleRate);
 
     const float level = dbToLinear(params.levelDb);
+    const float f0Gain = params.f0Mix * 0.01f;
     const float dry = params.dry * 0.01f;
     const float norm = params.carrierNorm * 0.01f;
     const bool bypass = params.bypass >= 0.5f;
@@ -593,12 +666,34 @@ void processBlock(EngineState& state,
             }
         }
 
+        // Fundamental: a sine at the tracked pitch, level following the voiced input.
+        float f0Sample = 0.0f;
+        {
+            const Analyzer& an = state.analyzer;
+            const float f0Target = an.f0Hz > 0.0f ? an.f0Level : 0.0f;
+            if (an.f0Hz > 0.0f) {
+                const float lg = std::log2(an.f0Hz);
+                if (state.f0SmAmp < 1.0e-4f)
+                    state.f0SmLogFreq = lg;
+                else
+                    state.f0SmLogFreq += aFreq * (lg - state.f0SmLogFreq);
+            }
+            state.f0SmAmp += (f0Target > state.f0SmAmp ? aAttack : aRelease) * (f0Target - state.f0SmAmp);
+            if (f0Target <= 0.0f && state.f0SmAmp <= kIdleAmp)
+                state.f0SmAmp = 0.0f;
+            if (state.f0SmAmp > 0.0f && f0Gain > 0.0f) {
+                state.f0Phase += std::exp2(static_cast<double>(state.f0SmLogFreq)) / sampleRate;
+                state.f0Phase -= std::floor(state.f0Phase);
+                f0Sample = static_cast<float>(std::sin(kTwoPi * state.f0Phase)) * state.f0SmAmp * f0Gain;
+            }
+        }
+
         if (bypass) {
             outputs[0][s] = inL;
             outputs[1][s] = inR;
         } else {
-            outputs[0][s] = dry * inL + level * (voxL + sineL);
-            outputs[1][s] = dry * inR + level * (voxR + sineR);
+            outputs[0][s] = dry * inL + level * (voxL + sineL + f0Sample);
+            outputs[1][s] = dry * inR + level * (voxR + sineR + f0Sample);
         }
     }
 
@@ -608,6 +703,7 @@ void processBlock(EngineState& state,
     // Publish what the tracker hears, pre-shift, so the panel shows the speaker
     // rather than the transposition.
     state.outLevelDb = std::max(state.analyzer.levelDb, -90.0f);
+    state.outF0 = state.f0SmAmp > 1.0e-3f ? std::exp2(state.f0SmLogFreq) : 0.0f;
     state.outActive = 0;
     for (int i = 0; i < kMaxFormants; ++i) {
         const Formant& f = state.formants[static_cast<std::size_t>(i)];

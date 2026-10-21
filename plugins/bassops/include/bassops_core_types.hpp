@@ -40,8 +40,9 @@ struct Parameters {
 inline constexpr std::uint32_t kMidDelayLen = kFirOrder / 2;  // 64 samples (FIR group delay)
 
 struct FirBank {
-    // LP → mid (clean low-end), HP(distorted mono) → side (harmonic stereo width).
-    // LP + HP = delayed identity at shape=0, so outL=outR=delayed mono (phase-coherent).
+    // mid = mono delayed by the FIR latency (bufMid); side = HP(shaped - mono), the
+    // harmonics the waveshaper adds above the cutoff. Zero at shape=0, so outL=outR.
+    // (lp is only used to build hp = delta - lp.)
     std::array<float, kFirTaps>    lp {};
     std::array<float, kFirTaps>    hp {};
     std::array<float, kFirTaps>    bufMid {};      // convolution buffer for LP path
@@ -56,6 +57,8 @@ struct FirBank {
 
 struct EnvFollower {
     float envelope = 0.0f;
+    float mainEnvL = 0.0f;  // |main L| and |main R|, to spot a mono feed
+    float mainEnvR = 0.0f;
 };
 
 struct Meters {

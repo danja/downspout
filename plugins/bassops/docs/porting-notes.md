@@ -6,12 +6,13 @@ bassops is an original Downspout plugin (no LV2 source to port from). It combine
 common bass-focused processing techniques into a single 4-in/2-out effect:
 
 1. **Sidechain ducker** – a kick-drum send on inputs 3/4 ducks the main signal on 1/2.
-2. **Mono split + stereo synthesis** – after ducking, the stereo input is summed to mono.
-   A complementary LP/HP FIR pair splits the mono signal: the LP path forms the centre
-   component (clean bass), and optionally distorted mono fed to the HP path forms a
-   synthetic side component. Decoding via the M/S matrix creates stereo width above the
-   cutoff entirely from the distortion-generated harmonics. With side shape at zero the
-   output is phase-coherent mono on both channels (LP + HP = identity).
+2. **Mono split + stereo synthesis** – after ducking, the stereo input is summed to mono
+   (a silent main L or R, i.e. a mono track, is treated as a copy of the other side).
+   The delayed full-range mono is the mid. A waveshaper distorts the mono, and the
+   harmonics it adds, high-passed above the cutoff, form a synthetic side. M/S decoding
+   creates stereo width above the cutoff entirely from the distortion; the bass stays
+   mono and clean. With side shape at zero the side is exactly zero and both outputs
+   are the delayed mono.
 
 ## Signal flow
 
@@ -20,8 +21,8 @@ inputs 3-4 (sidechain)
     └─ peak envelope follower ─┐
                                 ↓
 inputs 1-2 (main) ──── VCA (duck gain)
-                                └─ sum to mono ──┬─ LP FIR (clean bass) ──────────────────┐
-                                                 └─ [waveshaper] ──── HP FIR (side) ───┐  │
+                                └─ sum to mono ──┬─ 64-sample delay (mid) ────────────────┐
+                                                 └─ [waveshaper] − mono ── HP FIR ─────┐  │
                                                                                          ↓  ↓
                                                                                    M/S decode
                                                                                          │
@@ -35,26 +36,29 @@ outL = wetScale × (midF + sideF) + dryScale × delayedInL
 outR = wetScale × (midF − sideF) + dryScale × delayedInR
 ```
 
-At `sideShape=0%`: waveshaper is bypassed, LP(mono) + HP(mono) = delayed(mono), so both
-outputs are identical mono — stereo width comes entirely from the dry wet/mix path.
-At `sideShape>0%`: distortion breaks the LP+HP identity; the HP path carries asymmetric
-harmonics that become the stereo-difference component after decoding.
+At `sideShape=0%`: the side is zero, so both outputs are the delayed mono — stereo width
+comes entirely from the dry wet/mix path.
+At `sideShape>0%`: side = HP(shaped − mono), the harmonics the waveshaper adds above the
+cutoff; they appear in anti-phase in L and R, so they cancel when the output is summed
+to mono and the bass is untouched.
 
 Note: original stereo difference of the main input is not preserved in the wet path;
 the dry mix is the only route for retaining the source's stereo content.
 
 ## FIR filter design
 
-Both filters use a Hann-windowed sinc design of order 128 (129 taps, latency = 64 frames).
-The LP and HP are a perfect complementary pair:
+The side high-pass is a Hann-windowed sinc design of order 128 (129 taps, latency = 64
+frames), built as the complement of a unity-DC-gain LP kernel (the kernel is normalised;
+an un-normalised 129-tap sinc at a low cutoff sums to about 0.5). With only 129 taps the
+cutoff is soft at low settings (transition of order 1 kHz): it sets where the added
+harmonics start, it is not a sharp crossover.
 
 ```
 h_lp[n] = sinc(2·fc·(n − M/2)) · hann(n)
 h_hp[n] = δ[n − M/2] − h_lp[n]
 ```
 
-This gives `h_lp + h_hp = δ` (unit impulse), so without distortion the decoded output
-is a latency-compensated copy of the mono sum.
+
 
 The latency (64 frames) is reported to the host via `getLatencyInFrames()`.
 
@@ -80,25 +84,23 @@ output  = clipped / drive          ← unity small-signal gain
 At `sideShape=0%`: `drive=1, hardMix=0` → no distortion, straight through.
 At `sideShape=100%`: `drive≈8, hardMix=1` → maximum drive, hard clipping, fully normalised.
 
-The HP filter then extracts the high-frequency harmonic content, which after M/S decoding
-becomes the stereo-difference signal above the cutoff. Bass content below the cutoff is
-unaffected (LP path is always clean).
+The side is the HP filter's output for `shaped − mono`, so only the harmonics the
+shaper added appear in it. Bass below the cutoff is therefore the clean mono signal in
+both channels.
 
 ## M/S matrix
 
-The encode step sums to mono before entering the FIR stage (stereo difference is not
-extracted). The decode step reconstructs left/right from the filtered mid and side:
+The encode step sums to mono before the FIR stage (stereo difference is not extracted):
 
 ```
-mono = (L + R) / 2          ← mono sum fed to both LP and HP paths
-mid  = LP(mono)
-side = HP(shaped_mono)
+mono = (L + R) / 2          ← a silent L or R (mono track) is replaced by the other
+mid  = mono delayed 64 samples
+side = HP(shaped(mono) − mono)
 L_out = mid + side
 R_out = mid − side
 ```
 
-Dividing by 2 on the encode ensures that LP + HP = identity gives unity gain on a mono
-source.
+At shape 0 the side is zero and a mono source comes out at unity gain in both channels.
 
 ## Parameters
 

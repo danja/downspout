@@ -81,6 +81,7 @@ enum SliderId : std::uint32_t {
     kSliderSpeech,
     kSliderCarrierNorm,
     kSliderSpread,
+    kSliderFundamental,
     kSliderCount,
 };
 
@@ -97,11 +98,13 @@ constexpr std::array<std::uint32_t, kSliderCount> kSliderParams = {
     index(ParamId::dry),
     index(ParamId::carrierNorm),
     index(ParamId::spread),
+    index(ParamId::f0Mix),
 };
 
 constexpr std::array<const char*, kSliderCount> kSliderLabels = {
     "Gate", "BW Limit", "Glide", "Attack", "Release",
     "Tilt", "Level", "Speech Mix", "Carrier Norm", "Sine Spread",
+    "Fundamental",
 };
 
 [[nodiscard]] bool sliderIsLogarithmic(const std::uint32_t slider) noexcept
@@ -337,7 +340,7 @@ constexpr int kMaxRows = 10;
 constexpr int kTwoColLimit = 20;
 constexpr float kTrackH = 12.0f;
 
-constexpr float kLowerY = kBodyY + 5.0f * kSliderH + 18.0f;
+constexpr float kLowerY = kBodyY + 6.0f * kSliderH + 18.0f;
 constexpr float kPadW = kColW;
 constexpr float kPadH = 150.0f;
 
@@ -549,6 +552,7 @@ private:
         }
         values_[index(ParamId::outLevelDb)] = -21.0f;
         values_[index(ParamId::outActive)] = 4.0f;
+        values_[index(ParamId::outF0)] = 118.0f;
     }
     int dragSlider_ = -1;
     bool draggingPad_ = false;
@@ -586,7 +590,7 @@ private:
 
     [[nodiscard]] Rect bypassBox() const noexcept
     {
-        return { kSynthX, kBodyY + 5.0f * kSliderH + 2.0f, kColW, 32.0f };
+        return { kSynthX, kBodyY + 6.0f * kSliderH + 2.0f, kColW, 32.0f };
     }
 
     [[nodiscard]] Rect padBox() const noexcept
@@ -936,6 +940,25 @@ private:
             }
         }
 
+        // The tracked fundamental: a full-height line, since it is not a formant.
+        const float f0 = value(ParamId::outF0);
+        if (f0 > kPlotMinHz && f0 < kPlotMaxHz) {
+            const float fx = xOf(f0);
+            beginPath();
+            sc(kReadoutAccent);
+            strokeWidth(1.5f);
+            moveTo(fx, plot.y + 14.0f);
+            lineTo(fx, baseY);
+            stroke();
+            closePath();
+            char tag[24];
+            std::snprintf(tag, sizeof(tag), "F0 %.0f Hz", static_cast<double>(f0));
+            fontSize(9.5f);
+            textAlign(ALIGN_CENTER | ALIGN_TOP);
+            fc(th.textPrimary);
+            text(fx, plot.y + 3.0f, tag, nullptr);
+        }
+
         // Envelope: power sum of the formants.
         bool any = false;
         for (const bool s : sounding)
@@ -1044,6 +1067,28 @@ private:
         text(x + w, y, val, nullptr);
     }
 
+    // Detected fundamental, in the free slot under the Analysis sliders. It is a
+    // read-out, not a control: the Fundamental slider mixes it into the output.
+    void drawPitchReadout()
+    {
+        const float f0 = value(ParamId::outF0);
+        const Rect track = { kAnalysisX, kBodyY + 5.0f * kSliderH + 19.0f, kColW, kTrackH };
+        const bool voiced = f0 > 0.0f;
+        char line[48] = "unvoiced";
+        if (voiced) {
+            static const char* const kNames[12] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+            const double midi = 69.0 + 12.0 * std::log2(static_cast<double>(f0) / 440.0);
+            const int note = static_cast<int>(std::lround(midi));
+            const int cents = static_cast<int>(std::lround((midi - note) * 100.0));
+            std::snprintf(line, sizeof(line), "%.0f Hz  %s%d %+dc", static_cast<double>(f0),
+                          kNames[((note % 12) + 12) % 12], note / 12 - 1, cents);
+        }
+        drawLabelValue(track.x, track.y - 17.0f, track.w, "Pitch F0", line, !voiced);
+        // Position within the 60 - 500 Hz search range.
+        const float norm = voiced ? clampf(std::log(f0 / 60.0f) / std::log(500.0f / 60.0f), 0.0f, 1.0f) : 0.0f;
+        drawTrack(track, norm, voiced ? kReadoutAccent : Accent { 130, 126, 116 });
+    }
+
     void drawSliders()
     {
         const int mode = static_cast<int>(std::lround(value(ParamId::mode)));
@@ -1064,6 +1109,7 @@ private:
                            formatSlider(s, values_[parameter]).c_str(), dim);
             drawTrack(track, valueToSlider(s, values_[parameter]), dim ? Accent { 130, 126, 116 } : accent);
         }
+        drawPitchReadout();
     }
 
     // X: Shift. Y: Q Scale. The crosshair is the neutral setting.

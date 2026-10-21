@@ -39,7 +39,7 @@ formant is not displaced by a spurious one.
 - **Roots** by Durand-Kerner on the order-`P` polynomial, warm-started from the
   previous frame (usually a handful of iterations), with a cold restart if the warm
   start does not converge. Fixed-size arrays, no allocation, so it runs on the
-  audio thread; about 70× real time with eight formants and both engines.
+  audio thread; about 26× real time with eight formants, both engines and the pitch tracker.
 - **Candidates**: roots with positive imaginary part, 90 Hz up to 0.46× the analysis
   rate, bandwidth under BW Limit. Frequency `= arg(z)·fs/2π`; bandwidth
   `= −ln|z|·fs/π`; Q `= f/bw`.
@@ -98,6 +98,15 @@ not sample-accurate.
   level), since those are measurements.
 - **Status is pre-shift.** The panel plots what the tracker hears; the shifted
   positions are marked with triangles on the axis. MIDI output is post-shift.
+- **Fundamental.** Normalised autocorrelation of the unemphasised 16 kHz signal over
+  40 ms, lags for 60-500 Hz, computed each 5 ms hop beside the LPC frame. Voiced
+  when the best peak is at least 0.5; the shortest local peak within 12 % of the best
+  wins (no octave drops), refined by parabolic interpolation. Reads within 0.5 % for
+  85-330 Hz at 44.1/48/96 kHz on the synthetic vowel; noise, silence and sub-gate
+  input read 0. The sine glides with the Glide time, takes its level from the frame
+  RMS through Attack/Release, is centred, follows Level, and ignores Shift (Shift is
+  the vocal tract, not the pitch). Fundamental Mix is 0 by default so existing
+  patches are unchanged. The tracker costs about two thirds of the analysis time.
 - **Bypass** passes speech 1/2 straight to the outputs; the analyser keeps running
   so MIDI out and the panel stay live.
 - **Stereo.** Speech is summed to mono for analysis. The vocoder processes 3 and 4
@@ -110,5 +119,5 @@ not sample-accurate.
 `tests/sinevox_core_tests.cpp`: formant accuracy at 44.1/48/96 kHz, spectra of both
 engines measured with Goertzel, silence and gate, every control's audible effect
 (mode, formants, bypass, gate, BW limit, glide, attack, release, shift, Q scale,
-tilt, level, speech mix, carrier norm, spread), CC and note input, MIDI out
+tilt, level, speech mix, carrier norm, spread, fundamental mix), pitch accuracy and octave behaviour, CC and note input, MIDI out
 (CCs, notes, hanging-note release), activate behaviour, denormals and run time.

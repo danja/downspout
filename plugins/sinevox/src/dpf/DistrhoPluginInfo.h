@@ -24,7 +24,7 @@
 // No WANT_STATE: every setting is an ordinary parameter, which DPF saves itself.
 #define DISTRHO_PLUGIN_VST3_CATEGORIES  "Fx|Filter"
 #define DISTRHO_UI_DEFAULT_WIDTH        820
-#define DISTRHO_UI_DEFAULT_HEIGHT       770
+#define DISTRHO_UI_DEFAULT_HEIGHT       814
 #define DISTRHO_UI_USE_NANOVG           1
 
 #endif

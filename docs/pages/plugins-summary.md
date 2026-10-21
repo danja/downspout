@@ -563,9 +563,9 @@ override Cutoff and Scream.
 ### bassops
 Sidechain ducker plus mid/side bass management. Inputs 1-2 are the main signal, 3-4 a
 control signal (typically a dry kick send) driving an envelope follower whose inverse ducks
-the main signal. After ducking a linear-phase LP/HP FIR pair splits at a shared cutoff:
-bass stays in the mid channel, highs keep stereo width in the side. Reports 64-sample
-latency to the host.
+the main signal. After ducking the signal is summed to mono (a one-sided mono feed is
+treated as dual mono); a waveshaper's added harmonics, high-passed at the cutoff, form the
+side, so bass stays clean mono and highs gain width. Reports 64-sample latency to the host.
 
 ### e-mix
 Transport-aware Euclidean stereo gate: deterministic block rhythms applied to audio.
@@ -661,7 +661,8 @@ Formant tracker with two voices. Inputs 1-2 (speech) are summed to mono and anal
 by LPC for up to eight formants (default four): centre frequency, Q and amplitude each.
 Mode picks Vocoder (a parallel band-pass bank on inputs 3-4 follows the formants), Sine
 Speech (one sine per formant) or Both. Shift, Q Scale, Tilt, Gate, BW Limit, Glide,
-Attack/Release, Level, Speech Mix, Carrier Norm, Sine Spread. MIDI in on one channel:
+Attack/Release, Level, Speech Mix, Carrier Norm, Sine Spread, Fundamental (a sine at the
+tracked pitch, 60-500 Hz, mixed into every mode). MIDI in on one channel:
 CC 1-5 = Shift, Q Scale, Formants, Tilt, Mode; Note Shift makes the held note transpose
 the formants from middle C. MIDI out (off by default): formant frequency on CC 20-27 and
 level on CC 102-109, or one note per formant. Panel x-y pad: X Shift, Y Q Scale. Vocoder

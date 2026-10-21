@@ -58,6 +58,7 @@ where Shift will put each formant.
 | Speech Mix | 0–100 % | 0 | Dry speech |
 | Carrier Norm | 0–100 % | 100 | Vocoder only |
 | Sine Spread | 0–100 % | 30 | Sine modes only |
+| Fundamental | 0–100 % | 0 | Sine at the tracked pitch, every mode |
 | Note Shift | off / on | off | Held note shifts from middle C |
 | MIDI Out | off / CCs / notes | off | CC 20–27 frequency, CC 102–109 level |
 | Out / In Channel | 1–16 | 1 | |
