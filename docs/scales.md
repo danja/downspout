@@ -83,6 +83,10 @@ Qune (`plugins/qune`) uses the same 24-scale canonical ordering as plank (0 = ch
 pitch correction, and its tests pin the ordinals and hold an independent copy of every scale's
 semitone set. Its scale list is a dropdown, as in bassgen.
 
+Resonance Garden (`plugins/resonance-garden`) uses bassgen's 23-scale ordering (0 = Major through 22 =
+Bebop Minor) for its internal fallback bank, as a dropdown. Its tests pin the ordinals and hold an
+independent copy of every scale's semitone set.
+
 Sprout (`plugins/sprout`) uses the same 24-scale canonical ordering as plank (0 = chromatic through 23 =
 bebopMinor, no separate `pentatonic` row) and its tests pin the ordinals and hold an independent copy of
 every scale's semitone set.
@@ -128,6 +132,7 @@ These assertions exist to catch mid-enum insertions. They must remain passing:
 - `bassgen`: `ScaleId::minor == 2`, `ScaleId::bebopMinor == 22`, `ScaleId::count == 23`
 - `counterpointer`: `SCALE_BEBOP_MINOR == 23`, `SCALE_COUNT == 24`
 - `plank`: `ScaleId::minor == 3`, `ScaleId::bebopMinor == 23`, `ScaleId::count == 24`
+- `resonance-garden`: `kScaleCount == 23`, `scaleName(2) == "Minor"`, `scaleName(22) == "Bebop Minor"`
 - `qune`: `ScaleId::minor == 3`, `ScaleId::bebopMinor == 23`, `ScaleId::count == 24`
   (same canonical ordering as plank)
   (plank uses the canonical 0-based ordering, so its ordinals line up with the

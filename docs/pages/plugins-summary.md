@@ -690,9 +690,10 @@ level on CC 102-109, or one note per formant. Panel x-y pad: X Shift, Y Q Scale.
 mode needs a carrier with harmonics.
 
 ### resonance-garden
-Eight bounded damped resonators tuned by held MIDI notes (HarmonyMidi) or an internal
-scale, turning arbitrary audio into pitched evolving material: damping, inharmonicity,
-freeze, bounded feedback and deterministic voice replacement.
+Up to twelve bounded damped resonators (Voice limit 1-12) tuned by held MIDI notes (HarmonyMidi) or
+an internal scale picked from a dropdown of BassGen's 23 scales plus a root, turning arbitrary audio
+into pitched evolving material: damping, inharmonicity, freeze, bounded feedback and deterministic
+voice replacement.
 
 ### orbit
 Ordinary stereo spatial processor (no HRTF or binaural claim): seeded orbit, pendulum,

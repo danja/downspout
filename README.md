@@ -128,7 +128,7 @@ installed bundle.
 | [Polymeter](plugins/polymeter/README.md) | `polymeter.vst3` | MIDI generator | Four Euclidean lanes with coprime lengths, ratchets, probability, and drift. |
 | [Oracle](plugins/oracle/README.md) | `oracle.vst3` | Audio/MIDI effect | Bounded audio/MIDI analysis with CC and guarded note responses. |
 | [Mosaic](plugins/mosaic/README.md) | `mosaic.vst3` | Sampler instrument | Four-slot WAV sampler with deterministic slicing and autonomous triggering. |
-| [Resonance Garden](plugins/resonance-garden/README.md) | `resonance_garden.vst3` | Audio effect | MIDI-tuned damped resonator bank with internal-scale fallback. |
+| [Resonance Garden](plugins/resonance-garden/README.md) | `resonance_garden.vst3` | Audio effect | MIDI-tuned damped resonator bank (up to 12 voices) with a 23-scale internal fallback. |
 | [Orbit](plugins/orbit/README.md) | `orbit.vst3` | Audio effect | Seeded transport-aware stereo trajectories, distance filtering, and conservative Doppler. |
 | [Guardian](plugins/guardian/README.md) | `guardian.vst3` | Safety effect | DC removal, look-ahead limiting, true-peak protection, and latched diagnostics. |
 | [Skream](plugins/skream/README.md) | `skream.vst3` | Audio effect | Scream filter: SVF lowpass/highpass with ADAA2 feedback saturation for dubstep growl. Ten presets, MIDI CC control via Drift. |

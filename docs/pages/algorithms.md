@@ -130,8 +130,8 @@ current Downspout plugins.
 - [`Sinevox`]({{ '/plugins/sinevox/' | relative_url }}): LPC analysis of the speech input finds up to eight formants; these drive a
   parallel band-pass vocoder bank on the carrier, one sine per formant (sine-wave
   speech), or both.
-- [`Resonance Garden`]({{ '/plugins/resonance-garden/' | relative_url }}): eight bounded damped resonators tuned by held notes or an internal
-  scale, with inharmonicity, freeze and bounded feedback.
+- [`Resonance Garden`]({{ '/plugins/resonance-garden/' | relative_url }}): up to twelve bounded damped resonators tuned by held notes or an internal
+  scale (23 to choose from), with inharmonicity, freeze and bounded feedback.
 - [`Orbit`]({{ '/plugins/orbit/' | relative_url }}): seeded orbit, pendulum, random-walk and figure-eight trajectories applied as
   stereo placement, distance filtering and conservative Doppler. No HRTF.
 - [`Helterskelter`]({{ '/plugins/helterskelter/' | relative_url }}): automatic wah; a resonant low-pass whose cutoff follows the input

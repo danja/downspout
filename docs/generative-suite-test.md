@@ -60,8 +60,9 @@ For every plugin:
   and clear samples; save/reload the project and confirm file paths restore
   without audio-thread stalls.
 - **Resonance Garden:** feed short percussive audio, then hold and release MIDI
-  notes. Verify the resonator display, internal fallback scale, freeze, voice
-  limit, and wet/dry behavior. Check silence remains stable at high feedback.
+  notes. Verify the resonator display, internal fallback scale (try several of the 23
+  scales and the root with no MIDI held), freeze, voice limit up to 12, and wet/dry
+  behavior. Check silence remains stable at high feedback.
 - **Orbit:** use a sustained stereo source. Compare all four trajectory views,
   tempo changes, width, distance, and conservative Doppler. Confirm the marker
   moves smoothly and the effect is described as stereo rather than binaural.

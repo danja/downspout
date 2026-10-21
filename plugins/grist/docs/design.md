@@ -60,7 +60,7 @@ none). To use it as a resonator the mallet would be replaced by an input stage a
 allocator by something tuned from the input or from MIDI, which is a different plugin that
 shares Moka's mode tables.
 
-**Resonance Garden already is the resonator.** It takes stereo audio in, runs eight damped
+**Resonance Garden already is the resonator.** It takes stereo audio in, runs up to twelve damped
 delay-line resonators (each with a feedback loop, damping filter and decay) tuned by held MIDI
 notes or an internal scale, and has Excitation, Inharmonicity, Damping, Freeze and Feedback. A
 grain stream going into it behaves like one going into a plucked or bowed string bank.

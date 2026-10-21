@@ -7,7 +7,7 @@
 
 dsp:resonance-garden a trn:PluginProfile ;
     rdfs:label "Resonance Garden" ;
-    rdfs:comment "Eight-voice damped resonator bank that turns stereo input into pitched material using MIDI tuning or an internal scale." ;
+    rdfs:comment "Twelve-voice damped resonator bank that turns stereo input into pitched material using MIDI tuning or an internal scale chosen from 23 scales." ;
     trn:bundleName "resonance_garden.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/resonance_garden/> ;

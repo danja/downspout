@@ -60,7 +60,7 @@ Downspout is a suite of VST3 plugins for autonomous music generation and process
 | [Rift](plugins/rift/) | Transport-locked buffer disruptor for chop, stutter, reverse, skip, smear, and pitch-slip | [profile.ttl](plugins/rift/profile.ttl) |
 | [Orchid](plugins/orchid/) | Transport-aware voiced freeze effect with grid-synchronised loop holds | [profile.ttl](plugins/orchid/profile.ttl) |
 | [Ambo](plugins/ambo/) | Stereo ambient processor with time, spectral, tape, shimmer, delay, drive, and feedback modules | [profile.ttl](plugins/ambo/profile.ttl) |
-| [Resonance Garden](plugins/resonance-garden/) | Eight-voice damped resonator bank that turns stereo input into pitched material | [profile.ttl](plugins/resonance-garden/profile.ttl) |
+| [Resonance Garden](plugins/resonance-garden/) | Twelve-voice damped resonator bank that turns stereo input into pitched material | [profile.ttl](plugins/resonance-garden/profile.ttl) |
 | [Orbit](plugins/orbit/) | Transport-aware stereo motion effect with orbit, pendulum, random-walk, and figure-eight modes | [profile.ttl](plugins/orbit/profile.ttl) |
 | [Gater](plugins/gater/) | MIDI-controlled stereo switcher routing input to one of two outputs by note parity | [profile.ttl](plugins/gater/profile.ttl) |
 | [PaunchLad](plugins/paunchlad/) | Launchpad dub performance effect with echo throws, splashes, chops, and freezes | [profile.ttl](plugins/paunchlad/profile.ttl) |

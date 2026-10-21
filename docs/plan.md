@@ -384,7 +384,7 @@ Per-plugin usability targets:
 - **Mosaic:** four visible sample slots with load/replace/clear actions,
   filenames, pool status, and a slice/grain visualization.
 - **Resonance Garden:** grouped resonance/tuning/output controls and a live
-  eight-voice pitch/energy view.
+  twelve-voice pitch/energy view (voice limit 1-12, internal scale as a 23-scale dropdown).
 - **Orbit:** named trajectories, musical timing, contextual seed control, and
   a live path/position view.
 - **Guardian:** conventional limiter meters, protection switches, neutral
