@@ -12,178 +12,178 @@ current Downspout plugins.
 
 ## MIDI generators
 
-- `BassGen`: transport-synced monophonic bass generation with style and scale
+- [`BassGen`]({{ '/plugins/bassgen/' | relative_url }}): transport-synced monophonic bass generation with style and scale
   vocabularies, rhythm regeneration, color-driven harmonic tension, MIDI
   follow/dodge behavior, Jazz-specific ii-V-I / turnaround targeting, and
   Fugue subject/answer bass behavior.
-- `DrumGen`: transport-aware drum pattern generation with fill logic, style
+- [`DrumGen`]({{ '/plugins/drumgen/' | relative_url }}): transport-aware drum pattern generation with fill logic, style
   modes, genre vocabularies, pattern mutation around the current cycle, and a
   sparse Fugue pulse mode. An optional automaton layer treats the generated pattern as
   generation 0 and plays the targeted lanes (hats, percussion, toms) as successive rows
   of a 1-D cellular automaton (rules 30, 90, 110, 150, ...), as in `Xoxolo`.
-- `MelGen`: phrase-aware monophonic melody generation with contour, call and
+- [`MelGen`]({{ '/plugins/melgen/' | relative_url }}): phrase-aware monophonic melody generation with contour, call and
   answer, structure, range, color, follow controls, and a high-structure
   Fugue-friendly subject/dominant-answer region.
-- `Ground`: longer-horizon bass generation that plans phrase roles, movement,
+- [`Ground`]({{ '/plugins/ground/' | relative_url }}): longer-horizon bass generation that plans phrase roles, movement,
   cadences, pedal phrases, color, and high-sequence subject/answer forms across
   sections rather than just local bars, with explicit Dub and Jazz styles and
   generated notes folded into a guarded bass register lane.
-- `Cadence`: learned harmony generation from captured MIDI, with scale-aware
+- [`Cadence`]({{ '/plugins/cadence/' | relative_url }}): learned harmony generation from captured MIDI, with scale-aware
   voicing, chord-size modes, comp scheduling, variation, arpeggiated playback
   phrasing, Jazz ii-V-I bias, and high-color circle-of-fifths/suspended
   dominant support.
-- `Counterpointer`: learns an incoming MIDI line and answers it with a
+- [`Counterpointer`]({{ '/plugins/counterpointer/' | relative_url }}): learns an incoming MIDI line and answers it with a
   monophonic complementary line that can lean into contrary motion, chromatic
   color, rhythmic response, and strict dominant-answer imitation.
-- `Markov`: a walk over the twelve pitch classes from Root through a 12 x 12
+- [`Markov`]({{ '/plugins/markov/' | relative_url }}): a walk over the twelve pitch classes from Root through a 12 x 12
   transition matrix (weights 0-8, editable, or replaced by a Style preset). Out-of-scale
   columns are zeroed, Chaos applies the exponent `2^(1-2c)` to the weights, and Order 2
   uses learned second-order pair data where it exists. Learn counts transitions on the
   MIDI input and blends them in row by row. Each phrase restarts from the tonic, seeded,
   so a note is a pure function of its position.
-- `Sprout`: L-system melody. Seven built-in grammars (Plant, Koch, Dragon, Sierpinski,
+- [`Sprout`]({{ '/plugins/sprout/' | relative_url }}): L-system melody. Seven built-in grammars (Plant, Koch, Dragon, Sierpinski,
   Cantor, Levy, Tree) are expanded to a symbol-count cap, falling back to the deepest
   generation that fits; tables are prebuilt, so nothing allocates in the audio thread.
   Symbols map to scale steps or rests on a transport grid; Grow Every adds a generation
   every N bars. Optionally the pitch source is the held input notes.
-- `Worms` (ToneWorm): Paterson's Worm on a Tonnetz lattice. Six directional rules each
+- [`Worms`]({{ '/plugins/worms/' | relative_url }}) (ToneWorm): Paterson's Worm on a Tonnetz lattice. Six directional rules each
   choose among L120, L60, Straight, R60, R120; the visited lattice points are quantised
   to the scale and register, with loop-boundary variation. Randomize and Mutate make new
   rule sets.
-- `Polymeter`: four lanes, each a Euclidean pattern (length, pulses, rotation) with
+- [`Polymeter`]({{ '/plugins/polymeter/' | relative_url }}): four lanes, each a Euclidean pattern (length, pulses, rotation) with
   ratchets, probability and accent. Coprime lengths drift against each other. A lane
   can instead run a 1-D cellular automaton (rule 1-255) whose row evolves each lane
   cycle, with Pulses setting the initial density.
-- `Xoxolo`: x0x step sequencer, 11 drum lanes, up to 32 steps. An optional Evolve layer
+- [`Xoxolo`]({{ '/plugins/xoxolo/' | relative_url }}): x0x step sequencer, 11 drum lanes, up to 32 steps. An optional Evolve layer
   plays marked lanes as successive rows of a 1-D cellular automaton seeded from the
   programmed grid (the pass number comes from playback position, returning to the grid
   after 64 generations).
-- `Harmonic Atlas`: autonomous chord generator over four movement families (tonal,
+- [`Harmonic Atlas`]({{ '/plugins/harmonic-atlas/' | relative_url }}): autonomous chord generator over four movement families (tonal,
   modal, chromatic-mediant, neo-Riemannian). Gravity swaps a chord for a functional
   target (V to I, IV to V, ...) with probability up to 85%; voice-leading picks
   inversion and octave by a sorted-voice-distance search against the previous chord.
-- `Sidecar`: phrase player with deterministic local generation, and an optional
+- [`Sidecar`]({{ '/plugins/sidecar/' | relative_url }}): phrase player with deterministic local generation, and an optional
   localhost coordinator mode that accepts phrases from an external process.
-- `Tuney-vst`: text-to-music. Unicode text is mapped through configurable alphabets,
+- [`Tuney-vst`]({{ '/plugins/tuney-vst/' | relative_url }}): text-to-music. Unicode text is mapped through configurable alphabets,
   scales and microtonal tunings to seeded free-time phrasing, played by a small internal
   synth and emitted as MIDI.
-- `Conductor`: arrangement controller. A fixed form (Intro, Develop, Break, Reprise,
+- [`Conductor`]({{ '/plugins/conductor/' | relative_url }}): arrangement controller. A fixed form (Intro, Develop, Break, Reprise,
   Coda) or seeded weighted section selection with bounded durations; at each section
   boundary it emits bar-aligned notes and CC 20-24 (Scene, Density, Energy, Mutation,
   Reset) that the other generators read through their Conductor channel.
 
 ## Audio effects
 
-- `P-Mix`: transport-aware probabilistic audio gating and blending with fades.
-- `E-Mix`: Euclidean stereo gating that carves audio into repeating patterns
+- [`P-Mix`]({{ '/plugins/p-mix/' | relative_url }}): transport-aware probabilistic audio gating and blending with fades.
+- [`E-Mix`]({{ '/plugins/e-mix/' | relative_url }}): Euclidean stereo gating that carves audio into repeating patterns
   using density, block, and fade controls.
-- `Rift`: short-buffer capture and disruption with chop/stutter repeats,
+- [`Rift`]({{ '/plugins/rift/' | relative_url }}): short-buffer capture and disruption with chop/stutter repeats,
   reverse, skip, smear, and pitch-slip actions.
-- `Qune`: pitch quantiser. A normalised-square-difference pitch tracker (decimated
+- [`Qune`]({{ '/plugins/qune/' | relative_url }}): pitch quantiser. A normalised-square-difference pitch tracker (decimated
   search, full-rate refinement, octave-error checks) picks a target note from a scale or
   from held MIDI notes; the shift is smoothed by an optional glide and applied by one of
   three shifters: a pitch-synchronous splice delay line (Fast), time-domain PSOLA with
   fractional pitch marks (Good), or a peak-locked phase vocoder with cepstral formant
   correction (Best).
-- `Ambo`: four rearrangeable module chains (granular smear, frozen-band motion, tape
+- [`Ambo`]({{ '/plugins/ambo/' | relative_url }}): four rearrangeable module chains (granular smear, frozen-band motion, tape
   colour, shimmer, ping-pong echo, saturation, regenerative feedback).
-- `Chipper`: sample-and-hold rate reduction (divider 1-64, optional jitter) followed by
+- [`Chipper`]({{ '/plugins/chipper/' | relative_url }}): sample-and-hold rate reduction (divider 1-64, optional jitter) followed by
   midtread bit quantisation (1-16 bits).
-- `Damiano`: six waveshapers (Soft, Tanh, Fuzz, Overdrive, Tube, Wavefold) behind a
+- [`Damiano`]({{ '/plugins/damiano/' | relative_url }}): six waveshapers (Soft, Tanh, Fuzz, Overdrive, Tube, Wavefold) behind a
   one-pole high-shelf tone control; the right channel can take its own settings.
-- `Skream`: ADAA2 anti-aliased tanh saturator into an SVF low-pass, with a high-passed,
+- [`Skream`]({{ '/plugins/skream/' | relative_url }}): ADAA2 anti-aliased tanh saturator into an SVF low-pass, with a high-passed,
   saturated feedback path gated by an envelope-follower expander. Morph crossfades the
   forward SVF between low-pass and high-pass by cutoff position.
-- `BassOps`: sidechain envelope follower ducks the main signal, which is then summed to
+- [`BassOps`]({{ '/plugins/bassops/' | relative_url }}): sidechain envelope follower ducks the main signal, which is then summed to
   mono; a waveshaper's added harmonics, high-passed at the cutoff, form the side signal.
-- `T-Mix`: eight-input mixer with level, pan, mute, solo and meters; Mixgen CCs apply
+- [`T-Mix`]({{ '/plugins/t-mix/' | relative_url }}): eight-input mixer with level, pan, mute, solo and meters; Mixgen CCs apply
   click-smoothed transient gain multipliers over the saved faders.
-- `Loopdelay`: stereo delay and capture looper, time free (20-4000 ms) or BBT-synced.
-- `Lightverb`: fixed-cost stereo feedback-delay-network reverb.
-- `Guardian`: output safety chain: gain, look-ahead limiter, selectable clipper, DC
+- [`Loopdelay`]({{ '/plugins/loopdelay/' | relative_url }}): stereo delay and capture looper, time free (20-4000 ms) or BBT-synced.
+- [`Lightverb`]({{ '/plugins/lightverb/' | relative_url }}): fixed-cost stereo feedback-delay-network reverb.
+- [`Guardian`]({{ '/plugins/guardian/' | relative_url }}): output safety chain: gain, look-ahead limiter, selectable clipper, DC
   removal, true-peak guard, silence detection and latched fault diagnostics.
-- `Beards`: granular processor after Mutable Instruments Beads. Input is recorded into
+- [`Beards`]({{ '/plugins/beards/' | relative_url }}): granular processor after Mutable Instruments Beads. Input is recorded into
   a 4 s buffer and replayed by up to 32 overlapping grains (position, size, shape,
   pitch, density, scatter), with feedback, a Griesinger reverb, freeze, and optional
   host-grid grain triggering.
-- `Orchid`: voiced freeze. Autocorrelation capture and grid-synchronised loop holds turn
+- [`Orchid`]({{ '/plugins/orchid/' | relative_url }}): voiced freeze. Autocorrelation capture and grid-synchronised loop holds turn
   incoming material into sustained rhythmic freezes.
-- `Keyframe`: extrema-sampling time stretch (Nielsen, DAFx26). Input becomes
+- [`Keyframe`]({{ '/plugins/keyframe/' | relative_url }}): extrema-sampling time stretch (Nielsen, DAFx26). Input becomes
   timestamped local extrema whose spacing sets content-adaptive overlap-add splices;
   no transient detector.
-- `Quefrency`: cepstral formant and harmonic shifter. Each frame is split via the
+- [`Quefrency`]({{ '/plugins/quefrency/' | relative_url }}): cepstral formant and harmonic shifter. Each frame is split via the
   cepstrum into formant envelope and harmonic excitation, shifted and reshaped
   independently, then multiplied back.
-- `Primefold`: direct 2x, 3x, 5x pitch voices (dual-tap resamplers) recirculated
+- [`Primefold`]({{ '/plugins/primefold/' | relative_url }}): direct 2x, 3x, 5x pitch voices (dual-tap resamplers) recirculated
   all-to-all through a short delay and damping low-pass, so 4x, 6x, 8x, 9x, 10x emerge
   from feedback. Feedback is capped at 0.90.
-- `Voxmod`: a filter-bank vocoder and a band-limited ring modulator in parallel, blended
+- [`Voxmod`]({{ '/plugins/voxmod/' | relative_url }}): a filter-bank vocoder and a band-limited ring modulator in parallel, blended
   by Mix; Sync feeds the ring-modulated signal back as the vocoder carrier.
-- `Sinevox`: LPC analysis of the speech input finds up to eight formants; these drive a
+- [`Sinevox`]({{ '/plugins/sinevox/' | relative_url }}): LPC analysis of the speech input finds up to eight formants; these drive a
   parallel band-pass vocoder bank on the carrier, one sine per formant (sine-wave
   speech), or both.
-- `Resonance Garden`: eight bounded damped resonators tuned by held notes or an internal
+- [`Resonance Garden`]({{ '/plugins/resonance-garden/' | relative_url }}): eight bounded damped resonators tuned by held notes or an internal
   scale, with inharmonicity, freeze and bounded feedback.
-- `Orbit`: seeded orbit, pendulum, random-walk and figure-eight trajectories applied as
+- [`Orbit`]({{ '/plugins/orbit/' | relative_url }}): seeded orbit, pendulum, random-walk and figure-eight trajectories applied as
   stereo placement, distance filtering and conservative Doppler. No HRTF.
-- `Helterskelter`: automatic wah; a resonant low-pass whose cutoff follows the input
+- [`Helterskelter`]({{ '/plugins/helterskelter/' | relative_url }}): automatic wah; a resonant low-pass whose cutoff follows the input
   envelope and/or a BBT-synced ADSR cycle.
-- `Spliff`: 3-band transient detector applies dynamic cuts or boosts only at
+- [`Spliff`]({{ '/plugins/spliff/' | relative_url }}): 3-band transient detector applies dynamic cuts or boosts only at
   transients (mono detector, so the image is preserved).
-- `Treatment`: acoustic panel model: facing mass, porous fill and air gap form a
+- [`Treatment`]({{ '/plugins/treatment/' | relative_url }}): acoustic panel model: facing mass, porous fill and air gap form a
   mass-air-mass resonator, `w0 = c * sqrt(rho0 / (m D))`, with an impedance match at
   `r = rho0 c`.
-- `Gater`: routes a stereo input to one of two output pairs by incoming note parity
+- [`Gater`]({{ '/plugins/gater/' | relative_url }}): routes a stereo input to one of two output pairs by incoming note parity
   (even to Output 1, odd to Output 2).
 
 ## MIDI effects
 
-- `M-Mix`: MIDI gating that combines transport-locked probability decisions
+- [`M-Mix`]({{ '/plugins/m-mix/' | relative_url }}): MIDI gating that combines transport-locked probability decisions
   with Euclidean block patterns.
-- `Gremlin Driver`: modulation and action sequencing that emits CC movement,
+- [`Gremlin Driver`]({{ '/plugins/gremlin-driver/' | relative_url }}): modulation and action sequencing that emits CC movement,
   action notes, and patch-randomization bursts for `Gremlin`.
-- `Cadence`: input-aware MIDI harmonizing and comping that learns a cycle,
+- [`Cadence`]({{ '/plugins/cadence/' | relative_url }}): input-aware MIDI harmonizing and comping that learns a cycle,
   rebuilds voicings from captured material, and can thin or break chords with
   `Spread` and `Arpeggio`.
-- `ArpGen`: transport-synced arpeggiator. Chord mode captures incoming chord slices;
+- [`ArpGen`]({{ '/plugins/arpgen/' | relative_url }}): transport-synced arpeggiator. Chord mode captures incoming chord slices;
   Scale mode derives runs, triads or sevenths from held register anchors; up, down and
   alternating orders over one to four octaves.
-- `Mnemosyne`: phrase memory of eight bounded phrases; accompanies input or generates
+- [`Mnemosyne`]({{ '/plugins/mnemosyne/' | relative_url }}): phrase memory of eight bounded phrases; accompanies input or generates
   from recalled and transformed material, with an internal motif for an empty reservoir.
-- `Retune`: sends one note per MIDI channel (2-16) with a pitch bend that moves the
+- [`Retune`]({{ '/plugins/retune/' | relative_url }}): sends one note per MIDI channel (2-16) with a pitch bend that moves the
   nearest 12-TET key onto the Scala scale degree.
-- `Midiscribe`: records MIDI into a rolling window and exports a Type 0 SMF at 480 PPQ.
-- `Flues Synth Driver`: converts plugin parameters to CCs for the Flues synth with 31
+- [`Midiscribe`]({{ '/plugins/midiscribe/' | relative_url }}): records MIDI into a rolling window and exports a Type 0 SMF at 480 PPQ.
+- [`Flues Synth Driver`]({{ '/plugins/flues-synth-driver/' | relative_url }}): converts plugin parameters to CCs for the Flues synth with 31
   programs; only changed parameters are sent.
-- `Drift`: four lanes, each an LFO, sample-and-hold, bounded random walk, deterministic
+- [`Drift`]({{ '/plugins/drift/' | relative_url }}): four lanes, each an LFO, sample-and-hold, bounded random walk, deterministic
   chaos source or audio envelope follower, emitting CC (default 1-4).
-- `Mixgen`: eight repeatable gain lanes (random, low-discrepancy or Euclidean) sending
+- [`Mixgen`]({{ '/plugins/mixgen/' | relative_url }}): eight repeatable gain lanes (random, low-discrepancy or Euclidean) sending
   CC 20-27 to T-Mix, plus macros for Loopdelay and Lightverb.
-- `Oracle`: bounded analysis of level, onset, brightness, density and pitch class,
+- [`Oracle`]({{ '/plugins/oracle/' | relative_url }}): bounded analysis of level, onset, brightness, density and pitch class,
   mapped to rate-limited CC and note responses with a refractory interval.
-- `Ghost`: audio-triggered ghost notes quantised to the transport 16th grid; onsets
+- [`Ghost`]({{ '/plugins/ghost/' | relative_url }}): audio-triggered ghost notes quantised to the transport 16th grid; onsets
   accent, quieter fills land on off-16th slots by Density and Drag.
 
 ## Instruments
 
-- `Basilico`: a monophonic bass synth with glide, accent, body, drive,
+- [`Basilico`]({{ '/plugins/basilico/' | relative_url }}): a monophonic bass synth with glide, accent, body, drive,
   tempo-aware wobble modulation for amplitude/filter/phase movement, and acid
   squelch across upright, electric, dub, acid, and industrial tones.
-- `DrumKit`: a triggered drum synthesizer with a fixed MIDI map, voice
+- [`DrumKit`]({{ '/plugins/drumkit/' | relative_url }}): a triggered drum synthesizer with a fixed MIDI map, voice
   controls, and mixer-style mute strips.
-- `Floozy`: an 8-voice hybrid synth combining distortion, physical-model-style
+- [`Floozy`]({{ '/plugins/floozy/' | relative_url }}): an 8-voice hybrid synth combining distortion, physical-model-style
   excitation, feedback, filtering, modulation, and reverb.
-- `Gremlin`: a chaotic glitch synth with sound modes, scenes, fader macros,
+- [`Gremlin`]({{ '/plugins/gremlin/' | relative_url }}): a chaotic glitch synth with sound modes, scenes, fader macros,
   performance actions, hold pads, and MIDI LED feedback.
-- `Magneto`: a physically informed four-stroke engine. A phasor at `RPM/120`
+- [`Magneto`]({{ '/plugins/magneto/' | relative_url }}): a physically informed four-stroke engine. A phasor at `RPM/120`
   Hz drives intake-valve, exhaust-valve, piston and ignition functions; each
   cylinder is a digital waveguide whose feedback follows its valves and whose
   length follows its piston; cylinders feed intake runners and extractors, and
   the extractors feed a straight pipe, a four-element muffler and a tailpipe.
   Intake, block vibration and tailpipe are mixed for a listening position.
-- `Canticle`: a 12-voice tonal synth for readable keys, reed, pad, pluck, and
+- [`Canticle`]({{ '/plugins/canticle/' | relative_url }}): a 12-voice tonal synth for readable keys, reed, pad, pluck, and
   glass parts driven by melody, counterpoint, and harmony generators.
-- `Pratt`: Pratt polynomials `f_1 = 1`, `f_2 = x`, `f_p = 1 + f_{p-1}` (odd prime p),
+- [`Pratt`]({{ '/plugins/pratt/' | relative_url }}): Pratt polynomials `f_1 = 1`, `f_2 = x`, `f_p = 1 + f_{p-1}` (odd prime p),
   `f_n = prod f_p^v`, so `f_n(2) = n` and `f_mn = f_m f_n`. The filter
   `H_n(s) = n / f_n(2 + s/w0)` is all-pole, unity at DC and strictly stable (every
   pole has `Re(s/w0) < -0.997` for n up to 8192; degree at most 13). Cascading two
@@ -199,32 +199,32 @@ current Downspout plugins.
 
 Plugins driven by, or giving LED feedback to, a Launchpad grid.
 
-- `Lifeform`: Conway's Game of Life drives the MIDI output, advancing the grid
+- [`Lifeform`]({{ '/plugins/lifeform/' | relative_url }}): Conway's Game of Life drives the MIDI output, advancing the grid
   one beat at a time and turning active cells into musical events.
-- `Luma`: an 8x8 Launchpad grid drives a small set of musical agents where
+- [`Luma`]({{ '/plugins/luma/' | relative_url }}): an 8x8 Launchpad grid drives a small set of musical agents where
   cells can act as bass, chord, melody, or drum sources.
-- `Plank`: eight strings, one per Launchpad grid column. Each column's eight
+- [`Plank`]({{ '/plugins/plank/' | relative_url }}): eight strings, one per Launchpad grid column. Each column's eight
   rows are one octave of the current scale. Two 32-bit phase oscillators are
   summed as a polyBLEP saw pair with the second inverted; a morph axis
   crossfades that into a band-limited wavetable pair read at a quarter-cycle
   offset, and the result feeds a two-pole resonant filter whose coefficient is
   modulated by a second envelope.
-- `Moka`: modal "hit object" synth; eight damped modes per voice from six instrument
+- [`Moka`]({{ '/plugins/moka/' | relative_url }}): modal "hit object" synth; eight damped modes per voice from six instrument
   tables, with the onset ramped over the mallet contact time.
-- `Syrinx`: Mindlin-Laje syrinx ODE solved per voice at audio rate (optional
+- [`Syrinx`]({{ '/plugins/syrinx/' | relative_url }}): Mindlin-Laje syrinx ODE solved per voice at audio rate (optional
   oversampling), a pitch-tracking vocal-tract band-pass, formant bank, respiration and
   roughness modifiers.
-- `Bubbles`: subtractive noise layers plus physical models (up to 36 bubble voices, 16
+- [`Bubbles`]({{ '/plugins/bubbles/' | relative_url }}): subtractive noise layers plus physical models (up to 36 bubble voices, 16
   drip voices, modal body resonances) in seven water modes.
-- `Campione`: multi-zone sampler with pitch-shifting to target, per-zone ADSR and
+- [`Campione`]({{ '/plugins/campione/' | relative_url }}): multi-zone sampler with pitch-shifting to target, per-zone ADSR and
   biquad, crossfaded loops, REX2 slices and wavetable import.
-- `Mosaic`: four-slot WAV sampler with seeded slice selection, zero-crossing snapping,
+- [`Mosaic`]({{ '/plugins/mosaic/' | relative_url }}): four-slot WAV sampler with seeded slice selection, zero-crossing snapping,
   reverse chance and autonomous triggering.
-- `Trajectory`: the oscillator is a point bouncing inside a regular polygon (3-12
+- [`Trajectory`]({{ '/plugins/trajectory/' | relative_url }}): the oscillator is a point bouncing inside a regular polygon (3-12
   sides); the waveform is its x and y position, mixed.
-- `Fathom`: four-voice drone: a generator (Analog, Shaper, Sines, Table, Cluster), a
+- [`Fathom`]({{ '/plugins/fathom/' | relative_url }}): four-voice drone: a generator (Analog, Shaper, Sines, Table, Cluster), a
   per-voice notch, then a delay network with a frequency shifter in its feedback loop.
-- `PaunchLad`: a dub-style performance effect built around delay throws,
+- [`PaunchLad`]({{ '/plugins/paunchlad/' | relative_url }}): a dub-style performance effect built around delay throws,
   sirens, spring splashes, dropouts, and rhythmic chops.
 
 ## Appendix: Ground Algorithm Detail
