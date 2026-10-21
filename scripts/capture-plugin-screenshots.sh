@@ -63,6 +63,7 @@ plugins=(
   "retune:retune"
   "sprout:sprout"
   "markov:markov"
+  "grist:grist"
   "tuney-vst:tuney_vst"
   "harmonic-atlas:harmonic_atlas"
   "conductor:conductor"

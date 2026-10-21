@@ -163,6 +163,16 @@ send-style texture. Drift lanes default to CC 1-4 (Position, Size, Density, Dry/
 Conductor drives Density, Dry/Wet and scatter on its channel and fires a grain on Reset.
 Density 48-52% is silent, and Feedback plus Reverb can build up, so trim output.
 
+### Grist (`grist.vst3`)
+
+Granular grain delay. Stereo audio in; one grain starts every Window / Density and plays a
+windowed slice of the recent input, scattered in time (Blur), direction (Reverse), pitch
+(Pitch, plus Range on a Scale), length (Variance) and stereo position (Spread). Window and the
+feedback Delay can follow the host tempo. Feedback runs the grains back through a delay and an
+optional filter for evolving clouds. It adds latency (shown on the panel, not reported to
+the host). Follow it with Resonance Garden for tuned resonances, or use it as a send texture;
+reach for Beards instead when you want a freeze, reverb or Drift/Conductor control.
+
 ### Trajectory (`trajectory.vst3`)
 
 Eight-voice polygon-bounce synthesiser: a point bounces inside a regular 3-12 sided

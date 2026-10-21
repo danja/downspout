@@ -73,6 +73,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | flues-synth-driver | flues_synth_driver.vst3 | MIDI controller | 0/2 | yes/yes | no |
 | gater | gater.vst3 | audio router | 2/4 | yes/no | declared |
 | ghost | ghost.vst3 | audio-to-MIDI | 2/2 | yes/yes | yes |
+| grist | grist.vst3 | audio effect (granular grain delay) | 2/2 | no/no | yes |
 | gremlin | gremlin.vst3 | instrument (glitch) | 0/2 | yes/yes | no |
 | gremlin-driver | gremlin_driver.vst3 | MIDI controller | 0/2 | yes/yes | yes |
 | ground | ground.vst3 | MIDI generator | 0/2 | yes/yes | yes |
@@ -614,6 +615,22 @@ CC 1 Position, 2 Size, 3 Density, 4 Dry/Wet (Drift defaults), 5 Shape, 6 Pitch,
 **Conductor**. Settings are ordinary parameters; the buffer is not saved. Feedback and
 reverb can build up; trim output. The Beads delay mode and CV/gate inputs are not ported.
 
+### grist
+Granular grain-delay effect (no MIDI): stereo in/out, tempo from the host. One grain starts every
+**Window** / **Density** (1-1000 ms, or a 1/64 to 8/1 division with triplets and dotted values; 1-4
+grains per window) and plays a windowed slice of the recent input, so grains scroll even at Pitch 0.
+Per grain, drawn from a seeded generator (reproducible, **Seed**): **Blur** is a random start 0-2 windows
+back, **Reverse** the chance it plays backwards, **Spread** its stereo position, **Variance** shortens it
+to as little as 25 % of the window, and **Range** moves its pitch up, down or both (up to 24 semitones)
+around **Pitch** (+-24), optionally only onto a **Scale** (Free, Semitones, Octaves, Fifths + octaves, Major,
+Minor, Pentatonic) counted from the input's own pitch. **Shape** blends a Hann bell with a percussive
+curve; both keep the same average level. **Feedback** (up to 0.95, soft-limited) returns the grain output
+through its own **Delay** (free or synced) and an optional Lowpass/Highpass/Bandpass filter. Average
+latency is Blur x Window / 2 plus (ratio - 1) x Window when pitched up, shown on the panel; the plugin
+does not report it to the host. Output parameters: status_latency, status_grains, status_window, status_delay.
+Pairs with resonance-garden (grains in, tuned resonators after). Unlike beards it has no reverb, freeze or
+MIDI control; its window and feedback delay lock to the tempo and its cloud follows a scale.
+
 ### rift
 Transport-locked live/sample buffer disruptor: WAV loading, chop and stutter repeats,
 reverse, skip, smear and pitch-slip actions, for fills, transitions and glitches. Sample
@@ -731,7 +748,7 @@ a note-on), so it does not follow other channels.
   (birds), pratt (GM voices), floozy, gremlin (glitch), campione / mosaic (samples),
   tuney-vst. Bend-aware: see the per-channel list at the top.
 - **Need an unpitched sound:** drumkit, magneto, bubbles.
-- **Need audio processing:** distortion (damiano, skream, chipper), granular (beards), time/pitch (keyframe,
+- **Need audio processing:** distortion (damiano, skream, chipper), granular (beards, grist), time/pitch (keyframe,
   primefold, quefrency), space (lightverb, loopdelay, orbit, treatment, ambo),
   rhythm/gating (e-mix, p-mix, orchid, rift), tone/dynamics (bassops, spliff,
   helterskelter, guardian), spectral (voxmod, sinevox, resonance-garden).

@@ -106,6 +106,14 @@ current Downspout plugins.
   a 4 s buffer and replayed by up to 32 overlapping grains (position, size, shape,
   pitch, density, scatter), with feedback, a Griesinger reverb, freeze, and optional
   host-grid grain triggering.
+- [`Grist`]({{ '/plugins/grist/' | relative_url }}): granular grain delay. Input history in a 7 s ring buffer; one grain per
+  Window / Density, each a four-point Hermite read with a Hann/percussive window of equal mean level.
+  A grain starts Blur x Window x u samples back, plus (ratio - 1) x length when pitched up so it never
+  catches the write position, and reads forwards or backwards (Reverse). Its pitch is Pitch plus a draw
+  within Range, restricted to Scale (the total shift's pitch class counted from the input), its
+  length is shortened by Variance, and its pan comes from Spread; all draws use a seeded xorshift
+  generator. Feedback passes the grain output through a delay, an optional state-variable filter and a
+  tanh limiter back into the history.
 - [`Orchid`]({{ '/plugins/orchid/' | relative_url }}): voiced freeze. Autocorrelation capture and grid-synchronised loop holds turn
   incoming material into sustained rhythmic freezes.
 - [`Keyframe`]({{ '/plugins/keyframe/' | relative_url }}): extrema-sampling time stretch (Nielsen, DAFx26). Input becomes

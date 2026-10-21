@@ -90,6 +90,7 @@ Current output filenames:
 - `trajectory.png`
 - `fathom.png`
 - `qune.png`
+- `grist.png`
 - `primefold.png`
 - `quefrency.png`
 - `keyframe.png`

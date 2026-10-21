@@ -81,6 +81,7 @@ option(DOWNSPOUT_BUILD_PRATT "Configure the Pratt number-theoretic synth and fil
 option(DOWNSPOUT_BUILD_RETUNE "Configure the Retune Scala microtuning MIDI effect target" ON)
 option(DOWNSPOUT_BUILD_SPROUT "Configure the Sprout L-system MIDI generator target" ON)
 option(DOWNSPOUT_BUILD_MARKOV "Configure the Markov melody generator target" ON)
+option(DOWNSPOUT_BUILD_GRIST "Configure the Grist granular grain-delay effect target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 option(DOWNSPOUT_BUILD_SCREENSHOT_APPS "Build DPF standalone apps for documentation screenshots" OFF)
 
@@ -468,4 +469,8 @@ endif()
 
 if(DOWNSPOUT_BUILD_QUNE)
     add_subdirectory(plugins/qune)
+endif()
+
+if(DOWNSPOUT_BUILD_GRIST)
+    add_subdirectory(plugins/grist)
 endif()

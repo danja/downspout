@@ -1,0 +1,49 @@
+add_library(downspout_grist_core STATIC src/grist_core.cpp)
+target_link_libraries(downspout_grist_core PUBLIC downspout-project-options)
+target_include_directories(downspout_grist_core PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${PROJECT_SOURCE_DIR}/plugins/generative-common/include"
+)
+
+if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
+    dpf_add_plugin(grist
+        TARGETS ${DOWNSPOUT_DPF_PLUGIN_TARGETS}
+        ${DOWNSPOUT_DPF_PLUGIN_ARGS}
+        FILES_DSP
+            src/dpf/GristPlugin.cpp
+        FILES_UI
+            src/dpf/GristUI.cpp
+    )
+    target_link_libraries(grist-dsp PUBLIC downspout_grist_core)
+    target_link_libraries(grist-ui PUBLIC downspout_grist_core)
+    target_include_directories(grist PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${PROJECT_SOURCE_DIR}/plugins/generative-common/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
+        "${PROJECT_SOURCE_DIR}/include"
+    )
+    target_include_directories(grist-ui PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${PROJECT_SOURCE_DIR}/plugins/generative-common/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
+    )
+
+    install(DIRECTORY "${PROJECT_BINARY_DIR}/bin/grist.vst3"
+        DESTINATION "."
+        OPTIONAL
+    )
+endif()
+
+if(BUILD_TESTING)
+    add_executable(downspout_grist_core_tests tests/grist_core_tests.cpp)
+    target_link_libraries(downspout_grist_core_tests PRIVATE downspout_grist_core)
+    # Release adds -DNDEBUG, which compiles every assert() out and lets the
+    # suite pass while testing nothing.
+    if(MSVC)
+        target_compile_options(downspout_grist_core_tests PRIVATE /UNDEBUG)
+    else()
+        target_compile_options(downspout_grist_core_tests PRIVATE -UNDEBUG)
+    endif()
+    target_include_directories(downspout_grist_core_tests PRIVATE "${PROJECT_SOURCE_DIR}/include")
+    add_test(NAME downspout_grist_core_tests COMMAND downspout_grist_core_tests)
+endif()

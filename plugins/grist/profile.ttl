@@ -1,0 +1,63 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:grist a trn:PluginProfile ;
+    rdfs:label "Grist" ;
+    rdfs:comment "Granular grain-delay effect. The input is recorded into a ring buffer and replayed by windowed grains, one per Window / Density, each with a random start (Blur), direction (Reverse), pan (Spread), length (Variance) and pitch (Pitch plus Range, optionally on a Scale). Window and the feedback Delay can lock to the host tempo. A filtered, soft-limited feedback loop returns the grains into the buffer." ;
+    trn:bundleName "grist.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/grist/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio ;
+    trn:recommendedBefore dsp:resonance-garden ;
+    trn:caution "Adds latency of about Blur x Window / 2 plus (ratio - 1) x Window when pitched up, shown on the panel and not reported to the host. The host tempo is used only for the tempo-synced Window and Delay (120 bpm when absent). Feedback is soft-limited but can build; trim output." ;
+    trn:parameter [ rdfs:label "Dry/wet" ; trn:symbol "mix" ; trn:range "0-100 %" ;
+                    rdfs:comment "0 = input only, 100 % = grains only." ] ;
+    trn:parameter [ rdfs:label "Window" ; trn:symbol "window" ; trn:range "1-1000 ms" ;
+                    rdfs:comment "Length of the window one grain is spread over. Used when Window sync is off." ] ;
+    trn:parameter [ rdfs:label "Window sync" ; trn:symbol "window_sync" ; trn:range "0-1" ;
+                    rdfs:comment "1 sets the window from the host tempo and Window division." ] ;
+    trn:parameter [ rdfs:label "Window division" ; trn:symbol "window_division" ; trn:range "1/64 ... 8/1 (19 values)" ;
+                    rdfs:comment "Triplet, straight and dotted values; the result is clamped to 1-1000 ms." ] ;
+    trn:parameter [ rdfs:label "Pitch" ; trn:symbol "pitch" ; trn:range "-24 to +24 st" ;
+                    rdfs:comment "Pitch shift of the grains." ] ;
+    trn:parameter [ rdfs:label "Density" ; trn:symbol "density" ; trn:range "1-4" ;
+                    rdfs:comment "Grains per window. 2 with the Hann shape overlaps to a steady level." ] ;
+    trn:parameter [ rdfs:label "Blur" ; trn:symbol "blur" ; trn:range "0-2 windows" ;
+                    rdfs:comment "Each grain starts a random 0 to Blur windows back." ] ;
+    trn:parameter [ rdfs:label "Reverse" ; trn:symbol "reverse" ; trn:range "0-100 %" ;
+                    rdfs:comment "Chance that a grain plays backwards." ] ;
+    trn:parameter [ rdfs:label "Spread" ; trn:symbol "spread" ; trn:range "0-100 %" ;
+                    rdfs:comment "Random stereo position per grain." ] ;
+    trn:parameter [ rdfs:label "Shape" ; trn:symbol "shape" ; trn:range "0-100 %" ;
+                    rdfs:comment "0 = Hann bell, 100 % = percussive; the average level is the same." ] ;
+    trn:parameter [ rdfs:label "Range" ; trn:symbol "range" ; trn:range "0-24 st" ;
+                    rdfs:comment "Random pitch: each grain moves up to this far around Pitch. 0 keeps every grain on Pitch." ] ;
+    trn:parameter [ rdfs:label "Direction" ; trn:symbol "direction" ; trn:range "Up, Down, Up & down" ;
+                    rdfs:comment "Which side of Pitch the random pitch goes." ] ;
+    trn:parameter [ rdfs:label "Scale" ; trn:symbol "scale" ; trn:range "Free, Semitones, Octaves, Fifths + octaves, Major, Minor, Pentatonic" ;
+                    rdfs:comment "Pitches a grain may take, counted from the input's pitch (the grain's total shift must fall on the scale). Free: any value." ] ;
+    trn:parameter [ rdfs:label "Variance" ; trn:symbol "variance" ; trn:range "0-100 %" ;
+                    rdfs:comment "Each grain lasts 100 % down to (100 - 75 x Variance) % of the window." ] ;
+    trn:parameter [ rdfs:label "Feedback" ; trn:symbol "feedback" ; trn:range "0-0.95" ;
+                    rdfs:comment "Grain output returned into the buffer; soft-limited. 0 = no loop." ] ;
+    trn:parameter [ rdfs:label "Feedback delay" ; trn:symbol "delay" ; trn:range "1-1000 ms" ;
+                    rdfs:comment "Delay of the feedback loop when Delay sync is off." ] ;
+    trn:parameter [ rdfs:label "Delay sync" ; trn:symbol "delay_sync" ; trn:range "0-1" ;
+                    rdfs:comment "1 sets the loop delay from the host tempo and Delay division." ] ;
+    trn:parameter [ rdfs:label "Delay division" ; trn:symbol "delay_division" ; trn:range "1/64 ... 8/1 (19 values)" ;
+                    rdfs:comment "As Window division." ] ;
+    trn:parameter [ rdfs:label "Feedback filter" ; trn:symbol "filter_on" ; trn:range "0-1" ;
+                    rdfs:comment "Puts a filter in the loop. Only acts while Feedback is above 0." ] ;
+    trn:parameter [ rdfs:label "Filter mode" ; trn:symbol "filter_mode" ; trn:range "Lowpass, Highpass, Bandpass" ] ;
+    trn:parameter [ rdfs:label "Filter freq" ; trn:symbol "filter_freq" ; trn:range "0-1 (20 Hz to 15 kHz, exponential)" ] ;
+    trn:parameter [ rdfs:label "Filter width" ; trn:symbol "filter_width" ; trn:range "0-100 %" ;
+                    rdfs:comment "Wider is lower Q." ] ;
+    trn:parameter [ rdfs:label "Seed" ; trn:symbol "seed" ; trn:range "1-65535" ;
+                    rdfs:comment "Seeds the per-grain random draws; the same seed repeats a pass." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

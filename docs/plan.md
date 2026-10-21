@@ -253,6 +253,14 @@ Progress as of 2026-05-27:
   canonical 24-scale ordering. No plugin state: every setting is a parameter. See
   `plugins/qune/docs/design.md`. Host validation in REAPER and listening tests on real
   voices remain.
+- `grist` is a granular grain-delay effect in the Magneto look: a seven-second stereo history
+  read by windowed grains (one per Window / Density, Hermite reads), each with a seeded random
+  start, direction, pan, length and pitch (Pitch plus Range, optionally held to a scale), and a
+  filtered, soft-limited feedback loop. The Window and loop Delay follow the host tempo. Original
+  code. No plugin state: every
+  setting is a parameter. See `plugins/grist/docs/design.md`. Host validation in REAPER and
+  listening tests remain, and so does a decision on whether Resonance Garden needs a string
+  mode to pair with it.
 - `magneto` now exists as an original physically informed combustion engine
   sound generator ported from Baldan et al., SIVE'15: four-stroke cycle
   functions, per-cylinder digital waveguides with valve-modulated feedback and
@@ -321,7 +329,7 @@ Current main gap:
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
   `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`,
-  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, and `qune.vst3` bundles.
+  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, and `grist.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of
