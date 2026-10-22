@@ -261,6 +261,15 @@ Progress as of 2026-05-27:
   setting is a parameter. See `plugins/grist/docs/design.md`. Host validation in REAPER and
   listening tests remain, and so does a decision on whether Resonance Garden needs a string
   mode to pair with it.
+- `sam` is a speech instrument in the Magneto look, built around the vendored SAM (Software
+  Automatic Mouth) C code from `~/github/SAM`. Keys mode speaks a word per MIDI note, sung at the
+  key's pitch (nearest whole SAM pitch tick, then resampled into tune); Transport mode lays the
+  words out one per step from a start bar against the host's BBT, with locate and loop handling and a
+  **Speak** audition. SAM renders words on the audio thread (30-50 us each); the text is the one
+  state. SAM was hardened against the out-of-bounds accesses, divide by zero and infinite loop
+  found by fuzzing (`plugins/sam/third_party/sam/PATCHES.md`). **SAM has no licence**: whether
+  the bundle may ship in public releases is an open decision. Host validation in REAPER and
+  listening tests remain. See `plugins/sam/docs/design.md`.
 - `magneto` now exists as an original physically informed combustion engine
   sound generator ported from Baldan et al., SIVE'15: four-stroke cycle
   functions, per-cylinder digital waveguides with valve-modulated feedback and
@@ -329,7 +338,7 @@ Current main gap:
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
   `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`,
-  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, and `grist.vst3` bundles.
+  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `grist.vst3`, and `sam.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of

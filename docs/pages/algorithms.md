@@ -114,6 +114,11 @@ current Downspout plugins.
   length is shortened by Variance, and its pan comes from Spread; all draws use a seeded xorshift
   generator. Feedback passes the grain output through a delay, an optional state-variable filter and a
   tanh limiter back into the history.
+- [`Sam`]({{ '/plugins/sam/' | relative_url }}): speech synthesis by SAM (Software Automatic Mouth, 1982). Text goes through
+  a rule-based reciter to phonemes, which become 10 ms frames of three formant frequencies and amplitudes and a glottal
+  period; each glottal pulse restarts two sine formants and a rectangular third, summed into an 8-bit, 22.05 kHz buffer.
+  In singing mode the pitch byte is the glottal period, so f0 = 6805.56 / byte; a key is rendered at the nearest whole
+  period and resampled into tune. Words are scheduled against the host BBT at the first frame at or after each step.
 - [`Orchid`]({{ '/plugins/orchid/' | relative_url }}): voiced freeze. Autocorrelation capture and grid-synchronised loop holds turn
   incoming material into sustained rhythmic freezes.
 - [`Keyframe`]({{ '/plugins/keyframe/' | relative_url }}): extrema-sampling time stretch (Nielsen, DAFx26). Input becomes

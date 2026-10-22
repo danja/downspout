@@ -252,6 +252,7 @@ The release script currently expects these bundles:
 - `fathom.vst3`
 - `qune.vst3`
 - `grist.vst3`
+- `sam.vst3`
 - `primefold.vst3`
 - `quefrency.vst3`
 - `keyframe.vst3`

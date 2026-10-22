@@ -43,6 +43,27 @@ helterskelter, skream, spliff) now have `WANT_FULL_STATE` and a `getState()`.
 - [ ] Re-run the `-Wall -Wextra` sweep after any state change: the wrapper callbacks are
       what the core tests never touch.
 
+## Sam (added 2026-10-22)
+
+- [ ] **Decide whether `sam.vst3` may be released.** SAM has no licence (abandonware, copyright
+      SoftVoice, Inc.; `plugins/sam/third_party/sam/SAM-LICENSE.md`). It is vendored, so a public
+      tag ships it, and `scripts/package-release.sh` now requires the bundle. To hold it back,
+      build with `-DDOWNSPOUT_BUILD_SAM=OFF` and drop `sam.vst3` from the lists
+      `scripts/check-bundle-lists.sh` checks.
+- [ ] **Validate in REAPER**: both modes, with a real transport (loop region, relocate, tempo
+      change) and the saved text surviving save and reopen. So far the DPF wrapper has been driven
+      only through the JACK standalone with a throwaway client (MIDI notes, and BBT as timebase
+      master): Keys speaks the right words at the right times, and Transport output matched the
+      core's offline render at a constant lag (correlation 0.989-1.000, 0.3 ms jitter, which is
+      JACK's tick resolution), with the panel highlighting the spoken word. No relocation, loop
+      wrap or state save/reload has been run through the wrapper.
+- [ ] **Listen**: tuning near the top of the keyboard (formants move with the retune), SAM's
+      aliasing against the **Tone** default, and whether Keys mode wants a sustained or looped word.
+- [ ] Not built, see `plugins/sam/docs/design.md`: a phrase mode (one note speaks the whole text),
+      formant correction after the retune, CC mapping, Speak in Keys mode.
+- [ ] `scripts/package-built-bundles.sh` (the advisory macOS/Windows list) was already missing
+      beards, grist and qune; Sam was added, those three were not. `scripts/check-bundle-lists.sh` reports it.
+
 ## `-Wall -Wextra` sweep: what is left
 
 Standalone `g++ -std=c++20 -Wall -Wextra -fsyntax-only` over `plugins/*/src/*.cpp` (add

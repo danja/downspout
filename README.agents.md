@@ -86,6 +86,7 @@ Downspout is a suite of VST3 plugins for autonomous music generation and process
 | [Markov](plugins/markov/) | MIDI generator: Markov-chain melody through a visible, editable, learnable transition matrix | [profile.ttl](plugins/markov/profile.ttl) |
 | [Sprout](plugins/sprout/) | MIDI generator: L-system grammars rewritten per generation and played as a melody, optionally growing over bars | [profile.ttl](plugins/sprout/profile.ttl) |
 | [Grist](plugins/grist/) | Audio effect: granular grain delay with tempo-syncable windows, per-grain random start, reverse, pan and scale-quantised pitch, plus a filtered feedback loop | [profile.ttl](plugins/grist/profile.ttl) |
+| [Sam](plugins/sam/) | Instrument: SAM speech synthesiser, a word per MIDI note at the key's pitch, or the text read aloud one word per step in time with the transport | [profile.ttl](plugins/sam/profile.ttl) |
 | [Plank](plugins/plank/) | Eight-string synthesizer derived from Plinky, one voice per Launchpad column | [profile.ttl](plugins/plank/profile.ttl) |
 
 ## Routing conventions

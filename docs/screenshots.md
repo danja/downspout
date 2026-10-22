@@ -91,6 +91,7 @@ Current output filenames:
 - `fathom.png`
 - `qune.png`
 - `grist.png`
+- `sam.png`
 - `primefold.png`
 - `quefrency.png`
 - `keyframe.png`

@@ -173,6 +173,18 @@ optional filter for evolving clouds. It adds latency (shown on the panel, not re
 the host). Follow it with Resonance Garden for tuned resonances, or use it as a send texture;
 reach for Beards instead when you want a freeze, reverb or Drift/Conductor control.
 
+### Sam (`sam.vst3`)
+
+Speech synthesiser: Software Automatic Mouth, the 1982 Commodore 64 voice, played two ways. In
+**Keys** mode each MIDI note speaks the next word of the text, sung at the pitch of the key
+(**Key = word** instead speaks the word the key selects); in **Transport** mode the host timeline
+reads the text aloud, one word per step from a start bar, so it stays in time with the song through
+tempo changes, relocations and loops. Type the text into the panel (`_` is a rest) as English or as
+SAM phoneme codes. **Speed**, **Pitch**, **Mouth** and **Throat** are SAM's own voice controls, with
+its six manual voices as presets. Use it as a robot lead from a keyboard or sequencer, or as a spoken
+part that follows the arrangement. No audio input. SAM's source has no licence; see
+`plugins/sam/third_party/sam/SAM-LICENSE.md`.
+
 ### Trajectory (`trajectory.vst3`)
 
 Eight-voice polygon-bounce synthesiser: a point bounces inside a regular 3-12 sided

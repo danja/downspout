@@ -1,0 +1,61 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:sam a trn:PluginProfile ;
+    rdfs:label "Sam" ;
+    rdfs:comment "Software Automatic Mouth, the 1982 formant speech synthesiser, as an instrument: typed text is spoken either one word per MIDI note, sung at the pitch of the key, or one word per step from a start bar, locked to the host transport." ;
+    trn:bundleName "sam.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/sam/> ;
+    trn:role trn:InstrumentPlugin ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Audio ;
+    trn:requires trn:HostTransport ;
+    trn:caution "Transport mode is silent while the host is stopped (use Speak to audition) and when the host gives no bar and beat position. Keys mode ignores the transport. SAM is vendored with no licence (abandonware); see plugins/sam/third_party/sam/SAM-LICENSE.md." ;
+    trn:parameter [ rdfs:label "Mode" ; trn:symbol "mode" ; trn:range "Keys, Transport" ;
+                    rdfs:comment "Keys: each MIDI note speaks a word. Transport: words are laid out one per step from the start bar and spoken as the playhead reaches them. Switching mode releases what the other mode started." ] ;
+    trn:parameter [ rdfs:label "Speed" ; trn:symbol "speed" ; trn:range "20-200" ;
+                    rdfs:comment "SAM speed; lower is faster. Default 72." ] ;
+    trn:parameter [ rdfs:label "Pitch" ; trn:symbol "pitch" ; trn:range "16-255" ;
+                    rdfs:comment "SAM pitch byte, used in Transport mode only (Keys mode takes pitch from the key). Lower is higher in pitch: with Monotone on, f0 is 6805.56 / Pitch Hz. Default 64, about 106 Hz." ] ;
+    trn:parameter [ rdfs:label "Mouth" ; trn:symbol "mouth" ; trn:range "0-255" ;
+                    rdfs:comment "SAM mouth formant scaling, which colours vowels. Default 128." ] ;
+    trn:parameter [ rdfs:label "Throat" ; trn:symbol "throat" ; trn:range "0-255" ;
+                    rdfs:comment "SAM throat formant scaling, which sets the voice's size. Default 128." ] ;
+    trn:parameter [ rdfs:label "Monotone" ; trn:symbol "monotone" ; trn:range "Off, On" ;
+                    rdfs:comment "Transport mode: on sings each word at one pitch (SAM's -sing); off lets SAM shape the pitch from stress and punctuation. Keys mode always sings." ] ;
+    trn:parameter [ rdfs:label "Phonetic" ; trn:symbol "phonetic" ; trn:range "Off, On" ;
+                    rdfs:comment "Off reads English with SAM's spelling rules. On reads SAM phoneme codes, e.g. /HEH3LOW2 WER4LD: digits 1-8 are stress, / starts a breath." ] ;
+    trn:parameter [ rdfs:label "MIDI In" ; trn:symbol "midi_ch" ; trn:range "Off, 1-16, All" ;
+                    rdfs:comment "Keys mode: channel whose notes, pitch bend and CC 120 and 123 are heard. Default All." ] ;
+    trn:parameter [ rdfs:label "Advance" ; trn:symbol "advance" ; trn:range "Next word, Key = word" ;
+                    rdfs:comment "Keys mode: Next word speaks the words in turn and starts over when the host starts playing. Key = word speaks word (note - 48) modulo the word count, so C3 is the first word." ] ;
+    trn:parameter [ rdfs:label "Transpose" ; trn:symbol "transpose" ; trn:range "-24 to +24 st" ;
+                    rdfs:comment "Keys mode: shifts the pitch a note is sung at; it does not change which word Key = word picks." ] ;
+    trn:parameter [ rdfs:label "Release" ; trn:symbol "release" ; trn:range "5-1000 ms" ;
+                    rdfs:comment "Keys mode: fade when a key is released. A word that ends first just ends." ] ;
+    trn:parameter [ rdfs:label "Step" ; trn:symbol "step" ; trn:range "1/16, 1/8, 1/4, 1/2, 1/1, 1 bar, 2 bars, 4 bars" ;
+                    rdfs:comment "Transport mode: length of one word slot. Note values are counted in host beats; bars follow the time signature. Default 1/4." ] ;
+    trn:parameter [ rdfs:label "Start Bar" ; trn:symbol "start_bar" ; trn:range "1-256" ;
+                    rdfs:comment "Transport mode: bar where the first word starts. Earlier bars are silent." ] ;
+    trn:parameter [ rdfs:label "Loop" ; trn:symbol "loop" ; trn:range "Off, On" ;
+                    rdfs:comment "Transport mode: repeat the text after the last word, or stop after one pass. Default On." ] ;
+    trn:parameter [ rdfs:label "Speak" ; trn:symbol "speak" ; trn:range "trigger" ;
+                    rdfs:comment "Transport mode: speaks the text once from the start bar without the host transport, at the host tempo (120 bpm if none). Ignored while the host is playing." ] ;
+    trn:parameter [ rdfs:label "Tone" ; trn:symbol "tone" ; trn:range "1000-12000 Hz" ;
+                    rdfs:comment "Two-pole low-pass on the output that softens SAM's 8-bit, 22.05 kHz aliasing. The top of the range is open (no filter). Default 8000." ] ;
+    trn:parameter [ rdfs:label "Level" ; trn:symbol "level" ; trn:range "0-1" ;
+                    rdfs:comment "Output gain; the sum of the voices is limited to full scale. Default 0.70." ] ;
+    trn:parameter [ rdfs:label "Current Word" ; trn:symbol "out_word" ; trn:range "0-4096" ;
+                    rdfs:comment "Read-only: 1-based slot of the word being spoken, 0 when idle. Drives the highlight in the panel." ] ;
+    trn:state [
+        trn:stateKey "text" ;
+        rdfs:label "Text" ;
+        trn:default "Hello world. This is Sam, speaking in time." ;
+        rdfs:comment "The text to speak, saved with the project: up to 2000 printable ASCII characters. Words are separated by whitespace (at most 512); a lone _ is a rest."
+    ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

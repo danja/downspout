@@ -107,6 +107,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | resonance-garden | resonance_garden.vst3 | audio effect (resonators) | 2/2 | yes/no | no |
 | retune | retune.vst3 | MIDI processor (tuning) | 0/2 | yes/yes | no |
 | rift | rift.vst3 | audio effect (buffer) | 2/2 | yes/no | yes |
+| sam | sam.vst3 | instrument (speech synthesiser) | 0/2 | yes/no | yes |
 | sidecar | sidecar.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | skream | skream.vst3 | audio effect (filter) | 2/2 | yes/no | no |
 | spliff | spliff.vst3 | audio effect (transients) | 2/2 | yes/no | no |
@@ -630,6 +631,23 @@ latency is Blur x Window / 2 plus (ratio - 1) x Window when pitched up, shown on
 does not report it to the host. Output parameters: status_latency, status_grains, status_window, status_delay.
 Pairs with resonance-garden (grains in, tuned resonators after). Unlike beards it has no reverb, freeze or
 MIDI control; its window and feedback delay lock to the tempo and its cloud follows a scale.
+
+### sam
+Speech instrument: the 1982 SAM (Software Automatic Mouth) formant synthesiser, vendored from
+`~/github/SAM`. No audio in; stereo out (one mono voice). Text is a state (`text`, up to 2000 ASCII
+characters, 512 whitespace-separated words, a lone `_` is a rest) read as English (SAM's rules) or
+SAM phoneme codes (**Phonetic**). **Mode** Keys: each MIDI note on the **MIDI In** channel (default
+all) speaks one word, sung at the key's pitch (nearest whole SAM pitch tick, then resampled; within
+about 12 cents), velocity sets level, note-off fades over **Release**, pitch bend is +-2 semitones,
+CC 120 and 123 release all, eight voices; **Advance** Next word cycles through the text (restarting
+when the host starts playing) and Key = word speaks word (note - 48) modulo the count. **Mode**
+Transport: word *n* starts at step *n* (**Step** 1/16 to 4 bars, **Start Bar**, **Loop**) from the
+host BBT, to the frame, independent of block size; a locate or loop wrap speaks the word under the
+playhead from the matching point; silent while stopped or without BBT; **Speak** (trigger) plays one
+pass without the transport at the host tempo (120 if none). Voice: **Speed** 20-200 (lower is faster),
+**Pitch** 16-255 (Transport mode), **Mouth**, **Throat**, **Monotone**; **Tone** low-pass and **Level**.
+Output parameter `out_word` is the 1-based slot being spoken (0 idle). Words render on the audio
+thread (30-50 us); nothing is allocated. SAM has no licence; see `plugins/sam/third_party/sam/SAM-LICENSE.md`.
 
 ### rift
 Transport-locked live/sample buffer disruptor: WAV loading, chop and stutter repeats,

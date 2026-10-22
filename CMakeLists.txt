@@ -82,6 +82,7 @@ option(DOWNSPOUT_BUILD_RETUNE "Configure the Retune Scala microtuning MIDI effec
 option(DOWNSPOUT_BUILD_SPROUT "Configure the Sprout L-system MIDI generator target" ON)
 option(DOWNSPOUT_BUILD_MARKOV "Configure the Markov melody generator target" ON)
 option(DOWNSPOUT_BUILD_GRIST "Configure the Grist granular grain-delay effect target" ON)
+option(DOWNSPOUT_BUILD_SAM "Configure the Sam speech synthesiser (Software Automatic Mouth) target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 option(DOWNSPOUT_BUILD_SCREENSHOT_APPS "Build DPF standalone apps for documentation screenshots" OFF)
 
@@ -473,4 +474,8 @@ endif()
 
 if(DOWNSPOUT_BUILD_GRIST)
     add_subdirectory(plugins/grist)
+endif()
+
+if(DOWNSPOUT_BUILD_SAM)
+    add_subdirectory(plugins/sam)
 endif()

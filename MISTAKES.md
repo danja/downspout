@@ -41,3 +41,13 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 - **Root cause:** (1) The right output was `LP(x) - HP(x)`, which is only the identity the notes claimed for the left one. (2) The 129-tap Hann sinc LP at 200 Hz was never normalised and summed to about 0.5, so `HP = delta - LP` passed half of the bass and the right channel cancelled to nothing at DC. (3) A mono track feeds only main input 1, so the mono sum `(L+R)/2` was 6 dB down. The existing tests only checked silence and ducking, never the default frequency response, and the doc comment asserted a property nobody measured.
 - **Prevention:** Test the default signal path's gain per channel across the bass range, for stereo and for a one-sided (mono) feed. When a design note claims an identity ("LP + HP = delay"), assert it numerically for every output. Normalise windowed-sinc kernels to unity DC gain.
 
+
+## Sam: assumed a private JACK server, attached to the real one (2026-10-22)
+- **What happened:** To drive Sam's standalone I started `jackd -r -d dummy` and assumed it was the server the app would join. A `jack_lsp` showed the user's real devices (USB mic, built-in audio): a `jackdbus` session was already running, the dummy server had not taken over, and the standalone (and the earlier UI-driving and screenshot runs) had registered on the user's real graph. Nothing was audible, because nothing had sent MIDI yet.
+- **Root cause:** Never checked which server was live before sending audio. The capture script has the same blind spot: it starts a dummy server only if none responds, and otherwise uses whatever is there.
+- **Prevention:** Before a test sends audio or MIDI through JACK, run `jack_lsp` and look for real hardware ports; disconnect the app's outputs from everything but the test's own capture ports, and abort if anything else is attached (the throwaway client for Sam did this). Do not start a second `jackd` without checking.
+
+## Sam: word onsets depended on where the host cut its blocks (2026-10-22)
+- **What happened:** A word starting within a frame of the end of a block was placed on the wrong frame, so rendering the same song with block sizes 1 and 480 differed by one frame. The block-size test caught it before anything shipped.
+- **Root cause:** The onset frame was `round((slotStart - rel0) / beatsPerFrame)` clamped to the block, so a boundary at .6 of a frame landed one frame early in a block that ended there and on the right frame in one that did not.
+- **Prevention:** Start an event on the first frame at or after its time (`ceil`, with a tolerance for float noise) and count slots already started, so each fires once whatever the block size. Keep a block-size independence test for anything scheduled against the transport.
