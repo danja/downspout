@@ -53,7 +53,7 @@ Filters run in double precision, so a 20 Hz 48 dB high-pass is accurate at 192 k
 
 ### Status
 
-Core covered by tests (380 checks): the plotted response against the measured filter for every type at 48 and 96 kHz, band
+Core covered by tests (633 checks, including the analyser: band levels, falloff, Nyquist, block-size independence): the plotted response against the measured filter for every type at 48 and 96 kHz, band
 shapes, cut slopes, the routing modes, stacking bands, output gain, every control, impulse-response decay for random
 settings at 44.1 to 192 kHz, block-size independence, denormals, and the parameter table against the core. Not yet listened to
-or validated in a host. No spectrum analyser, no linear-phase mode. Drift CC 1-4 drive one band (CC band, default 4): Frequency, Gain, Q, and the Output.
+or validated in a host. No linear-phase mode. A Spectrum switch (Off / Pre / Post) draws a 64-band analyser behind the response curve; it is new and unlistened. Drift CC 1-4 drive one band (CC band, default 4): Frequency, Gain, Q, and the Output.

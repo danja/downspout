@@ -1,4 +1,4 @@
-add_library(downspout_octet_core STATIC src/octet_core.cpp)
+add_library(downspout_octet_core STATIC src/octet_core.cpp src/octet_spectrum.cpp)
 target_link_libraries(downspout_octet_core PUBLIC downspout-project-options)
 target_include_directories(downspout_octet_core PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"

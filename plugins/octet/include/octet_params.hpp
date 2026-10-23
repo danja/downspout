@@ -1,6 +1,7 @@
 #pragma once
 
 #include "octet_core.hpp"
+#include "octet_spectrum.hpp"
 
 #include <array>
 #include <cstdint>
@@ -17,7 +18,14 @@ inline constexpr std::uint32_t kFirstBand = 2;
 inline constexpr std::uint32_t kBandControlEnd = kFirstBand + kBands * kPerBand;
 inline constexpr std::uint32_t kCcChannel = kBandControlEnd;   // appended after the band controls: parameter indices never move
 inline constexpr std::uint32_t kCcBand = kBandControlEnd + 1;
-inline constexpr std::uint32_t kParameterCount = kBandControlEnd + 2;
+inline constexpr std::uint32_t kSpectrumSource = kBandControlEnd + 2;   // appended: 0 off, 1 pre-EQ, 2 post-EQ
+inline constexpr std::uint32_t kSpectrumFirst = kBandControlEnd + 3;    // 64 read-only outputs: band levels in dB, measured from the audio
+inline constexpr std::uint32_t kParameterCount = kSpectrumFirst + kSpectrumBins;
+
+[[nodiscard]] constexpr bool isSpectrumBin(const std::uint32_t index) noexcept
+{
+    return index >= kSpectrumFirst && index < kParameterCount;
+}
 
 [[nodiscard]] constexpr std::uint32_t bandParameter(const int band, const BandParameter p) noexcept
 {
@@ -31,6 +39,7 @@ struct ParameterSpec {
     float minimum, maximum, defaultValue;
     bool logarithmic;
     bool integer;
+    bool output;   // read-only: written by the audio thread, shown by the panel
 };
 
 // Built once: names and symbols need storage that outlives the host's calls.
@@ -43,6 +52,13 @@ public:
         set(kOutput, "output", "Output", "dB", -12.0f, 12.0f, defaults.outputDb, false, false);
         set(kCcChannel, "cc_channel", "CC Channel", "", 0.0f, 16.0f, defaults.ccChannel, false, true);
         set(kCcBand, "cc_band", "CC Band", "", 1.0f, static_cast<float>(kBands), defaults.ccBand, false, true);
+        set(kSpectrumSource, "spectrum_source", "Spectrum", "", 0.0f, 2.0f, defaults.spectrumSource, false, true);
+        for (int k = 0; k < kSpectrumBins; ++k) {
+            const std::uint32_t i = kSpectrumFirst + static_cast<std::uint32_t>(k);
+            std::snprintf(symbols_[i], sizeof(symbols_[i]), "spectrum_%02d", k + 1);
+            std::snprintf(names_[i], sizeof(names_[i]), "Spectrum Band %02d", k + 1);
+            specs_[i] = {symbols_[i], names_[i], "dB", kSpectrumFloorDb, 6.0f, kSpectrumFloorDb, false, false, true};
+        }
         for (int b = 0; b < kBands; ++b) {
             const Band& d = defaults.bands[static_cast<size_t>(b)];
             add(b, kOn, "on", "On", "", 0.0f, 1.0f, d.on, false, true);
@@ -62,14 +78,14 @@ private:
         const std::uint32_t i = bandParameter(band, p);
         std::snprintf(symbols_[i], sizeof(symbols_[i]), "band%d_%s", band + 1, sym);
         std::snprintf(names_[i], sizeof(names_[i]), "Band %d %s", band + 1, name);
-        specs_[i] = {symbols_[i], names_[i], unit, lo, hi, def, log, integer};
+        specs_[i] = {symbols_[i], names_[i], unit, lo, hi, def, log, integer, false};
     }
     void set(const std::uint32_t i, const char* sym, const char* name, const char* unit, const float lo, const float hi,
              const float def, const bool log, const bool integer)
     {
         std::snprintf(symbols_[i], sizeof(symbols_[i]), "%s", sym);
         std::snprintf(names_[i], sizeof(names_[i]), "%s", name);
-        specs_[i] = {symbols_[i], names_[i], unit, lo, hi, def, log, integer};
+        specs_[i] = {symbols_[i], names_[i], unit, lo, hi, def, log, integer, false};
     }
 
     std::array<ParameterSpec, kParameterCount> specs_ {};
@@ -90,7 +106,8 @@ inline float& field(Parameters& p, const std::uint32_t index) noexcept
     if (index == kOutput) return p.outputDb;
     if (index == kCcChannel) return p.ccChannel;
     if (index == kCcBand) return p.ccBand;
-    if (index < kFirstBand || index >= kBandControlEnd) return unused;
+    if (index == kSpectrumSource) return p.spectrumSource;
+    if (index < kFirstBand || index >= kBandControlEnd) return unused;   // including the spectrum outputs: not part of the patch
     Band& b = p.bands[(index - kFirstBand) / kPerBand];
     switch ((index - kFirstBand) % kPerBand) {
     case kOn:      return b.on;

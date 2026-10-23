@@ -35,6 +35,7 @@ struct Parameters {
     float outputDb = 0.0f;      // -12..+12
     float ccChannel = 1.0f;     // 0 = ignore MIDI, 1-16: the channel whose CC 1-4 drive one band (Drift's default lanes)
     float ccBand    = 4.0f;     // 1..8: the band those controllers drive (default: band 4, a bell near 600 Hz)
+    float spectrumSource = 2.0f; // 0 off, 1 pre-EQ, 2 post-EQ: which signal the panel's spectrum analyser shows (SpectrumSource)
     std::array<Band, kBands> bands {};
     Parameters();               // the eight default bands
 };

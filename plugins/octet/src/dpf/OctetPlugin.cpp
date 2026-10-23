@@ -3,18 +3,24 @@
 #include "octet_core.hpp"
 #include "octet_params.hpp"
 
+#include <array>
+#include <atomic>
+
 START_NAMESPACE_DISTRHO
 
 namespace core = downspout::octet;
 
 // Eight-band parametric equalizer. Every control is an ordinary automatable host parameter,
-// which DPF saves by symbol, so there is no plugin state.
+// which DPF saves by symbol, so there is no plugin state. The spectrum analyser's 64 band levels are read-only output
+// parameters the panel reads; they are measured from the audio.
 class OctetPlugin : public Plugin
 {
 public:
     OctetPlugin()
         : Plugin(core::kParameterCount, 0, 0)
     {
+        core::resetSpectrum(analyser_);   // the bars start at the floor, not at 0 dB
+        publishSpectrum();
     }
 
 protected:
@@ -49,7 +55,7 @@ protected:
         parameter.name   = spec.name;
         parameter.symbol = spec.symbol;
         parameter.unit   = spec.unit;
-        parameter.hints  = kParameterIsAutomatable;
+        parameter.hints  = spec.output ? kParameterIsOutput : kParameterIsAutomatable;
         if (spec.integer)     parameter.hints |= kParameterIsInteger;
         if (spec.logarithmic) parameter.hints |= kParameterIsLogarithmic;
         parameter.ranges.min = spec.minimum;
@@ -59,13 +65,15 @@ protected:
 
     float getParameterValue(uint32_t index) const override
     {
+        if (core::isSpectrumBin(index))
+            return spectrum_[index - core::kSpectrumFirst].load(std::memory_order_relaxed);
         return index < core::kParameterCount ? core::field(parameters_, index) : 0.0f;
     }
 
     void setParameterValue(uint32_t index, float value) override
     {
-        if (index >= core::kParameterCount)
-            return;
+        if (index >= core::kParameterCount || core::specs()[index].output)
+            return;  // outputs are written by the audio thread only
         core::field(parameters_, index) = value;
         parameters_ = core::clampParameters(parameters_);
         // The panel or the host has taken the control back from a controller; a new CC band starts with none held.
@@ -74,7 +82,13 @@ protected:
     }
 
     // Clears the filter memory only. The patch lives in the parameters.
-    void activate() override { core::resetState(engine_); live_ = core::LiveControl {}; }
+    void activate() override
+    {
+        core::resetState(engine_);
+        core::resetSpectrum(analyser_);
+        publishSpectrum();
+        live_ = core::LiveControl {};
+    }
 
     void run(const float** inputs, float** outputs, uint32_t frames, const MidiEvent* midiEvents, uint32_t midiEventCount) override
     {
@@ -85,13 +99,36 @@ protected:
                 core::handleController(live_, e.data[1], e.data[2]);
         }
         const core::Parameters effective = core::withLive(parameters_, live_);
-        core::processBlock(engine_, effective, static_cast<float>(getSampleRate()), frames, inputs, outputs);
+        const float sampleRate = static_cast<float>(getSampleRate());
+        const auto source = static_cast<core::SpectrumSource>(static_cast<int>(parameters_.spectrumSource));
+        // Pre-EQ reads the inputs before they are processed (hosts may run in place); post-EQ reads the outputs after.
+        if (source == core::SpectrumSource::Pre)
+            core::analyseBlock(analyser_, sampleRate, frames, inputs[0], inputs[1]);
+        core::processBlock(engine_, effective, sampleRate, frames, inputs, outputs);
+        if (source == core::SpectrumSource::Post)
+            core::analyseBlock(analyser_, sampleRate, frames, outputs[0], outputs[1]);
+        if (source == core::SpectrumSource::Off) {
+            if (analyser_.primed) {   // switched off: let the panel's bars fall to nothing
+                core::resetSpectrum(analyser_);
+                publishSpectrum();
+            }
+        } else {
+            publishSpectrum();
+        }
     }
 
 private:
+    void publishSpectrum()
+    {
+        for (size_t k = 0; k < spectrum_.size(); ++k)
+            spectrum_[k].store(analyser_.levelDb[k], std::memory_order_relaxed);
+    }
+
     core::Parameters  parameters_ {};
     core::LiveControl live_ {};
     core::EngineState engine_ {};
+    core::SpectrumState analyser_ {};
+    std::array<std::atomic<float>, core::kSpectrumBins> spectrum_ {};
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OctetPlugin)
 };

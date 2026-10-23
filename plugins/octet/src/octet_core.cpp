@@ -123,6 +123,7 @@ Parameters clampParameters(const Parameters& p) noexcept
     o.outputDb = clampf(p.outputDb, -12.0f, 12.0f);
     o.ccChannel = std::round(clampf(p.ccChannel, 0.0f, 16.0f));
     o.ccBand = std::round(clampf(p.ccBand, 1.0f, static_cast<float>(kBands)));
+    o.spectrumSource = std::round(clampf(p.spectrumSource, 0.0f, 2.0f));
     for (int i = 0; i < kBands; ++i) o.bands[static_cast<size_t>(i)] = clampBand(p.bands[static_cast<size_t>(i)]);
     return o;
 }

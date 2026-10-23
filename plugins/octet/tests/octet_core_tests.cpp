@@ -1,7 +1,9 @@
 #include "octet_core.hpp"
 #include "octet_params.hpp"
+#include "octet_spectrum.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -490,9 +492,19 @@ static void testParameterTableMatchesCore()
 {
     const Parameters defaults;
     Parameters probe;
-    check("fifty-two parameters (CC channel and band are appended after the band controls)", kParameterCount == 52 && kCcChannel == 50 && kCcBand == 51);
+    check("117 parameters (CC channel and band, spectrum source and 64 spectrum outputs are appended after the band controls)",
+          kParameterCount == 117 && kCcChannel == 50 && kCcBand == 51 && kSpectrumSource == 52 && kSpectrumFirst == 53);
+    int outputs = 0;
     for (std::uint32_t i = 0; i < kParameterCount; ++i) {
         const ParameterSpec& s = specs()[i];
+        if (s.output) {   // measured from the audio: not part of the patch, so the core neither stores nor clamps them
+            ++outputs;
+            check("outputs are exactly the spectrum bins", isSpectrumBin(i));
+            check("a spectrum output runs from the floor up to +6 dB, resting at the floor",
+                  s.minimum == kSpectrumFloorDb && s.maximum == 6.0f && s.defaultValue == kSpectrumFloorDb);
+            check("symbol and name are set", s.symbol[0] != '\0' && s.name[0] != '\0');
+            continue;
+        }
         check("table default equals the core default", field(defaults, i) == s.defaultValue);
         check("default is inside its range", s.defaultValue >= s.minimum && s.defaultValue <= s.maximum);
         field(probe, i) = s.minimum - 1000.0f;
@@ -508,7 +520,119 @@ static void testParameterTableMatchesCore()
         for (std::uint32_t j = i + 1; j < kParameterCount; ++j)
             if (std::string(specs()[i].symbol) == specs()[j].symbol) unique = false;
     check("symbols are unique", unique);
+    check("64 outputs", outputs == kSpectrumBins);
+    check("the spectrum shows the post-EQ signal by default", defaults.spectrumSource == 2.0f);
     check("band parameter indices are contiguous per band", bandParameter(0, kOn) == 2 && bandParameter(7, kChannel) == kBandControlEnd - 1);
+}
+
+// A fixed-frequency sine, run through the analyser in blocks of `block`.
+static SpectrumState analyse(const std::vector<float>& sig, float sr = 48000.0f, uint32_t block = 128)
+{
+    SpectrumState st;
+    resetSpectrum(st);
+    for (size_t pos = 0; pos < sig.size(); pos += block) {
+        const uint32_t n = static_cast<uint32_t>(std::min<size_t>(block, sig.size() - pos));
+        analyseBlock(st, sr, n, sig.data() + pos, sig.data() + pos);
+    }
+    return st;
+}
+
+static int bandOf(double hz)
+{
+    for (int k = 0; k < kSpectrumBins; ++k)
+        if (hz >= spectrumBandEdgeHz(k) && hz < spectrumBandEdgeHz(k + 1)) return k;
+    return -1;
+}
+
+static void testSpectrum()
+{
+    check("the bands run from 20 Hz to 20 kHz", std::fabs(spectrumBandEdgeHz(0) - 20.0) < 1e-9 && std::fabs(spectrumBandEdgeHz(kSpectrumBins) - 20000.0) < 1e-6);
+
+    const SpectrumState silent = analyse(std::vector<float>(48000, 0.0f));
+    bool floor = true;
+    for (float v : silent.levelDb) floor = floor && v == kSpectrumFloorDb;
+    check("silence rests on the floor", floor);
+
+    // A tone reads at its level in its own band and far below elsewhere, over the range of the display.
+    for (const double hz : {55.0, 220.0, 1000.0, 4400.0, 12000.0}) {
+        const SpectrumState st = analyse(sine(hz, 0.5, 0.5));
+        const int band = bandOf(hz);
+        float best = -200.0f;
+        int bestBand = -1;
+        for (int k = 0; k < kSpectrumBins; ++k)
+            if (st.levelDb[static_cast<size_t>(k)] > best) { best = st.levelDb[static_cast<size_t>(k)]; bestBand = k; }
+        char name[96];
+        std::snprintf(name, sizeof(name), "%.0f Hz peaks in its own band (+-1)", hz);
+        check(name, std::abs(bestBand - band) <= 1);
+        std::snprintf(name, sizeof(name), "%.0f Hz at -6 dBFS reads about -6 dB (got %.1f)", hz, static_cast<double>(best));
+        check(name, std::fabs(static_cast<double>(best) + 6.02) < 3.0);
+        const int far = (band + kSpectrumBins / 2) % kSpectrumBins;   // 4+ octaves away
+        std::snprintf(name, sizeof(name), "%.0f Hz leaves a band 4 octaves away more than 40 dB down", hz);
+        check(name, st.levelDb[static_cast<size_t>(far)] < best - 40.0f);
+    }
+
+    // The block size makes no difference.
+    const auto tone = sine(777.0, 0.4, 0.4);
+    const SpectrumState a = analyse(tone, 48000.0f, 37), b = analyse(tone, 48000.0f, 4096);
+    check("block size does not change the spectrum", a.levelDb == b.levelDb);
+
+    // Falls slowly once the tone stops, and ends on the floor.
+    std::vector<float> sig = sine(1000.0, 0.5, 0.5);
+    const size_t toneEnd = sig.size();
+    sig.resize(toneEnd + 12000, 0.0f);   // 0.25 s of silence
+    const SpectrumState tail = analyse(sig);
+    const int band = bandOf(1000.0);
+    const float held = analyse(sine(1000.0, 0.5, 0.5)).levelDb[static_cast<size_t>(band)];
+    check("a stopped tone fades no faster than the fall rate",
+          tail.levelDb[static_cast<size_t>(band)] > held - kSpectrumFallDbPerSecond * 0.25f - 4.0f);
+    check("a stopped tone has begun to fall", tail.levelDb[static_cast<size_t>(band)] < held - 3.0f);
+    sig.resize(toneEnd + 48000 * 4, 0.0f);
+    check("a stopped tone reaches the floor", analyse(sig).levelDb[static_cast<size_t>(band)] == kSpectrumFloorDb);
+
+    // Bands above Nyquist stay on the floor at a low sample rate.
+    const SpectrumState low = analyse(sine(1000.0, 0.5, 0.5, 22050.0f), 22050.0f);
+    check("bands above Nyquist stay on the floor", low.levelDb[kSpectrumBins - 1] == kSpectrumFloorDb && low.levelDb[static_cast<size_t>(bandOf(1000.0))] > -12.0f);
+
+    // Stereo is analysed as the mono sum: opposite channels cancel.
+    {
+        const auto l = sine(1000.0, 0.5, 0.3);
+        std::vector<float> r(l.size());
+        for (size_t i = 0; i < l.size(); ++i) r[i] = -l[i];
+        SpectrumState st;
+        resetSpectrum(st);
+        analyseBlock(st, 48000.0f, static_cast<uint32_t>(l.size()), l.data(), r.data());
+        check("out-of-phase channels cancel in the sum", st.levelDb[static_cast<size_t>(bandOf(1000.0))] == kSpectrumFloorDb);
+    }
+
+    // The tap matters: an EQ boost shows in the post signal, not the pre signal.
+    {
+        const auto in = sine(1000.0, 0.1, 0.5);
+        const Result boosted = run(solo(BandType::Bell, 1000, 12.0, 1.0), in, in);
+        const double pre = analyse(in).levelDb[static_cast<size_t>(bandOf(1000.0))];
+        const double post = analyse(boosted.l).levelDb[static_cast<size_t>(bandOf(1000.0))];
+        check("a +12 dB bell reads about 12 dB higher after the EQ than before", std::fabs((post - pre) - 12.0) < 1.5);
+    }
+
+    // Finite, and cheap: ten seconds of noise must take far less than real time.
+    {
+        std::vector<float> noise(480000);
+        unsigned r = 1u;
+        for (auto& x : noise) { r = r * 1664525u + 1013904223u; x = (static_cast<float>(r >> 8) / 8388608.0f - 1.0f) * 0.5f; }
+        const auto t0 = std::chrono::steady_clock::now();
+        const SpectrumState st = analyse(noise);
+        const double sec = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+        bool finite = true;
+        for (float v : st.levelDb) finite = finite && std::isfinite(v) && v >= kSpectrumFloorDb && v <= 6.0f;
+        check("noise gives finite levels inside the range", finite);
+        check("ten seconds of audio analyse in under a tenth of the time", sec < 1.0);
+    }
+
+    // Parameter: clamped, and a source that is Off is the only silent choice.
+    Parameters p;
+    p.spectrumSource = 9.0f;
+    check("the spectrum source clamps to 0..2", clampParameters(p).spectrumSource == 2.0f);
+    p.spectrumSource = -3.0f;
+    check("the spectrum source clamps at 0", clampParameters(p).spectrumSource == 0.0f);
 }
 
 int main()
@@ -530,6 +654,7 @@ int main()
     testResetClearsMemoryOnly();
     testMidiControl();
     testParameterTableMatchesCore();
+    testSpectrum();
     std::printf("octet_core_tests: %d passed, %d failed\n", gPassed, gFailed);
     return gFailed == 0 ? 0 : 1;
 }

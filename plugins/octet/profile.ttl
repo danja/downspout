@@ -223,4 +223,12 @@ dsp:octet trn:hasParameter [
     trn:symbol "cc_band" ; trn:label "CC Band" ;
     trn:minimum 1 ; trn:maximum 8 ; trn:default 4 ;
     rdfs:comment "The band that CC 1-3 drive (Frequency logarithmic, Gain, Q logarithmic)"
+], [
+    trn:symbol "spectrum_source" ; trn:label "Spectrum" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 2 ;
+    rdfs:comment "Spectrum analyser behind the response curve: 0=off 1=pre (the input) 2=post (the output)"
+], [
+    trn:symbol "spectrum_01" ; trn:label "Spectrum Band 01" ;
+    trn:minimum -90 ; trn:maximum 6 ; trn:default -90 ;
+    rdfs:comment "Read-only output. Spectrum_01 to spectrum_64: the level in dB of 64 log-spaced bands from 20 Hz to 20 kHz (a full-scale sine peaks at 0 dB), from a Hann-windowed 4096-point FFT of the mono sum about 30 times a second; instant attack, 40 dB/s fall. Only the first is listed here"
 ] .

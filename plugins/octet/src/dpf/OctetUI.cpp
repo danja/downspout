@@ -31,7 +31,7 @@ struct Tables {
     std::array<float, core::kParameterCount> defaults {};
     Tables()
     {
-        for (std::uint32_t i = 0; i < core::kParameterCount; ++i) {
+        for (std::uint32_t i = 0; i < core::kSpectrumFirst; ++i) {
             const auto& s = core::specs()[i];
             ranges[i] = {s.minimum, s.maximum, s.integer, s.logarithmic};
             defaults[i] = s.defaultValue;
@@ -50,8 +50,12 @@ const Tables& tables()
 class OctetUI : public MagnetoUI
 {
 public:
-    OctetUI() : MagnetoUI(tables().ranges.data(), core::kParameterCount, tables().defaults.data())
+    // MagnetoUI holds at most 64 values, so it is given the controls only; the 64 spectrum outputs live in `spectrum_`.
+    static_assert(core::kSpectrumFirst <= kMaxValues, "the controls must fit MagnetoUI's value table");
+
+    OctetUI() : MagnetoUI(tables().ranges.data(), core::kSpectrumFirst, tables().defaults.data())
     {
+        spectrum_.fill(core::kSpectrumFloorDb);
         // The standalone used for screenshots starts at the transparent defaults; show a plausible curve.
         if (std::getenv("DOWNSPOUT_SCREENSHOT_DEMO") != nullptr) {
             demo_ = true;
@@ -69,6 +73,14 @@ public:
             set(5, true, core::BandType::Notch, 5200.0f, 0.0f, 6.0f);
             set(6, true, core::BandType::HighShelf, 9000.0f, 3.5f, 0.71f);
             selected_ = 4;
+            // A plausible programme spectrum: a gentle tilt with a few peaks, so the screenshot shows the analyser.
+            for (int k = 0; k < core::kSpectrumBins; ++k) {
+                const double hz = std::sqrt(core::spectrumBandEdgeHz(k) * core::spectrumBandEdgeHz(k + 1));
+                double db = -22.0 - 11.0 * std::log2(hz / 100.0) * (hz > 100.0 ? 1.0 : -0.4);
+                db += 7.0 * std::sin(k * 1.7) * std::sin(k * 0.45) + (std::fabs(std::log2(hz / 2400.0)) < 0.25 ? 7.0 : 0.0);
+                spectrum_[static_cast<size_t>(k)] = static_cast<float>(std::clamp(db, -90.0, 0.0));
+            }
+            setValue(core::kSpectrumSource, 2.0f);
         }
     }
 
@@ -77,6 +89,11 @@ protected:
     {
         if (demo_)
             return;  // keep the demo curve
+        if (core::isSpectrumBin(index)) {
+            spectrum_[index - core::kSpectrumFirst] = v;
+            repaint();
+            return;
+        }
         MagnetoUI::parameterChanged(index, v);
     }
 
@@ -148,7 +165,7 @@ private:
     [[nodiscard]] core::Parameters currentParameters() const
     {
         core::Parameters p;
-        for (std::uint32_t i = 0; i < core::kParameterCount; ++i)
+        for (std::uint32_t i = 0; i < core::kSpectrumFirst; ++i)
             core::field(p, i) = value(i);
         return p;
     }
@@ -206,7 +223,7 @@ private:
 
     void drawPlotPanel(const Rect b)
     {
-        drawPanel(b, "RESPONSE", kPlotAccent, "dB; each band's curve, and the total");
+        drawPanel(b, "RESPONSE", kPlotAccent, "dB; each band's curve, the total, and the spectrum behind them");
         const auto& t = theme();
         plot_ = {b.x + 46.0f, b.y + 44.0f, b.w - 46.0f - 18.0f, b.h - 44.0f - 28.0f};
         drawPlotFrame(plot_);
@@ -237,6 +254,8 @@ private:
             else std::snprintf(buf, sizeof(buf), "%g", static_cast<double>(hz));
             label(xOf(hz), plot_.y + plot_.h + 6.0f, buf, true, 10.0f, ALIGN_CENTER | ALIGN_TOP);
         }
+
+        drawSpectrum();
 
         const double sr = getSampleRate() > 0.0 ? getSampleRate() : 48000.0;
         const core::Parameters p = currentParameters();
@@ -312,6 +331,30 @@ private:
         }
     }
 
+    // The analyser: one bar per band from the floor, behind the curves. The 64 levels are read-only outputs measured from
+    // the audio (pre- or post-EQ, per the Spectrum switch); the plot's dB grid is the EQ's, so the bars have their own scale.
+    void drawSpectrum()
+    {
+        if (intValue(core::kSpectrumSource) == 0)
+            return;
+        const auto& t = theme();
+        const float barW = plot_.w / static_cast<float>(core::kSpectrumBins);
+        const bool pre = intValue(core::kSpectrumSource) == 1;
+        for (int k = 0; k < core::kSpectrumBins; ++k) {
+            const float db = spectrum_[static_cast<size_t>(k)];
+            const float n = std::clamp((db - core::kSpectrumFloorDb) / (-core::kSpectrumFloorDb), 0.0f, 1.0f);
+            if (n <= 0.0f)
+                continue;
+            // The bands are log-spaced, so equal widths match the plot's frequency axis.
+            const float h = n * plot_.h * 0.9f;
+            beginPath();
+            rect(plot_.x + static_cast<float>(k) * barW + 0.5f, plot_.y + plot_.h - h, barW - 1.0f, h);
+            if (pre) fillColor(t.textDim.r, t.textDim.g, t.textDim.b, 95);
+            else fillColor(kPlotAccent.r, kPlotAccent.g, kPlotAccent.b, 90);
+            fill();
+        }
+    }
+
     void drawBandPanel(const Rect b)
     {
         drawPanel(b, "BAND", kBandAccent, "the selected band");
@@ -378,8 +421,12 @@ private:
         drawPanel(b, "STEREO, OUTPUT AND MIDI", kGlobalAccent, "CC 1-4: band Freq, Gain, Q; Output");
         static constexpr const char* kModeNames[3] = {"Stereo", "Left / Right", "Mid / Side"};
         label(b.x + 14.0f, b.y + 40.0f, "Mode");
-        drawSegments(core::kMode, kModeNames, 3, {b.x + 14.0f, b.y + 52.0f - 6.0f + 4.0f, 380.0f, 22.0f}, kGlobalAccent);
-        drawSlider(core::kOutput, "Output", format(core::kOutput).c_str(), {b.x + 430.0f, b.y + 40.0f, b.w - 430.0f - 14.0f, 34.0f},
+        drawSegments(core::kMode, kModeNames, 3, {b.x + 14.0f, b.y + 52.0f - 6.0f + 4.0f, 290.0f, 22.0f}, kGlobalAccent);
+        // The analyser behind the response curve: before or after the EQ.
+        static constexpr const char* kSpectrumNames[3] = {"Off", "Pre", "Post"};
+        label(b.x + 330.0f, b.y + 40.0f, "Spectrum (before / after the EQ)");
+        drawSegments(core::kSpectrumSource, kSpectrumNames, 3, {b.x + 330.0f, b.y + 52.0f - 6.0f + 4.0f, 220.0f, 22.0f}, kGlobalAccent);
+        drawSlider(core::kOutput, "Output", format(core::kOutput).c_str(), {b.x + 580.0f, b.y + 40.0f, b.w - 580.0f - 14.0f, 34.0f},
                    kGlobalAccent);
         // MIDI: Drift's CC 1-4 drive one band's Frequency, Gain and Q, and the Output.
         const float w = (b.w - 28.0f - 24.0f) / 2.0f;
@@ -396,6 +443,10 @@ private:
                 return "off";
             std::snprintf(buffer, sizeof(buffer), "%d", static_cast<int>(std::lround(v)));
             return buffer;
+        }
+        if (parameter == core::kSpectrumSource) {   // appended after the band controls, so decode before the per-band branch
+            static constexpr const char* kNames[3] = {"off", "pre", "post"};
+            return kNames[std::clamp(static_cast<int>(std::lround(v)), 0, 2)];
         }
         if (parameter == core::kCcBand) {
             std::snprintf(buffer, sizeof(buffer), "%d", static_cast<int>(std::lround(v)));
@@ -426,6 +477,7 @@ private:
     }
 
     Rect plot_ {};
+    std::array<float, core::kSpectrumBins> spectrum_ {};
     int selected_ = 2;
     int dragging_ = -1;
     bool demo_ = false;

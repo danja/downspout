@@ -659,9 +659,9 @@ Oxide Studio EQ Eight). Each band has **On**, **Type** (HP 12, HP 48, Low shelf,
 notch) and **Channel** (Both, A, B). The 48 dB cuts are 8th-order Butterworth, -3 dB at the cutoff. **Mode** is Stereo,
 Left/Right or Mid/Side; in the last two, Channel picks left or mid (A), right or side (B) or both, and in Stereo it is
 ignored. **Output** +-12 dB. Defaults: bands 2-7 on at 0 dB and the two cuts off, so a fresh instance is bit-exact
-transparent. Fifty-two automatable parameters (`band1_freq`, `band8_channel`, `mode`, `output`, `cc_channel`, `cc_band`, ...). The panel draws each
+transparent. Fifty-three automatable parameters (`band1_freq`, `band8_channel`, `mode`, `output`, `cc_channel`, `cc_band`, `spectrum_source`, ...) and 64 read-only analyser outputs. The panel draws each
 band's curve and the total from the coefficients in use, with a draggable node per band (across for frequency, up and
-down for gain; scroll for Q). No spectrum analyser.
+down for gain; scroll for Q). A Spectrum switch (Off / Pre / Post, default Post) draws a 64-band analyser behind the curve from 64 read-only output parameters.
 
 ### glue
 Stereo-linked feed-forward bus compressor (a redesign, not a port, of the Oxide Studio Glue Compressor). **Threshold**

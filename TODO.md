@@ -183,7 +183,7 @@ None has been listened to or run in a host. Remaining per plugin:
   high drive is not measured.
 * **glue**: listen (is the auto-release table 40-800 ms / 8 dB depth right? the 10 ms RMS window?);
   check in a host that Look-ahead's reported latency is compensated.
-* **octet**: a spectrum analyser (needs a UI data channel); the CC band mapping (Frequency/Gain/Q of one band + Output) is my choice: confirm it suits a Drift lane.
+* **octet**: listen to and look at the new spectrum analyser in a host (Off/Pre/Post; does the 40 dB/s fall and the 0 dB-at-full-scale scale read well? is a 4.5 dB/oct tilt wanted?); the CC band mapping (Frequency/Gain/Q of one band + Output) is my choice: confirm it suits a Drift lane.
 * **trio**: listen (the OTT defaults are strong; the detector decay times are my choice); check the sidechain
   routing in a host.
 * **strata**: listen; oversampled warps (Bend -42.6 dB, Sync -38.5 dB, Fold -33.1 dB aliasing at note 60,
