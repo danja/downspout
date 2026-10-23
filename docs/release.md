@@ -49,6 +49,10 @@ downspout-<version>-<platform>-vst3.zip
 ├── qune.vst3/
 ├── grist.vst3/
 ├── sam.vst3/
+├── ladder.vst3/
+├── glue.vst3/
+├── octet.vst3/
+├── trio.vst3/
 ├── primefold.vst3/
 ├── quefrency.vst3/
 ├── keyframe.vst3/

@@ -124,6 +124,10 @@ The repository currently installs sixty-one real wrapper targets:
 - `qune.vst3` with UI
 - `grist.vst3` with UI
 - `sam.vst3` with UI
+- `ladder.vst3` with UI
+- `glue.vst3` with UI
+- `octet.vst3` with UI
+- `trio.vst3` with UI
 - `primefold.vst3` with UI
 - `quefrency.vst3` with UI
 - `ghost.vst3` with UI

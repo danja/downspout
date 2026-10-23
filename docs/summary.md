@@ -173,6 +173,46 @@ optional filter for evolving clouds. It adds latency (shown on the panel, not re
 the host). Follow it with Resonance Garden for tuned resonances, or use it as a send texture;
 reach for Beards instead when you want a freeze, reverb or Drift/Conductor control.
 
+### Ladder (`ladder.vst3`)
+
+Four-pole saturating low-pass ladder filter, stereo, with no MIDI and no latency. **Cutoff** is
+logarithmic from 20 Hz to 18 kHz; **Resonance** feeds the output back and the filter rings on its
+own from about 85 %; **Bass Comp** restores the low end the feedback removes (100 % puts the
+passband back at 0 dB, the default 50 % leaves it a few dB down); **Drive** pushes the saturators;
+**Mix** and **Output** finish it. The panel draws the filter's response curve as you move the
+controls. Put it on a synth or bass and automate Cutoff; reach for Skream instead when you want a
+scream-style feedback filter, and Damiano after it for distortion. Resonance with full Bass Comp is
+loud, so trim Output. See `plugins/ladder/docs/design.md`.
+
+### Trio (`trio.vst3`)
+
+Three-band dynamics with no MIDI and no latency, in the OTT manner. The signal is split at two adjustable crossovers
+(250 Hz and 2.5 kHz by default) into bands that sum back flat, and each band compresses what is loud (**Down threshold** and
+**ratio**) and lifts what is quiet (**Up threshold** and **ratio**) with its own **Attack**, **Release** and **Gain**. **Amount**
+blends the dry signal, **Time** scales every attack and release at once, and **Input** drives the bands without changing the dry
+path. The panel plots the three bands with draggable crossover lines and a live bar for what each band is doing. The defaults are
+a heavy "OTT" sound: lower Amount, or set every ratio to 1 for a plain three-band split. Upward lift raises the noise floor, so
+use it on sources that are not already noisy. See `plugins/trio/docs/design.md`.
+
+### Octet (`octet.vst3`)
+
+Eight-band parametric equalizer with no MIDI and no latency. Each band is one of: 12 or 48 dB high-pass, low shelf, bell,
+notch, high shelf, 12 or 48 dB low-pass, with frequency, gain and Q where they apply. **Mode** switches between Stereo,
+Left/Right and Mid/Side; in the last two each band can act on both channels or on just one (left or mid, right or side),
+which is how you widen or tighten a mix with an EQ. The panel plots every band's curve and the total, and the band nodes can
+be dragged (across for frequency, up and down for gain) with the scroll wheel setting Q. A fresh instance changes nothing.
+Put it before Glue for corrective cuts, or after for tone. See `plugins/octet/docs/design.md`.
+
+### Glue (`glue.vst3`)
+
+Stereo-linked bus compressor with no MIDI and no latency. **Threshold**, **Ratio**, **Knee** (soft) and **Range** set the
+curve; **Attack** and **Release** (or **Auto**, which is quick after a transient and slow once the compression has been
+sustained) set the timing; the **Sidechain HPF** (60 Hz by default) keeps the bass from pumping the mix; **Detector**
+chooses Peak or RMS; **Makeup**, **Soft clip** and **Mix** (parallel compression) finish it. The louder channel sets the
+reduction, so the stereo image holds still. The panel draws the transfer curve with a live dot and a scrolling
+gain-reduction history. Put it on a drum bus or the mix, and follow it with Guardian when you need a hard ceiling:
+it has no look-ahead. See `plugins/glue/docs/design.md`.
+
 ### Sam (`sam.vst3`)
 
 Speech synthesiser: Software Automatic Mouth, the 1982 Commodore 64 voice, played two ways. In

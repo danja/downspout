@@ -266,6 +266,10 @@ jobs:
             echo "- qune.vst3"
             echo "- grist.vst3"
             echo "- sam.vst3"
+            echo "- ladder.vst3"
+            echo "- glue.vst3"
+            echo "- octet.vst3"
+            echo "- trio.vst3"
             echo
             echo "Sidecar is currently Linux-only and is omitted from macOS and Windows release assets."
             echo "macOS and Windows release builds are best-effort and do not block Linux publication."

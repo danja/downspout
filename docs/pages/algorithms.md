@@ -106,6 +106,29 @@ current Downspout plugins.
   a 4 s buffer and replayed by up to 32 overlapping grains (position, size, shape,
   pitch, density, scatter), with feedback, a Griesinger reverb, freeze, and optional
   host-grid grain triggering.
+- [`Trio`]({{ '/plugins/trio/' | relative_url }}): two 4th-order Linkwitz-Riley splits in double precision (each LR4 is two identical Butterworth cells).
+  Low = AP_H(LP_L(x)), mid = LP_H(HP_L(x)), high = HP_H(HP_L(x)), where AP_H = LP_H + HP_H of the high crossover; the sum is
+  AP_L AP_H, an exact all-pass. Each band's detector is a peak hold, d = max(max(|L|, |R|), d e^(-1/tau)) with tau about two periods of
+  the band's lowest frequency. The gain computer is -(L - Td)(1 - 1/Rd) above the down threshold and +min((Tu - L)(1 - 1/Ru), limit) below
+  the up threshold; the gain in dB is smoothed with the attack coefficient when the target is lower and the release coefficient otherwise.
+- [`Octet`]({{ '/plugins/octet/' | relative_url }}): eight RBJ-cookbook biquads in double precision, transposed direct form II. Bell, shelf, notch and
+  12 dB cut cells take the band's own Q (the cut uses 1/sqrt 2); a 48 dB cut is an 8th-order Butterworth made of four cells with
+  Q = 1 / (2 cos((2k - 1) pi / 16)) for k = 1..4, so it is -3 dB at the cutoff. Mid/Side uses the orthonormal matrix
+  (l + r, l - r) / sqrt 2 and back. The plot multiplies each cell's |H(e^jw)| from the same coefficients the audio uses.
+- [`Glue`]({{ '/plugins/glue/' | relative_url }}): feed-forward compressor. Each channel is high-passed (Butterworth, detector only), then
+  measured as |x| or a 10 ms mean square; the louder channel's level in dB goes through the soft-knee computer of
+  Giannoulis et al., GR = -(1 - 1/R)(L - T + W/2)^2 / 2W inside the knee and -(1 - 1/R)(L - T) above it, capped at
+  Range. The gain is one-pole smoothed in dB, with the attack coefficient when the target is lower than the current gain
+  and the release coefficient otherwise. Auto release sets the release to 40 + 760 clamp(d / 8 dB) ms, where d is a
+  400 ms average of the demanded reduction (not of the smoothed gain, which would lengthen its own release). Soft clip is
+  x up to 0.5, then 0.5 + 0.5 tanh((|x| - 0.5) / 0.5).
+- [`Ladder`]({{ '/plugins/ladder/' | relative_url }}): four-pole zero-delay-feedback low-pass ladder after Mystran, run at
+  2x with a tanh at each integrator and the cutoff prewarped for the doubled rate. The tanh(x)/x
+  secants come from a Pade [4/4] rational (exact asymptote beyond |x| = 4.5), so the stage gains
+  are solved in closed form with no iteration. Resonance is the feedback amount k, mapped
+  k = 4.2 (1 - 10^-u) / 0.9 so the peak height rises roughly evenly in dB (k >= 4 rings). Bass Comp
+  multiplies the output by 1 + c k, which undoes the 1 / (1 + k) low-frequency loss. The plotted
+  curve is H = G^4 / (1 + k G^4) with G = 1 / (1 + jf/fc), scaled by Bass Comp, Mix and Output.
 - [`Grist`]({{ '/plugins/grist/' | relative_url }}): granular grain delay. Input history in a 7 s ring buffer; one grain per
   Window / Density, each a four-point Hermite read with a Hann/percussive window of equal mean level.
   A grain starts Blur x Window x u samples back, plus (ratio - 1) x length when pitched up so it never

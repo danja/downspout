@@ -19,11 +19,13 @@ floozy
 flues-synth-driver
 gater
 generative-common
+glue
 gremlin
 gremlin-driver
 ground
 guardian
 harmonic-atlas
+ladder
 lifeform
 lightverb
 loopdelay
@@ -34,12 +36,13 @@ midiscribe
 mixgen
 mnemosyne
 mosaic
+octet
 oracle
 orbit
 orchid
 p-mix
-plank
 paunchlad
+plank
 polymeter
 resonance-garden
 rift
@@ -47,6 +50,7 @@ sidecar
 skream
 syrinx
 t-mix
+trio
 tuney-vst
 worms
 xoxolo

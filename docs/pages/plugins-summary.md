@@ -77,10 +77,14 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | gremlin | gremlin.vst3 | instrument (glitch) | 0/2 | yes/yes | no |
 | gremlin-driver | gremlin_driver.vst3 | MIDI controller | 0/2 | yes/yes | yes |
 | ground | ground.vst3 | MIDI generator | 0/2 | yes/yes | yes |
+| glue | glue.vst3 | audio effect (compressor) | 2/2 | no/no | no |
+| octet | octet.vst3 | audio effect (equalizer) | 2/2 | no/no | no |
+| trio | trio.vst3 | audio effect (multiband dynamics) | 2/2 | no/no | no |
 | guardian | guardian.vst3 | audio utility (limiter) | 2/2 | no/no | no |
 | harmonic-atlas | harmonic_atlas.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | helterskelter | helterskelter.vst3 | audio effect (wah) | 2/2 | yes/no | yes |
 | keyframe | keyframe.vst3 | audio effect (time stretch) | 2/2 | yes/no | no |
+| ladder | ladder.vst3 | audio effect (filter) | 2/2 | no/no | no |
 | lifeform | lifeform.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | lightverb | lightverb.vst3 | audio effect (reverb) | 2/2 | yes/yes | no |
 | loopdelay | loopdelay.vst3 | audio effect (delay/looper) | 2/2 | yes/yes | yes |
@@ -597,6 +601,40 @@ Fixed-cost stereo feedback-delay-network reverb, low CPU, usable as insert or 10
 send. Fixed CC 32 Wet mix and CC 33 Space; same CC 19 lifecycle, channel isolation and
 MIDI-through behaviour as loopdelay.
 
+### trio
+Three-band dynamics, stereo, no MIDI, transport, latency or plugin state (a redesign, not a port, of the Oxide Studio Multiband
+Dynamics). Two adjustable Linkwitz-Riley crossovers (**Low** 40-1000 Hz, default 250; **High** 1-12 kHz, default 2.5 kHz, held at
+least 1.25 x the low one) split the signal into bands that sum flat; the low band is passed through the high crossover's
+all-pass. Each band has **On**, a **Down threshold** (-60 to 0 dB) and **ratio** (1-20:1) that compress what is loud, an **Up
+threshold** (-80 to 0 dB, held at or below the down one) and **ratio** (1-10:1; 1 = no lift) that lift what is quiet,
+**Attack** 0.5-200 ms, **Release** 5-2000 ms and **Gain** +-18 dB. Globally: **Input** (into the bands only), **Output**,
+**Amount** (dry/wet; 0 is bit-exact dry), **Time** (0.1-10 x on every attack and release) and **Upward limit** (0-24 dB). One
+detector per band, linked across the two channels. Defaults are the "OTT" settings, so a fresh instance is a strong effect; set
+every ratio to 1 for a transparent split. Six output parameters (`status_gain_1-3`, `status_level_1-3`) drive the panel's
+per-band gain bars; the crossover lines on the plot are draggable. Upward lift raises the noise floor.
+
+### octet
+Eight-band parametric equalizer, stereo, no MIDI, transport, latency or plugin state (a redesign, not a port, of the
+Oxide Studio EQ Eight). Each band has **On**, **Type** (HP 12, HP 48, Low shelf, Bell, Notch, High shelf, LP 12, LP 48),
+**Frequency** 20 Hz to 20 kHz (logarithmic), **Gain** +-18 dB (bell and shelves only), **Q** 0.1 to 18 (bell, shelves and
+notch) and **Channel** (Both, A, B). The 48 dB cuts are 8th-order Butterworth, -3 dB at the cutoff. **Mode** is Stereo,
+Left/Right or Mid/Side; in the last two, Channel picks left or mid (A), right or side (B) or both, and in Stereo it is
+ignored. **Output** +-12 dB. Defaults: bands 2-7 on at 0 dB and the two cuts off, so a fresh instance is bit-exact
+transparent. Fifty automatable parameters (`band1_freq`, `band8_channel`, `mode`, `output`, ...). The panel draws each
+band's curve and the total from the coefficients in use, with a draggable node per band (across for frequency, up and
+down for gain; scroll for Q). No spectrum analyser.
+
+### glue
+Stereo-linked feed-forward bus compressor (a redesign, not a port, of the Oxide Studio Glue Compressor). **Threshold**
+-60 to 0 dB (default -18), **Ratio** 1.1 to 20:1 (4), **Knee** 0 to 24 dB (6, soft), **Range** 1 to 40 dB cap on the
+reduction, **Attack** 0.1 to 100 ms (10), **Release** 20 to 2000 ms (200) or **Auto** (about 40 ms after a transient,
+up to 800 ms once compression has been sustained; the knob is ignored), **Sidechain HPF** 20 to 400 Hz (60; 20 = off,
+detector only), **Detector** Peak or RMS (10 ms), **Makeup** 0 to 24 dB, **Soft clip** Off/On (off by default; linear
+below 0.5, never exceeds 1), **Mix** (parallel). The louder channel sets the reduction for both. No MIDI, transport,
+latency, look-ahead or plugin state; every control is an automatable parameter. Two output parameters,
+`status_reduction` and `status_level`, are measured from the audio and drive the panel's transfer curve, live dot
+and reduction history. Not a limiter; put Guardian after it.
+
 ### guardian
 Output safety processor for the end of autonomous chains: input gain (+-24 dB),
 look-ahead limiter with attack/release, clipper shape (none through gentle tanh to near
@@ -631,6 +669,18 @@ latency is Blur x Window / 2 plus (ratio - 1) x Window when pitched up, shown on
 does not report it to the host. Output parameters: status_latency, status_grains, status_window, status_delay.
 Pairs with resonance-garden (grains in, tuned resonators after). Unlike beards it has no reverb, freeze or
 MIDI control; its window and feedback delay lock to the tempo and its cloud follows a scale.
+
+### ladder
+Stereo four-pole saturating low-pass ladder (zero-delay-feedback, 2x oversampled, a tanh at each
+stage), ported from the Oxide Studio DSP and measured against the analytic response first.
+**Cutoff** 20-18000 Hz (logarithmic; -12 dB at the cutoff with no resonance), **Resonance** 0-100 %
+(exponential taper in the feedback: peak over the passband about 6 dB at 20 %, 18 dB at 50 %, 28 dB at
+70 % with full Bass Comp; rings on its own from about 85 %), **Drive** 0-24 dB into the saturators,
+**Bass Comp** 0-100 % (restores the low end the feedback removes; 100 % returns the passband to
+unity; default 50 %, so the defaults sit about 3.5 dB low), **Mix**, **Output**. No MIDI, transport,
+latency or plugin state: every control is an automatable parameter. The panel plots the small-signal
+response (Drive not included) from the model the tests hold to the real filter. Resonance with full
+Bass Comp is loud; trim Output.
 
 ### sam
 Speech instrument: the 1982 SAM (Software Automatic Mouth) formant synthesiser, vendored from
@@ -767,7 +817,7 @@ a note-on), so it does not follow other channels.
   (birds), pratt (GM voices), floozy, gremlin (glitch), campione / mosaic (samples),
   tuney-vst. Bend-aware: see the per-channel list at the top.
 - **Need an unpitched sound:** drumkit, magneto, bubbles.
-- **Need audio processing:** distortion (damiano, skream, chipper), granular (beards, grist), time/pitch (keyframe,
+- **Need audio processing:** filter (ladder, skream), distortion (damiano, skream, chipper), granular (beards, grist), time/pitch (keyframe,
   primefold, quefrency), space (lightverb, loopdelay, orbit, treatment, ambo),
-  rhythm/gating (e-mix, p-mix, orchid, rift), tone/dynamics (bassops, spliff,
+  rhythm/gating (e-mix, p-mix, orchid, rift), tone/dynamics (trio, octet, glue, bassops, spliff,
   helterskelter, guardian), spectral (voxmod, sinevox, resonance-garden).

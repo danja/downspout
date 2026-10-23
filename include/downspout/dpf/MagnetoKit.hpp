@@ -3,7 +3,7 @@
 // Magneto-style panel toolkit for a NanoVG DPF UI: flat surface panels with
 // accent-coloured headers, horizontal bar sliders, stepper and segmented
 // controls, and a dark/light theme toggle, all drawn from downspout/look_and_feel.hpp.
-// Shared by retune, sprout, markov and damiano. This header depends on DPF, which is why
+// Shared by retune, sprout, markov, damiano and ladder. This header depends on DPF, which is why
 // it lives under downspout/dpf/ rather than beside the portable headers.
 //
 // A plugin derives from MagnetoUI, calls beginFrame()/drawHeader()/drawPanel() and the
@@ -49,14 +49,35 @@ struct Range {
     float minimum;
     float maximum;
     bool integer;
+    bool logarithmic = false;  // slider travel is exponential (a frequency); minimum must be > 0
 };
+
+// Position 0-1 along a slider for a value, and back. Linear unless the range is logarithmic.
+[[nodiscard]] inline float toNormalized(const Range& r, const float v) noexcept
+{
+    if (!(r.maximum > r.minimum))
+        return 0.0f;
+    const float n = r.logarithmic && r.minimum > 0.0f
+                        ? std::log(std::max(v, r.minimum) / r.minimum) / std::log(r.maximum / r.minimum)
+                        : (v - r.minimum) / (r.maximum - r.minimum);
+    return std::clamp(n, 0.0f, 1.0f);
+}
+
+[[nodiscard]] inline float fromNormalized(const Range& r, const float n) noexcept
+{
+    return r.logarithmic && r.minimum > 0.0f ? r.minimum * std::pow(r.maximum / r.minimum, n)
+                                             : r.minimum + n * (r.maximum - r.minimum);
+}
 
 }  // namespace kit
 
 class MagnetoUI : public UI {
 public:
+    // Most parameters a panel can mirror (octet has 50).
+    static constexpr std::uint32_t kMaxValues = 64;
+
     MagnetoUI(const kit::Range* ranges, const std::uint32_t count, const float* defaults)
-        : UI(DISTRHO_UI_DEFAULT_WIDTH, DISTRHO_UI_DEFAULT_HEIGHT), ranges_(ranges), count_(std::min<std::uint32_t>(count, 32))
+        : UI(DISTRHO_UI_DEFAULT_WIDTH, DISTRHO_UI_DEFAULT_HEIGHT), ranges_(ranges), count_(std::min<std::uint32_t>(count, kMaxValues))
     {
         for (std::uint32_t i = 0; i < count_; ++i)
             values_[i] = defaults[i];
@@ -255,7 +276,7 @@ protected:
     {
         const auto& t = theme();
         const auto& r = ranges_[parameter];
-        const float normalized = r.maximum > r.minimum ? std::clamp((values_[parameter] - r.minimum) / (r.maximum - r.minimum), 0.0f, 1.0f) : 0.0f;
+        const float normalized = kit::toNormalized(r, values_[parameter]);
         label(b.x, b.y, name);
         fc(t.textPrimary);
         fontSize(12.0f);
@@ -410,12 +431,12 @@ private:
     {
         const auto& r = ranges_[s.parameter];
         const float n = std::clamp((mouseX - s.bounds.x) / std::max(1.0f, s.bounds.w), 0.0f, 1.0f);
-        commit(s.parameter, r.minimum + n * (r.maximum - r.minimum));
+        commit(s.parameter, kit::fromNormalized(r, n));
     }
 
     const kit::Range* ranges_;
     std::uint32_t count_;
-    std::array<float, 32> values_ {};
+    std::array<float, kMaxValues> values_ {};
     std::array<SliderHit, 32> sliders_ {};
     std::array<ActionHit, 16> actions_ {};
     std::array<SliderHit, 8> steppers_ {};

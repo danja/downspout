@@ -1,0 +1,48 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:ladder a trn:PluginProfile ;
+    rdfs:label "Ladder" ;
+    rdfs:comment "Stereo four-pole saturating low-pass ladder filter with self-oscillating resonance, bass compensation, drive and a response plot." ;
+    trn:bundleName "ladder.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/ladder/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio .
+
+dsp:ladder trn:hasParameter [
+    trn:symbol "cutoff" ;
+    trn:label "Cutoff" ;
+    trn:minimum 20.0 ; trn:maximum 18000.0 ; trn:default 1000.0 ;
+    rdfs:comment "Cutoff frequency in Hz (logarithmic); -12 dB at the cutoff with no resonance"
+], [
+    trn:symbol "resonance" ;
+    trn:label "Resonance" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 20.0 ;
+    rdfs:comment "Feedback amount; the filter rings on its own from about 85 percent"
+], [
+    trn:symbol "drive" ;
+    trn:label "Drive" ;
+    trn:minimum 0.0 ; trn:maximum 24.0 ; trn:default 0.0 ;
+    rdfs:comment "Gain in dB into the first saturator"
+], [
+    trn:symbol "bass_comp" ;
+    trn:label "Bass Comp" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 50.0 ;
+    rdfs:comment "How much of the low end removed by resonance is restored; 100 returns the passband to unity"
+], [
+    trn:symbol "mix" ;
+    trn:label "Mix" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 100.0 ;
+    rdfs:comment "Dry/wet blend percentage"
+], [
+    trn:symbol "output" ;
+    trn:label "Output" ;
+    trn:minimum -24.0 ; trn:maximum 12.0 ; trn:default 0.0 ;
+    rdfs:comment "Output gain in dB"
+] .

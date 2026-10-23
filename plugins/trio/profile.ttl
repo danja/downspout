@@ -1,0 +1,166 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:trio a trn:PluginProfile ;
+    rdfs:label "Trio" ;
+    rdfs:comment "Three-band downward and upward dynamics with adjustable Linkwitz-Riley crossovers, a linked detector per band, Time and Amount macros, and live per-band gain meters." ;
+    trn:bundleName "trio.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/trio/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio .
+
+dsp:trio trn:hasParameter [
+    trn:symbol "input" ; trn:label "Input" ;
+    trn:minimum -12.0 ; trn:maximum 24.0 ; trn:default 0.0 ;
+    rdfs:comment "Gain in dB into the bands; the dry path is not affected"
+], [
+    trn:symbol "output" ; trn:label "Output" ;
+    trn:minimum -24.0 ; trn:maximum 12.0 ; trn:default 0.0 ;
+    rdfs:comment "Output gain in dB on the wet signal"
+], [
+    trn:symbol "amount" ; trn:label "Amount" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 100.0 ;
+    rdfs:comment "Dry/wet percentage"
+], [
+    trn:symbol "time" ; trn:label "Time" ;
+    trn:minimum 0.1 ; trn:maximum 10.0 ; trn:default 1.0 ;
+    rdfs:comment "Scales every band's attack and release (logarithmic)"
+], [
+    trn:symbol "up_limit" ; trn:label "Upward Limit" ;
+    trn:minimum 0.0 ; trn:maximum 24.0 ; trn:default 18.0 ;
+    rdfs:comment "Maximum upward lift in dB; 0 turns the lift off"
+], [
+    trn:symbol "cross_low" ; trn:label "Low Crossover" ;
+    trn:minimum 40.0 ; trn:maximum 1000.0 ; trn:default 250.0 ;
+    rdfs:comment "Low/mid Linkwitz-Riley crossover in Hz (logarithmic)"
+], [
+    trn:symbol "cross_high" ; trn:label "High Crossover" ;
+    trn:minimum 1000.0 ; trn:maximum 12000.0 ; trn:default 2500.0 ;
+    rdfs:comment "Mid/high crossover in Hz (logarithmic); held at least 1.25 x the low crossover"
+], [
+    trn:symbol "band1_on" ; trn:label "Low On" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "0=off (the band passes through) 1=on"
+], [
+    trn:symbol "band1_down_thresh" ; trn:label "Low Down Threshold" ;
+    trn:minimum -60.0 ; trn:maximum 0.0 ; trn:default -24.0 ;
+    rdfs:comment "Compress above this band level in dB"
+], [
+    trn:symbol "band1_down_ratio" ; trn:label "Low Down Ratio" ;
+    trn:minimum 1.0 ; trn:maximum 20.0 ; trn:default 4.0 ;
+    rdfs:comment "Compression ratio N:1 (logarithmic); 1 = off"
+], [
+    trn:symbol "band1_up_thresh" ; trn:label "Low Up Threshold" ;
+    trn:minimum -80.0 ; trn:maximum 0.0 ; trn:default -36.0 ;
+    rdfs:comment "Lift below this band level in dB; held at or below the down threshold"
+], [
+    trn:symbol "band1_up_ratio" ; trn:label "Low Up Ratio" ;
+    trn:minimum 1.0 ; trn:maximum 10.0 ; trn:default 2.5 ;
+    rdfs:comment "Upward ratio 1:N (logarithmic); 1 = no lift"
+], [
+    trn:symbol "band1_attack" ; trn:label "Low Attack" ;
+    trn:minimum 0.5 ; trn:maximum 200.0 ; trn:default 10.0 ;
+    rdfs:comment "Attack time constant in ms (logarithmic)"
+], [
+    trn:symbol "band1_release" ; trn:label "Low Release" ;
+    trn:minimum 5.0 ; trn:maximum 2000.0 ; trn:default 100.0 ;
+    rdfs:comment "Release time constant in ms (logarithmic)"
+], [
+    trn:symbol "band1_gain" ; trn:label "Low Gain" ;
+    trn:minimum -18.0 ; trn:maximum 18.0 ; trn:default 0.0 ;
+    rdfs:comment "Band trim in dB"
+], [
+    trn:symbol "band2_on" ; trn:label "Mid On" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "0=off (the band passes through) 1=on"
+], [
+    trn:symbol "band2_down_thresh" ; trn:label "Mid Down Threshold" ;
+    trn:minimum -60.0 ; trn:maximum 0.0 ; trn:default -20.0 ;
+    rdfs:comment "Compress above this band level in dB"
+], [
+    trn:symbol "band2_down_ratio" ; trn:label "Mid Down Ratio" ;
+    trn:minimum 1.0 ; trn:maximum 20.0 ; trn:default 4.0 ;
+    rdfs:comment "Compression ratio N:1 (logarithmic); 1 = off"
+], [
+    trn:symbol "band2_up_thresh" ; trn:label "Mid Up Threshold" ;
+    trn:minimum -80.0 ; trn:maximum 0.0 ; trn:default -32.0 ;
+    rdfs:comment "Lift below this band level in dB; held at or below the down threshold"
+], [
+    trn:symbol "band2_up_ratio" ; trn:label "Mid Up Ratio" ;
+    trn:minimum 1.0 ; trn:maximum 10.0 ; trn:default 2.5 ;
+    rdfs:comment "Upward ratio 1:N (logarithmic); 1 = no lift"
+], [
+    trn:symbol "band2_attack" ; trn:label "Mid Attack" ;
+    trn:minimum 0.5 ; trn:maximum 200.0 ; trn:default 5.0 ;
+    rdfs:comment "Attack time constant in ms (logarithmic)"
+], [
+    trn:symbol "band2_release" ; trn:label "Mid Release" ;
+    trn:minimum 5.0 ; trn:maximum 2000.0 ; trn:default 80.0 ;
+    rdfs:comment "Release time constant in ms (logarithmic)"
+], [
+    trn:symbol "band2_gain" ; trn:label "Mid Gain" ;
+    trn:minimum -18.0 ; trn:maximum 18.0 ; trn:default 0.0 ;
+    rdfs:comment "Band trim in dB"
+], [
+    trn:symbol "band3_on" ; trn:label "High On" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "0=off (the band passes through) 1=on"
+], [
+    trn:symbol "band3_down_thresh" ; trn:label "High Down Threshold" ;
+    trn:minimum -60.0 ; trn:maximum 0.0 ; trn:default -18.0 ;
+    rdfs:comment "Compress above this band level in dB"
+], [
+    trn:symbol "band3_down_ratio" ; trn:label "High Down Ratio" ;
+    trn:minimum 1.0 ; trn:maximum 20.0 ; trn:default 4.0 ;
+    rdfs:comment "Compression ratio N:1 (logarithmic); 1 = off"
+], [
+    trn:symbol "band3_up_thresh" ; trn:label "High Up Threshold" ;
+    trn:minimum -80.0 ; trn:maximum 0.0 ; trn:default -30.0 ;
+    rdfs:comment "Lift below this band level in dB; held at or below the down threshold"
+], [
+    trn:symbol "band3_up_ratio" ; trn:label "High Up Ratio" ;
+    trn:minimum 1.0 ; trn:maximum 10.0 ; trn:default 2.5 ;
+    rdfs:comment "Upward ratio 1:N (logarithmic); 1 = no lift"
+], [
+    trn:symbol "band3_attack" ; trn:label "High Attack" ;
+    trn:minimum 0.5 ; trn:maximum 200.0 ; trn:default 2.0 ;
+    rdfs:comment "Attack time constant in ms (logarithmic)"
+], [
+    trn:symbol "band3_release" ; trn:label "High Release" ;
+    trn:minimum 5.0 ; trn:maximum 2000.0 ; trn:default 50.0 ;
+    rdfs:comment "Release time constant in ms (logarithmic)"
+], [
+    trn:symbol "band3_gain" ; trn:label "High Gain" ;
+    trn:minimum -18.0 ; trn:maximum 18.0 ; trn:default 0.0 ;
+    rdfs:comment "Band trim in dB"
+], [
+    trn:symbol "status_gain_1" ; trn:label "Low Gain" ;
+    trn:minimum -40.0 ; trn:maximum 24.0 ; trn:default -40.0 ;
+    rdfs:comment "Output: dynamic gain the band is applying, in dB (negative is reduction)"
+], [
+    trn:symbol "status_gain_2" ; trn:label "Mid Gain" ;
+    trn:minimum -40.0 ; trn:maximum 24.0 ; trn:default -40.0 ;
+    rdfs:comment "Output: dynamic gain the band is applying, in dB (negative is reduction)"
+], [
+    trn:symbol "status_gain_3" ; trn:label "High Gain" ;
+    trn:minimum -40.0 ; trn:maximum 24.0 ; trn:default -40.0 ;
+    rdfs:comment "Output: dynamic gain the band is applying, in dB (negative is reduction)"
+], [
+    trn:symbol "status_level_1" ; trn:label "Low Level" ;
+    trn:minimum -120.0 ; trn:maximum 12.0 ; trn:default -120.0 ;
+    rdfs:comment "Output: band peak level in dB"
+], [
+    trn:symbol "status_level_2" ; trn:label "Mid Level" ;
+    trn:minimum -120.0 ; trn:maximum 12.0 ; trn:default -120.0 ;
+    rdfs:comment "Output: band peak level in dB"
+], [
+    trn:symbol "status_level_3" ; trn:label "High Level" ;
+    trn:minimum -120.0 ; trn:maximum 12.0 ; trn:default -120.0 ;
+    rdfs:comment "Output: band peak level in dB"
+] .

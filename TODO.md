@@ -61,8 +61,8 @@ helterskelter, skream, spliff) now have `WANT_FULL_STATE` and a `getState()`.
       aliasing against the **Tone** default, and whether Keys mode wants a sustained or looped word.
 - [ ] Not built, see `plugins/sam/docs/design.md`: a phrase mode (one note speaks the whole text),
       formant correction after the retune, CC mapping, Speak in Keys mode.
-- [ ] `scripts/package-built-bundles.sh` (the advisory macOS/Windows list) was already missing
-      beards, grist and qune; Sam was added, those three were not. `scripts/check-bundle-lists.sh` reports it.
+- [x] `scripts/package-built-bundles.sh` (the advisory macOS/Windows list) was missing beards, grist and
+      qune; fixed 2026-10-23 when ladder was added, and `scripts/check-bundle-lists.sh` is clean.
 
 ## `-Wall -Wextra` sweep: what is left
 
@@ -230,10 +230,65 @@ Remaining:
 * Later candidate: chord-graph walker. A shared voice-leading helper in
   generative-common is only worth it if a second plugin needs it (shared code, needs approval).
 
+## Candidates from `~/github/oxide-studio` (reviewed 2026-10-23)
+
+MIT/Apache-2.0 Rust, so porting is allowed. Its README overstates: `DuckShaper`, `MasterClipper`,
+`PhaseScope` and `ClubDeck` do not exist in the code. Read the source and check it against its
+reference before porting any device. Downspout already covers distortion, granular, pitch/formant,
+reverb/delay, resonators and every MIDI generator, so only gaps are listed. In order:
+
+1. [x] **Ladder filter** (`oxide-dsp/src/filter.rs`): done 2026-10-23 as `plugins/ladder/`, fully wired
+       (root CMake, install/release scripts, workflow, docs, product page, profile, screenshot). Probed
+       against the analytic response first; 87 core checks pass, VST3 builds clean, bundle lists clean.
+       Changes from the source: resonance taper, Bass Comp control. Adds a `logarithmic` option to
+       `MagnetoKit` ranges (shared). Still to do: host validation in REAPER, listen (does Bass Comp 50 %
+       suit as a default? the defaults sit 3.5 dB low), aliasing at high drive (not measured), optional
+       Drift CC 1-4 on Cutoff/Resonance (not wired). CPU measured 2026-10-23 on a busy machine (load ~30, so an
+       upper bound): about 5.5 % of one core for stereo at 48 kHz (-O2), the same through a long silent decay, so no denormal penalty; it
+       could be cheaper (about 20 divides per sample) if it ever matters.
+2. [x] **Glue compressor** (`oxide-fx/src/glue_compressor.rs`): done 2026-10-23 as `plugins/glue/`, fully wired. A
+       redesign, not a port: the source has a hard knee, no sidechain filter (despite its README), a soft clipper that is
+       discontinuous at |x| = 2/3 and on by default, and a 1024-frame cap. Glue has a soft knee, sidechain HPF, peak/RMS,
+       linked detector, auto release, continuous soft clip, mix and meters; 139 core checks pass. Still to do: host
+       validation in REAPER, listen (is the auto-release table 40-800 ms / 8 dB depth right? is the 10 ms RMS window?),
+       external sidechain input (bassops uses inputs 3-4), look-ahead, Drift CC input.
+3. [x] **EQ Eight** (`oxide-fx/src/eq8.rs`): done 2026-10-23 as `plugins/octet/` (an eight-band EQ, named to avoid
+       Ableton's product name), fully wired. A redesign: the source's 48 dB cuts are four identical Q = 0.707 sections
+       (-12 dB at the cutoff, not -3), its L/R and M/S modes hard-wire bands 1-4 to one channel, and its defaults are not
+       transparent. Octet has 8th-order Butterworth cuts, per-band channel assignment, double precision, a bit-exact
+       transparent default, and a draggable-node response plot. 380 core checks pass. Raised `MagnetoKit` to 64 mirrored
+       values. Still to do: host validation, listen, a spectrum analyser (needs a UI data channel), coefficient smoothing
+       for fast sweeps, Drift CC input.
+4. [x] **Multiband dynamics** (`multiband_dynamics.rs`): done 2026-10-23 as `plugins/trio/`, fully wired. A redesign: the source
+       shares one envelope between the two channels of a band and steps it twice per sample (halved times, cross-steered
+       channels), reads the rectified wave, and does not sum flat. Trio has all-pass-compensated adjustable LR4 crossovers, one
+       peak-hold detector per band linked across channels, Time/Amount/Upward-limit controls and live per-band gain bars; 303 core
+       checks pass. Still to do: host validation, listen (the OTT defaults are strong; detector decay times are my choice), soft
+       knee, band solo, external sidechain, Drift CC input.
+5. [ ] **Wavetable synth** (`oxide-dsp/src/wavetable/`): IN PROGRESS as `plugins/strata/` (not wired into the root build yet, so
+       it cannot break anything). Done 2026-10-23: band-limited half-octave mip tables built by FFT (`strata_tables.*`), the
+       8-voice engine (`strata_core.*`: two table oscillators, Bend/Sync/Fold warp with ADAA fold, sine sub, unison, SVF filter,
+       two ADSRs, LFO, MIDI, DC blocker), `strata_params.hpp` (41 parameters), and 300 core checks passing
+       (`tests/strata_core_tests.cpp`, built by hand with g++; no CMake yet). Measured: unwarped inharmonic power -77 to -88 dB at
+       every pitch against -12 to -25 dB for the same table read naively; warp aliasing at note 60, amount 0.7: Bend -42.6,
+       Sync -38.5, Fold -33.1 dB. The Oxide source has unaliased naive tables and cancelling evenly-phased unison.
+       Still to do: `plugins/strata/CMakeLists.txt`, DPF wrapper + UI (copy the `trio` pattern; show the current frame's
+       waveform), `profile.ttl`, wire with `python3 <scratchpad>/wire.py` equivalent (root CMake option, install.sh,
+       package scripts, workflow, screenshot script, docs lists), docs/product page, screenshot, design.md, CPU timing.
+6. [ ] **4-op FM** (`oxide-dsp/src/operator/`): 11 routing algorithms. No FM synth yet.
+7. [ ] Lower priority: Electric piano and Collision/Tension physical models (near moka, syrinx,
+       magneto), Meld-style engines (Swarm, Formant, Chord, Shepard), Drift-style analog synth.
+8. [ ] Skip or only if wanted: spectral resonator and Auto Shift (overlap resonance-garden, qune,
+       quefrency), warp engine (overlaps keyframe, qune, grist), stem splitter (crude), groove pool.
+
 ## Evaluate Manually in Reaper
 
 * helterskelter
 * keyframe
+* ladder
+* glue
+* octet
+* trio
 * ghost
 * spliff
 * ambo

@@ -1,0 +1,218 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:octet a trn:PluginProfile ;
+    rdfs:label "Octet" ;
+    rdfs:comment "Eight-band parametric equalizer with bell, shelf, notch and 12/48 dB Butterworth cut bands, Stereo, Left/Right and Mid/Side modes with per-band channel assignment, and a draggable response plot." ;
+    trn:bundleName "octet.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/octet/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio .
+
+dsp:octet trn:hasParameter [
+    trn:symbol "mode" ; trn:label "Mode" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 0 ;
+    rdfs:comment "0=Stereo 1=Left/Right 2=Mid/Side"
+], [
+    trn:symbol "output" ; trn:label "Output" ;
+    trn:minimum -12.0 ; trn:maximum 12.0 ; trn:default 0.0 ;
+    rdfs:comment "Output gain in dB"
+], [
+    trn:symbol "band1_on" ; trn:label "Band 1 On" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "0=off 1=on; a bell or shelf at 0 dB does nothing even when on"
+], [
+    trn:symbol "band1_type" ; trn:label "Band 1 Type" ;
+    trn:minimum 0 ; trn:maximum 7 ; trn:default 1 ;
+    rdfs:comment "0=HP 12, 1=HP 48, 2=Low shelf, 3=Bell, 4=Notch, 5=High shelf, 6=LP 12, 7=LP 48"
+], [
+    trn:symbol "band1_freq" ; trn:label "Band 1 Frequency" ;
+    trn:minimum 20.0 ; trn:maximum 20000.0 ; trn:default 30.0 ;
+    rdfs:comment "Centre or corner frequency in Hz (logarithmic)"
+], [
+    trn:symbol "band1_gain" ; trn:label "Band 1 Gain" ;
+    trn:minimum -18.0 ; trn:maximum 18.0 ; trn:default 0.0 ;
+    rdfs:comment "Gain in dB; used by bell and shelf types only"
+], [
+    trn:symbol "band1_q" ; trn:label "Band 1 Q" ;
+    trn:minimum 0.1 ; trn:maximum 18.0 ; trn:default 1.0 ;
+    rdfs:comment "Q (logarithmic); used by bell, shelf and notch types only"
+], [
+    trn:symbol "band1_channel" ; trn:label "Band 1 Channel" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 0 ;
+    rdfs:comment "0=both 1=A (left or mid) 2=B (right or side); ignored in Stereo mode"
+], [
+    trn:symbol "band2_on" ; trn:label "Band 2 On" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "0=off 1=on; a bell or shelf at 0 dB does nothing even when on"
+], [
+    trn:symbol "band2_type" ; trn:label "Band 2 Type" ;
+    trn:minimum 0 ; trn:maximum 7 ; trn:default 2 ;
+    rdfs:comment "0=HP 12, 1=HP 48, 2=Low shelf, 3=Bell, 4=Notch, 5=High shelf, 6=LP 12, 7=LP 48"
+], [
+    trn:symbol "band2_freq" ; trn:label "Band 2 Frequency" ;
+    trn:minimum 20.0 ; trn:maximum 20000.0 ; trn:default 100.0 ;
+    rdfs:comment "Centre or corner frequency in Hz (logarithmic)"
+], [
+    trn:symbol "band2_gain" ; trn:label "Band 2 Gain" ;
+    trn:minimum -18.0 ; trn:maximum 18.0 ; trn:default 0.0 ;
+    rdfs:comment "Gain in dB; used by bell and shelf types only"
+], [
+    trn:symbol "band2_q" ; trn:label "Band 2 Q" ;
+    trn:minimum 0.1 ; trn:maximum 18.0 ; trn:default 0.71 ;
+    rdfs:comment "Q (logarithmic); used by bell, shelf and notch types only"
+], [
+    trn:symbol "band2_channel" ; trn:label "Band 2 Channel" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 0 ;
+    rdfs:comment "0=both 1=A (left or mid) 2=B (right or side); ignored in Stereo mode"
+], [
+    trn:symbol "band3_on" ; trn:label "Band 3 On" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "0=off 1=on; a bell or shelf at 0 dB does nothing even when on"
+], [
+    trn:symbol "band3_type" ; trn:label "Band 3 Type" ;
+    trn:minimum 0 ; trn:maximum 7 ; trn:default 3 ;
+    rdfs:comment "0=HP 12, 1=HP 48, 2=Low shelf, 3=Bell, 4=Notch, 5=High shelf, 6=LP 12, 7=LP 48"
+], [
+    trn:symbol "band3_freq" ; trn:label "Band 3 Frequency" ;
+    trn:minimum 20.0 ; trn:maximum 20000.0 ; trn:default 250.0 ;
+    rdfs:comment "Centre or corner frequency in Hz (logarithmic)"
+], [
+    trn:symbol "band3_gain" ; trn:label "Band 3 Gain" ;
+    trn:minimum -18.0 ; trn:maximum 18.0 ; trn:default 0.0 ;
+    rdfs:comment "Gain in dB; used by bell and shelf types only"
+], [
+    trn:symbol "band3_q" ; trn:label "Band 3 Q" ;
+    trn:minimum 0.1 ; trn:maximum 18.0 ; trn:default 1.0 ;
+    rdfs:comment "Q (logarithmic); used by bell, shelf and notch types only"
+], [
+    trn:symbol "band3_channel" ; trn:label "Band 3 Channel" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 0 ;
+    rdfs:comment "0=both 1=A (left or mid) 2=B (right or side); ignored in Stereo mode"
+], [
+    trn:symbol "band4_on" ; trn:label "Band 4 On" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "0=off 1=on; a bell or shelf at 0 dB does nothing even when on"
+], [
+    trn:symbol "band4_type" ; trn:label "Band 4 Type" ;
+    trn:minimum 0 ; trn:maximum 7 ; trn:default 3 ;
+    rdfs:comment "0=HP 12, 1=HP 48, 2=Low shelf, 3=Bell, 4=Notch, 5=High shelf, 6=LP 12, 7=LP 48"
+], [
+    trn:symbol "band4_freq" ; trn:label "Band 4 Frequency" ;
+    trn:minimum 20.0 ; trn:maximum 20000.0 ; trn:default 600.0 ;
+    rdfs:comment "Centre or corner frequency in Hz (logarithmic)"
+], [
+    trn:symbol "band4_gain" ; trn:label "Band 4 Gain" ;
+    trn:minimum -18.0 ; trn:maximum 18.0 ; trn:default 0.0 ;
+    rdfs:comment "Gain in dB; used by bell and shelf types only"
+], [
+    trn:symbol "band4_q" ; trn:label "Band 4 Q" ;
+    trn:minimum 0.1 ; trn:maximum 18.0 ; trn:default 1.0 ;
+    rdfs:comment "Q (logarithmic); used by bell, shelf and notch types only"
+], [
+    trn:symbol "band4_channel" ; trn:label "Band 4 Channel" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 0 ;
+    rdfs:comment "0=both 1=A (left or mid) 2=B (right or side); ignored in Stereo mode"
+], [
+    trn:symbol "band5_on" ; trn:label "Band 5 On" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "0=off 1=on; a bell or shelf at 0 dB does nothing even when on"
+], [
+    trn:symbol "band5_type" ; trn:label "Band 5 Type" ;
+    trn:minimum 0 ; trn:maximum 7 ; trn:default 3 ;
+    rdfs:comment "0=HP 12, 1=HP 48, 2=Low shelf, 3=Bell, 4=Notch, 5=High shelf, 6=LP 12, 7=LP 48"
+], [
+    trn:symbol "band5_freq" ; trn:label "Band 5 Frequency" ;
+    trn:minimum 20.0 ; trn:maximum 20000.0 ; trn:default 1500.0 ;
+    rdfs:comment "Centre or corner frequency in Hz (logarithmic)"
+], [
+    trn:symbol "band5_gain" ; trn:label "Band 5 Gain" ;
+    trn:minimum -18.0 ; trn:maximum 18.0 ; trn:default 0.0 ;
+    rdfs:comment "Gain in dB; used by bell and shelf types only"
+], [
+    trn:symbol "band5_q" ; trn:label "Band 5 Q" ;
+    trn:minimum 0.1 ; trn:maximum 18.0 ; trn:default 1.0 ;
+    rdfs:comment "Q (logarithmic); used by bell, shelf and notch types only"
+], [
+    trn:symbol "band5_channel" ; trn:label "Band 5 Channel" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 0 ;
+    rdfs:comment "0=both 1=A (left or mid) 2=B (right or side); ignored in Stereo mode"
+], [
+    trn:symbol "band6_on" ; trn:label "Band 6 On" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "0=off 1=on; a bell or shelf at 0 dB does nothing even when on"
+], [
+    trn:symbol "band6_type" ; trn:label "Band 6 Type" ;
+    trn:minimum 0 ; trn:maximum 7 ; trn:default 3 ;
+    rdfs:comment "0=HP 12, 1=HP 48, 2=Low shelf, 3=Bell, 4=Notch, 5=High shelf, 6=LP 12, 7=LP 48"
+], [
+    trn:symbol "band6_freq" ; trn:label "Band 6 Frequency" ;
+    trn:minimum 20.0 ; trn:maximum 20000.0 ; trn:default 4000.0 ;
+    rdfs:comment "Centre or corner frequency in Hz (logarithmic)"
+], [
+    trn:symbol "band6_gain" ; trn:label "Band 6 Gain" ;
+    trn:minimum -18.0 ; trn:maximum 18.0 ; trn:default 0.0 ;
+    rdfs:comment "Gain in dB; used by bell and shelf types only"
+], [
+    trn:symbol "band6_q" ; trn:label "Band 6 Q" ;
+    trn:minimum 0.1 ; trn:maximum 18.0 ; trn:default 1.0 ;
+    rdfs:comment "Q (logarithmic); used by bell, shelf and notch types only"
+], [
+    trn:symbol "band6_channel" ; trn:label "Band 6 Channel" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 0 ;
+    rdfs:comment "0=both 1=A (left or mid) 2=B (right or side); ignored in Stereo mode"
+], [
+    trn:symbol "band7_on" ; trn:label "Band 7 On" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "0=off 1=on; a bell or shelf at 0 dB does nothing even when on"
+], [
+    trn:symbol "band7_type" ; trn:label "Band 7 Type" ;
+    trn:minimum 0 ; trn:maximum 7 ; trn:default 5 ;
+    rdfs:comment "0=HP 12, 1=HP 48, 2=Low shelf, 3=Bell, 4=Notch, 5=High shelf, 6=LP 12, 7=LP 48"
+], [
+    trn:symbol "band7_freq" ; trn:label "Band 7 Frequency" ;
+    trn:minimum 20.0 ; trn:maximum 20000.0 ; trn:default 8000.0 ;
+    rdfs:comment "Centre or corner frequency in Hz (logarithmic)"
+], [
+    trn:symbol "band7_gain" ; trn:label "Band 7 Gain" ;
+    trn:minimum -18.0 ; trn:maximum 18.0 ; trn:default 0.0 ;
+    rdfs:comment "Gain in dB; used by bell and shelf types only"
+], [
+    trn:symbol "band7_q" ; trn:label "Band 7 Q" ;
+    trn:minimum 0.1 ; trn:maximum 18.0 ; trn:default 0.71 ;
+    rdfs:comment "Q (logarithmic); used by bell, shelf and notch types only"
+], [
+    trn:symbol "band7_channel" ; trn:label "Band 7 Channel" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 0 ;
+    rdfs:comment "0=both 1=A (left or mid) 2=B (right or side); ignored in Stereo mode"
+], [
+    trn:symbol "band8_on" ; trn:label "Band 8 On" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "0=off 1=on; a bell or shelf at 0 dB does nothing even when on"
+], [
+    trn:symbol "band8_type" ; trn:label "Band 8 Type" ;
+    trn:minimum 0 ; trn:maximum 7 ; trn:default 7 ;
+    rdfs:comment "0=HP 12, 1=HP 48, 2=Low shelf, 3=Bell, 4=Notch, 5=High shelf, 6=LP 12, 7=LP 48"
+], [
+    trn:symbol "band8_freq" ; trn:label "Band 8 Frequency" ;
+    trn:minimum 20.0 ; trn:maximum 20000.0 ; trn:default 18000.0 ;
+    rdfs:comment "Centre or corner frequency in Hz (logarithmic)"
+], [
+    trn:symbol "band8_gain" ; trn:label "Band 8 Gain" ;
+    trn:minimum -18.0 ; trn:maximum 18.0 ; trn:default 0.0 ;
+    rdfs:comment "Gain in dB; used by bell and shelf types only"
+], [
+    trn:symbol "band8_q" ; trn:label "Band 8 Q" ;
+    trn:minimum 0.1 ; trn:maximum 18.0 ; trn:default 1.0 ;
+    rdfs:comment "Q (logarithmic); used by bell, shelf and notch types only"
+], [
+    trn:symbol "band8_channel" ; trn:label "Band 8 Channel" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 0 ;
+    rdfs:comment "0=both 1=A (left or mid) 2=B (right or side); ignored in Stereo mode"
+] .

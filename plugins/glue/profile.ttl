@@ -1,0 +1,74 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:glue a trn:PluginProfile ;
+    rdfs:label "Glue" ;
+    rdfs:comment "Stereo-linked bus compressor with soft knee, sidechain high-pass, peak or RMS detector, program-dependent auto release, soft clip and parallel mix; shows its transfer curve and gain reduction." ;
+    trn:bundleName "glue.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/glue/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio .
+
+dsp:glue trn:hasParameter [
+    trn:symbol "threshold" ; trn:label "Threshold" ;
+    trn:minimum -60.0 ; trn:maximum 0.0 ; trn:default -18.0 ;
+    rdfs:comment "Detector level in dB above which compression starts"
+], [
+    trn:symbol "ratio" ; trn:label "Ratio" ;
+    trn:minimum 1.1 ; trn:maximum 20.0 ; trn:default 4.0 ;
+    rdfs:comment "Compression ratio, N:1 (logarithmic)"
+], [
+    trn:symbol "knee" ; trn:label "Knee" ;
+    trn:minimum 0.0 ; trn:maximum 24.0 ; trn:default 6.0 ;
+    rdfs:comment "Soft knee width in dB, centred on the threshold"
+], [
+    trn:symbol "attack" ; trn:label "Attack" ;
+    trn:minimum 0.1 ; trn:maximum 100.0 ; trn:default 10.0 ;
+    rdfs:comment "Attack time constant in ms (logarithmic)"
+], [
+    trn:symbol "release" ; trn:label "Release" ;
+    trn:minimum 20.0 ; trn:maximum 2000.0 ; trn:default 200.0 ;
+    rdfs:comment "Release time constant in ms (logarithmic); ignored while auto_release is 1"
+], [
+    trn:symbol "auto_release" ; trn:label "Auto Release" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "0=Fixed 1=Auto: about 40 ms after a transient, up to 800 ms once compression has been sustained"
+], [
+    trn:symbol "sc_hpf" ; trn:label "Sidechain HPF" ;
+    trn:minimum 20.0 ; trn:maximum 400.0 ; trn:default 60.0 ;
+    rdfs:comment "Detector high-pass in Hz (logarithmic); 20 = off"
+], [
+    trn:symbol "detector" ; trn:label "Detector" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "0=Peak 1=RMS (10 ms window)"
+], [
+    trn:symbol "range" ; trn:label "Range" ;
+    trn:minimum 1.0 ; trn:maximum 40.0 ; trn:default 40.0 ;
+    rdfs:comment "Maximum gain reduction in dB"
+], [
+    trn:symbol "makeup" ; trn:label "Makeup" ;
+    trn:minimum 0.0 ; trn:maximum 24.0 ; trn:default 0.0 ;
+    rdfs:comment "Makeup gain in dB"
+], [
+    trn:symbol "soft_clip" ; trn:label "Soft Clip" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "0=Off 1=On: linear below 0.5, tanh shoulder above, never exceeds 1.0"
+], [
+    trn:symbol "mix" ; trn:label "Mix" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 100.0 ;
+    rdfs:comment "Dry/wet blend percentage (parallel compression)"
+], [
+    trn:symbol "status_reduction" ; trn:label "Gain Reduction" ;
+    trn:minimum 0.0 ; trn:maximum 40.0 ; trn:default 0.0 ;
+    rdfs:comment "Output: gain reduction in dB at the end of the last block"
+], [
+    trn:symbol "status_level" ; trn:label "Detector Level" ;
+    trn:minimum -120.0 ; trn:maximum 12.0 ; trn:default -120.0 ;
+    rdfs:comment "Output: detector level in dB at the end of the last block"
+] .

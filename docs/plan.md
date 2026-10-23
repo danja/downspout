@@ -261,6 +261,34 @@ Progress as of 2026-05-27:
   setting is a parameter. See `plugins/grist/docs/design.md`. Host validation in REAPER and
   listening tests remain, and so does a decision on whether Resonance Garden needs a string
   mode to pair with it.
+- `ladder` is a four-pole saturating low-pass ladder filter in the Magneto look, ported from the
+  zero-delay-feedback ladder in `~/github/oxide-studio` (`oxide-dsp`, MIT/Apache-2.0) after probing it
+  against the analytic response. Changes from the source: an exponential resonance taper, a Bass Comp
+  control for the low end that feedback removes, and drive/mix/output. The panel plots a linear response
+  model that the tests hold to the real filter. It adds a logarithmic option to `MagnetoKit` sliders.
+  Ordinary parameters, no plugin state. See `plugins/ladder/docs/design.md`. Listening and host
+  validation in REAPER remain; the rest of the oxide-studio candidates are listed in `TODO.md`.
+- `trio` is a three-band dynamics processor in the Magneto look, a redesign inspired by `oxide-fx`'s Multiband Dynamics
+  (`~/github/oxide-studio`, MIT/Apache-2.0), whose bands share one envelope between the left and right channels and step it
+  twice per sample (halving the times and cross-steering the channels), and whose detector reads the rectified wave. Trio has
+  adjustable all-pass-compensated LR4 crossovers that sum flat, one peak-hold detector per band linked across the channels,
+  a documented gain computer (`bandTargetDb()`), Time and Amount macros, an upward limit, and output parameters for per-band
+  gain and level that feed the panel's bars. Ordinary parameters, no plugin state. See `plugins/trio/docs/design.md`. Listening
+  and host validation in REAPER remain; no look-ahead, soft knee or external sidechain.
+- `octet` is an eight-band parametric equalizer in the Magneto look, a redesign inspired by `oxide-fx`'s EQ Eight
+  (`~/github/oxide-studio`, MIT/Apache-2.0), whose 48 dB cuts are four identical Q = 0.707 sections (-12 dB at the cutoff
+  rather than -3), whose L/R and M/S modes hard-wire bands 1-4 to one channel, and whose defaults are not transparent.
+  Octet has proper 8th-order Butterworth cuts, per-band channel assignment, double-precision filters, a bit-exact
+  transparent default, and a panel with draggable band nodes that plots the exact response from the coefficients in use.
+  It raises the `MagnetoKit` mirrored-parameter limit from 32 to 64 (octet has 50). Ordinary parameters, no plugin state.
+  See `plugins/octet/docs/design.md`. Listening and host validation in REAPER remain; no spectrum analyser.
+- `glue` is a stereo-linked bus compressor in the Magneto look, a redesign inspired by `oxide-fx`'s Glue Compressor
+  (`~/github/oxide-studio`, MIT/Apache-2.0), whose code is a plain hard-knee peak compressor with no sidechain filter
+  and a soft clipper that is discontinuous and on by default. Glue has a soft knee, a sidechain high-pass, peak or RMS
+  detection, a linked detector, an auto release driven by the demanded reduction, a continuous soft clip (off by
+  default), parallel mix, and output parameters for gain reduction and level that feed the panel's transfer curve, live
+  dot and history. Ordinary parameters, no plugin state. See `plugins/glue/docs/design.md`. Listening and host validation
+  in REAPER remain; no look-ahead and no external sidechain yet.
 - `sam` is a speech instrument in the Magneto look, built around the vendored SAM (Software
   Automatic Mouth) C code from `~/github/SAM`. Keys mode speaks a word per MIDI note, sung at the
   key's pitch (nearest whole SAM pitch tick, then resampled into tune); Transport mode lays the
@@ -338,7 +366,7 @@ Current main gap:
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
   `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`,
-  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `grist.vst3`, and `sam.vst3` bundles.
+  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `grist.vst3`, `sam.vst3`, `ladder.vst3`, `glue.vst3`, `octet.vst3`, and `trio.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of

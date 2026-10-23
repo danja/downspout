@@ -92,6 +92,10 @@ Current output filenames:
 - `qune.png`
 - `grist.png`
 - `sam.png`
+- `ladder.png`
+- `glue.png`
+- `octet.png`
+- `trio.png`
 - `primefold.png`
 - `quefrency.png`
 - `keyframe.png`

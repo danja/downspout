@@ -83,6 +83,10 @@ option(DOWNSPOUT_BUILD_SPROUT "Configure the Sprout L-system MIDI generator targ
 option(DOWNSPOUT_BUILD_MARKOV "Configure the Markov melody generator target" ON)
 option(DOWNSPOUT_BUILD_GRIST "Configure the Grist granular grain-delay effect target" ON)
 option(DOWNSPOUT_BUILD_SAM "Configure the Sam speech synthesiser (Software Automatic Mouth) target" ON)
+option(DOWNSPOUT_BUILD_LADDER "Configure the Ladder four-pole low-pass filter target" ON)
+option(DOWNSPOUT_BUILD_GLUE "Configure the Glue bus compressor target" ON)
+option(DOWNSPOUT_BUILD_OCTET "Configure the Octet eight-band equalizer target" ON)
+option(DOWNSPOUT_BUILD_TRIO "Configure the Trio three-band dynamics target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 option(DOWNSPOUT_BUILD_SCREENSHOT_APPS "Build DPF standalone apps for documentation screenshots" OFF)
 
@@ -478,4 +482,20 @@ endif()
 
 if(DOWNSPOUT_BUILD_SAM)
     add_subdirectory(plugins/sam)
+endif()
+
+if(DOWNSPOUT_BUILD_LADDER)
+    add_subdirectory(plugins/ladder)
+endif()
+
+if(DOWNSPOUT_BUILD_GLUE)
+    add_subdirectory(plugins/glue)
+endif()
+
+if(DOWNSPOUT_BUILD_OCTET)
+    add_subdirectory(plugins/octet)
+endif()
+
+if(DOWNSPOUT_BUILD_TRIO)
+    add_subdirectory(plugins/trio)
 endif()
