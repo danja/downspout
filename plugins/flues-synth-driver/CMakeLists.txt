@@ -29,11 +29,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_flues_synth_driver_core_tests
-        tests/flues_synth_driver_core_tests.cpp
-    )
-    target_link_libraries(downspout_flues_synth_driver_core_tests
-        PRIVATE downspout_flues_synth_driver_core)
-    add_test(NAME downspout_flues_synth_driver_core_tests
-             COMMAND downspout_flues_synth_driver_core_tests)
+    downspout_add_core_test(downspout_flues_synth_driver_core_tests
+        SOURCES tests/flues_synth_driver_core_tests.cpp
+        LIBS downspout_flues_synth_driver_core)
 endif()

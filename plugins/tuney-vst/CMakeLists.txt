@@ -39,7 +39,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_tuney_vst_core_tests tests/tuney_vst_core_tests.cpp)
-    target_link_libraries(downspout_tuney_vst_core_tests PRIVATE downspout_tuney_vst_core)
-    add_test(NAME downspout_tuney_vst_core_tests COMMAND downspout_tuney_vst_core_tests)
+    downspout_add_core_test(downspout_tuney_vst_core_tests
+        SOURCES tests/tuney_vst_core_tests.cpp
+        LIBS downspout_tuney_vst_core)
 endif()

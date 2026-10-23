@@ -42,17 +42,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_magneto_core_tests
-        tests/magneto_core_tests.cpp
-    )
-    target_link_libraries(downspout_magneto_core_tests PRIVATE downspout_magneto_core)
-    # Release adds -DNDEBUG, which compiles every assert() out and lets the
-    # suite pass while testing nothing.
-    if(MSVC)
-        target_compile_options(downspout_magneto_core_tests PRIVATE /UNDEBUG)
-    else()
-        target_compile_options(downspout_magneto_core_tests PRIVATE -UNDEBUG)
-    endif()
-    target_include_directories(downspout_magneto_core_tests PRIVATE "${PROJECT_SOURCE_DIR}/include")
-    add_test(NAME downspout_magneto_core_tests COMMAND downspout_magneto_core_tests)
+    downspout_add_core_test(downspout_magneto_core_tests
+        SOURCES tests/magneto_core_tests.cpp
+        LIBS downspout_magneto_core)
 endif()

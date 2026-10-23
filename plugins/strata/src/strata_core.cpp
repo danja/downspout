@@ -53,44 +53,19 @@ inline float randomUnit(std::uint32_t& s) noexcept   // 0..1
     return static_cast<float>(nextRandom(s) >> 8) * (1.0f / 16777216.0f);
 }
 
-// Filter coefficients for the trapezoidal SVF: g = tan(pi fc / sr), k = 1 / Q.
 using SvfCoeff = FilterCoeff;
+using downspout::dsp::makeSvf;
 
-SvfCoeff makeSvf(double cutoff, double resonance, double sr) noexcept
+// The plugin's own FilterType order is the shared SvfMode order (tested), so the cast is a rename.
+static_assert(static_cast<int>(FilterType::LowPass12) == static_cast<int>(downspout::dsp::SvfMode::LowPass12) &&
+              static_cast<int>(FilterType::LowPass24) == static_cast<int>(downspout::dsp::SvfMode::LowPass24) &&
+              static_cast<int>(FilterType::HighPass12) == static_cast<int>(downspout::dsp::SvfMode::HighPass12) &&
+              static_cast<int>(FilterType::BandPass) == static_cast<int>(downspout::dsp::SvfMode::BandPass) &&
+              static_cast<int>(FilterType::Notch) == static_cast<int>(downspout::dsp::SvfMode::Notch),
+              "FilterType must stay in the order of downspout::dsp::SvfMode");
+inline double filterSample(FilterType type, Svf& s1, Svf& s2, const FilterCoeff& c, const FilterCoeff& c2, double x) noexcept
 {
-    const double fc = std::min(std::max(cutoff, 20.0), std::min(20000.0, sr * 0.45));
-    SvfCoeff c;
-    c.g = std::tan(kPi * fc / sr);
-    // res 0 -> Q = 1/sqrt(2) (Butterworth), res 1 -> Q = 20.
-    c.k = 1.41421356 - (1.41421356 - 0.05) * std::min(std::max(resonance, 0.0), 1.0);
-    c.a1 = 1.0 / (1.0 + c.g * (c.g + c.k));
-    c.a2 = c.g * c.a1;
-    c.a3 = c.g * c.a2;
-    return c;
-}
-
-struct SvfOut { double lp, bp, hp; };
-
-inline SvfOut runSvf(Svf& s, const SvfCoeff& c, double x) noexcept
-{
-    const double v3 = x - s.ic2;
-    const double v1 = c.a1 * s.ic1 + c.a2 * v3;
-    const double v2 = s.ic2 + c.a2 * s.ic1 + c.a3 * v3;
-    s.ic1 = 2.0 * v1 - s.ic1;
-    s.ic2 = 2.0 * v2 - s.ic2;
-    return {v2, v1, x - c.k * v1 - v2};
-}
-
-inline double filterSample(FilterType type, Svf& s1, Svf& s2, const SvfCoeff& c, const SvfCoeff& c2, double x) noexcept
-{
-    const SvfOut a = runSvf(s1, c, x);
-    switch (type) {
-    case FilterType::LowPass12:  return a.lp;
-    case FilterType::LowPass24:  return runSvf(s2, c2, a.lp).lp;
-    case FilterType::HighPass12: return a.hp;
-    case FilterType::BandPass:   return c.k * a.bp;
-    default:                     return a.lp + a.hp;  // notch
-    }
+    return downspout::dsp::filterSample(static_cast<downspout::dsp::SvfMode>(static_cast<int>(type)), s1, s2, c, c2, x);
 }
 
 // One table oscillator read at `phase`, with the warp applied. The mip is chosen from the

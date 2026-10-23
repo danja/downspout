@@ -41,15 +41,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_arpgen_core_tests
-        tests/arpgen_core_tests.cpp
-    )
-    target_link_libraries(downspout_arpgen_core_tests PRIVATE downspout_arpgen_core)
-    if(MSVC)
-        target_compile_options(downspout_arpgen_core_tests PRIVATE /UNDEBUG)
-    else()
-        target_compile_options(downspout_arpgen_core_tests PRIVATE -UNDEBUG)
-    endif()
-    target_include_directories(downspout_arpgen_core_tests PRIVATE "${PROJECT_SOURCE_DIR}/include")
-    add_test(NAME downspout_arpgen_core_tests COMMAND downspout_arpgen_core_tests)
+    downspout_add_core_test(downspout_arpgen_core_tests
+        SOURCES tests/arpgen_core_tests.cpp
+        LIBS downspout_arpgen_core)
 endif()

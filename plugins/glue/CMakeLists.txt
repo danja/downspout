@@ -33,9 +33,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_glue_core_tests
-        tests/glue_core_tests.cpp
-    )
-    target_link_libraries(downspout_glue_core_tests PRIVATE downspout_glue_core)
-    add_test(NAME downspout_glue_core_tests COMMAND downspout_glue_core_tests)
+    downspout_add_core_test(downspout_glue_core_tests
+        SOURCES tests/glue_core_tests.cpp
+        LIBS downspout_glue_core)
 endif()

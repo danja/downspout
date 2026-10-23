@@ -29,9 +29,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_treatment_core_tests
-        tests/treatment_core_tests.cpp
-    )
-    target_link_libraries(downspout_treatment_core_tests PRIVATE downspout_treatment_core)
-    add_test(NAME downspout_treatment_core_tests COMMAND downspout_treatment_core_tests)
+    downspout_add_core_test(downspout_treatment_core_tests
+        SOURCES tests/treatment_core_tests.cpp
+        LIBS downspout_treatment_core)
 endif()

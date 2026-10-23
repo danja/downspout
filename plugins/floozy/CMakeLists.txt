@@ -37,9 +37,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_floozy_core_tests
-        tests/floozy_core_tests.cpp
-    )
-    target_link_libraries(downspout_floozy_core_tests PRIVATE downspout_floozy_core)
-    add_test(NAME downspout_floozy_core_tests COMMAND downspout_floozy_core_tests)
+    downspout_add_core_test(downspout_floozy_core_tests
+        SOURCES tests/floozy_core_tests.cpp
+        LIBS downspout_floozy_core)
 endif()

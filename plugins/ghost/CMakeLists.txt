@@ -31,12 +31,8 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_ghost_core_tests
-        tests/ghost_core_tests.cpp
-    )
-    target_link_libraries(downspout_ghost_core_tests PRIVATE downspout_ghost_core)
-    target_include_directories(downspout_ghost_core_tests PRIVATE
-        "${PROJECT_SOURCE_DIR}/plugins/generative-common/include"
-    )
-    add_test(NAME downspout_ghost_core_tests COMMAND downspout_ghost_core_tests)
+    downspout_add_core_test(downspout_ghost_core_tests
+        SOURCES tests/ghost_core_tests.cpp
+        LIBS downspout_ghost_core
+        INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/plugins/generative-common/include")
 endif()

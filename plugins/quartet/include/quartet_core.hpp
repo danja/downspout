@@ -1,5 +1,7 @@
 #pragma once
 
+#include "downspout/dsp/svf.hpp"
+
 #include <array>
 #include <cstdint>
 
@@ -78,13 +80,9 @@ struct Envelope {
     double value = 0.0;
 };
 
-struct FilterCoeff {
-    double g = 0.0, k = 1.0, a1 = 1.0, a2 = 0.0, a3 = 0.0;
-};
-
-struct Svf {
-    double ic1 = 0.0, ic2 = 0.0;
-};
+// The trapezoidal state-variable filter is shared (include/downspout/dsp/svf.hpp).
+using FilterCoeff = downspout::dsp::SvfCoeff;
+using Svf = downspout::dsp::Svf;
 
 inline constexpr int kDecimatorTaps = 63;
 

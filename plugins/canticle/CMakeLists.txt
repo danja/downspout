@@ -35,11 +35,9 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_canticle_core_tests
-        tests/canticle_core_tests.cpp
-    )
-    target_link_libraries(downspout_canticle_core_tests PRIVATE downspout_canticle_core)
-    add_test(NAME downspout_canticle_core_tests COMMAND downspout_canticle_core_tests)
+    downspout_add_core_test(downspout_canticle_core_tests
+        SOURCES tests/canticle_core_tests.cpp
+        LIBS downspout_canticle_core)
 
     add_executable(downspout_canticle_processing_benchmark
         tests/canticle_processing_benchmark.cpp

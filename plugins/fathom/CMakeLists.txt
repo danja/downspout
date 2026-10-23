@@ -37,21 +37,10 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_fathom_core_tests tests/fathom_core_tests.cpp)
-    target_link_libraries(downspout_fathom_core_tests PRIVATE downspout_fathom_core)
-    # The suite uses its own require() rather than assert(), so the Release
-    # build's -DNDEBUG cannot compile the checks out. -UNDEBUG is belt and braces.
-    if(MSVC)
-        target_compile_options(downspout_fathom_core_tests PRIVATE /UNDEBUG)
-    else()
-        target_compile_options(downspout_fathom_core_tests PRIVATE -UNDEBUG)
-    endif()
     # Drift's lane table is inline constexpr data; the CC-alignment test reads it
     # directly, so no link dependency on the drift library is needed.
-    target_include_directories(downspout_fathom_core_tests PRIVATE
-        "${PROJECT_SOURCE_DIR}/include"
-        "${PROJECT_SOURCE_DIR}/plugins/drift/include"
-        "${PROJECT_SOURCE_DIR}/plugins/generative-common/include"
-    )
-    add_test(NAME downspout_fathom_core_tests COMMAND downspout_fathom_core_tests)
+    downspout_add_core_test(downspout_fathom_core_tests
+        SOURCES tests/fathom_core_tests.cpp
+        LIBS downspout_fathom_core
+        INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/plugins/drift/include" "${PROJECT_SOURCE_DIR}/plugins/generative-common/include")
 endif()

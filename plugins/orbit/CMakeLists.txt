@@ -11,15 +11,7 @@ target_include_directories(orbit-ui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include"
 install(DIRECTORY "${PROJECT_BINARY_DIR}/bin/orbit.vst3" DESTINATION "." OPTIONAL)
 endif()
 if(BUILD_TESTING)
-add_executable(downspout_orbit_core_tests tests/orbit_core_tests.cpp)
-target_link_libraries(downspout_orbit_core_tests PRIVATE downspout_orbit_core)
-# Release adds -DNDEBUG, which compiles every assert() out and lets the
-# suite pass while testing nothing.
-if(MSVC)
-    target_compile_options(downspout_orbit_core_tests PRIVATE /UNDEBUG)
-else()
-    target_compile_options(downspout_orbit_core_tests PRIVATE -UNDEBUG)
-endif()
-target_include_directories(downspout_orbit_core_tests PRIVATE "${PROJECT_SOURCE_DIR}/include")
-add_test(NAME downspout_orbit_core_tests COMMAND downspout_orbit_core_tests)
+    downspout_add_core_test(downspout_orbit_core_tests
+        SOURCES tests/orbit_core_tests.cpp
+        LIBS downspout_orbit_core)
 endif()

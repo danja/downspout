@@ -40,17 +40,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_bassgen_core_tests
-        tests/bassgen_core_tests.cpp
-    )
-    target_link_libraries(downspout_bassgen_core_tests PRIVATE downspout_bassgen_core)
-    # Release adds -DNDEBUG, which compiles every assert() out and lets the
-    # suite pass while testing nothing.
-    if(MSVC)
-        target_compile_options(downspout_bassgen_core_tests PRIVATE /UNDEBUG)
-    else()
-        target_compile_options(downspout_bassgen_core_tests PRIVATE -UNDEBUG)
-    endif()
-    target_include_directories(downspout_bassgen_core_tests PRIVATE "${PROJECT_SOURCE_DIR}/include")
-    add_test(NAME downspout_bassgen_core_tests COMMAND downspout_bassgen_core_tests)
+    downspout_add_core_test(downspout_bassgen_core_tests
+        SOURCES tests/bassgen_core_tests.cpp
+        LIBS downspout_bassgen_core)
 endif()

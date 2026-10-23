@@ -56,7 +56,7 @@ Each plugin directory generally follows this shape:
 - `src/dpf/`
   DPF wrapper, metadata, and UI
 - `tests/`
-  Deterministic core tests
+  Deterministic core tests, registered with `downspout_add_core_test()` from `cmake/DownspoutTests.cmake` (it applies `-UNDEBUG`, the shared include path and `add_test`)
 - `docs/`
   Audit notes, extraction plan, porting notes
 - `README.md`
@@ -310,3 +310,7 @@ The generative-workstation suite shares only plugin-suite-local transport/MIDI
 utilities and a parameter-panel UI under `plugins/generative-common`. Domain
 logic remains in each plugin core. Existing plugins do not depend on this
 suite-local layer.
+
+## Shared DSP headers
+
+`include/downspout/dsp/` holds DSP that two or more plugins carried identically: `svf.hpp` (the trapezoidal state-variable filter, Strata and Quartet) and `dc_blocker.hpp` (Drumkit and Syrinx). Each was moved verbatim and checked bit-for-bit against the old code. Helpers that only look alike (the one-pole low-passes, the biquads) stay per plugin, because unifying them would change the sound.

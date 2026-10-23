@@ -2,17 +2,15 @@
 
 Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 
-## Needs your approval first (shared or root code)
+## Shared code follow-ups (approved, partly done)
 
-* **Promote the shared `OnePoleLowpass` / `DCBlocker` / `BiquadFilter` duplicates into
-  `include/downspout/dsp/`.** Worth doing but a separate change, and CLAUDE.md requires
-  approval before touching shared headers. HANDLE WITH CARE. (The seven oxide-studio plugins
-  added in October each carry their own small SVF/biquad/DC blocker too.)
-* **Replace the copy-pasted `-UNDEBUG` + include-dir blocks with one root helper**, e.g.
-  `downspout_add_core_test(<target> SOURCES ... LIBS ...)`, so a new plugin cannot forget
-  either. Low urgency, since `include/downspout/test_assert.h` already makes a lost
-  `-UNDEBUG` a compile error (the newest suites use a `check()` helper, not `assert`, and need
-  neither). Touches root glue and ~40 plugin CMake files, so it needs approval and a full test run.
+Done in October: `cmake/DownspoutTests.cmake` (`downspout_add_core_test`) replaced the copy-pasted test blocks in the plugin
+CMake files; `include/downspout/dsp/svf.hpp` (Strata, Quartet) and `dc_blocker.hpp` (Drumkit, Syrinx) are shared, both
+checked bit-for-bit against the old code. The remaining "duplicates" are not duplicates, so unifying them would change how
+plugins sound: the `OnePoleLowpass` copies in Moka, Canticle and Magneto differ in cutoff clamp (40 vs 30 Hz), coefficient
+caching and denormal handling; Gremlin's DC blocker has a fixed pole of 0.9985; Drumkit's and Syrinx's `BiquadFilter`
+differ in the Q floor (0.5 vs 0.3) and the band-pass gain (`Q alpha` vs `alpha`). Only unify these deliberately, per plugin,
+with an A/B listen. The core test blocks in `src/common/sampleprofile` and `tools/ai-coordinator` still use the long form.
 
 ## Session state
 

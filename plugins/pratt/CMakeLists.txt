@@ -45,18 +45,8 @@ endif()
 
 if(BUILD_TESTING)
     foreach(suite core engine params threading)
-        add_executable(downspout_pratt_${suite}_tests
-            tests/pratt_${suite}_tests.cpp
-        )
-        target_link_libraries(downspout_pratt_${suite}_tests PRIVATE downspout_pratt_core)
-        # Release adds -DNDEBUG, which compiles every assert() out and lets the
-        # suite pass while testing nothing.
-        if(MSVC)
-            target_compile_options(downspout_pratt_${suite}_tests PRIVATE /UNDEBUG)
-        else()
-            target_compile_options(downspout_pratt_${suite}_tests PRIVATE -UNDEBUG)
-        endif()
-        target_include_directories(downspout_pratt_${suite}_tests PRIVATE "${PROJECT_SOURCE_DIR}/include")
-        add_test(NAME downspout_pratt_${suite}_tests COMMAND downspout_pratt_${suite}_tests)
+        downspout_add_core_test(downspout_pratt_${suite}_tests
+            SOURCES tests/pratt_${suite}_tests.cpp
+            LIBS downspout_pratt_core)
     endforeach()
 endif()

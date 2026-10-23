@@ -33,9 +33,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_monochord_core_tests
-        tests/monochord_core_tests.cpp
-    )
-    target_link_libraries(downspout_monochord_core_tests PRIVATE downspout_monochord_core)
-    add_test(NAME downspout_monochord_core_tests COMMAND downspout_monochord_core_tests)
+    downspout_add_core_test(downspout_monochord_core_tests
+        SOURCES tests/monochord_core_tests.cpp
+        LIBS downspout_monochord_core)
 endif()

@@ -5,6 +5,7 @@ add_library(downspout_strata_core STATIC
 target_link_libraries(downspout_strata_core PUBLIC downspout-project-options)
 target_include_directories(downspout_strata_core PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${PROJECT_SOURCE_DIR}/include"
 )
 
 if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
@@ -36,9 +37,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_strata_core_tests
-        tests/strata_core_tests.cpp
-    )
-    target_link_libraries(downspout_strata_core_tests PRIVATE downspout_strata_core)
-    add_test(NAME downspout_strata_core_tests COMMAND downspout_strata_core_tests)
+    downspout_add_core_test(downspout_strata_core_tests
+        SOURCES tests/strata_core_tests.cpp
+        LIBS downspout_strata_core)
 endif()

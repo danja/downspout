@@ -4,6 +4,7 @@ add_library(downspout_quartet_core STATIC
 target_link_libraries(downspout_quartet_core PUBLIC downspout-project-options)
 target_include_directories(downspout_quartet_core PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${PROJECT_SOURCE_DIR}/include"
 )
 
 if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
@@ -35,9 +36,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_quartet_core_tests
-        tests/quartet_core_tests.cpp
-    )
-    target_link_libraries(downspout_quartet_core_tests PRIVATE downspout_quartet_core)
-    add_test(NAME downspout_quartet_core_tests COMMAND downspout_quartet_core_tests)
+    downspout_add_core_test(downspout_quartet_core_tests
+        SOURCES tests/quartet_core_tests.cpp
+        LIBS downspout_quartet_core)
 endif()

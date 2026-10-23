@@ -40,16 +40,8 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_retune_core_tests tests/retune_core_tests.cpp)
-    target_link_libraries(downspout_retune_core_tests PRIVATE downspout_retune_core)
-    # Release adds -DNDEBUG, which compiles every assert() out and lets the
-    # suite pass while testing nothing.
-    if(MSVC)
-        target_compile_options(downspout_retune_core_tests PRIVATE /UNDEBUG)
-    else()
-        target_compile_options(downspout_retune_core_tests PRIVATE -UNDEBUG)
-    endif()
-    target_include_directories(downspout_retune_core_tests PRIVATE "${PROJECT_SOURCE_DIR}/include")
-    target_compile_definitions(downspout_retune_core_tests PRIVATE RETUNE_EXAMPLES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/scales")
-    add_test(NAME downspout_retune_core_tests COMMAND downspout_retune_core_tests)
+    downspout_add_core_test(downspout_retune_core_tests
+        SOURCES tests/retune_core_tests.cpp
+        LIBS downspout_retune_core
+        DEFINITIONS RETUNE_EXAMPLES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/scales")
 endif()

@@ -35,9 +35,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_keyframe_core_tests
-        tests/keyframe_core_tests.cpp
-    )
-    target_link_libraries(downspout_keyframe_core_tests PRIVATE downspout_keyframe_core)
-    add_test(NAME downspout_keyframe_core_tests COMMAND downspout_keyframe_core_tests)
+    downspout_add_core_test(downspout_keyframe_core_tests
+        SOURCES tests/keyframe_core_tests.cpp
+        LIBS downspout_keyframe_core)
 endif()

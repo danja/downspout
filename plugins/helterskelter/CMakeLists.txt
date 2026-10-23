@@ -31,12 +31,8 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_helterskelter_core_tests
-        tests/helterskelter_core_tests.cpp
-    )
-    target_link_libraries(downspout_helterskelter_core_tests PRIVATE downspout_helterskelter_core)
-    target_include_directories(downspout_helterskelter_core_tests PRIVATE
-        "${PROJECT_SOURCE_DIR}/plugins/generative-common/include"
-    )
-    add_test(NAME downspout_helterskelter_core_tests COMMAND downspout_helterskelter_core_tests)
+    downspout_add_core_test(downspout_helterskelter_core_tests
+        SOURCES tests/helterskelter_core_tests.cpp
+        LIBS downspout_helterskelter_core
+        INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/plugins/generative-common/include")
 endif()

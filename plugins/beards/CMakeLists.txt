@@ -41,17 +41,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_beards_core_tests
-        tests/beards_core_tests.cpp
-    )
-    target_link_libraries(downspout_beards_core_tests PRIVATE downspout_beards_core)
-    # Release adds -DNDEBUG, which compiles every assert() out and lets the
-    # suite pass while testing nothing.
-    if(MSVC)
-        target_compile_options(downspout_beards_core_tests PRIVATE /UNDEBUG)
-    else()
-        target_compile_options(downspout_beards_core_tests PRIVATE -UNDEBUG)
-    endif()
-    target_include_directories(downspout_beards_core_tests PRIVATE "${PROJECT_SOURCE_DIR}/include")
-    add_test(NAME downspout_beards_core_tests COMMAND downspout_beards_core_tests)
+    downspout_add_core_test(downspout_beards_core_tests
+        SOURCES tests/beards_core_tests.cpp
+        LIBS downspout_beards_core)
 endif()

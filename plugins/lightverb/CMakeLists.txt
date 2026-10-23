@@ -11,15 +11,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
   install(DIRECTORY "${PROJECT_BINARY_DIR}/bin/lightverb.vst3" DESTINATION "." OPTIONAL)
 endif()
 if(BUILD_TESTING)
-  add_executable(downspout_lightverb_core_tests tests/lightverb_core_tests.cpp)
-  target_link_libraries(downspout_lightverb_core_tests PRIVATE downspout_lightverb_core)
-  # Release adds -DNDEBUG, which compiles every assert() out and lets the
-  # suite pass while testing nothing.
-  if(MSVC)
-      target_compile_options(downspout_lightverb_core_tests PRIVATE /UNDEBUG)
-  else()
-      target_compile_options(downspout_lightverb_core_tests PRIVATE -UNDEBUG)
-  endif()
-  target_include_directories(downspout_lightverb_core_tests PRIVATE "${PROJECT_SOURCE_DIR}/include")
-  add_test(NAME downspout_lightverb_core_tests COMMAND downspout_lightverb_core_tests)
+    downspout_add_core_test(downspout_lightverb_core_tests
+        SOURCES tests/lightverb_core_tests.cpp
+        LIBS downspout_lightverb_core)
 endif()

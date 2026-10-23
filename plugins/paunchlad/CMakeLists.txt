@@ -36,9 +36,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_paunchlad_core_tests
-        tests/paunchlad_core_tests.cpp
-    )
-    target_link_libraries(downspout_paunchlad_core_tests PRIVATE downspout_paunchlad_core)
-    add_test(NAME downspout_paunchlad_core_tests COMMAND downspout_paunchlad_core_tests)
+    downspout_add_core_test(downspout_paunchlad_core_tests
+        SOURCES tests/paunchlad_core_tests.cpp
+        LIBS downspout_paunchlad_core)
 endif()

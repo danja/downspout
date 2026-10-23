@@ -4,6 +4,7 @@ add_library(downspout_syrinx_core STATIC
 target_link_libraries(downspout_syrinx_core PUBLIC downspout-project-options)
 target_include_directories(downspout_syrinx_core PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${PROJECT_SOURCE_DIR}/include"
 )
 
 if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
@@ -29,9 +30,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_syrinx_core_tests
-        tests/syrinx_core_tests.cpp
-    )
-    target_link_libraries(downspout_syrinx_core_tests PRIVATE downspout_syrinx_core)
-    add_test(NAME downspout_syrinx_core_tests COMMAND downspout_syrinx_core_tests)
+    downspout_add_core_test(downspout_syrinx_core_tests
+        SOURCES tests/syrinx_core_tests.cpp
+        LIBS downspout_syrinx_core)
 endif()

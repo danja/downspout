@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 project(downspout VERSION 0.1.0 LANGUAGES C CXX)
 
 include(CTest)
+include(cmake/DownspoutTests.cmake)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -206,36 +207,17 @@ endif()
 
 # Shared header-only code under include/downspout has its own suite here.
 if(BUILD_TESTING)
-    add_executable(downspout_cellular_automaton_tests tests/cellular_automaton_tests.cpp)
-    target_link_libraries(downspout_cellular_automaton_tests PRIVATE downspout-project-options)
-    # Release adds -DNDEBUG, which compiles every assert() out and lets the
-    # suite pass while testing nothing.
-    if(MSVC)
-        target_compile_options(downspout_cellular_automaton_tests PRIVATE /UNDEBUG)
-    else()
-        target_compile_options(downspout_cellular_automaton_tests PRIVATE -UNDEBUG)
-    endif()
-    add_test(NAME downspout_cellular_automaton_tests COMMAND downspout_cellular_automaton_tests)
+    downspout_add_core_test(downspout_cellular_automaton_tests
+        SOURCES tests/cellular_automaton_tests.cpp
+        LIBS downspout-project-options)
 endif()
 
 if(BUILD_TESTING AND TARGET downspout_mixgen_core AND TARGET downspout_t_mix_core
    AND TARGET downspout_loopdelay_core AND TARGET downspout_lightverb_core)
-    add_executable(downspout_producer_bus_contract_tests
-        plugins/mixgen/tests/mixgen_t_mix_contract_tests.cpp)
-    target_link_libraries(downspout_producer_bus_contract_tests PRIVATE
-        downspout_mixgen_core downspout_t_mix_core
-        downspout_loopdelay_core downspout_lightverb_core)
-    # Release adds -DNDEBUG, which compiles every assert() out and lets the
-    # suite pass while testing nothing.
-    if(MSVC)
-        target_compile_options(downspout_producer_bus_contract_tests PRIVATE /UNDEBUG)
-    else()
-        target_compile_options(downspout_producer_bus_contract_tests PRIVATE -UNDEBUG)
-    endif()
-    target_include_directories(downspout_producer_bus_contract_tests PRIVATE
-        "${PROJECT_SOURCE_DIR}/include")
-    add_test(NAME downspout_producer_bus_contract_tests
-        COMMAND downspout_producer_bus_contract_tests)
+    downspout_add_core_test(downspout_producer_bus_contract_tests
+        SOURCES plugins/mixgen/tests/mixgen_t_mix_contract_tests.cpp
+        LIBS downspout_mixgen_core downspout_t_mix_core
+             downspout_loopdelay_core downspout_lightverb_core)
 endif()
 
 if(DOWNSPOUT_BUILD_MELGEN)

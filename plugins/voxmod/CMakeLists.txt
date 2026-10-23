@@ -29,17 +29,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_voxmod_core_tests
-        tests/voxmod_core_tests.cpp
-    )
-    target_link_libraries(downspout_voxmod_core_tests PRIVATE downspout_voxmod_core)
-    # Release builds define NDEBUG, which compiles every assert() in this file
-    # out. Without this the suite silently passes while testing nothing.
-    if(MSVC)
-        target_compile_options(downspout_voxmod_core_tests PRIVATE /UNDEBUG)
-    else()
-        target_compile_options(downspout_voxmod_core_tests PRIVATE -UNDEBUG)
-    endif()
-    target_include_directories(downspout_voxmod_core_tests PRIVATE "${PROJECT_SOURCE_DIR}/include")
-    add_test(NAME downspout_voxmod_core_tests COMMAND downspout_voxmod_core_tests)
+    downspout_add_core_test(downspout_voxmod_core_tests
+        SOURCES tests/voxmod_core_tests.cpp
+        LIBS downspout_voxmod_core)
 endif()

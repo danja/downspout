@@ -36,9 +36,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_lifeform_core_tests
-        tests/lifeform_core_tests.cpp
-    )
-    target_link_libraries(downspout_lifeform_core_tests PRIVATE downspout_lifeform_core)
-    add_test(NAME downspout_lifeform_core_tests COMMAND downspout_lifeform_core_tests)
+    downspout_add_core_test(downspout_lifeform_core_tests
+        SOURCES tests/lifeform_core_tests.cpp
+        LIBS downspout_lifeform_core)
 endif()

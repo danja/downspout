@@ -2,6 +2,8 @@
 
 #include "strata_tables.hpp"
 
+#include "downspout/dsp/svf.hpp"
+
 #include <array>
 #include <cstdint>
 
@@ -76,15 +78,9 @@ struct MidiEvent {
     int bend = 0;             // PitchBend: -8192..8191
 };
 
-// Filter coefficients for the trapezoidal SVF: g = tan(pi fc / sr), k = 1 / Q.
-struct FilterCoeff {
-    double g = 0.0, k = 1.0, a1 = 1.0, a2 = 0.0, a3 = 0.0;
-};
-
-// Trapezoidal state-variable filter (zero-delay feedback), one per channel per voice.
-struct Svf {
-    double ic1 = 0.0, ic2 = 0.0;
-};
+// The trapezoidal state-variable filter is shared (include/downspout/dsp/svf.hpp).
+using FilterCoeff = downspout::dsp::SvfCoeff;
+using Svf = downspout::dsp::Svf;
 
 struct Envelope {
     enum class Stage : std::uint8_t { Idle, Attack, Decay, Release };

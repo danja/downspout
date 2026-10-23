@@ -37,9 +37,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(downspout_basilico_core_tests
-        tests/basilico_core_tests.cpp
-    )
-    target_link_libraries(downspout_basilico_core_tests PRIVATE downspout_basilico_core)
-    add_test(NAME downspout_basilico_core_tests COMMAND downspout_basilico_core_tests)
+    downspout_add_core_test(downspout_basilico_core_tests
+        SOURCES tests/basilico_core_tests.cpp
+        LIBS downspout_basilico_core)
 endif()
