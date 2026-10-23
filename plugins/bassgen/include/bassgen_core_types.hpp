@@ -101,6 +101,7 @@ struct Controls {
     float color = 0.5f;
     float vary = 0.0f;
     float followDodge = 0.0f;
+    float offset = 0.0f;  // beats the whole pattern is delayed by, 0..1
     int listenChannel = 10;
     int listenNote = 36;
     InputMatchModeId inputMatchMode = InputMatchModeId::exact;

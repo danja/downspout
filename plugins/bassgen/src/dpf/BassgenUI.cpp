@@ -37,6 +37,7 @@ enum ParameterIndex : uint32_t {
     kParamInputMatchMode,
     kParamInputSensitivity,
     kParamConductorChannel,
+    kParamOffset,
     kParameterCount
 };
 
@@ -86,6 +87,7 @@ constexpr SliderDef kSliders[] = {
     {kParamInputSensitivity, "Follow Sens", 0.0f, 100.0f, true},
     {kParamListenChannel, "Follow Ch", 1.0f, 16.0f, true},
     {kParamListenNote, "Follow Note", 0.0f, 127.0f, true},
+    {kParamOffset, "Offset", 0.0f, 1.0f, false},
 };
 
 constexpr const char* kScaleNames[] = {
@@ -179,6 +181,9 @@ constexpr ButtonDef kButtons[] = {
         std::snprintf(buf, sizeof(buf), "%s %d", value > 0.0f ? "Follow" : "Dodge",
                       static_cast<int>(std::lround(std::fabs(value))));
         return buf;
+    case kParamOffset:
+        std::snprintf(buf, sizeof(buf), "%.2f beat", value);
+        return buf;
     case kParamDensity:
     case kParamHold:
     case kParamAccent:
@@ -220,6 +225,7 @@ public:
         values_[kParamSeed] = 1.0f;
         values_[kParamVary] = 0.0f;
         values_[kParamFollowDodge] = 0.0f;
+        values_[kParamOffset] = 0.0f;
         values_[kParamInputMatchMode] = 0.0f;
         values_[kParamInputSensitivity] = 100.0f;
         values_[kParamListenChannel] = 10.0f;

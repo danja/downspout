@@ -8,7 +8,7 @@
 dsp:bassgen a trn:PluginProfile ;
     rdfs:label "BassGen" ;
     rdfs:comment """Transport-synced monophonic bass generator with persistent patterns, meter-aware
-rhythm, scale/style/genre selection, Follow/Dodge MIDI input, and Conductor CC control.
+rhythm, scale/style/genre selection, Follow/Dodge MIDI input, Offset (0–1 beat delay of the whole pattern), and Conductor CC control.
 Jazz mode outlines ii-V-I movement; Fugue mode uses subject/answer/episode shapes;
 Moroder mode produces short, bright, subdivided pulse lines.""" ;
     trn:bundleName "bassgen.vst3" ;

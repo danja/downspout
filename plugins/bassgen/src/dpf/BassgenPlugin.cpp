@@ -37,6 +37,7 @@ enum ParameterIndex : uint32_t {
     kParamInputMatchMode,
     kParamInputSensitivity,
     kParamConductorChannel,
+    kParamOffset,
     kParameterCount
 };
 
@@ -330,6 +331,14 @@ protected:
             parameter.ranges.max = 16.0f;
             parameter.ranges.def = 0.0f;
             break;
+        case kParamOffset:
+            parameter.name = "Offset";
+            parameter.symbol = "offset";
+            parameter.unit = "beats";
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.0f;
+            break;
         case kParamActionNew:
             parameter.name = "New";
             parameter.symbol = "new";
@@ -401,6 +410,7 @@ protected:
         case kParamInputMatchMode: return static_cast<float>(static_cast<int>(controls_.inputMatchMode));
         case kParamInputSensitivity: return controls_.inputSensitivity * 100.0f;
         case kParamConductorChannel: return static_cast<float>(conductorChannel_);
+        case kParamOffset: return controls_.offset;
         case kParamActionNew: return static_cast<float>(controls_.actionNew);
         case kParamActionNotes: return static_cast<float>(controls_.actionNotes);
         case kParamActionRhythm: return static_cast<float>(controls_.actionRhythm);
@@ -432,6 +442,7 @@ protected:
         case kParamInputMatchMode: controls_.inputMatchMode = static_cast<downspout::bassgen::InputMatchModeId>(static_cast<int>(value)); break;
         case kParamInputSensitivity: controls_.inputSensitivity = value / 100.0f; break;
         case kParamConductorChannel: conductorChannel_ = static_cast<int>(value); break;
+        case kParamOffset: controls_.offset = value; break;
         case kParamActionNew: controls_.actionNew = static_cast<int>(value); break;
         case kParamActionNotes: controls_.actionNotes = static_cast<int>(value); break;
         case kParamActionRhythm: controls_.actionRhythm = static_cast<int>(value); break;

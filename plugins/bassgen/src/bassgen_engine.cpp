@@ -437,7 +437,9 @@ BlockResult processBlock(EngineState& state,
     }
 
     const int stepsPerBeat = state.pattern.stepsPerBeat;
-    const double absBeatsStart = transport.bar * transport.beatsPerBar + transport.barBeat;
+    // Offset delays the pattern against the transport; it is not structural, so no regeneration.
+    const double absBeatsStart =
+        transport.bar * transport.beatsPerBar + transport.barBeat - static_cast<double>(state.controls.offset);
     const double absBeatsStep = (static_cast<double>(nframes) * transport.bpm) / (60.0 * sampleRate);
     const double absStepsStart = absBeatsStart * static_cast<double>(stepsPerBeat);
     const double absStepsEnd = (absBeatsStart + absBeatsStep) * static_cast<double>(stepsPerBeat);

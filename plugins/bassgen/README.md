@@ -9,6 +9,10 @@ pickups, and longer pulse-spanning notes rather than assuming every bar is
 effectively `4/4`. It also now exposes explicit style modes:
 `Auto`, `Straight`, `Reel`, `Waltz`, `Jig`, and `Slip Jig`.
 
+`Offset` (0–1 beat, default 0) delays the whole pattern against the transport,
+so notes land after the beat; 0.5 puts a downbeat note on the eighth-note
+offbeat. It does not regenerate the pattern.
+
 The DPF wrapper accepts incoming MIDI as context. The `Follow/Dodge` control
 can make bass notes more likely on incoming drum/bass hits or suppress bass
 notes on those beats. `Input Match` chooses whether input must match one exact

@@ -721,6 +721,60 @@ void testEngineBoundaryEndThenStartScheduling() {
     assert(result.events[1].channel == 1);
 }
 
+void testOffsetDelaysNoteOnset() {
+    // One note on step 0 of a 4-step-per-beat pattern. Offset 0.5 beat moves its onset to step 2.
+    auto firstNoteOnBeat = [](float offset) {
+        Controls controls;
+        controls.offset = offset;
+        EngineState engine;
+        activate(engine, controls);
+        engine.patternValid = true;
+        engine.pattern.patternSteps = 32;
+        engine.pattern.stepsPerBeat = 4;
+        engine.pattern.stepsPerBar = 16;
+        engine.pattern.meter = ::downspout::Meter {};
+        engine.pattern.eventCount = 1;
+        engine.pattern.events[0] = NoteEvent{0, 1, 48, 100};
+
+        TransportSnapshot transport;
+        transport.valid = true;
+        transport.playing = true;
+        transport.beatsPerBar = 4.0;
+        transport.beatType = 4.0;
+        transport.bpm = 120.0;
+        transport.meter = ::downspout::Meter {};
+
+        const double sampleRate = 48000.0;
+        const std::uint32_t nframes = 480;  // 0.01 beats at 120 bpm
+        double beat = 7.99;  // just before the loop point (step 32 = beat 8)
+        for (int block = 0; block < 400; ++block) {
+            transport.bar = std::floor(beat / 4.0);
+            transport.barBeat = beat - transport.bar * 4.0;
+            const BlockResult result = processBlock(engine, controls, transport, nframes, sampleRate);
+            for (int i = 0; i < result.eventCount; ++i) {
+                if (result.events[i].type == MidiEventType::noteOn) {
+                    return beat + (static_cast<double>(result.events[i].frame) / nframes) * 0.01 - 8.0;
+                }
+            }
+            beat += 0.01;
+        }
+        return -1.0;
+    };
+
+    const double plain = firstNoteOnBeat(0.0f);
+    const double delayed = firstNoteOnBeat(0.5f);
+    assert(plain > -0.02 && plain < 0.05);  // onset at the loop point
+    assert(std::fabs((delayed - plain) - 0.5) < 0.03);
+
+    Controls clamped;
+    clamped.offset = 7.0f;
+    assert(clampControls(clamped).offset == 1.0f);
+    Controls roundTrip;
+    roundTrip.offset = 0.25f;
+    const auto restored = deserializeControls(serializeControls(roundTrip));
+    assert(restored.has_value() && std::fabs(restored->offset - 0.25f) < 0.0001f);
+}
+
 void testIncomingMidiDodgeSuppressesMatchedStep() {
     Controls controls;
     controls.followDodge = -1.0f;
@@ -1159,5 +1213,6 @@ int main() {
     testTripleMeterGenerationTracksSecondaryBeat();
     testEngineRegeneratesOnMeterChange();
     testEngineActionCountersRegenerateAndResync();
+    testOffsetDelaysNoteOnset();
     return 0;
 }

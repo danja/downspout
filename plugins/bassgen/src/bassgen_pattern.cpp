@@ -1652,6 +1652,7 @@ Controls clampControls(const Controls& raw) {
     controls.color = clampf(controls.color, 0.0f, 1.0f);
     controls.vary = clampf(controls.vary, 0.0f, 1.0f);
     controls.followDodge = clampf(controls.followDodge, -1.0f, 1.0f);
+    controls.offset = clampf(controls.offset, 0.0f, 1.0f);
     controls.listenChannel = clampi(controls.listenChannel, 1, 16);
     controls.listenNote = clampi(controls.listenNote, 0, 127);
     controls.inputMatchMode = static_cast<InputMatchModeId>(clampi(static_cast<int>(controls.inputMatchMode), 0, static_cast<int>(InputMatchModeId::count) - 1));
