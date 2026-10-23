@@ -39,6 +39,7 @@ struct MidiEvent {
     Type type = Type::NoteOn;
     std::uint8_t data1 = 0;
     std::uint8_t data2 = 0;
+    std::uint8_t channel = 0;   // 0-15: notes and bends are per channel (Retune sends one note per channel, each with its own bend)
     int bend = 0;
 };
 
@@ -59,6 +60,7 @@ struct Biquad {
 
 struct Voice {
     bool active = false;
+    int channel = 0;          // the MIDI channel the note arrived on
     bool held = false;
     bool sustained = false;
     int note = 60;
@@ -83,7 +85,7 @@ struct EngineState {
     std::array<Voice, kVoices> voices {};
     std::uint64_t counter = 0;
     bool sustainPedal = false;
-    float bend = 0.0f, bendTarget = 0.0f;
+    std::array<float, 16> bend {}, bendTarget {};   // semitones per MIDI channel (smoothed, target)
     float masterSmooth = 0.6f;
     double dcX = 0.0, dcY = 0.0;
     bool primed = false;

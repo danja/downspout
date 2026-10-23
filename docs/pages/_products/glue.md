@@ -40,6 +40,9 @@ gain computer is a textbook soft knee; the gain is smoothed in dB with separate 
 | Makeup | 0 to 24 dB | 0 dB | |
 | Soft clip | Off / On | Off | Linear below -6 dBFS; never exceeds 1.0 |
 | Mix | 0 to 100 % | 100 % | Parallel compression |
+| Detector listens to | Input / Sidechain | Input | Sidechain is inputs 3-4 (a host that connects nothing falls back to the input) |
+| CC channel | 0-16 | 1 | CC 1-4 drive Threshold, Ratio, Makeup and Mix (Drift's default lanes); 0 ignores MIDI |
+| Look-ahead | 0-10 ms | off | Delays the audio, not the detector; the plugin reports the latency to the host |
 
 ### Auto release
 
@@ -58,4 +61,4 @@ read gain reduction and level that the plugin measures from the audio.
 Core covered by tests (static curve on audio, soft knee, range cap, attack and release time constants, auto
 release, sidechain filter, stereo link, RMS against peak, mix, makeup, soft clip shape, meters, every control,
 stability and overload at 44.1 to 192 kHz, block-size independence, denormals, and the parameter table against the
-core). Not yet listened to or validated in a host. No look-ahead, so it is not a limiter, and no external sidechain.
+core), the external sidechain and the Drift CC mapping. Not yet listened to or validated in a host. Look-ahead is a delay on the audio path with the one-pole attack, so it is not a brick-wall limiter.

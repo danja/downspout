@@ -123,6 +123,8 @@ Environment:
   DOWNSPOUT_SCREENSHOT_WAIT_SECONDS   Window wait timeout. Default: 15
   DOWNSPOUT_SCREENSHOT_SETTLE_SECONDS Delay before capture. Default: 1
   DOWNSPOUT_SCREENSHOT_SCREEN         Xvfb screen. Default: 1920x1400x24
+  DOWNSPOUT_SCREENSHOT_USE_DISPLAY    Set to 1 to capture on the current DISPLAY instead of a private Xvfb.
+                                      Default: always use Xvfb, whatever DISPLAY is set to.
   DOWNSPOUT_SCREENSHOT_START_JACK     Start jackd -d dummy if needed. Default: 1
   DOWNSPOUT_SCREENSHOT_APP_ARGS       Extra standalone app args.
 EOF
@@ -241,7 +243,9 @@ if [[ "$skip_build" != "1" ]]; then
   cmake --build "$build_dir" --config "$build_type" --target "${build_targets[@]}"
 fi
 
-if [[ -z "${DISPLAY:-}" && "${DOWNSPOUT_SCREENSHOT_UNDER_XVFB:-0}" != "1" ]]; then
+# Always capture on a private Xvfb display. Capturing on the caller's own display photographs whatever else
+# is on that desktop (it did, twice: see MISTAKES.md), so the real display is only used on explicit request.
+if [[ "${DOWNSPOUT_SCREENSHOT_UNDER_XVFB:-0}" != "1" && "${DOWNSPOUT_SCREENSHOT_USE_DISPLAY:-0}" != "1" ]]; then
   require_command xvfb-run "the xvfb package"
   exec xvfb-run -a -s "-screen 0 $screen_geometry" \
     env DOWNSPOUT_SCREENSHOT_UNDER_XVFB=1 "$0" \

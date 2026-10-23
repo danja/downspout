@@ -28,6 +28,7 @@ constexpr std::array<const char*, 4> kWarpNames = {"None", "Bend", "Sync", "Fold
 constexpr std::array<const char*, 3> kUnisonNames = {"Classic", "Shimmer", "Noise"};
 constexpr std::array<const char*, 5> kFilterNames = {"LP 12", "LP 24", "HP 12", "BP", "Notch"};
 constexpr std::array<const char*, 2> kSubNames = {"-1 oct", "-2 oct"};
+constexpr std::array<const char*, 3> kPlayNames = {"Poly", "Mono", "Legato"};
 constexpr std::array<const char*, 5> kLfoNames = {"Sine", "Triangle", "Saw", "Square", "S&H"};
 
 struct Tables {
@@ -97,7 +98,7 @@ protected:
         drawUnisonPanel({24.0f, 472.0f, third, 318.0f});
         drawFilterPanel({24.0f + third + 12.0f, 472.0f, third, 318.0f});
         drawEnvelopePanel({24.0f + 2.0f * (third + 12.0f), 472.0f, third, 318.0f});
-        drawModPanel({24.0f, 802.0f, full, 96.0f});
+        drawModPanel({24.0f, 802.0f, full, 152.0f});
     }
 
 private:
@@ -226,6 +227,9 @@ private:
         const char* const names[8] = {"LFO rate", "LFO shape", "to Position", "to Pitch", "to Cutoff", "Master", "Velocity", "Bend range"};
         for (int i = 0; i < 8; ++i)
             slider(ids[static_cast<size_t>(i)], names[i], {b.x + pad + static_cast<float>(i) * (w + gap), b.y + 44.0f, w, 34.0f}, kModAccent);
+        // Voicing: Poly plays every key as its own voice; Mono and Legato play one voice, last note wins. Glide slides from the previous note.
+        segments(core::kPlayMode, "Play mode", kPlayNames.data(), 3, {b.x + pad, b.y + 116.0f, 2.0f * w + gap, 24.0f}, kModAccent);
+        slider(core::kGlide, "Glide (portamento from the previous note)", {b.x + pad + 2.0f * (w + gap), b.y + 106.0f, 3.0f * w + 2.0f * gap, 34.0f}, kModAccent);
     }
 
     [[nodiscard]] std::string format(const std::uint32_t id) const
@@ -254,6 +258,11 @@ private:
         case core::kFltAttack: case core::kFltDecay: case core::kFltRelease:
             if (v >= 1000.0f) std::snprintf(buffer, sizeof(buffer), "%.2f s", static_cast<double>(v) / 1000.0);
             else std::snprintf(buffer, sizeof(buffer), v < 10.0f ? "%.1f ms" : "%.0f ms", static_cast<double>(v));
+            break;
+        case core::kGlide:
+            if (v < 0.5f) std::snprintf(buffer, sizeof(buffer), "off");
+            else if (v >= 1000.0f) std::snprintf(buffer, sizeof(buffer), "%.2f s", static_cast<double>(v) / 1000.0);
+            else std::snprintf(buffer, sizeof(buffer), "%.0f ms", static_cast<double>(v));
             break;
         case core::kLfoRate:
             std::snprintf(buffer, sizeof(buffer), "%.2f Hz", static_cast<double>(v));

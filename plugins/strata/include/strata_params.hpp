@@ -17,7 +17,7 @@ enum ParameterIndex : std::uint32_t {
     kAmpAttack, kAmpDecay, kAmpSustain, kAmpRelease,
     kFltAttack, kFltDecay, kFltSustain, kFltRelease,
     kLfoRate, kLfoShape, kLfoPosition, kLfoPitch, kLfoCutoff,
-    kMaster, kVelocity, kBendRange,
+    kMaster, kVelocity, kBendRange, kPlayMode, kGlide,
     kParameterCount
 };
 
@@ -72,6 +72,8 @@ inline constexpr std::array<ParameterSpec, kParameterCount> kParameterSpecs = {{
     {"master",        "Master",           "",   0.0f,    1.0f,    0.6f, false, false},
     {"velocity",      "Velocity",         "",   0.0f,    1.0f,    0.7f, false, false},
     {"bend_range",    "Bend Range",       "st", 0.0f,    24.0f,   2.0f, false, false},
+    {"play_mode",     "Play Mode",        "",   0.0f,    2.0f,    0.0f, false, true },
+    {"glide",         "Glide",            "ms", 0.0f,    2000.0f, 0.0f, false, false},
 }};
 
 inline float& field(Parameters& p, const std::uint32_t index) noexcept
@@ -117,6 +119,8 @@ inline float& field(Parameters& p, const std::uint32_t index) noexcept
     case kMaster:        return p.master;
     case kVelocity:      return p.velocity;
     case kBendRange:     return p.bendRange;
+    case kPlayMode:      return p.playMode;
+    case kGlide:         return p.glideMs;
     default:             return unused;
     }
 }

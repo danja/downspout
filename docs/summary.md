@@ -175,7 +175,7 @@ reach for Beards instead when you want a freeze, reverb or Drift/Conductor contr
 
 ### Ladder (`ladder.vst3`)
 
-Four-pole saturating low-pass ladder filter, stereo, with no MIDI and no latency. **Cutoff** is
+Four-pole saturating low-pass ladder filter, stereo, with no latency; Drift CC 1-4 on a channel drive Cutoff, Resonance, Drive and Mix. **Cutoff** is
 logarithmic from 20 Hz to 18 kHz; **Resonance** feeds the output back and the filter rings on its
 own from about 85 %; **Bass Comp** restores the low end the feedback removes (100 % puts the
 passband back at 0 dB, the default 50 % leaves it a few dB down); **Drive** pushes the saturators;
@@ -209,7 +209,7 @@ pad). See `plugins/strata/docs/design.md`.
 
 ### Trio (`trio.vst3`)
 
-Three-band dynamics with no MIDI and no latency, in the OTT manner. The signal is split at two adjustable crossovers
+Three-band dynamics with no latency, in the OTT manner; Drift CC 1-4 on a channel drive Amount, Time, Input and Upward limit. The signal is split at two adjustable crossovers
 (250 Hz and 2.5 kHz by default) into bands that sum back flat, and each band compresses what is loud (**Down threshold** and
 **ratio**) and lifts what is quiet (**Up threshold** and **ratio**) with its own **Attack**, **Release** and **Gain**. **Amount**
 blends the dry signal, **Time** scales every attack and release at once, and **Input** drives the bands without changing the dry
@@ -228,7 +228,7 @@ Put it before Glue for corrective cuts, or after for tone. See `plugins/octet/do
 
 ### Glue (`glue.vst3`)
 
-Stereo-linked bus compressor with no MIDI and no latency. **Threshold**, **Ratio**, **Knee** (soft) and **Range** set the
+Stereo-linked bus compressor with no latency, an optional sidechain input (inputs 3-4) and Drift CC 1-4 on a channel for Threshold, Ratio, Makeup and Mix. **Threshold**, **Ratio**, **Knee** (soft) and **Range** set the
 curve; **Attack** and **Release** (or **Auto**, which is quick after a transient and slow once the compression has been
 sustained) set the timing; the **Sidechain HPF** (60 Hz by default) keeps the bass from pumping the mix; **Detector**
 chooses Peak or RMS; **Makeup**, **Soft clip** and **Mix** (parallel compression) finish it. The louder channel sets the
@@ -311,7 +311,7 @@ Text-to-music instrument and MIDI generator derived from Tuney 0.3.39. Focused U
 
 ### Plank (`plank.vst3`)
 
-Eight-string synthesizer derived from the Plinky touch synth. A polyBLEP oscillator pair morphs into seventeen synthesised band-limited wavetables, feeding Plinky's resonant two-pole filter, two envelopes, tape delay, shimmer reverb and mid/side width. Each Launchpad grid column is one string and each row a scale degree, so the eight-voice polyphony is held rather than allocated.
+Eight-voice synthesizer derived from the Plinky touch synth, played from a Launchpad grid (one voice per column). A polyBLEP oscillator pair morphs into seventeen synthesised band-limited wavetables, feeding Plinky's resonant two-pole filter, two envelopes, tape delay, shimmer reverb and mid/side width. Each Launchpad grid column is one string and each row a scale degree, so the eight-voice polyphony is held rather than allocated.
 
 ### Pratt (`pratt.vst3`)
 

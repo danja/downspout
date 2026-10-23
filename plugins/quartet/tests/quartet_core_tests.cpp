@@ -624,7 +624,9 @@ static void testEveryControlMatters()
     MidiEvent b;
     b.frame = 2000; b.type = MidiEvent::Type::PitchBend; b.bend = 4096;
     ev.push_back(b);
+    ev.push_back(noteOn(70, 90, 3000)[0]);   // an overlapping note, so Play Mode and Glide have something to do
     ev.push_back(noteOffEvent(66, 6000));
+    ev.push_back(noteOffEvent(70, 7000));
     const Render ref = render(base, ev, 12000);
     int silentControls = 0;
     for (std::uint32_t i = 0; i < kParameterCount; ++i) {
@@ -723,7 +725,7 @@ static void testDenormalsAndReset()
     Render s = render(q, noteOn(60, 100), 4000);
     check("a voice is sounding", activeVoices(s.state) == 1);
     resetState(s.state);
-    check("reset silences every voice", activeVoices(s.state) == 0 && s.state.bend == 0.0f && !s.state.primed);
+    check("reset silences every voice", activeVoices(s.state) == 0 && s.state.bend[0] == 0.0f && !s.state.primed);
     check("reset leaves the parameters alone", q.op[0].level == 0.8f);
 }
 
@@ -731,7 +733,7 @@ static void testParameterTableMatchesCore()
 {
     const Parameters defaults;
     Parameters probe;
-    check("fifty-seven parameters", kParameterCount == 57);
+    check("fifty-nine parameters", kParameterCount == 59);
     for (std::uint32_t i = 0; i < kParameterCount; ++i) {
         const ParameterSpec& s = specs()[i];
         check("symbol and name are set", s.symbol[0] != '\0' && s.name[0] != '\0');
@@ -749,6 +751,122 @@ static void testParameterTableMatchesCore()
         for (std::uint32_t j = i + 1; j < kParameterCount; ++j)
             if (std::string(specs()[i].symbol) == specs()[j].symbol) unique = false;
     check("symbols are unique", unique);
+}
+
+// ── Play mode and glide ─────────────────────────────────────────────────────
+
+static double cents(double hz, int note) { return 1200.0 * std::log2(hz / noteHz(note)); }
+
+static double pitchAt(const std::vector<float>& x, size_t from, size_t n = 8192)
+{
+    return peakFrequency(std::vector<float>(x.begin() + static_cast<long>(from), x.begin() + static_cast<long>(from + n)), kSr, n);
+}
+
+static void testGlideSlidesFromThePreviousNote()
+{
+    Parameters p = solo();
+    p.glideMs = 400.0f;
+    std::vector<MidiEvent> ev = noteOn(60, 100, 0);
+    ev.push_back(noteOffEvent(60, 20000));
+    ev.push_back(noteOn(72, 100, 24000)[0]);
+    const Render r = render(p, ev, 24000 + 65536);
+    check("with Glide the second note starts well below its pitch", cents(pitchAt(r.l, 24000 + 100), 72) < -300.0);
+    check("... and arrives on it", std::fabs(cents(pitchAt(r.l, 24000 + 40000), 72)) < 5.0);
+    p.glideMs = 0.0f;
+    const Render q = render(p, ev, 24000 + 65536);
+    check("Glide 0 plays every note at its pitch from the start", std::fabs(cents(pitchAt(q.l, 24000 + 100), 72)) < 5.0);
+}
+
+static void testMonoAndLegato()
+{
+    Parameters p = solo();
+    p.playMode = 1.0f;   // Mono
+    std::vector<MidiEvent> ev = noteOn(60, 100, 0);
+    ev.push_back(noteOn(64, 100, 4000)[0]);
+    ev.push_back(noteOn(67, 100, 8000)[0]);
+    Render r = render(p, ev, 20000);
+    check("Mono plays one voice for three held notes", activeVoices(r.state) == 1);
+    check("... at the newest note", std::fabs(cents(pitchAt(r.l, 12000), 67)) < 5.0);
+    ev.push_back(noteOffEvent(67, 14000));
+    r = render(p, ev, 30000);
+    check("releasing the top note returns to the one still held", std::fabs(cents(pitchAt(r.l, 20000), 64)) < 5.0 && activeVoices(r.state) == 1);
+    ev.push_back(noteOffEvent(64, 22000));
+    ev.push_back(noteOffEvent(60, 22001));
+    r = render(p, ev, 40000);
+    check("releasing every key lets the voice end", activeVoices(r.state) == 0);
+    p.playMode = 0.0f;
+    check("Poly gives each held note a voice", activeVoices(render(p, ev, 12000).state) == 3);
+
+    // Legato keeps the envelopes running across an overlapping note; Mono restarts them.
+    Parameters e = solo();
+    for (auto& o : e.op) { o.sustain = 0.4f; o.decayMs = 100.0f; o.attackMs = 5.0f; }
+    std::vector<MidiEvent> two = noteOn(60, 100, 0);
+    two.push_back(noteOn(64, 100, 24000)[0]);
+    e.playMode = 1.0f;
+    const Render m = render(e, two, 24000 + 2400);
+    e.playMode = 2.0f;
+    const Render l = render(e, two, 24000 + 2400);
+    auto window = [](const Render& x) {
+        double s = 0.0;
+        for (size_t i = 24000 + 100; i < 24000 + 1500; ++i) s += static_cast<double>(x.l[i]) * x.l[i];
+        return std::sqrt(s / 1400.0);
+    };
+    check("Mono restarts the envelope on a new note and Legato does not", window(m) > 1.2 * window(l));
+}
+
+static void testStealingFadesTheOldVoice()
+{
+    Parameters p = solo();
+    for (auto& o : p.op) { o.sustain = 1.0f; o.attackMs = 0.5f; }
+    std::vector<MidiEvent> ev;
+    for (int i = 0; i < 8; ++i) ev.push_back(noteOn(40 + 3 * i, 127, static_cast<std::uint32_t>(i * 10))[0]);
+    ev.push_back(noteOn(81, 127, 6000)[0]);
+    const Render r = render(p, ev, 12000);
+    auto maxStep = [&](size_t a, size_t b) {
+        double m = 0.0;
+        for (size_t i = a; i < b; ++i) m = std::max(m, static_cast<double>(std::fabs(r.l[i] - r.l[i - 1])));
+        return m;
+    };
+    const double steady = maxStep(4000, 5900);
+    const double around = maxStep(6000, 6400);
+    check("stealing a voice adds no step bigger than the steady waveform's", around < 1.5 * steady);
+    check("... and the new note sounds once the old one has faded", activeVoices(r.state) == 8);
+    ev.push_back(noteOffEvent(81, 6001));
+    const Render q = render(p, ev, 12000);
+    check("a note released while the voice it stole fades never sounds", activeVoices(q.state) == 7);
+}
+
+// ── Per-channel notes and bend (Retune sends one note per channel, each with its own bend) ──
+
+static void testBendAndNoteOffArePerChannel()
+{
+    Parameters p = solo();
+    p.bendRange = 12.0f;
+    auto on = [](int note, int channel, std::uint32_t frame = 0) {
+        MidiEvent e = noteOn(note, 100, frame)[0];
+        e.channel = static_cast<std::uint8_t>(channel);
+        return e;
+    };
+    MidiEvent bendOther;
+    bendOther.frame = 10; bendOther.type = MidiEvent::Type::PitchBend; bendOther.bend = 8191; bendOther.channel = 1;
+
+    const Render a = render(p, {on(60, 0)}, 1 << 15);
+    const Render b = render(p, {on(60, 0), bendOther}, 1 << 15);
+    double d = 0.0;
+    for (size_t i = 0; i < a.l.size(); ++i) d = std::max(d, static_cast<double>(std::fabs(a.l[i] - b.l[i])));
+    check("a bend on channel 2 leaves a note on channel 1 untouched", d == 0.0);
+
+    const Render c = render(p, {on(60, 1), bendOther}, 1 << 15);
+    d = 0.0;
+    for (size_t i = 0; i < a.l.size(); ++i) d = std::max(d, static_cast<double>(std::fabs(a.l[i] - c.l[i])));
+    check("... but moves a note on channel 2", d > 1e-3);
+
+    // The same note on two channels is two voices; a note-off releases only its own channel.
+    for (auto& o : p.op) o.releaseMs = 20.0f;
+    MidiEvent off = noteOffEvent(60, 500);
+    off.channel = 1;
+    const Render e = render(p, {on(60, 0), on(60, 1), off}, 1 << 15);
+    check("the same note on two channels is held independently", activeVoices(e.state) == 1);
 }
 
 int main()
@@ -771,6 +889,10 @@ int main()
     testStabilityAndBounds();
     testDenormalsAndReset();
     testParameterTableMatchesCore();
+    testGlideSlidesFromThePreviousNote();
+    testMonoAndLegato();
+    testStealingFadesTheOldVoice();
+    testBendAndNoteOffArePerChannel();
     std::printf("quartet_core_tests: %d passed, %d failed\n", gPassed, gFailed);
     return gFailed == 0 ? 0 : 1;
 }

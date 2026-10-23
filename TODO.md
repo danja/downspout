@@ -6,48 +6,38 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 
 * **Promote the shared `OnePoleLowpass` / `DCBlocker` / `BiquadFilter` duplicates into
   `include/downspout/dsp/`.** Worth doing but a separate change, and CLAUDE.md requires
-  approval before touching shared headers. HANDLE WITH CARE.
-* **Replace the 36 copy-pasted `-UNDEBUG` + include-dir blocks with one root helper**, e.g.
+  approval before touching shared headers. HANDLE WITH CARE. (The seven oxide-studio plugins
+  added in October each carry their own small SVF/biquad/DC blocker too.)
+* **Replace the copy-pasted `-UNDEBUG` + include-dir blocks with one root helper**, e.g.
   `downspout_add_core_test(<target> SOURCES ... LIBS ...)`, so a new plugin cannot forget
   either. Low urgency, since `include/downspout/test_assert.h` already makes a lost
-  `-UNDEBUG` a compile error. Touches root glue and ~36 plugin CMake files, so it needs
-  approval and a full test run.
+  `-UNDEBUG` a compile error (the newest suites use a `check()` helper, not `assert`, and need
+  neither). Touches root glue and ~40 plugin CMake files, so it needs approval and a full test run.
 
-## Session state (found 2026-10-06)
+## Session state
 
-`scripts/check-plugin-state.sh` reports **45 correct / 0 broken / 34 parameters only** as of 2026-10-23 (see the note below: "parameters only" is not data loss; the seven new plugins from the oxide-studio review are all parameters only). The six
-plugins that silently wrote their defaults into every project (chipper, damiano, ghost,
-helterskelter, skream, spliff) now have `WANT_FULL_STATE` and a `getState()`.
+`scripts/check-plugin-state.sh`: 0 broken. "Parameters only" is not data loss: DPF's VST3
+`getState` saves every non-output, non-trigger parameter by symbol
+(`third_party/DPF/distrho/src/DistrhoPluginVST3.cpp:1169`), so those plugins need no `WANT_STATE`.
+Real state is only needed for data outside parameters (patterns, sample paths, text), as in
+lifeform, luma, paunchlad, plank.
 
-- [ ] **Verify those six in a host.** The failure was silent, so a green build proves
-      nothing and the core tests never touch the wrapper. Change a setting, save,
-      reopen, confirm it stuck.
-- [x] **lifeform, luma and paunchlad now have session state** (2026-10-06), following
-      Plank's pattern: one versioned, symbol-keyed text state, bad input rejected without
-      touching the patch, triggers never stored. Lifeform and luma also save the live
-      64-cell pattern as a bitmap (restoring lifeform's `seed` deliberately does not
-      reseed over it); paunchlad's pad cells are momentary so only its nine settings
-      are stored. Each got round-trip, rejection, trigger and host-activation tests.
-      **Verify in a host**, as with the six above.
-- [x] **gremlin, gremlin-driver and flues-synth-driver keep the patch** across host
-      activation and sample-rate change (2026-10-09); verify in a host when they get state.
-- [ ] **Confirm in a host that the 22 "parameters only" plugins survive save/reopen** (arpgen,
-      basilico, canticle, conductor, drift, drumkit, floozy, flues-synth-driver, gremlin-driver,
-      gremlin, guardian, harmonic-atlas, m-mix, mixgen, moka, oracle, orbit, polymeter,
-      resonance-garden, sprout, syrinx). DPF's VST3 `getState` saves every non-output,
-      non-trigger parameter by symbol (`third_party/DPF/distrho/src/DistrhoPluginVST3.cpp:1169`),
-      so they need no `WANT_STATE`; `scripts/check-plugin-state.sh` now reports them as
-      "parameters only" rather than data loss (2026-10-09). Real state is only needed for data
-      outside parameters (patterns, sample paths, text), as in lifeform, luma, paunchlad, plank.
-- [x] `gater` state macros removed (2026-10-09): it has no parameters and only momentary MIDI state.
-- [ ] Re-run the `-Wall -Wextra` sweep after any state change: the wrapper callbacks are
-      what the core tests never touch.
+- [ ] **Verify in a host** that these save and reopen: chipper, damiano, ghost, helterskelter, skream,
+      spliff (they once silently wrote defaults into every project; they now have `WANT_FULL_STATE`
+      and a `getState()`), lifeform, luma, paunchlad (versioned text state, with the live 64-cell
+      bitmap for lifeform and luma), and every "parameters only" plugin (arpgen, basilico, canticle,
+      conductor, drift, drumkit, floozy, flues-synth-driver, gremlin, gremlin-driver, guardian,
+      harmonic-atlas, m-mix, mixgen, moka, oracle, orbit, polymeter, resonance-garden, sprout, syrinx,
+      and the seven new ones below). The failures were silent, so a green build proves nothing and the
+      core tests never touch the wrapper: change a setting, save, reopen, confirm it stuck.
+- [ ] gremlin, gremlin-driver and flues-synth-driver keep the patch across host activation and
+      sample-rate change; verify in a host when they get state.
 
-## Sam (added 2026-10-22)
+## Sam
 
 - [ ] **Decide whether `sam.vst3` may be released.** SAM has no licence (abandonware, copyright
       SoftVoice, Inc.; `plugins/sam/third_party/sam/SAM-LICENSE.md`). It is vendored, so a public
-      tag ships it, and `scripts/package-release.sh` now requires the bundle. To hold it back,
+      tag ships it, and `scripts/package-release.sh` requires the bundle. To hold it back,
       build with `-DDOWNSPOUT_BUILD_SAM=OFF` and drop `sam.vst3` from the lists
       `scripts/check-bundle-lists.sh` checks.
 - [ ] **Validate in REAPER**: both modes, with a real transport (loop region, relocate, tempo
@@ -61,23 +51,18 @@ helterskelter, skream, spliff) now have `WANT_FULL_STATE` and a `getState()`.
       aliasing against the **Tone** default, and whether Keys mode wants a sustained or looped word.
 - [ ] Not built, see `plugins/sam/docs/design.md`: a phrase mode (one note speaks the whole text),
       formant correction after the retune, CC mapping, Speak in Keys mode.
-- [x] `scripts/package-built-bundles.sh` (the advisory macOS/Windows list) was missing beards, grist and
-      qune; fixed 2026-10-23 when ladder was added, and `scripts/check-bundle-lists.sh` is clean.
 
-## `-Wall -Wextra` sweep: what is left
+## `-Wall -Wextra` sweep
 
 Standalone `g++ -std=c++20 -Wall -Wextra -fsyntax-only` over `plugins/*/src/*.cpp` (add
 `-Iplugins/generative-common/include` or conductor, drift, ghost, guardian, harmonic-atlas
-and others will not compile). No `-Wswitch` warnings remain. What was left on purpose:
+and others will not compile). Re-run after any wrapper or state change: the wrapper callbacks
+are what the core tests never touch.
 
-* `cadence` and `drumgen` `memset` calls are `void*`-cast, so they no longer warn. (Re-swept
-  2026-10-10: zero warnings across `plugins/*/src/*.cpp`.) `cadence_clear_progression` now
-  resets slots to `ChordSlot{}` (velocity 96) instead of zeroing; cadence tests pass.
+* Last full sweep 2026-10-23: zero warnings in 159 core files (`plugins/sam` needs `-Iplugins/sam/third_party/sam`).
 * `campione` loader: the `smpl` loop end is inclusive in the WAV spec, but the engine wraps at
   `position >= loopEnd`, so the last loop sample is skipped (one frame). Changing it means
-  adjusting load, save and the engine together; decide whether it is worth it. (The ignored
-  `parseSmplChunk` result is now explicit: a short chunk is the same as no chunk. Only the first
-  loop record is read, which is documented in the code.)
+  adjusting load, save and the engine together; decide whether it is worth it.
 
 ## Qune
 
@@ -110,22 +95,17 @@ and others will not compile). No `-Wswitch` warnings remain. What was left on pu
       Romanian) are not in Plank. Adding them means appending to `docs/scales.md`. The
       microtonal ones (Harmonics, Hexany, Just) also need a cents-based table, which the
       current integer ladder cannot express.
-- [ ] The root `README.md`, `docs/plan.md` and `docs/summary.md` still call Plank an
-      "eight-string synthesizer". Shared docs; wording agreed, awaiting approval to change.
 
 ## Other
 
-* `skream` **Morph LP-HP** (bipolar, default off) is in and tested. Not yet listened to in a
-  host; try it with Drift on Cutoff. Decisions worth a listen: the morph weight follows
-  cutoff position linearly (t = 0.5 is a notch at the cutoff), and it only reshapes the
-  forward filter, not the Scream feedback high-pass.
-
-* **Damiano Linked/Split stereo** is in and tested (per-channel Mode, Drive, Tone, Folds; CC Drive and
-  CC Shape per channel on a shared CC channel; see `plugins/damiano/docs/porting-notes.md`). Not yet
-  auditioned in a host: try Split with Soft left and Fuzz right, and two Drift lanes on CC Drive / CC
-  Drive R. Verify an old project (pre-split state) loads Linked. Open: "shape" is the stepped waveshaper
+* `skream` **Morph LP-HP** (bipolar, default off): not yet listened to in a host; try it with Drift
+  on Cutoff. Decisions worth a listen: the morph weight follows cutoff position linearly (t = 0.5
+  is a notch at the cutoff), and it only reshapes the forward filter, not the Scream feedback
+  high-pass.
+* **Damiano Linked/Split stereo** (`plugins/damiano/docs/porting-notes.md`): not yet auditioned in a
+  host: try Split with Soft left and Fuzz right, and two Drift lanes on CC Drive / CC Drive R.
+  Verify an old project (pre-split state) loads Linked. Open: "shape" is the stepped waveshaper
   mode; a continuous shape (asymmetry/bias) would be new DSP. Tone and Folds are not CC-controlled.
-
 * `voxmod`: host validation in REAPER still pending.
 * `sinevox`: host validation in REAPER pending, in particular (1) that the host routes
   MIDI out from an effect, (2) the 4-in layout (speech 1/2, carrier 3/4) and (3) that
@@ -137,190 +117,95 @@ and others will not compile). No `-Wswitch` warnings remain. What was left on pu
 * `keyframe`: the leash diagram is static at unity rates because drift is genuinely ~0 there;
   a splice halo was added so it reads live during crossfades. If it still reads dead at
   defaults, the diagram needs a rethink, not another lamp.
-
-## Pratt (new plugin, from `~/github/pratt-synth`)
-
-Fully wired (root CMake option, install/release scripts, workflow, docs, product page,
-screenshot script entry and asset). 4 core suites pass, threading suite clean under TSan.
-Remaining:
-
-* **Verify in a host (REAPER):** load, play notes, filter an audio track, save/reopen state.
-  Nothing has been listened to. Also confirm the host accepts an instrument with audio inputs.
-* Listen to drum levels (normalised per hit, consistent at ~0.15); check voice-stealing clicks.
-* GM Program mode now queues a warm-up per Program Change (last 8 voices); host-check that
-  switching programs on several channels no longer glitches on first notes. Offline-tested only.
-* `scripts/capture-plugin-screenshots.sh` captures the real desktop if `DISPLAY` is set
-  (see `MISTAKES.md`). Make it always use Xvfb. Shared script, needs approval.
-* Catalogue screenshot shows Synth mode (filter dimmed); consider a Synth + Filter capture.
-* **Timbre Index** (separate fixed filter chain, default 1 = off) is in and tested; not yet
-  listened to. Open: it is limited to one index <= 8192 (degree <= 13), so very dark voices still
-  lean on Rolloff; a second chain or a larger limit would need `kMaxSections` raised and a
-  warm-up that touches only the indices in use (see `plugins/pratt/docs/high-base.md`).
-  Filter mode keeps A x B capped at 8192.
-
-## Subsequence-inspired work (see `docs/subsequent.md`)
-
-* **melgen Inertia** is in and tested; screenshot recaptured. Not yet listened to in a
-  host. The Channel selector showed "2" for the default of 1; fixed (selector values are
-  now offset by their base).
-* **counterpointer Inertia** is in and tested (scoring term; Counterpoint mode only, not
-  Bass Descend). Its Routing-column layout was fixed (selectors now share the height so
-  Freeze is no longer covered by the buttons, and the header band ends under the header).
-* **Retune plugin** (`plugins/retune/`): wired into the root build, install/release
-  scripts, workflow, docs and Pages; core suite passes under ASan/UBSan. Remaining:
-  host validation, a catalogue screenshot with a real `.scl` loaded (the standalone
-  shows 12-TET), `.kbm` support, saving scale contents with the session (only the path
-  is saved), and an audition against a per-channel-bend synth.
-* **Per-channel pitch bend in existing instruments** (needed for Retune): Retune sends
-  one note per channel (2-16) with its own bend. Each instrument must apply pitch bend
-  per MIDI channel at a configurable range (default 2 semitones) instead of globally,
-  and must not treat different channels as separate parts. Audit and fix, one at a time,
-  with a test that two simultaneous notes on different channels bend independently.
-  **Done:** `canticle`, `moka`, `floozy` and `syrinx` (per-channel bend, RPN 0 range, voices
-  keyed by channel and note where they were keyed by note, tested). They default to a
-  2-semitone range, matching Retune. Not applicable (checked 2026-10-09): `plank` (input is
-  Launchpad grid presses, not pitched notes) and `magneto` (a note sets engine RPM, no
-  pitched voice). **`basilico` done 2026-10-09** (mono: the sounding note's channel bend
-  applies, RPN 0 range, tested). **`gremlin` done 2026-10-09** (single source: the
-  last-played channel's bend, RPN 0). **`campione` done 2026-10-09** (per-voice, uses its Bend Range
-  control, no RPN; see `plugins/campione/docs/pitch-bend.md`). **`mosaic` done 2026-10-09** (per-channel bend with a Pitch bend range control; only
-  audible at Pitch range 0).
-  `drumkit` is not applicable (notes select unpitched drum pieces). Not yet auditioned with Retune in a host. `pratt` already bends per
-  channel and has a Bend Range control (confirm its default suits Retune's 2 st). Also add a Bend
-  Range control where a synth has a fixed range, and note the result in each plugin's
-  README.
-* **Sprout** (`plugins/sprout/`, L-system generator): built, wired, documented, screenshot
-  taken. Remaining: host validation, a rule editor (grammars are built in), and listening
-  to which grammars sound good at which Step size.
-* **Sprout MIDI input** (held-notes pitch source, Drift CC 1-4, Conductor CC 21-24) is in and
-  tested under ASan/UBSan. Not yet auditioned in a host: try harmonic-atlas into Sprout with
-  Pitch source = Held notes, and Drift or Conductor into its CC channels. Pitch source has a Latched
-  mode (the chord survives note-off; the next fresh press replaces it). Open: MIDI is applied
-  at block start, not sample-accurately; no pass-through of incoming MIDI.
-* **drumgen** has a **Generation every** (1-8 loops, `ca_every`) control for its automaton; tested, not yet listened to.
-* **CA lanes in `drumgen` and `xoxolo`** are in and tested. Not yet auditioned in a host: try Rule 90 and 30
-  on Hats in drumgen, and marking the hat and percussion lanes in xoxolo. The automaton arithmetic is now
-  shared (`include/downspout/cellular_automaton.hpp`, tested in `tests/cellular_automaton_tests.cpp`) and used
-  by `polymeter`, `drumgen` and `xoxolo`. Open: xoxolo's grid shows the programmed pattern, not the
-  evolved row now playing.
-* **Magneto look and feel:** the kit is now shared, `include/downspout/dpf/MagnetoKit.hpp`, used by
-  Retune, Sprout, Markov and Damiano (new hooks: overridable `sendValue()` for plugins that carry
-  values as state, `setValue()` and `setDim()`). Older generator plugins still use
-  `GenerativePanelUI` (mosaic, polymeter, etc.); restyle if wanted. Retune, Sprout and Markov were
-  rebuilt against the shared header but not re-screenshotted; confirm they look unchanged.
-* **Gravity** is in `harmonic-atlas`. `cadence` (learned harmony) has not had it; its progression
-  model is different, so decide whether a gravity bias on the learned transitions makes sense.
-* **Atlas voice-leading** is local to `harmonic-atlas`. Listen to it; the chords sit low (around
-  C3-C4) because only the bottom and top of the range are penalised, so consider a centre pull.
-* **Markov** (`plugins/markov/`, the Markov melody generator) is in and tested (core suite also under
-  ASan/UBSan: scales against the docs, walk statistics, order 2, learning, locate and block-size
-  independence, Conductor, state format). Not yet auditioned in a host: try each style, Order 2 after
-  learning a line, and Learned mix at 50%. Open: learning assumes one melodic line (chords blur the counts);
-  the matrix editor has click-to-cycle, drag-to-paint and right-click-to-zero but no undo; the plugin does
-  not pass incoming MIDI through; the editor does not move while a CC drives a control.
-* **Conductor awareness** was added to `lifeform`, `luma`, `polymeter` and `xoxolo` (off by default; not yet auditioned
-  in a host). `counterpointer` and `cadence` followed (the CC mapping is a tested pure function,
-  `applyConductorCc`, in their core-types headers; CC 24 relearns). `arpgen` followed (CC 21 Density -> Octaves,
-  CC 22 Energy -> Rate; `applyConductorCc` in `arpgen_core.hpp`, tested; screenshot recaptured; not yet auditioned
-  in a host). `m-mix` followed (CC 21 Density -> Open Bias, CC 22 Energy -> Maintain inverted; tested; UI slider added and
-  the window made taller because its sixth slider row had been hidden under the toggles). Still without it among the generators: `mnemosyne` (only Novelty and a seed re-roll would fit, and its core takes parameters const, so it needs wrapper-level handling), `sidecar` (its wrapper is tangled up with the server path),
-  `tuney-vst`. Worth adding where a density or energy knob exists.
-* **Jig port (from Farelo, `#jigdaw`):** port Sprout, Markov and Moka from Downspout to Jig
-  format. Lives outside this repo; keep their portable cores free of DPF code so they move cleanly.
-* Later candidate: chord-graph walker. A shared voice-leading helper in
-  generative-common is only worth it if a second plugin needs it (shared code, needs approval).
-
-## Candidates from `~/github/oxide-studio` (reviewed 2026-10-23)
-
-MIT/Apache-2.0 Rust, so porting is allowed. Its README overstates: `DuckShaper`, `MasterClipper`,
-`PhaseScope` and `ClubDeck` do not exist in the code. Read the source and check it against its
-reference before porting any device. Downspout already covers distortion, granular, pitch/formant,
-reverb/delay, resonators and every MIDI generator, so only gaps are listed. In order:
-
-1. [x] **Ladder filter** (`oxide-dsp/src/filter.rs`): done 2026-10-23 as `plugins/ladder/`, fully wired
-       (root CMake, install/release scripts, workflow, docs, product page, profile, screenshot). Probed
-       against the analytic response first; 87 core checks pass, VST3 builds clean, bundle lists clean.
-       Changes from the source: resonance taper, Bass Comp control. Adds a `logarithmic` option to
-       `MagnetoKit` ranges (shared). Still to do: host validation in REAPER, listen (does Bass Comp 50 %
-       suit as a default? the defaults sit 3.5 dB low), aliasing at high drive (not measured), optional
-       Drift CC 1-4 on Cutoff/Resonance (not wired). CPU measured 2026-10-23 on a busy machine (load ~30, so an
-       upper bound): about 5.5 % of one core for stereo at 48 kHz (-O2), the same through a long silent decay, so no denormal penalty; it
-       could be cheaper (about 20 divides per sample) if it ever matters.
-2. [x] **Glue compressor** (`oxide-fx/src/glue_compressor.rs`): done 2026-10-23 as `plugins/glue/`, fully wired. A
-       redesign, not a port: the source has a hard knee, no sidechain filter (despite its README), a soft clipper that is
-       discontinuous at |x| = 2/3 and on by default, and a 1024-frame cap. Glue has a soft knee, sidechain HPF, peak/RMS,
-       linked detector, auto release, continuous soft clip, mix and meters; 139 core checks pass. Still to do: host
-       validation in REAPER, listen (is the auto-release table 40-800 ms / 8 dB depth right? is the 10 ms RMS window?),
-       external sidechain input (bassops uses inputs 3-4), look-ahead, Drift CC input.
-3. [x] **EQ Eight** (`oxide-fx/src/eq8.rs`): done 2026-10-23 as `plugins/octet/` (an eight-band EQ, named to avoid
-       Ableton's product name), fully wired. A redesign: the source's 48 dB cuts are four identical Q = 0.707 sections
-       (-12 dB at the cutoff, not -3), its L/R and M/S modes hard-wire bands 1-4 to one channel, and its defaults are not
-       transparent. Octet has 8th-order Butterworth cuts, per-band channel assignment, double precision, a bit-exact
-       transparent default, and a draggable-node response plot. 380 core checks pass. Raised `MagnetoKit` to 64 mirrored
-       values. Still to do: host validation, listen, a spectrum analyser (needs a UI data channel), coefficient smoothing
-       for fast sweeps, Drift CC input.
-4. [x] **Multiband dynamics** (`multiband_dynamics.rs`): done 2026-10-23 as `plugins/trio/`, fully wired. A redesign: the source
-       shares one envelope between the two channels of a band and steps it twice per sample (halved times, cross-steered
-       channels), reads the rectified wave, and does not sum flat. Trio has all-pass-compensated adjustable LR4 crossovers, one
-       peak-hold detector per band linked across channels, Time/Amount/Upward-limit controls and live per-band gain bars; 303 core
-       checks pass. Still to do: host validation, listen (the OTT defaults are strong; detector decay times are my choice), soft
-       knee, band solo, external sidechain, Drift CC input.
-5. [x] **Wavetable synth** (`oxide-dsp/src/wavetable/`): done 2026-10-23 as `plugins/strata/`, fully wired. A redesign: the source's tables are not
-       band-limited (aliasing at high notes) and its evenly phased unison cancels the fundamental at Amount 0. Strata has 21 half-octave band-limited
-       mips per frame built by FFT (unwarped square: -77 to -89 dB off its harmonics at every pitch, against -12 to -25 dB for a naive read), in-step
-       unison, ADAA Fold, control-rate pitch/filter (CPU for 8 notes at the defaults fell from 51 % to 9 % of a core), and 300 core checks under
-       ASan/UBSan. Warp aliasing at note 60, amount 0.7: Bend -42.6, Sync -38.5, Fold -33.1 dB. Still to do: host validation, listen, oversampled warps,
-       table import, a modulation matrix, voice-steal click, portamento/mono mode, Fold+Sync worst case is about 90 % of a core.
-6. [x] **4-op FM** (`oxide-dsp/src/operator/`): done 2026-10-23 as `plugins/quartet/`, fully wired. A redesign: the source's full-level modulation is about 19 rad, its
-       "fine" is a percentage (an octave at the extreme), and its PolyBLEP saw and square are wrong under phase modulation. Quartet has band-limited operator tables chosen by the modulated
-       read speed, FM depth in cycles (sidebands match Bessel to four digits), algorithms as data (drawn on the panel), optional 2x oversampling with a half-band decimator, a pitch envelope
-       and an SVF; 493 core checks under ASan/UBSan, 57 parameters. Still to do: host validation, listen, user waveform (the source's 16-harmonic one), per-operator key/velocity scaling, 4x
-       oversampling for bright FM at the top of the keyboard, mono/legato mode, voice-steal click.
-7. Physical models and the Meld/Drift-style synths:
-   - [x] **Tension** (waveguide string): done 2026-10-23 as `plugins/monochord/`, fully wired. A redesign: the source's loop filters add delay that is never compensated (the string plays flat, an
-     estimated 14 cents at middle C), its hammer pulse is not zero-mean, and its single dispersion all-pass is inaudible. Monochord tunes the loop from its own phase delay (error ~1e-12 samples; notes within
-     0.4 cents), sets the fundamental's decay exactly, makes stiffness a four-section cascade, and adds a pickup comb, body, damper and a bow that sounds at every pressure and velocity; 134 core checks under
-     ASan/UBSan, 14 parameters. Still to do: host validation, listen, sympathetic strings / several strings per note, frequency-dependent T60, bow noise.
-   - [ ] Decided not to build (2026-10-23), revisit if wanted: **Electric piano** and **Collision** are a few modal filters each, which Moka (modal hit objects) and Quartet (FM electric-piano timbres) already
-     cover; the **Meld** engines (Swarm, Harmonic, Sub, NoiseLoop, FM, Fold, Chip, Bitcrush, Formant, Chord, Resonator, Shepard) mostly overlap Strata's tables and warps and Quartet's FM; a **Drift-style analog synth**
-     overlaps Basilico (bass) and Strata with a filter. If one is wanted, Meld's Shepard and Chord engines are the least covered.
-8. [ ] Skip or only if wanted: spectral resonator and Auto Shift (overlap resonance-garden, qune,
-       quefrency), warp engine (overlaps keyframe, qune, grist), stem splitter (crude), groove pool.
-
-## Evaluate Manually in Reaper
-
-* helterskelter
-* keyframe
-* ladder
-* glue
-* octet
-* trio
-* strata
-* quartet
-* monochord
-* ghost
-* spliff
-* ambo
-* arpgen
-* conductor
-* drift
-* harmonic-atlas
-* mnemosyne
-* magneto
-* moka
-* mosaic
-* oracle
-* orbit
-* polymeter
-* resonance-garden
-* plank
-* tuney-vst
-* worms
-* **Beards host validation and follow-ups.** Load `beards.vst3` in REAPER, route Drift (CC 1-4)
+* **Beards** host validation and follow-ups: load `beards.vst3` in REAPER, route Drift (CC 1-4)
   and Conductor (ch 16) into it, and listen: the DSP is a port but has only been checked
   by core tests and a headless UI capture. Not ported from Beads: delay (multitap) mode,
   CV/gate inputs, wow and flutter, 24 kHz Tape rate. The reverb is a new Griesinger tank,
   not Beads' `fx_engine`. See `plugins/beards/docs/design.md`.
+
+## Pratt
+
+* **Verify in a host (REAPER):** load, play notes, filter an audio track, save/reopen state.
+  Nothing has been listened to. Also confirm the host accepts an instrument with audio inputs.
+* Listen to drum levels (normalised per hit, consistent at ~0.15); check voice-stealing clicks.
+* GM Program mode queues a warm-up per Program Change (last 8 voices); host-check that
+  switching programs on several channels no longer glitches on first notes. Offline-tested only.
+* Catalogue screenshot shows Synth mode (filter dimmed); consider a Synth + Filter capture.
+* **Timbre Index** (separate fixed filter chain, default 1 = off) is tested; not yet listened to.
+  Open: it is limited to one index <= 8192 (degree <= 13), so very dark voices still lean on
+  Rolloff; a second chain or a larger limit would need `kMaxSections` raised and a warm-up that
+  touches only the indices in use (see `plugins/pratt/docs/high-base.md`). Filter mode keeps
+  A x B capped at 8192.
+
+## Generators and MIDI tools (host and listening checks, small follow-ups)
+
+* **melgen Inertia** and **counterpointer Inertia** (scoring term; Counterpoint mode only, not Bass
+  Descend): not yet listened to in a host.
+* **Retune** (`plugins/retune/`): host validation, a catalogue screenshot with a real `.scl` loaded (the
+  standalone shows 12-TET), `.kbm` support, saving scale contents with the session (only the path is
+  saved), and an audition against a per-channel-bend synth.
+* **Per-channel pitch bend** (needed for Retune): done for canticle, moka, floozy, syrinx, basilico,
+  gremlin, campione, mosaic, strata, quartet, monochord (pratt already bends per channel; plank, magneto and drumkit are not
+  applicable). Remaining: audition them with Retune in a host, confirm pratt's default Bend Range suits
+  Retune's 2 st, and add a Bend Range control where a synth has a fixed range, noting it in each README.
+* **Sprout**: host validation, a rule editor (grammars are built in), listening to which grammars sound
+  good at which Step size; its MIDI input (held-notes pitch source, Drift CC 1-4, Conductor CC 21-24) is
+  not yet auditioned (try harmonic-atlas into it, Pitch source = Held). Open: MIDI is applied at block
+  start, not sample-accurately; no pass-through of incoming MIDI.
+* **drumgen** (`Generation every`) and **CA lanes in drumgen and xoxolo**: not yet listened to (try Rule 90
+  and 30 on Hats; mark the hat and percussion lanes in xoxolo). Open: xoxolo's grid shows the programmed
+  pattern, not the evolved row now playing.
+* **Magneto look and feel:** `include/downspout/dpf/MagnetoKit.hpp` is shared by Retune, Sprout, Markov,
+  Damiano and the newer instruments and effects. Older generator plugins still use `GenerativePanelUI`
+  (mosaic, polymeter, etc.); restyle if wanted. Retune, Sprout and Markov were rebuilt against the shared
+  header but not re-screenshotted; confirm they look unchanged.
+* **Gravity** is in `harmonic-atlas`. `cadence` (learned harmony) has not had it; its progression model is
+  different, so decide whether a gravity bias on the learned transitions makes sense.
+* **Atlas voice-leading** is local to `harmonic-atlas`. Listen to it; the chords sit low (around C3-C4)
+  because only the bottom and top of the range are penalised, so consider a centre pull.
+* **Markov**: not yet auditioned in a host (each style, Order 2 after learning a line, Learned mix at 50 %).
+  Open: learning assumes one melodic line (chords blur the counts); the matrix editor has click-to-cycle,
+  drag-to-paint and right-click-to-zero but no undo; no MIDI pass-through; the editor does not move while a
+  CC drives a control.
+* **Conductor awareness** (lifeform, luma, polymeter, xoxolo, counterpointer, cadence, arpgen, m-mix; off by
+  default) is not yet auditioned in a host. Still without it: `mnemosyne` (only Novelty and a seed re-roll
+  would fit, and its core takes parameters const, so it needs wrapper-level handling), `sidecar` (its wrapper
+  is tangled up with the server path), `tuney-vst`.
+* **Jig port (from Farelo, `#jigdaw`):** port Sprout, Markov and Moka from Downspout to Jig format. Lives
+  outside this repo; keep their portable cores free of DPF code so they move cleanly.
+* Later candidate: chord-graph walker. A shared voice-leading helper in generative-common is only worth it
+  if a second plugin needs it (shared code, needs approval).
+
+## New plugins from the oxide-studio review (October 2026)
+
+All seven are built, wired and tested (core suites under ASan/UBSan where noted in their `docs/design.md`).
+None has been listened to or run in a host. Remaining per plugin:
+
+* **ladder**: listen (is Bass Comp 50 % the right default? the defaults sit 3.5 dB below unity); aliasing at
+  high drive is not measured.
+* **glue**: listen (is the auto-release table 40-800 ms / 8 dB depth right? the 10 ms RMS window?);
+  check in a host that Look-ahead's reported latency is compensated.
+* **octet**: a spectrum analyser (needs a UI data channel); the CC band mapping (Frequency/Gain/Q of one band + Output) is my choice: confirm it suits a Drift lane.
+* **trio**: listen (the OTT defaults are strong; the detector decay times are my choice); check the sidechain
+  routing in a host.
+* **strata**: listen; oversampled warps (Bend -42.6 dB, Sync -38.5 dB, Fold -33.1 dB aliasing at note 60,
+  amount 0.7); table import; a modulation matrix; Fold + Sync
+  worst case is about 90 % of a core.
+* **quartet**: listen; user waveform (the source's 16-harmonic one); per-operator key and velocity scaling;
+  4x oversampling for bright FM at the top of the keyboard.
+* **monochord**: listen; sympathetic strings / several strings per note; frequency-dependent T60; bow noise.
+* Decided not to build (revisit if wanted): **Electric piano** and **Collision** (a few modal filters each,
+  covered by Moka and Quartet); the **Meld** engines (Swarm, Harmonic, Sub, NoiseLoop, FM, Fold, Chip,
+  Bitcrush, Formant, Chord, Resonator, Shepard: mostly overlap Strata and Quartet; Shepard and Chord are the
+  least covered); a **Drift-style analog synth** (overlaps Basilico and Strata with a filter); spectral
+  resonator and Auto Shift (overlap resonance-garden, qune, quefrency), the warp engine (overlaps keyframe,
+  qune, grist), the stem splitter (crude), the groove pool.
+
+## Evaluate Manually in Reaper
+
+helterskelter, keyframe, ladder, glue, octet, trio, strata, quartet, monochord, ghost, spliff, ambo,
+arpgen, conductor, drift, harmonic-atlas, mnemosyne, magneto, moka, mosaic, oracle, orbit, polymeter,
+resonance-garden, plank, tuney-vst, worms, beards.
 
 ## Recurring - check periodically
 
@@ -329,3 +214,4 @@ reverb/delay, resonators and every MIDI generator, so only gaps are listed. In o
 * if an issue in MISTAKES.md has been fully resolved, remove it from the file
 * for new material, check test coverage
 * ensure README.md and docs are up-to-date
+* read INBOX.md and fold tasks in here; check `dim` for Farelo tasks relevant to Downspout (read-only)

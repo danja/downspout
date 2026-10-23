@@ -48,8 +48,9 @@ around it was redesigned.
 
 - No spectrum analyser. It needs a cheap detector (Goertzel or a decimated FFT) and a way to send the bins to
   the panel, which is a UI data channel the plugins do not have yet.
-- Coefficients change in steps at block boundaries when a node is dragged or automated, so very fast sweeps of a
-  high-Q band can click; no interpolation or smoothing of the coefficients.
+- Frequency, gain and Q glide to a new target in steps of 32 samples (about 4 ms time constant), rebuilding the
+  sections from the gliding parameters so every step is a stable filter; a type change or a band coming on is
+  immediate. A gliding band therefore lags a fast automation lane by a few milliseconds.
 - No linear-phase mode, no per-band solo or listen, no match-EQ, no auto-gain.
 - Not listened to; no host validation (REAPER).
-- No Drift CC input.
+- **Drift CC.** CC 1-4 on the CC channel drive one band, chosen by the CC band parameter (default 4): Frequency, Gain, Q and the Output. There are no four natural live controls across eight bands, so the band is the choice: a sweepable, boostable bell is what an LFO or a performance lane does to an EQ. `ccBand` and `ccChannel` are appended after the band controls (parameters 50 and 51). Moving a held control on the panel releases it; changing the CC band releases all four.

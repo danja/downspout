@@ -12,7 +12,7 @@ dsp:ladder a trn:PluginProfile ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/ladder/> ;
     trn:role trn:AudioEffect ;
-    trn:accepts trn:Audio ;
+    trn:accepts trn:Audio, trn:MidiCC ;
     trn:produces trn:Audio .
 
 dsp:ladder trn:hasParameter [
@@ -45,4 +45,8 @@ dsp:ladder trn:hasParameter [
     trn:label "Output" ;
     trn:minimum -24.0 ; trn:maximum 12.0 ; trn:default 0.0 ;
     rdfs:comment "Output gain in dB"
+], [
+    trn:symbol "cc_channel" ; trn:label "CC Channel" ;
+    trn:minimum 0 ; trn:maximum 16 ; trn:default 1 ;
+    rdfs:comment "MIDI channel whose CC 1-4 drive Cutoff, Resonance, Drive and Mix (Drift's default lanes); 0 ignores MIDI"
 ] .

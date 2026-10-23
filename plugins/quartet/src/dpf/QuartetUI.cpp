@@ -20,6 +20,7 @@ constexpr kit::Accent kDiagramAccent {198, 132, 58};  // amber
 constexpr kit::Accent kGlobalAccent {120, 132, 96};   // sage
 constexpr std::array<kit::Accent, core::kOperators> kOpAccent = {{{198, 120, 64}, {92, 140, 156}, {140, 120, 170}, {176, 90, 70}}};
 constexpr std::array<const char*, core::kOperators> kOpNames = {"A", "B", "C", "D"};
+constexpr std::array<const char*, 3> kPlayNames = {"Poly", "Mono", "Legato"};
 constexpr std::array<const char*, 3> kWaveNames = {"Sine", "Saw", "Square"};
 constexpr std::array<const char*, 2> kModeNames = {"Ratio", "Fixed"};
 constexpr std::array<const char*, 5> kFilterNames = {"LP 12", "LP 24", "HP 12", "BP", "Notch"};
@@ -92,7 +93,7 @@ protected:
         const float colW = (full - 3.0f * gap) / 4.0f;
         for (int o = 0; o < core::kOperators; ++o)
             drawOperatorPanel(o, {24.0f + static_cast<float>(o) * (colW + gap), 310.0f, colW, 504.0f});
-        drawGlobalPanel({24.0f, 826.0f, full, 156.0f});
+        drawGlobalPanel({24.0f, 826.0f, full, 214.0f});
     }
 
 private:
@@ -284,6 +285,14 @@ private:
                 x += w;
             }
         }
+        // Row 3: voicing. Poly plays every key as its own voice; Mono and Legato play one voice, last note wins.
+        {
+            const float segW = 270.0f;
+            const float y = b.y + 172.0f;
+            label(b.x + pad, y - 16.0f, "Play mode");
+            drawSegments(core::kPlayMode, kPlayNames.data(), 3, {b.x + pad, y, segW, 24.0f}, kGlobalAccent);
+            slider(core::kGlide, "Glide", {b.x + pad + segW + gap, y - 6.0f, 2.0f * ((b.w - 2.0f * pad - segW - 6.0f * gap) / 6.0f) + gap, 34.0f}, kGlobalAccent);
+        }
     }
 
     [[nodiscard]] std::string format(const std::uint32_t id) const
@@ -312,6 +321,11 @@ private:
         case core::kCutoff:
             if (v >= 1000.0f) std::snprintf(buffer, sizeof(buffer), "%.2f kHz", static_cast<double>(v) / 1000.0);
             else std::snprintf(buffer, sizeof(buffer), "%.0f Hz", static_cast<double>(v));
+            break;
+        case core::kGlide:
+            if (v < 0.5f) std::snprintf(buffer, sizeof(buffer), "off");
+            else if (v >= 1000.0f) std::snprintf(buffer, sizeof(buffer), "%.2f s", static_cast<double>(v) / 1000.0);
+            else std::snprintf(buffer, sizeof(buffer), "%.0f ms", static_cast<double>(v));
             break;
         case core::kBendRange: std::snprintf(buffer, sizeof(buffer), "%.0f st", static_cast<double>(v)); break;
         default:               std::snprintf(buffer, sizeof(buffer), "%.2f", static_cast<double>(v)); break;

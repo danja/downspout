@@ -24,6 +24,9 @@ enum ParameterIndex : std::uint32_t {
     kControlCount,
     kStatusReduction = kControlCount,  // output: gain reduction in dB, 0 or positive
     kStatusLevel,                      // output: detector level in dB
+    kSidechain,                        // appended after the outputs: parameter indices never move
+    kCcChannel,
+    kLookahead,
     kParameterCount
 };
 
@@ -52,6 +55,9 @@ inline constexpr std::array<ParameterSpec, kParameterCount> kParameterSpecs = {{
     {"mix",          "Mix",               "%",     0.0f, 100.0f, 100.0f, false, false, false},
     {"status_reduction", "Gain Reduction","dB",    0.0f,  40.0f,   0.0f, false, false, true},
     {"status_level", "Detector Level",    "dB", -120.0f,  12.0f,-120.0f, false, false, true},
+    {"sidechain",    "Sidechain",         "",      0.0f,   1.0f,   0.0f, false, true,  false},
+    {"cc_channel",   "CC Channel",        "",      0.0f,  16.0f,   1.0f, false, true,  false},
+    {"lookahead",    "Look-ahead",        "ms",    0.0f,  10.0f,   0.0f, false, false, false},
 }};
 
 inline float& field(Parameters& p, const std::uint32_t index) noexcept
@@ -70,6 +76,9 @@ inline float& field(Parameters& p, const std::uint32_t index) noexcept
     case kMakeup:      return p.makeupDb;
     case kSoftClip:    return p.softClip;
     case kMix:         return p.mix;
+    case kSidechain:   return p.sidechain;
+    case kCcChannel:   return p.ccChannel;
+    case kLookahead:   return p.lookaheadMs;
     default:           return unused;
     }
 }
@@ -77,6 +86,12 @@ inline float& field(Parameters& p, const std::uint32_t index) noexcept
 inline float field(const Parameters& p, const std::uint32_t index) noexcept
 {
     return field(const_cast<Parameters&>(p), index);
+}
+
+// The control a Drift CC overrides, or -1: the panel moving this control releases its override.
+[[nodiscard]] constexpr int liveSlot(const std::uint32_t index) noexcept
+{
+    return index == kThreshold ? 0 : index == kRatio ? 1 : index == kMakeup ? 2 : index == kMix ? 3 : -1;
 }
 
 }  // namespace downspout::glue

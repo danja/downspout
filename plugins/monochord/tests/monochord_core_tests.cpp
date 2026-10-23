@@ -586,7 +586,7 @@ static void testDenormalsAndReset()
     Render s = render(q, noteOn(60, 100), 4000);
     check("a voice is sounding", activeVoices(s.state) == 1);
     resetState(s.state);
-    check("reset silences every voice", activeVoices(s.state) == 0 && s.state.bend == 0.0f && !s.state.primed);
+    check("reset silences every voice", activeVoices(s.state) == 0 && s.state.bend[0] == 0.0f && !s.state.primed);
     check("reset leaves the parameters alone", q.decaySec == 4.0f);
 }
 
@@ -613,6 +613,39 @@ static void testParameterTableMatchesCore()
     check("symbols are unique", unique);
 }
 
+// ── Per-channel notes and bend (Retune sends one note per channel, each with its own bend) ──
+
+static void testBendAndNoteOffArePerChannel()
+{
+    Parameters p = bare();
+    p.bendRange = 12.0f;
+    auto on = [](int note, int channel, std::uint32_t frame = 0) {
+        MidiEvent e = noteOn(note, 100, frame)[0];
+        e.channel = static_cast<std::uint8_t>(channel);
+        return e;
+    };
+    MidiEvent bendOther;
+    bendOther.frame = 10; bendOther.type = MidiEvent::Type::PitchBend; bendOther.bend = 8191; bendOther.channel = 1;
+
+    const Render a = render(p, {on(60, 0)}, 1 << 15);
+    const Render b = render(p, {on(60, 0), bendOther}, 1 << 15);
+    double d = 0.0;
+    for (size_t i = 0; i < a.l.size(); ++i) d = std::max(d, static_cast<double>(std::fabs(a.l[i] - b.l[i])));
+    check("a bend on channel 2 leaves a note on channel 1 untouched", d == 0.0);
+
+    const Render c = render(p, {on(60, 1), bendOther}, 1 << 15);
+    d = 0.0;
+    for (size_t i = 0; i < a.l.size(); ++i) d = std::max(d, static_cast<double>(std::fabs(a.l[i] - c.l[i])));
+    check("... but moves a note on channel 2", d > 1e-3);
+
+    // The same note on two channels is two voices; a note-off releases only its own channel.
+    p.releaseMs = 20.0f;
+    MidiEvent off = noteOffEvent(60, 500);
+    off.channel = 1;
+    const Render e = render(p, {on(60, 0), on(60, 1), off}, 1 << 15);
+    check("the same note on two channels is held independently", activeVoices(e.state) == 1);
+}
+
 int main()
 {
     testLoopPhaseDelayIsOnePeriod();
@@ -630,6 +663,7 @@ int main()
     testStabilityAndBounds();
     testDenormalsAndReset();
     testParameterTableMatchesCore();
+    testBendAndNoteOffArePerChannel();
     std::printf("monochord_core_tests: %d passed, %d failed\n", gPassed, gFailed);
     return gFailed == 0 ? 0 : 1;
 }

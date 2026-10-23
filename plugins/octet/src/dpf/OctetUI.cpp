@@ -141,7 +141,7 @@ protected:
         const float full = static_cast<float>(getWidth()) - 48.0f;
         drawPlotPanel({24.0f, 108.0f, full, 280.0f});
         drawBandPanel({24.0f, 400.0f, full, 188.0f});
-        drawGlobalPanel({24.0f, 600.0f, full, 80.0f});
+        drawGlobalPanel({24.0f, 600.0f, full, 144.0f});
     }
 
 private:
@@ -375,18 +375,32 @@ private:
 
     void drawGlobalPanel(const Rect b)
     {
-        drawPanel(b, "STEREO AND OUTPUT", kGlobalAccent);
+        drawPanel(b, "STEREO, OUTPUT AND MIDI", kGlobalAccent, "CC 1-4: band Freq, Gain, Q; Output");
         static constexpr const char* kModeNames[3] = {"Stereo", "Left / Right", "Mid / Side"};
         label(b.x + 14.0f, b.y + 40.0f, "Mode");
         drawSegments(core::kMode, kModeNames, 3, {b.x + 14.0f, b.y + 52.0f - 6.0f + 4.0f, 380.0f, 22.0f}, kGlobalAccent);
         drawSlider(core::kOutput, "Output", format(core::kOutput).c_str(), {b.x + 430.0f, b.y + 40.0f, b.w - 430.0f - 14.0f, 34.0f},
                    kGlobalAccent);
+        // MIDI: Drift's CC 1-4 drive one band's Frequency, Gain and Q, and the Output.
+        const float w = (b.w - 28.0f - 24.0f) / 2.0f;
+        drawSlider(core::kCcChannel, "CC channel (0 = ignore MIDI)", format(core::kCcChannel).c_str(), {b.x + 14.0f, b.y + 98.0f, w, 34.0f}, kGlobalAccent);
+        drawSlider(core::kCcBand, "CC band (the band CC 1-3 drive)", format(core::kCcBand).c_str(), {b.x + 14.0f + w + 24.0f, b.y + 98.0f, w, 34.0f}, kGlobalAccent);
     }
 
     [[nodiscard]] std::string format(const std::uint32_t parameter) const
     {
         char buffer[32];
         const float v = value(parameter);
+        if (parameter == core::kCcChannel) {   // appended after the band controls, so decode it before the per-band branch
+            if (v < 0.5f)
+                return "off";
+            std::snprintf(buffer, sizeof(buffer), "%d", static_cast<int>(std::lround(v)));
+            return buffer;
+        }
+        if (parameter == core::kCcBand) {
+            std::snprintf(buffer, sizeof(buffer), "%d", static_cast<int>(std::lround(v)));
+            return buffer;
+        }
         if (parameter == core::kOutput) {
             std::snprintf(buffer, sizeof(buffer), "%+.1f dB", static_cast<double>(v));
         } else if (parameter >= core::kFirstBand) {

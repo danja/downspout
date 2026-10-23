@@ -23,6 +23,9 @@ struct Parameters {
     float makeupDb    = 0.0f;    // 0..24 dB
     float softClip    = 0.0f;    // 0 off, 1 on
     float mix         = 100.0f;  // 0..100 % wet
+    float sidechain   = 0.0f;    // 0 the detector listens to the input, 1 to the sidechain input (inputs 3-4)
+    float lookaheadMs = 0.0f;    // 0..10 ms: the audio is delayed this long (reported as latency) so the gain is already down when a peak arrives; 0 = off
+    float ccChannel   = 1.0f;    // 0 = ignore MIDI, 1-16: the channel whose CC 1-4 drive the controls (Drift's default lanes)
 };
 
 inline constexpr float kHpfOffHz = 20.0f;
@@ -38,7 +41,11 @@ struct Biquad {
     float z1 = 0.0f, z2 = 0.0f;
 };
 
+inline constexpr int kMaxLookahead = 2048;   // samples: 10 ms at 192 kHz, rounded up to a power of two
+
 struct EngineState {
+    std::array<std::array<float, kMaxLookahead>, 2> delay {};   // the audio path, when Look-ahead is on
+    int delayPos = 0;
     std::array<Biquad, 2> hpf {};
     std::array<float, 2> meanSquare {};  // RMS detector memory
     float gainDb = 0.0f;                 // smoothed gain, 0 or negative
@@ -51,6 +58,9 @@ struct EngineState {
 
 [[nodiscard]] Parameters clampParameters(const Parameters& p) noexcept;
 
+// Samples of delay (latency) the Look-ahead control adds at this sample rate; 0 when it is off.
+[[nodiscard]] int lookaheadSamples(const Parameters& p, float sampleRate) noexcept;
+
 // Static gain computer: gain in dB (0 or negative) for a detector level in dB, including the
 // soft knee and the range cap. The panel plots this and the tests hold the audio to it.
 [[nodiscard]] float staticGainDb(const Parameters& p, float levelDb) noexcept;
@@ -62,14 +72,29 @@ struct EngineState {
 // Release time actually used by Auto Release for a given average reduction depth.
 [[nodiscard]] float autoReleaseMs(float depthDb) noexcept;
 
+// MIDI control, following the Drift convention (CC 1-4 on a channel): a controller overrides one control until the panel
+// moves it or the host automates it. The mapping and override logic are here so they are tested; the wrapper only parses MIDI.
+inline constexpr int kCcSlots = 4;   // CC 1 Threshold, CC 2 Ratio, CC 3 Makeup, CC 4 Mix
+struct LiveControl {
+    std::array<float, kCcSlots> value {};   // in parameter units (Threshold can be negative, so `active` says which are set)
+    std::array<bool, kCcSlots> active {false, false, false, false};
+};
+[[nodiscard]] float ccToValue(int slot, int cc) noexcept;
+[[nodiscard]] bool ccChannelMatches(unsigned char status, float ccChannel) noexcept;
+void handleController(LiveControl& live, int controller, int value) noexcept;
+[[nodiscard]] Parameters withLive(const Parameters& p, const LiveControl& live) noexcept;
+
 // Clears the detector and gain memory only; never touches the patch.
 void resetState(EngineState& state) noexcept;
 
+// `sidechain` is the optional stereo sidechain input; it is only listened to when Parameters::sidechain is 1 and both
+// pointers are set, otherwise the detector uses the input (so a host that gives no sidechain does not silence the detector).
 void processBlock(EngineState&      state,
                   const Parameters& params,
                   float             sampleRate,
                   uint32_t          frames,
                   const float* const* inputs,
-                  float* const*       outputs) noexcept;
+                  float* const*       outputs,
+                  const float* const* sidechain = nullptr) noexcept;
 
 }  // namespace downspout::glue

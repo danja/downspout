@@ -17,7 +17,12 @@ enum BandParameter : std::uint32_t { kOn = 0, kDownThresh, kDownRatio, kUpThresh
 inline constexpr std::uint32_t kFirstBand = kGlobalCount;
 inline constexpr std::uint32_t kControlCount = kFirstBand + kBands * kPerBand;
 inline constexpr std::uint32_t kFirstMeter = kControlCount;       // three band gains, then three band levels
-inline constexpr std::uint32_t kParameterCount = kControlCount + 2 * kBands;
+inline constexpr std::uint32_t kMeterCount = 2 * kBands;
+inline constexpr std::uint32_t kCcChannel = kControlCount + kMeterCount;   // appended after the meters: parameter indices never move
+inline constexpr std::uint32_t kKnee = kCcChannel + 1;
+inline constexpr std::uint32_t kSolo = kCcChannel + 2;
+inline constexpr std::uint32_t kSidechain = kCcChannel + 3;
+inline constexpr std::uint32_t kParameterCount = kCcChannel + 4;
 
 [[nodiscard]] constexpr std::uint32_t bandParameter(const int band, const BandParameter p) noexcept
 {
@@ -49,6 +54,10 @@ public:
         global(kUpLimit, "up_limit", "Upward Limit", "dB", 0.0f, 24.0f, d.upLimitDb, false);
         global(kCrossLow, "cross_low", "Low Crossover", "Hz", 40.0f, 1000.0f, d.crossLowHz, true);
         global(kCrossHigh, "cross_high", "High Crossover", "Hz", 1000.0f, 12000.0f, d.crossHighHz, true);
+        global(kCcChannel, "cc_channel", "CC Channel", "", 0.0f, 16.0f, d.ccChannel, false, true);
+        global(kKnee, "knee", "Knee", "dB", 0.0f, 24.0f, d.kneeDb, false);
+        global(kSolo, "solo", "Solo", "", 0.0f, 3.0f, d.solo, false, true);
+        global(kSidechain, "sidechain", "Sidechain", "", 0.0f, 1.0f, d.sidechain, false, true);
         static constexpr const char* kBandNames[kBands] = {"Low", "Mid", "High"};
         for (int b = 0; b < kBands; ++b) {
             const Band& x = d.bands[static_cast<size_t>(b)];
@@ -69,11 +78,11 @@ public:
 private:
     void put(const std::uint32_t i, const ParameterSpec& s) { specs_[i] = s; specs_[i].symbol = symbols_[i]; specs_[i].name = names_[i]; }
     void global(const std::uint32_t i, const char* sym, const char* name, const char* unit, const float lo, const float hi,
-                const float def, const bool log)
+                const float def, const bool log, const bool integer = false)
     {
         std::snprintf(symbols_[i], sizeof(symbols_[i]), "%s", sym);
         std::snprintf(names_[i], sizeof(names_[i]), "%s", name);
-        put(i, {nullptr, nullptr, unit, lo, hi, def, log, false, false});
+        put(i, {nullptr, nullptr, unit, lo, hi, def, log, integer, false});
     }
     void band(const int b, const BandParameter p, const char* sym, const char* name, const char* unit, const float lo,
               const float hi, const float def, const bool log, const bool integer, const char* bandName)
@@ -115,6 +124,10 @@ inline float& field(Parameters& p, const std::uint32_t index) noexcept
     case kCrossHigh: return p.crossHighHz;
     default: break;
     }
+    if (index == kCcChannel) return p.ccChannel;
+    if (index == kKnee) return p.kneeDb;
+    if (index == kSolo) return p.solo;
+    if (index == kSidechain) return p.sidechain;
     if (index < kFirstBand || index >= kControlCount) return unused;
     Band& b = p.bands[(index - kFirstBand) / kPerBand];
     switch ((index - kFirstBand) % kPerBand) {
@@ -132,6 +145,12 @@ inline float& field(Parameters& p, const std::uint32_t index) noexcept
 inline float field(const Parameters& p, const std::uint32_t index) noexcept
 {
     return field(const_cast<Parameters&>(p), index);
+}
+
+// The control a Drift CC overrides, or -1: the panel moving this control releases its override.
+[[nodiscard]] constexpr int liveSlot(const std::uint32_t index) noexcept
+{
+    return index == kAmount ? 0 : index == kTime ? 1 : index == kInput ? 2 : index == kUpLimit ? 3 : -1;
 }
 
 }  // namespace downspout::trio

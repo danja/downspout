@@ -5,11 +5,7 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 ## Open
 
-- **Screenshot script captures the real desktop.** `scripts/capture-plugin-screenshots.sh`
-  only starts Xvfb when `DISPLAY` is empty, so from a session with `DISPLAY` set it
-  screenshotted the user's browser (twice, 2026-10-07 and 2026-10-08, overwriting
-  `pratt.png`). Prevention is in CLAUDE.md (`env -u DISPLAY`). Remove this entry once the
-  script always forces Xvfb (shared glue, needs approval; tracked in TODO.md under Pratt).
+(No open entries from before October 2026: the screenshot script now always captures on a private Xvfb.)
 
 ## Plank: repeated note fix killed the string (2026-10-15)
 - **What happened:** "Second note doesn't play" was fixed by retriggering on a repeated note-on, but the host's overlapping order (on, on, off, off) meant the first note-off released the freshly retriggered string, so output still died.
@@ -52,13 +48,7 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 - **Root cause:** The onset frame was `round((slotStart - rel0) / beatsPerFrame)` clamped to the block, so a boundary at .6 of a frame landed one frame early in a block that ended there and on the right frame in one that did not.
 - **Prevention:** Start an event on the first frame at or after its time (`ceil`, with a tolerance for float noise) and count slots already started, so each fires once whatever the block size. Keep a block-size independence test for anything scheduled against the transport.
 
-## Ladder: probe reference was wrong, then a test measured the wrong thing (2026-10-23)
-- **What happened:** The first probe of the oxide-studio ladder reported -12 dB at the cutoff against an "ideal" of -6 dB, which looked like a 2x error in the source. The first taper test then failed because the resonant "peak" at low resonance was just the search floor.
-- **Root cause:** (1) The analytic reference was written as -40 log10(sqrt(1 + m^2)); the 4-pole response is -40 log10(1 + m^2), which gives exactly the measured -12.04 dB. The filter was right and the reference was wrong. (2) The peak was measured without bass compensation, so the resonance-driven bass loss lowered the whole passband and hid the peak.
-- **Prevention:** Derive the reference from the formula for the stated order (four cascaded one-poles: (1 + m^2)^-2) and check it at one point by hand before concluding the DSP is wrong. When a metric mixes two effects (peak height and passband loss), neutralise one before measuring the other.
-- **Also:** `ctest -j8` on a loaded machine failed fathom's "faster than real time" check (load average 37); it passes alone. Rerun a timing test alone before treating it as a regression, and say that a CPU figure taken under load is an upper bound.
-
-## `cmake --build --target <plugin>` does not build the UI (2026-10-23)
-- **What happened:** I reported "ladder.vst3 builds clean" and "all MagnetoKit users build" after building the targets `ladder`, `retune`, `sprout` and so on. The UI was never compiled on that path: a missing `#include <string>` in `LadderUI.cpp` only showed up later, in `ladder-vst3`.
-- **Root cause:** `dpf_add_plugin(x)` makes `x` a small static library; the real work is in `x-dsp`, `x-ui`, `x-vst3` and `x-jack`. The `x.vst3` directory in `build/bin` can exist without a compiled UI, and the screenshot (jack) build happened to get `<string>` transitively.
-- **Prevention:** Build `<plugin>-vst3` (it pulls in `-dsp` and `-ui`) and check `grep -E "error:|Error [0-9]"` and the exit status. After a change to a shared header, build `-vst3` for every plugin that includes it (`grep -rl MagnetoKit.hpp plugins`). Include what you use in UI files; do not rely on DPF to pull in `<string>`.
+## Parameters appended after the meters: UI formatter and test slips (2026-10-23)
+- **What happened:** Appending parameters (Knee, Solo, Sidechain, CC band) past the meters or per-band blocks repeated earlier slips: a formatter that decodes `(index - firstBand) % perBand` would have shown them as band controls. Separately, a core test fed the same buffer as left and right output (the filter ran twice, +36 dB instead of +18), a test length written `24000 + 1 << 16` (shift binds looser than +, a 1.5 GB render that hung the build), and Glue's latency call failed to compile until `DISTRHO_PLUGIN_WANT_LATENCY` was defined.
+- **Root cause:** Index arithmetic assumed the band blocks run to the end of the table; the tests used shortcuts without checking the first number they produced against the model (`responseDb`); `setLatency` only exists behind its flag.
+- **Prevention:** Decode appended parameters by explicit index before any range or modulo branch. Give a stereo core test separate left and right output buffers and compare the first measured gain with the plotted response before trusting it. Parenthesise shifts. Latency needs `DISTRHO_PLUGIN_WANT_LATENCY 1` in `DistrhoPluginInfo.h` as well as `setLatency`.

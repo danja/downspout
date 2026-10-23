@@ -35,7 +35,7 @@ re-derived. It is validated by the response and stability results above, not by 
 ## Not done
 
 - Not yet validated in a host (REAPER): automation of Cutoff, save and reopen, sample-rate change.
-- No Drift CC input (CC 1-4); the other filter/effect plugins read it, this one does not yet.
+- Drift CC input is in (CC 1-4 on a channel: Cutoff, Resonance, Drive, Mix; a controller overrides its control until the panel moves it); the panel does not follow it. The mapping and override logic are core functions with tests (104 checks in all).
 - Not listened to. CPU measured on a busy machine (load about 30, so an upper bound): about 5.5 % of one core
   for stereo at 48 kHz (-O2), the same
   through a 60 s silent decay after a loud burst, so the denormal flush works.

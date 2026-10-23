@@ -461,11 +461,11 @@ static void testParameterTableMatchesCore()
 {
     const Parameters defaults;
     Parameters probe;
-    check("thirty-seven parameters", kParameterCount == 37);
+    check("forty-one parameters (the CC channel, Knee, Solo and Sidechain are appended after the meters)", kParameterCount == 41 && kCcChannel == 37 && kKnee == 38 && kSolo == 39 && kSidechain == 40 && kFirstMeter == 31);
     for (std::uint32_t i = 0; i < kParameterCount; ++i) {
         const ParameterSpec& s = specs()[i];
         check("symbol and name are set", s.symbol[0] != '\0' && s.name[0] != '\0');
-        if (i >= kControlCount) {
+        if (i >= kFirstMeter && i < kFirstMeter + kMeterCount) {
             check("meters are outputs", s.output);
             continue;
         }
@@ -487,6 +487,105 @@ static void testParameterTableMatchesCore()
         for (std::uint32_t j = i + 1; j < kParameterCount; ++j)
             if (std::string(specs()[i].symbol) == specs()[j].symbol) unique = false;
     check("symbols are unique", unique);
+}
+
+// MIDI control: the Drift convention, CC 1-4 on a channel.
+static void testMidiControl()
+{
+    check("CC 0 and 127 reach the ends of every mapping",
+          ccToValue(0, 0) == 0.0f && ccToValue(0, 127) == 100.0f && std::fabs(ccToValue(1, 0) - 0.1f) < 1e-5f && std::fabs(ccToValue(1, 127) - 10.0f) < 1e-3f &&
+          ccToValue(2, 0) == -12.0f && ccToValue(2, 127) == 24.0f && ccToValue(3, 0) == 0.0f && ccToValue(3, 127) == 24.0f);
+    bool monotonic = true;
+    for (int slot = 0; slot < kCcSlots; ++slot)
+        for (int cc = 1; cc <= 127; ++cc) if (ccToValue(slot, cc) < ccToValue(slot, cc - 1)) monotonic = false;
+    check("every mapping rises with the controller", monotonic);
+    check("a Control Change on the set channel matches", ccChannelMatches(0xB0, 1.0f) && ccChannelMatches(0xB4, 5.0f) && ccChannelMatches(0xBF, 16.0f));
+    check("another channel, another message type, or channel 0 does not", !ccChannelMatches(0xB1, 1.0f) && !ccChannelMatches(0x90, 1.0f) && !ccChannelMatches(0xB0, 0.0f));
+    LiveControl live;
+    check("nothing overrides at first", withLive(Parameters{}, live).amount == Parameters{}.amount);
+    handleController(live, 0, 100);
+    handleController(live, 5, 100);
+    handleController(live, 74, 100);
+    check("other controllers are ignored", !live.active[0] && !live.active[1] && !live.active[2] && !live.active[3]);
+    handleController(live, 1, 0);
+    handleController(live, 2, 127);
+    handleController(live, 3, 0);      // input -12 dB: negative, which a sentinel could not carry
+    handleController(live, 4, 127);
+    const Parameters p = withLive(Parameters{}, live);
+    check("CC 1-4 override amount, time, input (including negative) and upward limit",
+          p.amount == 0.0f && std::fabs(p.time - 10.0f) < 1e-3f && p.inputDb == -12.0f && p.upLimitDb == 24.0f);
+    check("the controls a controller does not own are untouched", p.outputDb == Parameters{}.outputDb && p.crossLowHz == Parameters{}.crossLowHz);
+    Parameters base = neutral();
+    LiveControl loud;
+    handleController(loud, 3, 127);
+    check("the override changes the sound (input +24 dB)", std::fabs(gainDb(withLive(base, loud), 700.0, 0.01) - 24.0) < 0.3);
+    check("liveSlot names the controls a panel move must release", liveSlot(kAmount) == 0 && liveSlot(kTime) == 1 && liveSlot(kInput) == 2 &&
+          liveSlot(kUpLimit) == 3 && liveSlot(kOutput) == -1 && liveSlot(kCcChannel) == -1 && liveSlot(gainMeter(0)) == -1);
+    check("the CC channel is clamped to 0-16", clampParameters([] { Parameters q; q.ccChannel = 99.0f; return q; }()).ccChannel == 16.0f &&
+          clampParameters([] { Parameters q; q.ccChannel = -3.0f; return q; }()).ccChannel == 0.0f);
+}
+
+// Soft knee, band solo and the external sidechain.
+static void testKneeSoloAndSidechain()
+{
+    // Knee: a quadratic blend through the threshold, continuous at both edges, and 0 is the hard curve.
+    Band b = Parameters{}.bands[1];
+    b.downThreshDb = -20.0f; b.downRatio = 4.0f; b.upThreshDb = -80.0f; b.upRatio = 1.0f;
+    check("knee 0 is the hard curve", bandTargetDb(b, -20.0f, 18.0f, 0.0f) == 0.0f && std::fabs(bandTargetDb(b, -10.0f, 18.0f, 0.0f) + 7.5f) < 1e-5f);
+    check("at the threshold a 12 dB knee is already 1.125 dB down", std::fabs(bandTargetDb(b, -20.0f, 18.0f, 12.0f) + 1.125f) < 1e-4f);
+    check("a knee is continuous at its lower edge", std::fabs(bandTargetDb(b, -26.001f, 18.0f, 12.0f)) < 1e-3f);
+    check("... and meets the hard curve at its upper edge", std::fabs(bandTargetDb(b, -14.0f, 18.0f, 12.0f) - bandTargetDb(b, -14.0f, 18.0f, 0.0f)) < 1e-4f);
+    float prev = 1.0f;
+    bool monotone = true;
+    for (float l = -40.0f; l <= 0.0f; l += 0.25f) {
+        const float g = bandTargetDb(b, l, 18.0f, 12.0f);
+        if (g > prev + 1e-6f) monotone = false;
+        prev = g;
+    }
+    check("the knee curve only ever reduces more as the level rises", monotone);
+    Parameters p = only(1, -20.0f, 4.0f);
+    const double hard = gainDb(p, 900.0, 0.1);
+    p.kneeDb = 12.0f;
+    const double soft = gainDb(p, 900.0, 0.1);
+    check("on audio a sine at the threshold is 1.1 dB down with a 12 dB knee and untouched without", std::fabs(hard) < 0.3 && std::fabs(soft + 1.125) < 0.4);
+
+    // Solo: only the chosen band reaches the output, and the dry signal no longer mixes in.
+    Parameters s = neutral();
+    s.solo = 1.0f;
+    const double lowOnly = gainDb(s, 900.0, 0.1);
+    s.solo = 2.0f;
+    const double midOnly = gainDb(s, 900.0, 0.1);
+    s.amount = 0.0f;
+    const double midNoAmount = gainDb(s, 900.0, 0.1);
+    check("soloing the low band silences a 900 Hz tone", lowOnly < -40.0);
+    check("soloing the mid band passes it at unity", std::fabs(midOnly) < 0.5);
+    check("solo ignores Amount (no dry mixed back)", std::fabs(midNoAmount - midOnly) < 0.05);
+    s.solo = 3.0f; s.amount = 100.0f;
+    check("soloing the high band removes it too (an LR4 slope: about -34 dB at 900 Hz)", gainDb(s, 900.0, 0.1) < -30.0);
+
+    // Sidechain: a loud tone on inputs 3-4 reduces a quiet main signal that is itself below the threshold.
+    const auto quiet = sine(900.0, 0.01, 1.2);
+    const auto loud = sine(900.0, 0.5, 1.2);
+    auto runSc = [&](const Parameters& q, const bool connected) {
+        EngineState st;
+        std::vector<float> out(quiet.size()), outR(quiet.size());
+        for (size_t pos = 0; pos < quiet.size(); pos += 128) {
+            const uint32_t n = static_cast<uint32_t>(std::min<size_t>(128, quiet.size() - pos));
+            const float* ins[2] = {quiet.data() + pos, quiet.data() + pos};
+            const float* sc[2] = {loud.data() + pos, loud.data() + pos};
+            float* outs[2] = {out.data() + pos, outR.data() + pos};
+            processBlock(st, q, kSr, n, ins, outs, connected ? sc : nullptr);
+        }
+        return dbOf(rms(out, quiet.size() / 2) / rms(quiet, quiet.size() / 2));
+    };
+    Parameters c = only(1, -20.0f, 4.0f);
+    const double own = runSc(c, true);
+    c.sidechain = 1.0f;
+    const double keyed = runSc(c, true);
+    const double unconnected = runSc(c, false);
+    check("with the detectors on the input a quiet signal is not compressed", std::fabs(own) < 0.3);
+    check("with the sidechain selected the loud key reduces it by about 10.5 dB", std::fabs(keyed + 10.5) < 1.5);
+    check("selecting the sidechain with nothing connected falls back to the input", std::fabs(unconnected) < 0.3);
 }
 
 static void testCrossoversStayApart()
@@ -519,8 +618,10 @@ int main()
     testGainChangesAreSmoothed();
     testSilentDecayLeavesNoDenormals();
     testResetClearsMemoryOnly();
+    testMidiControl();
     testParameterTableMatchesCore();
     testCrossoversStayApart();
+    testKneeSoloAndSidechain();
     std::printf("trio_core_tests: %d passed, %d failed\n", gPassed, gFailed);
     return gFailed == 0 ? 0 : 1;
 }

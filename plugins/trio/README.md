@@ -6,7 +6,7 @@ below another, with adjustable crossovers. A redesign inspired by the Multiband 
 the left and right channels of a band and updates it twice per sample (see `docs/design.md`).
 
 The panel plots the three bands with draggable crossover lines and a live bar for the gain each band is
-applying (reduction down, lift up). No MIDI, no transport, no latency.
+applying (reduction down, lift up). MIDI in for Drift (below); no transport, no latency.
 
 | Control | Range | Default |
 |---|---|---|
@@ -21,6 +21,10 @@ applying (reduction down, lift up). No MIDI, no transport, no latency.
 | Per band: Up threshold / ratio | -80 to 0 dB / 1-10 : 1 (1 = no lift) | low -36 dB, mid -32, high -30 / 2.5 : 1 |
 | Per band: Attack / release | 0.5-200 ms / 5-2000 ms (logarithmic) | low 10 / 100 ms, mid 5 / 80, high 2 / 50 |
 | Per band: Gain | -18 to +18 dB | 0 dB |
+| CC channel | 0-16 | 1 (0 ignores MIDI): CC 1-4 drive Amount, Time (logarithmic), Input and Upward limit until you move that control or automate it |
+| Knee | 0-24 dB | 0 (hard) | Quadratic soft knee centred on both thresholds |
+| Solo | Off, Low, Mid, High | Off | Only that band's processed signal is heard; Amount and the dry path are ignored |
+| Detectors listen to | Input, Sidechain | Input | Sidechain is inputs 3-4, split into the same three bands; with nothing connected it falls back to the input |
 
 The defaults are the canonical "OTT" settings, so a fresh instance is a strong effect: lower Amount to dial
 it back, or set every ratio to 1 for a transparent three-band split (the crossover sums flat). The louder

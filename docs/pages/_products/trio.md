@@ -56,4 +56,4 @@ reduction, up for lift), its value in dB, and its level. The bars and levels are
 Core covered by tests (303 checks): the crossover sums flat at several settings and sample rates, the gain formula in each band, band
 independence, the stereo link, attack and release time constants and the Time scaling, Amount, Input and Output, the upward limit, band on and off,
 meters, every control, stability and overload at 44.1 to 192 kHz, block-size independence, denormals, and the parameter table against the core. Not yet
-listened to or validated in a host. No look-ahead, soft knee, external sidechain or band solo.
+listened to or validated in a host. Takes Drift CC 1-4 on a channel (Amount, Time, Input, Upward limit). No look-ahead. **Knee**, **Solo** (a band's processed signal alone) and an external **sidechain** (inputs 3-4, with the detectors on the same three bands) are on the Global panel.

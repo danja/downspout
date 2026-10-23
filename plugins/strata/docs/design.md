@@ -54,7 +54,7 @@ engine was redesigned.
 - The filter's measured response matches the model within 0.3 dB for all five types at five pitches; the 24 dB low-pass is
   -6 dB at its cutoff.
 - Envelope attack time, 63 % decay and release constants, LFO rate and range, voice stealing, sustain pedal, CC 120 and 123,
-  velocity scaling, sample-accurate events, every one of the 41 controls having an audible effect.
+  velocity scaling, sample-accurate events, every one of the 43 controls having an audible effect.
 - 300 random patches with random notes at 44.1, 96 and 192 kHz: no NaN or inf, output below 40.
 
 ## Not done
@@ -64,5 +64,6 @@ engine was redesigned.
 - No arbitrary-table import (WAV or Serum `.wav` tables, as campione loads `clm`); the five families are generated.
 - No general modulation matrix: a filter envelope (to cutoff and position), an LFO (to position, pitch, cutoff) and
   key tracking are fixed routes. One filter, not two.
-- Voice stealing can click (the stolen voice stops at once); no portamento, no mono or legato mode, no mod wheel mapping.
+- Voice stealing fades the stolen voice over about 3 ms before the new note starts in its place (the note starts that much late); no mod wheel mapping.
+- **Play mode and Glide.** Poly gives every key a voice. Mono and Legato play through one voice, last note wins; releasing the top key returns to the one still held (a stack of 16). Mono restarts both envelopes from their current value on each new note, Legato leaves them running. Glide is the time to cover about 95 % of the distance from the previous note (three time constants, stepped every 32 samples); the pitch is continuous through a retune, so a held note slides rather than jumps. In Poly each new voice glides in from the previous note, so a chord slides together. Not modelled: constant-time versus constant-rate glide, glide only when legato.
 - Not listened to; no host validation (REAPER). The Fold worst case is heavy (up to about 90 % of a core).

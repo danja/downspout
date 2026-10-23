@@ -61,7 +61,17 @@ Parameters clampParameters(const Parameters& p) noexcept
     o.makeupDb    = clampf(p.makeupDb, 0.0f, 24.0f);
     o.softClip    = p.softClip >= 0.5f ? 1.0f : 0.0f;
     o.mix         = clampf(p.mix, 0.0f, 100.0f);
+    o.sidechain   = p.sidechain >= 0.5f ? 1.0f : 0.0f;
+    o.ccChannel   = std::round(clampf(p.ccChannel, 0.0f, 16.0f));
+    o.lookaheadMs = clampf(p.lookaheadMs, 0.0f, 10.0f);
     return o;
+}
+
+int lookaheadSamples(const Parameters& raw, const float sampleRate) noexcept
+{
+    const Parameters p = clampParameters(raw);
+    const float sr = sampleRate > 0.0f ? sampleRate : 44100.0f;
+    return std::min(static_cast<int>(std::lround(p.lookaheadMs * 0.001f * sr)), kMaxLookahead - 1);
 }
 
 float staticGainDb(const Parameters& raw, float levelDb) noexcept
@@ -99,8 +109,42 @@ void resetState(EngineState& state) noexcept
     state = EngineState {};
 }
 
+float ccToValue(int slot, int cc) noexcept
+{
+    const float u = static_cast<float>(std::min(std::max(cc, 0), 127)) / 127.0f;
+    switch (slot) {
+    case 0:  return -60.0f + 60.0f * u;                           // threshold
+    case 1:  return 1.1f * std::pow(20.0f / 1.1f, u);             // ratio, logarithmic
+    case 2:  return 24.0f * u;                                    // makeup
+    default: return 100.0f * u;                                   // mix
+    }
+}
+
+bool ccChannelMatches(unsigned char status, float ccChannel) noexcept
+{
+    return (status & 0xF0) == 0xB0 && ccChannel >= 0.5f && static_cast<int>(status & 0x0F) + 1 == static_cast<int>(std::lround(ccChannel));
+}
+
+void handleController(LiveControl& live, int controller, int value) noexcept
+{
+    if (controller >= 1 && controller <= kCcSlots) {
+        live.value[static_cast<size_t>(controller - 1)] = ccToValue(controller - 1, value);
+        live.active[static_cast<size_t>(controller - 1)] = true;
+    }
+}
+
+Parameters withLive(const Parameters& p, const LiveControl& live) noexcept
+{
+    Parameters o = p;
+    if (live.active[0]) o.thresholdDb = live.value[0];
+    if (live.active[1]) o.ratio = live.value[1];
+    if (live.active[2]) o.makeupDb = live.value[2];
+    if (live.active[3]) o.mix = live.value[3];
+    return o;
+}
+
 void processBlock(EngineState& state, const Parameters& rawParams, float sampleRate, uint32_t frames,
-                  const float* const* inputs, float* const* outputs) noexcept
+                  const float* const* inputs, float* const* outputs, const float* const* sidechain) noexcept
 {
     const Parameters p = clampParameters(rawParams);
     const float sr = sampleRate > 0.0f ? sampleRate : 44100.0f;
@@ -134,16 +178,24 @@ void processBlock(EngineState& state, const Parameters& rawParams, float sampleR
 
     const float* in0 = inputs[0];
     const float* in1 = inputs[1] ? inputs[1] : inputs[0];
+    const bool external = p.sidechain >= 0.5f && sidechain != nullptr && sidechain[0] != nullptr && sidechain[1] != nullptr;
+    const float* sc0 = external ? sidechain[0] : in0;
+    const float* sc1 = external ? sidechain[1] : in1;
     float* out0 = outputs[0];
     float* out1 = outputs[1];
+    const int look = lookaheadSamples(p, sr);
 
     float level = 0.0f;
+    float blockPeak = kFloorLevel;   // the meter shows the loudest detector level in the block, not the last sample's
     for (uint32_t i = 0; i < frames; ++i) {
         float x0 = in0[i], x1 = in1[i];
         if (!std::isfinite(x0)) x0 = 0.0f;
         if (!std::isfinite(x1)) x1 = 0.0f;
 
-        float s0 = x0, s1 = x1;
+        // The detector listens to the input, or to the sidechain when it is selected and connected.
+        float s0 = external ? sc0[i] : x0, s1 = external ? sc1[i] : x1;
+        if (!std::isfinite(s0)) s0 = 0.0f;
+        if (!std::isfinite(s1)) s1 = 0.0f;
         if (hpfOn) {
             s0 = runBiquad(state.hpf[0], s0);
             s1 = runBiquad(state.hpf[1], s1);
@@ -159,6 +211,7 @@ void processBlock(EngineState& state, const Parameters& rawParams, float sampleR
             a1 = std::fabs(s1);
         }
         level = std::max(std::max(a0, a1), kFloorLevel);
+        blockPeak = std::max(blockPeak, level);
         const float levelDb = 20.0f * std::log10(level);
 
         const float target = staticGainDb(p, levelDb);
@@ -177,6 +230,15 @@ void processBlock(EngineState& state, const Parameters& rawParams, float sampleR
         const float wet = wetFrom + (wetGoal - wetFrom) * t;
         const float gain = std::exp(state.gainDb * kDbToNeper) * makeup;
 
+        // The audio path trails the detector by the look-ahead, so the gain is already down when a peak gets here.
+        if (look > 0) {
+            state.delay[0][static_cast<size_t>(state.delayPos)] = x0;
+            state.delay[1][static_cast<size_t>(state.delayPos)] = x1;
+            const size_t read = static_cast<size_t>((state.delayPos - look + kMaxLookahead) % kMaxLookahead);
+            state.delayPos = (state.delayPos + 1) % kMaxLookahead;
+            x0 = state.delay[0][read];
+            x1 = state.delay[1][read];
+        }
         float w0 = x0 * gain, w1 = x1 * gain;
         if (clip) {
             w0 = softClipSample(w0);
@@ -200,7 +262,7 @@ void processBlock(EngineState& state, const Parameters& rawParams, float sampleR
     state.makeupLinear = makeupGoal;
     state.wet = wetGoal;
     state.meters.reductionDb = -state.gainDb;
-    state.meters.levelDb = 20.0f * std::log10(std::max(level, kFloorLevel));
+    state.meters.levelDb = 20.0f * std::log10(std::max(blockPeak, kFloorLevel));
 }
 
 }  // namespace downspout::glue

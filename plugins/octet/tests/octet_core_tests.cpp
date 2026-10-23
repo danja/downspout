@@ -354,6 +354,34 @@ static void testOutputGainIsSmoothed()
     check("output gain changes do not step at the block edge", worst < 0.05);
 }
 
+static void testBandMovesGlide()
+{
+    // A narrow +18 dB bell on a 1 kHz tone is moved 50 Hz away in one step: the band's coefficients glide there over a few
+    // milliseconds instead of jumping, and settle exactly on the target.
+    Parameters p = solo(BandType::Bell, 1000.0, 18.0, 18.0);
+    const auto in = sine(1000.0, 0.05, 0.4);
+    EngineState st;
+    std::vector<float> out(in.size()), outR(in.size());
+    const uint32_t split = 9600;
+    const float* i1[2] = {in.data(), in.data()};
+    float* o1[2] = {out.data(), outR.data()};
+    processBlock(st, p, 48000.0f, split, i1, o1);
+    p.bands[0].freqHz = 1050.0f;
+    const uint32_t rest = static_cast<uint32_t>(in.size()) - split;
+    const float* i2[2] = {in.data() + split, in.data() + split};
+    float* o2[2] = {out.data() + split, outR.data() + split};
+    processBlock(st, p, 48000.0f, rest, i2, o2);
+    const double oldDb = responseDb(solo(BandType::Bell, 1000.0, 18.0, 18.0), 1000.0, 48000.0);
+    const double newDb = responseDb(p, 1000.0, 48000.0);
+    std::vector<float> early(out.begin() + split, out.begin() + split + 96);
+    std::vector<float> src(in.begin() + split, in.begin() + split + 96);
+    const double earlyDb = dbOf(rms(early, 0) / rms(src, 0));
+    check("the level has barely left the old response a couple of cycles after the move", earlyDb > 0.5 * (oldDb + newDb));
+    const std::vector<float> tail(out.end() - 4800, out.end());
+    const std::vector<float> tailIn(in.end() - 4800, in.end());
+    check("... and settles on the new response", std::fabs(dbOf(rms(tail, 0) / rms(tailIn, 0)) - newDb) < 0.1);
+}
+
 static void testSwitchingABandOffClearsItsMemory()
 {
     EngineState st;
@@ -411,11 +439,58 @@ static void testResetClearsMemoryOnly()
     check("reset leaves the parameters alone", p.bands[0].gainDb == 9.0f);
 }
 
+// Drift's CC 1-4 on a channel drive one band's Frequency, Gain and Q, and the Output.
+static void testMidiControl()
+{
+    check("CC 1 spans 20 Hz to 20 kHz logarithmically", std::fabs(ccToValue(0, 0) - 20.0f) < 0.01f && std::fabs(ccToValue(0, 127) - 20000.0f) < 1.0f &&
+          std::fabs(ccToValue(0, 64) / 20.0f - std::pow(1000.0f, 64.0f / 127.0f)) < 0.5f);
+    check("CC 2 is gain, +-18 dB", ccToValue(1, 0) == -18.0f && ccToValue(1, 127) == 18.0f);
+    check("CC 3 is Q, 0.1 to 18 logarithmically", std::fabs(ccToValue(2, 0) - 0.1f) < 1e-4f && std::fabs(ccToValue(2, 127) - 18.0f) < 1e-3f);
+    check("CC 4 is output, +-12 dB", ccToValue(3, 0) == -12.0f && ccToValue(3, 127) == 12.0f);
+    check("a controller matches only its channel, and 0 ignores MIDI", ccChannelMatches(0xB0, 1.0f) && !ccChannelMatches(0xB1, 1.0f) &&
+          ccChannelMatches(0xBF, 16.0f) && !ccChannelMatches(0xB0, 0.0f) && !ccChannelMatches(0x90, 1.0f));
+    LiveControl live;
+    handleController(live, 5, 100);
+    handleController(live, 1, 64);
+    check("only CC 1-4 are taken", live.active[0] && !live.active[1] && !live.active[2] && !live.active[3]);
+    handleController(live, 2, 127);
+    handleController(live, 3, 127);
+    handleController(live, 4, 0);
+    Parameters p;
+    p.ccBand = 6.0f;
+    const Parameters o = withLive(p, live);
+    const Band& d = o.bands[5];
+    check("the chosen band takes frequency, gain and Q", d.freqHz == live.value[0] && d.gainDb == 18.0f && std::fabs(d.q - 18.0f) < 1e-3f);
+    check("... and the output follows CC 4", o.outputDb == -12.0f);
+    bool others = true;
+    for (int b = 0; b < kBands; ++b)
+        if (b != 5 && (o.bands[static_cast<size_t>(b)].freqHz != p.bands[static_cast<size_t>(b)].freqHz || o.bands[static_cast<size_t>(b)].gainDb != p.bands[static_cast<size_t>(b)].gainDb)) others = false;
+    check("the other bands are untouched", others);
+    check("the panel releases exactly the controls the CCs hold", liveSlot(bandParameter(5, kFreq), 6) == 0 && liveSlot(bandParameter(5, kGain), 6) == 1 &&
+          liveSlot(bandParameter(5, kQ), 6) == 2 && liveSlot(kOutput, 6) == 3 && liveSlot(bandParameter(4, kFreq), 6) == -1 && liveSlot(kCcBand, 6) == -1);
+    // On audio: CC 2 lifting a bell at 1 kHz changes the level of a 1 kHz tone.
+    Parameters q = solo(BandType::Bell, 1000.0, 0.0, 1.0);
+    q.ccBand = 1.0f;
+    LiveControl l2;
+    handleController(l2, 2, 127);
+    const auto in = sine(1000.0, 0.05, 0.8);
+    EngineState st;
+    std::vector<float> out(in.size()), outR(in.size());
+    const Parameters e = withLive(q, l2);
+    for (size_t pos = 0; pos < in.size(); pos += 128) {
+        const uint32_t n = static_cast<uint32_t>(std::min<size_t>(128, in.size() - pos));
+        const float* ins[2] = {in.data() + pos, in.data() + pos};
+        float* outs[2] = {out.data() + pos, outR.data() + pos};
+        processBlock(st, e, 48000.0f, n, ins, outs);
+    }
+    check("CC 2 at full lifts the chosen band by 18 dB", std::fabs(dbOf(rms(out, in.size() / 2) / rms(in, in.size() / 2)) - 18.0) < 0.3);
+}
+
 static void testParameterTableMatchesCore()
 {
     const Parameters defaults;
     Parameters probe;
-    check("fifty parameters", kParameterCount == 50);
+    check("fifty-two parameters (CC channel and band are appended after the band controls)", kParameterCount == 52 && kCcChannel == 50 && kCcBand == 51);
     for (std::uint32_t i = 0; i < kParameterCount; ++i) {
         const ParameterSpec& s = specs()[i];
         check("table default equals the core default", field(defaults, i) == s.defaultValue);
@@ -433,7 +508,7 @@ static void testParameterTableMatchesCore()
         for (std::uint32_t j = i + 1; j < kParameterCount; ++j)
             if (std::string(specs()[i].symbol) == specs()[j].symbol) unique = false;
     check("symbols are unique", unique);
-    check("band parameter indices are contiguous per band", bandParameter(0, kOn) == 2 && bandParameter(7, kChannel) == kParameterCount - 1);
+    check("band parameter indices are contiguous per band", bandParameter(0, kOn) == 2 && bandParameter(7, kChannel) == kBandControlEnd - 1);
 }
 
 int main()
@@ -449,9 +524,11 @@ int main()
     testStabilityAndBounds();
     testBlockSizeIndependence();
     testOutputGainIsSmoothed();
+    testBandMovesGlide();
     testSwitchingABandOffClearsItsMemory();
     testSilentDecayLeavesNoDenormals();
     testResetClearsMemoryOnly();
+    testMidiControl();
     testParameterTableMatchesCore();
     std::printf("octet_core_tests: %d passed, %d failed\n", gPassed, gFailed);
     return gFailed == 0 ? 0 : 1;

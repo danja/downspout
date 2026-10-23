@@ -84,6 +84,7 @@ protected:
             const uint8_t status = in.data[0] & 0xF0;
             core::MidiEvent e;
             e.frame = in.frame;
+            e.channel = in.data[0] & 0x0F;
             if (status == 0x90 && in.size >= 3)       { e.type = core::MidiEvent::Type::NoteOn;     e.data1 = in.data[1]; e.data2 = in.data[2]; }
             else if (status == 0x80)                  { e.type = core::MidiEvent::Type::NoteOff;    e.data1 = in.data[1]; }
             else if (status == 0xB0 && in.size >= 3)  { e.type = core::MidiEvent::Type::Controller; e.data1 = in.data[1]; e.data2 = in.data[2]; }

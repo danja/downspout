@@ -9,7 +9,7 @@ whole loop has exactly one period of delay at the note, whatever the damping and
 resonances and a damper on note-off complete it. The panel plots the string's initial shape with the pluck and pickup positions, and the
 harmonics that follow, computed from the same shape and comb.
 
-Instrument: MIDI in (notes with velocity, pitch bend, sustain pedal CC 64, CC 120 and 123), mono voices to a stereo output (both channels
+Instrument: MIDI in (notes with velocity, per-channel pitch bend over Bend range, sustain pedal CC 64, CC 120 and 123), mono voices to a stereo output (both channels
 equal), no audio input and no transport use. All 14 controls are ordinary automatable parameters; there is no plugin state.
 
 | Control | Range | Default | Notes |

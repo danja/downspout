@@ -68,18 +68,29 @@ protected:
             return;
         core::field(parameters_, index) = value;
         parameters_ = core::clampParameters(parameters_);
+        // The panel or the host has taken the control back from a controller; a new CC band starts with none held.
+        if (index == core::kCcBand) live_ = core::LiveControl {};
+        else if (const int slot = core::liveSlot(index, static_cast<int>(parameters_.ccBand)); slot >= 0) live_.active[static_cast<size_t>(slot)] = false;
     }
 
     // Clears the filter memory only. The patch lives in the parameters.
-    void activate() override { core::resetState(engine_); }
+    void activate() override { core::resetState(engine_); live_ = core::LiveControl {}; }
 
-    void run(const float** inputs, float** outputs, uint32_t frames) override
+    void run(const float** inputs, float** outputs, uint32_t frames, const MidiEvent* midiEvents, uint32_t midiEventCount) override
     {
-        core::processBlock(engine_, parameters_, static_cast<float>(getSampleRate()), frames, inputs, outputs);
+        // CC 1-4 on the set channel drive one band's Frequency, Gain and Q and the Output (the Drift convention). Applied at block start.
+        for (uint32_t i = 0; i < midiEventCount; ++i) {
+            const MidiEvent& e = midiEvents[i];
+            if (e.size >= 3 && core::ccChannelMatches(e.data[0], parameters_.ccChannel))
+                core::handleController(live_, e.data[1], e.data[2]);
+        }
+        const core::Parameters effective = core::withLive(parameters_, live_);
+        core::processBlock(engine_, effective, static_cast<float>(getSampleRate()), frames, inputs, outputs);
     }
 
 private:
     core::Parameters  parameters_ {};
+    core::LiveControl live_ {};
     core::EngineState engine_ {};
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OctetPlugin)

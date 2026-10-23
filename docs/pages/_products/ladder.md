@@ -55,5 +55,5 @@ passband, the slope and the resonant peak. Drive is non-linear and is not plotte
 
 ### Status
 
-Core covered by tests (analytic response, taper, self-oscillation, bass compensation, stability
+Takes Drift CC 1-4 on a channel (Cutoff, Resonance, Drive, Mix; default channel 1, 0 = off). Core covered by tests (analytic response, taper, MIDI mapping and override, self-oscillation, bass compensation, stability
 under random sweeps and overload at 44.1 to 192 kHz, block-size independence, denormals, and the parameter table against the core). Not yet listened to or validated in a host.

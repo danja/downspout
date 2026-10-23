@@ -81,7 +81,7 @@ protected:
     // standalone's own (silent) meters.
     void parameterChanged(const uint32_t index, const float v) override
     {
-        if (demo_ && index >= core::kControlCount)
+        if (demo_ && (index == core::kStatusReduction || index == core::kStatusLevel))
             return;
         MagnetoUI::parameterChanged(index, v);
     }
@@ -109,15 +109,15 @@ protected:
         drawHistoryPanel({24.0f + curveW + 12.0f, 108.0f, full - curveW - 12.0f, 250.0f});
         drawCompressionPanel({24.0f, 370.0f, full, 100.0f});
         const float timingW = full * 0.62f;
-        drawTimingPanel({24.0f, 482.0f, timingW, 156.0f});
-        drawOutputPanel({24.0f + timingW + 12.0f, 482.0f, full - timingW - 12.0f, 156.0f});
+        drawTimingPanel({24.0f, 482.0f, timingW, 212.0f});
+        drawOutputPanel({24.0f + timingW + 12.0f, 482.0f, full - timingW - 12.0f, 212.0f});
     }
 
 private:
     [[nodiscard]] core::Parameters currentParameters() const
     {
         core::Parameters p;
-        for (std::uint32_t i = 0; i < core::kControlCount; ++i)
+        for (std::uint32_t i = 0; i < core::kParameterCount; ++i)
             core::field(p, i) = value(i);
         return p;
     }
@@ -267,11 +267,14 @@ private:
         static constexpr const char* kDetectorNames[2] = {"Peak", "RMS"};
         label(x + w + gap, y, "Detector");
         drawSegments(core::kDetector, kDetectorNames, 2, {x + w + gap, y + 18.0f, w, 26.0f}, kTimingAccent);
+        static constexpr const char* kSourceNames[2] = {"Input", "Sidechain"};
+        label(x + 2.0f * (w + gap), y, "Detector listens to");
+        drawSegments(core::kSidechain, kSourceNames, 2, {x + 2.0f * (w + gap), y + 18.0f, w, 26.0f}, kTimingAccent);
     }
 
     void drawOutputPanel(const Rect b)
     {
-        drawPanel(b, "OUTPUT", kOutputAccent);
+        drawPanel(b, "OUTPUT", kOutputAccent, "CC 1-4: Threshold, Ratio, Makeup, Mix");
         const float gap = 24.0f;
         const float w = (b.w - 28.0f - gap) / 2.0f;
         float x = b.x + 14.0f;
@@ -280,8 +283,11 @@ private:
         slider(core::kMix, "Mix (parallel)", {x + w + gap, y, w, 34.0f}, kOutputAccent);
         y += 54.0f;
         static constexpr const char* kClipNames[2] = {"Off", "On"};
-        label(x, y, "Soft clip (linear below -6 dBFS)");
+        label(x, y, "Soft clip");
         drawSegments(core::kSoftClip, kClipNames, 2, {x, y + 18.0f, w, 26.0f}, kOutputAccent);
+        slider(core::kCcChannel, "CC channel", {x + w + gap, y, w, 34.0f}, kOutputAccent);
+        y += 54.0f;
+        slider(core::kLookahead, "Look-ahead", {x, y, w, 34.0f}, kOutputAccent);
     }
 
     void slider(const std::uint32_t parameter, const char* name, const Rect r, const Accent accent)
@@ -310,6 +316,16 @@ private:
             break;
         case core::kRelease:
             std::snprintf(buffer, sizeof(buffer), "%.0f ms", static_cast<double>(v));
+            break;
+        case core::kLookahead:
+            if (v < 0.05f)
+                return "off";
+            std::snprintf(buffer, sizeof(buffer), "%.1f ms", static_cast<double>(v));
+            break;
+        case core::kCcChannel:
+            if (v < 0.5f)
+                return "off";
+            std::snprintf(buffer, sizeof(buffer), "%d", static_cast<int>(std::lround(v)));
             break;
         case core::kScHpf:
             if (v <= core::kHpfOffHz + 0.5f)

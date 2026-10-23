@@ -33,6 +33,9 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - Probes must advance the input pointer per block, and be sanity-checked against the raw input.
 - A doc that quotes a "worst case over a range" needs a test sweeping the whole range, asserting the documented bound.
 - Measure before building: write the accuracy probe (pitch ratio, filter response across the whole parameter space) before wiring DSP. Use a Goertzel magnitude, not zero-crossings, on spliced signals. Read the reference function (e.g. `plinky.c` `stride()`) before describing it.
+- Measuring a tone's size: sum the Hann main-lobe energy (`A = sqrt(32/3 x sum|X|^2) / N`) and use the same window length as the render. A single peak bin loses up to 15 % to scalloping and silently skews ratios. Treat DC as harmonic 0 and exclude +-16 bins around each harmonic when measuring aliasing.
+- Before concluding the DSP is wrong, derive the reference from the formula for the stated order and check one point by hand (a 4-pole is -40 log10(1 + m^2), not half that). When a metric mixes two effects (resonant peak and passband loss), neutralise one before measuring the other.
+- A bound on output level is the wrong stability test for cascaded boosts (they legitimately exceed 100 dB): check that the impulse response decays.
 - Build output: filter with `grep -E "error:|Error [0-9]"` and check the exit status. After adding a test, confirm it actually ran (count/runtime changed) before saying it passes.
 
 **Host lifecycle and state**
@@ -42,12 +45,14 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - Recursive filters on idle voices decay into denormals (4x CPU): skip idle voices, zero their state, flush tiny values per block, and time new recursive DSP over a long decay.
 
 **Screenshots and UI**
-- Run the capture script as `env -u DISPLAY scripts/capture-plugin-screenshots.sh <plugin>` (it otherwise captures the user's real desktop, which has happened twice). Capture into the scratchpad, open the image at full resolution, and only then copy it into the repo.
+- Run `scripts/capture-plugin-screenshots.sh <plugin>`; it always captures on a private Xvfb (it used to photograph the user's real desktop when `DISPLAY` was set, twice), so no `env -u DISPLAY` is needed. Capture into the scratchpad with `--output-dir`, open the image at full resolution, and only then copy it into the repo.
 - Capture by PID or window id, never `xdotool search --name` (substring match). `identify` the PNG against `DISTRHO_UI_DEFAULT_WIDTH/HEIGHT`. A blank grey capture means raise `DOWNSPOUT_SCREENSHOT_SETTLE_SECONDS`.
 - Generate stepper label tables from the value and clamp the index; give an empty state no mark. Derive plot shapes numerically and compare with the image.
 
 **Process**
 - Never `pkill -f` / `pgrep -f` with a pattern that appears in your own command line; use `ps` or the bracket trick (`foo[.]bar`).
+- Rerun a timing-based test ("renders faster than real time") alone before treating it as a regression: it failed under a load average of 37 and passed alone. A CPU figure taken on a busy machine is an upper bound; say so.
+- `cmake --build --target <plugin>` does not compile the UI (it builds a stub library). Build `<plugin>-vst3` and check the exit status; after changing a shared header such as `MagnetoKit.hpp`, build `-vst3` for every plugin that includes it (`grep -rl MagnetoKit.hpp plugins`). Include what a UI file uses (`<string>`): the screenshot (jack) build can hide a missing include.
 - Scripted batch edits: `continue` in every branch, diff the result. For non-unique lines anchor on context, not first match.
 - Port a DSP core a function at a time and build after each; do not draft the whole thing in one pass.
 - Cross-repo scripts: read the dataclass before constructing it positionally, and distrust a large mismatch on only some cases.

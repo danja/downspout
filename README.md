@@ -115,7 +115,7 @@ installed bundle.
 | [luma](plugins/luma/README.md) | `luma.vst3` | MIDI generator | Launchpad-oriented performance generator where lit pads become bass, chord, melody, and drum agents. |
 | [paunchlad](plugins/paunchlad/README.md) | `paunchlad.vst3` | Audio effect/instrument | Launchpad dub performance effect with echo throws, sirens, spring splashes, dropouts, and chops. |
 | [lifeform](plugins/lifeform/README.md) | `lifeform.vst3` | MIDI generator | Conway Game of Life sequencer for Launchpad, evolving one generation per beat into melodic or drum MIDI. |
-| [plank](plugins/plank/README.md) | `plank.vst3` | Instrument | Eight-string synthesizer derived from Plinky, with one voice per Launchpad grid column. |
+| [plank](plugins/plank/README.md) | `plank.vst3` | Instrument | Eight-voice synthesizer derived from Plinky, played from a Launchpad grid with one voice per column. |
 | [pratt](plugins/pratt/README.md) | `pratt.vst3` | Instrument/Audio effect | Number-theoretic synthesizer and filter built from Pratt polynomials: eleven GM voices, a stable all-pole Pratt filter with two cascading index controls, or both. |
 | [retune](plugins/retune/README.md) | `retune.vst3` | MIDI effect | Retunes any note stream to a Scala `.scl` scale with one pitch bend and one output channel per note, for synths with per-channel bend (MPE-style). |
 | [markov](plugins/markov/README.md) | `markov.vst3` | MIDI generator | Markov-chain melody generator: a random walk through a visible 12x12 transition matrix that you draw, fill from one of eight styles, or learn from a line you play; scale-masked, optional second order, repeatable from any position. |

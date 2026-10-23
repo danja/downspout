@@ -11,8 +11,8 @@ pitch reads a copy that stays under Nyquist. **Warp** bends the cycle (Bend), re
 (Sync), or folds it (Fold, antialiased). Add a sine sub, unison, one resonant filter (LP 12, LP 24, HP 12, BP,
 Notch), an amplitude and a filter envelope, and an LFO. The panel plots each oscillator's waveform as you set it.
 
-Instrument: MIDI in (notes with velocity, pitch bend, sustain pedal CC 64, CC 120 and 123), stereo out, no audio
-input and no transport use. All 41 controls are ordinary automatable parameters (`osc1_table` ... `bend_range`);
+Instrument: MIDI in (notes with velocity, per-channel pitch bend over Bend range, sustain pedal CC 64, CC 120 and 123), stereo out, no audio
+input and no transport use. All 43 controls are ordinary automatable parameters (`osc1_table` ... `glide`);
 there is no plugin state.
 
 | Group | Controls |
@@ -24,6 +24,7 @@ there is no plugin state.
 | Envelopes | Attack, Decay, Sustain, Release for the amplitude and the filter envelope |
 | LFO | Rate 0.05-20 Hz, Shape (Sine / Triangle / Saw / Square / S&H), to Position, to Pitch, to Cutoff |
 | Performance | Master, Velocity (0 = every note at full level), Bend range 0-24 st |
+| Voicing | Play mode (Poly, Mono, Legato), Glide 0-2000 ms |
 
 CPU (a busy machine, so an upper bound, 48 kHz, -O2): about 2 % of a core for one note and 9 % for eight notes at the
 defaults; 28 % with eight notes at 8 unison voices on both oscillators and the 24 dB filter; up to about 90 % in that

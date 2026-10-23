@@ -93,6 +93,7 @@ Parameters clampParameters(const Parameters& p) noexcept
     o.bassComp  = clampf(p.bassComp, 0.0f, 100.0f);
     o.mix       = clampf(p.mix, 0.0f, 100.0f);
     o.outputDb  = clampf(p.outputDb, -24.0f, 12.0f);
+    o.ccChannel = std::round(clampf(p.ccChannel, 0.0f, 16.0f));
     return o;
 }
 
@@ -116,6 +117,38 @@ Coefficients makeCoefficients(float cutoffHz, float resonance01, float sampleRat
     c.f = (w * (0.99999949f - 0.096524608f * w2)) / (1.0f - 0.42986726f * w2 + 0.009981878f * w2 * w2);
     c.k = resonanceToFeedback(resonance01);
     return c;
+}
+
+float ccToValue(int slot, int cc) noexcept
+{
+    const float u = static_cast<float>(std::min(std::max(cc, 0), 127)) / 127.0f;
+    switch (slot) {
+    case 0:  return 20.0f * std::pow(18000.0f / 20.0f, u);   // cutoff, logarithmic across the whole range
+    case 1:  return 100.0f * u;                               // resonance
+    case 2:  return 24.0f * u;                                // drive
+    default: return 100.0f * u;                               // mix
+    }
+}
+
+bool ccChannelMatches(unsigned char status, float ccChannel) noexcept
+{
+    return (status & 0xF0) == 0xB0 && ccChannel >= 0.5f && static_cast<int>(status & 0x0F) + 1 == static_cast<int>(std::lround(ccChannel));
+}
+
+void handleController(LiveControl& live, int controller, int value) noexcept
+{
+    if (controller >= 1 && controller <= kCcSlots)
+        live.value[static_cast<size_t>(controller - 1)] = ccToValue(controller - 1, value);
+}
+
+Parameters withLive(const Parameters& p, const LiveControl& live) noexcept
+{
+    Parameters o = p;
+    if (live.value[0] >= 0.0f) o.cutoffHz = live.value[0];
+    if (live.value[1] >= 0.0f) o.resonance = live.value[1];
+    if (live.value[2] >= 0.0f) o.driveDb = live.value[2];
+    if (live.value[3] >= 0.0f) o.mix = live.value[3];
+    return o;
 }
 
 double responseDb(const Parameters& raw, double hz) noexcept

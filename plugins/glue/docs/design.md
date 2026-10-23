@@ -56,12 +56,21 @@ range cap, a soft clipper, parallel mix and a gain-reduction readout.
 - CPU, measured on a busy machine (so an upper bound): about 0.4-0.55 % of one core for stereo at 48 kHz (-O2),
   with no extra cost through a long silent decay.
 
+## Added later (October 2026)
+
+- **External sidechain** (inputs 3-4, chosen by *Detector listens to*): the detector, with its high-pass and Peak or RMS, listens to the sidechain and the
+  reduction is applied to inputs 1-2. If the host connects nothing the detector falls back to the input. Tests: a loud sidechain compresses a quiet input by
+  the static curve for the sidechain's level (within 0.7 dB), a silent sidechain compresses nothing, internal mode ignores the sidechain, the high-pass acts on
+  it, and the level meter reads it.
+- **The level meter is the block peak** of the detector level, not the last sample's (which on a sine is anywhere between 0 and -6 dB and made the panel's dot
+  flicker).
+- **Drift CC 1-4** on a channel (default 1; 0 ignores MIDI) drive Threshold, Ratio (logarithmic), Makeup and Mix until the panel or the host moves the control.
+  The mapping, channel match and override logic are core functions with tests; the panel does not follow the CC. Threshold overrides need an explicit "active"
+  flag because the value is negative. `sidechain` and `cc_channel` are appended after the two meters (indices 14 and 15) so no index moved. 157 checks in all.
+
 ## Not done
 
-- No look-ahead (so no peak-safe limiting; use Guardian after it) and no latency.
-- No external sidechain input: the detector is the input. The bassops plugin takes a sidechain on inputs 3-4;
-  the same layout here would make ducking from a kick possible.
+- **Look-ahead** (0-10 ms, off by default, parameter 16) delays the audio path by whole samples while the detector sees the input undelayed, so the gain has been falling for that long when a peak arrives. The delay is reported to the host with `setLatency` when the control, the sample rate or activation changes. Changing it while playing moves the read point, which clicks once. Because the gain still follows the one-pole attack it is not peak-safe limiting; use Guardian after it.
 - Not listened to; no host validation (REAPER).
-- No Drift CC input.
 - The 10 ms RMS window and the auto-release table (40-800 ms, 8 dB depth) are my choices, not measured against
   any hardware.

@@ -32,7 +32,8 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
   position (not wall clock), so loops, restarts and offline renders reproduce.
 - **Control-change conventions.** Drift lanes default to CC 1-4; the audio effects
   chipper, damiano, skream, spliff, helterskelter, treatment, magneto, beards, ghost, trajectory and fathom read
-  those by default so Drift needs no configuration. Conductor emits CC 20-24 on channel 16
+  those by default so Drift needs no configuration; ladder (Cutoff, Resonance, Drive, Mix), glue (Threshold, Ratio,
+  Makeup, Mix), trio (Amount, Time, Input, Upward limit) and octet (one band's Frequency, Gain and Q, chosen by CC Band, and Output) do too, on a **CC Channel** parameter (default 1, 0 = off). Conductor emits CC 20-24 on channel 16
   (Scene, Density, Energy, Mutation, Reset); bassgen, drumgen, ground, melgen, worms, bubbles,
   floozy, harmonic-atlas, sprout, lifeform, luma, polymeter, xoxolo, markov, counterpointer
   cadence, arpgen, m-mix and beards listen through a **Conductor Ch**
@@ -44,7 +45,8 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
   bend at a configurable range (default 2 semitones). Instruments that follow bend per
   channel and honour that range: canticle, moka, floozy, syrinx, pratt, basilico,
   gremlin, campione (Bend Range control, no RPN), mosaic (Pitch bend range control, only
-  when Pitch range = 0). Canticle, moka, floozy, syrinx, basilico and gremlin also accept
+  when Pitch range = 0), strata, quartet and monochord (Bend range control, no RPN; voices keyed by
+  channel and note). Canticle, moka, floozy, syrinx, basilico and gremlin also accept
   RPN 0 to set the range per channel. Other instruments ignore or globally apply bend.
 
 ## Quick reference
@@ -77,9 +79,9 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | gremlin | gremlin.vst3 | instrument (glitch) | 0/2 | yes/yes | no |
 | gremlin-driver | gremlin_driver.vst3 | MIDI controller | 0/2 | yes/yes | yes |
 | ground | ground.vst3 | MIDI generator | 0/2 | yes/yes | yes |
-| glue | glue.vst3 | audio effect (compressor) | 2/2 | no/no | no |
-| octet | octet.vst3 | audio effect (equalizer) | 2/2 | no/no | no |
-| trio | trio.vst3 | audio effect (multiband dynamics) | 2/2 | no/no | no |
+| glue | glue.vst3 | audio effect (compressor, sidechain) | 4/2 | yes/no | no |
+| octet | octet.vst3 | audio effect (equalizer) | 2/2 | yes/no | no |
+| trio | trio.vst3 | audio effect (multiband dynamics, sidechain) | 4/2 | yes/no | no |
 | strata | strata.vst3 | instrument (wavetable) | 0/2 | yes/no | no |
 | quartet | quartet.vst3 | instrument (FM) | 0/2 | yes/no | no |
 | monochord | monochord.vst3 | instrument (string) | 0/2 | yes/no | no |
@@ -87,7 +89,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | harmonic-atlas | harmonic_atlas.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | helterskelter | helterskelter.vst3 | audio effect (wah) | 2/2 | yes/no | yes |
 | keyframe | keyframe.vst3 | audio effect (time stretch) | 2/2 | yes/no | no |
-| ladder | ladder.vst3 | audio effect (filter) | 2/2 | no/no | no |
+| ladder | ladder.vst3 | audio effect (filter) | 2/2 | yes/no | no |
 | lifeform | lifeform.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | lightverb | lightverb.vst3 | audio effect (reverb) | 2/2 | yes/yes | no |
 | loopdelay | loopdelay.vst3 | audio effect (delay/looper) | 2/2 | yes/yes | yes |
@@ -532,8 +534,8 @@ note; at 0 the note sets pitch (note - 60) and **Pitch bend range** (1-24, defau
 applies per channel. Sample paths are state. Requires transport for autonomous mode.
 
 ### plank
-Eight-string touch-synth derived from Plinky, driven from a Launchpad grid (each column a
-string, each row a scale degree; polyphony held rather than allocated). PolyBLEP oscillator
+Eight-voice touch-synth derived from Plinky, driven from a Launchpad grid (each column a
+voice, each row a scale degree; polyphony held rather than allocated). PolyBLEP oscillator
 pair morphing across 17 band-limited wavetables, resonant two-pole filter, two envelopes,
 tape delay, shimmer reverb, mid/side width, and several resonator engines. Emits LED and
 note MIDI (note-on/off on a base channel, with a MIDI thru switch). 24 scales, ordering
@@ -616,7 +618,7 @@ for a note, 6 % for eight.
 
 ### quartet
 Eight-voice four-operator FM synthesizer (a redesign, not a port, of the Oxide Studio Operator). MIDI in (velocity, pitch bend over **Bend range**, sustain pedal CC 64, CC 120 and
-123), stereo out (mono voices, both channels equal), no audio input, no transport use, no plugin state: 57 automatable parameters (`opa_wave` ... `quality`). Each operator A-D has a **Waveform**
+123), stereo out (mono voices, both channels equal), no audio input, no transport use, no plugin state: 59 automatable parameters (`opa_wave` ... `glide`; **Play mode** Poly/Mono/Legato and **Glide** 0-2000 ms). Each operator A-D has a **Waveform**
 (sine, or a band-limited saw or square), **Ratio** 0.25-32 with **Fine** +-50 cents or a **Fixed Hz**, a **Level** (a carrier's output, a modulator's FM amount) and its own ADSR. **Algorithm** 1-11
 routes them (1 D>C>B>A; 4 D>(B+C)>A; 11 all additive; carriers are averaged); the panel draws the routing from the same table. **FM Depth** (0-4 cycles; the index in radians is 2 pi x depth x
 level) and **Feedback** (D into itself). A **Pitch envelope** (+-48 st, ADSR) and one **Filter** (LP 12, LP 24, HP 12, BP, Notch; cutoff, resonance, key track). **Quality** 2x runs the voice
@@ -625,8 +627,8 @@ oversampled and decimates with a 63-tap half-band FIR (flat to 18 kHz, -89 dB st
 
 ### strata
 Eight-voice wavetable synthesizer (a redesign, not a port, of the Oxide Studio Wavetable). MIDI in (velocity, pitch bend over
-**Bend range**, sustain pedal CC 64, CC 120 and 123), stereo out, no audio input, no transport use, no plugin state: 41 automatable parameters
-(`osc1_table` ... `bend_range`). Two oscillators each read one of five table families (**Table**: Basic, Harmonics, Formant, Digital, Vintage) of eight
+**Bend range**, sustain pedal CC 64, CC 120 and 123), stereo out, no audio input, no transport use, no plugin state: 43 automatable parameters
+(`osc1_table` ... `glide`; **Play mode** Poly/Mono/Legato and **Glide** 0-2000 ms). Two oscillators each read one of five table families (**Table**: Basic, Harmonics, Formant, Digital, Vintage) of eight
 frames that **Position** scrolls through; every frame is stored in 21 band-limited versions and the read picks the one that stays under Nyquist, so
 a square measures -77 to -89 dB away from its harmonics at every pitch (a naive read: -12 to -25 dB). **Warp** is None, Bend, Sync or Fold (Fold is
 antialiased), with an amount; warp aliasing at note 60, amount 0.7 is -42.6, -38.5 and -33.1 dB. Per oscillator **Transpose** +-24 st, **Fine** +-50 ct,
@@ -637,7 +639,7 @@ output. Eight voices; a ninth steals the quietest. About 2 % of a core for a not
 about 90 % with Fold and Sync together. The panel plots each oscillator's warped waveform.
 
 ### trio
-Three-band dynamics, stereo, no MIDI, transport, latency or plugin state (a redesign, not a port, of the Oxide Studio Multiband
+Three-band dynamics, stereo, no transport, latency or plugin state; MIDI in for Drift: **CC Channel** (0-16, default 1) and CC 1-4 drive Amount, Time, Input and Upward limit until the panel or host moves the control (a redesign, not a port, of the Oxide Studio Multiband
 Dynamics). Two adjustable Linkwitz-Riley crossovers (**Low** 40-1000 Hz, default 250; **High** 1-12 kHz, default 2.5 kHz, held at
 least 1.25 x the low one) split the signal into bands that sum flat; the low band is passed through the high crossover's
 all-pass. Each band has **On**, a **Down threshold** (-60 to 0 dB) and **ratio** (1-20:1) that compress what is loud, an **Up
@@ -646,16 +648,18 @@ threshold** (-80 to 0 dB, held at or below the down one) and **ratio** (1-10:1; 
 **Amount** (dry/wet; 0 is bit-exact dry), **Time** (0.1-10 x on every attack and release) and **Upward limit** (0-24 dB). One
 detector per band, linked across the two channels. Defaults are the "OTT" settings, so a fresh instance is a strong effect; set
 every ratio to 1 for a transparent split. Six output parameters (`status_gain_1-3`, `status_level_1-3`) drive the panel's
-per-band gain bars; the crossover lines on the plot are draggable. Upward lift raises the noise floor.
+per-band gain bars; the crossover lines on the plot are draggable. Upward lift raises the noise floor. **Knee** (0-24 dB, default hard) softens both thresholds; **Solo** (Off/Low/Mid/High) plays one band's processed
+signal alone (no dry, Amount ignored); **Detectors listen to** Input or Sidechain (inputs 3-4, split into the same three bands; with nothing
+connected it falls back to the input). The `status_*` meters are followed by `cc_channel`, `knee`, `solo` and `sidechain` (41 parameters).
 
 ### octet
-Eight-band parametric equalizer, stereo, no MIDI, transport, latency or plugin state (a redesign, not a port, of the
+Eight-band parametric equalizer, stereo, MIDI in for Drift (CC 1-4 on **CC Channel**, default 1, drive the band chosen by **CC Band**, default 4: Frequency, Gain, Q; CC 4 Output), no transport, latency or plugin state (a redesign, not a port, of the
 Oxide Studio EQ Eight). Each band has **On**, **Type** (HP 12, HP 48, Low shelf, Bell, Notch, High shelf, LP 12, LP 48),
 **Frequency** 20 Hz to 20 kHz (logarithmic), **Gain** +-18 dB (bell and shelves only), **Q** 0.1 to 18 (bell, shelves and
 notch) and **Channel** (Both, A, B). The 48 dB cuts are 8th-order Butterworth, -3 dB at the cutoff. **Mode** is Stereo,
 Left/Right or Mid/Side; in the last two, Channel picks left or mid (A), right or side (B) or both, and in Stereo it is
 ignored. **Output** +-12 dB. Defaults: bands 2-7 on at 0 dB and the two cuts off, so a fresh instance is bit-exact
-transparent. Fifty automatable parameters (`band1_freq`, `band8_channel`, `mode`, `output`, ...). The panel draws each
+transparent. Fifty-two automatable parameters (`band1_freq`, `band8_channel`, `mode`, `output`, `cc_channel`, `cc_band`, ...). The panel draws each
 band's curve and the total from the coefficients in use, with a draggable node per band (across for frequency, up and
 down for gain; scroll for Q). No spectrum analyser.
 
@@ -665,8 +669,10 @@ Stereo-linked feed-forward bus compressor (a redesign, not a port, of the Oxide 
 reduction, **Attack** 0.1 to 100 ms (10), **Release** 20 to 2000 ms (200) or **Auto** (about 40 ms after a transient,
 up to 800 ms once compression has been sustained; the knob is ignored), **Sidechain HPF** 20 to 400 Hz (60; 20 = off,
 detector only), **Detector** Peak or RMS (10 ms), **Makeup** 0 to 24 dB, **Soft clip** Off/On (off by default; linear
-below 0.5, never exceeds 1), **Mix** (parallel). The louder channel sets the reduction for both. No MIDI, transport,
-latency, look-ahead or plugin state; every control is an automatable parameter. Two output parameters,
+below 0.5, never exceeds 1), **Mix** (parallel). The louder channel sets the reduction for both. **Detector listens to** Input
+or Sidechain (inputs 3-4; with nothing connected it falls back to the input). **CC Channel** (0-16, default 1; 0 = ignore MIDI): CC 1-4
+drive Threshold, Ratio, Makeup and Mix until the panel or the host moves the control (the Drift convention). **Look-ahead** 0 to 10 ms (off)
+delays the audio, not the detector, and is reported to the host as latency. No transport or plugin state; every control is an automatable parameter. Two output parameters,
 `status_reduction` and `status_level`, are measured from the audio and drive the panel's transfer curve, live dot
 and reduction history. Not a limiter; put Guardian after it.
 
@@ -712,8 +718,9 @@ stage), ported from the Oxide Studio DSP and measured against the analytic respo
 (exponential taper in the feedback: peak over the passband about 6 dB at 20 %, 18 dB at 50 %, 28 dB at
 70 % with full Bass Comp; rings on its own from about 85 %), **Drive** 0-24 dB into the saturators,
 **Bass Comp** 0-100 % (restores the low end the feedback removes; 100 % returns the passband to
-unity; default 50 %, so the defaults sit about 3.5 dB low), **Mix**, **Output**. No MIDI, transport,
-latency or plugin state: every control is an automatable parameter. The panel plots the small-signal
+unity; default 50 %, so the defaults sit about 3.5 dB low), **Mix**, **Output**, **CC Channel** (0-16, default 1; 0 =
+ignore MIDI). MIDI in: CC 1-4 on that channel drive Cutoff, Resonance, Drive and Mix until the panel or the host moves the control
+(the Drift convention). No transport, latency or plugin state: every control is an automatable parameter. The panel plots the small-signal
 response (Drive not included) from the model the tests hold to the real filter. Resonance with full
 Bass Comp is loud; trim Output.
 

@@ -202,23 +202,13 @@ constexpr std::array<Algorithm, kAlgorithms> kAlgorithmTable = {{
     {{0u, 0u, 0u, 0u}, 15u},     // 11: A + B + C + D
 }};
 
-void startVoice(EngineState& st, int note, int velocity) noexcept
+void initVoice(EngineState& st, Voice& v, int note, int velocity, int channel, double glide) noexcept
 {
-    int idx = -1;
-    for (int i = 0; i < kVoices; ++i)
-        if (!st.voices[static_cast<size_t>(i)].active) { idx = i; break; }
-    if (idx < 0) {
-        double best = 1e9;
-        for (int i = 0; i < kVoices; ++i) {
-            const Voice& v = st.voices[static_cast<size_t>(i)];
-            const double score = v.env[0].value + (v.held || v.sustained ? 10.0 : 0.0);
-            if (score < best) { best = score; idx = i; }
-        }
-    }
-    Voice& v = st.voices[static_cast<size_t>(idx)];
     v = Voice {};
+    v.glide = glide;
     v.active = true;
     v.held = true;
+    v.channel = channel & 15;
     v.note = note;
     v.velocity = static_cast<float>(velocity) / 127.0f;
     v.age = ++st.counter;
@@ -226,23 +216,121 @@ void startVoice(EngineState& st, int note, int velocity) noexcept
     v.pitchEnv.stage = Envelope::Stage::Attack;
 }
 
-void noteOff(EngineState& st, int note) noexcept
+void startVoice(EngineState& st, int note, int velocity, int channel, double glide) noexcept
+{
+    int idx = -1;
+    for (int i = 0; i < kVoices; ++i)
+        if (!st.voices[static_cast<size_t>(i)].active) { idx = i; break; }
+    if (idx >= 0) {
+        initVoice(st, st.voices[static_cast<size_t>(idx)], note, velocity, channel, glide);
+        return;
+    }
+    // Steal a releasing voice first, then the quietest, and one already being stolen last. It fades out
+    // before the new note starts in its place.
+    double best = 1e9;
+    for (int i = 0; i < kVoices; ++i) {
+        const Voice& v = st.voices[static_cast<size_t>(i)];
+        const double score = v.env[0].value + (v.held || v.sustained ? 10.0 : 0.0) + (v.stealing ? 20.0 : 0.0);
+        if (score < best) { best = score; idx = i; }
+    }
+    Voice& v = st.voices[static_cast<size_t>(idx)];
+    v.stealing = true;
+    v.held = false;
+    v.sustained = false;
+    v.pendingNote = note;
+    v.pendingVelocity = velocity;
+    v.pendingChannel = channel & 15;
+    v.pendingGlide = glide;
+}
+
+void releaseNote(EngineState& st, int note, int channel) noexcept
 {
     for (Voice& v : st.voices)
-        if (v.active && v.held && v.note == note) {
+        if (v.active && v.held && v.note == note && v.channel == (channel & 15)) {
             v.held = false;
             if (st.sustainPedal) v.sustained = true;
+        } else if (v.stealing && v.pendingNote == note && v.pendingChannel == (channel & 15)) {
+            v.pendingNote = -1;   // released before it ever sounded
         }
+}
+
+// The one voice a mono mode plays through: the sounding voice whose key is down.
+Voice* monoVoice(EngineState& st) noexcept
+{
+    for (Voice& v : st.voices)
+        if (v.active && v.held && !v.stealing) return &v;
+    return nullptr;
+}
+
+// Moves a sounding voice to another note. Its pitch carries on from where it is and slides there when Glide is set.
+void retune(const Parameters& p, Voice& v, const HeldNote& n, bool retrigger) noexcept
+{
+    const double sounding = v.note + v.glide;
+    v.note = n.note;
+    v.channel = n.channel & 15;
+    v.velocity = static_cast<float>(n.velocity) / 127.0f;
+    v.glide = p.glideMs > 0.0f ? sounding - v.note : 0.0;
+    v.held = true;
+    v.sustained = false;
+    if (retrigger) {
+        for (Envelope& e : v.env) e.stage = Envelope::Stage::Attack;
+        v.pitchEnv.stage = Envelope::Stage::Attack;
+    }
+}
+
+void noteOn(EngineState& st, const Parameters& p, int note, int velocity, int channel) noexcept
+{
+    const double glide = p.glideMs > 0.0f && st.lastNote >= 0 ? std::min(std::max(static_cast<double>(st.lastNote - note), -48.0), 48.0) : 0.0;
+    for (int i = 0; i < st.heldCount; ++i)   // a repeated key moves to the top of the stack
+        if (st.held[static_cast<size_t>(i)].note == note && st.held[static_cast<size_t>(i)].channel == (channel & 15)) {
+            for (int j = i; j + 1 < st.heldCount; ++j) st.held[static_cast<size_t>(j)] = st.held[static_cast<size_t>(j + 1)];
+            --st.heldCount;
+            break;
+        }
+    if (st.heldCount == static_cast<int>(st.held.size())) {
+        for (size_t j = 0; j + 1 < st.held.size(); ++j) st.held[j] = st.held[j + 1];
+        --st.heldCount;
+    }
+    const HeldNote hn {static_cast<std::uint8_t>(note), static_cast<std::uint8_t>(channel & 15), static_cast<std::uint8_t>(velocity)};
+    st.held[static_cast<size_t>(st.heldCount++)] = hn;
+    st.lastNote = note;
+    const PlayMode mode = static_cast<PlayMode>(static_cast<int>(p.playMode));
+    if (mode != PlayMode::Poly) {
+        if (Voice* mv = monoVoice(st)) {
+            retune(p, *mv, hn, mode == PlayMode::Mono);
+            return;
+        }
+    }
+    startVoice(st, note, velocity, channel, glide);
+}
+
+void noteOff(EngineState& st, const Parameters& p, int note, int channel) noexcept
+{
+    for (int i = 0; i < st.heldCount; ++i)
+        if (st.held[static_cast<size_t>(i)].note == note && st.held[static_cast<size_t>(i)].channel == (channel & 15)) {
+            for (int j = i; j + 1 < st.heldCount; ++j) st.held[static_cast<size_t>(j)] = st.held[static_cast<size_t>(j + 1)];
+            --st.heldCount;
+            break;
+        }
+    const PlayMode mode = static_cast<PlayMode>(static_cast<int>(p.playMode));
+    if (mode != PlayMode::Poly && st.heldCount > 0) {
+        Voice* mv = monoVoice(st);
+        if (mv && mv->note == note && mv->channel == (channel & 15)) {
+            retune(p, *mv, st.held[static_cast<size_t>(st.heldCount - 1)], mode == PlayMode::Mono);
+            return;
+        }
+    }
+    releaseNote(st, note, channel);
 }
 
 void handleEvent(EngineState& st, const Parameters& p, const MidiEvent& e) noexcept
 {
     switch (e.type) {
     case MidiEvent::Type::NoteOn:
-        if (e.data2 == 0) noteOff(st, e.data1); else startVoice(st, e.data1, e.data2);
+        if (e.data2 == 0) noteOff(st, p, e.data1, e.channel); else noteOn(st, p, e.data1, e.data2, e.channel);
         break;
     case MidiEvent::Type::NoteOff:
-        noteOff(st, e.data1);
+        noteOff(st, p, e.data1, e.channel);
         break;
     case MidiEvent::Type::Controller:
         if (e.data1 == 64) {
@@ -250,6 +338,7 @@ void handleEvent(EngineState& st, const Parameters& p, const MidiEvent& e) noexc
             if (!st.sustainPedal)
                 for (Voice& v : st.voices) v.sustained = false;
         } else if (e.data1 == 120 || e.data1 == 123) {
+            st.heldCount = 0;
             for (Voice& v : st.voices) {
                 v.held = false;
                 v.sustained = false;
@@ -259,7 +348,7 @@ void handleEvent(EngineState& st, const Parameters& p, const MidiEvent& e) noexc
         }
         break;
     case MidiEvent::Type::PitchBend:
-        st.bendTarget = static_cast<float>(e.bend) / 8192.0f * p.bendRange;
+        st.bendTarget[e.channel & 15] = static_cast<float>(e.bend) / 8192.0f * p.bendRange;
         break;
     }
 }
@@ -306,6 +395,8 @@ Parameters clampParameters(const Parameters& in) noexcept
     p.master     = clampf(in.master, 0.0f, 1.0f);
     p.velocity   = clampf(in.velocity, 0.0f, 1.0f);
     p.bendRange  = clampf(in.bendRange, 0.0f, 24.0f);
+    p.playMode   = std::round(clampf(in.playMode, 0.0f, 2.0f));
+    p.glideMs    = clampf(in.glideMs, 0.0f, 2000.0f);
     p.quality    = in.quality >= 0.5f ? 1.0f : 0.0f;
     return p;
 }
@@ -420,18 +511,29 @@ void processBlock(EngineState& st, const Parameters& rawParams, float sampleRate
         EnvCoeffs(p.op[3].attackMs, p.op[3].decayMs, p.op[3].sustain, p.op[3].releaseMs, sr)};
     const EnvCoeffs pitchCoeffs(p.pitchAttackMs, p.pitchDecayMs, p.pitchSustain, p.pitchReleaseMs, sr);
     const bool usePitchEnv = p.pitchEnvOn >= 0.5f;
+    // Glide is the time to cover about 95 % of the distance (three time constants), stepped every 32 samples.
+    const double glideDecay = p.glideMs > 0.0f ? std::exp(-32.0 / (p.glideMs * 0.001 / 3.0 * sr)) : 0.0;
+    const float stealCoef = std::exp(-1.0f / static_cast<float>(0.0005 * sr));   // time constant 0.5 ms: gone in about 3 ms
 
     std::uint32_t nextEvent = 0;
     for (std::uint32_t i = 0; i < frames; ++i) {
         while (nextEvent < eventCount && events[nextEvent].frame <= i) handleEvent(st, p, events[nextEvent++]);
         st.cutoffSmooth += smooth * (p.cutoffHz - st.cutoffSmooth);
         st.masterSmooth += smooth * (p.master - st.masterSmooth);
-        st.bend += smooth * (st.bendTarget - st.bend);
+        for (size_t ch = 0; ch < 16; ++ch) st.bend[ch] += smooth * (st.bendTarget[ch] - st.bend[ch]);
 
         double sum = 0.0;
         for (Voice& v : st.voices) {
             if (!v.active) continue;
-            const bool gate = v.held || v.sustained;
+            const bool gate = v.held || v.sustained || v.stealing;
+            if (v.stealing) {
+                v.fade *= stealCoef;
+                if (v.fade < 1.0e-3f) {
+                    const int note = v.pendingNote, vel = v.pendingVelocity, ch = v.pendingChannel;
+                    if (note >= 0) initVoice(st, v, note, vel, ch, v.pendingGlide); else v = Voice {};
+                    continue;
+                }
+            }
             std::array<double, kOperators> amp {};
             bool carrierAlive = false;
             for (int o = 0; o < kOperators; ++o) {
@@ -444,14 +546,15 @@ void processBlock(EngineState& st, const Parameters& rawParams, float sampleRate
 
             if (v.controlCountdown-- <= 0) {
                 v.controlCountdown = 31;
-                const double baseHz = 440.0 * std::exp2((v.note - 69 + st.bend + pitchEnv * p.pitchEnvSemitones) / 12.0);
+                v.glide = std::fabs(v.glide) < 1e-4 ? 0.0 : v.glide * glideDecay;
+                const double baseHz = 440.0 * std::exp2((v.note + v.glide - 69 + st.bend[static_cast<size_t>(v.channel)] + pitchEnv * p.pitchEnvSemitones) / 12.0);
                 for (int o = 0; o < kOperators; ++o) {
                     const OperatorParams& op = p.op[static_cast<size_t>(o)];
                     const double hz = op.fixedMode >= 0.5f ? static_cast<double>(op.fixedHz)
                                                            : baseHz * op.ratio * std::exp2(op.fineCents / 1200.0);
                     v.opHz[static_cast<size_t>(o)] = std::min(std::max(hz, 0.1), srOs * 0.48);
                 }
-                const double cutoff = static_cast<double>(st.cutoffSmooth) * std::exp2(p.keyTrack * (v.note - 60) / 12.0);
+                const double cutoff = static_cast<double>(st.cutoffSmooth) * std::exp2(p.keyTrack * (v.note + v.glide - 60) / 12.0);
                 v.coeff1 = makeSvf(cutoff, p.resonance, sr);
                 v.coeff2 = makeSvf(cutoff, 0.0, sr);
             }
@@ -505,7 +608,7 @@ void processBlock(EngineState& st, const Parameters& rawParams, float sampleRate
             }
             const double filtered = filterSample(ftype, v.filter1, v.filter2, v.coeff1, v.coeff2, voiceOut);
             const double velGain = 1.0 - p.velocity + p.velocity * v.velocity;
-            sum += filtered * velGain * st.masterSmooth;
+            sum += filtered * velGain * st.masterSmooth * v.fade;
         }
         // One-pole DC blocker at about 8 Hz: feedback and asymmetric waves can carry an offset. (Its onset transient
         // for a note starting at phase 0 is about 0.007 and dies away with a 20 ms time constant.)

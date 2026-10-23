@@ -21,7 +21,7 @@ public:
 
 protected:
     const char* getLabel() const override       { return "Ladder"; }
-    const char* getDescription() const override { return "Four-pole saturating low-pass ladder filter with self-oscillating resonance and bass compensation."; }
+    const char* getDescription() const override { return "Four-pole saturating low-pass ladder filter with self-oscillating resonance, bass compensation and Drift CC 1-4 control."; }
     const char* getMaker() const override       { return "danja"; }
     const char* getHomePage() const override    { return "https://danja.github.io/downspout/"; }
     const char* getLicense() const override     { return "MIT"; }
@@ -51,7 +51,7 @@ protected:
         parameter.name   = spec.name;
         parameter.symbol = spec.symbol;
         parameter.unit   = spec.unit;
-        parameter.hints  = kParameterIsAutomatable | (spec.logarithmic ? kParameterIsLogarithmic : 0);
+        parameter.hints  = kParameterIsAutomatable | (spec.logarithmic ? kParameterIsLogarithmic : 0) | (spec.integer ? kParameterIsInteger : 0);
         parameter.ranges.min = spec.minimum;
         parameter.ranges.max = spec.maximum;
         parameter.ranges.def = spec.defaultValue;
@@ -70,18 +70,32 @@ protected:
             return;
         core::field(parameters_, index) = value;
         parameters_ = core::clampParameters(parameters_);
+        // The panel or the host has taken the control back from a controller.
+        if (const int slot = core::liveSlot(index); slot >= 0) live_.value[static_cast<size_t>(slot)] = -1.0f;
     }
 
     // Clears the filter memory only. The patch lives in the parameters and is not touched.
-    void activate() override { core::resetState(engine_); }
-
-    void run(const float** inputs, float** outputs, uint32_t frames) override
+    void activate() override
     {
-        core::processBlock(engine_, parameters_, static_cast<float>(getSampleRate()), frames, inputs, outputs);
+        core::resetState(engine_);
+        live_ = core::LiveControl {};
+    }
+
+    void run(const float** inputs, float** outputs, uint32_t frames, const MidiEvent* midiEvents, uint32_t midiEventCount) override
+    {
+        // CC 1-4 on the set channel override Cutoff, Resonance, Drive and Mix (the Drift convention). Applied at block start.
+        for (uint32_t i = 0; i < midiEventCount; ++i) {
+            const MidiEvent& e = midiEvents[i];
+            if (e.size >= 3 && core::ccChannelMatches(e.data[0], parameters_.ccChannel))
+                core::handleController(live_, e.data[1], e.data[2]);
+        }
+        const core::Parameters effective = core::withLive(parameters_, live_);
+        core::processBlock(engine_, effective, static_cast<float>(getSampleRate()), frames, inputs, outputs);
     }
 
 private:
     core::Parameters  parameters_ {};
+    core::LiveControl live_ {};
     core::EngineState engine_ {};
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LadderPlugin)

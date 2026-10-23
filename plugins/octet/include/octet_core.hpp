@@ -33,6 +33,8 @@ struct Band {
 struct Parameters {
     float mode     = 0.0f;      // StereoMode
     float outputDb = 0.0f;      // -12..+12
+    float ccChannel = 1.0f;     // 0 = ignore MIDI, 1-16: the channel whose CC 1-4 drive one band (Drift's default lanes)
+    float ccBand    = 4.0f;     // 1..8: the band those controllers drive (default: band 4, a bell near 600 Hz)
     std::array<Band, kBands> bands {};
     Parameters();               // the eight default bands
 };
@@ -55,7 +57,7 @@ struct BandRuntime {
     std::array<std::array<SectionState, kMaxSections>, 2> state {};  // per channel
     bool active = false;
     int channels = 3;      // bit 0 = channel A, bit 1 = channel B
-    Band last {};          // parameters the sections were computed from
+    Band last {};          // the parameters the sections were computed from: they glide to the target in steps of 32 samples
     bool computed = false;
 };
 
@@ -79,6 +81,19 @@ struct EngineState {
 // not included). The panel plots these; the tests hold the audio to them.
 [[nodiscard]] double bandResponseDb(const Band& b, double hz, double sampleRate) noexcept;
 [[nodiscard]] double responseDb(const Parameters& p, double hz, double sampleRate) noexcept;
+
+// MIDI control, following the Drift convention (CC 1-4 on a channel): a controller overrides one control until the panel
+// moves it or the host automates it. CC 1 Frequency, CC 2 Gain and CC 3 Q of the band chosen by `ccBand`, CC 4 Output. The
+// mapping and override logic are here so they are tested; the wrapper only parses MIDI.
+inline constexpr int kCcSlots = 4;
+struct LiveControl {
+    std::array<float, kCcSlots> value {};   // in parameter units (Gain can be negative, so `active` says which are set)
+    std::array<bool, kCcSlots> active {false, false, false, false};
+};
+[[nodiscard]] float ccToValue(int slot, int cc) noexcept;
+[[nodiscard]] bool ccChannelMatches(unsigned char status, float ccChannel) noexcept;
+void handleController(LiveControl& live, int controller, int value) noexcept;
+[[nodiscard]] Parameters withLive(const Parameters& p, const LiveControl& live) noexcept;
 
 // Clears filter memory only; never touches the patch.
 void resetState(EngineState& state) noexcept;

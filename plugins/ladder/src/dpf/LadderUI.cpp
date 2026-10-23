@@ -29,7 +29,7 @@ struct Tables {
     {
         for (std::uint32_t i = 0; i < core::kParameterCount; ++i) {
             const auto& s = core::kParameterSpecs[i];
-            ranges[i] = {s.minimum, s.maximum, false, s.logarithmic};
+            ranges[i] = {s.minimum, s.maximum, s.integer, s.logarithmic};
             defaults[i] = s.defaultValue;
         }
     }
@@ -62,6 +62,7 @@ protected:
         drawResponsePanel({24.0f, 108.0f, full, 232.0f});
         drawFilterPanel({24.0f, 352.0f, full, 92.0f});
         drawLevelPanel({24.0f, 456.0f, full, 92.0f});
+        drawControlPanel({24.0f, 560.0f, full, 92.0f});
     }
 
 private:
@@ -174,6 +175,14 @@ private:
         drawSlider(core::kDrive, "Drive (into the saturators)", format(core::kDrive).c_str(), {x, y, w, 34.0f}, kFilterAccent);
     }
 
+    void drawControlPanel(const Rect b)
+    {
+        drawPanel(b, "MIDI CONTROL", kPlotAccent, "CC 1 Cutoff, 2 Resonance, 3 Drive, 4 Mix (a Drift on its default lanes)");
+        const float x = b.x + 14.0f, y = b.y + 44.0f;
+        drawSlider(core::kCcChannel, "CC channel (0 = ignore MIDI)", format(core::kCcChannel).c_str(), {x, y, 260.0f, 34.0f}, kPlotAccent);
+        label(x + 290.0f, y + 6.0f, "A controller holds its control until you move it on the panel or automate it.", true, 12.0f);
+    }
+
     void drawLevelPanel(const Rect b)
     {
         drawPanel(b, "LEVEL", kLevelAccent);
@@ -202,6 +211,10 @@ private:
         case core::kDrive:
         case core::kOutput:
             std::snprintf(buffer, sizeof(buffer), "%+.1f dB", static_cast<double>(v));
+            break;
+        case core::kCcChannel:
+            if (v < 0.5f) return "off";
+            std::snprintf(buffer, sizeof(buffer), "%d", static_cast<int>(std::lround(v)));
             break;
         default:
             std::snprintf(buffer, sizeof(buffer), "%.0f%%", static_cast<double>(v));

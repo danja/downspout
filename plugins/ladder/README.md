@@ -6,7 +6,7 @@ measured against the analytic response before porting and changed where the meas
 showed a weakness; see `docs/design.md`.
 
 The panel plots the filter's small-signal response from the same model the tests compare with
-the real filter, so the curve and the sound agree. No MIDI, no transport, no latency.
+the real filter, so the curve and the sound agree. MIDI in for Drift (below); no transport, no latency.
 
 | Control | Range | Default | Notes |
 |---|---|---|---|
@@ -19,6 +19,10 @@ the real filter, so the curve and the sound agree. No MIDI, no transport, no lat
 
 At the defaults the passband sits about 3.5 dB below unity (resonance 20 %, Bass Comp 50 %).
 That is the behaviour, not a bug: raise Bass Comp to bring it up.
+
+**MIDI control (Drift convention).** CC 1 to 4 on the **CC channel** (default 1; 0 ignores MIDI) drive Cutoff (logarithmic
+across its whole range), Resonance, Drive (0-24 dB) and Mix, so a Drift on its default lanes needs no setup. A controller holds its
+control until you move it on the panel or automate it. The panel does not follow the CC.
 
 Settings are ordinary automatable parameters, saved by the host; there is no plugin state.
 High Resonance with full Bass Comp is loud; trim Output.

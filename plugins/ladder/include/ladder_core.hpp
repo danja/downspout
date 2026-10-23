@@ -16,6 +16,7 @@ struct Parameters {
     float bassComp   = 50.0f;    // 0-100 %; how much of the resonance bass loss is restored
     float mix        = 100.0f;   // 0-100 % wet
     float outputDb   = 0.0f;     // -24 to +12 dB
+    float ccChannel  = 1.0f;     // 0 = ignore MIDI, 1-16: the channel whose CC 1-4 drive the controls (Drift's default lanes)
 };
 
 // Feedback amount k and the prewarped integrator gain f; both are interpolated
@@ -52,6 +53,18 @@ struct EngineState {
 // feedback loop, bass compensation, mix and output). Drive is left out because it is
 // non-linear. This is what the panel plots; tests hold it against the measured filter.
 [[nodiscard]] double responseDb(const Parameters& p, double hz) noexcept;
+
+// MIDI control, following the Drift convention (CC 1-4 on a channel): a controller overrides one control until the
+// panel moves that control or the host automates it. The mapping and the override logic are here, not in the
+// wrapper, so they are tested; the wrapper only parses MIDI.
+inline constexpr int kCcSlots = 4;   // CC 1 Cutoff, CC 2 Resonance, CC 3 Drive, CC 4 Mix
+struct LiveControl {
+    std::array<float, kCcSlots> value {-1.0f, -1.0f, -1.0f, -1.0f};   // in parameter units; -1 = no override
+};
+[[nodiscard]] float ccToValue(int slot, int cc) noexcept;                 // cc 0-127 to the control's units
+[[nodiscard]] bool ccChannelMatches(unsigned char status, float ccChannel) noexcept;   // a Control Change on the set channel
+void handleController(LiveControl& live, int controller, int value) noexcept;
+[[nodiscard]] Parameters withLive(const Parameters& p, const LiveControl& live) noexcept;
 
 // Clears the filter memory only; never touches the patch.
 void resetState(EngineState& state) noexcept;

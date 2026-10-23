@@ -52,6 +52,16 @@ struct Parameters {
     float master     = 0.6f;    // 0..1
     float velocity   = 0.7f;    // 0..1 (0 = every note at full level)
     float bendRange  = 2.0f;    // 0..24 semitones
+    float playMode   = 0.0f;    // PlayMode
+    float glideMs    = 0.0f;    // 0..2000: portamento from the previous note (0 = off)
+};
+
+// Poly: every note its own voice. Mono: one voice, last note wins, a new note retriggers the envelopes and a released
+// note returns to the one still held. Legato: the same, but the envelopes carry on while notes overlap.
+enum class PlayMode : int { Poly = 0, Mono, Legato };
+
+struct HeldNote {
+    std::uint8_t note = 0, channel = 0, velocity = 0;
 };
 
 [[nodiscard]] Parameters clampParameters(const Parameters& p) noexcept;
@@ -62,6 +72,7 @@ struct MidiEvent {
     Type type = Type::NoteOn;
     std::uint8_t data1 = 0;   // note or controller number
     std::uint8_t data2 = 0;   // velocity or controller value
+    std::uint8_t channel = 0; // 0-15: notes and bends are per channel (Retune sends one note per channel, each with its own bend)
     int bend = 0;             // PitchBend: -8192..8191
 };
 
@@ -83,6 +94,12 @@ struct Envelope {
 
 struct Voice {
     bool active = false;
+    int channel = 0;          // the MIDI channel the note arrived on
+    double glide = 0.0;       // semitones still to slide: the sounding pitch is note + glide, and glide decays to 0
+    double pendingGlide = 0.0;
+    // A stolen voice fades out over about 2 ms, then starts the note that stole it (no click from cutting it off).
+    bool stealing = false;
+    int pendingNote = -1, pendingVelocity = 0, pendingChannel = 0;
     bool held = false;        // key down
     bool sustained = false;   // key up but the pedal holds it
     int note = 60;
@@ -114,8 +131,11 @@ struct EngineState {
     double lfoPhase = 0.0;
     float lfoHeld = 0.0f;
     bool sustainPedal = false;
-    float bend = 0.0f;             // semitones, smoothed
-    float bendTarget = 0.0f;       // semitones
+    std::array<HeldNote, 16> held {};     // keys down, oldest first (the mono modes play the newest)
+    int heldCount = 0;
+    int lastNote = -1;                    // the previous note, for portamento
+    std::array<float, 16> bend {};        // semitones per MIDI channel, smoothed
+    std::array<float, 16> bendTarget {};  // semitones per MIDI channel
     // Smoothed copies of the parameters that would otherwise step at a block edge.
     float posSmooth[2] {0.2f, 0.2f};
     float levelSmooth[2] {0.8f, 0.8f};

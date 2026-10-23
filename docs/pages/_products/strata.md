@@ -42,7 +42,7 @@ the waveform through the warp.
 | Filter | Type (LP 12, LP 24, HP 12, BP, Notch), Cutoff, Resonance, Key track, Envelope to cutoff, Envelope to position |
 | Envelopes | Attack, Decay, Sustain, Release for the amplitude and the filter envelope |
 | LFO | Rate, Shape (Sine, Triangle, Saw, Square, S&H), to Position, to Pitch, to Cutoff |
-| Performance | Master, Velocity, Bend range |
+| Performance | Master, Velocity, Bend range, Play mode (Poly, Mono, Legato), Glide |
 
 ### Unison
 
@@ -65,4 +65,4 @@ filter. The heaviest setting (Fold on one oscillator and Sync on the other with 
 Core covered by tests (300 checks, also under ASan/UBSan): the tables' definitions, normalisation, band limits and reads; pitch to half a cent; aliasing
 against a naive read; warps and their DC; unison level and width; the filter against its model; envelope and LFO shapes; voices, pedal, panic and velocity;
 sample-accurate events; every control; stability at 44.1 to 192 kHz; the parameter table against the core. Not yet listened to or validated in a host. No
-oversampling, table import, modulation matrix, portamento or mono mode.
+oversampling, table import, modulation matrix, a per-voice rather than global glide.

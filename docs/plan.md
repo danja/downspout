@@ -219,7 +219,7 @@ Progress as of 2026-05-27:
   the host transport, has a deterministic core suite (block-size independence, scale
   pins from `docs/scales.md`), and a VST3 wrapper with a pattern plot; host validation
   is pending;
-- `plank` now reimplements Plinky's voice engine as a portable eight-string
+- `plank` now reimplements Plinky's voice engine as a portable eight-voice
   synthesizer: a polyBLEP oscillator pair morphing into seventeen synthesised
   band-limited wavetables, Plinky's resonant two-pole filter, two envelopes,
   dynamic parameter smoothing, tape delay, shimmer reverb and mid/side width,

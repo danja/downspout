@@ -50,7 +50,7 @@ ratio or fixed frequency, eleven algorithms, feedback on D, a pitch envelope and
   the note.
 - Every algorithm: an operator is heard only if it is a carrier, and every declared modulator changes its target; carrier output is averaged (two carriers, half level).
 - The filter's measured response matches its model within 0.3 dB for all five types at five pitches. Envelope attack, decay and release times, voice stealing,
-  sustain pedal, CC 120 and 123, velocity, sample-accurate events, block-size independence, every one of the 57 controls having an audible effect.
+  sustain pedal, CC 120 and 123, velocity, sample-accurate events, block-size independence, every one of the 59 controls having an audible effect.
 - 300 random patches with random notes at 44.1, 96 and 192 kHz: no NaN or inf, output below 40.
 - CPU on a busy machine: 1x 1 % of a core for one note, 5.4 % for eight; 2x 1.7 % and 13.4 %; saw operators in algorithm 4 at 2x, eight notes: 15 %.
 
@@ -58,5 +58,6 @@ ratio or fixed frequency, eleven algorithms, feedback on D, a pitch envelope and
 
 - No user-drawn waveform (the source's 16-harmonic "user" waveform is not ported), no per-operator velocity or key scaling, no operator-level LFO.
 - No higher oversampling (4x) for very bright FM at the top of the keyboard.
-- Voice stealing can click; no portamento, mono or legato mode; the output is mono (both channels equal).
+- Voice stealing fades the stolen voice over about 3 ms before the new note starts (that much late); the output is mono (both channels equal).
 - Not listened to; no host validation (REAPER).
+- **Play mode and Glide.** Poly gives every key a voice. Mono and Legato play through one voice, last note wins; releasing the top key returns to the one still held (a stack of 16). Mono restarts every envelope (operators and pitch) from its current value on each new note, Legato leaves them running. Glide is the time to cover about 95 % of the distance from the previous note (three time constants, stepped every 32 samples); the pitch is continuous through a retune. In Poly each new voice glides in from the previous note.

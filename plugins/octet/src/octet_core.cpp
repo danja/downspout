@@ -121,6 +121,8 @@ Parameters clampParameters(const Parameters& p) noexcept
     Parameters o = p;
     o.mode = std::round(clampf(p.mode, 0.0f, 2.0f));
     o.outputDb = clampf(p.outputDb, -12.0f, 12.0f);
+    o.ccChannel = std::round(clampf(p.ccChannel, 0.0f, 16.0f));
+    o.ccBand = std::round(clampf(p.ccBand, 1.0f, static_cast<float>(kBands)));
     for (int i = 0; i < kBands; ++i) o.bands[static_cast<size_t>(i)] = clampBand(p.bands[static_cast<size_t>(i)]);
     return o;
 }
@@ -190,6 +192,41 @@ double responseDb(const Parameters& p, double hz, double sampleRate) noexcept
     return total;
 }
 
+float ccToValue(int slot, int cc) noexcept
+{
+    const float u = static_cast<float>(std::min(std::max(cc, 0), 127)) / 127.0f;
+    switch (slot) {
+    case 0:  return 20.0f * std::pow(1000.0f, u);   // frequency, logarithmic 20 Hz to 20 kHz
+    case 1:  return -18.0f + 36.0f * u;             // gain
+    case 2:  return 0.1f * std::pow(180.0f, u);     // Q, logarithmic 0.1 to 18
+    default: return -12.0f + 24.0f * u;             // output
+    }
+}
+
+bool ccChannelMatches(unsigned char status, float ccChannel) noexcept
+{
+    return (status & 0xF0) == 0xB0 && ccChannel >= 0.5f && static_cast<int>(status & 0x0F) + 1 == static_cast<int>(std::lround(ccChannel));
+}
+
+void handleController(LiveControl& live, int controller, int value) noexcept
+{
+    if (controller >= 1 && controller <= kCcSlots) {
+        live.value[static_cast<size_t>(controller - 1)] = ccToValue(controller - 1, value);
+        live.active[static_cast<size_t>(controller - 1)] = true;
+    }
+}
+
+Parameters withLive(const Parameters& p, const LiveControl& live) noexcept
+{
+    Parameters o = p;
+    Band& b = o.bands[static_cast<size_t>(std::min(std::max(static_cast<int>(std::lround(p.ccBand)), 1), kBands) - 1)];
+    if (live.active[0]) b.freqHz = live.value[0];
+    if (live.active[1]) b.gainDb = live.value[1];
+    if (live.active[2]) b.q = live.value[2];
+    if (live.active[3]) o.outputDb = live.value[3];
+    return o;
+}
+
 void resetState(EngineState& state) noexcept
 {
     state = EngineState {};
@@ -228,9 +265,8 @@ void processBlock(EngineState& state, const Parameters& rawParams, float sampleR
         const Band& b = p.bands[static_cast<size_t>(bi)];
         const bool active = bandIsActive(b);
         if (active) {
-            const bool same = br.computed && b.type == br.last.type && b.freqHz == br.last.freqHz &&
-                              b.gainDb == br.last.gainDb && b.q == br.last.q;
-            if (!same) {
+            // A change of type (or a band coming on) takes effect at once; frequency, gain and Q glide to the target.
+            if (!br.computed || b.type != br.last.type) {
                 br.sections = makeSections(b, sr);
                 br.last = b;
                 br.computed = true;
@@ -255,18 +291,42 @@ void processBlock(EngineState& state, const Parameters& rawParams, float sampleR
         }
     }
 
+    // Frequency (in octaves), gain and Q glide toward the target in steps of 32 samples (about 4 ms time constant), so a fast
+    // sweep of a high-Q band does not zipper or click. The sections are rebuilt from the gliding parameters, which keeps
+    // every step a stable filter; once the target is reached nothing is recomputed.
+    constexpr uint32_t kStep = 32;
+    const double glide = 1.0 - std::exp(-static_cast<double>(kStep) / (0.004 * sr));
     for (int bi = 0; bi < kBands; ++bi) {
         BandRuntime& br = state.bands[static_cast<size_t>(bi)];
         if (!br.active) continue;
-        for (int c = 0; c < 2; ++c) {
-            if (!(br.channels & (1 << c))) continue;
-            float* buf = c == 0 ? out0 : out1;
-            auto& st = br.state[static_cast<size_t>(c)];
-            for (uint32_t i = 0; i < frames; ++i) {
-                double x = buf[i];
-                for (int s = 0; s < br.sections.count; ++s)
-                    x = runCell(st[static_cast<size_t>(s)], br.sections.bq[static_cast<size_t>(s)], x);
-                buf[i] = static_cast<float>(x);
+        const Band& target = p.bands[static_cast<size_t>(bi)];
+        for (uint32_t start = 0; start < frames; start += kStep) {
+            const uint32_t n = std::min(kStep, frames - start);
+            Band& cur = br.last;
+            const double dOct = std::log2(static_cast<double>(target.freqHz) / cur.freqHz);
+            const double dGain = static_cast<double>(target.gainDb) - cur.gainDb;
+            const double dQ = std::log2(static_cast<double>(target.q) / cur.q);
+            if (dOct != 0.0 || dGain != 0.0 || dQ != 0.0) {
+                const bool close = std::fabs(dOct) < 1e-4 && std::fabs(dGain) < 5e-3 && std::fabs(dQ) < 1e-3;
+                if (close) {
+                    cur = target;
+                } else {
+                    cur.freqHz = static_cast<float>(cur.freqHz * std::exp2(dOct * glide));
+                    cur.gainDb = static_cast<float>(cur.gainDb + dGain * glide);
+                    cur.q = static_cast<float>(cur.q * std::exp2(dQ * glide));
+                }
+                br.sections = makeSections(cur, sr);
+            }
+            for (int c = 0; c < 2; ++c) {
+                if (!(br.channels & (1 << c))) continue;
+                float* buf = (c == 0 ? out0 : out1) + start;
+                auto& st = br.state[static_cast<size_t>(c)];
+                for (uint32_t i = 0; i < n; ++i) {
+                    double x = buf[i];
+                    for (int s = 0; s < br.sections.count; ++s)
+                        x = runCell(st[static_cast<size_t>(s)], br.sections.bq[static_cast<size_t>(s)], x);
+                    buf[i] = static_cast<float>(x);
+                }
             }
         }
     }

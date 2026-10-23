@@ -180,4 +180,12 @@ dsp:strata trn:hasParameter [
     trn:symbol "bend_range" ; trn:label "Bend Range" ;
     trn:minimum 0.0 ; trn:maximum 24.0 ; trn:default 2.0 ;
     rdfs:comment "Pitch bend range in semitones"
+], [
+    trn:symbol "play_mode" ; trn:label "Play Mode" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 0 ;
+    rdfs:comment "0 Poly, 1 Mono (last note wins, new notes restart the envelopes), 2 Legato (last note wins, envelopes carry on)"
+], [
+    trn:symbol "glide" ; trn:label "Glide" ;
+    trn:minimum 0.0 ; trn:maximum 2000.0 ; trn:default 0.0 ;
+    rdfs:comment "Portamento in ms from the previous note (about 95 percent of the way); 0 is off"
 ] .

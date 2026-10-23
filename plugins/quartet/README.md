@@ -9,9 +9,9 @@ draws the routing from the same table the audio uses. Operator D can feed back i
 full-level modulator moves its target's phase, in cycles (the index in radians is 2 pi x depth x level). A pitch envelope, one
 multimode filter, and optional 2x oversampling with a half-band decimator for cleaner high-index FM.
 
-Instrument: MIDI in (notes with velocity, pitch bend, sustain pedal CC 64, CC 120 and 123), mono voices summed to a stereo
-output (both channels identical), no audio input, no transport use. All 57 controls are ordinary automatable parameters
-(`opa_wave` ... `quality`); there is no plugin state.
+Instrument: MIDI in (notes with velocity, per-channel pitch bend over Bend range, sustain pedal CC 64, CC 120 and 123), mono voices summed to a stereo
+output (both channels identical), no audio input, no transport use. All 59 controls are ordinary automatable parameters
+(`opa_wave` ... `glide`); there is no plugin state.
 
 | Group | Controls |
 |---|---|
@@ -20,6 +20,7 @@ output (both channels identical), no audio input, no transport use. All 57 contr
 | Pitch envelope | On, Amount +-48 st, Attack, Decay, Sustain, Release |
 | Filter | Type (LP 12, LP 24, HP 12, BP, Notch), Cutoff, Resonance, Key track |
 | Performance | Master, Velocity, Bend range |
+| Voicing | Play mode (Poly, Mono, Legato), Glide 0-2000 ms |
 
 Algorithms (letters are operators, `>` means modulates): 1 D>C>B>A; 2 (C+D)>B>A; 3 (B + D>C)>A; 4 D>(B+C)>A; 5 (B>A) + (D>C);
 6 (B+C+D)>A; 7 A + B + (D>C); 8 A + (D>C>B); 9 A + ((C+D)>B); 10 D>(A+B+C); 11 A+B+C+D. Carriers are averaged, so the output

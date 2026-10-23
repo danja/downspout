@@ -18,7 +18,7 @@ enum GlobalParameter : std::uint32_t {
     kAlgorithm = kGlobalBase, kFeedback, kDepth,
     kPitchEnvOn, kPitchEnvSemitones, kPitchAttack, kPitchDecay, kPitchSustain, kPitchRelease,
     kFilterType, kCutoff, kResonance, kKeyTrack,
-    kMaster, kVelocity, kBendRange, kQuality,
+    kMaster, kVelocity, kBendRange, kQuality, kPlayMode, kGlide,
     kParameterCount
 };
 
@@ -73,6 +73,8 @@ public:
         global(kVelocity, "velocity", "Velocity", "", 0.0f, 1.0f, d.velocity, false, false);
         global(kBendRange, "bend_range", "Bend Range", "st", 0.0f, 24.0f, d.bendRange, false, false);
         global(kQuality, "quality", "Quality", "", 0.0f, 1.0f, d.quality, false, true);
+        global(kPlayMode, "play_mode", "Play Mode", "", 0.0f, 2.0f, d.playMode, false, true);
+        global(kGlide, "glide", "Glide", "ms", 0.0f, 2000.0f, d.glideMs, false, false);
     }
     [[nodiscard]] const ParameterSpec& operator[](const std::uint32_t i) const { return specs_[i]; }
 
@@ -144,6 +146,8 @@ inline float& field(Parameters& p, const std::uint32_t index) noexcept
     case kVelocity:          return p.velocity;
     case kBendRange:         return p.bendRange;
     case kQuality:           return p.quality;
+    case kPlayMode:          return p.playMode;
+    case kGlide:             return p.glideMs;
     default:                 return unused;
     }
 }

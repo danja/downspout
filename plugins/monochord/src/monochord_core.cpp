@@ -74,7 +74,7 @@ inline double runBiquad(Biquad& b, double x) noexcept
     return y;
 }
 
-void startVoice(EngineState& st, const Parameters& p, double sr, int note, int velocity) noexcept
+void startVoice(EngineState& st, const Parameters& p, double sr, int note, int velocity, int channel) noexcept
 {
     int idx = -1;
     for (int i = 0; i < kVoices; ++i)
@@ -91,13 +91,14 @@ void startVoice(EngineState& st, const Parameters& p, double sr, int note, int v
     v = Voice {};
     v.active = true;
     v.held = true;
+    v.channel = channel & 15;
     v.note = note;
     // The Velocity control mixes between every note at full level (0) and the key velocity itself (1); this one value
     // scales the excitation, and nothing scales the output again.
     v.velocity = 1.0f - p.velocity + p.velocity * static_cast<float>(velocity) / 127.0f;
     v.age = ++st.counter;
     v.peak = 1.0;
-    const double f0 = std::max(440.0 * std::exp2((note - 69 + st.bend) / 12.0), 20.0);
+    const double f0 = std::max(440.0 * std::exp2((note - 69 + st.bend[static_cast<size_t>(channel & 15)]) / 12.0), 20.0);
     v.tuning = tuneLoop(f0, p, sr);
     const Exciter ex = static_cast<Exciter>(static_cast<int>(p.exciter));
     if (ex == Exciter::Bow) {
@@ -114,10 +115,10 @@ void startVoice(EngineState& st, const Parameters& p, double sr, int note, int v
     }
 }
 
-void noteOff(EngineState& st, int note) noexcept
+void noteOff(EngineState& st, int note, int channel) noexcept
 {
     for (Voice& v : st.voices)
-        if (v.active && v.held && v.note == note) {
+        if (v.active && v.held && v.note == note && v.channel == (channel & 15)) {
             v.held = false;
             if (st.sustainPedal) v.sustained = true;
         }
@@ -127,10 +128,10 @@ void handleEvent(EngineState& st, const Parameters& p, double sr, const MidiEven
 {
     switch (e.type) {
     case MidiEvent::Type::NoteOn:
-        if (e.data2 == 0) noteOff(st, e.data1); else startVoice(st, p, sr, e.data1, e.data2);
+        if (e.data2 == 0) noteOff(st, e.data1, e.channel); else startVoice(st, p, sr, e.data1, e.data2, e.channel);
         break;
     case MidiEvent::Type::NoteOff:
-        noteOff(st, e.data1);
+        noteOff(st, e.data1, e.channel);
         break;
     case MidiEvent::Type::Controller:
         if (e.data1 == 64) {
@@ -147,7 +148,7 @@ void handleEvent(EngineState& st, const Parameters& p, double sr, const MidiEven
         }
         break;
     case MidiEvent::Type::PitchBend:
-        st.bendTarget = static_cast<float>(e.bend) / 8192.0f * p.bendRange;
+        st.bendTarget[e.channel & 15] = static_cast<float>(e.bend) / 8192.0f * p.bendRange;
         break;
     }
 }
@@ -285,7 +286,7 @@ void processBlock(EngineState& st, const Parameters& rawParams, float sampleRate
     for (std::uint32_t i = 0; i < frames; ++i) {
         while (nextEvent < eventCount && events[nextEvent].frame <= i) handleEvent(st, p, sr, events[nextEvent++]);
         st.masterSmooth += smooth * (p.master - st.masterSmooth);
-        st.bend += smooth * (st.bendTarget - st.bend);
+        for (size_t ch = 0; ch < 16; ++ch) st.bend[ch] += smooth * (st.bendTarget[ch] - st.bend[ch]);
 
         double sum = 0.0;
         for (Voice& v : st.voices) {
@@ -298,7 +299,7 @@ void processBlock(EngineState& st, const Parameters& rawParams, float sampleRate
             }
             if (v.controlCountdown-- <= 0) {
                 v.controlCountdown = 31;
-                v.tuning = tuneLoop(440.0 * std::exp2((v.note - 69 + st.bend) / 12.0), p, sr);
+                v.tuning = tuneLoop(440.0 * std::exp2((v.note - 69 + st.bend[static_cast<size_t>(v.channel)]) / 12.0), p, sr);
                 // Keep the bodies' memory across blocks: copy only the coefficients.
                 v.body[0].b0 = body1.b0; v.body[0].b1 = body1.b1; v.body[0].b2 = body1.b2; v.body[0].a1 = body1.a1; v.body[0].a2 = body1.a2;
                 v.body[1].b0 = body2.b0; v.body[1].b1 = body2.b1; v.body[1].b2 = body2.b2; v.body[1].a1 = body2.a1; v.body[1].a2 = body2.a2;

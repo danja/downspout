@@ -65,7 +65,7 @@ public:
 protected:
     void parameterChanged(const uint32_t index, const float v) override
     {
-        if (demo_ && index >= core::kControlCount)
+        if (demo_ && index >= core::kFirstMeter && index < core::kFirstMeter + core::kMeterCount)
             return;  // keep the demo meters
         MagnetoUI::parameterChanged(index, v);
     }
@@ -115,7 +115,7 @@ protected:
         const float colW = (full - 2.0f * gap) / 3.0f;
         for (int b = 0; b < core::kBands; ++b)
             drawBandPanel(b, {24.0f + static_cast<float>(b) * (colW + gap), 310.0f, colW, 342.0f});
-        drawGlobalPanel({24.0f, 664.0f, full, 84.0f});
+        drawGlobalPanel({24.0f, 664.0f, full, 150.0f});
     }
 
 private:
@@ -224,25 +224,50 @@ private:
 
     void drawGlobalPanel(const Rect b)
     {
-        drawPanel(b, "GLOBAL", kGlobalAccent);
+        drawPanel(b, "GLOBAL", kGlobalAccent, "CC 1-4: Amount, Time, Input, Upward limit");
         const float gap = 20.0f;
-        const float w = (b.w - 28.0f - 4.0f * gap) / 5.0f;
+        const float w = (b.w - 28.0f - 5.0f * gap) / 6.0f;
         float x = b.x + 14.0f;
         const float y = b.y + 42.0f;
         for (const auto& [id, name] : {std::pair<std::uint32_t, const char*>{core::kInput, "Input"},
                                        {core::kAmount, "Amount"},
                                        {core::kTime, "Time scale"},
                                        {core::kUpLimit, "Upward limit"},
-                                       {core::kOutput, "Output"}}) {
+                                       {core::kOutput, "Output"},
+                                       {core::kCcChannel, "CC channel"}}) {
             drawSlider(id, name, format(id).c_str(), {x, y, w, 30.0f}, kGlobalAccent);
             x += w + gap;
         }
+        // Second row: the knee, solo and what the detectors listen to.
+        static constexpr const char* kSoloNames[4] = {"Off", "Low", "Mid", "High"};
+        static constexpr const char* kSourceNames[2] = {"Input", "Sidechain"};
+        const float y2 = y + 52.0f;
+        x = b.x + 14.0f;
+        drawSlider(core::kKnee, "Knee", format(core::kKnee).c_str(), {x, y2, w, 30.0f}, kGlobalAccent);
+        x += w + gap;
+        label(x, y2, "Solo band (no dry)");
+        drawSegments(core::kSolo, kSoloNames, 4, {x, y2 + 18.0f, 2.0f * w + gap, 24.0f}, kGlobalAccent);
+        x += 2.0f * (w + gap);
+        label(x, y2, "Detectors listen to");
+        drawSegments(core::kSidechain, kSourceNames, 2, {x, y2 + 18.0f, 2.0f * w + gap, 24.0f}, kGlobalAccent);
     }
 
     [[nodiscard]] std::string format(const std::uint32_t parameter) const
     {
         char buffer[32];
         const float v = value(parameter);
+        if (parameter == core::kCcChannel) {   // appended after the meters, so it must be decoded before the per-band branch
+            if (v < 0.5f)
+                return "off";
+            std::snprintf(buffer, sizeof(buffer), "%d", static_cast<int>(std::lround(v)));
+            return buffer;
+        }
+        if (parameter == core::kKnee) {   // also appended after the meters
+            if (v < 0.5f)
+                return "hard";
+            std::snprintf(buffer, sizeof(buffer), "%.0f dB", static_cast<double>(v));
+            return buffer;
+        }
         if (parameter < core::kFirstBand) {
             switch (parameter) {
             case core::kInput:

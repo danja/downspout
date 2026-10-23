@@ -12,7 +12,7 @@ dsp:glue a trn:PluginProfile ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/glue/> ;
     trn:role trn:AudioEffect ;
-    trn:accepts trn:Audio ;
+    trn:accepts trn:Audio, trn:MidiCC ;
     trn:produces trn:Audio .
 
 dsp:glue trn:hasParameter [
@@ -71,4 +71,16 @@ dsp:glue trn:hasParameter [
     trn:symbol "status_level" ; trn:label "Detector Level" ;
     trn:minimum -120.0 ; trn:maximum 12.0 ; trn:default -120.0 ;
     rdfs:comment "Output: detector level in dB at the end of the last block"
+], [
+    trn:symbol "sidechain" ; trn:label "Sidechain" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "0=the detector listens to the input, 1=to the sidechain input (inputs 3-4)"
+], [
+    trn:symbol "cc_channel" ; trn:label "CC Channel" ;
+    trn:minimum 0 ; trn:maximum 16 ; trn:default 1 ;
+    rdfs:comment "MIDI channel whose CC 1-4 drive Threshold, Ratio, Makeup and Mix (Drift's default lanes); 0 ignores MIDI"
+], [
+    trn:symbol "lookahead" ; trn:label "Look-ahead" ;
+    trn:minimum 0.0 ; trn:maximum 10.0 ; trn:default 0.0 ;
+    rdfs:comment "ms of delay on the audio path, reported to the host as latency, so the gain is already down when a peak arrives; 0 is off and adds no latency"
 ] .

@@ -326,6 +326,47 @@ static void testParameterTableMatchesCore()
     }
 }
 
+// MIDI control: the Drift convention, CC 1-4 on a channel.
+static void testMidiControl()
+{
+    check("CC 0 and 127 reach the ends of every mapping",
+          ccToValue(0, 0) == 20.0f && std::fabs(ccToValue(0, 127) - 18000.0f) < 0.5f && ccToValue(1, 0) == 0.0f && ccToValue(1, 127) == 100.0f &&
+          ccToValue(2, 127) == 24.0f && ccToValue(3, 0) == 0.0f && ccToValue(3, 127) == 100.0f);
+    check("the cutoff mapping is logarithmic (the middle CC is the geometric mean)", std::fabs(ccToValue(0, 64) / std::sqrt(20.0f * 18000.0f) - 1.0f) < 0.03f);
+    bool monotonic = true;
+    for (int slot = 0; slot < kCcSlots; ++slot)
+        for (int cc = 1; cc <= 127; ++cc) if (ccToValue(slot, cc) < ccToValue(slot, cc - 1)) monotonic = false;
+    check("every mapping rises with the controller", monotonic);
+
+    check("a Control Change on the set channel matches", ccChannelMatches(0xB0, 1.0f) && ccChannelMatches(0xB4, 5.0f) && ccChannelMatches(0xBF, 16.0f));
+    check("another channel, another message type, or channel 0 does not", !ccChannelMatches(0xB1, 1.0f) && !ccChannelMatches(0x90, 1.0f) && !ccChannelMatches(0xB0, 0.0f) && !ccChannelMatches(0xE0, 1.0f));
+
+    LiveControl live;
+    check("nothing overrides at first", withLive(Parameters{}, live).cutoffHz == Parameters{}.cutoffHz);
+    handleController(live, 5, 100);
+    handleController(live, 0, 100);
+    handleController(live, 74, 100);
+    check("other controllers are ignored", live.value[0] < 0.0f && live.value[1] < 0.0f && live.value[2] < 0.0f && live.value[3] < 0.0f);
+    handleController(live, 1, 127);
+    handleController(live, 2, 64);
+    handleController(live, 3, 127);
+    handleController(live, 4, 0);
+    const Parameters p = withLive(Parameters{}, live);
+    check("CC 1-4 override cutoff, resonance, drive and mix", std::fabs(p.cutoffHz - 18000.0f) < 0.5f && std::fabs(p.resonance - ccToValue(1, 64)) < 1e-4f &&
+          p.driveDb == 24.0f && p.mix == 0.0f);
+    check("the controls a controller does not own are untouched", p.bassComp == Parameters{}.bassComp && p.outputDb == Parameters{}.outputDb);
+    // The audio follows: a CC that closes the filter makes the output quieter than the panel's setting.
+    Parameters base;
+    base.resonance = 0.0f; base.bassComp = 0.0f;
+    LiveControl closed;
+    handleController(closed, 1, 10);
+    check("the override changes the sound", gainDb(withLive(base, closed), 4000.0) < gainDb(base, 4000.0) - 20.0);
+    check("liveSlot names the controls a panel move must release", liveSlot(kCutoff) == 0 && liveSlot(kResonance) == 1 && liveSlot(kDrive) == 2 &&
+          liveSlot(kMix) == 3 && liveSlot(kBassComp) == -1 && liveSlot(kOutput) == -1 && liveSlot(kCcChannel) == -1);
+    check("the CC channel is clamped to 0-16", clampParameters([] { Parameters q; q.ccChannel = 99.0f; return q; }()).ccChannel == 16.0f &&
+          clampParameters([] { Parameters q; q.ccChannel = -3.0f; return q; }()).ccChannel == 0.0f);
+}
+
 int main()
 {
     testMatchesAnalyticResponse();
@@ -340,6 +381,7 @@ int main()
     testEveryControlMatters();
     testSilentDecayLeavesNoDenormals();
     testResetClearsMemoryOnly();
+    testMidiControl();
     testParameterTableMatchesCore();
     std::printf("ladder_core_tests: %d passed, %d failed\n", gPassed, gFailed);
     return gFailed == 0 ? 0 : 1;

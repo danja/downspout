@@ -38,7 +38,7 @@ can **feed back** into itself for a raspier tone.
 | FM | Algorithm, Feedback, FM Depth 0-4 cycles, Quality (1x or 2x oversampling) |
 | Pitch envelope | On, Amount +-48 st, ADSR |
 | Filter | Type (LP 12, LP 24, HP 12, BP, Notch), Cutoff, Resonance, Key track |
-| Performance | Master, Velocity, Bend range |
+| Performance | Master, Velocity, Bend range, Play mode (Poly, Mono, Legato), Glide |
 
 ### Clean at the top
 
@@ -56,5 +56,5 @@ steals the quietest. Mono voices summed to a stereo output (both channels identi
 
 Core covered by tests (493 checks, also under ASan/UBSan): the waveform tables and their band limits, the decimator's response, the algorithm table and every declared routing,
 the FM sidebands against Bessel functions (exact to four digits), pitch to half a cent, feedback, aliasing with and without oversampling, DC, the pitch envelope, the filter
-against its model, envelope shapes, voices, pedal, panic and velocity, sample-accurate events, every one of the 57 controls, and stability at 44.1 to 192 kHz. Not yet listened
-to or validated in a host. No user-drawn waveform, key or velocity scaling per operator, 4x oversampling, or mono mode.
+against its model, envelope shapes, voices, pedal, panic and velocity, sample-accurate events, every one of the 59 controls, and stability at 44.1 to 192 kHz. Not yet listened
+to or validated in a host. No user-drawn waveform, key or velocity scaling per operator, or 4x oversampling.

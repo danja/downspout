@@ -12,7 +12,7 @@ dsp:trio a trn:PluginProfile ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/trio/> ;
     trn:role trn:AudioEffect ;
-    trn:accepts trn:Audio ;
+    trn:accepts trn:Audio, trn:MidiCC ;
     trn:produces trn:Audio .
 
 dsp:trio trn:hasParameter [
@@ -163,4 +163,20 @@ dsp:trio trn:hasParameter [
     trn:symbol "status_level_3" ; trn:label "High Level" ;
     trn:minimum -120.0 ; trn:maximum 12.0 ; trn:default -120.0 ;
     rdfs:comment "Output: band peak level in dB"
+], [
+    trn:symbol "cc_channel" ; trn:label "CC Channel" ;
+    trn:minimum 0 ; trn:maximum 16 ; trn:default 1 ;
+    rdfs:comment "MIDI channel whose CC 1-4 drive Amount, Time, Input and Upward limit (Drift's default lanes); 0 ignores MIDI"
+], [
+    trn:symbol "knee" ; trn:label "Knee" ;
+    trn:minimum 0.0 ; trn:maximum 24.0 ; trn:default 0.0 ;
+    rdfs:comment "Soft knee width in dB on both the compress and lift thresholds; 0 is the hard knee"
+], [
+    trn:symbol "solo" ; trn:label "Solo" ;
+    trn:minimum 0 ; trn:maximum 3 ; trn:default 0 ;
+    rdfs:comment "0 off, 1 low, 2 mid, 3 high: hear only that band's processed signal, with no dry mixed in"
+], [
+    trn:symbol "sidechain" ; trn:label "Sidechain" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "0 the band detectors listen to the input, 1 to the sidechain input (inputs 3-4, split into the same bands; the Input trim does not scale it)"
 ] .

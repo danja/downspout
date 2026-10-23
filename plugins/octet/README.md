@@ -1,6 +1,6 @@
 # Octet
 
-Eight-band parametric equalizer, stereo, no MIDI and no latency. A redesign inspired by the EQ
+Eight-band parametric equalizer, stereo, MIDI in for Drift (below), no latency. A redesign inspired by the EQ
 Eight in `~/github/oxide-studio` (`oxide-fx`, MIT/Apache-2.0), not a port: see `docs/design.md`
 for what was wrong in the source and what changed.
 
@@ -22,5 +22,9 @@ filter within 0.15 dB.
 
 Every band is at 0 dB and the two cuts are off, so a fresh instance passes the signal unchanged
 bit for bit. The 48 dB cuts are 8th-order Butterworth (-3 dB at the cutoff). Settings are ordinary
-automatable parameters (50 of them: `band1_freq` ... `band8_channel`, `mode`, `output`); there is no
-plugin state. No spectrum analyser yet.
+automatable parameters (52 of them: `band1_freq` ... `band8_channel`, `mode`, `output`, `cc_channel`, `cc_band`); there is no
+plugin state. Frequency, gain and Q glide to a new value over a few milliseconds, so fast sweeps do not zipper.
+
+**MIDI control (Drift convention).** CC 1 to 4 on the **CC channel** (default 1; 0 ignores MIDI) drive the **CC band** (1-8, default 4): CC 1 its Frequency
+(logarithmic, 20 Hz-20 kHz), CC 2 its Gain (+-18 dB), CC 3 its Q (logarithmic, 0.1-18), and CC 4 the Output. A controller holds its control until you move it on
+the panel or automate it; changing the CC band releases them all. The panel does not follow the CC. No spectrum analyser yet.

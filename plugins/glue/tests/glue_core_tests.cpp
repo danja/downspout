@@ -309,7 +309,7 @@ static void testMetersReportTheAudio()
     const double expected = -staticGainDb(p, -6.0206f);
     check("reduction meter is positive and matches the static curve", r.state.meters.reductionDb > 0.0f &&
           std::fabs(r.state.meters.reductionDb - expected) < 1.5);
-    check("level meter is a decibel value near the signal peak", r.state.meters.levelDb > -30.0f && r.state.meters.levelDb < 0.5f);
+    check("level meter is the block peak of a 0.5 sine (-6 dB)", std::fabs(r.state.meters.levelDb + 6.0f) < 0.6f);
     const std::vector<float> silence(4800, 0.0f);
     const Result idle = run(p, silence, silence);
     check("meters read zero reduction on silence", idle.state.meters.reductionDb == 0.0f);
@@ -488,9 +488,12 @@ static void testParameterTableMatchesCore()
 {
     const Parameters defaults;
     Parameters probe;
-    for (std::uint32_t i = 0; i < kControlCount; ++i) {
+    for (std::uint32_t i = 0; i < kParameterCount; ++i) {
         const ParameterSpec& s = kParameterSpecs[i];
-        check("controls are not outputs", !s.output);
+        if (s.output) {
+            check("outputs are the two meters", i == kStatusReduction || i == kStatusLevel);
+            continue;
+        }
         check("table default equals the core default", field(defaults, i) == s.defaultValue);
         check("default is inside its range", s.defaultValue >= s.minimum && s.defaultValue <= s.maximum);
         field(probe, i) = s.minimum - 1000.0f;
@@ -500,8 +503,113 @@ static void testParameterTableMatchesCore()
         field(probe, i) = s.defaultValue;
         check("a logarithmic range has a positive minimum", !s.logarithmic || s.minimum > 0.0f);
     }
-    for (std::uint32_t i = kControlCount; i < kParameterCount; ++i)
-        check("status entries are outputs", kParameterSpecs[i].output);
+    check("the meters are outputs", kParameterSpecs[kStatusReduction].output && kParameterSpecs[kStatusLevel].output);
+    check("the controls appended after the meters are not", !kParameterSpecs[kSidechain].output && !kParameterSpecs[kCcChannel].output);
+    check("the original parameters did not move", kStatusReduction == 12 && kStatusLevel == 13 && kSidechain == 14 && kCcChannel == 15);
+    check("Look-ahead is appended after them", kLookahead == 16 && !kParameterSpecs[kLookahead].output);
+}
+
+// Look-ahead: the audio trails the detector, so the gain is already down when a burst arrives.
+static void testLookahead()
+{
+    Parameters p = plain();
+    p.thresholdDb = 0.0f;   // nothing is compressed, so the output is the delayed input
+    p.lookaheadMs = 5.0f;
+    const int look = lookaheadSamples(p, kSr);
+    check("5 ms at 48 kHz is 240 samples of latency", look == 240);
+    check("Look-ahead 0 adds no latency", lookaheadSamples(plain(), kSr) == 0);
+    auto in = sine(440.0, 0.3, 0.2);
+    const Result r = run(p, in, in);
+    double worst = 0.0;
+    for (size_t i = static_cast<size_t>(look); i < in.size(); ++i) worst = std::max(worst, static_cast<double>(std::fabs(r.l[i] - in[i - static_cast<size_t>(look)])));
+    check("with nothing to compress the output is the input delayed by the latency, exactly", worst < 1e-6);
+
+    // A burst after silence, 10 ms attack: with look-ahead the first loud samples are turned down before they play.
+    Parameters c = plain();
+    c.thresholdDb = -30.0f; c.ratio = 20.0f; c.attackMs = 10.0f; c.releaseMs = 100.0f;
+    std::vector<float> burst(24000, 0.0f);
+    for (size_t i = 6000; i < burst.size(); ++i) burst[i] = static_cast<float>(0.8 * std::sin(2.0 * M_PI * 1000.0 * static_cast<double>(i) / kSr));
+    auto peakAfter = [&](const Parameters& q) {
+        const Result x = run(q, burst, burst);
+        const size_t start = 6000 + static_cast<size_t>(lookaheadSamples(q, kSr));
+        double m = 0.0;
+        for (size_t i = start; i < start + 240; ++i) m = std::max(m, static_cast<double>(std::fabs(x.l[i])));
+        return m;
+    };
+    const double without = peakAfter(c);
+    c.lookaheadMs = 10.0f;
+    const double with = peakAfter(c);
+    check("the first 5 ms of a burst come out quieter with Look-ahead", with < 0.6 * without);
+}
+
+// An external sidechain: the detector listens to inputs 3-4 and the audio is compressed from them.
+static void testExternalSidechain()
+{
+    auto run2 = [](const Parameters& p, const std::vector<float>& main, const std::vector<float>& side, bool connected) {
+        EngineState st;
+        std::vector<float> l(main.size()), r(main.size());
+        const float* ins[2] = {main.data(), main.data()};
+        const float* scs[2] = {side.data(), side.data()};
+        float* outs[2] = {l.data(), r.data()};
+        processBlock(st, p, kSr, static_cast<uint32_t>(main.size()), ins, outs, connected ? scs : nullptr);
+        return std::make_pair(l, st);
+    };
+    Parameters p = plain();
+    p.thresholdDb = -20.0f;
+    const auto quiet = sine(1000.0, std::pow(10.0, -40.0 / 20.0), 1.2);   // far below the threshold
+    const auto loud = sine(1000.0, std::pow(10.0, -6.0 / 20.0), 1.2);     // well above it
+    auto gain = [&](const std::vector<float>& out) { return dbOf(rms(out, out.size() / 2) / rms(quiet, quiet.size() / 2)); };
+    p.sidechain = 0.0f;
+    check("internal: a quiet signal is not compressed however loud the sidechain is", std::fabs(gain(run2(p, quiet, loud, true).first)) < 0.1);
+    p.sidechain = 1.0f;
+    const double ducked = gain(run2(p, quiet, loud, true).first);
+    check("external: the loud sidechain compresses the quiet signal by the static curve for its level", std::fabs(ducked - staticGainDb(p, -6.02f)) < 0.7);
+    check("external with a silent sidechain: nothing is compressed", std::fabs(gain(run2(p, loud, std::vector<float>(loud.size(), 0.0f), true).first) - dbOf(rms(loud, loud.size() / 2) / rms(quiet, quiet.size() / 2))) < 0.1);
+    check("external but not connected: the detector falls back to the input", run2(p, loud, quiet, false).first == [&] { Parameters q = p; q.sidechain = 0.0f; return run2(q, loud, quiet, false).first; }());
+    // The meter reports what the detector sees: the sidechain's level.
+    check("the level meter reads the sidechain (its block peak, -6 dB), not the input (-40 dB)", std::fabs(run2(p, quiet, loud, true).second.meters.levelDb + 6.0f) < 0.6f);
+    // The sidechain high-pass filters the sidechain too.
+    Parameters hp = p;
+    hp.scHpfHz = 300.0f;
+    const auto lowTone = sine(40.0, std::pow(10.0, -6.0 / 20.0), 1.5);
+    check("the sidechain high-pass acts on the sidechain (a 40 Hz sidechain through a 300 Hz filter compresses over 6 dB less)", gain(run2(hp, quiet, lowTone, true).first) > ducked + 6.0);
+}
+
+// MIDI control: the Drift convention, CC 1-4 on a channel.
+static void testMidiControl()
+{
+    check("CC 0 and 127 reach the ends of every mapping",
+          ccToValue(0, 0) == -60.0f && ccToValue(0, 127) == 0.0f && std::fabs(ccToValue(1, 0) - 1.1f) < 1e-4f && std::fabs(ccToValue(1, 127) - 20.0f) < 1e-3f &&
+          ccToValue(2, 0) == 0.0f && ccToValue(2, 127) == 24.0f && ccToValue(3, 0) == 0.0f && ccToValue(3, 127) == 100.0f);
+    bool monotonic = true;
+    for (int slot = 0; slot < kCcSlots; ++slot)
+        for (int cc = 1; cc <= 127; ++cc) if (ccToValue(slot, cc) < ccToValue(slot, cc - 1)) monotonic = false;
+    check("every mapping rises with the controller", monotonic);
+    check("a Control Change on the set channel matches", ccChannelMatches(0xB0, 1.0f) && ccChannelMatches(0xB4, 5.0f) && ccChannelMatches(0xBF, 16.0f));
+    check("another channel, another message type, or channel 0 does not", !ccChannelMatches(0xB1, 1.0f) && !ccChannelMatches(0x90, 1.0f) && !ccChannelMatches(0xB0, 0.0f));
+    LiveControl live;
+    check("nothing overrides at first", withLive(Parameters{}, live).thresholdDb == Parameters{}.thresholdDb);
+    handleController(live, 0, 100);
+    handleController(live, 5, 100);
+    handleController(live, 74, 100);
+    check("other controllers are ignored", !live.active[0] && !live.active[1] && !live.active[2] && !live.active[3]);
+    handleController(live, 1, 0);      // threshold -60 dB: a negative value, which a -1 sentinel could not carry
+    handleController(live, 2, 127);
+    handleController(live, 3, 127);
+    handleController(live, 4, 0);
+    const Parameters p = withLive(Parameters{}, live);
+    check("CC 1-4 override threshold (including negative values), ratio, makeup and mix",
+          p.thresholdDb == -60.0f && std::fabs(p.ratio - 20.0f) < 1e-3f && p.makeupDb == 24.0f && p.mix == 0.0f);
+    check("the controls a controller does not own are untouched", p.kneeDb == Parameters{}.kneeDb && p.attackMs == Parameters{}.attackMs && p.sidechain == Parameters{}.sidechain);
+    Parameters base = plain();
+    base.thresholdDb = 0.0f;
+    LiveControl low;
+    handleController(low, 1, 0);
+    check("the override changes the sound", gainDb(withLive(base, low), 1000.0, 0.3) < gainDb(base, 1000.0, 0.3) - 6.0);
+    check("liveSlot names the controls a panel move must release", liveSlot(kThreshold) == 0 && liveSlot(kRatio) == 1 && liveSlot(kMakeup) == 2 &&
+          liveSlot(kMix) == 3 && liveSlot(kKnee) == -1 && liveSlot(kSidechain) == -1 && liveSlot(kCcChannel) == -1);
+    check("the CC channel is clamped to 0-16 and Sidechain to 0 or 1", clampParameters([] { Parameters q; q.ccChannel = 99.0f; q.sidechain = 0.9f; return q; }()).ccChannel == 16.0f &&
+          clampParameters([] { Parameters q; q.sidechain = 0.9f; return q; }()).sidechain == 1.0f);
 }
 
 int main()
@@ -523,6 +631,9 @@ int main()
     testGainChangesAreSmoothed();
     testSilentDecayLeavesNoDenormals();
     testResetClearsMemoryOnly();
+    testExternalSidechain();
+    testLookahead();
+    testMidiControl();
     testParameterTableMatchesCore();
     std::printf("glue_core_tests: %d passed, %d failed\n", gPassed, gFailed);
     return gFailed == 0 ? 0 : 1;

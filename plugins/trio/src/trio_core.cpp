@@ -84,6 +84,10 @@ Parameters clampParameters(const Parameters& p) noexcept
     o.time        = clampf(p.time, 0.1f, 10.0f);
     o.upLimitDb   = clampf(p.upLimitDb, 0.0f, 24.0f);
     o.crossLowHz  = clampf(p.crossLowHz, 40.0f, 1000.0f);
+    o.ccChannel   = std::round(clampf(p.ccChannel, 0.0f, 16.0f));
+    o.kneeDb      = clampf(p.kneeDb, 0.0f, 24.0f);
+    o.solo        = std::round(clampf(p.solo, 0.0f, 3.0f));
+    o.sidechain   = p.sidechain >= 0.5f ? 1.0f : 0.0f;
     o.crossHighHz = clampf(p.crossHighHz, 1000.0f, 12000.0f);
     // Keep the two crossovers apart so the mid band cannot collapse.
     o.crossHighHz = std::max(o.crossHighHz, std::min(o.crossLowHz * 1.25f, 12000.0f));
@@ -91,17 +95,63 @@ Parameters clampParameters(const Parameters& p) noexcept
     return o;
 }
 
-float bandTargetDb(const Band& raw, float levelDb, float upLimitDb) noexcept
+namespace {
+
+// Gain change in dB (positive) for `over` dB past a threshold at `ratio`, through a quadratic knee `knee` dB wide centred on it.
+inline float kneeCurve(const float over, const float ratio, const float knee) noexcept
+{
+    const float slope = 1.0f - 1.0f / ratio;
+    if (knee <= 0.0f) return over > 0.0f ? over * slope : 0.0f;
+    if (2.0f * over < -knee) return 0.0f;
+    if (2.0f * std::fabs(over) <= knee) return slope * (over + knee * 0.5f) * (over + knee * 0.5f) / (2.0f * knee);
+    return over * slope;
+}
+
+}  // namespace
+
+float bandTargetDb(const Band& raw, float levelDb, float upLimitDb, float kneeDb) noexcept
 {
     const Band b = clampBand(raw);
-    float target = 0.0f;
-    if (levelDb > b.downThreshDb)
-        target -= (levelDb - b.downThreshDb) * (1.0f - 1.0f / b.downRatio);
+    const float knee = clampf(kneeDb, 0.0f, 24.0f);
+    float target = -kneeCurve(levelDb - b.downThreshDb, b.downRatio, knee);
     // The lift threshold may not sit above the compress threshold, or the two would fight.
     const float upThresh = std::min(b.upThreshDb, b.downThreshDb);
-    if (levelDb < upThresh)
-        target += std::min((upThresh - levelDb) * (1.0f - 1.0f / b.upRatio), std::max(upLimitDb, 0.0f));
+    target += std::min(kneeCurve(upThresh - levelDb, b.upRatio, knee), std::max(upLimitDb, 0.0f));
     return target;
+}
+
+float ccToValue(int slot, int cc) noexcept
+{
+    const float u = static_cast<float>(std::min(std::max(cc, 0), 127)) / 127.0f;
+    switch (slot) {
+    case 0:  return 100.0f * u;                              // amount
+    case 1:  return 0.1f * std::pow(100.0f, u);              // time, logarithmic 0.1 to 10
+    case 2:  return -12.0f + 36.0f * u;                      // input
+    default: return 24.0f * u;                               // upward limit
+    }
+}
+
+bool ccChannelMatches(unsigned char status, float ccChannel) noexcept
+{
+    return (status & 0xF0) == 0xB0 && ccChannel >= 0.5f && static_cast<int>(status & 0x0F) + 1 == static_cast<int>(std::lround(ccChannel));
+}
+
+void handleController(LiveControl& live, int controller, int value) noexcept
+{
+    if (controller >= 1 && controller <= kCcSlots) {
+        live.value[static_cast<size_t>(controller - 1)] = ccToValue(controller - 1, value);
+        live.active[static_cast<size_t>(controller - 1)] = true;
+    }
+}
+
+Parameters withLive(const Parameters& p, const LiveControl& live) noexcept
+{
+    Parameters o = p;
+    if (live.active[0]) o.amount = live.value[0];
+    if (live.active[1]) o.time = live.value[1];
+    if (live.active[2]) o.inputDb = live.value[2];
+    if (live.active[3]) o.upLimitDb = live.value[3];
+    return o;
 }
 
 void resetState(EngineState& state) noexcept
@@ -110,7 +160,7 @@ void resetState(EngineState& state) noexcept
 }
 
 void processBlock(EngineState& state, const Parameters& rawParams, float sampleRate, uint32_t frames,
-                  const float* const* inputs, float* const* outputs) noexcept
+                  const float* const* inputs, float* const* outputs, const float* const* sidechain) noexcept
 {
     const Parameters p = clampParameters(rawParams);
     const float sr = sampleRate > 0.0f ? sampleRate : 44100.0f;
@@ -155,6 +205,8 @@ void processBlock(EngineState& state, const Parameters& rawParams, float sampleR
 
     const float* in0 = inputs[0];
     const float* in1 = inputs[1] ? inputs[1] : inputs[0];
+    const bool external = p.sidechain >= 0.5f && sidechain != nullptr && sidechain[0] != nullptr && sidechain[1] != nullptr;
+    const int solo = static_cast<int>(p.solo);
     float* out0 = outputs[0];
     float* out1 = outputs[1];
     std::array<float, kBands> level {};
@@ -168,15 +220,21 @@ void processBlock(EngineState& state, const Parameters& rawParams, float sampleR
 
         // Split each channel into three bands; the low band goes through the all-pass of the
         // high crossover so the three sum back to a flat response.
-        double band[2][kBands];
-        for (int c = 0; c < 2; ++c) {
-            ChannelState& cs = state.channels[static_cast<size_t>(c)];
-            const double x = static_cast<double>(dry[c]) * drive;
+        auto split = [&](ChannelState& cs, const double x, double* out) {
             const double lowRaw = runLr4(cs.lowLp, state.lowLp, x);
             const double rest = runLr4(cs.lowHp, state.lowHp, x);
-            band[c][0] = runLr4(cs.lowApLp, state.highLp, lowRaw) + runLr4(cs.lowApHp, state.highHp, lowRaw);
-            band[c][1] = runLr4(cs.midLp, state.highLp, rest);
-            band[c][2] = runLr4(cs.highHp, state.highHp, rest);
+            out[0] = runLr4(cs.lowApLp, state.highLp, lowRaw) + runLr4(cs.lowApHp, state.highHp, lowRaw);
+            out[1] = runLr4(cs.midLp, state.highLp, rest);
+            out[2] = runLr4(cs.highHp, state.highHp, rest);
+        };
+        double band[2][kBands];
+        double sideBand[2][kBands];
+        for (int c = 0; c < 2; ++c) {
+            split(state.channels[static_cast<size_t>(c)], static_cast<double>(dry[c]) * drive, band[c]);
+            if (external) {
+                const float s = sidechain[c][i];
+                split(state.sideChannels[static_cast<size_t>(c)], std::isfinite(s) ? static_cast<double>(s) : 0.0, sideBand[c]);
+            }
         }
 
         double sum[2] = {0.0, 0.0};
@@ -186,39 +244,43 @@ void processBlock(EngineState& state, const Parameters& rawParams, float sampleR
             if (bd.on < 0.5f) {
                 state.envelopeDb[bi] = 0.0f;
                 state.detector[bi] = 0.0f;
-                sum[0] += band[0][b];
-                sum[1] += band[1][b];
+                if (solo == 0 || solo == b + 1) { sum[0] += band[0][b]; sum[1] += band[1][b]; }
                 level[bi] = kFloorLevel;
                 continue;
             }
             // One detector per band, shared by both channels, so the stereo image holds still.
-            const float instant = static_cast<float>(std::max(std::fabs(band[0][b]), std::fabs(band[1][b])));
+            // The detector listens to the band of the input, or of the sidechain (which the Input trim does not scale).
+            const auto& det = external ? sideBand : band;
+            const float instant = static_cast<float>(std::max(std::fabs(det[0][b]), std::fabs(det[1][b])));
             state.detector[bi] = std::max(instant, state.detector[bi] * detectorDecay[bi]);
             const float peak = std::max(state.detector[bi], kFloorLevel);
             level[bi] = peak;
-            const float target = bandTargetDb(bd, 20.0f * std::log10(peak), p.upLimitDb);
+            const float target = bandTargetDb(bd, 20.0f * std::log10(peak), p.upLimitDb, p.kneeDb);
             const float coeff = target < state.envelopeDb[bi] ? attack[bi] : release[bi];
             state.envelopeDb[bi] = coeff * state.envelopeDb[bi] + (1.0f - coeff) * target;
             const double gain = std::exp((state.envelopeDb[bi] + bandLinear[bi]) * kDbToNeper);
-            sum[0] += band[0][b] * gain;
-            sum[1] += band[1][b] * gain;
+            if (solo == 0 || solo == b + 1) {   // Solo: only that band's processed signal reaches the output
+                sum[0] += band[0][b] * gain;
+                sum[1] += band[1][b] * gain;
+            }
         }
 
         const float outGain = outFrom + (outGoal - outFrom) * t;
         const float amount = amountFrom + (amountGoal - amountFrom) * t;
         const float wet0 = static_cast<float>(sum[0] * outGain), wet1 = static_cast<float>(sum[1] * outGain);
-        out0[i] = dry[0] + (wet0 - dry[0]) * amount;
-        out1[i] = dry[1] + (wet1 - dry[1]) * amount;
+        out0[i] = solo > 0 ? wet0 : dry[0] + (wet0 - dry[0]) * amount;
+        out1[i] = solo > 0 ? wet1 : dry[1] + (wet1 - dry[1]) * amount;
     }
 
     // Recursive memory on a silent input decays into denormals; zero what is negligible.
     constexpr double kTiny = 1.0e-30;
-    for (ChannelState& cs : state.channels)
-        for (Lr4* f : {&cs.lowLp, &cs.lowHp, &cs.midLp, &cs.highHp, &cs.lowApLp, &cs.lowApHp})
-            for (Cell& c : f->cell) {
-                if (std::fabs(c.z1) < kTiny) c.z1 = 0.0;
-                if (std::fabs(c.z2) < kTiny) c.z2 = 0.0;
-            }
+    for (auto* set : {&state.channels, &state.sideChannels})
+        for (ChannelState& cs : *set)
+            for (Lr4* f : {&cs.lowLp, &cs.lowHp, &cs.midLp, &cs.highHp, &cs.lowApLp, &cs.lowApHp})
+                for (Cell& c : f->cell) {
+                    if (std::fabs(c.z1) < kTiny) c.z1 = 0.0;
+                    if (std::fabs(c.z2) < kTiny) c.z2 = 0.0;
+                }
     for (float& e : state.envelopeDb)
         if (std::fabs(e) < 1.0e-6f) e = 0.0f;
     for (float& d : state.detector)

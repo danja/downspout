@@ -407,7 +407,8 @@ private:
         if (usable < intValue(core::kGenerations))
             std::snprintf(buf, sizeof(buf), "%d (this grammar tops out at %d)", intValue(core::kGenerations), usable);
         else
-            std::snprintf(buf, sizeof(buf), "%d", intValue(core::kGenerations));        slider(core::kGenerations, "Generations", buf, b, 0, kGrammarAccent);
+            std::snprintf(buf, sizeof(buf), "%d", intValue(core::kGenerations));
+        slider(core::kGenerations, "Generations", buf, b, 0, kGrammarAccent);
         const int grow = intValue(core::kGrowBars);
         if (grow == 0)
             std::snprintf(buf, sizeof(buf), "off (final generation)");
