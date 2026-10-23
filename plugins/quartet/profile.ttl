@@ -1,0 +1,247 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:quartet a trn:PluginProfile ;
+    rdfs:label "Quartet" ;
+    rdfs:comment "Eight-voice four-operator FM synthesizer with eleven algorithms, band-limited sine, saw and square operators, per-operator envelopes, feedback, optional 2x oversampling, a pitch envelope and a multimode filter." ;
+    trn:bundleName "quartet.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/quartet/> ;
+    trn:role trn:Instrument ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Audio ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .
+
+dsp:quartet trn:hasParameter [
+    trn:symbol "opa_wave" ; trn:label "Op A Waveform" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 0 ;
+    rdfs:comment "Operator A: 0=Sine 1=Saw 2=Square (saw and square are band-limited)"
+], [
+    trn:symbol "opa_fixed" ; trn:label "Op A Fixed Frequency" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "Operator A: 0 follows the note (ratio), 1 is a fixed frequency"
+], [
+    trn:symbol "opa_ratio" ; trn:label "Op A Ratio" ;
+    trn:minimum 0.25 ; trn:maximum 32.0 ; trn:default 1.0 ;
+    rdfs:comment "Operator A: frequency as a multiple of the note (logarithmic)"
+], [
+    trn:symbol "opa_fine" ; trn:label "Op A Fine" ;
+    trn:minimum -50.0 ; trn:maximum 50.0 ; trn:default 0.0 ;
+    rdfs:comment "Operator A: fine tuning in cents"
+], [
+    trn:symbol "opa_fixed_hz" ; trn:label "Op A Fixed Hz" ;
+    trn:minimum 10.0 ; trn:maximum 20000.0 ; trn:default 440.0 ;
+    rdfs:comment "Operator A: frequency in Hz when fixed (logarithmic)"
+], [
+    trn:symbol "opa_level" ; trn:label "Op A Level" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.8 ;
+    rdfs:comment "Operator A: output level of a carrier, FM amount of a modulator"
+], [
+    trn:symbol "opa_attack" ; trn:label "Op A Attack" ;
+    trn:minimum 0.5 ; trn:maximum 5000.0 ; trn:default 5.0 ;
+    rdfs:comment "Operator A envelope attack in ms (logarithmic)"
+], [
+    trn:symbol "opa_decay" ; trn:label "Op A Decay" ;
+    trn:minimum 1.0 ; trn:maximum 8000.0 ; trn:default 300.0 ;
+    rdfs:comment "Operator A envelope decay in ms (logarithmic)"
+], [
+    trn:symbol "opa_sustain" ; trn:label "Op A Sustain" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.7 ;
+    rdfs:comment "Operator A envelope sustain level"
+], [
+    trn:symbol "opa_release" ; trn:label "Op A Release" ;
+    trn:minimum 1.0 ; trn:maximum 8000.0 ; trn:default 250.0 ;
+    rdfs:comment "Operator A envelope release in ms (logarithmic)"
+], [
+    trn:symbol "opb_wave" ; trn:label "Op B Waveform" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 0 ;
+    rdfs:comment "Operator B: 0=Sine 1=Saw 2=Square (saw and square are band-limited)"
+], [
+    trn:symbol "opb_fixed" ; trn:label "Op B Fixed Frequency" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "Operator B: 0 follows the note (ratio), 1 is a fixed frequency"
+], [
+    trn:symbol "opb_ratio" ; trn:label "Op B Ratio" ;
+    trn:minimum 0.25 ; trn:maximum 32.0 ; trn:default 2.0 ;
+    rdfs:comment "Operator B: frequency as a multiple of the note (logarithmic)"
+], [
+    trn:symbol "opb_fine" ; trn:label "Op B Fine" ;
+    trn:minimum -50.0 ; trn:maximum 50.0 ; trn:default 0.0 ;
+    rdfs:comment "Operator B: fine tuning in cents"
+], [
+    trn:symbol "opb_fixed_hz" ; trn:label "Op B Fixed Hz" ;
+    trn:minimum 10.0 ; trn:maximum 20000.0 ; trn:default 440.0 ;
+    rdfs:comment "Operator B: frequency in Hz when fixed (logarithmic)"
+], [
+    trn:symbol "opb_level" ; trn:label "Op B Level" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.5 ;
+    rdfs:comment "Operator B: output level of a carrier, FM amount of a modulator"
+], [
+    trn:symbol "opb_attack" ; trn:label "Op B Attack" ;
+    trn:minimum 0.5 ; trn:maximum 5000.0 ; trn:default 5.0 ;
+    rdfs:comment "Operator B envelope attack in ms (logarithmic)"
+], [
+    trn:symbol "opb_decay" ; trn:label "Op B Decay" ;
+    trn:minimum 1.0 ; trn:maximum 8000.0 ; trn:default 300.0 ;
+    rdfs:comment "Operator B envelope decay in ms (logarithmic)"
+], [
+    trn:symbol "opb_sustain" ; trn:label "Op B Sustain" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.7 ;
+    rdfs:comment "Operator B envelope sustain level"
+], [
+    trn:symbol "opb_release" ; trn:label "Op B Release" ;
+    trn:minimum 1.0 ; trn:maximum 8000.0 ; trn:default 250.0 ;
+    rdfs:comment "Operator B envelope release in ms (logarithmic)"
+], [
+    trn:symbol "opc_wave" ; trn:label "Op C Waveform" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 0 ;
+    rdfs:comment "Operator C: 0=Sine 1=Saw 2=Square (saw and square are band-limited)"
+], [
+    trn:symbol "opc_fixed" ; trn:label "Op C Fixed Frequency" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "Operator C: 0 follows the note (ratio), 1 is a fixed frequency"
+], [
+    trn:symbol "opc_ratio" ; trn:label "Op C Ratio" ;
+    trn:minimum 0.25 ; trn:maximum 32.0 ; trn:default 3.0 ;
+    rdfs:comment "Operator C: frequency as a multiple of the note (logarithmic)"
+], [
+    trn:symbol "opc_fine" ; trn:label "Op C Fine" ;
+    trn:minimum -50.0 ; trn:maximum 50.0 ; trn:default 0.0 ;
+    rdfs:comment "Operator C: fine tuning in cents"
+], [
+    trn:symbol "opc_fixed_hz" ; trn:label "Op C Fixed Hz" ;
+    trn:minimum 10.0 ; trn:maximum 20000.0 ; trn:default 440.0 ;
+    rdfs:comment "Operator C: frequency in Hz when fixed (logarithmic)"
+], [
+    trn:symbol "opc_level" ; trn:label "Op C Level" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.3 ;
+    rdfs:comment "Operator C: output level of a carrier, FM amount of a modulator"
+], [
+    trn:symbol "opc_attack" ; trn:label "Op C Attack" ;
+    trn:minimum 0.5 ; trn:maximum 5000.0 ; trn:default 5.0 ;
+    rdfs:comment "Operator C envelope attack in ms (logarithmic)"
+], [
+    trn:symbol "opc_decay" ; trn:label "Op C Decay" ;
+    trn:minimum 1.0 ; trn:maximum 8000.0 ; trn:default 300.0 ;
+    rdfs:comment "Operator C envelope decay in ms (logarithmic)"
+], [
+    trn:symbol "opc_sustain" ; trn:label "Op C Sustain" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.7 ;
+    rdfs:comment "Operator C envelope sustain level"
+], [
+    trn:symbol "opc_release" ; trn:label "Op C Release" ;
+    trn:minimum 1.0 ; trn:maximum 8000.0 ; trn:default 250.0 ;
+    rdfs:comment "Operator C envelope release in ms (logarithmic)"
+], [
+    trn:symbol "opd_wave" ; trn:label "Op D Waveform" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 0 ;
+    rdfs:comment "Operator D: 0=Sine 1=Saw 2=Square (saw and square are band-limited)"
+], [
+    trn:symbol "opd_fixed" ; trn:label "Op D Fixed Frequency" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "Operator D: 0 follows the note (ratio), 1 is a fixed frequency"
+], [
+    trn:symbol "opd_ratio" ; trn:label "Op D Ratio" ;
+    trn:minimum 0.25 ; trn:maximum 32.0 ; trn:default 4.0 ;
+    rdfs:comment "Operator D: frequency as a multiple of the note (logarithmic)"
+], [
+    trn:symbol "opd_fine" ; trn:label "Op D Fine" ;
+    trn:minimum -50.0 ; trn:maximum 50.0 ; trn:default 0.0 ;
+    rdfs:comment "Operator D: fine tuning in cents"
+], [
+    trn:symbol "opd_fixed_hz" ; trn:label "Op D Fixed Hz" ;
+    trn:minimum 10.0 ; trn:maximum 20000.0 ; trn:default 440.0 ;
+    rdfs:comment "Operator D: frequency in Hz when fixed (logarithmic)"
+], [
+    trn:symbol "opd_level" ; trn:label "Op D Level" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.2 ;
+    rdfs:comment "Operator D: output level of a carrier, FM amount of a modulator"
+], [
+    trn:symbol "opd_attack" ; trn:label "Op D Attack" ;
+    trn:minimum 0.5 ; trn:maximum 5000.0 ; trn:default 5.0 ;
+    rdfs:comment "Operator D envelope attack in ms (logarithmic)"
+], [
+    trn:symbol "opd_decay" ; trn:label "Op D Decay" ;
+    trn:minimum 1.0 ; trn:maximum 8000.0 ; trn:default 300.0 ;
+    rdfs:comment "Operator D envelope decay in ms (logarithmic)"
+], [
+    trn:symbol "opd_sustain" ; trn:label "Op D Sustain" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.7 ;
+    rdfs:comment "Operator D envelope sustain level"
+], [
+    trn:symbol "opd_release" ; trn:label "Op D Release" ;
+    trn:minimum 1.0 ; trn:maximum 8000.0 ; trn:default 250.0 ;
+    rdfs:comment "Operator D envelope release in ms (logarithmic)"
+], [
+    trn:symbol "algorithm" ; trn:label "Algorithm" ;
+    trn:minimum 0 ; trn:maximum 10 ; trn:default 0 ;
+    rdfs:comment "0..10 selects algorithms 1-11 (1: D>C>B>A, 4: D>(B+C)>A, 11: A+B+C+D)"
+], [
+    trn:symbol "feedback" ; trn:label "Feedback" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.15 ;
+    rdfs:comment "Operator D into its own phase"
+], [
+    trn:symbol "depth" ; trn:label "FM Depth" ;
+    trn:minimum 0.0 ; trn:maximum 4.0 ; trn:default 1.0 ;
+    rdfs:comment "Phase modulation of a full-level modulator, in cycles (index in radians = 2 pi x depth x level)"
+], [
+    trn:symbol "pitch_env" ; trn:label "Pitch Envelope" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "0=off 1=on"
+], [
+    trn:symbol "pitch_env_amount" ; trn:label "Pitch Envelope Amount" ;
+    trn:minimum -48.0 ; trn:maximum 48.0 ; trn:default 12.0 ;
+    rdfs:comment "Pitch envelope depth in semitones"
+], [
+    trn:symbol "pitch_attack" ; trn:label "Pitch Attack" ;
+    trn:minimum 0.5 ; trn:maximum 5000.0 ; trn:default 1.0 ;
+    rdfs:comment "Pitch envelope attack in ms (logarithmic)"
+], [
+    trn:symbol "pitch_decay" ; trn:label "Pitch Decay" ;
+    trn:minimum 1.0 ; trn:maximum 8000.0 ; trn:default 100.0 ;
+    rdfs:comment "Pitch envelope decay in ms (logarithmic)"
+], [
+    trn:symbol "pitch_sustain" ; trn:label "Pitch Sustain" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "Pitch envelope sustain"
+], [
+    trn:symbol "pitch_release" ; trn:label "Pitch Release" ;
+    trn:minimum 1.0 ; trn:maximum 8000.0 ; trn:default 100.0 ;
+    rdfs:comment "Pitch envelope release in ms (logarithmic)"
+], [
+    trn:symbol "filter_type" ; trn:label "Filter Type" ;
+    trn:minimum 0 ; trn:maximum 4 ; trn:default 1 ;
+    rdfs:comment "0=LP 12 1=LP 24 2=HP 12 3=BP 4=Notch"
+], [
+    trn:symbol "cutoff" ; trn:label "Cutoff" ;
+    trn:minimum 20.0 ; trn:maximum 20000.0 ; trn:default 8000.0 ;
+    rdfs:comment "Cutoff in Hz (logarithmic)"
+], [
+    trn:symbol "resonance" ; trn:label "Resonance" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.15 ;
+    rdfs:comment "Filter resonance"
+], [
+    trn:symbol "key_track" ; trn:label "Key Track" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "1 = the cutoff follows the note"
+], [
+    trn:symbol "master" ; trn:label "Master" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.6 ;
+    rdfs:comment "Master level"
+], [
+    trn:symbol "velocity" ; trn:label "Velocity" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.7 ;
+    rdfs:comment "0 = every note at full level"
+], [
+    trn:symbol "bend_range" ; trn:label "Bend Range" ;
+    trn:minimum 0.0 ; trn:maximum 24.0 ; trn:default 2.0 ;
+    rdfs:comment "Pitch bend range in semitones"
+], [
+    trn:symbol "quality" ; trn:label "Quality" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "0=1x, 1=2x oversampling with a half-band decimator"
+] .

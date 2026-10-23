@@ -35,6 +35,7 @@ melgen
 midiscribe
 mixgen
 mnemosyne
+monochord
 mosaic
 octet
 oracle
@@ -44,10 +45,12 @@ p-mix
 paunchlad
 plank
 polymeter
+quartet
 resonance-garden
 rift
 sidecar
 skream
+strata
 syrinx
 t-mix
 trio

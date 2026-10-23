@@ -65,6 +65,11 @@ struct MidiEvent {
     int bend = 0;             // PitchBend: -8192..8191
 };
 
+// Filter coefficients for the trapezoidal SVF: g = tan(pi fc / sr), k = 1 / Q.
+struct FilterCoeff {
+    double g = 0.0, k = 1.0, a1 = 1.0, a2 = 0.0, a3 = 0.0;
+};
+
 // Trapezoidal state-variable filter (zero-delay feedback), one per channel per voice.
 struct Svf {
     double ic1 = 0.0, ic2 = 0.0;
@@ -93,6 +98,10 @@ struct Voice {
     std::array<double, kMaxUnison> detuneRatio {};
     std::array<float, kMaxUnison> panL {}, panR {};
     int controlCountdown = 0;
+    // Also at control rate: the oscillators' and sub's base frequencies and the filter's coefficients.
+    std::array<double, 2> oscHz {};
+    double subHz = 0.0;
+    FilterCoeff coeff1 {}, coeff2 {};
     std::array<Svf, 2> filter1 {};                  // left, right
     std::array<Svf, 2> filter2 {};                  // second stage of the 24 dB low-pass
     Envelope amp, flt;
@@ -137,6 +146,10 @@ void processBlock(EngineState&      state,
 // Attack is linear in time; decay and release are one-pole exponentials.
 [[nodiscard]] double envelopeStep(Envelope& env, bool gate, double attackMs, double decayMs, double sustain, double releaseMs,
                                   double sampleRate) noexcept;
+
+// The phase warp: maps a cycle phase (0..1) to the phase the table is read at, and reports how much faster
+// than the note the read runs there (the mip choice needs it). Shared by the audio and the panel's waveform.
+[[nodiscard]] double warpPhase(WarpMode mode, double amount, double phase, double* slope = nullptr) noexcept;
 
 // One LFO step (-1..+1), exposed for the tests.
 [[nodiscard]] double lfoStep(EngineState& state, LfoShape shape, double rateHz, double sampleRate) noexcept;

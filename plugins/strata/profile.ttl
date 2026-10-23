@@ -1,0 +1,183 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:strata a trn:PluginProfile ;
+    rdfs:label "Strata" ;
+    rdfs:comment "Eight-voice wavetable synthesizer with two band-limited table oscillators (Bend, Sync and Fold warp), a sine sub, unison, a resonant multimode filter, two envelopes and an LFO." ;
+    trn:bundleName "strata.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/strata/> ;
+    trn:role trn:Instrument ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Audio ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .
+
+dsp:strata trn:hasParameter [
+    trn:symbol "osc1_table" ; trn:label "Osc 1 Table" ;
+    trn:minimum 0.0 ; trn:maximum 4.0 ; trn:default 0.0 ;
+    rdfs:comment "Oscillator 1: 0=Basic 1=Harmonics 2=Formant 3=Digital 4=Vintage"
+], [
+    trn:symbol "osc1_position" ; trn:label "Osc 1 Position" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.2 ;
+    rdfs:comment "Oscillator 1: Position across the table's eight frames"
+], [
+    trn:symbol "osc1_warp" ; trn:label "Osc 1 Warp" ;
+    trn:minimum 0.0 ; trn:maximum 3.0 ; trn:default 0.0 ;
+    rdfs:comment "Oscillator 1: 0=None 1=Bend 2=Sync 3=Fold"
+], [
+    trn:symbol "osc1_warp_amt" ; trn:label "Osc 1 Warp Amount" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "Oscillator 1: Warp amount; no effect with Warp None"
+], [
+    trn:symbol "osc1_transpose" ; trn:label "Osc 1 Transpose" ;
+    trn:minimum -24.0 ; trn:maximum 24.0 ; trn:default 0.0 ;
+    rdfs:comment "Oscillator 1: Semitones"
+], [
+    trn:symbol "osc1_fine" ; trn:label "Osc 1 Fine" ;
+    trn:minimum -50.0 ; trn:maximum 50.0 ; trn:default 0.0 ;
+    rdfs:comment "Oscillator 1: Cents"
+], [
+    trn:symbol "osc1_level" ; trn:label "Osc 1 Level" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.8 ;
+    rdfs:comment "Oscillator 1: Oscillator level"
+], [
+    trn:symbol "osc2_table" ; trn:label "Osc 2 Table" ;
+    trn:minimum 0.0 ; trn:maximum 4.0 ; trn:default 0.0 ;
+    rdfs:comment "Oscillator 2: 0=Basic 1=Harmonics 2=Formant 3=Digital 4=Vintage"
+], [
+    trn:symbol "osc2_position" ; trn:label "Osc 2 Position" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.2 ;
+    rdfs:comment "Oscillator 2: Position across the table's eight frames"
+], [
+    trn:symbol "osc2_warp" ; trn:label "Osc 2 Warp" ;
+    trn:minimum 0.0 ; trn:maximum 3.0 ; trn:default 0.0 ;
+    rdfs:comment "Oscillator 2: 0=None 1=Bend 2=Sync 3=Fold"
+], [
+    trn:symbol "osc2_warp_amt" ; trn:label "Osc 2 Warp Amount" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "Oscillator 2: Warp amount; no effect with Warp None"
+], [
+    trn:symbol "osc2_transpose" ; trn:label "Osc 2 Transpose" ;
+    trn:minimum -24.0 ; trn:maximum 24.0 ; trn:default 0.0 ;
+    rdfs:comment "Oscillator 2: Semitones"
+], [
+    trn:symbol "osc2_fine" ; trn:label "Osc 2 Fine" ;
+    trn:minimum -50.0 ; trn:maximum 50.0 ; trn:default 0.0 ;
+    rdfs:comment "Oscillator 2: Cents"
+], [
+    trn:symbol "osc2_level" ; trn:label "Osc 2 Level" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.8 ;
+    rdfs:comment "Oscillator 2: Oscillator level"
+], [
+    trn:symbol "sub_level" ; trn:label "Sub Level" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.3 ;
+    rdfs:comment "Sine sub-oscillator level"
+], [
+    trn:symbol "sub_octave" ; trn:label "Sub Octave" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "0=one octave down 1=two"
+], [
+    trn:symbol "unison_mode" ; trn:label "Unison Mode" ;
+    trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 0.0 ;
+    rdfs:comment "0=Classic 1=Shimmer 2=Noise"
+], [
+    trn:symbol "unison_voices" ; trn:label "Unison Voices" ;
+    trn:minimum 1.0 ; trn:maximum 8.0 ; trn:default 2.0 ;
+    rdfs:comment "Unison voices per oscillator"
+], [
+    trn:symbol "unison_amount" ; trn:label "Unison Amount" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.15 ;
+    rdfs:comment "Detune and stereo spread; at 0 the voices are in step"
+], [
+    trn:symbol "filter_type" ; trn:label "Filter Type" ;
+    trn:minimum 0.0 ; trn:maximum 4.0 ; trn:default 0.0 ;
+    rdfs:comment "0=LP 12 1=LP 24 2=HP 12 3=BP 4=Notch"
+], [
+    trn:symbol "cutoff" ; trn:label "Cutoff" ;
+    trn:minimum 20.0 ; trn:maximum 20000.0 ; trn:default 4000.0 ;
+    rdfs:comment "Cutoff in Hz (logarithmic)"
+], [
+    trn:symbol "resonance" ; trn:label "Resonance" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.2 ;
+    rdfs:comment "Filter resonance"
+], [
+    trn:symbol "key_track" ; trn:label "Key Track" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "1 = the cutoff follows the note"
+], [
+    trn:symbol "env_amount" ; trn:label "Filter Env Amount" ;
+    trn:minimum -1.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "Filter envelope to cutoff, +-4 octaves"
+], [
+    trn:symbol "env_position" ; trn:label "Filter Env Position" ;
+    trn:minimum -1.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "Filter envelope to both table positions"
+], [
+    trn:symbol "amp_attack" ; trn:label "Amp Attack" ;
+    trn:minimum 0.5 ; trn:maximum 5000.0 ; trn:default 5.0 ;
+    rdfs:comment "Amplitude envelope attack in ms (logarithmic)"
+], [
+    trn:symbol "amp_decay" ; trn:label "Amp Decay" ;
+    trn:minimum 1.0 ; trn:maximum 8000.0 ; trn:default 300.0 ;
+    rdfs:comment "Amplitude envelope decay in ms (logarithmic)"
+], [
+    trn:symbol "amp_sustain" ; trn:label "Amp Sustain" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.7 ;
+    rdfs:comment "Amplitude envelope sustain"
+], [
+    trn:symbol "amp_release" ; trn:label "Amp Release" ;
+    trn:minimum 1.0 ; trn:maximum 8000.0 ; trn:default 250.0 ;
+    rdfs:comment "Amplitude envelope release in ms (logarithmic)"
+], [
+    trn:symbol "flt_attack" ; trn:label "Filter Attack" ;
+    trn:minimum 0.5 ; trn:maximum 5000.0 ; trn:default 10.0 ;
+    rdfs:comment "Filter envelope attack in ms (logarithmic)"
+], [
+    trn:symbol "flt_decay" ; trn:label "Filter Decay" ;
+    trn:minimum 1.0 ; trn:maximum 8000.0 ; trn:default 400.0 ;
+    rdfs:comment "Filter envelope decay in ms (logarithmic)"
+], [
+    trn:symbol "flt_sustain" ; trn:label "Filter Sustain" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.3 ;
+    rdfs:comment "Filter envelope sustain"
+], [
+    trn:symbol "flt_release" ; trn:label "Filter Release" ;
+    trn:minimum 1.0 ; trn:maximum 8000.0 ; trn:default 300.0 ;
+    rdfs:comment "Filter envelope release in ms (logarithmic)"
+], [
+    trn:symbol "lfo_rate" ; trn:label "LFO Rate" ;
+    trn:minimum 0.05 ; trn:maximum 20.0 ; trn:default 2.0 ;
+    rdfs:comment "LFO rate in Hz (logarithmic)"
+], [
+    trn:symbol "lfo_shape" ; trn:label "LFO Shape" ;
+    trn:minimum 0.0 ; trn:maximum 4.0 ; trn:default 0.0 ;
+    rdfs:comment "0=Sine 1=Triangle 2=Saw 3=Square 4=Sample and hold"
+], [
+    trn:symbol "lfo_position" ; trn:label "LFO to Position" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "LFO to table position"
+], [
+    trn:symbol "lfo_pitch" ; trn:label "LFO to Pitch" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "LFO to pitch, +-1 semitone"
+], [
+    trn:symbol "lfo_cutoff" ; trn:label "LFO to Cutoff" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "LFO to cutoff, +-2 octaves"
+], [
+    trn:symbol "master" ; trn:label "Master" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.6 ;
+    rdfs:comment "Master level"
+], [
+    trn:symbol "velocity" ; trn:label "Velocity" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.7 ;
+    rdfs:comment "0 = every note at full level"
+], [
+    trn:symbol "bend_range" ; trn:label "Bend Range" ;
+    trn:minimum 0.0 ; trn:maximum 24.0 ; trn:default 2.0 ;
+    rdfs:comment "Pitch bend range in semitones"
+] .

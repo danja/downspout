@@ -96,6 +96,9 @@ Current output filenames:
 - `glue.png`
 - `octet.png`
 - `trio.png`
+- `strata.png`
+- `quartet.png`
+- `monochord.png`
 - `primefold.png`
 - `quefrency.png`
 - `keyframe.png`

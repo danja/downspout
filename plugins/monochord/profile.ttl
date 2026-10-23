@@ -1,0 +1,75 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:monochord a trn:PluginProfile ;
+    rdfs:label "Monochord" ;
+    rdfs:comment "Eight-voice waveguide string with plucked, bowed and hammered excitation, a loop tuned from its own phase delay, damping, stiffness, a pickup comb and a small body." ;
+    trn:bundleName "monochord.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/monochord/> ;
+    trn:role trn:Instrument ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Audio ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .
+
+dsp:monochord trn:hasParameter [
+    trn:symbol "exciter" ; trn:label "Exciter" ;
+    trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 0.0 ;
+    rdfs:comment "0=Pluck 1=Bow 2=Hammer"
+], [
+    trn:symbol "position" ; trn:label "Position" ;
+    trn:minimum 0.05 ; trn:maximum 0.5 ; trn:default 0.2 ;
+    rdfs:comment "Where along the string it is plucked, struck or bowed (fraction of its length)"
+], [
+    trn:symbol "hardness" ; trn:label "Hardness" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.6 ;
+    rdfs:comment "A soft pluck or wide hammer at 0, a sharp one at 1; no effect on the bow"
+], [
+    trn:symbol "bow_pressure" ; trn:label "Bow Pressure" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.5 ;
+    rdfs:comment "Bow pressure; used by the bow only"
+], [
+    trn:symbol "decay" ; trn:label "Decay" ;
+    trn:minimum 0.1 ; trn:maximum 20.0 ; trn:default 3.0 ;
+    rdfs:comment "Time in seconds for the fundamental to fall 60 dB (logarithmic)"
+], [
+    trn:symbol "damping" ; trn:label "Damping" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.3 ;
+    rdfs:comment "How much faster the high partials die; per pass, so stronger on high notes"
+], [
+    trn:symbol "stiffness" ; trn:label "Stiffness" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.5 ;
+    rdfs:comment "Sharpens the upper partials (four all-pass sections scaled to the period); the fundamental stays in tune"
+], [
+    trn:symbol "body_size" ; trn:label "Body Size" ;
+    trn:minimum 0.5 ; trn:maximum 2.0 ; trn:default 1.0 ;
+    rdfs:comment "Scales the two body resonances (logarithmic)"
+], [
+    trn:symbol "body_level" ; trn:label "Body Level" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.3 ;
+    rdfs:comment "Body resonance level"
+], [
+    trn:symbol "pickup" ; trn:label "Pickup" ;
+    trn:minimum 0.0 ; trn:maximum 0.5 ; trn:default 0.0 ;
+    rdfs:comment "Pickup comb position as a fraction of the string; 0 = off"
+], [
+    trn:symbol "release" ; trn:label "Release" ;
+    trn:minimum 5.0 ; trn:maximum 2000.0 ; trn:default 250.0 ;
+    rdfs:comment "Damper time after note-off in ms (logarithmic)"
+], [
+    trn:symbol "master" ; trn:label "Master" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.6 ;
+    rdfs:comment "Master level"
+], [
+    trn:symbol "velocity" ; trn:label "Velocity" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.7 ;
+    rdfs:comment "0 = every note at full level"
+], [
+    trn:symbol "bend_range" ; trn:label "Bend Range" ;
+    trn:minimum 0.0 ; trn:maximum 24.0 ; trn:default 2.0 ;
+    rdfs:comment "Pitch bend range in semitones"
+] .

@@ -268,6 +268,23 @@ Progress as of 2026-05-27:
   model that the tests hold to the real filter. It adds a logarithmic option to `MagnetoKit` sliders.
   Ordinary parameters, no plugin state. See `plugins/ladder/docs/design.md`. Listening and host
   validation in REAPER remain; the rest of the oxide-studio candidates are listed in `TODO.md`.
+- `monochord` is an eight-voice waveguide string in the Magneto look, a redesign inspired by `oxide-dsp`'s Tension device (`~/github/oxide-studio`, MIT/Apache-2.0), whose loop filters add
+  delay that is never compensated (so the string plays flat, by an estimated 14 cents at middle C), whose hammer pulse is not zero-mean, and whose single dispersion all-pass is inaudible. Monochord tunes the
+  loop from its own phase delay (error about 1e-12 samples; every measurable note within 0.4 cents), sets the fundamental's decay time exactly (within 12 %), makes stiffness a four-section cascade scaled to
+  the period (on a low note partial 6 is +3 to +62 cents across 0.5-0.9), and adds a pickup comb whose nulls match theory, a body, a damper and a bow that sounds at every pressure and velocity. 14 automatable
+  parameters, no plugin state, 134 core checks under ASan/UBSan. See `plugins/monochord/docs/design.md`. Listening and host validation in REAPER remain; one string per voice, no sympathetic strings.
+- `quartet` is an eight-voice four-operator FM synthesizer in the Magneto look, a redesign inspired by `oxide-dsp`'s Operator device (`~/github/oxide-studio`, MIT/Apache-2.0), whose full-level
+  modulation is about 19 rad, whose "fine" moves a frequency by up to an octave, and whose PolyBLEP saw and square are wrong under phase modulation. Quartet has band-limited operator tables
+  chosen by the modulated read speed, FM depth in cycles (sidebands match Bessel functions to four digits), fine in cents, algorithms as data (the panel draws them), optional 2x oversampling with a
+  half-band decimator (flat to 18 kHz, -89 dB stopband), pitch envelope and SVF filter. 57 automatable parameters, no plugin state, 493 core checks under ASan/UBSan. See
+  `plugins/quartet/docs/design.md`. Listening and host validation in REAPER remain; no user waveform, per-operator key or velocity scaling, or 4x mode.
+- `strata` is an eight-voice wavetable synthesizer in the Magneto look, a redesign inspired by `oxide-dsp`'s Wavetable device
+  (`~/github/oxide-studio`, MIT/Apache-2.0), whose single-resolution tables alias at high notes and whose evenly phased unison cancels the fundamental at Amount 0. Strata
+  builds each frame in 21 half-octave band-limited mips by FFT and reads the one that stays under Nyquist (a square measures -77 to -89 dB off its harmonics, a
+  naive read -12 to -25 dB), starts unison voices in step, antialiases Fold with first-order ADAA, and runs pitch, detune, pan and filter coefficients at a 32-sample control
+  rate (the first version cost 51 % of a core for eight notes at the defaults; now 9 %). Two oscillators, sub, unison, one SVF, two ADSRs, an LFO, 41 automatable parameters, no
+  plugin state, 300 core checks under ASan/UBSan. See `plugins/strata/docs/design.md`. Listening and host validation in REAPER remain; Bend and Sync still alias at about
+  -40 dB, and there is no table import or modulation matrix.
 - `trio` is a three-band dynamics processor in the Magneto look, a redesign inspired by `oxide-fx`'s Multiband Dynamics
   (`~/github/oxide-studio`, MIT/Apache-2.0), whose bands share one envelope between the left and right channels and step it
   twice per sample (halving the times and cross-steering the channels), and whose detector reads the rectified wave. Trio has
@@ -366,7 +383,7 @@ Current main gap:
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
   `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`,
-  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `grist.vst3`, `sam.vst3`, `ladder.vst3`, `glue.vst3`, `octet.vst3`, and `trio.vst3` bundles.
+  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `grist.vst3`, `sam.vst3`, `ladder.vst3`, `glue.vst3`, `octet.vst3`, `trio.vst3`, `strata.vst3`, `quartet.vst3`, and `monochord.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of

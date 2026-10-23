@@ -87,6 +87,9 @@ option(DOWNSPOUT_BUILD_LADDER "Configure the Ladder four-pole low-pass filter ta
 option(DOWNSPOUT_BUILD_GLUE "Configure the Glue bus compressor target" ON)
 option(DOWNSPOUT_BUILD_OCTET "Configure the Octet eight-band equalizer target" ON)
 option(DOWNSPOUT_BUILD_TRIO "Configure the Trio three-band dynamics target" ON)
+option(DOWNSPOUT_BUILD_STRATA "Configure the Strata wavetable synthesizer target" ON)
+option(DOWNSPOUT_BUILD_QUARTET "Configure the Quartet four-operator FM synthesizer target" ON)
+option(DOWNSPOUT_BUILD_MONOCHORD "Configure the Monochord waveguide string target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 option(DOWNSPOUT_BUILD_SCREENSHOT_APPS "Build DPF standalone apps for documentation screenshots" OFF)
 
@@ -498,4 +501,16 @@ endif()
 
 if(DOWNSPOUT_BUILD_TRIO)
     add_subdirectory(plugins/trio)
+endif()
+
+if(DOWNSPOUT_BUILD_STRATA)
+    add_subdirectory(plugins/strata)
+endif()
+
+if(DOWNSPOUT_BUILD_QUARTET)
+    add_subdirectory(plugins/quartet)
+endif()
+
+if(DOWNSPOUT_BUILD_MONOCHORD)
+    add_subdirectory(plugins/monochord)
 endif()

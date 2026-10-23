@@ -6,6 +6,30 @@
 
 namespace downspout::strata {
 
+double warpPhase(WarpMode mode, double amount, double phase, double* slope) noexcept
+{
+    double p = phase - std::floor(phase);
+    double s = 1.0;
+    switch (mode) {
+    case WarpMode::Bend: {
+        // Moves the half-way point of the cycle: 0 = unchanged, 1 = the first half takes 5 % of the cycle.
+        const double split = 0.5 + 0.45 * amount;
+        p = p < split ? p * 0.5 / split : 0.5 + (p - split) * 0.5 / (1.0 - split);
+        s = 0.5 / (1.0 - split);
+        break;
+    }
+    case WarpMode::Sync: {
+        const double mult = 1.0 + 7.0 * amount;
+        p = std::fmod(p * mult, 1.0);
+        s = mult;
+        break;
+    }
+    default: break;
+    }
+    if (slope) *slope = s;
+    return p;
+}
+
 namespace {
 
 constexpr double kPi = 3.14159265358979323846;
@@ -30,9 +54,7 @@ inline float randomUnit(std::uint32_t& s) noexcept   // 0..1
 }
 
 // Filter coefficients for the trapezoidal SVF: g = tan(pi fc / sr), k = 1 / Q.
-struct SvfCoeff {
-    double g, k, a1, a2, a3;
-};
+using SvfCoeff = FilterCoeff;
 
 SvfCoeff makeSvf(double cutoff, double resonance, double sr) noexcept
 {
@@ -78,24 +100,8 @@ inline float readOsc(const Bank& bk, const OscParams& o, double position, double
 {
     const WarpMode mode = static_cast<WarpMode>(static_cast<int>(o.warpMode));
     const double amt = o.warpAmount;
-    double p = phase - std::floor(phase);
     double slope = 1.0;
-    switch (mode) {
-    case WarpMode::Bend: {
-        // Moves the half-way point of the cycle: 0 = unchanged, 1 = the first half takes 5 % of the cycle.
-        const double split = 0.5 + 0.45 * amt;
-        p = p < split ? p * 0.5 / split : 0.5 + (p - split) * 0.5 / (1.0 - split);
-        slope = 0.5 / (1.0 - split);
-        break;
-    }
-    case WarpMode::Sync: {
-        const double mult = 1.0 + 7.0 * amt;
-        p = std::fmod(p * mult, 1.0);
-        slope = mult;
-        break;
-    }
-    default: break;
-    }
+    const double p = warpPhase(mode, amt, phase, &slope);
     const double allowed = (sr * 0.5) / std::max(freq * slope, 1.0);
     const int mip = Bank::mipForHarmonics(allowed);
     float s = bk.read(static_cast<int>(o.table), position, mip, p);
@@ -252,25 +258,44 @@ Parameters clampParameters(const Parameters& in) noexcept
     return p;
 }
 
-double envelopeStep(Envelope& e, bool gate, double attackMs, double decayMs, double sustain, double releaseMs, double sr) noexcept
+namespace {
+
+// The envelope with its three per-sample constants worked out once per block.
+struct EnvCoeffs {
+    double attackInc, decayCoef, sustain, releaseCoef;
+    EnvCoeffs(double attackMs, double decayMs, double sus, double releaseMs, double sr)
+        : attackInc(1.0 / std::max(attackMs * 0.001 * sr, 1.0)),
+          decayCoef(std::exp(-1.0 / std::max(decayMs * 0.001 * sr, 1.0))),
+          sustain(sus),
+          releaseCoef(std::exp(-1.0 / std::max(releaseMs * 0.001 * sr, 1.0))) {}
+};
+
+inline double stepEnvelope(Envelope& e, bool gate, const EnvCoeffs& c) noexcept
 {
     if (e.stage == Envelope::Stage::Idle) return 0.0;
     if (!gate && e.stage != Envelope::Stage::Release) e.stage = Envelope::Stage::Release;
     switch (e.stage) {
     case Envelope::Stage::Attack:
-        e.value += 1.0 / std::max(attackMs * 0.001 * sr, 1.0);
+        e.value += c.attackInc;
         if (e.value >= 1.0) { e.value = 1.0; e.stage = Envelope::Stage::Decay; }
         break;
     case Envelope::Stage::Decay:
-        e.value = sustain + (e.value - sustain) * std::exp(-1.0 / std::max(decayMs * 0.001 * sr, 1.0));
+        e.value = c.sustain + (e.value - c.sustain) * c.decayCoef;
         break;
     case Envelope::Stage::Release:
-        e.value *= std::exp(-1.0 / std::max(releaseMs * 0.001 * sr, 1.0));
+        e.value *= c.releaseCoef;
         if (e.value < 1.0e-4) { e.value = 0.0; e.stage = Envelope::Stage::Idle; }
         break;
     default: break;
     }
     return e.value;
+}
+
+}  // namespace
+
+double envelopeStep(Envelope& e, bool gate, double attackMs, double decayMs, double sustain, double releaseMs, double sr) noexcept
+{
+    return stepEnvelope(e, gate, EnvCoeffs(attackMs, decayMs, sustain, releaseMs, sr));
 }
 
 double filterResponseDb(FilterType type, double cutoffHz, double resonance, double hz, double sampleRate) noexcept
@@ -330,6 +355,9 @@ void processBlock(EngineState& st, const Parameters& rawParams, float sampleRate
     // coherent at Amount 0, so the level does not jump with the number of voices.
     const float uniWeight = std::pow(static_cast<float>(nUni), -(1.0f - 0.5f * p.unisonAmount));
 
+    const EnvCoeffs ampCoeffs(p.ampAttackMs, p.ampDecayMs, p.ampSustain, p.ampReleaseMs, sr);
+    const EnvCoeffs fltCoeffs(p.fltAttackMs, p.fltDecayMs, p.fltSustain, p.fltReleaseMs, sr);
+
     std::uint32_t nextEvent = 0;
     for (std::uint32_t i = 0; i < frames; ++i) {
         while (nextEvent < eventCount && events[nextEvent].frame <= i) handleEvent(st, p, events[nextEvent++]);
@@ -349,17 +377,25 @@ void processBlock(EngineState& st, const Parameters& rawParams, float sampleRate
         for (Voice& v : st.voices) {
             if (!v.active) continue;
             const bool gate = v.held || v.sustained;
-            const double ampEnv = envelopeStep(v.amp, gate, p.ampAttackMs, p.ampDecayMs, p.ampSustain, p.ampReleaseMs, sr);
-            const double fltEnv = envelopeStep(v.flt, gate, p.fltAttackMs, p.fltDecayMs, p.fltSustain, p.fltReleaseMs, sr);
+            const double ampEnv = stepEnvelope(v.amp, gate, ampCoeffs);
+            const double fltEnv = stepEnvelope(v.flt, gate, fltCoeffs);
             if (v.amp.stage == Envelope::Stage::Idle) { v.active = false; continue; }
 
-            const double baseSemi = (v.note - 69) + st.bend + lfo * p.lfoPitch;
-            const double noteHz = 440.0 * std::exp2(baseSemi / 12.0);
             const double posMod = fltEnv * p.envPosition + lfo * p.lfoPosition * 0.5;
 
             // Unison detune and pan change slowly, so they are worked out every 32 samples, not every sample.
             if (v.controlCountdown-- <= 0) {
                 v.controlCountdown = 31;
+                // Pitch and filter move slowly too (bend, LFO and the filter envelope are all well under 1 kHz).
+                const double baseSemi = (v.note - 69) + st.bend + lfo * p.lfoPitch;
+                const double noteHz = 440.0 * std::exp2(baseSemi / 12.0);
+                for (int o = 0; o < 2; ++o)
+                    v.oscHz[static_cast<size_t>(o)] = noteHz * std::exp2((p.osc[static_cast<size_t>(o)].transpose + p.osc[static_cast<size_t>(o)].fineCents * 0.01) / 12.0);
+                v.subHz = std::min(noteHz * (p.subOctave >= 0.5f ? 0.25 : 0.5), sr * 0.48);
+                const double oct = p.keyTrack * (v.note - 60) / 12.0 + p.envAmount * 4.0 * fltEnv + p.lfoCutoff * 2.0 * lfo;
+                const double cutoff = static_cast<double>(st.cutoffSmooth) * std::exp2(oct);
+                v.coeff1 = makeSvf(cutoff, p.resonance, sr);
+                v.coeff2 = makeSvf(cutoff, 0.0, sr);
                 for (int u = 0; u < nUni; ++u) {
                     const double spread = nUni > 1 ? 2.0 * u / (nUni - 1) - 1.0 : 0.0;
                     double detune = 0.0, pan = 0.0;
@@ -392,7 +428,7 @@ void processBlock(EngineState& st, const Parameters& rawParams, float sampleRate
                 const OscParams& op = p.osc[static_cast<size_t>(o)];
                 if (op.level <= 0.0f && st.levelSmooth[o] < 1e-4f) continue;
                 const double position = std::min(std::max(st.posSmooth[o] + posMod, 0.0), 1.0);
-                const double oscHz = noteHz * std::exp2((op.transpose + op.fineCents * 0.01) / 12.0);
+                const double oscHz = v.oscHz[static_cast<size_t>(o)];
                 for (int u = 0; u < nUni; ++u) {
                     const double freq = std::min(oscHz * v.detuneRatio[static_cast<size_t>(u)], sr * 0.48);
                     double& ph = v.phase[static_cast<size_t>(o)][static_cast<size_t>(u)];
@@ -406,18 +442,15 @@ void processBlock(EngineState& st, const Parameters& rawParams, float sampleRate
             }
             double subL = 0.0, subR = 0.0;
             if (p.subLevel > 0.0f || st.subSmooth > 1e-4f) {
-                const double subHz = std::min(noteHz * (p.subOctave >= 0.5f ? 0.25 : 0.5), sr * 0.48);
-                v.subPhase += subHz / sr;
+                v.subPhase += v.subHz / sr;
                 v.subPhase -= std::floor(v.subPhase);
                 const double sub = std::sin(2.0 * kPi * v.subPhase) * st.subSmooth;
                 subL = subR = sub * 0.7071;
             }
 
             // Filter: cutoff follows the key, the filter envelope and the LFO, all in octaves.
-            const double oct = p.keyTrack * (v.note - 60) / 12.0 + p.envAmount * 4.0 * fltEnv + p.lfoCutoff * 2.0 * lfo;
-            const double cutoff = static_cast<double>(st.cutoffSmooth) * std::exp2(oct);
-            const SvfCoeff c1 = makeSvf(cutoff, p.resonance, sr);
-            const SvfCoeff c2 = makeSvf(cutoff, 0.0, sr);
+            const SvfCoeff& c1 = v.coeff1;
+            const SvfCoeff& c2 = v.coeff2;
             const double inL = oscL[0] * st.levelSmooth[0] + oscL[1] * st.levelSmooth[1] + subL;
             const double inR = oscR[0] * st.levelSmooth[0] + oscR[1] * st.levelSmooth[1] + subR;
             const double fl = filterSample(ftype, v.filter1[0], v.filter2[0], c1, c2, inL);

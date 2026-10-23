@@ -1,0 +1,113 @@
+#include "DistrhoPlugin.hpp"
+
+#include "quartet_core.hpp"
+#include "quartet_params.hpp"
+
+#include <array>
+
+START_NAMESPACE_DISTRHO
+
+namespace core = downspout::quartet;
+
+// Eight-voice four-operator FM synthesizer. Every control is an ordinary automatable host parameter,
+// which DPF saves by symbol, so there is no plugin state.
+class QuartetPlugin : public Plugin
+{
+public:
+    QuartetPlugin()
+        : Plugin(core::kParameterCount, 0, 0)
+    {
+        // Build the waveform tables and the decimator here, off the audio thread.
+        (void)core::readWave(core::Wave::Saw, 0.0, 1024.0);
+        (void)core::decimatorTaps();
+    }
+
+protected:
+    const char* getLabel() const override       { return "Quartet"; }
+    const char* getDescription() const override { return "Four-operator FM synthesizer with eleven algorithms, band-limited waveforms, optional 2x oversampling, a pitch envelope and a filter."; }
+    const char* getMaker() const override       { return "danja"; }
+    const char* getHomePage() const override    { return "https://danja.github.io/downspout/"; }
+    const char* getLicense() const override     { return "MIT"; }
+
+    uint32_t getVersion() const override
+    {
+        return d_version(DOWNSPOUT_PLUGIN_VERSION_MAJOR,
+                         DOWNSPOUT_PLUGIN_VERSION_MINOR,
+                         DOWNSPOUT_PLUGIN_VERSION_PATCH);
+    }
+
+    int64_t getUniqueId() const override { return d_cconst('Q', 'r', 't', 't'); }
+
+    void initAudioPort(const bool input, const uint32_t index, AudioPort& port) override
+    {
+        Plugin::initAudioPort(input, index, port);
+        if (index < 2) port.groupId = kPortGroupStereo;
+        port.name   = String(input ? "Input " : "Output ") + String(static_cast<int>(index + 1));
+        port.symbol = String(input ? "in_" : "out_")       + String(static_cast<int>(index + 1));
+    }
+
+    void initParameter(uint32_t index, Parameter& parameter) override
+    {
+        if (index >= core::kParameterCount)
+            return;
+        const auto& spec = core::specs()[index];
+        parameter.name   = spec.name;
+        parameter.symbol = spec.symbol;
+        parameter.unit   = spec.unit;
+        parameter.hints  = kParameterIsAutomatable;
+        if (spec.integer)     parameter.hints |= kParameterIsInteger;
+        if (spec.logarithmic) parameter.hints |= kParameterIsLogarithmic;
+        parameter.ranges.min = spec.minimum;
+        parameter.ranges.max = spec.maximum;
+        parameter.ranges.def = spec.defaultValue;
+    }
+
+    float getParameterValue(uint32_t index) const override
+    {
+        return index < core::kParameterCount ? core::field(parameters_, index) : 0.0f;
+    }
+
+    void setParameterValue(uint32_t index, float value) override
+    {
+        if (index >= core::kParameterCount)
+            return;
+        core::field(parameters_, index) = value;
+        parameters_ = core::clampParameters(parameters_);
+    }
+
+    // Silences the voices only. The patch lives in the parameters.
+    void activate() override { core::resetState(engine_); }
+
+    void run(const float**, float** outputs, uint32_t frames, const MidiEvent* midiEvents, uint32_t midiEventCount) override
+    {
+        uint32_t count = 0;
+        for (uint32_t i = 0; i < midiEventCount && count < events_.size(); ++i) {
+            const MidiEvent& in = midiEvents[i];
+            if (in.size < 2) continue;
+            const uint8_t status = in.data[0] & 0xF0;
+            core::MidiEvent e;
+            e.frame = in.frame;
+            if (status == 0x90 && in.size >= 3)       { e.type = core::MidiEvent::Type::NoteOn;     e.data1 = in.data[1]; e.data2 = in.data[2]; }
+            else if (status == 0x80)                  { e.type = core::MidiEvent::Type::NoteOff;    e.data1 = in.data[1]; }
+            else if (status == 0xB0 && in.size >= 3)  { e.type = core::MidiEvent::Type::Controller; e.data1 = in.data[1]; e.data2 = in.data[2]; }
+            else if (status == 0xE0 && in.size >= 3)  { e.type = core::MidiEvent::Type::PitchBend;  e.bend = (static_cast<int>(in.data[2]) << 7 | in.data[1]) - 8192; }
+            else continue;
+            events_[count++] = e;
+        }
+        core::processBlock(engine_, parameters_, static_cast<float>(getSampleRate()), frames, events_.data(), count, outputs[0], outputs[1]);
+    }
+
+private:
+    core::Parameters  parameters_ {};
+    core::EngineState engine_ {};
+    std::array<core::MidiEvent, 512> events_ {};
+
+    DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(QuartetPlugin)
+};
+
+Plugin* createPlugin()
+{
+    return new QuartetPlugin();
+}
+
+END_NAMESPACE_DISTRHO

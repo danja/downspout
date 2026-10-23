@@ -153,15 +153,31 @@ std::vector<double> synthesize(const Series& s, int limit)
 
 }  // namespace
 
+namespace {
+
+const std::array<int, kMips>& harmonicLimits()
+{
+    static const std::array<int, kMips> limits = [] {
+        std::array<int, kMips> l {};
+        for (int m = 0; m < kMips; ++m)
+            l[static_cast<size_t>(m)] = std::max(1, static_cast<int>(std::floor(kMaxHarmonics * std::pow(2.0, -0.5 * m) + 1e-9)));
+        return l;
+    }();
+    return limits;
+}
+
+}  // namespace
+
 int Bank::harmonicLimit(int mip) noexcept
 {
-    return std::max(1, static_cast<int>(std::floor(kMaxHarmonics * std::pow(2.0, -0.5 * mip) + 1e-9)));
+    return harmonicLimits()[static_cast<size_t>(std::min(std::max(mip, 0), kMips - 1))];
 }
 
 int Bank::mipForHarmonics(double allowed) noexcept
 {
+    const auto& l = harmonicLimits();
     for (int m = 0; m < kMips; ++m)
-        if (harmonicLimit(m) <= allowed) return m;
+        if (l[static_cast<size_t>(m)] <= allowed) return m;
     return kMips - 1;
 }
 

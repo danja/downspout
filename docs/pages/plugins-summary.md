@@ -80,6 +80,9 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | glue | glue.vst3 | audio effect (compressor) | 2/2 | no/no | no |
 | octet | octet.vst3 | audio effect (equalizer) | 2/2 | no/no | no |
 | trio | trio.vst3 | audio effect (multiband dynamics) | 2/2 | no/no | no |
+| strata | strata.vst3 | instrument (wavetable) | 0/2 | yes/no | no |
+| quartet | quartet.vst3 | instrument (FM) | 0/2 | yes/no | no |
+| monochord | monochord.vst3 | instrument (string) | 0/2 | yes/no | no |
 | guardian | guardian.vst3 | audio utility (limiter) | 2/2 | no/no | no |
 | harmonic-atlas | harmonic_atlas.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | helterskelter | helterskelter.vst3 | audio effect (wah) | 2/2 | yes/no | yes |
@@ -601,6 +604,38 @@ Fixed-cost stereo feedback-delay-network reverb, low CPU, usable as insert or 10
 send. Fixed CC 32 Wet mix and CC 33 Space; same CC 19 lifecycle, channel isolation and
 MIDI-through behaviour as loopdelay.
 
+### monochord
+Eight-voice waveguide string (a redesign, not a port, of the Oxide Studio Tension). MIDI in (velocity, pitch bend over **Bend range**, sustain pedal CC 64, CC 120 and 123), stereo out
+(mono voices, both channels equal), no audio input, no transport use, no plugin state: 14 automatable parameters. A delay line closed into a loop with a damping low-pass, a fractional-delay all-pass and
+a four-section stiffness all-pass; the loop is tuned from its own phase delay (error about 1e-12 samples), so every note is within 0.4 cents whatever the damping and stiffness. **Exciter** Pluck (a
+triangle, rounded as **Hardness** falls), Bow (friction while the key is held; **Bow pressure**) or Hammer (a half-sine pulse); **Position** 0.05-0.5 sets where along the string. **Decay** 0.1-20 s is the
+fundamental's 60 dB time (within 12 % at Damping 0), **Damping** makes the high partials die faster (partial 8 at about 2x the fundamental's rate at 0.7; per pass, so stronger on high notes),
+**Stiffness** sharpens the upper partials (on a low note partial 6: +3 cents at 0.5, +20 at 0.7, +62 at 0.9) without moving the fundamental. **Pickup** is a comb at a fraction of the string (at 1/n it removes
+every n-th harmonic), **Body size** and **Body level** add two resonances, **Release** is the damper after note-off. The panel plots the string's initial shape and the harmonics it gives. About 0.8 % of a core
+for a note, 6 % for eight.
+
+### quartet
+Eight-voice four-operator FM synthesizer (a redesign, not a port, of the Oxide Studio Operator). MIDI in (velocity, pitch bend over **Bend range**, sustain pedal CC 64, CC 120 and
+123), stereo out (mono voices, both channels equal), no audio input, no transport use, no plugin state: 57 automatable parameters (`opa_wave` ... `quality`). Each operator A-D has a **Waveform**
+(sine, or a band-limited saw or square), **Ratio** 0.25-32 with **Fine** +-50 cents or a **Fixed Hz**, a **Level** (a carrier's output, a modulator's FM amount) and its own ADSR. **Algorithm** 1-11
+routes them (1 D>C>B>A; 4 D>(B+C)>A; 11 all additive; carriers are averaged); the panel draws the routing from the same table. **FM Depth** (0-4 cycles; the index in radians is 2 pi x depth x
+level) and **Feedback** (D into itself). A **Pitch envelope** (+-48 st, ADSR) and one **Filter** (LP 12, LP 24, HP 12, BP, Notch; cutoff, resonance, key track). **Quality** 2x runs the voice
+oversampled and decimates with a 63-tap half-band FIR (flat to 18 kHz, -89 dB stopband): on a deliberately extreme patch it lowers aliasing from -17 to -53 dB at note 72, -8 to -26 at note 84,
+-2 to -8 at note 96. Saw and square operators stay under -77 dB inharmonic at every pitch. About 1 % of a core for a note and 5 % for eight at 1x; 2 % and 13 % at 2x.
+
+### strata
+Eight-voice wavetable synthesizer (a redesign, not a port, of the Oxide Studio Wavetable). MIDI in (velocity, pitch bend over
+**Bend range**, sustain pedal CC 64, CC 120 and 123), stereo out, no audio input, no transport use, no plugin state: 41 automatable parameters
+(`osc1_table` ... `bend_range`). Two oscillators each read one of five table families (**Table**: Basic, Harmonics, Formant, Digital, Vintage) of eight
+frames that **Position** scrolls through; every frame is stored in 21 band-limited versions and the read picks the one that stays under Nyquist, so
+a square measures -77 to -89 dB away from its harmonics at every pitch (a naive read: -12 to -25 dB). **Warp** is None, Bend, Sync or Fold (Fold is
+antialiased), with an amount; warp aliasing at note 60, amount 0.7 is -42.6, -38.5 and -33.1 dB. Per oscillator **Transpose** +-24 st, **Fine** +-50 ct,
+**Level**. A sine **Sub** (-1 or -2 octaves), **Unison** (Classic, Shimmer or Noise; 1-8 voices; Amount; the voices are in step at Amount 0, so the
+fundamental never cancels), one **Filter** (LP 12, LP 24, HP 12, BP, Notch; cutoff, resonance, key track, filter envelope to cutoff and to position),
+amplitude and filter ADSRs, one **LFO** (five shapes; to position, pitch, cutoff), **Master**, **Velocity**. A one-pole DC blocker at about 4 Hz is on the
+output. Eight voices; a ninth steals the quietest. About 2 % of a core for a note, 9 % for eight at the defaults, 28 % for the heaviest unison, up to
+about 90 % with Fold and Sync together. The panel plots each oscillator's warped waveform.
+
 ### trio
 Three-band dynamics, stereo, no MIDI, transport, latency or plugin state (a redesign, not a port, of the Oxide Studio Multiband
 Dynamics). Two adjustable Linkwitz-Riley crossovers (**Low** 40-1000 Hz, default 250; **High** 1-12 kHz, default 2.5 kHz, held at
@@ -813,7 +848,7 @@ a note-on), so it does not follow other channels.
 - **Need MIDI from audio:** ghost (transient-triggered ghost notes), oracle (analysis).
 - **Need automation CCs:** drift (four lanes), mixgen (mix lanes), gremlin-driver and
   flues-synth-driver (specific targets), conductor.
-- **Need a pitched sound:** canticle (general), basilico (bass), moka (mallets), syrinx
+- **Need a pitched sound:** monochord (string), strata (wavetable), quartet (FM), canticle (general), basilico (bass), moka (mallets), syrinx
   (birds), pratt (GM voices), floozy, gremlin (glitch), campione / mosaic (samples),
   tuney-vst. Bend-aware: see the per-channel list at the top.
 - **Need an unpitched sound:** drumkit, magneto, bubbles.

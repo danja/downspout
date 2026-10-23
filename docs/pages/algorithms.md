@@ -106,6 +106,19 @@ current Downspout plugins.
   a 4 s buffer and replayed by up to 32 overlapping grains (position, size, shape,
   pitch, density, scatter), with feedback, a Griesinger reverb, freeze, and optional
   host-grid grain triggering.
+- [`Monochord`]({{ '/plugins/monochord/' | relative_url }}): a delay line of N samples in a loop with a one-pole low-pass (1 - a) / (1 - a z^-1), a first-order all-pass (c + z^-1) / (1 + c z^-1) for the fraction and four more for
+  stiffness. For a note f0 the fixed phase delays at omega0 = 2 pi f0 / sr are summed, the remainder of the period gives N and a fraction d in [0.5, 1.5), and the all-pass coefficient is found by bisection so that its phase delay at
+  omega0 equals d: the loop delay at f0 is exactly sr / f0. The loop gain is 10^(-3 / (decay f0)) / |H_lp(omega0)|. A pluck is a triangle with its apex at the position (rounded by (1/4, 1/2, 1/4) passes), a hammer a half-sine of width
+  (0.02 + 0.28 (1 - hardness)) of the string, both with the mean removed. The bow adds 0.5 drive 2 v / (1 + (g v)^2) with v the bow speed minus the string value. The pickup is x[n] - x[n - d] with d the pickup fraction of N.
+- [`Quartet`]({{ '/plugins/quartet/' | relative_url }}): operator i is `amp_i x wave(phase_i + depth x sum_m out_m [+ feedback])`, evaluated for operators D to A each (oversampled) sample, where `m` ranges over the
+  modulators the algorithm's bitmask lists for i; phases are in cycles, so the index in radians is 2 pi x depth x amp. Carriers are summed and divided by their count. Saw and square are 2048-point tables with harmonics
+  limited to `1024 >> k`; the mip is the finest whose limit is at most `(sr / 2) / (f x slope)`, slope = 1 + 2 pi depth sum(|amp_m| f_m) / f. Feedback adds `0.398 x fb x (y[n-1] + y[n-2]) / 2` cycles to D. At 2x
+  the voice runs at twice the rate and a 63-tap Kaiser half-band FIR (beta 8, h[n] = 0.5 sinc((n - 31) / 2) w[n], normalised to unity DC gain) decimates it.
+- [`Strata`]({{ '/plugins/strata/' | relative_url }}): wavetables stored as harmonic spectra, with 21 mips made by inverse FFT keeping harmonics up to 1024 2^(-k/2). A read at
+  frequency f and warp speed-up s takes the finest mip with limit <= (sr / 2) / (f s), cubic Hermite along the phase and linear between frames, so no harmonic can pass Nyquist.
+  Bend maps p to p / (2 b) below b and 0.5 + (p - b) / (2 (1 - b)) above, with b = 0.5 + 0.45 a; Sync reads (p (1 + 7 a)) mod 1; Fold is sin(g s) with g = 0.5 pi (1 + 6 a),
+  antialiased by first-order ADAA, (cos(g s0) - cos(g s)) / (g (s - s0)). Unison starts its voices at random phases scaled by Amount and weights them n^-(1 - Amount/2).
+  The filter is a trapezoidal state-variable filter, g = tan(pi f / sr), k from 1.414 to 0.05; attack is linear, decay and release are one-pole exponentials.
 - [`Trio`]({{ '/plugins/trio/' | relative_url }}): two 4th-order Linkwitz-Riley splits in double precision (each LR4 is two identical Butterworth cells).
   Low = AP_H(LP_L(x)), mid = LP_H(HP_L(x)), high = HP_H(HP_L(x)), where AP_H = LP_H + HP_H of the high crossover; the sum is
   AP_L AP_H, an exact all-pass. Each band's detector is a peak hold, d = max(max(|L|, |R|), d e^(-1/tau)) with tau about two periods of

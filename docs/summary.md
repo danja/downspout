@@ -184,6 +184,29 @@ controls. Put it on a synth or bass and automate Cutoff; reach for Skream instea
 scream-style feedback filter, and Damiano after it for distortion. Resonance with full Bass Comp is
 loud, so trim Output. See `plugins/ladder/docs/design.md`.
 
+### Monochord (`monochord.vst3`)
+
+Eight-voice waveguide string that can be **plucked**, **bowed** or **struck**. The loop is tuned from its own phase delay, so notes are in tune whatever you do to the string. **Position** sets where
+along it you pluck, strike or bow (a string plucked a fifth of the way along has no fifth harmonic), **Decay** and **Damping** set how long it rings and how fast the highs die, **Stiffness** gives the sharp upper
+partials of a thick string, and **Pickup** puts a comb filter along it. Two body resonances and a damper on note-off finish it. The panel shows the shape the string starts in and the harmonics that gives. Use it for
+guitar-like plucks, hammered strings, bowed drones, or any of the generators (bassgen for a plucked bass, harmonic-atlas for chords). See `plugins/monochord/docs/design.md`.
+
+### Quartet (`quartet.vst3`)
+
+Eight-voice four-operator FM synthesizer. Four operators, each a sine, saw or square with its own ratio (or fixed frequency) and envelope, are connected by one of eleven
+**algorithms**: the panel draws the routing so you can see which operator modulates which and which you hear. **FM Depth** sets how hard modulators push, **Feedback** roughens operator D,
+and **Quality** 2x oversamples the voice for cleaner bright patches. A pitch envelope gives the classic FM "pluck" or kick, and one multimode filter shapes the result. Use it for electric
+pianos, bells, plucks and metallic basses. Play it from a keyboard or from any of the generators (bassgen for a bass, melgen or harmonic-atlas for chords). See `plugins/quartet/docs/design.md`.
+
+### Strata (`strata.vst3`)
+
+Eight-voice wavetable synthesizer. Two oscillators each read a table family (Basic, Harmonics, Formant, Digital or Vintage) whose eight frames
+**Position** scrolls through, and **Warp** (Bend, Sync or Fold) shapes the cycle; the tables are band-limited at every pitch, so high notes stay clean. Add a
+sine **Sub**, **Unison** (voices play in step at Amount 0, then spread in detune and width), one multimode **Filter**, amplitude and filter envelopes, and an
+**LFO** that can move the table position, the pitch and the cutoff. The filter envelope can also scroll Position, which is where wavetable pads come from. The
+panel plots the waveform each oscillator is producing. Play it from a keyboard or from any of the generators (bassgen for a bass, melgen or harmonic-atlas for a
+pad). See `plugins/strata/docs/design.md`.
+
 ### Trio (`trio.vst3`)
 
 Three-band dynamics with no MIDI and no latency, in the OTT manner. The signal is split at two adjustable crossovers

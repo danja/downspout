@@ -15,7 +15,7 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 
 ## Session state (found 2026-10-06)
 
-`scripts/check-plugin-state.sh` reports **42 correct / 0 broken / 22 no state** (see the note below: "no state" is not data loss). The six
+`scripts/check-plugin-state.sh` reports **45 correct / 0 broken / 34 parameters only** as of 2026-10-23 (see the note below: "parameters only" is not data loss; the seven new plugins from the oxide-studio review are all parameters only). The six
 plugins that silently wrote their defaults into every project (chipper, damiano, ghost,
 helterskelter, skream, spliff) now have `WANT_FULL_STATE` and a `getState()`.
 
@@ -265,19 +265,25 @@ reverb/delay, resonators and every MIDI generator, so only gaps are listed. In o
        peak-hold detector per band linked across channels, Time/Amount/Upward-limit controls and live per-band gain bars; 303 core
        checks pass. Still to do: host validation, listen (the OTT defaults are strong; detector decay times are my choice), soft
        knee, band solo, external sidechain, Drift CC input.
-5. [ ] **Wavetable synth** (`oxide-dsp/src/wavetable/`): IN PROGRESS as `plugins/strata/` (not wired into the root build yet, so
-       it cannot break anything). Done 2026-10-23: band-limited half-octave mip tables built by FFT (`strata_tables.*`), the
-       8-voice engine (`strata_core.*`: two table oscillators, Bend/Sync/Fold warp with ADAA fold, sine sub, unison, SVF filter,
-       two ADSRs, LFO, MIDI, DC blocker), `strata_params.hpp` (41 parameters), and 300 core checks passing
-       (`tests/strata_core_tests.cpp`, built by hand with g++; no CMake yet). Measured: unwarped inharmonic power -77 to -88 dB at
-       every pitch against -12 to -25 dB for the same table read naively; warp aliasing at note 60, amount 0.7: Bend -42.6,
-       Sync -38.5, Fold -33.1 dB. The Oxide source has unaliased naive tables and cancelling evenly-phased unison.
-       Still to do: `plugins/strata/CMakeLists.txt`, DPF wrapper + UI (copy the `trio` pattern; show the current frame's
-       waveform), `profile.ttl`, wire with `python3 <scratchpad>/wire.py` equivalent (root CMake option, install.sh,
-       package scripts, workflow, screenshot script, docs lists), docs/product page, screenshot, design.md, CPU timing.
-6. [ ] **4-op FM** (`oxide-dsp/src/operator/`): 11 routing algorithms. No FM synth yet.
-7. [ ] Lower priority: Electric piano and Collision/Tension physical models (near moka, syrinx,
-       magneto), Meld-style engines (Swarm, Formant, Chord, Shepard), Drift-style analog synth.
+5. [x] **Wavetable synth** (`oxide-dsp/src/wavetable/`): done 2026-10-23 as `plugins/strata/`, fully wired. A redesign: the source's tables are not
+       band-limited (aliasing at high notes) and its evenly phased unison cancels the fundamental at Amount 0. Strata has 21 half-octave band-limited
+       mips per frame built by FFT (unwarped square: -77 to -89 dB off its harmonics at every pitch, against -12 to -25 dB for a naive read), in-step
+       unison, ADAA Fold, control-rate pitch/filter (CPU for 8 notes at the defaults fell from 51 % to 9 % of a core), and 300 core checks under
+       ASan/UBSan. Warp aliasing at note 60, amount 0.7: Bend -42.6, Sync -38.5, Fold -33.1 dB. Still to do: host validation, listen, oversampled warps,
+       table import, a modulation matrix, voice-steal click, portamento/mono mode, Fold+Sync worst case is about 90 % of a core.
+6. [x] **4-op FM** (`oxide-dsp/src/operator/`): done 2026-10-23 as `plugins/quartet/`, fully wired. A redesign: the source's full-level modulation is about 19 rad, its
+       "fine" is a percentage (an octave at the extreme), and its PolyBLEP saw and square are wrong under phase modulation. Quartet has band-limited operator tables chosen by the modulated
+       read speed, FM depth in cycles (sidebands match Bessel to four digits), algorithms as data (drawn on the panel), optional 2x oversampling with a half-band decimator, a pitch envelope
+       and an SVF; 493 core checks under ASan/UBSan, 57 parameters. Still to do: host validation, listen, user waveform (the source's 16-harmonic one), per-operator key/velocity scaling, 4x
+       oversampling for bright FM at the top of the keyboard, mono/legato mode, voice-steal click.
+7. Physical models and the Meld/Drift-style synths:
+   - [x] **Tension** (waveguide string): done 2026-10-23 as `plugins/monochord/`, fully wired. A redesign: the source's loop filters add delay that is never compensated (the string plays flat, an
+     estimated 14 cents at middle C), its hammer pulse is not zero-mean, and its single dispersion all-pass is inaudible. Monochord tunes the loop from its own phase delay (error ~1e-12 samples; notes within
+     0.4 cents), sets the fundamental's decay exactly, makes stiffness a four-section cascade, and adds a pickup comb, body, damper and a bow that sounds at every pressure and velocity; 134 core checks under
+     ASan/UBSan, 14 parameters. Still to do: host validation, listen, sympathetic strings / several strings per note, frequency-dependent T60, bow noise.
+   - [ ] Decided not to build (2026-10-23), revisit if wanted: **Electric piano** and **Collision** are a few modal filters each, which Moka (modal hit objects) and Quartet (FM electric-piano timbres) already
+     cover; the **Meld** engines (Swarm, Harmonic, Sub, NoiseLoop, FM, Fold, Chip, Bitcrush, Formant, Chord, Resonator, Shepard) mostly overlap Strata's tables and warps and Quartet's FM; a **Drift-style analog synth**
+     overlaps Basilico (bass) and Strata with a filter. If one is wanted, Meld's Shepard and Chord engines are the least covered.
 8. [ ] Skip or only if wanted: spectral resonator and Auto Shift (overlap resonance-garden, qune,
        quefrency), warp engine (overlaps keyframe, qune, grist), stem splitter (crude), groove pool.
 
@@ -289,6 +295,9 @@ reverb/delay, resonators and every MIDI generator, so only gaps are listed. In o
 * glue
 * octet
 * trio
+* strata
+* quartet
+* monochord
 * ghost
 * spliff
 * ambo
