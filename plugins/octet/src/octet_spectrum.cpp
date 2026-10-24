@@ -70,7 +70,8 @@ void fft(std::array<double, kFftSize>& re, std::array<double, kFftSize>& im)
 void refresh(SpectrumState& s, const float sampleRate)
 {
     const Tables& t = tables();
-    static thread_local std::array<double, kFftSize> re, im;   // scratch: 64 KB, kept off the stack
+    auto& re = s.re;
+    auto& im = s.im;
     for (int i = 0; i < kFftSize; ++i) {
         re[static_cast<size_t>(i)] = static_cast<double>(s.ring[static_cast<size_t>((s.writePos + i) % kFftSize)]) * t.window[static_cast<size_t>(i)];
         im[static_cast<size_t>(i)] = 0.0;

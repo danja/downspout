@@ -22,6 +22,7 @@ struct SpectrumState {
     std::array<float, kFftSize> ring {};
     int writePos = 0;
     int sinceUpdate = 0;
+    std::array<double, kFftSize> re {}, im {};        // FFT scratch (64 KB, in the state so nothing is thread-local or on the stack)
     std::array<float, kSpectrumBins> levelDb {};   // starts at the floor after resetSpectrum
     bool primed = false;
 };
