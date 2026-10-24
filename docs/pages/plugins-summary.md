@@ -122,7 +122,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | spliff | spliff.vst3 | audio effect (transients) | 2/2 | yes/no | no |
 | markov | markov.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | sprout | sprout.vst3 | MIDI generator | 0/2 | yes/yes | yes |
-| syrinx | syrinx.vst3 | instrument (birdsong) | 0/2 | yes/no | no |
+| syrinx | syrinx.vst3 | instrument + audio-driven voice (birdsong) | 2/2 | yes/no | no |
 | t-mix | t_mix.vst3 | audio mixer | 8/2 | yes/yes | no |
 | trajectory | trajectory.vst3 | instrument (polygon bounce) | 0/2 | yes/no | no |
 | fathom | fathom.vst3 | instrument (drone) | 0/2 | yes/no | no |
@@ -424,13 +424,18 @@ presets including Kalimba. Note onset ramps over the mallet contact time (no cli
 Per-channel pitch bend with RPN 0, voices keyed by channel and note.
 
 ### syrinx
-Polyphonic birdsong synthesiser: Mindlin-Laje syrinx ODE solved per voice at audio rate
-with optional oversampling, pitch-tracking vocal-tract bandpass, formant bank, respiration
-and noise/roughness modifiers. Up to eight voices, oldest-completed voice stealing, ten
-presets (Wren to Custom). Controls: Level, Noise, Roughness, Timbre, Vibrato Rate and
-Depth, Contour Bend, Harmonic, AM Rate, Distance, Gain. CCs 1 vibrato depth, 7 volume,
-71 roughness, 74 timbre, 76 vibrato rate, 77 noise, 91 distance, 94 contour bend.
-Per-channel pitch bend with RPN 0.
+Avian syrinx voice: the Mindlin-Laje ODE solved per voice at audio rate, with the oscillator
+pitch-locked to its target f0 so contours really sweep the source, a pitch-tracking vocal-tract
+bandpass, tracheal formant comb, respiration and noise/roughness modifiers. Ten presets (Wren to
+Custom), up to eight voices. **Source** picks the player. **MIDI**: each note-on plays a phrase of
+1-16 short syllables (Chirp sets speed and sweep depth, Variation the spread, Gap the silence between).
+**Audio in**: the input is analysed for pitch (autocorrelation), loudness, sibilance and onsets, and
+that steers a free-running bird voice (Pitch Multiplier, Voice Range, Gate, Pitch Glide, Hiss to
+Turbulence, Bird Mix); the keyboard is ignored. **Both** runs the two together. Status outputs
+(input level, input Hz, bird Hz, state) feed the live pitch plot in the UI. CCs 1 vibrato depth,
+7 volume, 11 level, 71 roughness, 73 duration, 74 timbre, 76 vibrato rate, 77 noise, 78 harmonic,
+79 coupling, 80 AM depth, 81 syllables, 82 chirp, 83 pitch, 84 variation, 85 respiration, 86 gap,
+87 bird mix, 91 distance, 94 contour bend. Per-channel pitch bend with RPN 0.
 
 ### pratt
 Number-theoretic synthesiser and filter built on Pratt polynomials. **Synth** mode plays

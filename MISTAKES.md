@@ -7,6 +7,17 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 (No open entries from before October 2026: the screenshot script now always captures on a private Xvfb.)
 
+## Syrinx: a pitch contour that only moved a filter, and a probe that measured the tails (2026-10-24)
+- **What happened:** "Not chirpy" had been tuned at the parameter level (Bend, Duration, presets) for a long time with no
+  effect. The first measurement probe reported f0 ranges of 469-2900 Hz per preset because it included the quiet release
+  frames, and its "sweep" numbers could not be trusted until it split syllables and ignored frames under -20 dB.
+- **Root cause:** `SyrinxVoice` set `gamma` once per note; the contour only retuned the tract bandpass, and the oscillator
+  frequency (`gamma * Phi(alpha, beta)`) drifted with pressure. Nobody had measured the output pitch against the intended
+  contour. The first probe also took the spectral peak over every frame above the noise floor.
+- **Prevention:** For any "pitch contour" or "sweep" parameter, assert on the measured output pitch track (the new
+  `testChirpPhrase` and `testPitchLockHoldsTheNote`), not on the parameter. Probes must segment on level before measuring
+  frequency.
+
 ## Plank: repeated note fix killed the string (2026-10-15)
 - **What happened:** "Second note doesn't play" was fixed by retriggering on a repeated note-on, but the host's overlapping order (on, on, off, off) meant the first note-off released the freshly retriggered string, so output still died.
 - **Root cause:** Assumed the repeat was a missing note-off; never modelled the host's on-before-off ordering. Core tests only covered on/off in separate blocks.

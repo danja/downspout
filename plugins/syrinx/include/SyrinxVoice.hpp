@@ -47,6 +47,7 @@ public:
     {
         dcCoeff_ = std::exp(-2.0f * kPi * 180.0f / sampleRate);
         lpCoeff_ = 1.0f - std::exp(-2.0f * kPi * 12000.0f / sampleRate);
+        updateRates();
     }
 
     void setSampleRate(float sr)
@@ -54,6 +55,7 @@ public:
         sampleRate_ = sr;
         dcCoeff_ = std::exp(-2.0f * kPi * 180.0f / sr);
         lpCoeff_ = 1.0f - std::exp(-2.0f * kPi * 12000.0f / sr);
+        updateRates();
         tract_.setSampleRate(sr);
         tractHarm_.setSampleRate(sr);
         formant1_.setSampleRate(sr);
@@ -74,94 +76,45 @@ public:
         channelBend_ = channelBend;
         midiNote_= midiNote;
         velocity_= velocity;
+        driven_  = false;
+        shaped_  = p.shaped;
+        sweepOct_= p.sweepOct;
+        arch_    = p.arch;
+        kickOct_ = 0.0f;
+        kickEnv_ = 0.0f;
+        driveTone_ = 1.0f;
+        driveNoise_ = 0.0f;
 
         // ODE initial state
         x_ = kOdeX0;
         y_ = 0.0f;
 
-        // Gamma: time-scale so that beta≈1 at this pitch.
-        // gammaScale now driven by regime (independent of harmonic band level).
-        // regime=0 → gammaScale=1 (tonal); regime=1 → gammaScale=4 (pulse/chaotic).
-        regime_      = 1.0f + p.regime * 3.0f;
-        gammaScale_  = regime_;
-        baseGamma_   = std::clamp(baseF0_ / kPhiAtBetaOne, 1200.0f, 150000.0f);
-        gamma_       = baseGamma_ * gammaScale_;
-
+        applyParams(p);
+        gamma_       = std::clamp(baseF0_ / kPhiAtBetaOne, 1200.0f, 150000.0f) * gammaScale_;
+        phiEst_      = baseF0_ / gamma_;
         oversample_  = oversampleForGamma(gamma_);
         dt_          = 1.0f / (sampleRate_ * static_cast<float>(oversample_));
 
-        // Timbre: blends tractQ and timbreGain
-        tractQ_      = 9.0f - p.timbre * 7.0f;                     // 9→2
-        timbreGain_  = 1.0f + p.timbre * 1.5f;                     // 1→2.5
-        betaMin_     = 0.002f;   // Lyrebird value; enables pulse/chaotic regime
-
-        // Store preset params
-        noise_       = std::clamp(p.noise, 0.0f, 1.0f);
-        roughness_   = std::clamp(p.roughness, 0.0f, 1.0f);
-        vibratoRateHz_    = p.vibratoRateHz;
-        vibratoDepthCents_= p.vibratoDepthCents;
-        bend_        = std::clamp(p.bend, -1.0f, 1.0f);
-        harmonic_    = std::clamp(p.harmonic, 0.0f, 1.0f);
-        amRateHz_    = p.amRateHz;
-        amDepth_     = std::clamp(p.amDepth, 0.0f, 1.0f);
-        level_       = std::clamp(p.level, 0.0f, 1.4f);
-        durationSec_ = std::max(0.05f, p.durationSec);
-        respiration_ = std::clamp(p.respiration, 0.0f, 1.0f);
-
-        // Formant filters: 4-partial tracheal comb (f1, 3f1, 5f1, 7f1) in cascade.
-        // Cascade produces antiresonances between peaks, giving hollow/reedy timbres
-        // that parallel summing cannot produce. f3/f4 derived from f1.
-        formant1Hz_  = std::clamp(p.formant1Hz, 200.0f, 8000.0f);
-        formant2Hz_  = std::clamp(p.formant2Hz, 200.0f, 8000.0f);
-        formant3Hz_  = std::min(formant1Hz_ * 5.0f, 8000.0f);
-        formant4Hz_  = std::min(formant1Hz_ * 7.0f, 8000.0f);
-        formantQ_    = std::clamp(p.formantQ, 0.7f, 20.0f);
-        coupling_    = std::clamp(p.coupling, 0.0f, 1.0f);
-        voiceOffset_ = std::clamp(p.voiceOffset, 0.0f, 1.0f);
-        tracheaCm_   = std::clamp(p.tracheaCm, 0.0f, 10.0f);
-
-        formant1_.setParameters(formant1Hz_, formantQ_);  formant1_.reset();
-        formant2_.setParameters(formant2Hz_, formantQ_);  formant2_.reset();
-        formant3_.setParameters(formant3Hz_, formantQ_);  formant3_.reset();
-        formant4_.setParameters(formant4Hz_, formantQ_);  formant4_.reset();
+        formant1_.reset();
+        formant2_.reset();
+        formant3_.reset();
+        formant4_.reset();
 
         // Air-sac respiration ODE: reset state
         respirX_ = 0.0f;
         respirP_ = 0.0f;
-        psBase_  = 1.0f;
-        // Pre-calibrate: run ODE 50 ms with constant forcing to find peak pressure
-        if (respiration_ > 0.0f) {
-            float rx = 0.0f, rp = 0.0f, peakP = 0.001f;
-            const float dt = 1.0f / sampleRate_;
-            for (int i = 0; i < static_cast<int>(0.05f * sampleRate_); ++i) {
-                const float aP = (rp <= 0.0f) ? kRespAlphaI : kRespAlphaI / kRespAlphaR;
-                const float dx = (-(1.0f + rx*rx)*rx - rp + kRespF0) / kRespTauX;
-                const float dp = (-(1.0f + rx*rx)*rx - (1.0f + aP)*rp + kRespF0) / kRespTauP;
-                rx += dx * dt;
-                rp += dp * dt;
-                if (rp > peakP) peakP = rp;
-            }
-            psBase_  = peakP;
-            respirX_ = 0.0f;
-            respirP_ = 0.0f;
-        }
 
         // Second oscillator: compute gamma and oversample from the offset
         gamma2_      = gamma_ * (1.0f + voiceOffset_) * (1.0f + coupling_ * 0.02f);
         oversample2_ = oversampleForGamma(gamma2_);
+        dt2_         = 1.0f / (sampleRate_ * static_cast<float>(oversample2_));
         x2_ = kOdeX0 * 1.5f;
         y2_ = 0.0f;
 
         // Physics tracheal coupling ring buffer
         piRing_.fill(0.0f);
         piRingPos_ = 0;
-        // Round-trip delay: 2L/c samples
-        piDelaySamples_ = 2.0f * tracheaCm_ * 0.01f / 344.0f * sampleRate_;
 
-        // Roughness LP
-        roughCoeff_ = std::exp(-2.0f * kPi * 140.0f / sampleRate_);
-        const float c = roughCoeff_;
-        roughScale_ = std::sqrt(3.0f) * std::sqrt((1.0f + c) / (1.0f - c));
         roughLp_    = 0.0f;
 
         // Noise PRNG
@@ -178,10 +131,11 @@ public:
         tract_.reset();
         tractHarm_.reset();
 
-        // Envelope
+        // Envelope. A shaped syllable is short, so its edges scale with it.
         envState_   = EnvAttack;
         envValue_   = 0.0f;
-        attackSamples_ = static_cast<int>(std::max(1.0f, kDefaultAttack * sampleRate_));
+        const float attack = shaped_ ? std::min(kDefaultAttack, 0.1f * durationSec_) : kDefaultAttack;
+        attackSamples_ = static_cast<int>(std::max(1.0f, attack * sampleRate_));
         releaseTau_ = kReleaseTau * sampleRate_;   // samples
 
         // Vibrato phase
@@ -189,12 +143,122 @@ public:
         amPhase_      = 0.0f;
 
         sampleCount_  = 0;
+        absN_         = 0.0;
+        lastCrossN_   = -1.0;
         active_       = true;
         filterCounter_= 0;
+        lockCounter_  = 0;
+    }
+
+    // Start the free-running voice that audio input drives. It sounds until kill().
+    void startDriven(const PresetParams& p, std::uint32_t stream)
+    {
+        PresetParams q = p;
+        q.shaped = false;
+        q.sweepOct = 0.0f;
+        q.bend = 0.0f;
+        q.noise = std::max(q.noise, 0.02f);   // the noise generators must exist for sibilants
+        q.roughness = std::max(q.roughness, 1.0e-4f);   // and for roughness edited while sounding
+        trigger(60, 1.0f, q, stream);
+        baseF0_ = 1000.0f * std::pow(2.0f, q.pitchSemitones / 12.0f);
+        driven_ = true;
+        driveAmp_ = 0.0f;
+        drivenEnv_ = 0.0f;
+        driveTone_ = 1.0f;
+        driveNoise_ = 0.0f;
+        envState_ = EnvSustain;
+        envValue_ = 1.0f;
+        gamma_ = std::clamp(baseF0_ / kPhiAtBetaOne, 1200.0f, 150000.0f) * gammaScale_;
+        phiEst_ = baseF0_ / gamma_;
+    }
+
+    // Per-sample controls for a driven voice.
+    void setDrive(float f0Hz, float amp, float tone, float extraNoise)
+    {
+        baseF0_ = std::clamp(f0Hz, 80.0f, 12000.0f) * std::pow(2.0f, pitchOffsetSt_ / 12.0f);
+        driveAmp_ = std::clamp(amp, 0.0f, 1.0f);
+        driveTone_ = std::clamp(tone, 0.0f, 1.0f);
+        driveNoise_ = std::clamp(extraNoise, 0.0f, 1.0f);
+    }
+
+    // A fast pitch gesture on a driven voice: jumps `octaves` away and glides back in ~50 ms.
+    void kick(float octaves)
+    {
+        kickOct_ = octaves;
+        kickEnv_ = 1.0f;
+    }
+
+    // Re-read preset parameters on a sounding voice without restarting it.
+    void applyParams(const PresetParams& p)
+    {
+        // gammaScale now driven by regime (independent of harmonic band level).
+        // regime=0 → gammaScale=1 (tonal); regime=1 → gammaScale=4 (pulse/chaotic).
+        regime_      = 1.0f + p.regime * 3.0f;
+        gammaScale_  = regime_;
+
+        // Timbre: blends tractQ and timbreGain
+        tractQ_      = 9.0f - p.timbre * 7.0f;                     // 9→2
+        timbreGain_  = 1.0f + p.timbre * 1.5f;                     // 1→2.5
+        betaMin_     = 0.002f;   // Lyrebird value; enables pulse/chaotic regime
+
+        noise_       = std::clamp(p.noise, 0.0f, 1.0f);
+        roughness_   = std::clamp(p.roughness, 0.0f, 1.0f);
+        vibratoRateHz_    = p.vibratoRateHz;
+        vibratoDepthCents_= p.vibratoDepthCents;
+        bend_        = std::clamp(p.bend, -1.0f, 1.0f);
+        harmonic_    = std::clamp(p.harmonic, 0.0f, 1.0f);
+        amRateHz_    = p.amRateHz;
+        amDepth_     = std::clamp(p.amDepth, 0.0f, 1.0f);
+        level_       = std::clamp(p.level, 0.0f, 1.4f);
+        durationSec_ = std::max(0.02f, p.durationSec);
+        respiration_ = std::clamp(p.respiration, 0.0f, 1.0f);
+        pitchOffsetSt_ = p.pitchSemitones;
+
+        // Formant filters: 4-partial tracheal comb (f1, 3f1, 5f1, 7f1) in cascade.
+        // Cascade produces antiresonances between peaks, giving hollow/reedy timbres
+        // that parallel summing cannot produce. f3/f4 derived from f1.
+        formant1Hz_  = std::clamp(p.formant1Hz, 200.0f, 8000.0f);
+        formant2Hz_  = std::clamp(p.formant2Hz, 200.0f, 8000.0f);
+        formant3Hz_  = std::min(formant1Hz_ * 5.0f, 8000.0f);
+        formant4Hz_  = std::min(formant1Hz_ * 7.0f, 8000.0f);
+        formantQ_    = std::clamp(p.formantQ, 0.7f, 20.0f);
+        coupling_    = std::clamp(p.coupling, 0.0f, 1.0f);
+        voiceOffset_ = std::clamp(p.voiceOffset, 0.0f, 1.0f);
+        tracheaCm_   = std::clamp(p.tracheaCm, 0.0f, 10.0f);
+
+        formant1_.setParameters(formant1Hz_, formantQ_);
+        formant2_.setParameters(formant2Hz_, formantQ_);
+        formant3_.setParameters(formant3Hz_, formantQ_);
+        formant4_.setParameters(formant4Hz_, formantQ_);
+
+        // Round-trip delay: 2L/c samples
+        piDelaySamples_ = 2.0f * tracheaCm_ * 0.01f / 344.0f * sampleRate_;
+
+        // Roughness LP
+        roughCoeff_ = std::exp(-2.0f * kPi * 140.0f / sampleRate_);
+        const float c = roughCoeff_;
+        roughScale_ = std::sqrt(3.0f) * std::sqrt((1.0f + c) / (1.0f - c));
+
+        // Pre-calibrate the air-sac ODE: run 50 ms with constant forcing to find peak pressure
+        psBase_ = 1.0f;
+        if (respiration_ > 0.0f) {
+            float rx = 0.0f, rp = 0.0f, peakP = 0.001f;
+            const float dt = 1.0f / sampleRate_;
+            for (int i = 0; i < static_cast<int>(0.05f * sampleRate_); ++i) {
+                const float aP = (rp <= 0.0f) ? kRespAlphaI : kRespAlphaI / kRespAlphaR;
+                const float dx = (-(1.0f + rx*rx)*rx - rp + kRespF0) / kRespTauX;
+                const float dp = (-(1.0f + rx*rx)*rx - (1.0f + aP)*rp + kRespF0) / kRespTauP;
+                rx += dx * dt;
+                rp += dp * dt;
+                if (rp > peakP) peakP = rp;
+            }
+            psBase_ = peakP;
+        }
     }
 
     void release()
     {
+        if (shaped_ || driven_) return;   // a syllable ends on its own window
         if (active_ && envState_ != EnvRelease)
             envState_ = EnvRelease;
     }
@@ -209,6 +273,7 @@ public:
     [[nodiscard]] bool isReleasing() const { return envState_ == EnvRelease; }
     [[nodiscard]] std::uint8_t midiNote() const { return midiNote_; }
     [[nodiscard]] int channel() const { return channel_; }
+    [[nodiscard]] int age() const { return sampleCount_; }
 
     // Channel pitch bend on a sounding voice: baseF0_ is read every sample.
     void setChannelBend(float ratio)
@@ -222,16 +287,30 @@ public:
     {
         if (!active_) return 0.0f;
 
-        ++sampleCount_;
+        if (driven_) sampleCount_ = 1; else ++sampleCount_;
         const float t = static_cast<float>(sampleCount_) / sampleRate_;
+        const float u = std::min(1.0f, t / durationSec_);   // position within a shaped syllable
 
-        // Auto-release after syllable duration
-        if (envState_ == EnvSustain && t >= durationSec_)
-            envState_ = EnvRelease;
-
-        // Envelope
-        const float env = updateEnvelope();
-        if (!active_) return 0.0f;
+        float env;
+        if (shaped_) {
+            if (t >= durationSec_) {
+                active_ = false;
+                envState_ = EnvIdle;
+                return 0.0f;
+            }
+            // sqrt(sin) is flat-topped like a real syllable; the 1.5 ms ramp removes the onset click.
+            env = std::sqrt(std::sin(kPi * u)) * std::min(1.0f, t * (1.0f / 0.0015f));
+        } else if (driven_) {
+            drivenEnv_ += driveSlew_ * (driveAmp_ - drivenEnv_);
+            env = drivenEnv_;
+            if (env < 1.0e-4f) return 0.0f;   // closed: freeze the oscillator instead of spending CPU
+        } else {
+            // Auto-release after syllable duration
+            if (envState_ == EnvSustain && t >= durationSec_)
+                envState_ = EnvRelease;
+            env = updateEnvelope();
+            if (!active_) return 0.0f;
+        }
 
         // Vibrato
         const float vibDepth = vibratoDepthCents_ / 1200.0f; // cents→semitones→ratio factor
@@ -239,9 +318,30 @@ public:
         if (vibratoPhase_ > 2.0f * kPi) vibratoPhase_ -= 2.0f * kPi;
         const float vibFactor = 1.0f + vibDepth * std::sin(vibratoPhase_);
 
-        // Pitch contour: linear log sweep over the first kBendDuration seconds
-        const float bendU = std::min(1.0f, t / kBendDuration);
-        const float f0 = baseF0_ * vibFactor * std::exp(bend_ * 1.5f * kLn2 * (bendU - 0.5f));
+        // Pitch contour. Shaped syllables sweep over their whole length, ramp or arch; the legacy
+        // contour is a gentle log sweep over the first kBendDuration seconds.
+        float contour;
+        if (shaped_) {
+            const float g = arch_ ? std::sin(kPi * u) - 0.5f : u - 0.5f;
+            contour = std::exp2(sweepOct_ * g);
+        } else {
+            const float bendU = std::min(1.0f, t / kBendDuration);
+            contour = std::exp(bend_ * 1.5f * kLn2 * (bendU - 0.5f));
+        }
+        kickEnv_ *= kickDecay_;
+        const float f0 = baseF0_ * vibFactor * contour * std::exp2(kickOct_ * kickEnv_);
+
+        // Pitch lock. The oscillator frequency is gamma * Phi(alpha, beta) and Phi moves with
+        // pressure, so a fixed gamma lets the pitch wander and a contour only moves the filter.
+        // Divide the target by the measured Phi to make the source itself follow f0.
+        gamma_  = std::clamp(f0 / phiEst_, 800.0f, 200000.0f);
+        gamma2_ = gamma_ * (1.0f + voiceOffset_) * (1.0f + coupling_ * 0.02f);
+        if ((lockCounter_++ & 7) == 0) {
+            oversample_  = oversampleForGamma(gamma_);
+            oversample2_ = oversampleForGamma(gamma2_);
+            dt_          = 1.0f / (sampleRate_ * static_cast<float>(oversample_));
+            dt2_         = 1.0f / (sampleRate_ * static_cast<float>(oversample2_));
+        }
 
         // AM modulation of pressure
         float amFactor = 1.0f;
@@ -253,6 +353,7 @@ public:
 
         // Pressure drives ODE physics (level_ applied as output gain below)
         const float pressure = std::clamp(env * velocity_ * timbreGain_ * amFactor, 0.0f, 1.4f);
+        const float yBefore = y_;
 
         // Air-sac ODE: modulate syringeal pressure ps multiplicatively.
         // When respiration_=0, ps == pressure (no change to behavior).
@@ -325,6 +426,22 @@ public:
             x_ = xv; y_ = yv;
         }
 
+        // Period measurement: upward zero crossings of y (the extrema of x).
+        absN_ += 1.0;
+        if (yBefore < 0.0f && y_ >= 0.0f) {
+            const double crossN = absN_ - 1.0 + static_cast<double>(yBefore / (yBefore - y_));
+            if (lastCrossN_ >= 0.0) {
+                const double period = crossN - lastCrossN_;
+                if (period > 2.0 && period < 2000.0) {
+                    const float phiMeas = static_cast<float>(sampleRate_ / period) / gamma_;
+                    const float ratio = phiMeas / phiEst_;
+                    if (ratio > 0.5f && ratio < 2.0f)
+                        phiEst_ += 0.6f * (phiMeas - phiEst_);
+                }
+            }
+            lastCrossN_ = crossN;
+        }
+
         // Source signal
         const float ampPP  = 0.5f + 3.4f * alpha + 0.62f * betaClean;
         float source = (y_ / gamma_) * kSourceGain / ampPP;
@@ -334,10 +451,13 @@ public:
             source *= std::sqrt(ps / pressure);
         }
 
+        // Driven voices fade the tonal source out as the input turns to hiss.
+        source *= driveTone_;
+
         // Turbulence noise injection (at labia, before tract)
-        if (noiseRng_.has_value() && noise_ > 0.0f) {
+        if (noiseRng_.has_value() && (noise_ > 0.0f || driveNoise_ > 0.0f)) {
             const float flow = std::max(ps - kNoisePsFloor, 0.0f);
-            source += noise_ * kNoiseGain * flow * noiseRng_->next();
+            source += (noise_ + driveNoise_) * kNoiseGain * flow * noiseRng_->next();
         }
 
         // Second oscillator (simple linear mix when tracheaCm_==0, physics mix otherwise)
@@ -349,8 +469,8 @@ public:
                 const float dx = yv;
                 const float dy = -alphaB*g22 - beta*g22*xv - g22*xv*xv*xv
                                  - g2*xv*xv*yv + g22*xv*xv - g2*xv*yv;
-                xv += dx * dt_;
-                yv += dy * dt_;
+                xv += dx * dt2_;
+                yv += dy * dt2_;
             }
             if (!(std::abs(xv) < 1e6f && std::abs(yv) < 1e12f)) { xv = kOdeX0 * 1.5f; yv = 0.0f; }
             x2_ = xv; y2_ = yv;
@@ -380,6 +500,14 @@ public:
                             formant2_.process(
                                 formant1_.process(hp))));
 
+        // Sibilants of a driven voice bypass the tract: its narrow band at f0 would turn hiss
+        // into a whistle. A first difference tilts the noise bright, like an "s".
+        if (driveNoise_ > 0.0f && noiseRng_.has_value()) {
+            const float n = noiseRng_->next();
+            filtered += driveNoise_ * kHissGain * (n - hissPrev_);
+            hissPrev_ = n;
+        }
+
         // DC block then tracheal LP
         const float dcOut = filtered - dcX_ + dcCoeff_ * dcY_;
         dcX_ = filtered; dcY_ = dcOut;
@@ -400,6 +528,7 @@ private:
     static constexpr float kReleaseTau    = 0.06f;  // 60 ms release
     static constexpr float kBendDuration  = 0.5f;   // pitch sweep over first 0.5 s
     static constexpr float kFormantGain   = 0.25f;  // fixed formant mix level
+    static constexpr float kHissGain      = 0.45f;  // driven-voice sibilant level
 
     // Air-sac ODE constants (Fainstein, Goller & Mindlin 2025, Table S2)
     static constexpr float kRespTauX   = 0.25f;
@@ -414,6 +543,12 @@ private:
     static constexpr float kTrachAlphaSlope = 0.40f;
 
     enum EnvState { EnvIdle, EnvAttack, EnvSustain, EnvRelease };
+
+    void updateRates()
+    {
+        kickDecay_ = std::exp(-1.0f / (0.035f * sampleRate_));   // ~35 ms time constant
+        driveSlew_ = 1.0f - std::exp(-1.0f / (0.002f * sampleRate_));
+    }
 
     int oversampleForGamma(float gamma) const
     {
@@ -460,6 +595,7 @@ private:
     float sampleRate_;
     BiquadFilter tract_, tractHarm_, formant1_, formant2_, formant3_, formant4_;
     float srcHpX_ = 0, srcHpY_ = 0;
+    float hissPrev_ = 0;
     float dcX_ = 0, dcY_ = 0, lpY_ = 0;
     float dcCoeff_, lpCoeff_;
 
@@ -467,7 +603,10 @@ private:
     float x_ = kOdeX0, y_ = 0.0f;
     float x2_ = kOdeX0, y2_ = 0.0f;
     float gamma_, gamma2_, baseGamma_, gammaScale_, regime_;
-    float dt_;
+    float dt_, dt2_ = 0.0f;
+    float phiEst_ = kPhiAtBetaOne;
+    double absN_ = 0.0, lastCrossN_ = -1.0;
+    int   lockCounter_ = 0;
     int   oversample_;
     int   oversample2_ = 16;
 
@@ -504,6 +643,15 @@ private:
     float durationSec_, respiration_;
     float formant1Hz_, formant2Hz_, formant3Hz_, formant4Hz_, formantQ_;
     float coupling_, voiceOffset_, tracheaCm_;
+
+    // Syllable shaping and audio-driven operation
+    bool  shaped_ = false, arch_ = false, driven_ = false;
+    float sweepOct_ = 0.0f;
+    float kickOct_ = 0.0f, kickEnv_ = 0.0f;
+    float kickDecay_ = 1.0f;
+    float driveAmp_ = 0.0f, drivenEnv_ = 0.0f, driveTone_ = 1.0f, driveNoise_ = 0.0f;
+    float driveSlew_ = 0.0f;
+    float pitchOffsetSt_ = 0.0f;
 
     std::uint8_t midiNote_ = 0;
     int channel_ = 0;

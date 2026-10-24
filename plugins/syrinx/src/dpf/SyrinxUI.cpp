@@ -1,610 +1,496 @@
-#include "DistrhoUI.hpp"
-#include "downspout/look_and_feel.hpp"
+#include "downspout/dpf/MagnetoKit.hpp"
 
 #include "syrinx_params.hpp"
-#include "syrinx_engine.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdio>
-#include <ctime>
+#include <cstdlib>
+#include <functional>
 #include <string>
 
 START_NAMESPACE_DISTRHO
 
-namespace laf = downspout::laf;
+namespace core = downspout::syrinx;
 
 namespace {
 
-using downspout::syrinx::kParameterCount;
-using downspout::syrinx::kPresetCount;
-using downspout::syrinx::kParamsPerPreset;
-using downspout::syrinx::kPresetParamLevel;
-using downspout::syrinx::kPresetParamNoise;
-using downspout::syrinx::kPresetParamRoughness;
-using downspout::syrinx::kPresetParamTimbre;
-using downspout::syrinx::kPresetParamVibRate;
-using downspout::syrinx::kPresetParamVibDepth;
-using downspout::syrinx::kPresetParamBend;
-using downspout::syrinx::kPresetParamHarmonic;
-using downspout::syrinx::kPresetParamAMRate;
-using downspout::syrinx::kPresetParamMute;
-using downspout::syrinx::kPresetParamPitch;
-using downspout::syrinx::kPresetParamDuration;
-using downspout::syrinx::kPresetParamRespiration;
-using downspout::syrinx::kPresetParamAMDepth;
-using downspout::syrinx::kPresetParamFormant1;
-using downspout::syrinx::kPresetParamFormant2;
-using downspout::syrinx::kPresetParamFormantQ;
-using downspout::syrinx::kPresetParamCoupling;
-using downspout::syrinx::kPresetParamVoiceOffset;
-using downspout::syrinx::kPresetParamRegime;
-using downspout::syrinx::kPresetParamTracheaCm;
-using downspout::syrinx::kParamDistance;
-using downspout::syrinx::kParamMasterGain;
-using downspout::syrinx::kParamSelectedPreset;
-using downspout::syrinx::presetParam;
-using downspout::syrinx::getParameterSpec;
-using downspout::syrinx::kPresetNames;
+// The kit mirrors at most 64 parameters but Syrinx has 228 (ten presets of 21). The panel shows
+// one preset at a time, so it works in "slots": the selected preset's 21 parameters, then the
+// global ones. Slots are translated to real parameter indices on the way to and from the host.
+constexpr std::uint32_t kPresetSlots = core::kParamsPerPreset;                 // 0-20
+constexpr std::uint32_t kGlobalBase = core::kParamDistance;                    // first global parameter
+constexpr std::uint32_t kSlotDistance = kPresetSlots + (core::kParamDistance - kGlobalBase);
+constexpr std::uint32_t kSlotGain = kPresetSlots + (core::kParamMasterGain - kGlobalBase);
+constexpr std::uint32_t kSlotPreset = kPresetSlots + (core::kParamSelectedPreset - kGlobalBase);
+constexpr std::uint32_t kSlotSource = kPresetSlots + (core::kParamSource - kGlobalBase);
+constexpr std::uint32_t kSlotSyllables = kPresetSlots + (core::kParamSyllables - kGlobalBase);
+constexpr std::uint32_t kSlotChirp = kPresetSlots + (core::kParamChirp - kGlobalBase);
+constexpr std::uint32_t kSlotVariation = kPresetSlots + (core::kParamVariation - kGlobalBase);
+constexpr std::uint32_t kSlotGap = kPresetSlots + (core::kParamGap - kGlobalBase);
+constexpr std::uint32_t kSlotPitchMult = kPresetSlots + (core::kParamInPitchMult - kGlobalBase);
+constexpr std::uint32_t kSlotRange = kPresetSlots + (core::kParamInRange - kGlobalBase);
+constexpr std::uint32_t kSlotGate = kPresetSlots + (core::kParamInGate - kGlobalBase);
+constexpr std::uint32_t kSlotResponse = kPresetSlots + (core::kParamInResponse - kGlobalBase);
+constexpr std::uint32_t kSlotUnvoiced = kPresetSlots + (core::kParamInUnvoiced - kGlobalBase);
+constexpr std::uint32_t kSlotMix = kPresetSlots + (core::kParamInMix - kGlobalBase);
+constexpr std::uint32_t kSlotOutLevel = kPresetSlots + (core::kParamOutLevel - kGlobalBase);
+constexpr std::uint32_t kSlotOutInHz = kPresetSlots + (core::kParamOutInHz - kGlobalBase);
+constexpr std::uint32_t kSlotOutBirdHz = kPresetSlots + (core::kParamOutBirdHz - kGlobalBase);
+constexpr std::uint32_t kSlotOutVoiced = kPresetSlots + (core::kParamOutVoiced - kGlobalBase);
+constexpr std::uint32_t kSlotCount = kPresetSlots + (core::kParameterCount - kGlobalBase);
 
-constexpr std::size_t kVoiceControlCount  = 20;
-constexpr std::size_t kVoiceRow1Count     = 5;   // controls per row
-constexpr std::size_t kMasterControlCount = 2;
+static_assert(kSlotCount <= MagnetoUI::kMaxValues, "slot window must fit the kit");
 
-// Layout constants
-constexpr float kPad           = 22.0f;
-constexpr float kHeaderH       = 62.0f;
-constexpr float kSliderGapY    = 16.0f;  // gap between header and slider area
-constexpr float kLabelAreaH    = 50.0f;  // below track: label + value
-constexpr float kSliderW       = 120.0f;
-constexpr float kSliderGap     = 12.0f;
-constexpr float kMasterGap     = 30.0f;  // extra gap before master sliders
-constexpr float kRowGap        = 10.0f;  // gap between slider rows
-constexpr float kTrackW        = 14.0f;
-constexpr float kThumbW        = 46.0f;
-constexpr float kThumbH        = 14.0f;
-constexpr float kDropdownItemH = 30.0f;
-constexpr std::size_t kNumRows = 4;
+constexpr kit::Accent kSourceAccent {92, 140, 156};   // cold steel
+constexpr kit::Accent kTrackAccent {104, 148, 104};   // leaf
+constexpr kit::Accent kPhraseAccent {198, 132, 58};   // amber
+constexpr kit::Accent kVoiceAccent {150, 112, 150};   // plum
+constexpr kit::Accent kMotionAccent {176, 112, 62};   // copper
+constexpr kit::Accent kTractAccent {92, 140, 156};    // steel
+constexpr kit::Accent kMasterAccent {116, 116, 128};  // slate
 
-struct Rect {
-    float x=0, y=0, w=0, h=0;
-    [[nodiscard]] bool contains(float px, float py) const noexcept
-    { return px>=x && px<=x+w && py>=y && py<=y+h; }
+std::uint32_t slotToParameter(const std::uint32_t slot, const std::uint32_t preset)
+{
+    return slot < kPresetSlots ? core::presetParam(preset, slot) : kGlobalBase + (slot - kPresetSlots);
+}
+
+// -1 when the parameter belongs to a preset that is not on show.
+int parameterToSlot(const std::uint32_t parameter, const std::uint32_t preset)
+{
+    if (parameter >= kGlobalBase)
+        return static_cast<int>(kPresetSlots + (parameter - kGlobalBase));
+    if (parameter / core::kParamsPerPreset == preset)
+        return static_cast<int>(parameter % core::kParamsPerPreset);
+    return -1;
+}
+
+struct Tables {
+    std::array<kit::Range, kSlotCount> ranges {};
+    std::array<float, kSlotCount> defaults {};
+    Tables()
+    {
+        for (std::uint32_t s = 0; s < kSlotCount; ++s) {
+            const auto spec = core::getParameterSpec(slotToParameter(s, 0));
+            ranges[s] = {spec.minimum, spec.maximum, spec.integer || spec.boolean};
+            defaults[s] = spec.defaultValue;
+        }
+        ranges[kSlotRange].logarithmic = true;
+        ranges[kSlotPitchMult].logarithmic = true;
+        ranges[core::kPresetParamFormant1].logarithmic = true;
+        ranges[core::kPresetParamFormant2].logarithmic = true;
+    }
 };
 
-struct Color { int r, g, b; };
-struct ControlDef { std::uint32_t parameter; const char* label; };
-
-constexpr std::array<Color, kPresetCount> kPresetColors = {{
-    {165, 200, 110}, // Wren
-    {120, 170, 210}, // Thrush
-    {215, 185,  90}, // Warbler
-    {205, 115,  75}, // Finch
-    {150, 200, 135}, // Robin
-    { 90,  90, 120}, // Nightjar
-    {175, 150, 195}, // Pigeon
-    {100, 200, 175}, // Hummingbird
-    {205, 165,  90}, // Starling
-    {155, 155, 155}, // Custom
-}};
-
-[[nodiscard]] float clampf(float v, float lo, float hi) { return std::max(lo, std::min(v, hi)); }
-
-[[nodiscard]] float normalizedValue(std::uint32_t param, float value)
+const Tables& tables()
 {
-    const auto spec = getParameterSpec(param);
-    if (spec.maximum <= spec.minimum) return 0.0f;
-    return clampf((value - spec.minimum) / (spec.maximum - spec.minimum), 0.0f, 1.0f);
+    static const Tables t;
+    return t;
 }
 
-[[nodiscard]] std::string formatValue(std::uint32_t param, float value)
+std::string pct(const float v)
 {
-    char buf[32];
-    const auto spec = getParameterSpec(param);
-    const std::uint32_t pp = param % kParamsPerPreset;
-    if (spec.boolean) {
-        std::snprintf(buf, sizeof(buf), "%s", value >= 0.5f ? "on" : "off");
-    } else if (pp == kPresetParamVibRate) {
-        std::snprintf(buf, sizeof(buf), "%.1fHz", value * 20.0f);
-    } else if (pp == kPresetParamVibDepth) {
-        std::snprintf(buf, sizeof(buf), "%.0fct", value * 300.0f);
-    } else if (pp == kPresetParamAMRate) {
-        std::snprintf(buf, sizeof(buf), "%.1fHz", value * 30.0f);
-    } else if (pp == kPresetParamBend) {
-        std::snprintf(buf, sizeof(buf), "%+.2f", value);
-    } else if (pp == kPresetParamPitch) {
-        std::snprintf(buf, sizeof(buf), "%+.1fst", value * 12.0f);
-    } else if (pp == kPresetParamDuration) {
-        std::snprintf(buf, sizeof(buf), "%.2fs", 0.05f + value * 1.95f);
-    } else if (pp == kPresetParamFormant1 || pp == kPresetParamFormant2) {
-        std::snprintf(buf, sizeof(buf), "%.0fHz", value);
-    } else if (pp == kPresetParamFormantQ) {
-        std::snprintf(buf, sizeof(buf), "Q%.1f", value);
-    } else if (pp == kPresetParamRegime) {
-        std::snprintf(buf, sizeof(buf), "x%.1f", 1.0f + value * 3.0f);
-    } else if (pp == kPresetParamTracheaCm) {
-        std::snprintf(buf, sizeof(buf), "%.1fcm", value);
-    } else if (spec.maximum <= 1.0f && spec.minimum >= 0.0f) {
-        std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::lround(value * 100.0f)));
-    } else {
-        std::snprintf(buf, sizeof(buf), "%.2f", value);
-    }
-    return buf;
+    char b[16];
+    std::snprintf(b, sizeof(b), "%.0f%%", v * 100.0f);
+    return b;
 }
 
-constexpr std::array<ControlDef, kVoiceControlCount> kVoiceControls = {{
-    // Row 1 — character (5)
-    { kPresetParamLevel,        "Level"    },
-    { kPresetParamNoise,        "Noise"    },
-    { kPresetParamRoughness,    "Rough"    },
-    { kPresetParamTimbre,       "Timbre"   },
-    { kPresetParamRegime,       "Regime"   },
-    // Row 2 — modulation (5)
-    { kPresetParamVibRate,      "Vib Rate" },
-    { kPresetParamVibDepth,     "Vib Dep"  },
-    { kPresetParamAMRate,       "AM Rate"  },
-    { kPresetParamAMDepth,      "AM Depth" },
-    { kPresetParamBend,         "Bend"     },
-    // Row 3 — articulation (5)
-    { kPresetParamPitch,        "Pitch"    },
-    { kPresetParamDuration,     "Duration" },
-    { kPresetParamHarmonic,     "Harmonic" },
-    { kPresetParamRespiration,  "Breath"   },
-    { kPresetParamCoupling,     "Coupling" },
-    // Row 4 — tract (5)
-    { kPresetParamFormant1,     "Formant1" },
-    { kPresetParamFormant2,     "Formant2" },
-    { kPresetParamFormantQ,     "Form Q"   },
-    { kPresetParamTracheaCm,    "Trachea"  },
-    { kPresetParamVoiceOffset,  "V.Offset" },
-}};
+std::string hz(const float v)
+{
+    char b[24];
+    if (v >= 1000.0f)
+        std::snprintf(b, sizeof(b), "%.2f kHz", v / 1000.0f);
+    else
+        std::snprintf(b, sizeof(b), "%.0f Hz", v);
+    return b;
+}
 
-constexpr std::array<ControlDef, kMasterControlCount> kMasterControls = {{
-    { kParamDistance,   "Distance" },
-    { kParamMasterGain, "Gain"     },
-}};
+}  // namespace
 
-} // namespace
-
-class SyrinxUI : public UI {
+class SyrinxUI : public MagnetoUI {
 public:
-    SyrinxUI() : UI(DISTRHO_UI_DEFAULT_WIDTH, DISTRHO_UI_DEFAULT_HEIGHT)
+    SyrinxUI()
+        : MagnetoUI(tables().ranges.data(), kSlotCount, tables().defaults.data())
     {
-        for (std::uint32_t i = 0; i < kParameterCount; ++i)
-            values_[i] = getParameterSpec(i).defaultValue;
-
-       #ifdef DGL_NO_SHARED_RESOURCES
-        createFontFromFile("sans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
-       #else
-        loadSharedResources();
-       #endif
+        for (std::uint32_t i = 0; i < core::kParameterCount; ++i)
+            host_[i] = core::getParameterSpec(i).defaultValue;
+        pitchIn_.fill(0.0f);
+        pitchBird_.fill(0.0f);
     }
 
 protected:
-    void parameterChanged(const uint32_t index, const float value) override
+    enum Action { kRandomize = 0, kReset = 1 };
+
+    void parameterChanged(const uint32_t index, const float v) override
     {
-        if (index < kParameterCount) {
-            values_[index] = value;
-            if (index == kParamSelectedPreset)
-                selectedPreset_ = static_cast<int>(std::round(value));
-            repaint();
+        if (index >= core::kParameterCount)
+            return;
+        host_[index] = v;
+        if (index == core::kParamSelectedPreset) {
+            preset_ = static_cast<std::uint32_t>(std::clamp(static_cast<int>(std::lround(v)), 0, 9));
+            showPreset();
         }
+        const int slot = parameterToSlot(index, preset_);
+        if (slot >= 0)
+            setValue(static_cast<std::uint32_t>(slot), v);
+        repaint();
+    }
+
+    void sendValue(const std::uint32_t slot, const float v) override
+    {
+        const std::uint32_t parameter = slotToParameter(slot, preset_);
+        host_[parameter] = v;
+        setParameterValue(parameter, v);
+        if (parameter == core::kParamSelectedPreset) {
+            preset_ = static_cast<std::uint32_t>(std::clamp(static_cast<int>(std::lround(v)), 0, 9));
+            showPreset();
+        }
+    }
+
+    void onAction(const int id) override
+    {
+        if (id == kRandomize) {
+            randomize();
+        } else if (id == kReset) {
+            for (std::uint32_t s = 0; s < kPresetSlots; ++s)
+                if (s != core::kPresetParamMute)
+                    commit(s, core::kPresetDefaults[preset_][s]);
+        }
+    }
+
+    // About 30 samples a second of the tracked pitch for the history plot.
+    void uiIdle() override
+    {
+        const bool live = intValue(kSlotSource) != 0;
+        if (!live)
+            return;
+        const float inHz = host_[core::kParamOutInHz];
+        const float birdHz = host_[core::kParamOutBirdHz];
+        head_ = (head_ + 1) % kHistory;
+        pitchIn_[head_] = inHz;
+        pitchBird_[head_] = birdHz;
+        repaint();
     }
 
     void onNanoDisplay() override
     {
-        const float W = static_cast<float>(getWidth());
-        const float H = static_cast<float>(getHeight());
+        const float width = static_cast<float>(getWidth());
+        const float colW = (width - 48.0f - 2.0f * kColGap) / 3.0f;
+        const float x1 = 24.0f, x2 = x1 + colW + kColGap, x3 = x2 + colW + kColGap;
+        const int source = intValue(kSlotSource);
 
-        drawBackground(W, H);
-        drawHeader(kPad, kPad, W - kPad * 2.0f, kHeaderH);
+        beginFrame();
+        drawHeader("Syrinx", "avian syrinx voice",
+                   "MIDI plays phrases of chirping syllables; audio in is tracked for pitch and loudness "
+                   "and steers the bird.");
 
-        const float sliderY = kPad + kHeaderH + kSliderGapY;
-        drawSliders(kPad, sliderY, W - kPad * 2.0f, H - sliderY - kPad);
+        drawSourcePanel({x1, 108.0f, colW, 134.0f});
+        drawTrackingPanel({x1, 254.0f, colW, 494.0f}, source == 0);
+        drawPhrasePanel({x2, 108.0f, colW, 292.0f}, source == 1);
+        drawVoicePanel({x2, 412.0f, colW, 336.0f});
 
-        // Dropdown drawn last so it overlays sliders
-        if (dropdownOpen_)
-            drawDropdownList();
-    }
-
-    bool onMouse(const MouseEvent& ev) override
-    {
-        if (ev.button != 1) return false;
-        const float x = static_cast<float>(ev.pos.getX());
-        const float y = static_cast<float>(ev.pos.getY());
-
-        if (!ev.press) {
-            activeControlParam_ = -1;
-            activeControlRect_  = {};
-            return false;
-        }
-
-        if (dropdownOpen_) {
-            for (std::size_t i = 0; i < kPresetCount; ++i) {
-                if (dropdownItemRects_[i].contains(x, y)) {
-                    selectedPreset_ = static_cast<int>(i);
-                    commitParameter(kParamSelectedPreset, static_cast<float>(selectedPreset_));
-                    dropdownOpen_ = false;
-                    repaint();
-                    return true;
-                }
-            }
-            dropdownOpen_ = false;
-            repaint();
-            return true;
-        }
-
-        if (dropdownRect_.contains(x, y)) {
-            dropdownOpen_ = true;
-            repaint();
-            return true;
-        }
-
-        if (muteRect_.contains(x, y)) {
-            const std::uint32_t p = presetParam(static_cast<std::uint32_t>(selectedPreset_), kPresetParamMute);
-            commitParameter(p, values_[p] >= 0.5f ? 0.0f : 1.0f);
-            return true;
-        }
-
-        if (randomizeRect_.contains(x, y)) {
-            randomizeSelectedPreset(static_cast<std::uint32_t>(std::time(nullptr)));
-            return true;
-        }
-
-        for (std::size_t i = 0; i < kVoiceControlCount; ++i) {
-            if (controlRects_[i].contains(x, y)) {
-                activeControlParam_ = static_cast<int>(
-                    presetParam(static_cast<std::uint32_t>(selectedPreset_),
-                                kVoiceControls[i].parameter));
-                activeControlRect_ = controlRects_[i];
-                updateControlFromY(activeControlParam_, y, activeControlRect_);
-                return true;
-            }
-        }
-
-        for (std::size_t i = 0; i < kMasterControlCount; ++i) {
-            if (masterRects_[i].contains(x, y)) {
-                activeControlParam_ = static_cast<int>(kMasterControls[i].parameter);
-                activeControlRect_  = masterRects_[i];
-                updateControlFromY(activeControlParam_, y, activeControlRect_);
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    bool onMotion(const MotionEvent& ev) override
-    {
-        if (activeControlParam_ >= 0) {
-            updateControlFromY(activeControlParam_, static_cast<float>(ev.pos.getY()), activeControlRect_);
-            return true;
-        }
-        return false;
-    }
-
-    bool onScroll(const ScrollEvent& ev) override
-    {
-        if (dropdownOpen_) return false;
-        const float x   = static_cast<float>(ev.pos.getX());
-        const float y   = static_cast<float>(ev.pos.getY());
-        const float dir = ev.delta.getY() > 0.0f ? 1.0f : -1.0f;
-
-        for (std::size_t i = 0; i < kVoiceControlCount; ++i) {
-            if (controlRects_[i].contains(x, y)) {
-                nudgeParameter(presetParam(static_cast<std::uint32_t>(selectedPreset_),
-                                           kVoiceControls[i].parameter), dir * 0.02f);
-                return true;
-            }
-        }
-        for (std::size_t i = 0; i < kMasterControlCount; ++i) {
-            if (masterRects_[i].contains(x, y)) {
-                nudgeParameter(kMasterControls[i].parameter, dir * 0.02f);
-                return true;
-            }
-        }
-        return false;
+        drawMotionPanel({x3, 108.0f, colW, 196.0f});
+        drawTractPanel({x3, 316.0f, colW, 196.0f});
+        drawMasterPanel({x3, 524.0f, colW, 224.0f});
     }
 
 private:
-    const laf::Theme& t_ { laf::defaultTheme() };
-    void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
-    void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
+    static constexpr float kColGap = 14.0f;
+    static constexpr std::size_t kHistory = 360;
 
-    std::array<float, kParameterCount>    values_{};
-    std::array<Rect, kVoiceControlCount>  controlRects_{};
-    std::array<Rect, kMasterControlCount> masterRects_{};
-    std::array<Rect, kPresetCount>        dropdownItemRects_{};
-    Rect dropdownRect_{};
-    Rect muteRect_{};
-    Rect randomizeRect_{};
-    Rect activeControlRect_{};
-
-    int  selectedPreset_    = 0;
-    int  activeControlParam_= -1;
-    bool dropdownOpen_      = false;
-
-    // ---- Drawing ----
-
-    void drawBackground(float W, float H)
+    // A slider showing the slot's value in a unit of the caller's choosing.
+    void slider(const std::uint32_t slot, const char* name, const std::string& shown, const float x, const float y,
+                const float w, const kit::Accent accent)
     {
-        beginPath(); fc(t_.background); rect(0, 0, W, H); fill(); closePath();
+        drawSlider(slot, name, shown.c_str(), {x, y, w, 34.0f}, accent);
     }
 
-    void drawHeader(float x, float y, float w, float h)
+    // Two columns of sliders inside a panel; `row` and `col` count from the panel's content area.
+    struct Grid {
+        float x, y, w;
+        float cell(const int col) const { return x + static_cast<float>(col) * (w + 16.0f); }
+        float row(const int r) const { return y + static_cast<float>(r) * 46.0f; }
+    };
+    static Grid grid(const Rect b, const float top = 46.0f)
     {
-        beginPath(); roundedRect(x, y, w, h, 7.0f);
-        fc(t_.panel); fill();
-        sc(t_.border); strokeWidth(1.0f); stroke();
-        closePath();
-
-        // Plugin name
-        fontSize(30.0f); textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fc(t_.textPrimary);
-        text(x + 22.0f, y + h * 0.5f, "Syrinx", nullptr);
-
-        // Subtitle
-        fontSize(12.0f); fc(t_.border.withAlpha(200));
-        text(x + 150.0f, y + h * 0.5f, "Mindlin-Laje avian vocal model · chromatic MIDI", nullptr);
-
-        const Color& col  = kPresetColors[static_cast<std::size_t>(selectedPreset_)];
-        const bool   muted = values_[presetParam(static_cast<std::uint32_t>(selectedPreset_),
-                                                  kPresetParamMute)] >= 0.5f;
-
-        // Preset dropdown button
-        dropdownRect_ = { x + w - 484.0f, y + 10.0f, 210.0f, h - 20.0f };
-        beginPath(); roundedRect(dropdownRect_.x, dropdownRect_.y, dropdownRect_.w, dropdownRect_.h, 6.0f);
-        fillColor(col.r / 4, col.g / 4, col.b / 4, 255);
-        strokeColor(col.r, col.g, col.b, dropdownOpen_ ? 255 : 160);
-        strokeWidth(dropdownOpen_ ? 2.0f : 1.0f);
-        fill(); stroke(); closePath();
-
-        fontSize(14.0f); textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        fillColor(col.r, col.g, col.b, 255);
-        char buf[64];
-        std::snprintf(buf, sizeof(buf), "%s  \xe2\x96\xbe", kPresetNames[selectedPreset_]);
-        text(dropdownRect_.x + 14.0f, dropdownRect_.y + dropdownRect_.h * 0.5f, buf, nullptr);
-
-        // Mute button
-        muteRect_ = { x + w - 266.0f, y + 10.0f, 70.0f, h - 20.0f };
-        beginPath(); roundedRect(muteRect_.x, muteRect_.y, muteRect_.w, muteRect_.h, 6.0f);
-        fillColor(muted ? col.r : 35, muted ? col.g : 40, muted ? col.b : 44, 255);
-        fill(); closePath();
-        fontSize(13.0f); textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fillColor(muted ? 12 : 175, muted ? 14 : 190, muted ? 15 : 190, 255);
-        text(muteRect_.x + muteRect_.w * 0.5f, muteRect_.y + muteRect_.h * 0.5f, "MUTE", nullptr);
-
-        // Randomize button
-        randomizeRect_ = { x + w - 188.0f, y + 10.0f, 166.0f, h - 20.0f };
-        beginPath(); roundedRect(randomizeRect_.x, randomizeRect_.y, randomizeRect_.w, randomizeRect_.h, 6.0f);
-        fc(t_.controlTrack); fill(); closePath();
-        fontSize(13.0f); textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fc(t_.textDim);
-        text(randomizeRect_.x + randomizeRect_.w * 0.5f, randomizeRect_.y + randomizeRect_.h * 0.5f,
-             "RANDOMIZE", nullptr);
+        return {b.x + 14.0f, b.y + top, (b.w - 28.0f - 16.0f) * 0.5f};
     }
 
-    void drawDropdownList()
+    void showPreset()
     {
-        const Color& selCol = kPresetColors[static_cast<std::size_t>(selectedPreset_)];
-        const float listW = dropdownRect_.w;
-        const float listX = dropdownRect_.x;
-        const float listY = dropdownRect_.y + dropdownRect_.h + 6.0f;
-        const float listH = static_cast<float>(kPresetCount) * kDropdownItemH + 6.0f;
-
-        beginPath(); roundedRect(listX, listY, listW, listH, 7.0f);
-        fc(t_.panel); fill();
-        strokeColor(selCol.r, selCol.g, selCol.b, 180); strokeWidth(1.5f); stroke(); closePath();
-
-        for (std::size_t i = 0; i < kPresetCount; ++i) {
-            const Rect item{ listX + 3.0f, listY + 3.0f + static_cast<float>(i) * kDropdownItemH,
-                             listW - 6.0f, kDropdownItemH };
-            dropdownItemRects_[i] = item;
-            const bool active = static_cast<int>(i) == selectedPreset_;
-            const Color& pc  = kPresetColors[i];
-
-            if (active) {
-                beginPath(); roundedRect(item.x, item.y, item.w, item.h, 4.0f);
-                fillColor(pc.r / 3, pc.g / 3, pc.b / 3, 255); fill(); closePath();
-            }
-
-            // Color swatch
-            beginPath(); roundedRect(item.x + 8.0f, item.y + item.h * 0.5f - 6.0f, 12.0f, 12.0f, 3.0f);
-            fillColor(pc.r, pc.g, pc.b, active ? 255 : 190); fill(); closePath();
-
-            fontSize(13.0f); textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-            fillColor(active ? pc.r : 205, active ? pc.g : 212, active ? pc.b : 210, 255);
-            text(item.x + 28.0f, item.y + item.h * 0.5f, kPresetNames[i], nullptr);
-        }
+        for (std::uint32_t s = 0; s < kPresetSlots; ++s)
+            setValue(s, host_[slotToParameter(s, preset_)]);
     }
 
-    void drawSliders(float x, float y, float w, float h)
+    void drawSourcePanel(const Rect b)
     {
-        // 6 voice columns + masterGap + 2 master columns
-        const float voiceRowW  = static_cast<float>(kVoiceRow1Count) * kSliderW
-                               + static_cast<float>(kVoiceRow1Count - 1) * kSliderGap;
-        const float masterColW = static_cast<float>(kMasterControlCount) * kSliderW
-                               + static_cast<float>(kMasterControlCount - 1) * kSliderGap;
-        const float totalW  = voiceRowW + kMasterGap + masterColW;
-        const float startX  = x + (w - totalW) * 0.5f;
-
-        const Color& col   = kPresetColors[static_cast<std::size_t>(selectedPreset_)];
-        const bool   muted = values_[presetParam(static_cast<std::uint32_t>(selectedPreset_),
-                                                  kPresetParamMute)] >= 0.5f;
-
-        // Three equal rows
-        const float rowH      = (h - static_cast<float>(kNumRows - 1) * kRowGap) / static_cast<float>(kNumRows);
-        const float rowTrackH = rowH - kLabelAreaH;
-
-        auto rowStartY = [&](std::size_t row) { return y + static_cast<float>(row) * (rowH + kRowGap); };
-
-        // Row separators
-        for (std::size_t r = 0; r + 1 < kNumRows; ++r) {
-            const float sepY = rowStartY(r) + rowH + kRowGap * 0.5f;
-            beginPath();
-            moveTo(startX, sepY);
-            lineTo(startX + voiceRowW, sepY);
-            sc(t_.border.withAlpha(160)); strokeWidth(1.0f); stroke(); closePath();
-        }
-
-        // Voice sliders — rows 1-3
-        for (std::size_t i = 0; i < kVoiceControlCount; ++i) {
-            const std::size_t row    = i / kVoiceRow1Count;
-            const std::size_t col_i  = i % kVoiceRow1Count;
-            // Row 3 has 5 controls: center them within the row width
-            const std::size_t row3Count = kVoiceControlCount - kVoiceRow1Count * (kNumRows - 1);
-            float cx;
-            if (row == kNumRows - 1 && row3Count < kVoiceRow1Count) {
-                const float rowUsedW = static_cast<float>(row3Count) * kSliderW
-                                     + static_cast<float>(row3Count - 1) * kSliderGap;
-                const float rowOffX  = (voiceRowW - rowUsedW) * 0.5f;
-                cx = startX + rowOffX + static_cast<float>(col_i) * (kSliderW + kSliderGap);
-            } else {
-                cx = startX + static_cast<float>(col_i) * (kSliderW + kSliderGap);
-            }
-            const float ry = rowStartY(row);
-            controlRects_[i] = { cx, ry, kSliderW, rowH };
-            const std::uint32_t param = presetParam(static_cast<std::uint32_t>(selectedPreset_),
-                                                     kVoiceControls[i].parameter);
-            drawVerticalSlider(controlRects_[i], rowTrackH, param, kVoiceControls[i].label, col, muted);
-        }
-
-        // Master divider
-        const float divX = startX + voiceRowW + kMasterGap * 0.5f;
-        beginPath();
-        moveTo(divX, y + 12.0f);
-        lineTo(divX, y + h - 12.0f);
-        sc(t_.border.withAlpha(200)); strokeWidth(1.0f); stroke(); closePath();
-
-        // Master sliders (span full height)
-        const float masterStartX = startX + voiceRowW + kMasterGap;
-        constexpr Color masterCol{ 88, 165, 158 };
-        const float masterTrackH = h - kLabelAreaH;
-
-        for (std::size_t i = 0; i < kMasterControlCount; ++i) {
-            const float cx = masterStartX + static_cast<float>(i) * (kSliderW + kSliderGap);
-            masterRects_[i] = { cx, y, kSliderW, h };
-            drawVerticalSlider(masterRects_[i], masterTrackH, kMasterControls[i].parameter,
-                               kMasterControls[i].label, masterCol, false);
-        }
-
-        // Master section label
-        const float labelBaseY = y + h - 6.0f;
-        fontSize(10.0f); textAlign(ALIGN_LEFT | ALIGN_BOTTOM);
-        fillColor(masterCol.r, masterCol.g, masterCol.b, 130);
-        text(masterStartX, labelBaseY, "Master", nullptr);
+        drawPanel(b, "SOURCE", kSourceAccent, "what plays the bird");
+        static const char* const kNames[] = {"MIDI", "Audio in", "Both"};
+        drawSegments(kSlotSource, kNames, 3, {b.x + 14.0f, b.y + 44.0f, b.w - 28.0f, 28.0f}, kSourceAccent);
+        slider(kSlotMix, "Bird mix  (0 = your voice, 1 = bird)", pct(value(kSlotMix)), b.x + 14.0f, b.y + 86.0f,
+               b.w - 28.0f, kSourceAccent);
     }
 
-    void drawVerticalSlider(const Rect& colRect, float trackH, std::uint32_t param,
-                            const char* label, const Color& col, bool muted)
+    // The input and bird pitch over the last few seconds, plus what the tracker currently hears.
+    void drawTrackingPanel(const Rect b, const bool inactive)
     {
-        const float value = values_[param];
-        const float norm  = normalizedValue(param, value);
-        const std::string txt = formatValue(param, value);
+        drawPanel(b, "AUDIO INPUT", kTrackAccent, inactive ? "inactive: Source is MIDI" : "pitch and loudness drive the bird");
+        const auto& t = theme();
 
-        const float cx     = colRect.x + colRect.w * 0.5f;
-        const float trackX = cx - kTrackW * 0.5f;
-        const float trackY = colRect.y + 4.0f;
-        const float tH     = trackH - 8.0f;
-
-        const float thumbCY = trackY + tH * (1.0f - norm);  // y-center of thumb
-        const float thumbY  = thumbCY - kThumbH * 0.5f;
-        const float fillH   = tH - (thumbCY - trackY);
-
-        // Track background
-        beginPath(); roundedRect(trackX, trackY, kTrackW, tH, 6.0f);
-        fc(t_.panel); fill(); closePath();
-
-        // Filled portion (bottom up to thumb)
-        if (fillH > 3.0f) {
-            beginPath();
-            roundedRect(trackX + 2.0f, thumbCY, kTrackW - 4.0f, fillH, 4.0f);
-            fillColor(col.r, col.g, col.b, muted ? 70 : 175); fill(); closePath();
-        }
-
-        // Thumb
-        const float tx = cx - kThumbW * 0.5f;
-        beginPath(); roundedRect(tx, thumbY, kThumbW, kThumbH, kThumbH * 0.5f);
-        fillColor(225, 232, 228, muted ? 100 : 228); fill(); closePath();
-
-        // Label
-        const float labelY = colRect.y + trackH + 10.0f;
-        fontSize(11.0f); textAlign(ALIGN_CENTER | ALIGN_TOP);
-        fillColor(185, 195, 192, muted ? 120 : 220);
-        text(cx, labelY, label, nullptr);
-
-        // Value
-        fontSize(10.0f);
-        fillColor(col.r, col.g, col.b, muted ? 80 : 195);
-        text(cx, labelY + 17.0f, txt.c_str(), nullptr);
-    }
-
-    // ---- Interaction helpers ----
-
-    void updateControlFromY(int paramIndex, float y, const Rect& rect)
-    {
-        if (paramIndex < 0 || paramIndex >= static_cast<int>(kParameterCount)) return;
-        const std::uint32_t p = static_cast<std::uint32_t>(paramIndex);
-        const auto   spec   = getParameterSpec(p);
-        const float  trackY = rect.y + 4.0f;
-        const float  tH     = (rect.h - kLabelAreaH) - 8.0f;
-        const float  norm   = clampf(1.0f - (y - trackY) / tH, 0.0f, 1.0f);
-        commitParameter(p, spec.minimum + norm * (spec.maximum - spec.minimum));
-    }
-
-    void nudgeParameter(std::uint32_t p, float delta)
-    {
-        const auto spec = getParameterSpec(p);
-        commitParameter(p, values_[p] + delta * (spec.maximum - spec.minimum));
-    }
-
-    void commitParameter(std::uint32_t p, float value)
-    {
-        if (p >= kParameterCount) return;
-        const auto  spec    = getParameterSpec(p);
-        const float clamped = spec.boolean
-            ? (value >= 0.5f ? 1.0f : 0.0f)
-            : clampf(value, spec.minimum, spec.maximum);
-        editParameter(p, true);
-        setParameterValue(p, clamped);
-        editParameter(p, false);
-        values_[p] = clamped;
-        repaint();
-    }
-
-    void randomizeSelectedPreset(std::uint32_t seed)
-    {
-        const auto p = static_cast<std::uint32_t>(selectedPreset_);
-        auto lcg = [&]() -> float {
-            seed = seed * 1664525u + 1013904223u;
-            return static_cast<float>(seed >> 8) / static_cast<float>(1u << 24);
+        const Rect plot {b.x + 14.0f, b.y + 44.0f, b.w - 28.0f, 190.0f};
+        drawPlotFrame(plot);
+        constexpr float kLo = 70.0f, kHi = 12000.0f;
+        const auto py = [&](const float f) {
+            return plot.y + plot.h - 8.0f - (std::log(f / kLo) / std::log(kHi / kLo)) * (plot.h - 16.0f);
         };
-        auto rr = [&](float lo, float hi) { return lo + lcg() * (hi - lo); };
+        static constexpr float kGrid[] = {100.0f, 300.0f, 1000.0f, 3000.0f, 10000.0f};
+        for (const float g : kGrid) {
+            beginPath();
+            sc(t.border);
+            strokeWidth(1.0f);
+            moveTo(plot.x + 1.0f, py(g));
+            lineTo(plot.x + plot.w - 1.0f, py(g));
+            stroke();
+            char axis[16];
+            std::snprintf(axis, sizeof(axis), g >= 1000.0f ? "%.0f kHz" : "%.0f Hz", g >= 1000.0f ? g / 1000.0f : g);
+            label(plot.x + 5.0f, py(g) - 12.0f, axis, true, 10.0f);
+        }
+        drawTrace(pitchIn_, plot, py, {170, 170, 176});
+        drawTrace(pitchBird_, plot, py, kTrackAccent);
+        label(plot.x + plot.w - 6.0f, plot.y + 5.0f, "input", true, 10.0f, ALIGN_RIGHT | ALIGN_TOP);
+        fillColor(kTrackAccent.r, kTrackAccent.g, kTrackAccent.b, 255);
+        fontSize(10.0f);
+        textAlign(ALIGN_RIGHT | ALIGN_TOP);
+        text(plot.x + plot.w - 6.0f, plot.y + 18.0f, "bird", nullptr);
 
-        commitParameter(presetParam(p, kPresetParamLevel),        rr(0.5f,   1.2f));
-        commitParameter(presetParam(p, kPresetParamNoise),        rr(0.0f,   0.4f));
-        commitParameter(presetParam(p, kPresetParamRoughness),    rr(0.0f,   0.3f));
-        commitParameter(presetParam(p, kPresetParamTimbre),       rr(0.0f,   0.8f));
-        commitParameter(presetParam(p, kPresetParamVibRate),      rr(0.1f,   0.8f));
-        commitParameter(presetParam(p, kPresetParamVibDepth),     rr(0.0f,   0.4f));
-        commitParameter(presetParam(p, kPresetParamBend),         rr(-0.7f,  0.7f));
-        commitParameter(presetParam(p, kPresetParamHarmonic),     rr(0.0f,   1.0f));
-        commitParameter(presetParam(p, kPresetParamAMRate),       rr(0.0f,    0.3f));
-        commitParameter(presetParam(p, kPresetParamAMDepth),      rr(0.0f,    0.8f));
-        commitParameter(presetParam(p, kPresetParamPitch),        rr(-0.25f,  0.25f));
-        commitParameter(presetParam(p, kPresetParamDuration),     rr(0.04f,   0.55f));
-        commitParameter(presetParam(p, kPresetParamRespiration),  rr(0.0f,    0.3f));
-        commitParameter(presetParam(p, kPresetParamFormant1),     rr(400.0f,  4000.0f));
-        commitParameter(presetParam(p, kPresetParamFormant2),     rr(800.0f,  7000.0f));
-        commitParameter(presetParam(p, kPresetParamFormantQ),     rr(2.0f,    12.0f));
-        commitParameter(presetParam(p, kPresetParamCoupling),     rr(0.0f,    0.4f));
-        commitParameter(presetParam(p, kPresetParamVoiceOffset),  rr(0.0f,    0.5f));
-        commitParameter(presetParam(p, kPresetParamRegime),       rr(0.0f,    0.3f));
-        // preserve mute, TracheaCm (physics coupling left at user's choice)
+        // Live readout
+        const float inHz = host_[core::kParamOutInHz];
+        const float birdHz = host_[core::kParamOutBirdHz];
+        const float state = host_[core::kParamOutVoiced];
+        const float level = host_[core::kParamOutLevel];
+        const float ry = plot.y + plot.h + 14.0f;
+        label(b.x + 14.0f, ry, "hearing");
+        label(b.x + 14.0f, ry + 17.0f, state >= 0.75f ? "voiced" : (state > 0.25f ? "hiss / breath" : "silence"), false, 14.0f);
+        label(b.x + 150.0f, ry, "input pitch");
+        label(b.x + 150.0f, ry + 17.0f, inHz > 0.0f ? hz(inHz).c_str() : "-", false, 14.0f);
+        label(b.x + 270.0f, ry, "bird pitch");
+        label(b.x + 270.0f, ry + 17.0f, birdHz > 0.0f ? hz(birdHz).c_str() : "-", false, 14.0f);
+
+        // Level bar
+        const Rect bar {b.x + 14.0f, ry + 46.0f, b.w - 28.0f, 8.0f};
+        beginPath();
+        fc(t.controlTrack);
+        roundedRect(bar.x, bar.y, bar.w, bar.h, 3.0f);
+        fill();
+        if (level > 0.01f) {
+            beginPath();
+            fillColor(kTrackAccent.r, kTrackAccent.g, kTrackAccent.b, 255);
+            roundedRect(bar.x, bar.y, bar.w * std::clamp(level, 0.0f, 1.0f), bar.h, 3.0f);
+            fill();
+        }
+
+        const Grid g = grid(b, 0.0f);
+        const float top = ry + 66.0f;
+        const float w = g.w;
+        char buf[24];
+        std::snprintf(buf, sizeof(buf), "x%.1f", value(kSlotPitchMult));
+        slider(kSlotPitchMult, "Pitch multiplier", buf, g.cell(0), top, w, kTrackAccent);
+        slider(kSlotRange, "Voice range", hz(value(kSlotRange)), g.cell(1), top, w, kTrackAccent);
+        slider(kSlotGate, "Gate", pct(value(kSlotGate)), g.cell(0), top + 46.0f, w, kTrackAccent);
+        std::snprintf(buf, sizeof(buf), "%.0f ms", 2.0f * std::pow(60.0f, value(kSlotResponse)));
+        slider(kSlotResponse, "Pitch glide", buf, g.cell(1), top + 46.0f, w, kTrackAccent);
+        slider(kSlotUnvoiced, "Hiss to turbulence", pct(value(kSlotUnvoiced)), g.cell(0), top + 92.0f, w, kTrackAccent);
+        label(g.cell(1), top + 96.0f, "Voice range: set to the middle of your", true, 10.0f);
+        label(g.cell(1), top + 109.0f, "speaking pitch; the tracker covers 0.5-2.5x.", true, 10.0f);
     }
 
-    DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SyrinxUI)
+    void drawTrace(const std::array<float, kHistory>& data, const Rect plot, const std::function<float(float)>& py,
+                   const kit::Accent colour)
+    {
+        beginPath();
+        strokeColor(colour.r, colour.g, colour.b, 255);
+        strokeWidth(1.6f);
+        bool pen = false;
+        for (std::size_t i = 0; i < kHistory; ++i) {
+            const float f = data[(head_ + 1 + i) % kHistory];
+            const float x = plot.x + 2.0f + (plot.w - 4.0f) * static_cast<float>(i) / static_cast<float>(kHistory - 1);
+            if (f < 70.0f) {
+                pen = false;
+                continue;
+            }
+            const float y = py(std::min(f, 12000.0f));
+            if (pen) lineTo(x, y); else moveTo(x, y);
+            pen = true;
+        }
+        stroke();
+    }
+
+    // A schematic of the phrase the sliders describe: syllable length, gaps and sweep, drawn from
+    // the same formulas the engine uses (mean values; the engine adds Variation on top).
+    void drawPhrasePanel(const Rect b, const bool audioOnly)
+    {
+        drawPanel(b, "PHRASE", kPhraseAccent, audioOnly ? "audio mode: Chirp sets the onset kick" : "one note-on = a run of chirps");
+        const auto& t = theme();
+        const float chirp = value(kSlotChirp);
+        const float gapAmt = value(kSlotGap);
+        const int n = intValue(kSlotSyllables);
+        const float dur = 0.05f + value(core::kPresetParamDuration) * 1.95f;
+        const float bend = value(core::kPresetParamBend);
+
+        const float len = std::max(0.025f, dur * std::pow(0.12f, chirp));
+        const float gap = len * (0.15f + 1.6f * gapAmt);
+        const float total = static_cast<float>(n) * len + static_cast<float>(n - 1) * gap;
+        const float sweep = chirp * 2.2f;
+
+        const Rect plot {b.x + 14.0f, b.y + 44.0f, b.w - 28.0f, 126.0f};
+        drawPlotFrame(plot);
+        const float mid = plot.y + plot.h * 0.5f;
+        const float octPx = (plot.h - 24.0f) / 3.2f;   // pixels per octave
+        beginPath();
+        sc(t.border);
+        strokeWidth(1.0f);
+        moveTo(plot.x + 1.0f, mid);
+        lineTo(plot.x + plot.w - 1.0f, mid);
+        stroke();
+        const float pxPerSec = (plot.w - 20.0f) / std::max(total, 0.05f);
+        for (int k = 0; k < n; ++k) {
+            const float t0 = static_cast<float>(k) * (len + gap);
+            const int kind = k % 3;   // ramp the way Bend leans, the opposite ramp, then an arch
+            const float dir = (bend >= 0.0f) == (kind != 1) ? 1.0f : -1.0f;
+            beginPath();
+            strokeColor(kPhraseAccent.r, kPhraseAccent.g, kPhraseAccent.b, 255);
+            strokeWidth(2.4f);
+            constexpr int kSteps = 24;
+            for (int i = 0; i <= kSteps; ++i) {
+                const float u = static_cast<float>(i) / kSteps;
+                const float shape = kind == 2 ? std::sin(3.14159265f * u) - 0.5f : u - 0.5f;
+                const float x = plot.x + 10.0f + (t0 + u * len) * pxPerSec;
+                const float y = mid - dir * sweep * shape * octPx;
+                if (i == 0) moveTo(x, y); else lineTo(x, y);
+            }
+            stroke();
+        }
+        char buf[96];
+        std::snprintf(buf, sizeof(buf), "%.0f ms syllables, %.0f ms apart, %.1f oct sweep, %.2f s phrase", len * 1000.0f,
+                      gap * 1000.0f, sweep, total);
+        label(b.x + 14.0f, plot.y + plot.h + 8.0f, buf, true, 11.0f);
+
+        const Grid g = grid(b, 44.0f + plot.h + 32.0f);
+        std::snprintf(buf, sizeof(buf), "%d", n);
+        slider(kSlotSyllables, "Syllables per note", buf, g.cell(0), g.row(0), g.w, kPhraseAccent);
+        slider(kSlotChirp, "Chirp  (speed, sweep depth)", pct(chirp), g.cell(1), g.row(0), g.w, kPhraseAccent);
+        slider(kSlotVariation, "Variation", pct(value(kSlotVariation)), g.cell(0), g.row(1), g.w, kPhraseAccent);
+        slider(kSlotGap, "Gap", pct(gapAmt), g.cell(1), g.row(1), g.w, kPhraseAccent);
+    }
+
+    void drawVoicePanel(const Rect b)
+    {
+        const auto& color = kPresetColors[preset_];
+        drawPanel(b, "VOICE", kVoiceAccent, "the selected bird preset");
+        const float w = b.w - 28.0f;
+        drawStepper(kSlotPreset, "Preset", core::kPresetNames[preset_], {b.x + 14.0f, b.y + 44.0f, w * 0.5f, 22.0f});
+        static const char* const kMute[] = {"Sounding", "Muted"};
+        label(b.x + 14.0f + w * 0.5f + 16.0f, b.y + 44.0f, "Mute");
+        drawSegments(core::kPresetParamMute, kMute, 2,
+                     {b.x + 14.0f + w * 0.5f + 16.0f, b.y + 59.0f, w * 0.5f - 16.0f, 22.0f}, color);
+
+        const Grid g = grid(b, 96.0f);
+        char buf[24];
+        slider(core::kPresetParamLevel, "Level", pct(value(core::kPresetParamLevel) / 1.4f), g.cell(0), g.row(0), g.w, color);
+        slider(core::kPresetParamTimbre, "Timbre", pct(value(core::kPresetParamTimbre)), g.cell(1), g.row(0), g.w, color);
+        slider(core::kPresetParamNoise, "Noise", pct(value(core::kPresetParamNoise)), g.cell(0), g.row(1), g.w, color);
+        slider(core::kPresetParamRoughness, "Roughness", pct(value(core::kPresetParamRoughness)), g.cell(1), g.row(1), g.w, color);
+        slider(core::kPresetParamRegime, "Regime  (tonal to pulse)", pct(value(core::kPresetParamRegime)), g.cell(0), g.row(2), g.w, color);
+        slider(core::kPresetParamHarmonic, "Harmonic", pct(value(core::kPresetParamHarmonic)), g.cell(1), g.row(2), g.w, color);
+        std::snprintf(buf, sizeof(buf), "%+.1f st", value(core::kPresetParamPitch) * 12.0f);
+        slider(core::kPresetParamPitch, "Pitch offset", buf, g.cell(0), g.row(3), g.w, color);
+        std::snprintf(buf, sizeof(buf), "%.2f s", 0.05f + value(core::kPresetParamDuration) * 1.95f);
+        slider(core::kPresetParamDuration, "Duration", buf, g.cell(1), g.row(3), g.w, color);
+    }
+
+    void drawMotionPanel(const Rect b)
+    {
+        drawPanel(b, "MOTION", kMotionAccent, "vibrato, bend, tremolo, breath");
+        const Grid g = grid(b);
+        char buf[24];
+        std::snprintf(buf, sizeof(buf), "%.1f Hz", value(core::kPresetParamVibRate) * 20.0f);
+        slider(core::kPresetParamVibRate, "Vibrato rate", buf, g.cell(0), g.row(0), g.w, kMotionAccent);
+        std::snprintf(buf, sizeof(buf), "%.0f ct", value(core::kPresetParamVibDepth) * 300.0f);
+        slider(core::kPresetParamVibDepth, "Vibrato depth", buf, g.cell(1), g.row(0), g.w, kMotionAccent);
+        std::snprintf(buf, sizeof(buf), "%+.2f", value(core::kPresetParamBend));
+        slider(core::kPresetParamBend, "Bend  (phrase lean)", buf, g.cell(0), g.row(1), g.w, kMotionAccent);
+        slider(core::kPresetParamRespiration, "Respiration", pct(value(core::kPresetParamRespiration)), g.cell(1), g.row(1), g.w, kMotionAccent);
+        std::snprintf(buf, sizeof(buf), "%.1f Hz", value(core::kPresetParamAMRate) * 30.0f);
+        slider(core::kPresetParamAMRate, "Tremolo rate", buf, g.cell(0), g.row(2), g.w, kMotionAccent);
+        slider(core::kPresetParamAMDepth, "Tremolo depth", pct(value(core::kPresetParamAMDepth)), g.cell(1), g.row(2), g.w, kMotionAccent);
+    }
+
+    void drawTractPanel(const Rect b)
+    {
+        drawPanel(b, "TRACT", kTractAccent, "trachea resonances, second voice");
+        const Grid g = grid(b);
+        char buf[24];
+        slider(core::kPresetParamFormant1, "Formant 1", hz(value(core::kPresetParamFormant1)), g.cell(0), g.row(0), g.w, kTractAccent);
+        slider(core::kPresetParamFormant2, "Formant 2", hz(value(core::kPresetParamFormant2)), g.cell(1), g.row(0), g.w, kTractAccent);
+        std::snprintf(buf, sizeof(buf), "%.1f", value(core::kPresetParamFormantQ));
+        slider(core::kPresetParamFormantQ, "Formant Q", buf, g.cell(0), g.row(1), g.w, kTractAccent);
+        slider(core::kPresetParamCoupling, "Coupling", pct(value(core::kPresetParamCoupling)), g.cell(1), g.row(1), g.w, kTractAccent);
+        slider(core::kPresetParamVoiceOffset, "Voice offset", pct(value(core::kPresetParamVoiceOffset)), g.cell(0), g.row(2), g.w, kTractAccent);
+        std::snprintf(buf, sizeof(buf), "%.1f cm", value(core::kPresetParamTracheaCm));
+        slider(core::kPresetParamTracheaCm, "Trachea length", buf, g.cell(1), g.row(2), g.w, kTractAccent);
+    }
+
+    void drawMasterPanel(const Rect b)
+    {
+        drawPanel(b, "MASTER", kMasterAccent);
+        const Grid g = grid(b);
+        slider(kSlotDistance, "Distance", pct(value(kSlotDistance)), g.cell(0), g.row(0), g.w, kMasterAccent);
+        slider(kSlotGain, "Master gain", pct(value(kSlotGain)), g.cell(1), g.row(0), g.w, kMasterAccent);
+        drawButton(kRandomize, "Randomize preset", {g.cell(0), g.row(1) + 6.0f, g.w, 30.0f}, kMasterAccent);
+        drawButton(kReset, "Reset preset", {g.cell(1), g.row(1) + 6.0f, g.w, 30.0f}, kMasterAccent, false);
+        label(b.x + 14.0f, g.row(2) + 10.0f, "CC: 1 vibrato  11 level  71 rough  74 timbre  77 noise", true, 10.0f);
+        label(b.x + 14.0f, g.row(2) + 24.0f, "81 syllables  82 chirp  84 variation  86 gap  87 mix  91 distance", true, 10.0f);
+        label(b.x + 14.0f, g.row(2) + 38.0f, "Presets are chosen with the Selected Preset parameter.", true, 10.0f);
+    }
+
+    void randomize()
+    {
+        std::srand(static_cast<unsigned>(std::lround(host_[core::kParamOutBirdHz])) * 2654435761u
+                   + static_cast<unsigned>(rand_++));
+        const auto r = [](const float lo, const float hi) {
+            return lo + (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX)) * (hi - lo);
+        };
+        commit(core::kPresetParamLevel, r(0.5f, 1.2f));
+        commit(core::kPresetParamNoise, r(0.0f, 0.4f));
+        commit(core::kPresetParamRoughness, r(0.0f, 0.3f));
+        commit(core::kPresetParamTimbre, r(0.0f, 0.8f));
+        commit(core::kPresetParamVibRate, r(0.1f, 0.8f));
+        commit(core::kPresetParamVibDepth, r(0.0f, 0.4f));
+        commit(core::kPresetParamBend, r(-0.7f, 0.7f));
+        commit(core::kPresetParamHarmonic, r(0.0f, 1.0f));
+        commit(core::kPresetParamAMRate, r(0.0f, 0.3f));
+        commit(core::kPresetParamPitch, r(-0.25f, 0.25f));
+        commit(core::kPresetParamDuration, r(0.04f, 0.55f));
+        commit(core::kPresetParamRespiration, r(0.0f, 0.3f));
+        commit(core::kPresetParamAMDepth, r(0.0f, 0.8f));
+        commit(core::kPresetParamFormant1, r(400.0f, 4000.0f));
+        commit(core::kPresetParamFormant2, r(800.0f, 7000.0f));
+        commit(core::kPresetParamFormantQ, r(2.0f, 12.0f));
+        commit(core::kPresetParamCoupling, r(0.0f, 0.4f));
+        commit(core::kPresetParamVoiceOffset, r(0.0f, 0.5f));
+    }
+
+    static constexpr std::array<kit::Accent, core::kPresetCount> kPresetColors = {{
+        {165, 200, 110}, {120, 170, 210}, {215, 185, 90}, {205, 115, 75}, {150, 200, 135},
+        {120, 120, 160}, {175, 150, 195}, {100, 200, 175}, {205, 165, 90}, {155, 155, 155},
+    }};
+
+    std::array<float, core::kParameterCount> host_ {};
+    std::uint32_t preset_ = 0;
+    std::array<float, kHistory> pitchIn_ {}, pitchBird_ {};
+    std::size_t head_ = 0;
+    unsigned rand_ = 1;
 };
 
 UI* createUI() { return new SyrinxUI(); }

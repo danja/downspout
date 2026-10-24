@@ -98,7 +98,7 @@ installed bundle.
 | [Ambo](plugins/ambo/README.md) | `ambo.vst3` | Audio effect | Stereo ambient processor with rearrangeable time, spectral, tape, shimmer, delay, drive, and feedback modules. |
 | [drumgen](plugins/drumgen/README.md) | `drumgen.vst3` | MIDI drum generator | Pattern generator with meter-aware styles, fills, Breakbeat/Amen/Jungle/Hip Hop genres, and clave-led Rumba/Samba/Township Jive grooves. |
 | [drumkit](plugins/drumkit/README.md) | `drumkit.vst3` | Instrument | Port of the `flues` drum synth with stereo output, one MIDI input, and mixer-style UI. |
-| [syrinx](plugins/syrinx/README.md) | `syrinx.vst3` | Instrument | Polyphonic MIDI synthesizer based on the Mindlin-Laje biophysical avian syrinx model with 10 bird presets and chromatic pitch mapping. |
+| [syrinx](plugins/syrinx/README.md) | `syrinx.vst3` | Instrument | Avian syrinx voice (Mindlin-Laje model, 10 bird presets): MIDI plays phrases of chirping syllables, or audio in is tracked for pitch and loudness and steers the bird. |
 | [cadence](plugins/cadence/README.md) | `cadence.vst3` | MIDI effect | Transport-aware MIDI harmonizer and comping generator. |
 | [arpgen](plugins/arpgen/README.md) | `arpgen.vst3` | MIDI effect | Transport-synced chord-capture and scale-derived arpeggiator. |
 | [counterpointer](plugins/counterpointer/README.md) | `counterpointer.vst3` | MIDI generator/effect | Learns incoming MIDI and emits a monophonic counter-melody. |

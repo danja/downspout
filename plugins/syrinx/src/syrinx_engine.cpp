@@ -8,6 +8,8 @@ namespace downspout::syrinx {
 
 Engine::Engine(float sampleRate)
     : sampleRate_(sampleRate)
+    , analyzer_(sampleRate)
+    , drivenVoice_(sampleRate)
     , reverbL_(sampleRate)
     , reverbR_(sampleRate)
     , dcL_(0.999f)
@@ -22,6 +24,7 @@ Engine::Engine(float sampleRate)
 
     for (auto& v : voices_)
         v.setSampleRate(sampleRate_);
+    drivenVoice_.setSampleRate(sampleRate_);
 
     rebuildFx();
 }
@@ -31,6 +34,9 @@ void Engine::setSampleRate(float sampleRate)
     sampleRate_ = sampleRate > 1.0f ? sampleRate : 48000.0f;
     for (auto& v : voices_)
         v.setSampleRate(sampleRate_);
+    drivenVoice_.setSampleRate(sampleRate_);
+    analyzer_.setSampleRate(sampleRate_);
+    drivenRunning_ = false;
     reverbL_ = ReverbModule(sampleRate_);
     reverbR_ = ReverbModule(sampleRate_);
     rebuildFx();
@@ -54,6 +60,7 @@ void Engine::setParameter(std::uint32_t index, float value)
 {
     if (index >= kParameterCount) return;
     const auto spec = getParameterSpec(index);
+    if (spec.output) return;   // status values belong to the engine
     if (spec.boolean)
         value = value >= 0.5f ? 1.0f : 0.0f;
     else if (spec.integer)
@@ -64,6 +71,16 @@ void Engine::setParameter(std::uint32_t index, float value)
 
     if (index == kParamDistance)
         rebuildFx();
+    // A knob on the selected preset, or a new preset or source, reaches the driven voice.
+    if (index == kParamSelectedPreset || index == kParamSource
+        || (index < kPresetCount * kParamsPerPreset && index / kParamsPerPreset == selectedPreset()))
+        drivenDirty_ = true;
+}
+
+std::uint32_t Engine::selectedPreset() const
+{
+    return static_cast<std::uint32_t>(
+        std::clamp(static_cast<int>(std::round(params_[kParamSelectedPreset])), 0, 9));
 }
 
 void Engine::handleMidi(const std::uint8_t* data, std::uint32_t size)
@@ -99,17 +116,90 @@ void Engine::handleMidi(const std::uint8_t* data, std::uint32_t size)
 
 void Engine::handleNoteOn(std::uint8_t note, std::uint8_t velocity, int channel)
 {
-    const std::uint32_t preset = static_cast<std::uint32_t>(
-        std::clamp(static_cast<int>(std::round(params_[kParamSelectedPreset])), 0, 9));
+    if (std::lround(params_[kParamSource]) == 1)   // Audio only: the keyboard is ignored
+        return;
+    const std::uint32_t preset = selectedPreset();
 
     // Check mute for selected preset
     if (params_[presetParam(preset, kPresetParamMute)] >= 0.5f)
         return;
 
     const PresetParams pp = decodePreset(params_.data(), preset);
+    const float vel = static_cast<float>(velocity) / 127.0f;
+    const int syllables = std::clamp(static_cast<int>(std::lround(params_[kParamSyllables])), 1, 16);
+    const float chirp = params_[kParamChirp];
+
+    if (syllables <= 1 && chirp <= 0.001f) {   // the original single steady tone
+        const int vi = allocateVoice();
+        voices_[vi].trigger(note, vel, pp, noiseStream_++, channel,
+                            bendRatio_[static_cast<std::size_t>(channel & 15)]);
+        return;
+    }
+
+    std::size_t slot = 0;
+    for (std::size_t i = 0; i < phrases_.size(); ++i)
+        if (!phrases_[i].active) { slot = i; break; }
+    Phrase& ph = phrases_[slot];
+    ph = Phrase {};
+    ph.active = true;
+    ph.note = note;
+    ph.velocity = vel;
+    ph.channel = channel;
+    ph.count = syllables;
+    ph.base = pp;
+    ph.rng = Xorshift32(noiseStream_++ * 7u + 3u);
+    fireSyllable(ph);
+}
+
+// Plays the phrase's next syllable and schedules the one after.
+void Engine::fireSyllable(Phrase& ph)
+{
+    const float chirp = params_[kParamChirp];
+    const float var = params_[kParamVariation];
+    const float gap = params_[kParamGap];
+    auto r01 = [&] { return 0.5f + 0.5f * ph.rng.next(); };
+
+    PresetParams q = ph.base;
+    q.shaped = true;
+    q.bend = 0.0f;
+    // Chirp shortens the preset's duration toward a real syllable: x0.28 at 0.6, x0.12 at 1.
+    const float len = std::max(0.025f, ph.base.durationSec * std::pow(0.12f, chirp)
+                                           * (1.0f + (r01() - 0.5f) * 0.7f * var));
+    q.durationSec = len;
+
+    // Contour: mostly ramps biased by the preset's Bend, some arches and valleys.
+    const float mag = chirp * 2.2f * (1.0f - 0.5f * var + var * r01());
+    const float pUp = 0.5f + 0.4f * ph.base.bend;
+    const float r = r01();
+    float sign = 1.0f;
+    q.arch = false;
+    if (r < 0.7f * pUp) {
+        sign = 1.0f;
+    } else if (r < 0.7f * pUp + 0.7f * (1.0f - pUp)) {
+        sign = -1.0f;
+    } else {
+        q.arch = true;
+        sign = r01() < 0.5f ? 1.0f : -1.0f;
+    }
+    q.sweepOct = sign * mag;
+
+    // Each syllable lands on its own pitch; the preset's Bend leans the phrase up or down.
+    q.pitchSemitones += (r01() - 0.5f) * 2.0f * var * 4.0f + ph.base.bend * static_cast<float>(ph.index) * 0.8f;
+    q.noise = std::clamp(ph.base.noise + 0.50f * chirp * (0.5f + r01()), 0.0f, 1.0f);
+    q.regime = std::clamp(ph.base.regime + var * 0.25f * (r01() - 0.3f), 0.0f, 1.0f);
+    const float vel = ph.velocity * (1.0f - var * 0.45f * r01());
+
     const int vi = allocateVoice();
-    voices_[vi].trigger(note, static_cast<float>(velocity) / 127.0f, pp, noiseStream_++, channel,
-                        bendRatio_[static_cast<std::size_t>(channel & 15)]);
+    voices_[vi].trigger(ph.note, vel, q, noiseStream_++, ph.channel,
+                        bendRatio_[static_cast<std::size_t>(ph.channel & 15)]);
+
+    ++ph.index;
+    if (ph.index >= ph.count) {
+        ph.active = false;
+        return;
+    }
+    const float gapSec = len * (0.15f + 1.6f * gap) * (1.0f + (r01() - 0.5f) * 0.6f * var);
+    ph.countdown = std::max(1, static_cast<int>((len + gapSec) * sampleRate_));
 }
 
 void Engine::handleNoteOff(std::uint8_t note, int channel)
@@ -142,8 +232,7 @@ void Engine::resetBend()
 void Engine::handleCC(std::uint8_t cc, std::uint8_t value)
 {
     const float norm = static_cast<float>(value) / 127.0f;
-    const std::uint32_t preset = static_cast<std::uint32_t>(
-        std::clamp(static_cast<int>(std::round(params_[kParamSelectedPreset])), 0, 9));
+    const std::uint32_t preset = selectedPreset();
 
     auto setPreset = [&](std::uint32_t p, float v) {
         setParameter(presetParam(preset, p), v);
@@ -162,7 +251,12 @@ void Engine::handleCC(std::uint8_t cc, std::uint8_t value)
     case 79:  setPreset(kPresetParamCoupling,    norm); break;
     case 80:  setPreset(kPresetParamAMDepth,     norm); break;
     case 83:  setPreset(kPresetParamPitch,       norm * 2.0f - 1.0f); break;
+    case 81:  setParameter(kParamSyllables,      1.0f + norm * 15.0f); break;
+    case 82:  setParameter(kParamChirp,          norm); break;
+    case 84:  setParameter(kParamVariation,      norm); break;
     case 85:  setPreset(kPresetParamRespiration, norm); break;
+    case 86:  setParameter(kParamGap,            norm); break;
+    case 87:  setParameter(kParamInMix,          norm); break;
     case 91:  setParameter(kParamDistance,       norm); break;
     case 94:  setPreset(kPresetParamBend,        norm * 2.0f - 1.0f); break;
     default:  break;
@@ -179,13 +273,85 @@ int Engine::allocateVoice()
     for (int i = 0; i < kMaxVoices; ++i)
         if (voices_[i].isReleasing()) return i;
 
-    // Steal voice 0 as last resort
-    return 0;
+    // Last resort: the oldest voice
+    int oldest = 0;
+    for (int i = 1; i < kMaxVoices; ++i)
+        if (voices_[i].age() > voices_[oldest].age()) oldest = i;
+    return oldest;
 }
 
-StereoFrame Engine::processStereo()
+// Analyses the input and steers the free-running bird voice with it. Adds the voice to `wet`.
+void Engine::updateAudioVoice(const float inL, const float inR, float& wet)
+{
+    analyzer_.setRange(params_[kParamInRange]);
+    analyzer_.push(0.5f * (inL + inR));
+
+    if (!drivenRunning_) {
+        drivenVoice_.startDriven(decodePreset(params_.data(), selectedPreset()), 0x5eedu);
+        drivenRunning_ = true;
+        drivenDirty_ = false;
+        pitchValid_ = false;
+    } else if (drivenDirty_) {
+        drivenVoice_.applyParams(decodePreset(params_.data(), selectedPreset()));
+        drivenDirty_ = false;
+    }
+
+    // Gate on loudness relative to the recent peak, with hysteresis so breaths do not chatter.
+    const float rel = analyzer_.relativeLevel();
+    const float threshold = 0.04f + 0.45f * params_[kParamInGate];
+    const bool audible = analyzer_.level() > 2.0e-4f;
+    if (!gateOpen_ && audible && rel > threshold * 1.15f) gateOpen_ = true;
+    if (gateOpen_ && (!audible || rel < threshold * 0.85f)) gateOpen_ = false;
+
+    const float hz = analyzer_.hz();
+    const bool voiced = gateOpen_ && hz > 0.0f;
+    const float unvoiced = params_[kParamInUnvoiced];
+    const float sib = analyzer_.sibilance();
+
+    if (voiced) {
+        float f = hz * params_[kParamInPitchMult];
+        for (int i = 0; i < 6 && f > 9000.0f; ++i) f *= 0.5f;
+        for (int i = 0; i < 6 && f < 300.0f; ++i) f *= 2.0f;
+        const float target = std::log2(f);
+        const float tau = 0.002f * std::pow(60.0f, params_[kParamInResponse]);
+        if (!pitchValid_) { logHz_ = target; pitchValid_ = true; }
+        logHz_ += (1.0f - std::exp(-1.0f / (tau * sampleRate_))) * (target - logHz_);
+    }
+    silentSamples_ = gateOpen_ ? 0 : silentSamples_ + 1;
+    if (silentSamples_ > static_cast<int>(0.15f * sampleRate_)) pitchValid_ = false;
+
+    if (analyzer_.takeOnset() && gateOpen_ && params_[kParamChirp] > 0.01f) {
+        const float up = audioRng_.next() > -0.3f ? 1.0f : -1.0f;
+        drivenVoice_.kick(up * params_[kParamChirp] * (0.4f + 0.8f * (0.5f + 0.5f * audioRng_.next())));
+    }
+
+    // Sibilants and breath: the tone fades and turbulence takes over.
+    const float toneTarget = voiced ? 1.0f - 0.5f * sib * unvoiced : 1.0f - unvoiced;
+    const float noiseTarget = gateOpen_ ? (voiced ? 0.3f * sib * unvoiced : unvoiced * (0.5f + 0.5f * sib)) : 0.0f;
+    const float ampTarget = gateOpen_ ? std::sqrt(std::clamp(rel, 0.0f, 1.0f)) : 0.0f;
+    const float k = 1.0f - std::exp(-1.0f / (0.004f * sampleRate_));
+    ampSm_ += k * (ampTarget - ampSm_);
+    toneSm_ += k * (toneTarget - toneSm_);
+    noiseSm_ += k * (noiseTarget - noiseSm_);
+
+    drivenVoice_.setDrive(std::exp2(logHz_), ampSm_, toneSm_, noiseSm_);
+    wet += drivenVoice_.process();
+
+    if ((++statusCounter_ & 63) == 0) {
+        params_[kParamOutLevel] = gateOpen_ ? rel : 0.0f;
+        params_[kParamOutInHz] = voiced ? hz : 0.0f;
+        params_[kParamOutBirdHz] = ampSm_ > 0.02f ? std::exp2(logHz_) : 0.0f;
+        params_[kParamOutVoiced] = !gateOpen_ ? 0.0f : (voiced ? 1.0f : 0.5f);
+    }
+}
+
+StereoFrame Engine::processStereo(const float inL, const float inR)
 {
     float sumL = 0.0f, sumR = 0.0f;
+
+    for (auto& ph : phrases_)
+        if (ph.active && --ph.countdown <= 0)
+            fireSyllable(ph);
 
     for (int i = 0; i < kMaxVoices; ++i) {
         if (!voices_[i].isActive()) continue;
@@ -195,6 +361,22 @@ StereoFrame Engine::processStereo()
         const float angle = (pan + 1.0f) * 3.14159265359f * 0.25f;
         sumL += sample * std::cos(angle);
         sumR += sample * std::sin(angle);
+    }
+
+    const bool audioIn = std::lround(params_[kParamSource]) != 0;
+    const float mix = params_[kParamInMix];
+    if (audioIn) {
+        float bird = 0.0f;
+        updateAudioVoice(inL, inR, bird);
+        sumL += bird * mix * 0.7071f;
+        sumR += bird * mix * 0.7071f;
+    } else if (drivenRunning_) {
+        drivenVoice_.kill();
+        drivenRunning_ = false;
+        analyzer_.reset();
+        gateOpen_ = false;
+        ampSm_ = noiseSm_ = 0.0f;
+        params_[kParamOutLevel] = params_[kParamOutInHz] = params_[kParamOutBirdHz] = params_[kParamOutVoiced] = 0.0f;
     }
 
     // Tanh soft saturation (matches syrinx-processor.js output stage)
@@ -211,15 +393,26 @@ StereoFrame Engine::processStereo()
 
     // Master gain
     const float gain = params_[kParamMasterGain];
-    sumL = std::clamp(sumL * gain, -1.0f, 1.0f);
-    sumR = std::clamp(sumR * gain, -1.0f, 1.0f);
+    sumL = sumL * gain;
+    sumR = sumR * gain;
 
-    return { sumL, sumR };
+    // The dry voice skips the master gain so the blend keeps the input level.
+    if (audioIn) {
+        sumL += inL * (1.0f - mix);
+        sumR += inR * (1.0f - mix);
+    }
+    return { std::clamp(sumL, -1.0f, 1.0f), std::clamp(sumR, -1.0f, 1.0f) };
 }
 
 void Engine::reset()
 {
     for (auto& v : voices_) v.kill();
+    for (auto& ph : phrases_) ph.active = false;
+    drivenVoice_.kill();
+    drivenRunning_ = false;
+    analyzer_.reset();
+    gateOpen_ = false;
+    ampSm_ = noiseSm_ = 0.0f;
     reverbL_.reset();
     reverbR_.reset();
     dcL_.reset();
@@ -228,8 +421,7 @@ void Engine::reset()
 
 void Engine::randomizeSelectedPreset(std::uint32_t seed)
 {
-    const std::uint32_t preset = static_cast<std::uint32_t>(
-        std::clamp(static_cast<int>(std::round(params_[kParamSelectedPreset])), 0, 9));
+    const std::uint32_t preset = selectedPreset();
 
     // Simple LCG for UI randomization
     auto lcg = [&]() -> float {

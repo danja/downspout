@@ -31,7 +31,8 @@ protected:
     const char* getDescription() const override
     {
         return "Biophysical bird vocal synthesiser based on the Mindlin-Laje syrinx model. "
-               "10 presets, chromatic MIDI playback, CC parameter control.";
+               "10 presets, MIDI phrases of chirping syllables, or an audio input analysed "
+               "for pitch and loudness that steers the bird voice.";
     }
     const char* getMaker()    const override { return "danja"; }
     const char* getHomePage() const override { return "https://danja.github.io/downspout/"; }
@@ -54,9 +55,11 @@ protected:
         const auto spec = getParameterSpec(index);
         parameter.name   = spec.name;
         parameter.symbol = spec.symbol;
-        parameter.hints  = kParameterIsAutomatable;
+        parameter.hints  = spec.output ? kParameterIsOutput : kParameterIsAutomatable;
         if (spec.boolean) parameter.hints |= kParameterIsBoolean | kParameterIsInteger;
         if (spec.integer) parameter.hints |= kParameterIsInteger;
+        if (index == downspout::syrinx::kParamInRange || index == downspout::syrinx::kParamInPitchMult)
+            parameter.hints |= kParameterIsLogarithmic;
         parameter.ranges.min = spec.minimum;
         parameter.ranges.max = spec.maximum;
         parameter.ranges.def = spec.defaultValue;
@@ -70,7 +73,7 @@ protected:
         engine_.setSampleRate(static_cast<float>(newSampleRate));
     }
 
-    void run(const float**, float** outputs, const uint32_t frames,
+    void run(const float** inputs, float** outputs, const uint32_t frames,
              const MidiEvent* midiEvents, const uint32_t midiEventCount) override
     {
         std::uint32_t eventIndex = 0;
@@ -78,7 +81,7 @@ protected:
             while (eventIndex < midiEventCount && midiEvents[eventIndex].frame <= frame)
                 handleMidiEvent(engine_, midiEvents[eventIndex++]);
 
-            const auto out = engine_.processStereo();
+            const auto out = engine_.processStereo(inputs[0][frame], inputs[1][frame]);
             outputs[0][frame] = out.left;
             outputs[1][frame] = out.right;
         }

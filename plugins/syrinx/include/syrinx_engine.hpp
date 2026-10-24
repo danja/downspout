@@ -2,6 +2,7 @@
 
 #include "syrinx_params.hpp"
 #include "SyrinxVoice.hpp"
+#include "syrinx_analyzer.hpp"
 #include "modules/DCBlocker.hpp"
 #include "modules/ReverbModule.hpp"
 #include "modules/Distortion.hpp"
@@ -35,15 +36,32 @@ public:
     void handlePitchBend(int channel, int value14);
     void handleCC(std::uint8_t cc, std::uint8_t value);
 
-    [[nodiscard]] StereoFrame processStereo();
+    // Audio in feeds the analyser when Source is Audio or Both; MIDI-only ignores it.
+    [[nodiscard]] StereoFrame processStereo(float inL = 0.0f, float inR = 0.0f);
     void reset();
 
     // Randomize the selected preset's parameters (UI action)
     void randomizeSelectedPreset(std::uint32_t seed);
 
 private:
+    // One MIDI note-on plays a phrase: a run of short syllables, each with its own contour.
+    struct Phrase {
+        bool active = false;
+        std::uint8_t note = 0;
+        float velocity = 0.0f;
+        int channel = 0;
+        int index = 0;
+        int count = 0;
+        int countdown = 0;
+        PresetParams base {};
+        Xorshift32 rng {1u};
+    };
+
     void rebuildFx();
     [[nodiscard]] int allocateVoice();
+    [[nodiscard]] std::uint32_t selectedPreset() const;
+    void fireSyllable(Phrase& phrase);
+    void updateAudioVoice(float inL, float inR, float& wet);
 
     float sampleRate_;
     std::array<float, kParameterCount> params_{};
@@ -58,6 +76,20 @@ private:
     void resetBend();
 
     std::array<SyrinxVoice, kMaxVoices> voices_;
+    std::array<Phrase, kMaxVoices> phrases_ {};
+
+    // Audio-driven voice
+    InputAnalyzer analyzer_;
+    SyrinxVoice   drivenVoice_;
+    Xorshift32    audioRng_ {99u};
+    bool  drivenRunning_ = false;
+    bool  drivenDirty_ = false;
+    bool  gateOpen_ = false;
+    bool  pitchValid_ = false;
+    float logHz_ = 10.0f;       // log2 of the pitch the bird voice follows
+    float ampSm_ = 0.0f, toneSm_ = 1.0f, noiseSm_ = 0.0f;
+    int   silentSamples_ = 0;
+    int   statusCounter_ = 0;
 
     ReverbModule reverbL_, reverbR_;
     DCBlocker    dcL_, dcR_;

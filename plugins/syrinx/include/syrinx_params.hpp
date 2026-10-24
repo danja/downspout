@@ -36,7 +36,28 @@ static constexpr std::uint32_t kPresetParamTracheaCm   = 20; // 0-10 cm tracheal
 static constexpr std::uint32_t kParamDistance         = kPresetCount * kParamsPerPreset + 0;
 static constexpr std::uint32_t kParamMasterGain       = kPresetCount * kParamsPerPreset + 1;
 static constexpr std::uint32_t kParamSelectedPreset   = kPresetCount * kParamsPerPreset + 2;
-static constexpr std::uint32_t kParameterCount        = kPresetCount * kParamsPerPreset + 3;
+
+// Global section, appended after the original masters so saved projects keep their indices.
+// Phrase: each MIDI note-on plays a run of short syllables instead of one steady tone.
+static constexpr std::uint32_t kParamSource           = kPresetCount * kParamsPerPreset + 3;  // 0 MIDI, 1 Audio, 2 Both
+static constexpr std::uint32_t kParamSyllables        = kPresetCount * kParamsPerPreset + 4;  // 1-16 per note-on
+static constexpr std::uint32_t kParamChirp            = kPresetCount * kParamsPerPreset + 5;  // 0-1 sweep depth and speed
+static constexpr std::uint32_t kParamVariation        = kPresetCount * kParamsPerPreset + 6;  // 0-1 syllable-to-syllable spread
+static constexpr std::uint32_t kParamGap              = kPresetCount * kParamsPerPreset + 7;  // 0-1 silence between syllables
+// Audio input analysis
+static constexpr std::uint32_t kParamInPitchMult      = kPresetCount * kParamsPerPreset + 8;  // 1-12 x, tracked pitch multiplier
+static constexpr std::uint32_t kParamInRange          = kPresetCount * kParamsPerPreset + 9;  // 80-800 Hz, centre of the voice
+static constexpr std::uint32_t kParamInGate           = kPresetCount * kParamsPerPreset + 10; // 0-1 noise gate
+static constexpr std::uint32_t kParamInResponse       = kPresetCount * kParamsPerPreset + 11; // 0-1 pitch glide time
+static constexpr std::uint32_t kParamInUnvoiced       = kPresetCount * kParamsPerPreset + 12; // 0-1 sibilants -> turbulence
+static constexpr std::uint32_t kParamInMix            = kPresetCount * kParamsPerPreset + 13; // 0-1 dry(0) / bird(1)
+// Output (status) parameters for the UI; written by the engine
+static constexpr std::uint32_t kParamOutLevel         = kPresetCount * kParamsPerPreset + 14; // 0-1 input level after gate
+static constexpr std::uint32_t kParamOutInHz          = kPresetCount * kParamsPerPreset + 15; // tracked input Hz (0 = unvoiced)
+static constexpr std::uint32_t kParamOutBirdHz        = kPresetCount * kParamsPerPreset + 16; // Hz the bird voice is following
+static constexpr std::uint32_t kParamOutVoiced        = kPresetCount * kParamsPerPreset + 17; // 0 silent, 0.5 unvoiced, 1 voiced
+static constexpr std::uint32_t kParameterCount        = kPresetCount * kParamsPerPreset + 18;
+static constexpr std::uint32_t kFirstOutputParam      = kParamOutLevel;
 
 inline constexpr std::uint32_t presetParam(std::uint32_t preset, std::uint32_t param)
 {
@@ -51,6 +72,7 @@ struct ParameterSpec {
     float defaultValue;
     bool boolean;
     bool integer;
+    bool output = false;
 };
 
 static const char* const kPresetNames[kPresetCount] = {
@@ -147,6 +169,36 @@ inline ParameterSpec getParameterSpec(std::uint32_t index)
         return { "Master Gain",     "master_gain",      0.0f, 1.0f, 0.75f, false, false };
     case kParamSelectedPreset:
         return { "Selected Preset", "selected_preset",  0.0f, 9.0f, 0.0f,  false, true  };
+    case kParamSource:
+        return { "Source",          "source",           0.0f, 2.0f, 0.0f,  false, true  };
+    case kParamSyllables:
+        return { "Syllables",       "syllables",        1.0f, 16.0f, 3.0f, false, true  };
+    case kParamChirp:
+        return { "Chirp",           "chirp",            0.0f, 1.0f, 0.6f,  false, false };
+    case kParamVariation:
+        return { "Variation",       "variation",        0.0f, 1.0f, 0.4f,  false, false };
+    case kParamGap:
+        return { "Gap",             "gap",              0.0f, 1.0f, 0.35f, false, false };
+    case kParamInPitchMult:
+        return { "Pitch Multiplier","in_pitch_mult",    1.0f, 12.0f, 6.0f, false, false };
+    case kParamInRange:
+        return { "Voice Range",     "in_range",         80.0f, 800.0f, 220.0f, false, false };
+    case kParamInGate:
+        return { "Gate",            "in_gate",          0.0f, 1.0f, 0.15f, false, false };
+    case kParamInResponse:
+        return { "Pitch Response",  "in_response",      0.0f, 1.0f, 0.3f,  false, false };
+    case kParamInUnvoiced:
+        return { "Unvoiced Noise",  "in_unvoiced",      0.0f, 1.0f, 0.7f,  false, false };
+    case kParamInMix:
+        return { "Bird Mix",        "in_mix",           0.0f, 1.0f, 1.0f,  false, false };
+    case kParamOutLevel:
+        return { "Input Level",     "out_level",        0.0f, 1.0f, 0.0f,  false, false, true };
+    case kParamOutInHz:
+        return { "Input Pitch",     "out_in_hz",        0.0f, 2000.0f, 0.0f, false, false, true };
+    case kParamOutBirdHz:
+        return { "Bird Pitch",      "out_bird_hz",      0.0f, 12000.0f, 0.0f, false, false, true };
+    case kParamOutVoiced:
+        return { "Input State",     "out_voiced",       0.0f, 1.0f, 0.0f,  false, false, true };
     default:
         return { "Unknown", "unknown", 0.0f, 1.0f, 0.0f, false, false };
     }
@@ -174,12 +226,17 @@ struct PresetParams {
     float voiceOffset;        // 0-1 secondary voice frequency offset (0=unison, 1=+octave)
     float regime;             // 0-1 → gammaScale 1-4 (ODE regime shift, independent of harmonic band)
     float tracheaCm;          // 0-10 cm tracheal tube (0=simple mix, >0=physics pi(t) coupling)
+
+    // Syllable shaping, set by the engine's phrase generator (not stored parameters).
+    bool  shaped      = false;  // sin^0.5 amplitude window over durationSec; ignores note-off
+    float sweepOct    = 0.0f;   // signed octaves swept over the syllable
+    bool  arch        = false;  // sweep goes there and back (sweepOct < 0 gives a valley)
 };
 
 inline PresetParams decodePreset(const float* values, std::uint32_t preset)
 {
     const std::uint32_t base = preset * kParamsPerPreset;
-    PresetParams p;
+    PresetParams p {};
     p.level             = values[base + kPresetParamLevel];
     p.noise             = values[base + kPresetParamNoise];
     p.roughness         = values[base + kPresetParamRoughness];

@@ -5,7 +5,9 @@
 syrinx is an original Downspout plugin. It implements the Mindlin-Laje avian
 syrinx model — a two-dimensional nonlinear ODE — plus a vocal-tract filter chain
 intended to produce convincing bird sounds. The reference production
-implementation is Lyrebird (`/home/danny/github/Lyrebird`).
+implementation is Lyrebird (`/home/danny/github/Lyrebird`, not present on the machine used for the
+October 2026 chirp/audio work, so those targets come from the literature and birdspeech, not a
+side-by-side with Lyrebird).
 
 ## Signal chain (per voice)
 
@@ -37,8 +39,73 @@ MIDI trigger
    16. DC block + 12 kHz lowpass
    17. Output × envelope × level
 
-Master: tanh soft saturation → distance reverb → gain
+Master: tanh soft saturation → distance reverb → gain (the dry audio input is added after the gain)
+
+Steps 3 and 4 apply to a MIDI syllable's own contour; see Pitch lock below for how the contour
+reaches the source.
 ```
+
+## Pitch lock (why contours now sweep the sound)
+
+Before: `gamma` was set once per note from the target f0, and the pitch contour only moved the
+tract bandpass's centre. The oscillator frequency is `gamma * Phi(alpha, beta)` and `Phi` moves
+with pressure (alpha = 0.05 + 0.4 ps), so the sound sat wherever `Phi` put it, and a contour just
+swept a filter across a nearly static tone. A probe (`downspout` scratch, per-syllable f0 track)
+measured 0.00-0.35 oct sweeps at under 12 oct/s, 7-14 % of the time moving, against 1-2 oct at
+20-50+ oct/s for real chirps.
+
+Now: `gamma = f0 / phiEst` every sample, where `phiEst = f_measured / gamma` is updated at each
+upward zero crossing of `y` (the extrema of `x`), smoothed 0.6 and rejected outside 0.5-2x. The
+equation is exactly time-scale invariant in `gamma` (every term carries `gamma^2` or `gamma` times
+a time derivative), so this is a PLL on the source, not an approximation. Oversampling and `dt`
+are recomputed every 8 samples. Assumption: in chaotic regimes the crossing interval is irregular,
+so pitch jitters; that is acceptable roughness. The second oscillator now has its own `dt2`
+(it previously reused the primary's `dt` with its own step count, running at the wrong rate).
+
+## Syllables and phrases (MIDI)
+
+A note-on starts a `Phrase` in the engine (up to 8 at once). Syllable k is a shaped voice:
+`sin^0.5` amplitude window over its length (with a 1.5 ms onset ramp), a contour of `sweepOct`
+octaves (ramp, or arch with `arch`; a negative sweep on an arch is a valley), and per-syllable
+draws for length, pitch, loudness, noise and regime, all from `Variation`. Formulas (engine,
+`fireSyllable`):
+
+- length = preset Duration x `0.12^Chirp` (min 25 ms), +/- 35 % x Variation
+- sweep = Chirp x 2.2 oct x (1 - Variation/2 + Variation x rand); direction by preset Bend
+- gap = length x (0.15 + 1.6 Gap), +/- 30 % x Variation
+- noise += 0.5 x Chirp x (0.5 + rand): chirps are breathier; flatness rose from about 0.0005
+  to 0.004-0.008 on the clean presets (Nightjar and Starling already sit at 0.02-0.03)
+
+Shaped syllables ignore note-off (they end on their window), so short sequencer notes still play
+the whole phrase. `Syllables = 1` with `Chirp = 0` is the original single steady tone. Voice
+stealing now takes the oldest voice instead of voice 0.
+
+## Audio mode
+
+`InputAnalyzer` (`syrinx_analyzer.hpp`, portable) runs per sample on the mono sum:
+
+- Pitch: two one-pole lowpasses at 1.4 kHz, decimated to ~6 kHz, McLeod NSDF over a 64 ms window
+  every 8 ms; lag range 0.5x-2.5x the Voice Range (clamped 50-1200 Hz); first key maximum within
+  90 % of the best, accepted above 0.55, parabolic refinement. Cost about 5 M MAC/s.
+- Level: 3 ms attack / 50 ms release follower; relative level = level / (peak with 3 s decay),
+  so Gate is independent of input gain. Absolute floor 2e-4 stops silence being normalised up.
+- Sibilance: high-band (4 kHz) level / level.
+- Onset: fast (4 ms) follower above 1.9x a slow (120 ms) one; re-arms only after the fast one
+  falls back within 1.25x of the slow, so a held note is one onset (the first version fired every
+  refractory period).
+
+`Engine::updateAudioVoice` maps these to a free-running `SyrinxVoice` in driven mode:
+pitch = tracked Hz x multiplier (octave-folded into 300-9000 Hz) slewed in log frequency with
+the Pitch Glide time constant (2-120 ms); pressure = sqrt(relative level) when the gate is open
+(hysteresis 15 %); tone and turbulence by sibilance and voicing; an onset kicks the pitch by
+Chirp x 0.4-1.2 oct decaying over ~35 ms. Sibilants use a broadband first-difference noise that
+bypasses the tract, because noise through the f0 bandpass is a whistle, not a hiss. Source MIDI
+never allocates the driven voice; Audio ignores note-ons. Preset edits reach the running voice
+through `applyParams` without restarting it.
+
+Latency is analysis-window bound (about 64 ms for pitch, a few ms for level) and is not reported
+to the host. Transport is not used. Output parameters (`OutLevel`, `OutInHz`, `OutBirdHz`,
+`OutVoiced`) carry the live state to the UI; they are not saved (DPF skips outputs).
 
 ## ODE physics
 

@@ -1,5 +1,8 @@
 # Syrinx Plugin Plan
 
+> Historical plan. The plugin has since gained pitch-locked contours, MIDI syllable phrases, an audio
+> input mode and a Magneto-style UI; see `plugins/syrinx/docs/design-notes.md` for what is built.
+
 Syrinx is a DPF plugin that ports the Mindlin-Laje biophysical syrinx model from the [Lyrebird](https://github.com/danja/Lyrebird) project into a C++ audio plugin with a drumkit-style NanoVG UI. It models avian vocal production — the same physics that produces birdsong.
 
 ---

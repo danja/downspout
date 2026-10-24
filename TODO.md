@@ -12,6 +12,18 @@ caching and denormal handling; Gremlin's DC blocker has a fixed pole of 0.9985; 
 differ in the Q floor (0.5 vs 0.3) and the band-pass gain (`Q alpha` vs `alpha`). Only unify these deliberately, per plugin,
 with an A/B listen. The core test blocks in `src/common/sampleprofile` and `tools/ai-coordinator` still use the long form.
 
+## Syrinx follow-ups (October 2026 chirp and audio-input work)
+
+- [ ] Ear pass over all ten presets with Chirp 60 %: Warbler and Pigeon are slow by design (sweeps of 6 and 3 oct/s);
+      decide whether they want a higher default Chirp or a per-preset syllable-length scale. Retune Nightjar, Pigeon
+      and Starling (air-sac ODE and tracheal coupling presets, already flagged in the design notes).
+- [ ] Host check of audio mode as an insert on a voice track (REAPER, Ardour): routing, that the VST3 category
+      "Instrument|Synth" still lets the host feed audio in, and the ~64 ms tracker latency (not reported to the host).
+- [ ] Compare against Lyrebird when it is on the machine: spectral flatness target (median 0.044 in its harvest, ours
+      0.004-0.03 with Chirp on, definitions may differ), syllable length and sweep statistics.
+- [ ] Projects saved before the chirp work open with 3 syllables per note (new defaults); consider whether Syllables 1 /
+      Chirp 0 should be the default for the `Custom` preset's host recall.
+
 ## Session state
 
 `scripts/check-plugin-state.sh`: 0 broken. "Parameters only" is not data loss: DPF's VST3
