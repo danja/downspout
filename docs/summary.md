@@ -191,6 +191,13 @@ along it you pluck, strike or bow (a string plucked a fifth of the way along has
 partials of a thick string, and **Pickup** puts a comb filter along it. Two body resonances and a damper on note-off finish it. The panel shows the shape the string starts in and the harmonics that gives. Use it for
 guitar-like plucks, hammered strings, bowed drones, or any of the generators (bassgen for a plucked bass, harmonic-atlas for chords). See `plugins/monochord/docs/design.md`.
 
+### NAM (`nam.vst3`)
+
+Plays Neural Amp Modeler captures: load a **`.nam`** model (an amp, pedal or whole rig) and a **`.wav`** cabinet impulse response from the panel. The signal runs **Input gain** (the drive control), a **Noise gate**
+before the model, the model, **Bass / Mid / Treble**, the cabinet with **Low cut** and **High cut**, then **IR gain**, **Dry / wet** and **Output gain**. **Mono sum** folds the input to one chain; **Stereo** runs one model per side
+at twice the CPU. A model trained at another sample rate is resampled and the latency reported to the host. A standard WaveNet capture is about a third of a core; Mix needs no help from you, the dry signal is delayed to match.
+Put it first on a guitar or bass track, or on a synth to make a distortion that follows playing level; reach for Damiano or Skream when you want a synthetic distortion with no files. See `plugins/nam/docs/design.md`.
+
 ### Quartet (`quartet.vst3`)
 
 Eight-voice four-operator FM synthesizer. Four operators, each a sine, saw or square with its own ratio (or fixed frequency) and envelope, are connected by one of eleven

@@ -1,0 +1,38 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:nam a trn:PluginProfile ;
+    rdfs:label "NAM" ;
+    rdfs:comment "Neural Amp Modeler player: loads a .nam amp/pedal model and a .wav cabinet impulse response, with input gain, noise gate, three-band tone, IR cuts, dry/wet and output level." ;
+    trn:bundleName "nam.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/nam/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio ;
+    trn:caution "Model and IR paths, not their contents, are saved with the session. A model trained at another rate is resampled to it, which adds a few dozen samples of reported latency. The output is clamped to +-8 (about +18 dBFS). Only models with one input and one output channel load." ;
+    trn:parameter [ rdfs:label "Input gain" ; trn:symbol "input_gain" ; trn:range "-24 to +24 dB" ; rdfs:comment "Gain into the gate and model; drives the amp harder." ] ;
+    trn:parameter [ rdfs:label "Noise gate" ; trn:symbol "gate" ; trn:range "-90 to -20 dB" ; rdfs:comment "Threshold before the model; the minimum (-90) means off." ] ;
+    trn:parameter [ rdfs:label "Bass" ; trn:symbol "bass" ; trn:range "-12 to +12 dB" ; rdfs:comment "120 Hz low shelf after the model." ] ;
+    trn:parameter [ rdfs:label "Mid" ; trn:symbol "mid" ; trn:range "-12 to +12 dB" ; rdfs:comment "750 Hz peak after the model." ] ;
+    trn:parameter [ rdfs:label "Treble" ; trn:symbol "treble" ; trn:range "-12 to +12 dB" ; rdfs:comment "3.5 kHz high shelf after the model." ] ;
+    trn:parameter [ rdfs:label "IR low cut" ; trn:symbol "ir_low_cut" ; trn:range "20-500 Hz (log)" ; rdfs:comment "High-pass after the cabinet; the minimum means off." ] ;
+    trn:parameter [ rdfs:label "IR high cut" ; trn:symbol "ir_high_cut" ; trn:range "2000-20000 Hz (log)" ; rdfs:comment "Low-pass after the cabinet; the maximum means off." ] ;
+    trn:parameter [ rdfs:label "IR gain" ; trn:symbol "ir_gain" ; trn:range "-24 to +12 dB" ; rdfs:comment "Level of the cabinet stage." ] ;
+    trn:parameter [ rdfs:label "Output gain" ; trn:symbol "output_gain" ; trn:range "-24 to +24 dB" ; rdfs:comment "Applied to the processed signal, not the dry signal." ] ;
+    trn:parameter [ rdfs:label "Mix" ; trn:symbol "mix" ; trn:range "0-1" ; rdfs:comment "Dry/wet. The dry signal is delayed to match the model's resampler." ] ;
+    trn:parameter [ rdfs:label "Channels" ; trn:symbol "channels" ; trn:range "0-1" ; rdfs:comment "0 = left and right summed to mono, 1 = one model per side." ] ;
+    trn:parameter [ rdfs:label "Model on" ; trn:symbol "model_enable" ; trn:range "0-1" ; rdfs:comment "0 bypasses the model." ] ;
+    trn:parameter [ rdfs:label "IR on" ; trn:symbol "ir_enable" ; trn:range "0-1" ; rdfs:comment "0 bypasses the cabinet." ] ;
+    trn:parameter [ rdfs:label "Normalise model" ; trn:symbol "normalize" ; trn:range "0-1" ; rdfs:comment "1 brings a model that reports its loudness to -18 dB." ] ;
+    trn:parameter [ rdfs:label "Input level" ; trn:symbol "in_level" ; trn:range "-90 to +12 dB" ; rdfs:comment "Read-only: input peak after Input gain." ] ;
+    trn:parameter [ rdfs:label "Output level" ; trn:symbol "out_level" ; trn:range "-90 to +12 dB" ; rdfs:comment "Read-only: output peak." ] ;
+    trn:parameter [ rdfs:label "Model status" ; trn:symbol "status_model" ; trn:range "0-2" ; rdfs:comment "Read-only: 0 empty, 1 loaded, 2 could not be read." ] ;
+    trn:parameter [ rdfs:label "IR status" ; trn:symbol "status_ir" ; trn:range "0-2" ; rdfs:comment "Read-only: 0 empty, 1 loaded, 2 could not be read." ] ;
+    trn:parameter [ rdfs:label "Model rate" ; trn:symbol "model_rate" ; trn:range "0-192000 Hz" ; rdfs:comment "Read-only: rate the model runs at." ] ;
+    trn:parameter [ rdfs:label "IR length" ; trn:symbol "ir_ms" ; trn:range "0-4000 ms" ; rdfs:comment "Read-only: length of the loaded impulse response." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

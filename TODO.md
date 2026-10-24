@@ -24,6 +24,16 @@ with an A/B listen. The core test blocks in `src/common/sampleprofile` and `tool
 - [ ] Projects saved before the chirp work open with 3 syllables per note (new defaults); consider whether Syllables 1 /
       Chirp 0 should be the default for the `Custom` preset's host recall.
 
+## NAM follow-ups (October 2026, first version)
+
+- [ ] Audition in REAPER with real captures and cabinet IRs: gain staging at the defaults (the -18 dB normalise target versus
+      each capture's own input level), the 120/750/3500 Hz tone points, the gate on a noisy guitar. Check the ~37-sample reported latency at 44.1 kHz.
+- [ ] CPU: a standard WaveNet is ~37 % of a core per network (Stereo doubles it). Consider an Eco switch that runs one network and copies
+      it, a slimmable-model size control, or an A2 recommendation in the panel text.
+- [ ] Input-level calibration from the model's `input_level_dbu` metadata (the NAM plugin's "calibrate input"), and a model-change crossfade.
+- [ ] macOS and Windows: the vendored NAM/Eigen build is untried there (`$<LINK_LIBRARY:WHOLE_ARCHIVE,...>` needs CMake 3.24).
+- [ ] Wrapper-level test in ctest: `plugins/nam/tests/wrapper_probe.cpp` is manual because it needs the DPF objects; wire it up if a second plugin wants the same.
+
 ## Session state
 
 `scripts/check-plugin-state.sh`: 0 broken. "Parameters only" is not data loss: DPF's VST3

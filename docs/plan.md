@@ -273,6 +273,10 @@ Progress as of 2026-05-27:
   loop from its own phase delay (error about 1e-12 samples; every measurable note within 0.4 cents), sets the fundamental's decay time exactly (within 12 %), makes stiffness a four-section cascade scaled to
   the period (on a low note partial 6 is +3 to +62 cents across 0.5-0.9), and adds a pickup comb whose nulls match theory, a body, a damper and a bow that sounds at every pressure and velocity. 14 automatable
   parameters, no plugin state, 134 core checks under ASan/UBSan. See `plugins/monochord/docs/design.md`. Listening and host validation in REAPER remain; one string per voice, no sympathetic strings.
+- `nam` plays Neural Amp Modeler captures: a `.nam` model through the vendored NeuralAmpModelerCore (`third_party/NeuralAmpModelerCore`, MIT, with Eigen 3.4.0 headers) and a `.wav` cabinet IR through
+  an own zero-latency partitioned FFT convolver, with input gain, noise gate, three-band tone, IR cuts, dry/wet and loudness normalisation. Models trained at another rate are resampled and the latency reported.
+  Files are plugin state (paths), loaded on the main thread and handed over as shared rigs. 14 automatable parameters, core tests plus a manual DPF-wrapper probe. See `plugins/nam/docs/design.md`.
+  Not yet auditioned in a host with real captures.
 - `quartet` is an eight-voice four-operator FM synthesizer in the Magneto look, a redesign inspired by `oxide-dsp`'s Operator device (`~/github/oxide-studio`, MIT/Apache-2.0), whose full-level
   modulation is about 19 rad, whose "fine" moves a frequency by up to an octave, and whose PolyBLEP saw and square are wrong under phase modulation. Quartet has band-limited operator tables
   chosen by the modulated read speed, FM depth in cycles (sidebands match Bessel functions to four digits), fine in cents, algorithms as data (the panel draws them), optional 2x oversampling with a
@@ -383,7 +387,7 @@ Current main gap:
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
   `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`,
-  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `grist.vst3`, `sam.vst3`, `ladder.vst3`, `glue.vst3`, `octet.vst3`, `trio.vst3`, `strata.vst3`, `quartet.vst3`, and `monochord.vst3` bundles.
+  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `grist.vst3`, `sam.vst3`, `ladder.vst3`, `glue.vst3`, `octet.vst3`, `trio.vst3`, `strata.vst3`, `quartet.vst3`, `monochord.vst3`, and `nam.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of

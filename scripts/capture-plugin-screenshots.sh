@@ -72,6 +72,7 @@ plugins=(
   "strata:strata"
   "quartet:quartet"
   "monochord:monochord"
+  "nam:nam"
   "tuney-vst:tuney_vst"
   "harmonic-atlas:harmonic_atlas"
   "conductor:conductor"

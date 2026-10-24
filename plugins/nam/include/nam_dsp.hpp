@@ -308,21 +308,26 @@ private:
 // to kMaxChunk samples (longer inputs are split).
 class StreamResampler {
 public:
-    static constexpr int kHalf = 16;
-    static constexpr int kTaps = 2 * kHalf;
+    static constexpr int kHalf = 16;        // kernel half-width in input samples when the rate does not fall
+    static constexpr int kMaxHalf = 128;
     static constexpr int kPhases = 256;
     static constexpr int kMaxChunk = 512;
 
     void configure(const double inRate, const double outRate)
     {
         step_ = inRate / outRate;
-        const double fc = 0.46 * std::min(1.0, outRate / inRate);  // cycles per input sample
-        table_.assign(static_cast<std::size_t>((kPhases + 1) * kTaps), 0.0f);
+        const double ratio = std::min(1.0, outRate / inRate);
+        // Lowering the rate narrows the passband, so the kernel must span more input samples to
+        // keep the same transition width at the new cutoff.
+        half_ = std::clamp(static_cast<int>(std::ceil(kHalf / ratio)), kHalf, kMaxHalf);
+        taps_ = 2 * half_;
+        const double fc = 0.46 * ratio;  // cycles per input sample
+        table_.assign(static_cast<std::size_t>((kPhases + 1) * taps_), 0.0f);
         for (int ph = 0; ph <= kPhases; ++ph) {
             const double frac = static_cast<double>(ph) / kPhases;
-            for (int k = 0; k < kTaps; ++k) {
-                const double x = (k - (kHalf - 1)) - frac;  // distance from the output instant
-                const double u = x / kHalf;
+            for (int k = 0; k < taps_; ++k) {
+                const double x = (k - (half_ - 1)) - frac;  // distance from the output instant
+                const double u = x / half_;
                 double sinc = 1.0;
                 if (std::fabs(x) > 1.0e-9)
                     sinc = std::sin(2.0 * kPi * fc * x) / (2.0 * kPi * fc * x);
@@ -330,24 +335,25 @@ public:
                     ? 0.0
                     : 0.35875 + 0.48829 * std::cos(kPi * u) + 0.14128 * std::cos(2.0 * kPi * u)
                           + 0.01168 * std::cos(3.0 * kPi * u);
-                table_[static_cast<std::size_t>(ph * kTaps + k)] = static_cast<float>(2.0 * fc * sinc * w);
+                table_[static_cast<std::size_t>(ph * taps_ + k)] = static_cast<float>(2.0 * fc * sinc * w);
             }
         }
-        buf_.assign(static_cast<std::size_t>(kMaxChunk + 2 * kTaps + 8), 0.0f);
+        buf_.assign(static_cast<std::size_t>(kMaxChunk + 2 * taps_ + 8), 0.0f);
         reset();
     }
 
     void reset()
     {
         std::fill(buf_.begin(), buf_.end(), 0.0f);
-        have_ = kHalf - 1;  // zeros before the first sample
-        pos_ = static_cast<double>(kHalf - 1);
+        have_ = half_ - 1;  // zeros before the first sample
+        pos_ = static_cast<double>(half_ - 1);
     }
 
     // Input samples of delay this stage adds.
-    [[nodiscard]] static constexpr int latencyInSamples() { return kHalf - 1; }
+    [[nodiscard]] int latencyInSamples() const { return half_ - 1; }
 
-    // Returns how many samples were written to `out` (at most `maxOut`).
+    // Returns how many samples were written to `out` (at most `maxOut`). The caller must leave room
+    // for every output the input can produce, or the unprocessed remainder piles up.
     int process(const float* in, int n, float* out, const int maxOut)
     {
         int written = 0;
@@ -359,23 +365,22 @@ public:
             n -= chunk;
             while (written < maxOut) {
                 const int base = static_cast<int>(pos_);
-                if (base + kHalf >= have_)
+                if (base + half_ >= have_)
                     break;
-                const double frac = pos_ - base;
-                const double fph = frac * kPhases;
+                const double fph = (pos_ - base) * kPhases;
                 const int ph = static_cast<int>(fph);
                 const float mix = static_cast<float>(fph - ph);
-                const float* a = table_.data() + ph * kTaps;
-                const float* b = a + kTaps;
-                const float* x = buf_.data() + base - (kHalf - 1);
+                const float* a = table_.data() + static_cast<std::ptrdiff_t>(ph) * taps_;
+                const float* b = a + taps_;
+                const float* x = buf_.data() + base - (half_ - 1);
                 float sum = 0.0f;
-                for (int k = 0; k < kTaps; ++k)
+                for (int k = 0; k < taps_; ++k)
                     sum += x[k] * (a[k] + mix * (b[k] - a[k]));
                 out[written++] = sum;
                 pos_ += step_;
             }
             // Drop what the next output can no longer reach.
-            const int drop = static_cast<int>(pos_) - (kHalf - 1);
+            const int drop = static_cast<int>(pos_) - (half_ - 1);
             if (drop > 0) {
                 std::copy(buf_.begin() + drop, buf_.begin() + have_, buf_.begin());
                 have_ -= drop;
@@ -388,6 +393,8 @@ public:
 private:
     double step_ = 1.0;
     double pos_ = 0.0;
+    int half_ = kHalf;
+    int taps_ = 2 * kHalf;
     int have_ = 0;
     std::vector<float> table_, buf_;
 };

@@ -37,6 +37,7 @@ mixgen
 mnemosyne
 monochord
 mosaic
+nam
 octet
 oracle
 orbit

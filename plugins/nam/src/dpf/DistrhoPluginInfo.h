@@ -1,0 +1,25 @@
+#ifndef DOWNSPOUT_NAM_DISTRHO_PLUGIN_INFO_H_INCLUDED
+#define DOWNSPOUT_NAM_DISTRHO_PLUGIN_INFO_H_INCLUDED
+
+#define DISTRHO_PLUGIN_BRAND   "Downspout"
+#define DISTRHO_PLUGIN_NAME    "NAM"
+#define DISTRHO_PLUGIN_URI     "https://danja.github.io/downspout/plugins/nam"
+#define DISTRHO_PLUGIN_CLAP_ID "it.hyperdata.downspout.nam"
+
+#define DISTRHO_PLUGIN_BRAND_ID DnSp
+#define DISTRHO_PLUGIN_UNIQUE_ID NAMp
+
+#define DISTRHO_PLUGIN_HAS_UI           1
+#define DISTRHO_PLUGIN_IS_RT_SAFE       1
+#define DISTRHO_PLUGIN_NUM_INPUTS       2
+#define DISTRHO_PLUGIN_NUM_OUTPUTS      2
+#define DISTRHO_PLUGIN_WANT_LATENCY     1
+#define DISTRHO_PLUGIN_WANT_STATE       1
+#define DISTRHO_PLUGIN_WANT_FULL_STATE  1
+#define DISTRHO_PLUGIN_VST3_CATEGORIES  "Fx|Distortion"
+#define DISTRHO_UI_DEFAULT_WIDTH        920
+#define DISTRHO_UI_DEFAULT_HEIGHT       660
+#define DISTRHO_UI_USE_NANOVG           1
+#define DISTRHO_UI_FILE_BROWSER         1
+
+#endif

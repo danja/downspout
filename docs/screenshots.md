@@ -99,6 +99,7 @@ Current output filenames:
 - `strata.png`
 - `quartet.png`
 - `monochord.png`
+- `nam.png`
 - `primefold.png`
 - `quefrency.png`
 - `keyframe.png`

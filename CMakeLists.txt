@@ -91,6 +91,7 @@ option(DOWNSPOUT_BUILD_TRIO "Configure the Trio three-band dynamics target" ON)
 option(DOWNSPOUT_BUILD_STRATA "Configure the Strata wavetable synthesizer target" ON)
 option(DOWNSPOUT_BUILD_QUARTET "Configure the Quartet four-operator FM synthesizer target" ON)
 option(DOWNSPOUT_BUILD_MONOCHORD "Configure the Monochord waveguide string target" ON)
+option(DOWNSPOUT_BUILD_NAM "Configure the NAM Neural Amp Modeler player target" ON)
 option(DOWNSPOUT_ENABLE_DPF "Enable DPF-based plugin wrapper targets" ON)
 option(DOWNSPOUT_BUILD_SCREENSHOT_APPS "Build DPF standalone apps for documentation screenshots" OFF)
 
@@ -495,4 +496,8 @@ endif()
 
 if(DOWNSPOUT_BUILD_MONOCHORD)
     add_subdirectory(plugins/monochord)
+endif()
+
+if(DOWNSPOUT_BUILD_NAM)
+    add_subdirectory(plugins/nam)
 endif()

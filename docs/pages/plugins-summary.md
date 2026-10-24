@@ -85,6 +85,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | strata | strata.vst3 | instrument (wavetable) | 0/2 | yes/no | no |
 | quartet | quartet.vst3 | instrument (FM) | 0/2 | yes/no | no |
 | monochord | monochord.vst3 | instrument (string) | 0/2 | yes/no | no |
+| nam | nam.vst3 | audio effect (neural amp + cab IR) | 2/2 | no/no | no |
 | guardian | guardian.vst3 | audio utility (limiter) | 2/2 | no/no | no |
 | harmonic-atlas | harmonic_atlas.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | helterskelter | helterskelter.vst3 | audio effect (wah) | 2/2 | yes/no | yes |
@@ -729,6 +730,20 @@ ignore MIDI). MIDI in: CC 1-4 on that channel drive Cutoff, Resonance, Drive and
 response (Drive not included) from the model the tests hold to the real filter. Resonance with full
 Bass Comp is loud; trim Output.
 
+### nam
+Neural Amp Modeler player (NeuralAmpModelerCore vendored in `third_party/`). Stereo in/out, no MIDI, no
+transport. Two plugin states: `model_file` (a `.nam`, one input and one output channel) and `ir_file` (mono or
+stereo `.wav`, resampled to the host rate, trimmed to 2 s), both paths only and both loaded on the main thread.
+Chain: **Input gain** -24..+24 dB, **Noise gate** -90 (off)..-20 dB before the model, model, loudness
+normalisation to -18 dB when **Normalise model** is on and the model reports one, **Bass/Mid/Treble** +-12 dB (120 Hz shelf,
+750 Hz peak, 3.5 kHz shelf), cabinet IR (zero-latency partitioned FFT), **IR low cut** 20 (off)-500 Hz, **IR high cut**
+2k-20k (off) Hz, **IR gain** -24..+12 dB, **Mix** (dry delayed to match), **Output gain**. **Channels** Mono sum folds
+L+R into one chain, Stereo runs one network per side (twice the CPU). **Model on / IR on** bypass each stage.
+A model trained at another rate is resampled around the network and the resulting latency (about 37 samples at
+44.1 kHz) is reported to the host. Output is clamped to +-8. Read-only outputs: input and output level, model and IR status
+(0 empty, 1 loaded, 2 unreadable), model rate, IR length. All other controls are automatable parameters.
+A standard WaveNet is about 37 % of a core per network; prefer A2-sized models for several instances.
+
 ### sam
 Speech instrument: the 1982 SAM (Software Automatic Mouth) formant synthesiser, vendored from
 `~/github/SAM`. No audio in; stereo out (one mono voice). Text is a state (`text`, up to 2000 ASCII
@@ -864,7 +879,7 @@ a note-on), so it does not follow other channels.
   (birds), pratt (GM voices), floozy, gremlin (glitch), campione / mosaic (samples),
   tuney-vst. Bend-aware: see the per-channel list at the top.
 - **Need an unpitched sound:** drumkit, magneto, bubbles.
-- **Need audio processing:** filter (ladder, skream), distortion (damiano, skream, chipper), granular (beards, grist), time/pitch (keyframe,
+- **Need audio processing:** filter (ladder, skream), distortion (damiano, skream, chipper), amp/cab modelling (nam), granular (beards, grist), time/pitch (keyframe,
   primefold, quefrency), space (lightverb, loopdelay, orbit, treatment, ambo),
   rhythm/gating (e-mix, p-mix, orchid, rift), tone/dynamics (trio, octet, glue, bassops, spliff,
   helterskelter, guardian), spectral (voxmod, sinevox, resonance-garden).

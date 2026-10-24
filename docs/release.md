@@ -56,6 +56,7 @@ downspout-<version>-<platform>-vst3.zip
 ├── strata.vst3/
 ├── quartet.vst3/
 ├── monochord.vst3/
+├── nam.vst3/
 ├── primefold.vst3/
 ├── quefrency.vst3/
 ├── keyframe.vst3/
