@@ -440,7 +440,7 @@ private:
     std::array<SliderHit, 32> sliders_ {};
     std::array<ActionHit, 16> actions_ {};
     std::array<SliderHit, 8> steppers_ {};
-    std::array<SegmentHit, 24> segments_ {};
+    std::array<SegmentHit, 48> segments_ {};
     std::size_t sliderCount_ = 0, actionCount_ = 0, stepperCount_ = 0, segmentCount_ = 0;
     int activeSlider_ = -1;
     bool darkTheme_ = true;
