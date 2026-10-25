@@ -6,7 +6,7 @@ kind: Audio effect
 category: processor
 role: Sidechain ducker / stereo synthesiser
 screenshot: /assets/plugins/bassops.png
-summary: Four-input sidechain ducker with optional harmonic stereo synthesis. A control signal (typically a kick-drum send) ducks the main stereo signal; the ducked result is summed to mono and the harmonics added by a waveshaper, high-passed at the cutoff, are decoded as a side signal that generates stereo width above it. The bass stays clean mono.
+summary: Four-input sidechain ducker with optional harmonic stereo synthesis, bass phase widening and a ring-mod mode. A control signal (typically a kick-drum send) ducks the main stereo signal; the ducked result is summed to mono and the harmonics added by a waveshaper, high-passed at the cutoff, are decoded as a side signal that generates stereo width above it. The bass stays clean mono.
 ---
 
 ## Opinion
@@ -42,6 +42,19 @@ stereo input. This is the only route to preserve the original stereo content of
 the source; the wet path uses a mono sum and does not retain the input's
 stereo difference.
 
+**Bass 90°** — an optional selector (Off / Left / Right, click the button in the
+Controls header). The bass below the M/S Cutoff is shifted 90° between the two
+channels at unchanged level, widening the low end; Left/Right chooses which channel
+is shifted. It uses a flat-magnitude allpass (Hilbert) pair, accurate across the bass
+range. Off by default, and when off it is not computed at all. With Wet below 100 %
+the bass partly decorrelates against the dry path.
+
+**Ring mod** — set Attack and Release both to 0 (the bottom of their sliders) and
+the envelope follower is bypassed: the main signal is multiplied by the signed
+sidechain, so you hear sum and difference tones instead of ducking. Duck Depth blends
+it in (0 % = dry, 100 % = pure ring mod). If either control is above 0 it is the
+normal ducker. The right-hand panel title changes to "Ring mod" while this is active.
+
 The right-hand panel shows four live meters — Input, Sidechain, Duck Gain, and
 Output — making the ducking action immediately visible.
 
@@ -50,11 +63,12 @@ Output — making the ducking action immediately visible.
 | Parameter    | Range          | Default | Notes                                                              |
 |--------------|----------------|---------|---------------------------------------------------------------------|
 | Duck Depth   | 0–100 %        | 80 %    | 0 = bypass ducker; 100 = full silence on sidechain hit             |
-| Attack       | 1–500 ms       | 10 ms   | Envelope follower rise time                                        |
-| Release      | 10–2000 ms     | 100 ms  | Envelope follower fall time                                        |
+| Attack       | 0–500 ms       | 10 ms   | Envelope follower rise time; 0 = instant (ring mod with Release 0) |
+| Release      | 0–2000 ms      | 100 ms  | Envelope follower fall time; 0 = instant (ring mod with Attack 0)  |
 | M/S Cutoff   | 50–5000 Hz     | 200 Hz  | LP/HP crossover; typical 80–300 Hz                                 |
 | Side Shape   | 0–100 %        | 0 %     | Distortion on the HP path; 0 = mono output, 100 = hard clip ×8 drive |
 | Wet          | 0–100 %        | 100 %   | Wet/dry blend; dry is latency-compensated original stereo          |
+| Bass 90°     | Off/Left/Right | Off     | 90° bass phase shift between channels; idle when Off               |
 
 ### Routing
 
@@ -75,7 +89,7 @@ latency so wet and dry signals are time-aligned at any wet/dry ratio.
 
 ### Status
 
-Core DSP — envelope follower, FIR filter pair, waveshaper, and wet/dry mix — is
-tested. The UI is functional with live metering. The FIR coefficients are
+Core DSP — envelope follower, FIR filter pair, waveshaper, bass phase quadrature,
+ring mod, and wet/dry mix — is tested. The UI is functional with live metering. The FIR coefficients are
 recomputed per-block on cutoff changes; rapid parameter automation may produce
 brief tonal artefacts at the crossover during the transition.

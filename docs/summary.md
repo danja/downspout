@@ -349,7 +349,7 @@ Transport-aware Euclidean stereo gate. It applies deterministic Euclidean block 
 
 ### Bassops (`bassops.vst3`)
 
-Four-input sidechain ducker with mid/side EQ. Inputs 3-4 carry a control signal (typically a dry kick-drum send) that drives an envelope follower; the inverted envelope ducks the main stereo signal on inputs 1-2. After ducking, a linear-phase LP/HP FIR pair splits the signal at a shared cutoff: bass stays centred in the mid channel, highs retain stereo width in the side channel. Introduces 64-sample FIR latency reported to the host. Use after bass and kick tracks to tighten low-end separation.
+Four-input sidechain ducker with mid/side EQ. Inputs 3-4 carry a control signal (typically a dry kick-drum send) that drives an envelope follower; the inverted envelope ducks the main stereo signal on inputs 1-2. After ducking, the signal is summed to mono; a waveshaper's added harmonics, high-passed at the cutoff (linear-phase FIR), form the side, so bass stays clean mono and highs gain width. **Bass 90** (Off/Left/Right, default off and idle) shifts the bass below the cutoff 90 degrees between the channels for low-end width. Setting **Attack and Release both to 0** turns the ducker into a ring mod: the main signal is multiplied by the signed sidechain, blended by Duck Depth. Introduces 64-sample FIR latency reported to the host. Use after bass and kick tracks to tighten low-end separation.
 
 ### Guardian (`guardian.vst3`)
 

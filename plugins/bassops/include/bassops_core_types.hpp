@@ -35,6 +35,7 @@ struct Parameters {
     float cutoffHz  = 200.0f;  // 50-5000 Hz
     float sideShape = 0.0f;    // 0=linear, 100=hard clip (waveshaper on side channel)
     float wet       = 100.0f;  // 0=dry original input, 100=fully processed
+    int   bassPhase = 0;       // 0=off, 1=left bass shifted 90 deg vs right, 2=right vs left
 };
 
 inline constexpr std::uint32_t kMidDelayLen = kFirOrder / 2;  // 64 samples (FIR group delay)
@@ -45,7 +46,7 @@ struct FirBank {
     // (lp is only used to build hp = delta - lp.)
     std::array<float, kFirTaps>    lp {};
     std::array<float, kFirTaps>    hp {};
-    std::array<float, kFirTaps>    bufMid {};      // convolution buffer for LP path
+    std::array<float, kFirTaps>    bufMid {};      // convolution buffer for LP path (also read for bass)
     std::array<float, kFirTaps>    bufSide {};     // convolution buffer for HP path
     std::array<float, kMidDelayLen> dryDelayL {};  // delay dry L to match FIR latency
     std::array<float, kMidDelayLen> dryDelayR {};  // delay dry R to match FIR latency
@@ -53,6 +54,21 @@ struct FirBank {
     std::uint32_t delayPos = 0;
     float lastCutoffHz   = -1.0f;
     float lastSampleRate = 0.0f;
+};
+
+// Quadrature allpass pair (12-pole Hilbert network). Both paths are flat in magnitude
+// and differ by 90 degrees in phase. Runs only while Parameters::bassPhase != 0.
+inline constexpr std::uint32_t kQuadSections = 4;
+
+struct AllpassSection {
+    float x1 = 0.0f, x2 = 0.0f, y1 = 0.0f, y2 = 0.0f;
+};
+
+struct BassQuad {
+    std::array<AllpassSection, kQuadSections> pathA {};
+    std::array<AllpassSection, kQuadSections> pathB {};
+    float delayB = 0.0f;   // path B takes its input one sample late
+    bool  running = false;  // state is live; cleared when the feature is switched off
 };
 
 struct EnvFollower {
@@ -71,6 +87,7 @@ struct Meters {
 struct EngineState {
     EnvFollower  env {};
     FirBank      fir {};
+    BassQuad     quad {};
     Meters       meters {};
     BusMidiState bus {};
 };

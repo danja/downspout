@@ -586,7 +586,11 @@ Sidechain ducker plus mid/side bass management. Inputs 1-2 are the main signal, 
 control signal (typically a dry kick send) driving an envelope follower whose inverse ducks
 the main signal. After ducking the signal is summed to mono (a one-sided mono feed is
 treated as dual mono); a waveshaper's added harmonics, high-passed at the cutoff, form the
-side, so bass stays clean mono and highs gain width. Reports 64-sample latency to the host.
+side, so bass stays clean mono and highs gain width. An optional **Bass 90** (Off/Left/Right,
+default off and idle) shifts the bass below the cutoff 90 degrees between the channels for
+low-end width. With **Attack and Release both at 0** the follower is bypassed and the main
+signal is multiplied by the signed sidechain (ring mod, blended by Duck Depth). Reports
+64-sample latency to the host.
 
 ### e-mix
 Transport-aware Euclidean stereo gate: deterministic block rhythms applied to audio.

@@ -109,11 +109,34 @@ At shape 0 the side is zero and a mono source comes out at unity gain in both ch
 | Parameter   | Range      | Default | Notes                                                  |
 |-------------|------------|---------|--------------------------------------------------------|
 | Duck Depth  | 0–100 %    | 80 %    | 0 = no ducking, 100 = full silence on sidechain hit   |
-| Attack      | 1–500 ms   | 10 ms   | Envelope follower rise time                            |
-| Release     | 10–2000 ms | 100 ms  | Envelope follower fall time / pump recovery            |
+| Attack      | 0–500 ms   | 10 ms   | Envelope follower rise time; 0 = instant                |
+| Release     | 0–2000 ms  | 100 ms  | Envelope follower fall time / pump recovery; 0 = instant |
 | M/S Cutoff  | 50–5000 Hz | 200 Hz  | LP/HP crossover; typical: 80–300 Hz                   |
 | Side Shape  | 0–100 %    | 0 %     | Distortion amount on side path; 0 = mono output, 100 = hard clip with drive 8× |
 | Wet         | 0–100 %    | 100 %   | Wet/dry mix; dry is latency-compensated original stereo |
+| Bass 90°    | Off/Left/Right | Off | Bass below the cutoff shifted 90° between channels (see below); UI: click the button in the Controls header |
+
+**Ring mod:** with Attack and Release both at 0 the follower is bypassed and the main signal is
+multiplied by the signed sidechain (larger-magnitude channel): `gain = (1 - d) + d * sc`, d = Duck Depth.
+0 % is dry, 100 % is a pure ring mod (sum and difference tones). If either is above 0 it is the
+ordinary ducker. The Duck Gain meter shows `|gain|` clamped to 1. In the UI the bottom of the
+Attack/Release slider travel is a dead zone that reads 0.
+
+### Bass 90° (not in the LV2 original)
+
+The bass part after the filter is `LP(mono)` from the existing FIR (aligned with the mid, so no extra
+latency). With Bass 90° on, that bass is swapped, in each channel, for one leg of a 12-pole
+allpass Hilbert pair (Niemitalo coefficients, ±0.7° over ~10 Hz to 20 kHz, flat magnitude): the
+chosen channel gets the leg that is 90° off the other. Output per channel is
+`mid ± side + (leg − bass)`, so nothing above the cutoff changes. An IIR pair was used because a
+129-tap FIR Hilbert cannot reach 90° at 50 Hz.
+
+- Off (default): the network is never stepped and its state is cleared; cost is zero beyond the
+  existing signal path. Switching on starts from clean state (a short settle, not crossfaded).
+- Both channels' bass takes an allpass leg, so with Wet < 100 the bass is no longer phase-aligned
+  with the (pure-delay) dry path and partly cancels/decorrelates against it.
+- Serialized as `bassPhase` (absent in older projects = Off). DPF parameter appended last
+  (`bass_phase`, index 19) so existing indices are unchanged.
 
 ### Read-only meters
 
@@ -154,3 +177,5 @@ At shape 0 the side is zero and a mono source comes out at unity gain in both ch
   original L−R difference in the HP path would be a straightforward routing alternative.
 - Attack/Release slider nudge in the UI uses a linear step for a log-scale parameter;
   a finer log step would be more ergonomic.
+- Bass 90° and ring mod are additions to the LV2 original. Bass 90° is not crossfaded when
+  switched; ring mod switches abruptly when attack/release reach 0.

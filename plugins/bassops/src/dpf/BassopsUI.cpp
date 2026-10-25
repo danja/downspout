@@ -33,6 +33,7 @@ enum ParameterIndex : uint32_t {
     kParamStatusWetMidi,
     kParamStatusDuckDepth,
     kParamStatusWet,
+    kParamBassPhase,
     kParameterCount
 };
 
@@ -50,15 +51,16 @@ struct SliderDef {
     const char* unit;
     float       min, max;
     bool        logScale;
+    float       logMin;  // log sliders: bottom of the log span; the slider foot below it reads 0 if min is 0
 };
 
 constexpr std::array<SliderDef, 6> kSliders = {{
-    {kParamDuckDepth, "Duck\nDepth",  "%",   0.0f,    100.0f, false},
-    {kParamAttackMs,  "Attack",       "ms",  1.0f,    500.0f, true},
-    {kParamReleaseMs, "Release",      "ms",  10.0f,  2000.0f, true},
-    {kParamCutoffHz,  "M/S\nCutoff",  "Hz",  50.0f,  5000.0f, true},
-    {kParamSideShape, "Side\nShape",  "%",   0.0f,    100.0f, false},
-    {kParamWet,       "Wet",          "%",   0.0f,    100.0f, false},
+    {kParamDuckDepth, "Duck\nDepth",  "%",   0.0f,    100.0f, false, 0.0f},
+    {kParamAttackMs,  "Attack",       "ms",  0.0f,    500.0f, true,  1.0f},
+    {kParamReleaseMs, "Release",      "ms",  0.0f,   2000.0f, true,  10.0f},
+    {kParamCutoffHz,  "M/S\nCutoff",  "Hz",  50.0f,  5000.0f, true,  50.0f},
+    {kParamSideShape, "Side\nShape",  "%",   0.0f,    100.0f, false, 0.0f},
+    {kParamWet,       "Wet",          "%",   0.0f,    100.0f, false, 0.0f},
 }};
 
 struct MeterDef {
@@ -81,11 +83,18 @@ constexpr std::array<MeterDef, 4> kMeters = {{
     return v < lo ? lo : (v > hi ? hi : v);
 }
 
+// Log sliders whose min is 0 (attack, release) keep the bottom kZeroFoot of travel as a
+// dead zone that means exactly 0; the log span runs above it.
+constexpr float kZeroFoot = 0.06f;
+
 [[nodiscard]] float toNorm(const SliderDef& def, float value) noexcept
 {
     if (def.logScale) {
-        const float lMin = std::log(def.min), lMax = std::log(def.max);
-        return clampf((std::log(std::max(value, def.min)) - lMin) / (lMax - lMin), 0.0f, 1.0f);
+        const float foot = def.min <= 0.0f ? kZeroFoot : 0.0f;
+        if (value <= 0.0f) return 0.0f;
+        const float lMin = std::log(def.logMin), lMax = std::log(def.max);
+        const float t = clampf((std::log(std::max(value, def.logMin)) - lMin) / (lMax - lMin), 0.0f, 1.0f);
+        return foot + (1.0f - foot) * t;
     }
     return clampf((value - def.min) / (def.max - def.min), 0.0f, 1.0f);
 }
@@ -94,8 +103,10 @@ constexpr std::array<MeterDef, 4> kMeters = {{
 {
     t = clampf(t, 0.0f, 1.0f);
     if (def.logScale) {
-        const float lMin = std::log(def.min), lMax = std::log(def.max);
-        return std::exp(lMin + t * (lMax - lMin));
+        const float foot = def.min <= 0.0f ? kZeroFoot : 0.0f;
+        if (t < foot) return 0.0f;
+        const float lMin = std::log(def.logMin), lMax = std::log(def.max);
+        return std::exp(lMin + (t - foot) / (1.0f - foot) * (lMax - lMin));
     }
     return def.min + t * (def.max - def.min);
 }
@@ -165,6 +176,7 @@ public:
         values_[kParamStatusWetMidi]  = 0.0f;
         values_[kParamStatusDuckDepth]= 80.0f;
         values_[kParamStatusWet]      = 100.0f;
+        values_[kParamBassPhase]      = 0.0f;
 
        #ifdef DGL_NO_SHARED_RESOURCES
         createFontFromFile("sans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
@@ -216,6 +228,7 @@ protected:
             }
         }
 
+        if (bassPhaseRect_.contains(x, y)) { cycleBassPhase(); return true; }
         if (busMidiToggleRect_.contains(x, y)) { commitBusToggle(kParamMidiEnabled);  return true; }
         if (busGateToggleRect_.contains(x, y)) { commitBusToggle(kParamRequireGate);  return true; }
         if (busResetRect_.contains(x, y))       { fireBusReset();                      return true; }
@@ -256,6 +269,7 @@ private:
     Rect busGateToggleRect_ {};
     Rect busResetRect_ {};
     Rect busChannelRect_ {};
+    Rect bassPhaseRect_ {};
     int dragging_ = -1;
 
     // ── drawing helpers ────────────────────────────────────────────────────
@@ -286,6 +300,7 @@ private:
         fontSize(12.0f); textAlign(ALIGN_LEFT | ALIGN_TOP);
         fc(t_.textPrimary);
         text(x + 16.0f, y + 14.0f, "Controls", nullptr);
+        drawBassPhaseButton(x + w - 150.0f, y + 8.0f, 136.0f);
 
         const float innerX = x + 14.0f;
         const float innerW = w - 28.0f;
@@ -299,6 +314,26 @@ private:
             drawVSlider(kSliders[i], cx, barY, colW, barH,
                         values_[kSliders[i].index], dragging_ == i);
         }
+    }
+
+    // Click to cycle Off / Left / Right: which channel's bass leads the 90 degree shift.
+    void drawBassPhaseButton(float x, float y, float w)
+    {
+        static constexpr const char* kNames[] = {"Off", "Left", "Right"};
+        const int mode = static_cast<int>(clampf(std::round(values_[kParamBassPhase]), 0.0f, 2.0f));
+        const float h = 22.0f;
+        bassPhaseRect_ = {x, y, w, h};
+
+        beginPath(); roundedRect(x, y, w, h, 4.0f);
+        fc(mode ? t_.controlTrack : t_.panel); fill();
+        sc(t_.buttonFace.withAlpha(180)); strokeWidth(1.0f); stroke();
+        closePath();
+
+        char label[32];
+        std::snprintf(label, sizeof(label), "Bass 90\xC2\xB0: %s", kNames[mode]);
+        fontSize(11.0f); textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+        if (mode) fillColor(235, 170, 90, 255); else fc(t_.textDim);
+        text(x + w * 0.5f, y + h * 0.5f, label, nullptr);
     }
 
     void drawVSlider(const SliderDef& def, float x, float y, float w, float h, float value, bool active)
@@ -344,7 +379,8 @@ private:
 
         fontSize(12.0f); textAlign(ALIGN_LEFT | ALIGN_TOP);
         fc(t_.textPrimary);
-        text(x + 16.0f, y + 14.0f, "Ducker", nullptr);
+        const bool ringMod = values_[kParamAttackMs] <= 0.0f && values_[kParamReleaseMs] <= 0.0f;
+        text(x + 16.0f, y + 14.0f, ringMod ? "Ring mod (attack & release 0)" : "Ducker", nullptr);
 
         const float innerX = x + 14.0f;
         const float innerW = w - 28.0f;
@@ -581,6 +617,16 @@ private:
         setParameterValue(index, newVal);
         editParameter(index, false);
         values_[index] = newVal;
+        repaint();
+    }
+
+    void cycleBassPhase()
+    {
+        const float newVal = std::fmod(std::round(values_[kParamBassPhase]) + 1.0f, 3.0f);
+        editParameter(kParamBassPhase, true);
+        setParameterValue(kParamBassPhase, newVal);
+        editParameter(kParamBassPhase, false);
+        values_[kParamBassPhase] = newVal;
         repaint();
     }
 

@@ -35,6 +35,8 @@ enum ParameterIndex : uint32_t {
     kParamStatusWetMidi,
     kParamStatusDuckDepth,
     kParamStatusWet,
+    // Appended after the bus block so existing parameter indices stay put
+    kParamBassPhase,
     kParameterCount
 };
 
@@ -49,6 +51,12 @@ using CoreAudioBlock  = downspout::bassops::AudioBlock;
 using CoreEngineState = downspout::bassops::EngineState;
 using CoreParameters  = downspout::bassops::Parameters;
 using CoreBusParams   = downspout::bassops::BusParameters;
+
+ParameterEnumerationValue kBassPhaseEnumValues[3] = {
+    {0.0f, "Off"},
+    {1.0f, "Left"},
+    {2.0f, "Right"},
+};
 
 std::string serializeBusConfig(bool midiEnabled, int controlChannel, bool requireGate)
 {
@@ -155,7 +163,7 @@ protected:
             parameter.name          = "Attack";
             parameter.symbol        = "attack_ms";
             parameter.unit          = "ms";
-            parameter.ranges.min    = 1.0f;
+            parameter.ranges.min    = 0.0f;
             parameter.ranges.max    = 500.0f;
             parameter.ranges.def    = 10.0f;
             break;
@@ -164,7 +172,7 @@ protected:
             parameter.name          = "Release";
             parameter.symbol        = "release_ms";
             parameter.unit          = "ms";
-            parameter.ranges.min    = 10.0f;
+            parameter.ranges.min    = 0.0f;
             parameter.ranges.max    = 2000.0f;
             parameter.ranges.def    = 100.0f;
             break;
@@ -292,6 +300,18 @@ protected:
             parameter.ranges.max    = 100.0f;
             parameter.ranges.def    = 80.0f;
             break;
+        case kParamBassPhase:
+            parameter.hints         = kParameterIsAutomatable | kParameterIsInteger;
+            parameter.name          = "Bass 90";
+            parameter.symbol        = "bass_phase";
+            parameter.ranges.min    = 0.0f;
+            parameter.ranges.max    = 2.0f;
+            parameter.ranges.def    = 0.0f;
+            parameter.enumValues.count          = 3;
+            parameter.enumValues.restrictedMode = true;
+            parameter.enumValues.values         = kBassPhaseEnumValues;
+            parameter.enumValues.deleteLater    = false;
+            break;
         case kParamStatusWet:
             parameter.hints         = kParameterIsOutput;
             parameter.name          = "Effective Wet";
@@ -324,6 +344,7 @@ protected:
         case kParamCutoffHz:        return parameters_.cutoffHz;
         case kParamSideShape:       return parameters_.sideShape;
         case kParamWet:             return parameters_.wet;
+        case kParamBassPhase:       return static_cast<float>(parameters_.bassPhase);
         case kParamInputLevel:      return engineState_.meters.inputPeak;
         case kParamScLevel:         return engineState_.meters.scLevel;
         case kParamDuckGain:        return engineState_.meters.duckGain;
@@ -351,6 +372,7 @@ protected:
         case kParamCutoffHz:       parameters_.cutoffHz  = value; break;
         case kParamSideShape:      parameters_.sideShape = value; break;
         case kParamWet:            parameters_.wet       = value; break;
+        case kParamBassPhase:      parameters_.bassPhase = static_cast<int>(std::lround(value)); break;
         case kParamMidiEnabled:    midiEnabled_    = value >= 0.5f; break;
         case kParamControlChannel: controlChannel_ = static_cast<int>(std::lround(value)); break;
         case kParamRequireGate:    requireGate_    = value >= 0.5f; break;
@@ -362,7 +384,7 @@ protected:
             break;
         default: break;
         }
-        if (index <= kParamWet) {
+        if (index <= kParamWet || index == kParamBassPhase) {
             parameters_ = downspout::bassops::clampParameters(parameters_);
         }
     }

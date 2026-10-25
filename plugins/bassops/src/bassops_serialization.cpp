@@ -43,7 +43,8 @@ std::string serializeParameters(const Parameters& p)
            "releaseMs=" + std::to_string(p.releaseMs) + "\n"
            "cutoffHz="  + std::to_string(p.cutoffHz)  + "\n"
            "sideShape=" + std::to_string(p.sideShape) + "\n"
-           "wet="       + std::to_string(p.wet)       + "\n";
+           "wet="       + std::to_string(p.wet)       + "\n"
+           "bassPhase=" + std::to_string(p.bassPhase) + "\n";
 }
 
 std::optional<Parameters> deserializeParameters(const std::string& text)
@@ -71,6 +72,8 @@ std::optional<Parameters> deserializeParameters(const std::string& text)
             p.sideShape = fv;
         } else if (key == "wet" && parseFloat(value, fv)) {
             p.wet = fv;
+        } else if (key == "bassPhase" && parseFloat(value, fv)) {
+            p.bassPhase = static_cast<int>(fv);
         } else {
             // skip unknown keys for forward compatibility
             continue;

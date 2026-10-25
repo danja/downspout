@@ -60,7 +60,7 @@ reported to the host.""" ;
         trn:unit "ms" ;
         rdfs:comment "Envelope follower rise time. Shorter values track transients tightly; longer values produce a slower pump." ;
         trn:default "10.0"^^xsd:float ;
-        trn:min "1.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
         trn:max "500.0"^^xsd:float
     ] ;
     trn:parameter [
@@ -69,7 +69,7 @@ reported to the host.""" ;
         trn:unit "ms" ;
         rdfs:comment "Envelope follower fall time. Controls how quickly the main signal returns to full level after the sidechain transient." ;
         trn:default "100.0"^^xsd:float ;
-        trn:min "10.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
         trn:max "2000.0"^^xsd:float
     ] ;
     trn:parameter [
@@ -98,6 +98,15 @@ reported to the host.""" ;
         trn:default "100.0"^^xsd:float ;
         trn:min "0.0"^^xsd:float ;
         trn:max "100.0"^^xsd:float
+    ] ;
+
+    trn:parameter [
+        rdfs:label "Bass 90" ;
+        trn:symbol "bass_phase" ;
+        rdfs:comment "Bass part (below M/S Cutoff) phase-shifted 90 degrees between the channels. 0 = Off (default; the quadrature network is not run), 1 = Left, 2 = Right: the chosen channel's bass is shifted 90 degrees relative to the other, with level unchanged. Both channels' bass passes through a flat-magnitude allpass pair, so with Wet below 100 the bass partly decorrelates against the dry path." ;
+        trn:default "0"^^xsd:integer ;
+        trn:min "0"^^xsd:integer ;
+        trn:max "2"^^xsd:integer
     ] ;
 
     ## Read-only meter outputs (not automatable; driven by the DSP)

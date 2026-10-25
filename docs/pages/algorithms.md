@@ -95,7 +95,9 @@ current Downspout plugins.
   saturated feedback path gated by an envelope-follower expander. Morph crossfades the
   forward SVF between low-pass and high-pass by cutoff position.
 - [`BassOps`]({{ '/plugins/bassops/' | relative_url }}): sidechain envelope follower ducks the main signal, which is then summed to
-  mono; a waveshaper's added harmonics, high-passed at the cutoff, form the side signal.
+  mono; a waveshaper's added harmonics, high-passed at the cutoff, form the side signal. Optional
+  90-degree bass phase shift between channels (allpass Hilbert pair); attack = release = 0 turns
+  the ducker into a ring mod (main x signed sidechain).
 - [`T-Mix`]({{ '/plugins/t-mix/' | relative_url }}): eight-input mixer with level, pan, mute, solo and meters; Mixgen CCs apply
   click-smoothed transient gain multipliers over the saved faders.
 - [`Loopdelay`]({{ '/plugins/loopdelay/' | relative_url }}): stereo delay and capture looper, time free (20-4000 ms) or BBT-synced.

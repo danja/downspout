@@ -1,5 +1,6 @@
 #include "bassops_engine.hpp"
 
+#include <array>
 #include <cmath>
 
 #ifndef M_PI
@@ -77,6 +78,36 @@ void recomputeFir(FirBank& fir, float cutoffHz, float sampleRate)
     return clipped / drive;
 }
 
+// Hilbert-pair coefficients (Niemitalo, 12 poles, +-0.7 deg from about 0.0002 to 0.4998 of
+// the sample rate). Each section is a first-order allpass in z^-2:
+// y[n] = a^2 (x[n] + y[n-2]) - x[n-2].
+constexpr std::array<float, kQuadSections> kQuadA = {0.6923878f, 0.9360654322959f,
+                                                     0.9882295226860f, 0.9987488452737f};
+constexpr std::array<float, kQuadSections> kQuadB = {0.4021921162426f, 0.8561710882420f,
+                                                     0.9722909545651f, 0.9952884791278f};
+
+[[nodiscard]] float allpassStep(AllpassSection& s, float a, float x) noexcept
+{
+    const float c = a * a;
+    const float y = c * (x + s.y2) - s.x2;
+    s.x2 = s.x1; s.x1 = x;
+    s.y2 = s.y1; s.y1 = y;
+    return y;
+}
+
+void quadStep(BassQuad& q, float x, float& outA, float& outB) noexcept
+{
+    float a = x;
+    for (std::uint32_t k = 0; k < kQuadSections; ++k)
+        a = allpassStep(q.pathA[k], kQuadA[k], a);
+    float b = q.delayB;
+    q.delayB = x;
+    for (std::uint32_t k = 0; k < kQuadSections; ++k)
+        b = allpassStep(q.pathB[k], kQuadB[k], b);
+    outA = a;
+    outB = b;
+}
+
 constexpr float kMainEnvCoeff = 0.001f;  // about 20 ms at 48 kHz
 constexpr float kSilentEnv    = 1.0e-6f; // -120 dB
 
@@ -86,11 +117,12 @@ Parameters clampParameters(const Parameters& raw)
 {
     Parameters p = raw;
     p.duckDepth = clampf(p.duckDepth, 0.0f, 100.0f);
-    p.attackMs  = clampf(p.attackMs,  1.0f, 500.0f);
-    p.releaseMs = clampf(p.releaseMs, 10.0f, 2000.0f);
+    p.attackMs  = clampf(p.attackMs,  0.0f, 500.0f);
+    p.releaseMs = clampf(p.releaseMs, 0.0f, 2000.0f);
     p.cutoffHz  = clampf(p.cutoffHz,  50.0f, 5000.0f);
     p.sideShape = clampf(p.sideShape, 0.0f, 100.0f);
     p.wet       = clampf(p.wet,       0.0f, 100.0f);
+    p.bassPhase = p.bassPhase < 0 ? 0 : (p.bassPhase > 2 ? 2 : p.bassPhase);
     return p;
 }
 
@@ -104,6 +136,7 @@ void activate(EngineState& state)
     state.fir.pos          = 0;
     state.fir.delayPos     = 0;
     state.fir.lastCutoffHz = -1.0f;
+    state.quad             = {};
     state.meters           = {};
 }
 
@@ -169,8 +202,11 @@ void processBlock(EngineState& state,
         recomputeFir(state.fir, p.cutoffHz, sr);
     }
 
-    const float attackCoeff  = 1.0f - std::exp(-1.0f / (sr * p.attackMs  * 0.001f));
-    const float releaseCoeff = 1.0f - std::exp(-1.0f / (sr * p.releaseMs * 0.001f));
+    // 0 ms = instant. With both at 0 the follower is bypassed and the main signal is
+    // multiplied by the signed sidechain (ring mod), blended in by Duck Depth.
+    const bool  ringMod      = p.attackMs <= 0.0f && p.releaseMs <= 0.0f;
+    const float attackCoeff  = p.attackMs  <= 0.0f ? 1.0f : 1.0f - std::exp(-1.0f / (sr * p.attackMs  * 0.001f));
+    const float releaseCoeff = p.releaseMs <= 0.0f ? 1.0f : 1.0f - std::exp(-1.0f / (sr * p.releaseMs * 0.001f));
     const float duckScale    = effectiveDuckDepth(state, p) * 0.01f;
     const float wetScale     = effectiveWet(state, p) * 0.01f;
     const float dryScale     = 1.0f - wetScale;
@@ -180,6 +216,13 @@ void processBlock(EngineState& state,
     const float sideShapeNorm = p.sideShape * 0.01f;
     const float shapeDrive    = std::exp(sideShapeNorm * kLn8);  // 1 → 8
     const float shapeHardMix  = sideShapeNorm * sideShapeNorm;
+
+    // Bass quadrature is idle unless selected: no filtering, and stale state is dropped
+    // so it starts clean when switched on.
+    const bool bassOn = p.bassPhase != 0;
+    if (!bassOn)
+        state.quad = {};
+    state.quad.running = bassOn;
 
     state.meters.inputPeak *= 0.85f;
     float blockInPeak  = 0.0f;
@@ -194,7 +237,11 @@ void processBlock(EngineState& state,
         float& env        = state.env.envelope;
         env += (envIn - env) * (envIn > env ? attackCoeff : releaseCoeff);
 
-        lastDuckGain = 1.0f - duckScale * env;
+        // Signed sidechain sample: the larger-magnitude channel, so a mono feed on one side works.
+        const float ctrlSigned = std::fabs(ctrlL) > std::fabs(ctrlR) ? ctrlL : ctrlR;
+        const float gain = ringMod ? 1.0f - duckScale + duckScale * ctrlSigned
+                                   : 1.0f - duckScale * env;
+        lastDuckGain = ringMod ? clampf(std::fabs(gain), 0.0f, 1.0f) : gain;
 
         float inL = audio.mainL ? audio.mainL[frame] : 0.0f;
         float inR = audio.mainR ? audio.mainR[frame] : 0.0f;
@@ -214,8 +261,8 @@ void processBlock(EngineState& state,
         if (absL > blockInPeak) { blockInPeak = absL; }
         if (absR > blockInPeak) { blockInPeak = absR; }
 
-        const float dL = inL * lastDuckGain;
-        const float dR = inR * lastDuckGain;
+        const float dL = inL * gain;
+        const float dR = inR * gain;
 
         // Routing: the mono sum, delayed by the FIR latency, is the mid. The side is only
         // what the waveshaper adds above the cutoff: HP(shaped - mono). Decoded as
@@ -234,6 +281,19 @@ void processBlock(EngineState& state,
             state.fir.bufSide[state.fir.pos] = 0.0f;
         }
 
+        // Bass part after the filter (LP of the mono sum, aligned with midF). Each channel's
+        // bass is swapped for one leg of the quadrature pair; the selected channel gets the
+        // leg that lags the other by 90 degrees.
+        float bassDeltaL = 0.0f;
+        float bassDeltaR = 0.0f;
+        if (bassOn) {
+            const float bass = firConvolve(state.fir.lp, state.fir.bufMid, state.fir.pos);
+            float qa = 0.0f, qb = 0.0f;
+            quadStep(state.quad, bass, qa, qb);
+            bassDeltaL = (p.bassPhase == 1 ? qb : qa) - bass;
+            bassDeltaR = (p.bassPhase == 1 ? qa : qb) - bass;
+        }
+
         state.fir.pos = (state.fir.pos + 1) % kFirTaps;
 
         // Delay dry signal to match FIR group delay (kMidDelayLen samples)
@@ -243,8 +303,8 @@ void processBlock(EngineState& state,
         state.fir.dryDelayR[state.fir.delayPos] = inR;
         state.fir.delayPos = (state.fir.delayPos + 1) % kMidDelayLen;
 
-        const float outL = wetScale * (midF + sideF) + dryScale * delayedInL;
-        const float outR = wetScale * (midF - sideF) + dryScale * delayedInR;
+        const float outL = wetScale * (midF + sideF + bassDeltaL) + dryScale * delayedInL;
+        const float outR = wetScale * (midF - sideF + bassDeltaR) + dryScale * delayedInR;
         if (audio.outL) { audio.outL[frame] = outL; }
         if (audio.outR) { audio.outR[frame] = outR; }
 
