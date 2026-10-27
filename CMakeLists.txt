@@ -64,6 +64,9 @@ option(DOWNSPOUT_BUILD_CHIPPER "Configure the Chipper lo-fi bit-crush target" ON
 option(DOWNSPOUT_BUILD_SKREAM "Configure the Skream scream filter target" ON)
 option(DOWNSPOUT_BUILD_WORMS "Configure the ToneWorm Tonnetz MIDI generator target" ON)
 option(DOWNSPOUT_BUILD_MAGNETO "Configure the magneto engine sound generator target" ON)
+option(DOWNSPOUT_BUILD_THUMPER "Configure the Thumper kick drum generator target" ON)
+option(DOWNSPOUT_BUILD_SNATCH "Configure the Snatch snare drum generator target" ON)
+option(DOWNSPOUT_BUILD_TOPS "Configure the Tops hi-hat/cymbal generator target" ON)
 option(DOWNSPOUT_BUILD_GHOST "Configure the ghost audio-triggered MIDI target" ON)
 option(DOWNSPOUT_BUILD_SPLIFF "Configure the spliff transient processor target" ON)
 option(DOWNSPOUT_BUILD_HELTERSKELTER "Configure the helterskelter auto-wah target" ON)
@@ -388,6 +391,18 @@ endif()
 
 if(DOWNSPOUT_BUILD_MAGNETO)
     add_subdirectory(plugins/magneto)
+endif()
+
+if(DOWNSPOUT_BUILD_THUMPER)
+    add_subdirectory(plugins/thumper)
+endif()
+
+if(DOWNSPOUT_BUILD_SNATCH)
+    add_subdirectory(plugins/snatch)
+endif()
+
+if(DOWNSPOUT_BUILD_TOPS)
+    add_subdirectory(plugins/tops)
 endif()
 
 if(DOWNSPOUT_BUILD_GHOST)

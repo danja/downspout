@@ -96,6 +96,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | loopdelay | loopdelay.vst3 | audio effect (delay/looper) | 2/2 | yes/yes | yes |
 | luma | luma.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | magneto | magneto.vst3 | instrument (engine) | 0/2 | yes/no | yes |
+| thumper | thumper.vst3 | instrument (kick) | 0/2 | yes/no | yes |
 | melgen | melgen.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | midiscribe | midiscribe.vst3 | MIDI utility | 0/0 | yes/yes | yes |
 | mixgen | mixgen.vst3 | CC generator + audio thru | 2/2 | no/yes | yes |
@@ -459,6 +460,13 @@ rpm limit) and velocity sets Throttle; note-off is ignored. CC 1 throttle, 2 RPM
 silencing, 4 growl, 5 pipe, 6 turbulence, 7 output. **Speed source** Host Sync locks the
 engine cycle to tempo and idles when the transport stops. Sounds immediately at 850 rpm
 idle. Not a pitched voice: pitch bend is not applicable.
+
+### thumper
+Kick drum generator with ten synthesis engines (virtual analog, modal, subtractive, FM,
+phase distortion, wavetable, 808, 909, physical, noise burst) and style presets (techno,
+gabber, rock, latin, house, trap, acoustic). Independent pitch/filter/amp envelopes,
+layering of two engines, output distortion. GM channel 10 triggers at fixed pitch; other
+channels follow MIDI note pitch.
 
 ### trajectory
 Eight-voice synthesiser whose oscillator is a point bouncing inside a regular polygon
