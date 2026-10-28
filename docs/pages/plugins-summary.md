@@ -154,7 +154,7 @@ Dodge, channel/note matching and sensitivity let existing parts guide or suppres
 generated notes. **Conductor Ch** (0 = off) maps CC 21 to density, 22 to accent, 23 to
 auto-variation rate and CC 24 = 127 to a fresh pattern; CC 20 is ignored. The **Descending** genre plays one line down the scale
 across the pattern (top of the line at the start, the root at the end), with **Color** as the amount of
-wander (0 = strict staircase). Pair with
+wander (0 = strict staircase); **Descend/bar** restarts it in every bar. Pair with
 basilico or any bass instrument. Requires host transport.
 
 ### drumgen

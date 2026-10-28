@@ -63,6 +63,9 @@ Implementation status:
 - the appended Moroder genre preserves existing genre IDs while adding a
   happy, repetitive subdivision-pulse bass line with tonic/fifth/octave focus
   and slider-driven color turns, density holes, short holds, and accents;
+- the appended Descend/bar genre (ID 13) is the same line restarted in every bar: each bar steps down
+  from the top of its own line and ends on the root, so the pattern repeats a falling figure rather
+  than one long fall;
 - the appended Descending genre (ID 12) plays one line down the scale across the
   whole pattern: the first event is the top of the line (up to about an octave and
   a half above the root) and the last always lands on the root, so a pattern with

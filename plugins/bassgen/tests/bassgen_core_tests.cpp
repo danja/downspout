@@ -469,6 +469,7 @@ void testFugueGenreIsAppendedAndAnswersAtDominant() {
     assert(static_cast<int>(GenreId::rock) == 10);
     assert(static_cast<int>(GenreId::moroder) == 11);
     assert(static_cast<int>(GenreId::descending) == 12);
+    assert(static_cast<int>(GenreId::descendingBars) == 13);
     assert(static_cast<int>(GenreId::count) == 13);
 
     Controls controls;
@@ -719,7 +720,7 @@ void testDescendingGenreRoundTripsAndClamps() {
     assert(restored->genre == GenreId::descending);
     assert(clampControls(controls).genre == GenreId::descending);
     controls.genre = static_cast<GenreId>(static_cast<int>(GenreId::count) + 5);
-    assert(clampControls(controls).genre == GenreId::descending);  // the highest genre, not an out-of-range value
+    assert(clampControls(controls).genre == GenreId::descendingBars);  // the highest genre, not an out-of-range value
 }
 
 void testDescendingPartialMutationKeepsTheDescent() {
@@ -733,6 +734,55 @@ void testDescendingPartialMutationKeepsTheDescent() {
         for (std::size_t i = 0; i < notes.size() / 2; ++i) firstHalf += notes[i];
         for (std::size_t i = notes.size() - notes.size() / 2; i < notes.size(); ++i) secondHalf += notes[i];
         assert(firstHalf > secondHalf);
+    }
+}
+
+void testDescendingBarsRestartsTheDescentInEveryBar() {
+    for (const float color : {0.0f, 0.8f}) {
+        for (std::uint32_t seed = 1; seed <= 20; ++seed) {
+            Controls controls = descendingControls(seed, color);
+            controls.genre = GenreId::descendingBars;
+            PatternState pattern;
+            regeneratePattern(pattern, controls, ::downspout::Meter {}, true, true);
+            const int root = controls.rootNote + registerOffset(controls.reg);
+            int bars = 0;
+            int index = 0;
+            while (index < pattern.eventCount) {
+                const int bar = pattern.events[index].startStep / pattern.stepsPerBar;
+                int last = index;
+                while (last + 1 < pattern.eventCount &&
+                       pattern.events[last + 1].startStep / pattern.stepsPerBar == bar) {
+                    last += 1;
+                }
+                assert(pattern.events[last].note == root);  // every bar ends on the root
+                if (color == 0.0f) {
+                    for (int i = index + 1; i <= last; ++i) assert(pattern.events[i].note <= pattern.events[i - 1].note);
+                }
+                bars += 1;
+                index = last + 1;
+            }
+            assert(bars >= 2);
+        }
+    }
+}
+
+void testDescendingBarsDiffersFromWholePatternDescent() {
+    Controls whole = descendingControls(12u, 0.0f);
+    Controls bars = whole;
+    bars.genre = GenreId::descendingBars;
+    PatternState a, b;
+    regeneratePattern(a, whole, ::downspout::Meter {}, true, true);
+    regeneratePattern(b, bars, ::downspout::Meter {}, true, true);
+    assert(notesOf(a) != notesOf(b));
+    // The restart: some note after the first bar is higher than the note before it.
+    bool rises = false;
+    const std::vector<int> n = notesOf(b);
+    for (std::size_t i = 1; i < n.size(); ++i) rises = rises || n[i] > n[i - 1];
+    assert(rises);
+    // Rhythm-only regeneration keeps every bar ending on the root.
+    for (int round = 0; round < 4; ++round) {
+        regeneratePattern(b, bars, ::downspout::Meter {}, true, false);
+        assert(notesOf(b).back() == bars.rootNote + registerOffset(bars.reg));
     }
 }
 
@@ -1369,6 +1419,8 @@ int main() {
     testDescendingGenreStaysInRangeAcrossRegisters();
     testDescendingGenreRoundTripsAndClamps();
     testDescendingPartialMutationKeepsTheDescent();
+    testDescendingBarsRestartsTheDescentInEveryBar();
+    testDescendingBarsDiffersFromWholePatternDescent();
     testBebopDominantScaleConstrainsGeneratedNotes();
     testStateSanitization();
     testEngineRewindResyncAndStopNoteOff();

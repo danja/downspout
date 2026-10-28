@@ -184,6 +184,15 @@ distinguish simple, triple, compound, and odd groupings. Musical style behavior
 is still uneven by design: `bassgen` and `drumgen` have explicit style modes,
 while deeper pickup, phrase-ending, and folk-idiom behavior remains future work.
 
+## Agent skills
+
+Reusable Claude Code skills live in `skills/<name>/SKILL.md`; `.claude/skills/<name>` holds relative
+symlinks to them so Claude Code finds them in this project. Plugin-authoring skills: `new-plugin`,
+`drum-voice-plugin`, `magneto-ui`, `plugin-core-tests`, `extend-genre-or-scale`, `debug-reaper-scan`.
+To add one, create `skills/<name>/SKILL.md` and `ln -s ../../skills/<name> .claude/skills/<name>`.
+The skills point to `CLAUDE.md` and `docs/` rather than copying them, so edit those, not the skills,
+when a rule changes.
+
 ## Reference Docs
 
 - [docs/pages/plugins-summary.md](docs/pages/plugins-summary.md): dense per-plugin

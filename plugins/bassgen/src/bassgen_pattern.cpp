@@ -1008,6 +1008,11 @@ constexpr ScaleDef kScales[] = {
     }
 }
 
+// Both Descending genres share rhythm, durations and wander; they differ only in how long one descent is.
+[[nodiscard]] bool isDescendingGenre(const GenreId genre) {
+    return genre == GenreId::descending || genre == GenreId::descendingBars;
+}
+
 [[nodiscard]] float genreDensityBias(GenreId genre, bool strong) {
     switch (genre) {
     case GenreId::techno: return strong ? 1.15f : 0.78f;
@@ -1022,7 +1027,8 @@ constexpr ScaleDef kScales[] = {
     case GenreId::fugue: return strong ? 1.48f : 0.42f;
     case GenreId::rock: return strong ? 1.55f : 0.18f;
     case GenreId::moroder: return strong ? 1.10f : 1.34f;
-    case GenreId::descending: return strong ? 1.18f : 0.92f;
+    case GenreId::descending:
+    case GenreId::descendingBars: return strong ? 1.18f : 0.92f;
     default: return 1.0f;
     }
 }
@@ -1189,7 +1195,7 @@ void reinforceDescendingBeats(std::array<bool, kMaxPatternSteps>& onset,
                               const PatternState& pattern,
                               const Controls& controls,
                               Rng& rng) {
-    if (controls.genre != GenreId::descending ||
+    if (!isDescendingGenre(controls.genre) ||
         pattern.stepsPerBeat <= 0 ||
         pattern.patternSteps <= 0) {
         return;
@@ -1320,6 +1326,7 @@ void reinforceMoroderPulse(std::array<bool, kMaxPatternSteps>& onset,
         holdBias = clampf(holdBias * 0.82f + 0.12f, 0.0f, 1.0f);
         break;
     case GenreId::descending:
+    case GenreId::descendingBars:
         holdBias = clampf(holdBias * 0.85f + 0.10f, 0.0f, 1.0f);
         break;
     default:
@@ -1517,7 +1524,7 @@ void buildSabbathDegreeCell(std::array<int, 4>& cell, int cellLen, Rng& rng) {
     return (degree == 6) ? 1 : 6;
 }
 
-// Descending: one line across the whole pattern. Event k of n ideally sits at
+// Descending: one line across the whole pattern (Descending (bars): the same line restarted in every bar). Event k of n ideally sits at
 // round(span * (1 - k / (n - 1))) scale degrees above the root, so the first event is the top of the line and
 // the last is the root, whatever the density. Colour is how far it wanders from that staircase: 0 follows it
 // exactly (never rises); above 0 an event may step back up, pause on the previous degree, or dip ahead of the
@@ -1640,7 +1647,27 @@ void generateNotes(PatternState& pattern, const Controls& controls, Rng& rng) {
         buildSabbathDegreeCell(sabbathCell, sabbathCellLen, rng);
     }
 
+    // Descending runs one descent per group of events: the whole pattern, or one bar for Descending (bars).
+    const bool perBar = controls.genre == GenreId::descendingBars && pattern.stepsPerBar > 0;
+    int groupFirst = 0;
+    int groupCount = pattern.eventCount;
     for (int index = 0; index < pattern.eventCount; ++index) {
+        if (perBar && index >= groupFirst + groupCount) {
+            const int bar = pattern.events[index].startStep / pattern.stepsPerBar;
+            groupFirst = index;
+            groupCount = 0;
+            while (index + groupCount < pattern.eventCount &&
+                   pattern.events[index + groupCount].startStep / pattern.stepsPerBar == bar) {
+                groupCount += 1;
+            }
+        } else if (perBar && index == 0) {
+            const int bar = pattern.events[0].startStep / pattern.stepsPerBar;
+            groupCount = 0;
+            while (groupCount < pattern.eventCount &&
+                   pattern.events[groupCount].startStep / pattern.stepsPerBar == bar) {
+                groupCount += 1;
+            }
+        }
         NoteEvent& event = pattern.events[index];
         const StepRole role = stepRoleFor(pattern, controls, event.startStep);
         const bool strong = role == StepRole::primary;
@@ -1658,8 +1685,8 @@ void generateNotes(PatternState& pattern, const Controls& controls, Rng& rng) {
                     ? sabbathCellDegree(pattern, rng, sabbathCell, sabbathCellLen, index)
                     : (controls.genre == GenreId::moroder)
                         ? moroderDegreeForEvent(pattern, controls, rng, event, prevDegree)
-                        : (controls.genre == GenreId::descending)
-                            ? descendingDegreeForEvent(controls, rng, index, pattern.eventCount, prevDegree)
+                        : isDescendingGenre(controls.genre)
+                            ? descendingDegreeForEvent(controls, rng, index - groupFirst, groupCount, prevDegree)
                             : chooseDegree(rng, controls, strong, prevDegree);
             prevDegree = degree;
             event.note = noteFromDegree(controls, degree);
@@ -1789,7 +1816,7 @@ void regeneratePattern(PatternState& pattern,
     }
 
     if (regenRhythm && !regenNotes && hadPreviousPattern) {
-        if (controls.genre == GenreId::descending) {
+        if (isDescendingGenre(controls.genre)) {
             // The line is a function of the event count, so copying notes by index would break it. Rebuild it
             // from the previous generation's random stream: the same wander, fitted to the new rhythm.
             Rng lineRng;

@@ -59,6 +59,7 @@ enum class GenreId : std::int32_t {
     rock,
     moroder,
     descending,
+    descendingBars,
     count
 };
 
