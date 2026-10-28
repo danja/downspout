@@ -10,7 +10,8 @@ dsp:bassgen a trn:PluginProfile ;
     rdfs:comment """Transport-synced monophonic bass generator with persistent patterns, meter-aware
 rhythm, scale/style/genre selection, Follow/Dodge MIDI input, Offset (0–1 beat delay of the whole pattern), and Conductor CC control.
 Jazz mode outlines ii-V-I movement; Fugue mode uses subject/answer/episode shapes;
-Moroder mode produces short, bright, subdivided pulse lines.""" ;
+Moroder mode produces short, bright, subdivided pulse lines.
+Descending mode walks one line down the scale to the root across the pattern; Color sets how much it wanders.""" ;
     trn:bundleName "bassgen.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/bassgen/> ;
@@ -18,7 +19,7 @@ Moroder mode produces short, bright, subdivided pulse lines.""" ;
     trn:produces trn:Midi, trn:BassMidi ;
     trn:accepts trn:Midi, trn:ControlMidi ;
     trn:requires trn:HostTransport ;
-    trn:genre "Straight", "Reel", "Waltz", "Jig", "Slip Jig", "Jazz", "Fugue", "Moroder" ;
+    trn:genre "Straight", "Reel", "Waltz", "Jig", "Slip Jig", "Jazz", "Fugue", "Moroder", "Descending" ;
     trn:recommendedBefore dsp:basilico ;
 
     ## Conductor CC input — enable by setting conductor_ch (1–16) to match Conductor's output channel

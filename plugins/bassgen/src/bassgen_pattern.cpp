@@ -1022,6 +1022,7 @@ constexpr ScaleDef kScales[] = {
     case GenreId::fugue: return strong ? 1.48f : 0.42f;
     case GenreId::rock: return strong ? 1.55f : 0.18f;
     case GenreId::moroder: return strong ? 1.10f : 1.34f;
+    case GenreId::descending: return strong ? 1.18f : 0.92f;
     default: return 1.0f;
     }
 }
@@ -1183,6 +1184,25 @@ void reinforceJazzWalkingBeats(std::array<bool, kMaxPatternSteps>& onset,
     }
 }
 
+// Descending: a line needs a steady pulse to walk down, so most beat starts are pinned (the first always).
+void reinforceDescendingBeats(std::array<bool, kMaxPatternSteps>& onset,
+                              const PatternState& pattern,
+                              const Controls& controls,
+                              Rng& rng) {
+    if (controls.genre != GenreId::descending ||
+        pattern.stepsPerBeat <= 0 ||
+        pattern.patternSteps <= 0) {
+        return;
+    }
+
+    const float beatProbability = clampf(0.62f + controls.density * 0.34f, 0.62f, 0.96f);
+    for (int step = 0; step < pattern.patternSteps; step += pattern.stepsPerBeat) {
+        if (step == 0 || rng.nextFloat() < beatProbability) {
+            onset[step] = true;
+        }
+    }
+}
+
 void reinforceFugueSubjectSteps(std::array<bool, kMaxPatternSteps>& onset,
                                 const PatternState& pattern,
                                 const Controls& controls,
@@ -1298,6 +1318,9 @@ void reinforceMoroderPulse(std::array<bool, kMaxPatternSteps>& onset,
         break;
     case GenreId::fugue:
         holdBias = clampf(holdBias * 0.82f + 0.12f, 0.0f, 1.0f);
+        break;
+    case GenreId::descending:
+        holdBias = clampf(holdBias * 0.85f + 0.10f, 0.0f, 1.0f);
         break;
     default:
         break;
@@ -1494,6 +1517,45 @@ void buildSabbathDegreeCell(std::array<int, 4>& cell, int cellLen, Rng& rng) {
     return (degree == 6) ? 1 : 6;
 }
 
+// Descending: one line across the whole pattern. Event k of n ideally sits at
+// round(span * (1 - k / (n - 1))) scale degrees above the root, so the first event is the top of the line and
+// the last is the root, whatever the density. Colour is how far it wanders from that staircase: 0 follows it
+// exactly (never rises); above 0 an event may step back up, pause on the previous degree, or dip ahead of the
+// line, but never leaps more than two degrees up, and the last event always lands on the root.
+[[nodiscard]] int descendingSpan(const Controls& controls, const int eventCount) {
+    const int degrees = std::max(1, scaleDegreeCount(controls));
+    return clampi(eventCount - 1, 1, degrees + degrees / 2);
+}
+
+[[nodiscard]] int descendingDegreeForEvent(const Controls& controls,
+                                           Rng& rng,
+                                           const int index,
+                                           const int eventCount,
+                                           const int previousDegree) {
+    if (eventCount <= 1 || index >= eventCount - 1) {
+        return 0;
+    }
+
+    const int span = descendingSpan(controls, eventCount);
+    const float progress = static_cast<float>(index) / static_cast<float>(eventCount - 1);
+    const int ideal = static_cast<int>(std::lround(static_cast<float>(span) * (1.0f - progress)));
+    if (index == 0) {
+        return ideal;
+    }
+
+    const float wander = controls.color * 0.7f;
+    const float roll = rng.nextFloat();
+    int degree = ideal;
+    if (roll < wander * 0.40f) {
+        degree = ideal + rng.nextInt(1, 2);  // step back up
+    } else if (roll < wander * 0.70f) {
+        degree = previousDegree;             // pause
+    } else if (roll < wander) {
+        degree = ideal - 1;                  // dip ahead of the line
+    }
+    return clampi(std::min(degree, previousDegree + 2), 0, span + 1);
+}
+
 void ensureFirstEvent(PatternState& pattern, const Controls& controls) {
     if (pattern.eventCount > 0) {
         return;
@@ -1543,6 +1605,7 @@ void generateRhythm(PatternState& pattern,
         reinforceStyleAnchors(onset, pattern, controls, rng);
     }
     reinforceJazzWalkingBeats(onset, pattern, controls, rng);
+    reinforceDescendingBeats(onset, pattern, controls, rng);
     reinforceFugueSubjectSteps(onset, pattern, controls, rng);
     reinforceRockBeatAnchors(onset, pattern, controls);
     reinforceMoroderPulse(onset, pattern, controls, rng);
@@ -1595,7 +1658,9 @@ void generateNotes(PatternState& pattern, const Controls& controls, Rng& rng) {
                     ? sabbathCellDegree(pattern, rng, sabbathCell, sabbathCellLen, index)
                     : (controls.genre == GenreId::moroder)
                         ? moroderDegreeForEvent(pattern, controls, rng, event, prevDegree)
-                        : chooseDegree(rng, controls, strong, prevDegree);
+                        : (controls.genre == GenreId::descending)
+                            ? descendingDegreeForEvent(controls, rng, index, pattern.eventCount, prevDegree)
+                            : chooseDegree(rng, controls, strong, prevDegree);
             prevDegree = degree;
             event.note = noteFromDegree(controls, degree);
             prevJazzNote = event.note;
@@ -1724,7 +1789,15 @@ void regeneratePattern(PatternState& pattern,
     }
 
     if (regenRhythm && !regenNotes && hadPreviousPattern) {
-        copyNoteContentFromPattern(pattern, previousPattern);
+        if (controls.genre == GenreId::descending) {
+            // The line is a function of the event count, so copying notes by index would break it. Rebuild it
+            // from the previous generation's random stream: the same wander, fitted to the new rhythm.
+            Rng lineRng;
+            lineRng.seed(seedMixForSerial(controls, previousPattern.generationSerial) ^ 0xA5A5A5A5u);
+            generateNotes(pattern, controls, lineRng);
+        } else {
+            copyNoteContentFromPattern(pattern, previousPattern);
+        }
     }
 
     if (regenNotes || pattern.eventCount <= 0) {

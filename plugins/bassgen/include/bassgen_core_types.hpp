@@ -58,6 +58,7 @@ enum class GenreId : std::int32_t {
     fugue,
     rock,
     moroder,
+    descending,
     count
 };
 

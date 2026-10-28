@@ -152,7 +152,9 @@ variation and style set Auto, Straight, Reel, Waltz, Jig, Slip Jig. Emits bass-r
 MIDI (default channel 1) and consumes incoming MIDI as context: configurable Follow or
 Dodge, channel/note matching and sensitivity let existing parts guide or suppress
 generated notes. **Conductor Ch** (0 = off) maps CC 21 to density, 22 to accent, 23 to
-auto-variation rate and CC 24 = 127 to a fresh pattern; CC 20 is ignored. Pair with
+auto-variation rate and CC 24 = 127 to a fresh pattern; CC 20 is ignored. The **Descending** genre plays one line down the scale
+across the pattern (top of the line at the start, the root at the end), with **Color** as the amount of
+wander (0 = strict staircase). Pair with
 basilico or any bass instrument. Requires host transport.
 
 ### drumgen

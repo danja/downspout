@@ -7,6 +7,7 @@
 
 #include "downspout/test_assert.h"
 #include <cmath>
+#include <vector>
 
 using namespace downspout::bassgen;
 
@@ -467,7 +468,8 @@ void testFugueGenreIsAppendedAndAnswersAtDominant() {
     assert(static_cast<int>(GenreId::fugue) == 9);
     assert(static_cast<int>(GenreId::rock) == 10);
     assert(static_cast<int>(GenreId::moroder) == 11);
-    assert(static_cast<int>(GenreId::count) == 12);
+    assert(static_cast<int>(GenreId::descending) == 12);
+    assert(static_cast<int>(GenreId::count) == 13);
 
     Controls controls;
     controls.seed = 1701u;
@@ -571,6 +573,167 @@ void testMoroderGenreUsesRepetitiveBrightPulse() {
     assert(hasBrightTurn);
     assert(pitchClassCount >= 4);
     assert(patternsDiffer(lowColor, highColor));
+}
+
+// ---- Descending genre --------------------------------------------------------------------------------------------
+
+Controls descendingControls(const std::uint32_t seed, const float color) {
+    Controls controls;
+    controls.seed = seed;
+    controls.genre = GenreId::descending;
+    controls.scale = ScaleId::minor;
+    controls.rootNote = 36;
+    controls.reg = 1;
+    controls.lengthBeats = 16;
+    controls.subdivision = SubdivisionId::sixteenth;
+    controls.density = 0.5f;
+    controls.color = color;
+    return controls;
+}
+
+// Notes in time order (events are sorted by start step).
+std::vector<int> notesOf(const PatternState& pattern) {
+    std::vector<int> notes;
+    for (int index = 0; index < pattern.eventCount; ++index) {
+        notes.push_back(pattern.events[index].note);
+    }
+    return notes;
+}
+
+void testDescendingWithoutColorIsAStrictStaircase() {
+    // Every scale, several densities and subdivisions: the line never rises, starts above the root and
+    // ends exactly on it.
+    for (int scale = 0; scale < static_cast<int>(ScaleId::count); ++scale) {
+        for (const float density : {0.15f, 0.5f, 0.9f}) {
+            for (const SubdivisionId subdivision : {SubdivisionId::eighth, SubdivisionId::sixteenth, SubdivisionId::quarter}) {
+                Controls controls = descendingControls(77u + static_cast<std::uint32_t>(scale), 0.0f);
+                controls.scale = static_cast<ScaleId>(scale);
+                controls.density = density;
+                controls.subdivision = subdivision;
+
+                PatternState pattern;
+                regeneratePattern(pattern, controls, ::downspout::Meter {}, true, true);
+                const std::vector<int> notes = notesOf(pattern);
+                assert(notes.size() >= 2);
+                for (std::size_t i = 1; i < notes.size(); ++i) {
+                    assert(notes[i] <= notes[i - 1]);
+                }
+                assert(notes.back() == controls.rootNote + registerOffset(controls.reg));
+                assert(notes.front() >= notes.back() + 3);
+                assert(notes.front() <= notes.back() + 24);  // at most a bit over an octave and a half
+                assert(eventStartingAt(pattern, 0) != nullptr);
+            }
+        }
+    }
+}
+
+void testDescendingColorWandersButStillDescends() {
+    bool everRose = false;
+    for (std::uint32_t seed = 1; seed <= 40; ++seed) {
+        Controls controls = descendingControls(seed, 1.0f);
+        PatternState pattern;
+        regeneratePattern(pattern, controls, ::downspout::Meter {}, true, true);
+        const std::vector<int> notes = notesOf(pattern);
+        const int root = controls.rootNote + registerOffset(controls.reg);
+        assert(notes.size() >= 4);
+        assert(notes.back() == root);
+        assert(notes.front() > notes.back());
+        for (std::size_t i = 0; i < notes.size(); ++i) {
+            assert(notes[i] >= root);
+            assert(notes[i] <= notes.front() + 4);
+            if (i > 0 && notes[i] > notes[i - 1]) {
+                everRose = true;
+                assert(notes[i] - notes[i - 1] <= 6);  // a step back up, never a leap
+            }
+        }
+        // net trend: the first half sits above the second half
+        long firstHalf = 0, secondHalf = 0;
+        for (std::size_t i = 0; i < notes.size() / 2; ++i) firstHalf += notes[i];
+        for (std::size_t i = notes.size() - notes.size() / 2; i < notes.size(); ++i) secondHalf += notes[i];
+        assert(firstHalf > secondHalf);
+    }
+    assert(everRose);  // at full colour it really does wander
+
+    // ... and with colour 0 it never does, for the same seeds.
+    for (std::uint32_t seed = 1; seed <= 40; ++seed) {
+        PatternState pattern;
+        regeneratePattern(pattern, descendingControls(seed, 0.0f), ::downspout::Meter {}, true, true);
+        const std::vector<int> notes = notesOf(pattern);
+        for (std::size_t i = 1; i < notes.size(); ++i) assert(notes[i] <= notes[i - 1]);
+    }
+}
+
+void testDescendingColorControlChangesTheLine() {
+    PatternState strict, wandering;
+    regeneratePattern(strict, descendingControls(9u, 0.0f), ::downspout::Meter {}, true, true);
+    regeneratePattern(wandering, descendingControls(9u, 1.0f), ::downspout::Meter {}, true, true);
+    assert(strict.eventCount == wandering.eventCount);  // colour does not touch the rhythm
+    assert(notesOf(strict) != notesOf(wandering));
+}
+
+void testDescendingLineAdaptsWhenOnlyTheRhythmIsRegenerated() {
+    Controls controls = descendingControls(31u, 0.0f);
+    PatternState pattern;
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, true, true);
+    for (int round = 0; round < 6; ++round) {
+        regeneratePattern(pattern, controls, ::downspout::Meter {}, true, false);
+        const std::vector<int> notes = notesOf(pattern);
+        assert(notes.size() >= 2);
+        for (std::size_t i = 1; i < notes.size(); ++i) assert(notes[i] <= notes[i - 1]);
+        assert(notes.back() == controls.rootNote + registerOffset(controls.reg));
+    }
+}
+
+void testDescendingNotesOnlyRegenerationKeepsTheRhythm() {
+    Controls controls = descendingControls(5u, 0.5f);
+    PatternState pattern;
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, true, true);
+    const PatternState before = pattern;
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, false, true);
+    assert(pattern.eventCount == before.eventCount);
+    for (int index = 0; index < pattern.eventCount; ++index) {
+        assert(pattern.events[index].startStep == before.events[index].startStep);
+    }
+}
+
+void testDescendingGenreStaysInRangeAcrossRegisters() {
+    for (int reg = 0; reg <= 3; ++reg) {
+        for (const int root : {0, 24, 36, 60, 96}) {
+            Controls controls = descendingControls(3u, 0.8f);
+            controls.reg = reg;
+            controls.rootNote = root;
+            PatternState pattern;
+            regeneratePattern(pattern, controls, ::downspout::Meter {}, true, true);
+            for (int index = 0; index < pattern.eventCount; ++index) {
+                assert(pattern.events[index].note >= 0 && pattern.events[index].note <= 127);
+                assert(pattern.events[index].velocity >= 1 && pattern.events[index].velocity <= 127);
+            }
+        }
+    }
+}
+
+void testDescendingGenreRoundTripsAndClamps() {
+    Controls controls = descendingControls(2u, 0.3f);
+    const auto restored = deserializeControls(serializeControls(controls));
+    assert(restored.has_value());
+    assert(restored->genre == GenreId::descending);
+    assert(clampControls(controls).genre == GenreId::descending);
+    controls.genre = static_cast<GenreId>(static_cast<int>(GenreId::count) + 5);
+    assert(clampControls(controls).genre == GenreId::descending);  // the highest genre, not an out-of-range value
+}
+
+void testDescendingPartialMutationKeepsTheDescent() {
+    Controls controls = descendingControls(8u, 0.5f);
+    PatternState pattern;
+    regeneratePattern(pattern, controls, ::downspout::Meter {}, true, true);
+    for (int round = 0; round < 10; ++round) {
+        partialNoteMutation(pattern, controls, 0.6f);
+        const std::vector<int> notes = notesOf(pattern);
+        long firstHalf = 0, secondHalf = 0;
+        for (std::size_t i = 0; i < notes.size() / 2; ++i) firstHalf += notes[i];
+        for (std::size_t i = notes.size() - notes.size() / 2; i < notes.size(); ++i) secondHalf += notes[i];
+        assert(firstHalf > secondHalf);
+    }
 }
 
 void testBebopDominantScaleConstrainsGeneratedNotes() {
@@ -1198,6 +1361,14 @@ int main() {
     testFugueGenreIsAppendedAndAnswersAtDominant();
     testRockGenrePinsBeatAnchors();
     testMoroderGenreUsesRepetitiveBrightPulse();
+    testDescendingWithoutColorIsAStrictStaircase();
+    testDescendingColorWandersButStillDescends();
+    testDescendingColorControlChangesTheLine();
+    testDescendingLineAdaptsWhenOnlyTheRhythmIsRegenerated();
+    testDescendingNotesOnlyRegenerationKeepsTheRhythm();
+    testDescendingGenreStaysInRangeAcrossRegisters();
+    testDescendingGenreRoundTripsAndClamps();
+    testDescendingPartialMutationKeepsTheDescent();
     testBebopDominantScaleConstrainsGeneratedNotes();
     testStateSanitization();
     testEngineRewindResyncAndStopNoteOff();

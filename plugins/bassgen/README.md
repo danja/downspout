@@ -63,9 +63,18 @@ Implementation status:
 - the appended Moroder genre preserves existing genre IDs while adding a
   happy, repetitive subdivision-pulse bass line with tonic/fifth/octave focus
   and slider-driven color turns, density holes, short holds, and accents;
+- the appended Descending genre (ID 12) plays one line down the scale across the
+  whole pattern: the first event is the top of the line (up to about an octave and
+  a half above the root) and the last always lands on the root, so a pattern with
+  more notes simply steps down more slowly. `Color` is how far it wanders from
+  that staircase: 0 follows it exactly and never rises; higher values let an
+  event step back up, pause or dip ahead of the line, never leaping more than two
+  scale degrees up. Most beat starts are pinned so the line keeps a pulse. The
+  `Rhythm` action refits the same line to the new rhythm instead of copying notes
+  by index;
 - the general `Color` control is serialized and exposed in the UI, and affects
   Jazz dominant color, Fugue leading tones, and genre-specific tension choices
-  for Funk, Acid, Dub, Ambient, Sabbath, Rock, Moroder, and the electronic
+  for Funk, Acid, Dub, Ambient, Sabbath, Rock, Moroder, Descending (wander), and the electronic
   styles;
 - incoming MIDI follow/dodge controls are wired through the wrapper, core, and
   UI, including channel/any-note input matching and input sensitivity for

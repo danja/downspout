@@ -6,7 +6,7 @@ Downspout is a collection of mostly generative and algorithmic VST3 plugins. The
 
 ### BassGen (`bassgen.vst3`)
 
-Transport-aware bass MIDI generator with persistent patterns, meter-aware rhythm, loop-boundary variation, and Auto, Straight, Reel, Waltz, Jig, and Slip Jig styles. Incoming MIDI can guide or suppress generated notes through configurable Follow/Dodge, channel/note matching, and sensitivity controls. Set **Conductor Ch** to receive Conductor's section CCs, which then steer density, accent, variation rate, and pattern resets automatically. Best used before a bass instrument such as Basilico.
+Transport-aware bass MIDI generator with persistent patterns, meter-aware rhythm, loop-boundary variation, and Auto, Straight, Reel, Waltz, Jig, and Slip Jig styles. Incoming MIDI can guide or suppress generated notes through configurable Follow/Dodge, channel/note matching, and sensitivity controls. Set **Conductor Ch** to receive Conductor's section CCs, which then steer density, accent, variation rate, and pattern resets automatically. The **Descending** genre plays one line down the scale across the pattern, ending on the root; **Color** sets how far it wanders from a strict staircase. Best used before a bass instrument such as Basilico.
 
 ### DrumGen (`drumgen.vst3`)
 

@@ -6,7 +6,7 @@ kind: MIDI generator
 category: generative
 role: Bassline generator
 screenshot: /assets/plugins/bassgen.png
-summary: Transport-synced bassline generator with style, scale, Moroder/Fugue/Jazz genres, variation, color, and MIDI follow/dodge controls.
+summary: Transport-synced bassline generator with style, scale, Moroder/Fugue/Jazz/Descending genres, variation, color, and MIDI follow/dodge controls.
 ---
 
 ## Opinion
@@ -25,7 +25,9 @@ movement with chord-tone targeting, dominant color, chromatic approaches, and
 simple enclosures. Its Fugue mode uses a tonic subject, dominant answer,
 episode, and tonic pedal/cadence shape for Bach-like continuo movement.
 Moroder mode makes short, bright, repetitive subdivision-pulse bass lines with
-slider-shaped holes and color turns.
+slider-shaped holes and color turns. Descending mode plays one line down the
+scale across the pattern, ending on the root; Color sets how much it wanders
+from a strict staircase.
 
 ### Conductor integration
 
