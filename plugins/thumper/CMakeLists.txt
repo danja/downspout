@@ -17,7 +17,7 @@ if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
             src/dpf/ThumperUI.cpp
     )
     target_link_libraries(thumper-dsp PUBLIC downspout_thumper_core)
-    target_link_libraries(thumper-ui PUBLIC downspout-project-options)
+    target_link_libraries(thumper-ui PUBLIC downspout-project-options downspout_thumper_core)
     target_include_directories(thumper PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"

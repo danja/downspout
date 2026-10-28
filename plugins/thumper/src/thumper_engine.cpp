@@ -26,10 +26,12 @@ void ThumperEngine::applyPreset() {
     }
 }
 
-void ThumperEngine::trigger() {
+void ThumperEngine::trigger(float pitchHz, float velocity) {
     for (int i=0;i<2;i++) {
         KickVoice* v = (i==0)?&v1_:&v2_;
         v->active = true;
+        v->basePitch = pitchHz;
+        v->velocity = clampf(velocity, 0.0f, 1.0f);
         v->phase = 0.0f;
         v->pitch = params_.pitch * std::pow(2.0f, params_.pitchDrop / 12.0f);
         v->env = 1.0f;
@@ -55,10 +57,12 @@ float ThumperEngine::renderVoice(int engineId, KickVoice& v) {
     v.pitchEnv = std::exp(-t / ped);
     v.filterEnv = std::exp(-t / fed);
     v.ampEnv = std::exp(-t / aed);
-    float pitch = params_.pitch * (1.0f + (params_.pitchDrop/12.0f) * v.pitchEnv);
+    float base = v.basePitch > 0.0f ? v.basePitch : params_.pitch;
+    float pitch = base * (1.0f + (params_.pitchDrop/12.0f) * v.pitchEnv);
     v.pitch = pitch;
 
     float env = v.ampEnv;
+    float modalEnv = std::exp(-t / std::max(0.001f, aed * params_.modalDecay / 0.4f));
     v.env = env;
     v.clickEnv *= 0.992f;
 
@@ -71,13 +75,13 @@ float ThumperEngine::renderVoice(int engineId, KickVoice& v) {
     if (eng == (int)Engine::VirtualAnalog) sample = std::sin(v.phase);
     else if (eng == (int)Engine::Subtractive) sample = (v.phase / (float)M_PI) - 1.0f;
     else if (eng == (int)Engine::FM) { float mod = std::sin(v.phase * params_.fmRatio) * params_.fmIndex * env; sample = std::sin(v.phase + mod); }
-    else if (eng == (int)Engine::Modal) sample = std::sin(v.phase) + 0.5f*std::sin(v.phase*2.0f)*env + 0.25f*std::sin(v.phase*3.1f)*env*env;
+    else if (eng == (int)Engine::Modal) sample = std::sin(v.phase) + 0.5f*std::sin(v.phase*2.0f)*modalEnv + 0.25f*std::sin(v.phase*3.1f)*modalEnv*modalEnv;
     else if (eng == (int)Engine::PhaseDistortion) sample = std::sin(v.phase + 0.5f*std::sin(v.phase));
-    else if (eng == (int)Engine::Wavetable) sample = 2.0f*(v.phase/(2.0f*(float)M_PI)) - 1.0f;
+    else if (eng == (int)Engine::Wavetable) sample = (1.0f - t)*(2.0f*(v.phase/(2.0f*(float)M_PI)) - 1.0f) + t*std::sin(v.phase);  // saw morphing to sine
     else if (eng == (int)Engine::EightOhEight) sample = std::sin(v.phase) * (1.0f + 0.3f*env);
     else if (eng == (int)Engine::NineOhNine) sample = std::sin(v.phase) + 0.4f*std::sin(v.phase*4.0f)*env;
     else if (eng == (int)Engine::Physical) sample = std::sin(v.phase) + 0.6f*std::sin(v.phase*1.59f)*env + 0.3f*std::sin(v.phase*2.14f)*env*env;
-    else sample = ((float)std::rand()/RAND_MAX*2.0f - 1.0f) * env;
+    else sample = noise() * env;
 
     float subPhase = v.phase * 0.5f;
     sample = sample*(1.0f - params_.subMix*0.5f) + std::sin(subPhase)*params_.subMix*0.5f;
@@ -89,8 +93,8 @@ float ThumperEngine::renderVoice(int engineId, KickVoice& v) {
     sample = v.toneState;
 
     if (v.clickEnv > 0.001f) {
-        float noise = ((float)std::rand()/RAND_MAX*2.0f - 1.0f);
-        sample += noise * v.clickEnv * params_.click * (1.0f - t*0.5f);
+        float click = noise();
+        sample += click * v.clickEnv * params_.click * (1.0f - t*0.5f);
     }
 
     if (params_.drive > 0.0f) {
@@ -98,7 +102,7 @@ float ThumperEngine::renderVoice(int engineId, KickVoice& v) {
         sample = std::tanh(sample * g);
     }
 
-    sample *= env * params_.volume;
+    sample *= env * params_.volume * v.velocity;
 
     v.samplesLeft -= 1.0f;
     if (v.samplesLeft <= 0.0f) v.active = false;

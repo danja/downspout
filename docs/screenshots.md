@@ -100,6 +100,10 @@ Current output filenames:
 - `quartet.png`
 - `monochord.png`
 - `nam.png`
+- `thumper.png`
+- `snatch.png`
+- `tops.png`
+- `clatter.png`
 - `primefold.png`
 - `quefrency.png`
 - `keyframe.png`

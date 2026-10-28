@@ -94,6 +94,7 @@ plugins=(
   "thumper:thumper"
   "snatch:snatch"
   "tops:tops"
+  "clatter:clatter"
   "primefold:primefold"
   "quefrency:quefrency"
   "ghost:ghost"

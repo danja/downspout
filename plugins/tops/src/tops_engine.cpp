@@ -14,9 +14,24 @@ void TopsEngine::applyPreset() {
         default: break;
     }
 }
-void TopsEngine::trigger() {
+int TopsEngine::instrumentForNote(int note) {
+    switch (note) {
+        case 42: return (int)Instrument::ClosedHH;
+        case 44: return (int)Instrument::PedalHH;
+        case 46: return (int)Instrument::OpenHH;
+        case 49: case 57: return (int)Instrument::Crash;
+        case 51: case 53: case 59: return (int)Instrument::Ride;
+        case 55: return (int)Instrument::Splash;
+        case 52: return (int)Instrument::China;
+        case 56: return (int)Instrument::Cowbell;
+        case 54: return (int)Instrument::Tambourine;
+        case 81: return (int)Instrument::Triangle;
+        default: return -1;
+    }
+}
+void TopsEngine::trigger(int instrument, float velocity) {
     // choke open HH on closed/pedal
-    int inst = params_.instrument;
+    int inst = instrument >= 0 ? instrument : params_.instrument;
     if (inst==(int)Instrument::ClosedHH || inst==(int)Instrument::PedalHH) {
         for (auto& v : voices_) if (v.active && v.instrument==(int)Instrument::OpenHH) v.active=false;
     }
@@ -28,6 +43,7 @@ void TopsEngine::trigger() {
     v.active=true; v.instrument=inst;
     v.phase=0; v.env=1; v.noiseEnv=1; v.toneState=0;
     v.pitch = params_.pitch;
+    v.noiseBias = 0;
     float decay = params_.decay;
     // instrument-specific decay
     if (inst==(int)Instrument::Crash) decay*=4.0f;
@@ -35,16 +51,20 @@ void TopsEngine::trigger() {
     if (inst==(int)Instrument::OpenHH) decay*=2.0f;
     if (inst==(int)Instrument::ClosedHH) decay=0.05f;
     if (inst==(int)Instrument::PedalHH) decay=0.07f;
+    // Voicing of the instruments that otherwise share a recipe (splash is the unmodified one).
+    if (inst==(int)Instrument::China)     { v.pitch*=0.75f; decay*=1.5f; v.noiseBias=0.2f; }
+    if (inst==(int)Instrument::Tambourine){ v.pitch*=1.3f;  decay*=0.6f; v.noiseBias=0.3f; }
+    if (inst==(int)Instrument::Cowbell)   { v.pitch*=0.08f; decay*=3.0f; }
+    if (inst==(int)Instrument::Triangle)  { decay*=6.0f; }
     v.samplesLeft = decay*(float)sr_;
+    // The envelope falls 8 e-folds (about -70 dB) over the voice's life.
+    v.decayCoef = std::exp(-8.0f / std::max(1.0f, v.samplesLeft));
+    v.velocity = clampf(velocity, 0.0f, 1.0f);
+    v.shelfState = 0;
 }
 float TopsEngine::renderVoice(Voice& v) {
     if(!v.active) return 0;
-    float total = v.samplesLeft + 1;
-    // approximate: use decay stored? recompute t from samplesLeft initial unknown; use env
-    float t = 1.0f - (v.samplesLeft / (std::max(1.0f,v.samplesLeft+v.env*0))); 
-    // simpler: use env decay
-    float decayRate = 8.0f / std::max(0.01f, (v.samplesLeft>0?v.samplesLeft:1)/ (float)v.sr);
-    v.env *= std::exp(-decayRate / (float)v.sr);
+    v.env *= v.decayCoef;
     v.noiseEnv *= 0.995f;
     float sample=0;
     int eng = params_.engine;
@@ -54,7 +74,7 @@ float TopsEngine::renderVoice(Voice& v) {
     if (eng==(int)Engine::Metallic) {
         sample = std::sin(v.phase) + 0.7f*std::sin(v.phase*2.3f) + 0.4f*std::sin(v.phase*3.7f) + 0.2f*std::sin(v.phase*5.1f);
     } else if (eng==(int)Engine::Noise) {
-        sample = ((float)rand()/RAND_MAX*2-1);
+        sample = (noise());
     } else if (eng==(int)Engine::FM) {
         float mod = std::sin(v.phase*params_.pitch*0.01f)*3.0f; sample=std::sin(v.phase+mod);
     } else if (eng==(int)Engine::Physical) {
@@ -65,15 +85,19 @@ float TopsEngine::renderVoice(Voice& v) {
         sample = std::sin(v.phase)*std::sin(v.phase*0.5f);
     }
     // noise component
-    sample = sample*(1-params_.noise) + (((float)rand()/RAND_MAX*2-1))*params_.noise;
+    float noiseMix = clampf(params_.noise + v.noiseBias, 0.0f, 1.0f);
+    sample = sample*(1-noiseMix) + ((noise()))*noiseMix;
     // brightness filter
     float cutoff = 0.2f + params_.brightness*0.75f;
     v.toneState += cutoff*(sample-v.toneState);
     sample = v.toneState;
+    // Tone: high-frequency tilt around a ~3 kHz split; neutral at the 0.6 default.
+    v.shelfState += 0.35f*(sample-v.shelfState);
+    sample = v.shelfState + std::max(0.0f, 1.0f + (params_.tone-0.6f)*2.5f)*(sample-v.shelfState);
     // cowbell/tambourine/triangle special: lower pitch
     if (v.instrument==(int)Instrument::Cowbell) sample *= 0.8f;
     if (v.instrument==(int)Instrument::Triangle) sample = std::sin(v.phase)*v.env;
-    sample *= v.env * params_.volume;
+    sample *= v.env * params_.volume * v.velocity;
     if (params_.distortion>0){ float g=1+params_.distortion*10; sample=std::tanh(sample*g); }
     v.samplesLeft -= 1;
     if (v.samplesLeft<=0) v.active=false;

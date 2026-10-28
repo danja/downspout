@@ -1,0 +1,40 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:snatch a trn:PluginProfile ;
+    rdfs:label "Snatch" ;
+    rdfs:comment "Snare drum generator with five engines, five presets, and tone, noise, snap, body and decay controls." ;
+    trn:bundleName "snatch.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/snatch/> ;
+    trn:role trn:InstrumentPlugin ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Audio ;
+    trn:caution "Any note triggers one monophonic hit. Velocity sets level; note-off is ignored. Note Map selects General MIDI snare notes 37 side stick, 38 selected engine, 40 electronic (default) or any note (selected engine)." ;
+    trn:parameter [ rdfs:label "Engine" ; trn:symbol "engine" ; trn:range "0-5" ;
+                    rdfs:comment "Tone+noise, metal, brush, electronic, acoustic, side stick." ] ;
+    trn:parameter [ rdfs:label "Preset" ; trn:symbol "preset" ; trn:range "0-4" ;
+                    rdfs:comment "Rock, jazz, electronic, latin, brushed. Selecting one overwrites the sound parameters." ] ;
+    trn:parameter [ rdfs:label "Pitch" ; trn:symbol "pitch" ; trn:range "100-400 Hz" ;
+                    rdfs:comment "Shell pitch." ] ;
+    trn:parameter [ rdfs:label "Tone" ; trn:symbol "tone" ; trn:range "0-1" ;
+                    rdfs:comment "Tone." ] ;
+    trn:parameter [ rdfs:label "Noise" ; trn:symbol "noise" ; trn:range "0-1" ;
+                    rdfs:comment "Snare wire noise level." ] ;
+    trn:parameter [ rdfs:label "Snap" ; trn:symbol "snap" ; trn:range "0-1" ;
+                    rdfs:comment "Attack snap." ] ;
+    trn:parameter [ rdfs:label "Body" ; trn:symbol "body" ; trn:range "0-1" ;
+                    rdfs:comment "Body level." ] ;
+    trn:parameter [ rdfs:label "Decay" ; trn:symbol "decay" ; trn:range "0.05-1 s" ;
+                    rdfs:comment "Decay." ] ;
+    trn:parameter [ rdfs:label "Volume" ; trn:symbol "volume" ; trn:range "0-1" ;
+                    rdfs:comment "Output level." ] ;
+    trn:parameter [ rdfs:label "Distortion" ; trn:symbol "distortion" ; trn:range "0-1" ;
+                    rdfs:comment "Output distortion." ] ;
+    trn:parameter [ rdfs:label "Note Map" ; trn:symbol "noteMap" ; trn:range "0-1" ;
+                    rdfs:comment "General MIDI is the default. Selected: any note plays the Engine parameter. General MIDI: notes 37, 38 and 40 only." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

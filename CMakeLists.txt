@@ -67,6 +67,7 @@ option(DOWNSPOUT_BUILD_MAGNETO "Configure the magneto engine sound generator tar
 option(DOWNSPOUT_BUILD_THUMPER "Configure the Thumper kick drum generator target" ON)
 option(DOWNSPOUT_BUILD_SNATCH "Configure the Snatch snare drum generator target" ON)
 option(DOWNSPOUT_BUILD_TOPS "Configure the Tops hi-hat/cymbal generator target" ON)
+option(DOWNSPOUT_BUILD_CLATTER "Configure the Clatter General MIDI percussion generator target" ON)
 option(DOWNSPOUT_BUILD_GHOST "Configure the ghost audio-triggered MIDI target" ON)
 option(DOWNSPOUT_BUILD_SPLIFF "Configure the spliff transient processor target" ON)
 option(DOWNSPOUT_BUILD_HELTERSKELTER "Configure the helterskelter auto-wah target" ON)
@@ -403,6 +404,10 @@ endif()
 
 if(DOWNSPOUT_BUILD_TOPS)
     add_subdirectory(plugins/tops)
+endif()
+
+if(DOWNSPOUT_BUILD_CLATTER)
+    add_subdirectory(plugins/clatter)
 endif()
 
 if(DOWNSPOUT_BUILD_GHOST)

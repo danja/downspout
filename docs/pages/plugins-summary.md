@@ -97,6 +97,9 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | luma | luma.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | magneto | magneto.vst3 | instrument (engine) | 0/2 | yes/no | yes |
 | thumper | thumper.vst3 | instrument (kick) | 0/2 | yes/no | yes |
+| snatch | snatch.vst3 | instrument (snare) | 0/2 | yes/no | yes |
+| tops | tops.vst3 | instrument (hi-hat/cymbal) | 0/2 | yes/no | yes |
+| clatter | clatter.vst3 | instrument (GM percussion) | 0/2 | yes/no | yes |
 | melgen | melgen.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | midiscribe | midiscribe.vst3 | MIDI utility | 0/0 | yes/yes | yes |
 | mixgen | mixgen.vst3 | CC generator + audio thru | 2/2 | no/yes | yes |
@@ -465,8 +468,37 @@ idle. Not a pitched voice: pitch bend is not applicable.
 Kick drum generator with ten synthesis engines (virtual analog, modal, subtractive, FM,
 phase distortion, wavetable, 808, 909, physical, noise burst) and style presets (techno,
 gabber, rock, latin, house, trap, acoustic). Independent pitch/filter/amp envelopes,
-layering of two engines, output distortion. GM channel 10 triggers at fixed pitch; other
-channels follow MIDI note pitch.
+layering of two engines, output distortion. Velocity sets level. **Note Map** General MIDI (default): only
+notes 35 and 36, at the Pitch parameter; Selected: channel 10 plays at the Pitch parameter, other channels
+at the note's pitch for that hit only.
+
+### snatch
+Snare drum generator with six engines (**Tone+Noise**, **Metal**, **Brush**, **Electronic**,
+**Acoustic**, **Side Stick**) and five presets (rock, jazz, electronic, latin, brushed). Controls: Pitch
+100-400 Hz, Tone, Noise, Snap, Body, Decay, Volume, Distortion. Note-on triggers one
+monophonic hit; velocity sets level. **Note Map** General MIDI (default): 37 side stick, 38 selected
+engine, 40 Electronic, others ignored; Selected: any note plays the chosen engine. Selecting a Preset overwrites the
+other sound controls. No CCs.
+
+### tops
+Hi-hat and cymbal generator: ten **Instruments** (closed, open and pedal hat, crash, ride,
+splash, china, cowbell, tambourine, triangle), six engines (**Metallic**, **Noise**, **FM**,
+**Physical**, **Wavetable**, **RingMod**) and five presets. Controls: Pitch 1-12 kHz, Decay,
+Tone, Noise, Brightness, Volume, Distortion. Velocity sets level. **Note Map** General MIDI (default): notes 42 closed, 44 pedal,
+46 open, 49 crash, 51 ride, 52 china, 54 tambourine, 55 splash, 56 cowbell, 81 triangle, others ignored;
+Selected: any note plays the selected Instrument. Closed and
+pedal hats choke a sounding open hat. No CCs.
+
+### clatter
+General MIDI percussion generator for the sounds Thumper, Snatch and Tops leave out: 31 sounds in five
+families on their GM notes. **Membrane**: toms 41 43 45 47 48 50, bongos 60 61, congas 62 (mute) 63 (open) 64,
+timbales 65 66, surdos 86 (mute) 87 (open). **Metal**: agogos 67 68, mute triangle 80, jingle bell 83, bell tree
+84. **Wood**: claves 75, wood blocks 76 77, castanets 85. **Shaker**: cabasa 69, maracas 70, shaker 82, vibraslap
+58. **Clap + guiro**: clap 39, guiros 73 74. Whistles (71, 72) and cuicas (78, 79) are not provided. Velocity
+sets level. **Note Map** General MIDI (default): only those notes play; Selected: any note plays the **Sound**
+parameter. Each family has **Tune** (+-12 st), **Decay** (x0.25-x4) and **Tone**; **Level** and **Width** (stereo
+spread of each sound's fixed pan). Open and mute congas and surdos, and the two guiros, choke each other. 16
+voices. No CCs.
 
 ### trajectory
 Eight-voice synthesiser whose oscillator is a point bouncing inside a regular polygon

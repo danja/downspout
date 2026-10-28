@@ -1,0 +1,60 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:thumper a trn:PluginProfile ;
+    rdfs:label "Thumper" ;
+    rdfs:comment "Kick drum generator with ten synthesis engines, style presets, pitch/filter/amp envelopes, an optional second-engine layer and output distortion." ;
+    trn:bundleName "thumper.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/thumper/> ;
+    trn:role trn:InstrumentPlugin ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Audio ;
+    trn:caution "Note Map selects General MIDI kick notes 35 and 36 only (default; always at the Pitch parameter) or any note. With any note, on channel 10 the pitch is the Pitch parameter; on other channels the note sets the pitch. Velocity sets level; note-off is ignored. The Pitch parameter is not changed by notes." ;
+    trn:parameter [ rdfs:label "Engine" ; trn:symbol "engine" ; trn:range "0-9" ;
+                    rdfs:comment "Virtual analog, modal, subtractive, FM, phase distortion, wavetable, 808, 909, physical, noise burst." ] ;
+    trn:parameter [ rdfs:label "Preset" ; trn:symbol "preset" ; trn:range "0-7" ;
+                    rdfs:comment "Techno, gabber, rock, latin, house, trap, acoustic, custom. Selecting one overwrites the sound parameters." ] ;
+    trn:parameter [ rdfs:label "Pitch" ; trn:symbol "pitch" ; trn:range "30-120 Hz" ;
+                    rdfs:comment "Base pitch." ] ;
+    trn:parameter [ rdfs:label "Pitch Drop" ; trn:symbol "pitchDrop" ; trn:range "0-24 st" ;
+                    rdfs:comment "Initial pitch sweep." ] ;
+    trn:parameter [ rdfs:label "Decay" ; trn:symbol "decay" ; trn:range "0.05-2 s" ;
+                    rdfs:comment "Overall decay." ] ;
+    trn:parameter [ rdfs:label "Click" ; trn:symbol "click" ; trn:range "0-1" ;
+                    rdfs:comment "Beater click level." ] ;
+    trn:parameter [ rdfs:label "Body" ; trn:symbol "body" ; trn:range "0-1" ;
+                    rdfs:comment "Body level." ] ;
+    trn:parameter [ rdfs:label "Drive" ; trn:symbol "drive" ; trn:range "0-1" ;
+                    rdfs:comment "Saturation." ] ;
+    trn:parameter [ rdfs:label "Tone" ; trn:symbol "tone" ; trn:range "0-1" ;
+                    rdfs:comment "Tone." ] ;
+    trn:parameter [ rdfs:label "Volume" ; trn:symbol "volume" ; trn:range "0-1" ;
+                    rdfs:comment "Output level." ] ;
+    trn:parameter [ rdfs:label "FM Ratio" ; trn:symbol "fmRatio" ; trn:range "0.5-8" ;
+                    rdfs:comment "FM engine ratio." ] ;
+    trn:parameter [ rdfs:label "FM Index" ; trn:symbol "fmIndex" ; trn:range "0-10" ;
+                    rdfs:comment "FM engine index." ] ;
+    trn:parameter [ rdfs:label "Modal Decay" ; trn:symbol "modalDecay" ; trn:range "0.05-2 s" ;
+                    rdfs:comment "Decay of the Modal engine upper partials; neutral at 0.4." ] ;
+    trn:parameter [ rdfs:label "Sub Mix" ; trn:symbol "subMix" ; trn:range "0-1" ;
+                    rdfs:comment "Sub oscillator level." ] ;
+    trn:parameter [ rdfs:label "Distortion" ; trn:symbol "distortion" ; trn:range "0-1" ;
+                    rdfs:comment "Output distortion." ] ;
+    trn:parameter [ rdfs:label "Pitch Env" ; trn:symbol "pitchEnvDecay" ; trn:range "0.001-2 s" ;
+                    rdfs:comment "Pitch envelope decay." ] ;
+    trn:parameter [ rdfs:label "Filter Env" ; trn:symbol "filterEnvDecay" ; trn:range "0.001-2 s" ;
+                    rdfs:comment "Filter envelope decay." ] ;
+    trn:parameter [ rdfs:label "Amp Env" ; trn:symbol "ampEnvDecay" ; trn:range "0.001-2 s" ;
+                    rdfs:comment "Amp envelope decay." ] ;
+    trn:parameter [ rdfs:label "Engine 2" ; trn:symbol "engine2" ; trn:range "0-9" ;
+                    rdfs:comment "Second layer engine." ] ;
+    trn:parameter [ rdfs:label "Layer Mix" ; trn:symbol "layerMix" ; trn:range "0-1" ;
+                    rdfs:comment "Level of the second engine; 0 = no layer." ] ;
+    trn:parameter [ rdfs:label "Note Map" ; trn:symbol "noteMap" ; trn:range "0-1" ;
+                    rdfs:comment "General MIDI is the default. Selected: any note plays a kick. General MIDI: notes 35 and 36 only." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

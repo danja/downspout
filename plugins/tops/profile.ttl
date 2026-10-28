@@ -1,0 +1,40 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:tops a trn:PluginProfile ;
+    rdfs:label "Tops" ;
+    rdfs:comment "Hi-hat and cymbal generator with ten instruments, six engines and five presets." ;
+    trn:bundleName "tops.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/tops/> ;
+    trn:role trn:InstrumentPlugin ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Audio ;
+    trn:caution "Velocity sets level. Note Map: General MIDI (default) plays only notes 42 closed, 44 pedal, 46 open, 49 crash, 51 ride, 52 china, 54 tambourine, 55 splash, 56 cowbell, 81 triangle (also 53, 57, 59); Selected plays the Instrument parameter from any note. A closed or pedal hat chokes an open hat." ;
+    trn:parameter [ rdfs:label "Instrument" ; trn:symbol "instrument" ; trn:range "0-9" ;
+                    rdfs:comment "Closed, open, pedal hat, crash, ride, splash, china, cowbell, tambourine, triangle." ] ;
+    trn:parameter [ rdfs:label "Engine" ; trn:symbol "engine" ; trn:range "0-5" ;
+                    rdfs:comment "Metallic, noise, FM, physical, wavetable, ring mod." ] ;
+    trn:parameter [ rdfs:label "Preset" ; trn:symbol "preset" ; trn:range "0-4" ;
+                    rdfs:comment "Rock, jazz, electronic, metal, latin. Selecting one overwrites the sound parameters." ] ;
+    trn:parameter [ rdfs:label "Pitch" ; trn:symbol "pitch" ; trn:range "1000-12000 Hz" ;
+                    rdfs:comment "Base pitch." ] ;
+    trn:parameter [ rdfs:label "Decay" ; trn:symbol "decay" ; trn:range "0.01-2 s" ;
+                    rdfs:comment "Decay." ] ;
+    trn:parameter [ rdfs:label "Tone" ; trn:symbol "tone" ; trn:range "0-1" ;
+                    rdfs:comment "High-frequency tilt; neutral at 0.6." ] ;
+    trn:parameter [ rdfs:label "Noise" ; trn:symbol "noise" ; trn:range "0-1" ;
+                    rdfs:comment "Noise level." ] ;
+    trn:parameter [ rdfs:label "Brightness" ; trn:symbol "brightness" ; trn:range "0-1" ;
+                    rdfs:comment "Brightness." ] ;
+    trn:parameter [ rdfs:label "Volume" ; trn:symbol "volume" ; trn:range "0-1" ;
+                    rdfs:comment "Output level." ] ;
+    trn:parameter [ rdfs:label "Distortion" ; trn:symbol "distortion" ; trn:range "0-1" ;
+                    rdfs:comment "Output distortion." ] ;
+    trn:parameter [ rdfs:label "Note Map" ; trn:symbol "noteMap" ; trn:range "0-1" ;
+                    rdfs:comment "General MIDI is the default. Selected: any note plays the Instrument parameter. General MIDI: mapped drum notes only." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

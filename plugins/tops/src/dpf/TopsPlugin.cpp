@@ -1,15 +1,14 @@
 #include "DistrhoPlugin.hpp"
 #include "tops_core_types.hpp"
 #include "tops_params.hpp"
-#include "tops_serialization.hpp"
 #include <cstring>
 #include <string>
 #include <cmath>
 START_NAMESPACE_DISTRHO
-namespace { constexpr const char* kStateKeyParameters="parameters"; enum StateIndex:uint32_t{kStateParameters=0,kStateCount}; enum ParamId:uint32_t{pInstrument=0,pEngine,pPreset,pPitch,pDecay,pTone,pNoise,pBrightness,pVolume,pDistortion,kParamCount}; }
+namespace { enum ParamId:uint32_t{pInstrument=0,pEngine,pPreset,pPitch,pDecay,pTone,pNoise,pBrightness,pVolume,pDistortion,pNoteMap,kParamCount}; }
 class TopsPlugin : public Plugin {
 public:
-    TopsPlugin():Plugin(kParamCount,0,kStateCount){ params_=tops::Params(); engine_.setSampleRate((int)getSampleRate()); engine_.setParams(params_);}
+    TopsPlugin():Plugin(kParamCount,0,0){ params_=tops::Params(); engine_.setSampleRate((int)getSampleRate()); engine_.setParams(params_);}
 protected:
     const char* getLabel() const override{return "Tops";}
     const char* getDescription() const override{return "Hi-hat and cymbal generator";}
@@ -32,23 +31,24 @@ protected:
             case pBrightness: parameter.name="Brightness";parameter.symbol="brightness";parameter.ranges.min=0;parameter.ranges.max=1;parameter.ranges.def=0.7f;break;
             case pVolume: parameter.name="Volume";parameter.symbol="volume";parameter.ranges.min=0;parameter.ranges.max=1;parameter.ranges.def=0.7f;break;
             case pDistortion: parameter.name="Distortion";parameter.symbol="distortion";parameter.ranges.min=0;parameter.ranges.max=1;parameter.ranges.def=0;break;
+            case pNoteMap: parameter.name="Note Map";parameter.symbol="noteMap";parameter.ranges.min=0;parameter.ranges.max=1;parameter.ranges.def=1;parameter.hints|=kParameterIsInteger;break;
         }
     }
-    void initState(uint32_t index,State& state) override{ if(index!=kStateParameters) return; state.key=kStateKeyParameters; state.label="Parameters"; state.hints=kStateIsOnlyForDSP; state.defaultValue="";}
-    String getState(const char* key) const override{ if(std::strcmp(key,kStateKeyParameters)==0) return String(tops::serialize(params_).c_str()); return String();}
-    void setState(const char* key,const char* value) override{ if(std::strcmp(key,kStateKeyParameters)!=0) return; std::string text=value?value:""; tops::Params p; if(tops::deserialize(text,p)){params_=p; engine_.setParams(params_);}}
     float getParameterValue(uint32_t index) const override{
-        switch(index){ case pInstrument:return (float)params_.instrument; case pEngine:return (float)params_.engine; case pPreset:return (float)params_.preset; case pPitch:return params_.pitch; case pDecay:return params_.decay; case pTone:return params_.tone; case pNoise:return params_.noise; case pBrightness:return params_.brightness; case pVolume:return params_.volume; case pDistortion:return params_.distortion;}
+        switch(index){ case pInstrument:return (float)params_.instrument; case pEngine:return (float)params_.engine; case pPreset:return (float)params_.preset; case pPitch:return params_.pitch; case pDecay:return params_.decay; case pTone:return params_.tone; case pNoise:return params_.noise; case pBrightness:return params_.brightness; case pVolume:return params_.volume; case pDistortion:return params_.distortion; case pNoteMap:return (float)params_.noteMap;}
         return 0;
     }
     void setParameterValue(uint32_t index,float value) override{
-        switch(index){ case pInstrument:params_.instrument=(int)value;break; case pEngine:params_.engine=(int)value;break; case pPreset:params_.preset=(int)value; engine_.setParams(params_); engine_.applyPreset(); params_=engine_.params(); break; case pPitch:params_.pitch=value;break; case pDecay:params_.decay=value;break; case pTone:params_.tone=value;break; case pNoise:params_.noise=value;break; case pBrightness:params_.brightness=value;break; case pVolume:params_.volume=value;break; case pDistortion:params_.distortion=value;break;}
+        switch(index){ case pInstrument:params_.instrument=(int)value;break; case pEngine:params_.engine=(int)value;break; case pPreset:params_.preset=(int)value; break; case pPitch:params_.pitch=value;break; case pDecay:params_.decay=value;break; case pTone:params_.tone=value;break; case pNoise:params_.noise=value;break; case pBrightness:params_.brightness=value;break; case pVolume:params_.volume=value;break; case pDistortion:params_.distortion=value;break; case pNoteMap:params_.noteMap=(int)value;break;}
         engine_.setParams(params_);
     }
     void activate() override{ engine_.setSampleRate((int)getSampleRate()); engine_.setParams(params_);}
     void sampleRateChanged(double sr) override{ engine_.setSampleRate((int)sr);}
     void run(const float**,float** outputs,uint32_t frames,const MidiEvent* midiEvents,uint32_t midiEventCount) override{
-        for(uint32_t i=0;i<midiEventCount;i++){ const MidiEvent&e=midiEvents[i]; if(e.size>=3 && (e.data[0]&0xF0)==0x90 && e.data[2]!=0) engine_.trigger(); }
+        for(uint32_t i=0;i<midiEventCount;i++){ const MidiEvent&e=midiEvents[i]; if(e.size<3 || (e.data[0]&0xF0)!=0x90 || e.data[2]==0) continue;
+            int inst=-1;  // -1 = the Instrument parameter
+            if(params_.noteMap==(int)tops::NoteMap::GeneralMidi){ inst=tops::TopsEngine::instrumentForNote(e.data[1]); if(inst<0) continue; }
+            engine_.trigger(inst,(float)e.data[2]/127.0f); }
         float* L=outputs[0]; float* R=outputs[1];
         for(uint32_t i=0;i<frames;i++){L[i]=0;R[i]=0;}
         engine_.render(L,R,(int)frames);

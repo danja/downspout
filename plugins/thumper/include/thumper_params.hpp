@@ -17,6 +17,7 @@ enum class Engine {
     NoiseBurst = 9,
 };
 
+enum class NoteMap { Selected=0, GeneralMidi=1 };  // GeneralMidi: only notes 35 and 36 play
 enum class Preset {
     Techno = 0,
     Gabber = 1,
@@ -31,6 +32,7 @@ enum class Preset {
 struct Params {
     int engine = (int)Engine::VirtualAnalog;
     int engine2 = -1; // -1 = no layer
+    int noteMap = 1;  // NoteMap
     int preset = (int)Preset::Techno;
     float pitch = 55.0f;       // Hz base
     float pitchDrop = 12.0f;   // semitones drop
@@ -45,7 +47,7 @@ struct Params {
     float fmIndex = 3.0f;
     float modalDecay = 0.4f;
     float subMix = 0.5f;
-    float layerMix = 0.5f;
+    float layerMix = 0.0f;
     float pitchEnvDecay = 0.1f;
     float filterEnvDecay = 0.3f;
     float ampEnvDecay = 0.5f;

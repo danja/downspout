@@ -1,7 +1,6 @@
 #include "DistrhoPlugin.hpp"
 #include "thumper_core_types.hpp"
 #include "thumper_params.hpp"
-#include "thumper_serialization.hpp"
 
 #include <cstring>
 #include <string>
@@ -10,14 +9,12 @@
 START_NAMESPACE_DISTRHO
 
 namespace {
-constexpr const char* kStateKeyParameters = "parameters";
-enum StateIndex : uint32_t { kStateParameters = 0, kStateCount };
 
 enum ParamId : uint32_t {
     pEngine = 0, pPreset, pPitch, pPitchDrop, pDecay, pClick, pBody, pDrive, pTone, pVolume,
     pFmRatio, pFmIndex, pModalDecay, pSubMix, pDistortion,
     pPitchEnvDecay, pFilterEnvDecay, pAmpEnvDecay,
-    pEngine2, pLayerMix,
+    pEngine2, pLayerMix, pNoteMap,
     kParamCount
 };
 }
@@ -25,7 +22,7 @@ enum ParamId : uint32_t {
 class ThumperPlugin : public Plugin {
 public:
     ThumperPlugin()
-        : Plugin(kParamCount, 0, kStateCount)
+        : Plugin(kParamCount, 0, 0)
     {
         params_ = thumper::Params();
         engine_.setSampleRate((int)getSampleRate());
@@ -70,24 +67,9 @@ protected:
             case pFilterEnvDecay: parameter.name="Filter Env"; parameter.symbol="filterEnvDecay"; parameter.ranges.min=0.001f; parameter.ranges.max=2; parameter.ranges.def=0.3f; break;
             case pAmpEnvDecay: parameter.name="Amp Env"; parameter.symbol="ampEnvDecay"; parameter.ranges.min=0.001f; parameter.ranges.max=2; parameter.ranges.def=0.5f; break;
             case pEngine2: parameter.name="Engine 2"; parameter.symbol="engine2"; parameter.ranges.min=0; parameter.ranges.max=9; parameter.ranges.def=0; parameter.hints|=kParameterIsInteger; break;
+            case pNoteMap: parameter.name="Note Map"; parameter.symbol="noteMap"; parameter.ranges.min=0; parameter.ranges.max=1; parameter.ranges.def=1; parameter.hints|=kParameterIsInteger; break;
             case pLayerMix: parameter.name="Layer Mix"; parameter.symbol="layerMix"; parameter.ranges.min=0; parameter.ranges.max=1; parameter.ranges.def=0.0f; break;
         }
-    }
-
-    void initState(uint32_t index, State& state) override {
-        if (index != kStateParameters) return;
-        state.key = kStateKeyParameters; state.label = "Parameters"; state.hints = kStateIsOnlyForDSP; state.defaultValue = "";
-    }
-
-    String getState(const char* key) const override {
-        if (std::strcmp(key, kStateKeyParameters)==0) return String(thumper::serialize(params_).c_str());
-        return String();
-    }
-    void setState(const char* key, const char* value) override {
-        if (std::strcmp(key, kStateKeyParameters)!=0) return;
-        std::string text = value?value:"";
-        thumper::Params p;
-        if (thumper::deserialize(text, p)) { params_ = p; engine_.setParams(params_); }
     }
 
     float getParameterValue(uint32_t index) const override {
@@ -110,15 +92,16 @@ protected:
             case pPitchEnvDecay: return params_.pitchEnvDecay;
             case pFilterEnvDecay: return params_.filterEnvDecay;
             case pAmpEnvDecay: return params_.ampEnvDecay;
-            case pEngine2: return (float)params_.engine2;
+            case pEngine2: return (float)(params_.engine2 < 0 ? 0 : params_.engine2);
             case pLayerMix: return params_.layerMix;
+            case pNoteMap: return (float)params_.noteMap;
         }
         return 0.0f;
     }
     void setParameterValue(uint32_t index, float value) override {
         switch(index) {
             case pEngine: params_.engine = (int)value; break;
-            case pPreset: params_.preset = (int)value; engine_.setParams(params_); engine_.applyPreset(); params_ = engine_.params(); break;
+            case pPreset: params_.preset = (int)value; break;
             case pPitch: params_.pitch = value; break;
             case pPitchDrop: params_.pitchDrop = value; break;
             case pDecay: params_.decay = value; break;
@@ -137,6 +120,7 @@ protected:
             case pAmpEnvDecay: params_.ampEnvDecay = value; break;
             case pEngine2: params_.engine2 = (int)value; break;
             case pLayerMix: params_.layerMix = value; break;
+            case pNoteMap: params_.noteMap = (int)value; break;
         }
         engine_.setParams(params_);
     }
@@ -151,13 +135,12 @@ protected:
             if ((e.data[0]&0xF0)!=0x90 || e.data[2]==0) continue;
             int channel = (e.data[0]&0x0F)+1;
             int note = e.data[1];
-            if (channel != 10) {
-                // pitch follows MIDI note
-                float freq = 440.0f * std::pow(2.0f, (note-69)/12.0f);
-                params_.pitch = freq;
-                engine_.setParams(params_);
-            }
-            engine_.trigger();
+            // Selected: channel 10 plays at the Pitch parameter, elsewhere the note sets the pitch of this
+            // hit only. General MIDI: only kick notes play, always at the Pitch parameter.
+            const bool gm = params_.noteMap == (int)thumper::NoteMap::GeneralMidi;
+            if (gm && !thumper::ThumperEngine::isKickNote(note)) continue;
+            float freq = (gm || channel == 10) ? 0.0f : 440.0f * std::pow(2.0f, (note-69)/12.0f);
+            engine_.trigger(freq, (float)e.data[2]/127.0f);
         }
         float* L = outputs[0]; float* R = outputs[1];
         // clear

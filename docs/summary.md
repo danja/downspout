@@ -304,6 +304,18 @@ the engine cycle to host tempo and drops to idle when the transport stops. A
 **Listening position** — Cabin, Front, Rear or Exterior — mixes intake,
 engine-block vibration and exhaust to stereo.
 
+
+### Drum generators (`thumper.vst3`, `snatch.vst3`, `tops.vst3`, `clatter.vst3`)
+
+Four synthesised percussion instruments that together cover the General MIDI drum map, so a GM drum track
+(DrumGen, a MIDI clip, a pad controller) can drive all four from the same MIDI. Each defaults to **Note Map**
+General MIDI and plays only its own notes; set Note Map to Selected to play one sound from any note.
+**Thumper** (kick: 35 and 36), **Snatch** (snare: 37 side stick, 38 snare, 40 electric snare), **Tops** (hats
+and cymbals: 42, 44, 46, 49, 51-57, 59, 81) and **Clatter** (toms, hand drums, bells, wood, shakers and
+clap: 39, 41, 43, 45, 47, 48, 50, 58, 60-70, 73-77, 80, 82-87). Whistles (71, 72) and cuicas (78, 79) are not
+covered. Velocity sets level in all four. In Selected mode Thumper plays at the note's pitch (except channel
+10), which makes an 808-style bass line from a keyboard.
+
 ### Moka (`moka.vst3`)
 
 Stereo modal hit-object synth with eight damped modes per voice, six instrument tables (xylophone, glockenspiel, woodblock, glass bowl, metal sheet, tube), selectable 1–12 voice polyphony defaulting to 4, and eleven factory presets including a Kalimba. Notes ramp in over the mallet contact time rather than stepping to full amplitude, so there is no click at note onset. Natural sound source for struck percussion and bell parts from DrumGen, Xoxolo, or authored MIDI.

@@ -319,6 +319,13 @@ Progress as of 2026-05-27:
   found by fuzzing (`plugins/sam/third_party/sam/PATCHES.md`). **SAM has no licence**: whether
   the bundle may ship in public releases is an open decision. Host validation in REAPER and
   listening tests remain. See `plugins/sam/docs/design.md`.
+- `thumper`, `snatch` and `tops` are portable-core drum generators (kick, snare, hi-hat/cymbal) with thin DPF
+  wrappers, core tests and `profile.ttl`, with Magneto-look panels (`MagnetoKit`). A Preset is a one-shot applied by
+  the UI (it sends its sound values as ordinary parameters), not by the DSP, so a reloaded project keeps its saved
+  values. Velocity sets level in all three; each has a Note Map (any note, or General MIDI: kick 35/36, snare 37/38/40, hats
+  and cymbals); none keeps plugin state (the host saves the parameters). `clatter` covers the rest of the GM
+  percussion map (toms, hand drums, bells, wood, shakers, clap, guiros: 31 sounds in five families, a table-driven
+  core with choke groups and per-family trims); whistles and cuicas are not yet covered. All four default to General MIDI.
 - `magneto` now exists as an original physically informed combustion engine
   sound generator ported from Baldan et al., SIVE'15: four-stroke cycle
   functions, per-cylinder digital waveguides with valve-modulated feedback and

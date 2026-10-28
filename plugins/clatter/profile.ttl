@@ -1,0 +1,40 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:clatter a trn:PluginProfile ;
+    rdfs:label "Clatter" ;
+    rdfs:comment "General MIDI percussion generator: toms, bongos, congas, timbales, surdos, agogos, bells, claves, wood blocks, castanets, shakers, vibraslap, clap and guiros, in five synthesis families." ;
+    trn:bundleName "clatter.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/clatter/> ;
+    trn:role trn:InstrumentPlugin ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Audio ;
+    trn:caution "General MIDI mode plays only notes 39, 41, 43, 45, 47, 48, 50, 58, 60-70, 73-77, 80, 82-87; other notes are ignored. Whistles (71, 72) and cuicas (78, 79) are not provided. Velocity sets level; note-off is ignored." ;
+    trn:recommendedAfter dsp:drumgen ;
+    trn:parameter [ rdfs:label "Sound" ; trn:symbol "sound" ; trn:range "0-30" ;
+                    rdfs:comment "The sound played by every note when Note Map is Selected. Order: membrane, metal, wood, shaker, clap and guiro." ] ;
+    trn:parameter [ rdfs:label "Note Map" ; trn:symbol "noteMap" ; trn:range "0-1" ;
+                    rdfs:comment "Selected: any note plays the Sound parameter. General MIDI (default): the listed notes play their own sounds." ] ;
+    trn:parameter [ rdfs:label "Membrane Tune" ; trn:symbol "membrane_tune" ; trn:range "-12 to +12 st" ; rdfs:comment "Pitch of the toms, bongos, congas, timbales and surdos." ] ;
+    trn:parameter [ rdfs:label "Membrane Decay" ; trn:symbol "membrane_decay" ; trn:range "0.25-4" ; rdfs:comment "Length multiplier for the membrane family." ] ;
+    trn:parameter [ rdfs:label "Membrane Tone" ; trn:symbol "membrane_tone" ; trn:range "0-1" ; rdfs:comment "Overtone and stick-click level; neutral at 0.5." ] ;
+    trn:parameter [ rdfs:label "Metal Tune" ; trn:symbol "metal_tune" ; trn:range "-12 to +12 st" ; rdfs:comment "Pitch of the agogos, triangle, jingle bell and bell tree." ] ;
+    trn:parameter [ rdfs:label "Metal Decay" ; trn:symbol "metal_decay" ; trn:range "0.25-4" ; rdfs:comment "Length multiplier for the metal family." ] ;
+    trn:parameter [ rdfs:label "Metal Tone" ; trn:symbol "metal_tone" ; trn:range "0-1" ; rdfs:comment "Weight of the upper partials; neutral at 0.5." ] ;
+    trn:parameter [ rdfs:label "Wood Tune" ; trn:symbol "wood_tune" ; trn:range "-12 to +12 st" ; rdfs:comment "Pitch of the claves, wood blocks and castanets." ] ;
+    trn:parameter [ rdfs:label "Wood Decay" ; trn:symbol "wood_decay" ; trn:range "0.25-4" ; rdfs:comment "Length multiplier for the wood family." ] ;
+    trn:parameter [ rdfs:label "Wood Tone" ; trn:symbol "wood_tone" ; trn:range "0-1" ; rdfs:comment "Overtone and click level; neutral at 0.5." ] ;
+    trn:parameter [ rdfs:label "Shaker Tune" ; trn:symbol "shaker_tune" ; trn:range "-12 to +12 st" ; rdfs:comment "Centre of the noise band for the cabasa, maracas, shaker and vibraslap." ] ;
+    trn:parameter [ rdfs:label "Shaker Decay" ; trn:symbol "shaker_decay" ; trn:range "0.25-4" ; rdfs:comment "Length multiplier for the shaker family." ] ;
+    trn:parameter [ rdfs:label "Shaker Tone" ; trn:symbol "shaker_tone" ; trn:range "0-1" ; rdfs:comment "Moves the noise band up or down by up to an octave; neutral at 0.5." ] ;
+    trn:parameter [ rdfs:label "Clap Tune" ; trn:symbol "clap_tune" ; trn:range "-12 to +12 st" ; rdfs:comment "Centre of the noise band for the clap and guiros." ] ;
+    trn:parameter [ rdfs:label "Clap Decay" ; trn:symbol "clap_decay" ; trn:range "0.25-4" ; rdfs:comment "Clap tail length; guiro scrape length." ] ;
+    trn:parameter [ rdfs:label "Clap Tone" ; trn:symbol "clap_tone" ; trn:range "0-1" ; rdfs:comment "Moves the noise band up or down by up to an octave; neutral at 0.5." ] ;
+    trn:parameter [ rdfs:label "Level" ; trn:symbol "level" ; trn:range "0-1" ; rdfs:comment "Output level." ] ;
+    trn:parameter [ rdfs:label "Width" ; trn:symbol "width" ; trn:range "0-1" ; rdfs:comment "Stereo spread of each sound's fixed pan; 0 is mono, 0.6 the designed spread." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

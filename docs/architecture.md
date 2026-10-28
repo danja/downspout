@@ -261,6 +261,10 @@ The release script currently expects these bundles:
 - `quartet.vst3`
 - `monochord.vst3`
 - `nam.vst3`
+- `thumper.vst3`
+- `snatch.vst3`
+- `tops.vst3`
+- `clatter.vst3`
 - `primefold.vst3`
 - `quefrency.vst3`
 - `keyframe.vst3`

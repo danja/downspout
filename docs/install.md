@@ -132,6 +132,10 @@ The repository currently installs sixty-one real wrapper targets:
 - `quartet.vst3` with UI
 - `monochord.vst3` with UI
 - `nam.vst3` with UI
+- `thumper.vst3` with UI
+- `snatch.vst3` with UI
+- `tops.vst3` with UI
+- `clatter.vst3` with UI
 - `primefold.vst3` with UI
 - `quefrency.vst3` with UI
 - `ghost.vst3` with UI

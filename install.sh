@@ -92,6 +92,10 @@ cmake_args=(
   -DDOWNSPOUT_BUILD_QUARTET=ON
   -DDOWNSPOUT_BUILD_MONOCHORD=ON
   -DDOWNSPOUT_BUILD_NAM=ON
+  -DDOWNSPOUT_BUILD_THUMPER=ON
+  -DDOWNSPOUT_BUILD_SNATCH=ON
+  -DDOWNSPOUT_BUILD_TOPS=ON
+  -DDOWNSPOUT_BUILD_CLATTER=ON
   "-DCMAKE_INSTALL_PREFIX=$vst3_dir"
 )
 
@@ -137,6 +141,14 @@ cmake --install "$build_dir" --prefix "$vst3_dir"
 # cmake install(DIRECTORY) does not preserve execute bits; set them so hosts
 # (Carla, REAPER, Ardour) can dlopen the shared libraries.
 find "$vst3_dir" -name "*.so" -exec chmod +x {} \;
+
+# A zero-byte .so is silently skipped by hosts; fail loudly instead.
+empty_so="$(find "$vst3_dir" -maxdepth 4 -path "*.vst3/Contents/*" -name "*.so" -size 0 -print)"
+if [[ -n "$empty_so" ]]; then
+  echo "ERROR: installed VST3 binaries are empty (hosts will ignore them):" >&2
+  echo "$empty_so" >&2
+  exit 1
+fi
 
 if compgen -G "$vst3_dir/*.vst3" > /dev/null; then
   echo "Installed VST3 bundles:"
