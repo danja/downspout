@@ -21,6 +21,7 @@ public:
     {
         core::resetSpectrum(analyser_);   // the bars start at the floor, not at 0 dB
         publishSpectrum();
+        publishMeter();
     }
 
 protected:
@@ -67,6 +68,8 @@ protected:
     {
         if (core::isSpectrumBin(index))
             return spectrum_[index - core::kSpectrumFirst].load(std::memory_order_relaxed);
+        if (core::isMeter(index))
+            return meter_[index - core::kMeterFirst].load(std::memory_order_relaxed);
         return index < core::kParameterCount ? core::field(parameters_, index) : 0.0f;
     }
 
@@ -87,6 +90,8 @@ protected:
         core::resetState(engine_);
         core::resetSpectrum(analyser_);
         publishSpectrum();
+        core::resetMeter(meterState_);
+        publishMeter();
         live_ = core::LiveControl {};
     }
 
@@ -107,6 +112,8 @@ protected:
         core::processBlock(engine_, effective, sampleRate, frames, inputs, outputs);
         if (source == core::SpectrumSource::Post)
             core::analyseBlock(analyser_, sampleRate, frames, outputs[0], outputs[1]);
+        core::updateMeter(meterState_, sampleRate, frames, outputs[0], outputs[1]);
+        publishMeter();
         if (source == core::SpectrumSource::Off) {
             if (analyser_.primed) {   // switched off: let the panel's bars fall to nothing
                 core::resetSpectrum(analyser_);
@@ -124,11 +131,19 @@ private:
             spectrum_[k].store(analyser_.levelDb[k], std::memory_order_relaxed);
     }
 
+    void publishMeter()
+    {
+        for (size_t c = 0; c < meter_.size(); ++c)
+            meter_[c].store(meterState_.peakDb[c], std::memory_order_relaxed);
+    }
+
     core::Parameters  parameters_ {};
     core::LiveControl live_ {};
     core::EngineState engine_ {};
     core::SpectrumState analyser_ {};
     std::array<std::atomic<float>, core::kSpectrumBins> spectrum_ {};
+    core::MeterState meterState_ {};
+    std::array<std::atomic<float>, core::kMeterChannels> meter_ {core::kMeterFloorDb, core::kMeterFloorDb};
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OctetPlugin)
 };

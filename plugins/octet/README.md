@@ -22,7 +22,7 @@ filter within 0.15 dB.
 
 Every band is at 0 dB and the two cuts are off, so a fresh instance passes the signal unchanged
 bit for bit. The 48 dB cuts are 8th-order Butterworth (-3 dB at the cutoff). Settings are ordinary
-automatable parameters (53 you can set: `band1_freq` ... `band8_channel`, `mode`, `output`, `cc_channel`, `cc_band`, `spectrum_source`, plus 64 read-only `spectrum_NN` outputs for the analyser); there is no
+automatable parameters (53 you can set: `band1_freq` ... `band8_channel`, `mode`, `output`, `cc_channel`, `cc_band`, `spectrum_source`, plus 64 read-only `spectrum_NN` outputs for the analyser and 2 read-only `meter_left` / `meter_right` outputs for the level meter); there is no
 plugin state. Frequency, gain and Q glide to a new value over a few milliseconds, so fast sweeps do not zipper.
 
 **MIDI control (Drift convention).** CC 1 to 4 on the **CC channel** (default 1; 0 ignores MIDI) drive the **CC band** (1-8, default 4): CC 1 its Frequency
@@ -30,3 +30,5 @@ plugin state. Frequency, gain and Q glide to a new value over a few milliseconds
 the panel or automate it; changing the CC band releases them all. The panel does not follow the CC.
 
 **Spectrum analyser.** The **Spectrum** switch (Off / Pre / Post, default Post) draws the level of 64 log-spaced bands (20 Hz-20 kHz, 0 dB = a full-scale sine) behind the response curve: Pre is the input, Post the output. It is a 4096-point FFT of the mono sum about 30 times a second, with a quick rise and a slow fall; Off stops the analysis.
+
+**Output level.** The Output control is the large vertical slider on the right of the panel (drag it, or scroll over it for 0.5 dB steps), with a small stereo peak meter beneath it. The meter reads the finished output (after the Output gain) from -60 dB to +12 dB, with an instant rise and a 30 dB/s fall; green to -12 dB, amber to 0 dB, red above.

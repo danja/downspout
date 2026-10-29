@@ -20,11 +20,17 @@ inline constexpr std::uint32_t kCcChannel = kBandControlEnd;   // appended after
 inline constexpr std::uint32_t kCcBand = kBandControlEnd + 1;
 inline constexpr std::uint32_t kSpectrumSource = kBandControlEnd + 2;   // appended: 0 off, 1 pre-EQ, 2 post-EQ
 inline constexpr std::uint32_t kSpectrumFirst = kBandControlEnd + 3;    // 64 read-only outputs: band levels in dB, measured from the audio
-inline constexpr std::uint32_t kParameterCount = kSpectrumFirst + kSpectrumBins;
+inline constexpr std::uint32_t kMeterFirst = kSpectrumFirst + kSpectrumBins;   // appended: left and right output peak in dB, read-only
+inline constexpr std::uint32_t kParameterCount = kMeterFirst + kMeterChannels;
 
 [[nodiscard]] constexpr bool isSpectrumBin(const std::uint32_t index) noexcept
 {
     return index >= kSpectrumFirst && index < kParameterCount;
+}
+
+[[nodiscard]] constexpr bool isMeter(const std::uint32_t index) noexcept
+{
+    return index >= kMeterFirst && index < kParameterCount;
 }
 
 [[nodiscard]] constexpr std::uint32_t bandParameter(const int band, const BandParameter p) noexcept
@@ -58,6 +64,12 @@ public:
             std::snprintf(symbols_[i], sizeof(symbols_[i]), "spectrum_%02d", k + 1);
             std::snprintf(names_[i], sizeof(names_[i]), "Spectrum Band %02d", k + 1);
             specs_[i] = {symbols_[i], names_[i], "dB", kSpectrumFloorDb, 6.0f, kSpectrumFloorDb, false, false, true};
+        }
+        for (int c = 0; c < kMeterChannels; ++c) {
+            const std::uint32_t i = kMeterFirst + static_cast<std::uint32_t>(c);
+            std::snprintf(symbols_[i], sizeof(symbols_[i]), c == 0 ? "meter_left" : "meter_right");
+            std::snprintf(names_[i], sizeof(names_[i]), c == 0 ? "Output Level Left" : "Output Level Right");
+            specs_[i] = {symbols_[i], names_[i], "dB", kMeterFloorDb, 12.0f, kMeterFloorDb, false, false, true};
         }
         for (int b = 0; b < kBands; ++b) {
             const Band& d = defaults.bands[static_cast<size_t>(b)];
@@ -107,7 +119,7 @@ inline float& field(Parameters& p, const std::uint32_t index) noexcept
     if (index == kCcChannel) return p.ccChannel;
     if (index == kCcBand) return p.ccBand;
     if (index == kSpectrumSource) return p.spectrumSource;
-    if (index < kFirstBand || index >= kBandControlEnd) return unused;   // including the spectrum outputs: not part of the patch
+    if (index < kFirstBand || index >= kBandControlEnd) return unused;   // including the spectrum and meter outputs: not part of the patch
     Band& b = p.bands[(index - kFirstBand) / kPerBand];
     switch ((index - kFirstBand) % kPerBand) {
     case kOn:      return b.on;

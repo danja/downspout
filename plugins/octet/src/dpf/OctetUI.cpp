@@ -81,6 +81,7 @@ public:
                 spectrum_[static_cast<size_t>(k)] = static_cast<float>(std::clamp(db, -90.0, 0.0));
             }
             setValue(core::kSpectrumSource, 2.0f);
+            meter_ = {-9.0f, -11.5f};
         }
     }
 
@@ -89,6 +90,11 @@ protected:
     {
         if (demo_)
             return;  // keep the demo curve
+        if (core::isMeter(index)) {
+            meter_[index - core::kMeterFirst] = v;
+            repaint();
+            return;
+        }
         if (core::isSpectrumBin(index)) {
             spectrum_[index - core::kSpectrumFirst] = v;
             repaint();
@@ -110,10 +116,16 @@ protected:
         if (ev.button == 1) {
             if (!ev.press) {
                 dragging_ = -1;
+                draggingOutput_ = false;
                 return MagnetoUI::onMouse(ev);
             }
             const float mx = static_cast<float>(ev.pos.getX());
             const float my = static_cast<float>(ev.pos.getY());
+            if (outputHit_.contains(mx, my)) {
+                draggingOutput_ = true;
+                setOutputFromY(my);
+                return true;
+            }
             if (plot_.contains(mx, my)) {
                 const int hit = nodeAt(mx, my);
                 if (hit >= 0) {
@@ -132,6 +144,10 @@ protected:
 
     bool onMotion(const MotionEvent& ev) override
     {
+        if (draggingOutput_) {
+            setOutputFromY(static_cast<float>(ev.pos.getY()));
+            return true;
+        }
         if (dragging_ >= 0) {
             drag(static_cast<float>(ev.pos.getX()), static_cast<float>(ev.pos.getY()));
             return true;
@@ -142,6 +158,10 @@ protected:
     // The wheel over the plot changes the selected band's Q.
     bool onScroll(const ScrollEvent& ev) override
     {
+        if (outputHit_.contains(static_cast<float>(ev.pos.getX()), static_cast<float>(ev.pos.getY()))) {   // the wheel over the level slider: 0.5 dB a notch
+            commit(core::kOutput, std::round((value(core::kOutput) + 0.5f * static_cast<float>(ev.delta.getY())) * 2.0f) * 0.5f);
+            return true;
+        }
         if (!plot_.contains(static_cast<float>(ev.pos.getX()), static_cast<float>(ev.pos.getY())))
             return MagnetoUI::onScroll(ev);
         const std::uint32_t pq = core::bandParameter(selected_, core::kQ);
@@ -155,10 +175,13 @@ protected:
         drawHeader("OCTET", "eight-band equalizer",
                    "Drag a node: across for frequency, up and down for gain. Scroll over the plot to change Q. "
                    "Cuts and notches have no gain.");
-        const float full = static_cast<float>(getWidth()) - 48.0f;
+        // The right-hand column is the output level; the three panels share the rest of the width.
+        const float columnW = 96.0f, gap = 12.0f;
+        const float full = static_cast<float>(getWidth()) - 48.0f - columnW - gap;
         drawPlotPanel({24.0f, 108.0f, full, 280.0f});
         drawBandPanel({24.0f, 400.0f, full, 188.0f});
         drawGlobalPanel({24.0f, 600.0f, full, 144.0f});
+        drawOutputPanel({24.0f + full + gap, 108.0f, columnW, 636.0f});
     }
 
 private:
@@ -418,7 +441,7 @@ private:
 
     void drawGlobalPanel(const Rect b)
     {
-        drawPanel(b, "STEREO, OUTPUT AND MIDI", kGlobalAccent, "CC 1-4: band Freq, Gain, Q; Output");
+        drawPanel(b, "STEREO, SPECTRUM AND MIDI", kGlobalAccent, "CC 1-4: band Freq, Gain, Q; Output");
         static constexpr const char* kModeNames[3] = {"Stereo", "Left / Right", "Mid / Side"};
         label(b.x + 14.0f, b.y + 40.0f, "Mode");
         drawSegments(core::kMode, kModeNames, 3, {b.x + 14.0f, b.y + 52.0f - 6.0f + 4.0f, 290.0f, 22.0f}, kGlobalAccent);
@@ -426,12 +449,101 @@ private:
         static constexpr const char* kSpectrumNames[3] = {"Off", "Pre", "Post"};
         label(b.x + 330.0f, b.y + 40.0f, "Spectrum (before / after the EQ)");
         drawSegments(core::kSpectrumSource, kSpectrumNames, 3, {b.x + 330.0f, b.y + 52.0f - 6.0f + 4.0f, 220.0f, 22.0f}, kGlobalAccent);
-        drawSlider(core::kOutput, "Output", format(core::kOutput).c_str(), {b.x + 580.0f, b.y + 40.0f, b.w - 580.0f - 14.0f, 34.0f},
-                   kGlobalAccent);
         // MIDI: Drift's CC 1-4 drive one band's Frequency, Gain and Q, and the Output.
         const float w = (b.w - 28.0f - 24.0f) / 2.0f;
         drawSlider(core::kCcChannel, "CC channel (0 = ignore MIDI)", format(core::kCcChannel).c_str(), {b.x + 14.0f, b.y + 98.0f, w, 34.0f}, kGlobalAccent);
         drawSlider(core::kCcBand, "CC band (the band CC 1-3 drive)", format(core::kCcBand).c_str(), {b.x + 14.0f + w + 24.0f, b.y + 98.0f, w, 34.0f}, kGlobalAccent);
+    }
+
+    // The output level: a large vertical slider (+12 dB at the top, 0 dB marked) with a small stereo peak meter under it.
+    static constexpr float kOutputMinDb = -12.0f, kOutputMaxDb = 12.0f;
+
+    void setOutputFromY(const float y)
+    {
+        const float n = 1.0f - (y - outputTrack_.y) / std::max(1.0f, outputTrack_.h);
+        commit(core::kOutput, kOutputMinDb + std::clamp(n, 0.0f, 1.0f) * (kOutputMaxDb - kOutputMinDb));
+    }
+
+    void drawOutputPanel(const Rect b)
+    {
+        drawPanel(b, "OUTPUT", kGlobalAccent);
+        const auto& t = theme();
+        const float cx = b.x + b.w * 0.5f;
+        label(cx, b.y + 44.0f, format(core::kOutput).c_str(), false, 13.0f, ALIGN_CENTER | ALIGN_TOP);
+
+        outputTrack_ = {cx - 6.0f, b.y + 74.0f, 12.0f, 392.0f};
+        outputHit_ = {b.x + 4.0f, outputTrack_.y - 12.0f, b.w - 8.0f, outputTrack_.h + 24.0f};
+        const auto yOfDb = [&](const float db) {
+            return outputTrack_.y + (1.0f - (db - kOutputMinDb) / (kOutputMaxDb - kOutputMinDb)) * outputTrack_.h;
+        };
+        beginPath();
+        fc(t.controlTrack);
+        roundedRect(outputTrack_.x, outputTrack_.y, outputTrack_.w, outputTrack_.h, 4.0f);
+        fill();
+        const float v = std::clamp(value(core::kOutput), kOutputMinDb, kOutputMaxDb);
+        const float thumbY = yOfDb(v);
+        // The fill runs from the 0 dB mark to the thumb, so a cut and a boost read as different directions.
+        const float zeroY = yOfDb(0.0f);
+        beginPath();
+        fillColor(kGlobalAccent.r, kGlobalAccent.g, kGlobalAccent.b, 255);
+        rect(outputTrack_.x, std::min(thumbY, zeroY), outputTrack_.w, std::max(2.0f, std::fabs(zeroY - thumbY)));
+        fill();
+        for (int db = -12; db <= 12; db += 6) {
+            const float y = yOfDb(static_cast<float>(db));
+            beginPath();
+            sc(db == 0 ? t.textDim : t.border);
+            strokeWidth(db == 0 ? 1.6f : 1.0f);
+            moveTo(outputTrack_.x - 16.0f, y);
+            lineTo(outputTrack_.x - 8.0f, y);
+            moveTo(outputTrack_.x + outputTrack_.w + 8.0f, y);
+            lineTo(outputTrack_.x + outputTrack_.w + 16.0f, y);
+            stroke();
+            char buf[8];
+            std::snprintf(buf, sizeof(buf), db == 0 ? "0" : "%+d", db);
+            label(b.x + 6.0f, y, buf, true, 10.0f, ALIGN_LEFT | ALIGN_MIDDLE);
+        }
+        beginPath();
+        fc(t.buttonFace);
+        roundedRect(cx - 20.0f, thumbY - 8.0f, 40.0f, 16.0f, downspout::laf::kRadiusSmall);
+        fill();
+        beginPath();
+        strokeColor(kGlobalAccent.r, kGlobalAccent.g, kGlobalAccent.b, 255);
+        strokeWidth(2.0f);
+        roundedRect(cx - 20.0f, thumbY - 8.0f, 40.0f, 16.0f, downspout::laf::kRadiusSmall);
+        stroke();
+        beginPath();
+        fc(t.textPrimary);
+        rect(cx - 12.0f, thumbY - 1.0f, 24.0f, 2.0f);
+        fill();
+
+        // Meter: two peak bars, green to amber to red, floor to +12 dB.
+        label(cx, b.y + 484.0f, "Level", true, 11.0f, ALIGN_CENTER | ALIGN_TOP);
+        const Rect m {cx - 20.0f, b.y + 502.0f, 40.0f, 96.0f};
+        const float barW = 16.0f;
+        for (int c = 0; c < core::kMeterChannels; ++c) {
+            const float x = m.x + static_cast<float>(c) * (m.w - barW);
+            beginPath();
+            fc(t.controlTrack);
+            roundedRect(x, m.y, barW, m.h, 3.0f);
+            fill();
+            const auto at = [&](const float db) { return m.y + m.h - std::clamp((db - core::kMeterFloorDb) / (kOutputMaxDb - core::kMeterFloorDb), 0.0f, 1.0f) * m.h; };
+            const float top = at(meter_[static_cast<size_t>(c)]);
+            struct Zone { float lo, hi; int r, g, bl; };
+            static constexpr Zone kZones[] = {{core::kMeterFloorDb, -12.0f, 132, 190, 96}, {-12.0f, 0.0f, 222, 170, 70}, {0.0f, kOutputMaxDb, 214, 96, 84}};
+            for (const Zone& z : kZones) {
+                const float y0 = std::max(top, at(z.hi)), y1 = at(z.lo);
+                if (y1 <= y0) continue;
+                beginPath();
+                fillColor(z.r, z.g, z.bl, 255);
+                rect(x, y0, barW, y1 - y0);
+                fill();
+            }
+        }
+        const float peak = std::max(meter_[0], meter_[1]);
+        char buf[16];
+        if (peak <= core::kMeterFloorDb + 0.05f) std::snprintf(buf, sizeof(buf), "-inf");
+        else std::snprintf(buf, sizeof(buf), "%.1f dB", static_cast<double>(peak));
+        label(cx, m.y + m.h + 8.0f, buf, true, 11.0f, ALIGN_CENTER | ALIGN_TOP);
     }
 
     [[nodiscard]] std::string format(const std::uint32_t parameter) const
@@ -477,6 +589,9 @@ private:
     }
 
     Rect plot_ {};
+    Rect outputTrack_ {}, outputHit_ {};
+    std::array<float, core::kMeterChannels> meter_ {core::kMeterFloorDb, core::kMeterFloorDb};
+    bool draggingOutput_ = false;
     std::array<float, core::kSpectrumBins> spectrum_ {};
     int selected_ = 2;
     int dragging_ = -1;

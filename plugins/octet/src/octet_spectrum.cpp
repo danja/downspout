@@ -134,4 +134,24 @@ void analyseBlock(SpectrumState& state, const float sampleRate, const std::uint3
     }
 }
 
+void resetMeter(MeterState& state) noexcept
+{
+    state.peakDb.fill(kMeterFloorDb);
+}
+
+void updateMeter(MeterState& state, const float sampleRate, const std::uint32_t frames, const float* left, const float* right) noexcept
+{
+    if (!(sampleRate > 0.0f) || frames == 0) return;
+    const float fall = kMeterFallDbPerSecond * static_cast<float>(frames) / sampleRate;
+    const float* const channels[kMeterChannels] = {left, right};
+    for (int c = 0; c < kMeterChannels; ++c) {
+        float peak = 0.0f;
+        for (std::uint32_t i = 0; i < frames; ++i)
+            peak = std::max(peak, std::fabs(channels[c][i]));
+        const float db = peak > 1e-6f ? 20.0f * std::log10(peak) : kMeterFloorDb;
+        float& level = state.peakDb[static_cast<size_t>(c)];
+        level = std::max(std::max(db, level - fall), kMeterFloorDb);
+    }
+}
+
 }  // namespace downspout::octet

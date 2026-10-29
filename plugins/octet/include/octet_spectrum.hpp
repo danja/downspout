@@ -36,4 +36,18 @@ void resetSpectrum(SpectrumState& state) noexcept;
 // Feeds `frames` stereo frames (right may equal left for a mono source) and refreshes `state.levelDb` when a hop has passed.
 void analyseBlock(SpectrumState& state, float sampleRate, std::uint32_t frames, const float* left, const float* right) noexcept;
 
+// Output level meter for the panel: the peak of each output channel in dB, instant attack and a steady fall.
+inline constexpr int kMeterChannels = 2;
+inline constexpr float kMeterFloorDb = -60.0f;
+inline constexpr float kMeterFallDbPerSecond = 30.0f;
+
+struct MeterState {
+    std::array<float, kMeterChannels> peakDb {kMeterFloorDb, kMeterFloorDb};
+};
+
+void resetMeter(MeterState& state) noexcept;
+
+// Folds one block of the finished output into the meter.
+void updateMeter(MeterState& state, float sampleRate, std::uint32_t frames, const float* left, const float* right) noexcept;
+
 }  // namespace downspout::octet

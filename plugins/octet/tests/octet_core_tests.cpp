@@ -492,16 +492,20 @@ static void testParameterTableMatchesCore()
 {
     const Parameters defaults;
     Parameters probe;
-    check("117 parameters (CC channel and band, spectrum source and 64 spectrum outputs are appended after the band controls)",
-          kParameterCount == 117 && kCcChannel == 50 && kCcBand == 51 && kSpectrumSource == 52 && kSpectrumFirst == 53);
+    check("119 parameters (CC channel and band, spectrum source, 64 spectrum outputs and 2 meter outputs are appended after the band controls)",
+          kParameterCount == 119 && kCcChannel == 50 && kCcBand == 51 && kSpectrumSource == 52 && kSpectrumFirst == 53 && kMeterFirst == 117);
     int outputs = 0;
     for (std::uint32_t i = 0; i < kParameterCount; ++i) {
         const ParameterSpec& s = specs()[i];
         if (s.output) {   // measured from the audio: not part of the patch, so the core neither stores nor clamps them
             ++outputs;
-            check("outputs are exactly the spectrum bins", isSpectrumBin(i));
-            check("a spectrum output runs from the floor up to +6 dB, resting at the floor",
-                  s.minimum == kSpectrumFloorDb && s.maximum == 6.0f && s.defaultValue == kSpectrumFloorDb);
+            check("outputs are exactly the spectrum bins and the meters", isSpectrumBin(i) || isMeter(i));
+            if (isMeter(i))
+                check("a meter output runs from its floor up to +12 dB, resting at the floor",
+                      s.minimum == kMeterFloorDb && s.maximum == 12.0f && s.defaultValue == kMeterFloorDb);
+            else
+                check("a spectrum output runs from the floor up to +6 dB, resting at the floor",
+                      s.minimum == kSpectrumFloorDb && s.maximum == 6.0f && s.defaultValue == kSpectrumFloorDb);
             check("symbol and name are set", s.symbol[0] != '\0' && s.name[0] != '\0');
             continue;
         }
@@ -520,7 +524,7 @@ static void testParameterTableMatchesCore()
         for (std::uint32_t j = i + 1; j < kParameterCount; ++j)
             if (std::string(specs()[i].symbol) == specs()[j].symbol) unique = false;
     check("symbols are unique", unique);
-    check("64 outputs", outputs == kSpectrumBins);
+    check("66 outputs", outputs == kSpectrumBins + kMeterChannels);
     check("the spectrum shows the post-EQ signal by default", defaults.spectrumSource == 2.0f);
     check("band parameter indices are contiguous per band", bandParameter(0, kOn) == 2 && bandParameter(7, kChannel) == kBandControlEnd - 1);
 }
@@ -635,6 +639,44 @@ static void testSpectrum()
     check("the spectrum source clamps at 0", clampParameters(p).spectrumSource == 0.0f);
 }
 
+// The output meter: peak per channel in dB, instant attack, steady fall.
+static void testMeter()
+{
+    MeterState m;
+    check("the meter rests at the floor", m.peakDb[0] == kMeterFloorDb && m.peakDb[1] == kMeterFloorDb);
+    std::vector<float> l(480, 0.0f), r(480, 0.0f);
+    l[100] = -0.5f;     // -6.02 dB on the left only
+    r[200] = 1.0f;      // 0 dB on the right
+    updateMeter(m, 48000.0f, 480, l.data(), r.data());
+    check("the left peak reads the absolute peak in dB", std::fabs(m.peakDb[0] + 6.0206f) < 0.01f);
+    check("the right peak reads 0 dB", std::fabs(m.peakDb[1]) < 0.01f);
+    check("a channel is metered on its own", m.peakDb[0] < m.peakDb[1]);
+    const std::vector<float> silence(480, 0.0f);
+    updateMeter(m, 48000.0f, 480, silence.data(), silence.data());  // 10 ms of silence
+    check("it falls at 30 dB/s", std::fabs(m.peakDb[1] + 0.3f) < 0.01f);
+    for (int i = 0; i < 400; ++i) updateMeter(m, 48000.0f, 480, silence.data(), silence.data());
+    check("it reaches the floor and stops there", m.peakDb[0] == kMeterFloorDb && m.peakDb[1] == kMeterFloorDb);
+    l[100] = 4.0f;  // +12 dB
+    updateMeter(m, 48000.0f, 480, l.data(), r.data());
+    check("it rises instantly, above full scale", std::fabs(m.peakDb[0] - 12.0412f) < 0.01f);
+    resetMeter(m);
+    check("reset returns it to the floor", m.peakDb[0] == kMeterFloorDb);
+    // Through the equalizer: the Output control moves the meter by the same number of dB.
+    Parameters p;
+    p.outputDb = 6.0f;
+    EngineState st;
+    std::vector<float> in(4800), out(4800), outR(4800);
+    for (size_t i = 0; i < in.size(); ++i) in[i] = 0.25f * std::sin(2.0f * 3.14159265f * 1000.0f * static_cast<float>(i) / 48000.0f);
+    for (int pass = 0; pass < 2; ++pass) {   // the first block ramps the gain; meter the settled second one
+        const float* ins[2] = {in.data(), in.data()};
+        float* outs[2] = {out.data(), outR.data()};
+        processBlock(st, p, 48000.0f, 4800, ins, outs);
+    }
+    MeterState mm;
+    updateMeter(mm, 48000.0f, 4800, out.data(), outR.data());
+    check("output +6 dB moves a 0.25 sine's peak by 6 dB", std::fabs(mm.peakDb[0] - (20.0f * std::log10(0.25f) + 6.0f)) < 0.2f);
+}
+
 int main()
 {
     testTransparentByDefault();
@@ -655,6 +697,7 @@ int main()
     testMidiControl();
     testParameterTableMatchesCore();
     testSpectrum();
+    testMeter();
     std::printf("octet_core_tests: %d passed, %d failed\n", gPassed, gFailed);
     return gFailed == 0 ? 0 : 1;
 }

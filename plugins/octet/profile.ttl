@@ -231,4 +231,8 @@ dsp:octet trn:hasParameter [
     trn:symbol "spectrum_01" ; trn:label "Spectrum Band 01" ;
     trn:minimum -90 ; trn:maximum 6 ; trn:default -90 ;
     rdfs:comment "Read-only output. Spectrum_01 to spectrum_64: the level in dB of 64 log-spaced bands from 20 Hz to 20 kHz (a full-scale sine peaks at 0 dB), from a Hann-windowed 4096-point FFT of the mono sum about 30 times a second; instant attack, 40 dB/s fall. Only the first is listed here"
+], [
+    trn:symbol "meter_left" ; trn:label "Output Level Left" ;
+    trn:minimum -60 ; trn:maximum 12 ; trn:default -60 ;
+    rdfs:comment "Read-only output. Peak level of the left output channel in dB, after the Output gain; instant attack, 30 dB/s fall. meter_right is the same for the right channel"
 ] .
