@@ -49,20 +49,20 @@ dsp:trio trn:hasParameter [
     rdfs:comment "0=off (the band passes through) 1=on"
 ], [
     trn:symbol "band1_down_thresh" ; trn:label "Low Down Threshold" ;
-    trn:minimum -60.0 ; trn:maximum 0.0 ; trn:default -24.0 ;
+    trn:minimum -60.0 ; trn:maximum 0.0 ; trn:default -16.0 ;
     rdfs:comment "Compress above this band level in dB"
 ], [
     trn:symbol "band1_down_ratio" ; trn:label "Low Down Ratio" ;
-    trn:minimum 1.0 ; trn:maximum 20.0 ; trn:default 4.0 ;
+    trn:minimum 1.0 ; trn:maximum 20.0 ; trn:default 2.0 ;
     rdfs:comment "Compression ratio N:1 (logarithmic); 1 = off"
 ], [
     trn:symbol "band1_up_thresh" ; trn:label "Low Up Threshold" ;
-    trn:minimum -80.0 ; trn:maximum 0.0 ; trn:default -36.0 ;
+    trn:minimum -80.0 ; trn:maximum 0.0 ; trn:default -40.0 ;
     rdfs:comment "Lift below this band level in dB; held at or below the down threshold"
 ], [
     trn:symbol "band1_up_ratio" ; trn:label "Low Up Ratio" ;
-    trn:minimum 1.0 ; trn:maximum 10.0 ; trn:default 2.5 ;
-    rdfs:comment "Upward ratio 1:N (logarithmic); 1 = no lift"
+    trn:minimum 0.2 ; trn:maximum 10.0 ; trn:default 1.5 ;
+    rdfs:comment "Upward ratio 1:N (logarithmic); 1 = no lift, below 1 expands downward (0.5 = 2:1 expander)"
 ], [
     trn:symbol "band1_attack" ; trn:label "Low Attack" ;
     trn:minimum 0.5 ; trn:maximum 200.0 ; trn:default 10.0 ;
@@ -81,20 +81,20 @@ dsp:trio trn:hasParameter [
     rdfs:comment "0=off (the band passes through) 1=on"
 ], [
     trn:symbol "band2_down_thresh" ; trn:label "Mid Down Threshold" ;
-    trn:minimum -60.0 ; trn:maximum 0.0 ; trn:default -20.0 ;
+    trn:minimum -60.0 ; trn:maximum 0.0 ; trn:default -14.0 ;
     rdfs:comment "Compress above this band level in dB"
 ], [
     trn:symbol "band2_down_ratio" ; trn:label "Mid Down Ratio" ;
-    trn:minimum 1.0 ; trn:maximum 20.0 ; trn:default 4.0 ;
+    trn:minimum 1.0 ; trn:maximum 20.0 ; trn:default 2.0 ;
     rdfs:comment "Compression ratio N:1 (logarithmic); 1 = off"
 ], [
     trn:symbol "band2_up_thresh" ; trn:label "Mid Up Threshold" ;
-    trn:minimum -80.0 ; trn:maximum 0.0 ; trn:default -32.0 ;
+    trn:minimum -80.0 ; trn:maximum 0.0 ; trn:default -38.0 ;
     rdfs:comment "Lift below this band level in dB; held at or below the down threshold"
 ], [
     trn:symbol "band2_up_ratio" ; trn:label "Mid Up Ratio" ;
-    trn:minimum 1.0 ; trn:maximum 10.0 ; trn:default 2.5 ;
-    rdfs:comment "Upward ratio 1:N (logarithmic); 1 = no lift"
+    trn:minimum 0.2 ; trn:maximum 10.0 ; trn:default 1.5 ;
+    rdfs:comment "Upward ratio 1:N (logarithmic); 1 = no lift, below 1 expands downward (0.5 = 2:1 expander)"
 ], [
     trn:symbol "band2_attack" ; trn:label "Mid Attack" ;
     trn:minimum 0.5 ; trn:maximum 200.0 ; trn:default 5.0 ;
@@ -113,20 +113,20 @@ dsp:trio trn:hasParameter [
     rdfs:comment "0=off (the band passes through) 1=on"
 ], [
     trn:symbol "band3_down_thresh" ; trn:label "High Down Threshold" ;
-    trn:minimum -60.0 ; trn:maximum 0.0 ; trn:default -18.0 ;
+    trn:minimum -60.0 ; trn:maximum 0.0 ; trn:default -12.0 ;
     rdfs:comment "Compress above this band level in dB"
 ], [
     trn:symbol "band3_down_ratio" ; trn:label "High Down Ratio" ;
-    trn:minimum 1.0 ; trn:maximum 20.0 ; trn:default 4.0 ;
+    trn:minimum 1.0 ; trn:maximum 20.0 ; trn:default 2.0 ;
     rdfs:comment "Compression ratio N:1 (logarithmic); 1 = off"
 ], [
     trn:symbol "band3_up_thresh" ; trn:label "High Up Threshold" ;
-    trn:minimum -80.0 ; trn:maximum 0.0 ; trn:default -30.0 ;
+    trn:minimum -80.0 ; trn:maximum 0.0 ; trn:default -36.0 ;
     rdfs:comment "Lift below this band level in dB; held at or below the down threshold"
 ], [
     trn:symbol "band3_up_ratio" ; trn:label "High Up Ratio" ;
-    trn:minimum 1.0 ; trn:maximum 10.0 ; trn:default 2.5 ;
-    rdfs:comment "Upward ratio 1:N (logarithmic); 1 = no lift"
+    trn:minimum 0.2 ; trn:maximum 10.0 ; trn:default 1.5 ;
+    rdfs:comment "Upward ratio 1:N (logarithmic); 1 = no lift, below 1 expands downward (0.5 = 2:1 expander)"
 ], [
     trn:symbol "band3_attack" ; trn:label "High Attack" ;
     trn:minimum 0.5 ; trn:maximum 200.0 ; trn:default 2.0 ;

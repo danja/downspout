@@ -6,7 +6,10 @@
 
 namespace downspout::syrinx {
 
-static constexpr std::uint32_t kPresetCount = 10;
+// Presets 0-9 are the original contiguous blocks, followed by the masters and status outputs. Later presets (Crow) are
+// appended as extra blocks after everything else, so no saved project's parameter index ever moves.
+static constexpr std::uint32_t kLegacyPresetCount = 10;
+static constexpr std::uint32_t kPresetCount = 11;
 static constexpr std::uint32_t kParamsPerPreset = 21;
 
 // Within each preset block (offset from preset_index * kParamsPerPreset):
@@ -33,35 +36,47 @@ static constexpr std::uint32_t kPresetParamRegime      = 19; // 0-1 → gammaSca
 static constexpr std::uint32_t kPresetParamTracheaCm   = 20; // 0-10 cm tracheal tube length (0=simple mix)
 
 // Master parameters (after all preset blocks)
-static constexpr std::uint32_t kParamDistance         = kPresetCount * kParamsPerPreset + 0;
-static constexpr std::uint32_t kParamMasterGain       = kPresetCount * kParamsPerPreset + 1;
-static constexpr std::uint32_t kParamSelectedPreset   = kPresetCount * kParamsPerPreset + 2;
+static constexpr std::uint32_t kParamDistance         = kLegacyPresetCount * kParamsPerPreset + 0;
+static constexpr std::uint32_t kParamMasterGain       = kLegacyPresetCount * kParamsPerPreset + 1;
+static constexpr std::uint32_t kParamSelectedPreset   = kLegacyPresetCount * kParamsPerPreset + 2;
 
 // Global section, appended after the original masters so saved projects keep their indices.
 // Phrase: each MIDI note-on plays a run of short syllables instead of one steady tone.
-static constexpr std::uint32_t kParamSource           = kPresetCount * kParamsPerPreset + 3;  // 0 MIDI, 1 Audio, 2 Both
-static constexpr std::uint32_t kParamSyllables        = kPresetCount * kParamsPerPreset + 4;  // 1-16 per note-on
-static constexpr std::uint32_t kParamChirp            = kPresetCount * kParamsPerPreset + 5;  // 0-1 sweep depth and speed
-static constexpr std::uint32_t kParamVariation        = kPresetCount * kParamsPerPreset + 6;  // 0-1 syllable-to-syllable spread
-static constexpr std::uint32_t kParamGap              = kPresetCount * kParamsPerPreset + 7;  // 0-1 silence between syllables
+static constexpr std::uint32_t kParamSource           = kLegacyPresetCount * kParamsPerPreset + 3;  // 0 MIDI, 1 Audio, 2 Both
+static constexpr std::uint32_t kParamSyllables        = kLegacyPresetCount * kParamsPerPreset + 4;  // 1-16 per note-on
+static constexpr std::uint32_t kParamChirp            = kLegacyPresetCount * kParamsPerPreset + 5;  // 0-1 sweep depth and speed
+static constexpr std::uint32_t kParamVariation        = kLegacyPresetCount * kParamsPerPreset + 6;  // 0-1 syllable-to-syllable spread
+static constexpr std::uint32_t kParamGap              = kLegacyPresetCount * kParamsPerPreset + 7;  // 0-1 silence between syllables
 // Audio input analysis
-static constexpr std::uint32_t kParamInPitchMult      = kPresetCount * kParamsPerPreset + 8;  // 1-12 x, tracked pitch multiplier
-static constexpr std::uint32_t kParamInRange          = kPresetCount * kParamsPerPreset + 9;  // 80-800 Hz, centre of the voice
-static constexpr std::uint32_t kParamInGate           = kPresetCount * kParamsPerPreset + 10; // 0-1 noise gate
-static constexpr std::uint32_t kParamInResponse       = kPresetCount * kParamsPerPreset + 11; // 0-1 pitch glide time
-static constexpr std::uint32_t kParamInUnvoiced       = kPresetCount * kParamsPerPreset + 12; // 0-1 sibilants -> turbulence
-static constexpr std::uint32_t kParamInMix            = kPresetCount * kParamsPerPreset + 13; // 0-1 dry(0) / bird(1)
+static constexpr std::uint32_t kParamInPitchMult      = kLegacyPresetCount * kParamsPerPreset + 8;  // 1-12 x, tracked pitch multiplier
+static constexpr std::uint32_t kParamInRange          = kLegacyPresetCount * kParamsPerPreset + 9;  // 80-800 Hz, centre of the voice
+static constexpr std::uint32_t kParamInGate           = kLegacyPresetCount * kParamsPerPreset + 10; // 0-1 noise gate
+static constexpr std::uint32_t kParamInResponse       = kLegacyPresetCount * kParamsPerPreset + 11; // 0-1 pitch glide time
+static constexpr std::uint32_t kParamInUnvoiced       = kLegacyPresetCount * kParamsPerPreset + 12; // 0-1 sibilants -> turbulence
+static constexpr std::uint32_t kParamInMix            = kLegacyPresetCount * kParamsPerPreset + 13; // 0-1 dry(0) / bird(1)
 // Output (status) parameters for the UI; written by the engine
-static constexpr std::uint32_t kParamOutLevel         = kPresetCount * kParamsPerPreset + 14; // 0-1 input level after gate
-static constexpr std::uint32_t kParamOutInHz          = kPresetCount * kParamsPerPreset + 15; // tracked input Hz (0 = unvoiced)
-static constexpr std::uint32_t kParamOutBirdHz        = kPresetCount * kParamsPerPreset + 16; // Hz the bird voice is following
-static constexpr std::uint32_t kParamOutVoiced        = kPresetCount * kParamsPerPreset + 17; // 0 silent, 0.5 unvoiced, 1 voiced
-static constexpr std::uint32_t kParameterCount        = kPresetCount * kParamsPerPreset + 18;
+static constexpr std::uint32_t kParamOutLevel         = kLegacyPresetCount * kParamsPerPreset + 14; // 0-1 input level after gate
+static constexpr std::uint32_t kParamOutInHz          = kLegacyPresetCount * kParamsPerPreset + 15; // tracked input Hz (0 = unvoiced)
+static constexpr std::uint32_t kParamOutBirdHz        = kLegacyPresetCount * kParamsPerPreset + 16; // Hz the bird voice is following
+static constexpr std::uint32_t kParamOutVoiced        = kLegacyPresetCount * kParamsPerPreset + 17; // 0 silent, 0.5 unvoiced, 1 voiced
+static constexpr std::uint32_t kLegacyParameterCount  = kLegacyPresetCount * kParamsPerPreset + 18;
+static constexpr std::uint32_t kAppendedPresetBase    = kLegacyParameterCount;   // first block of presets 10 and up
+static constexpr std::uint32_t kParameterCount        = kLegacyParameterCount + (kPresetCount - kLegacyPresetCount) * kParamsPerPreset;
 static constexpr std::uint32_t kFirstOutputParam      = kParamOutLevel;
 
 inline constexpr std::uint32_t presetParam(std::uint32_t preset, std::uint32_t param)
 {
-    return preset * kParamsPerPreset + param;
+    return preset < kLegacyPresetCount ? preset * kParamsPerPreset + param
+                                       : kAppendedPresetBase + (preset - kLegacyPresetCount) * kParamsPerPreset + param;
+}
+
+// Which preset a parameter index belongs to, or -1 for a master, phrase, input or status parameter.
+inline constexpr int presetOfParam(std::uint32_t index)
+{
+    if (index < kLegacyPresetCount * kParamsPerPreset) return static_cast<int>(index / kParamsPerPreset);
+    if (index >= kAppendedPresetBase && index < kParameterCount)
+        return static_cast<int>(kLegacyPresetCount + (index - kAppendedPresetBase) / kParamsPerPreset);
+    return -1;
 }
 
 struct ParameterSpec {
@@ -77,7 +92,7 @@ struct ParameterSpec {
 
 static const char* const kPresetNames[kPresetCount] = {
     "Wren", "Thrush", "Warbler", "Finch", "Robin",
-    "Nightjar", "Pigeon", "Hummingbird", "Starling", "Custom"
+    "Nightjar", "Pigeon", "Hummingbird", "Starling", "Custom", "Crow"
 };
 
 // Default values per preset [preset][param_within_preset]
@@ -117,6 +132,9 @@ static constexpr float kPresetDefaults[kPresetCount][kParamsPerPreset] = {
     {  0.75f, 0.10f, 0.00f, 0.15f, 0.80f, 0.30f, 0.50f, 0.60f, 0.50f, 0.00f, 0.17f, 0.05f, 0.00f, 1.00f, 6000.f, 8000.f, 6.0f, 0.00f, 0.00f, 0.00f, 0.00f }, // Hummingbird L≈1.4cm no coupling
     {  0.85f, 0.15f, 0.20f, 0.70f, 0.47f, 0.20f, 0.15f, 0.80f, 0.00f, 0.00f, 0.00f, 0.18f, 0.10f, 0.30f, 2500.f, 7500.f, 6.0f, 0.10f, 0.00f, 0.00f, 2.00f }, // Starling  L≈3.4cm  physics coupling
     {  0.80f, 0.05f, 0.00f, 0.30f, 0.33f, 0.20f, 0.00f, 0.50f, 0.00f, 0.00f, 0.00f, 0.15f, 0.00f, 0.00f, 3500.f, 8000.f, 6.0f, 0.00f, 0.00f, 0.00f, 0.00f }, // Custom
+    // A hoarse, falling "caw": low, nasal formants (~1/2.6 kHz, Q 4), strong breath noise and roughness, a 12 Hz AM rasp,
+    // a slightly detuned second voice and the chaotic ODE regime. Syllables 2-3 with a Gap near 0.4 give "caw caw".
+    {  0.95f, 0.38f, 0.70f, 0.80f, 0.00f, 0.00f,-0.35f, 0.85f, 0.40f, 0.00f,-0.35f, 0.17f, 0.12f, 0.55f, 1000.f, 2600.f, 4.0f, 0.35f, 0.04f, 0.65f, 2.00f }, // Crow      L≈8cm   chaotic regime, nasal
 };
 
 // Build the flat parameter table at compile time via a helper
@@ -156,9 +174,9 @@ inline ParameterSpec makePresetSpec(std::uint32_t preset, std::uint32_t p, float
 // Access via getParameterSpec(index).
 inline ParameterSpec getParameterSpec(std::uint32_t index)
 {
-    if (index < kPresetCount * kParamsPerPreset) {
-        const std::uint32_t preset = index / kParamsPerPreset;
-        const std::uint32_t p     = index % kParamsPerPreset;
+    if (const int presetIndex = presetOfParam(index); presetIndex >= 0) {
+        const std::uint32_t preset = static_cast<std::uint32_t>(presetIndex);
+        const std::uint32_t p     = (index - presetParam(preset, 0));
         const float defVal = kPresetDefaults[preset][p];
         return detail::makePresetSpec(preset, p, defVal);
     }
@@ -168,7 +186,7 @@ inline ParameterSpec getParameterSpec(std::uint32_t index)
     case kParamMasterGain:
         return { "Master Gain",     "master_gain",      0.0f, 1.0f, 0.75f, false, false };
     case kParamSelectedPreset:
-        return { "Selected Preset", "selected_preset",  0.0f, 9.0f, 0.0f,  false, true  };
+        return { "Selected Preset", "selected_preset",  0.0f, 10.0f, 0.0f,  false, true  };
     case kParamSource:
         return { "Source",          "source",           0.0f, 2.0f, 0.0f,  false, true  };
     case kParamSyllables:
@@ -235,7 +253,7 @@ struct PresetParams {
 
 inline PresetParams decodePreset(const float* values, std::uint32_t preset)
 {
-    const std::uint32_t base = preset * kParamsPerPreset;
+    const std::uint32_t base = presetParam(preset, 0);
     PresetParams p {};
     p.level             = values[base + kPresetParamLevel];
     p.noise             = values[base + kPresetParamNoise];

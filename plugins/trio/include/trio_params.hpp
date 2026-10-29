@@ -65,7 +65,7 @@ public:
             band(b, kDownThresh, "down_thresh", "Down Threshold", "dB", -60.0f, 0.0f, x.downThreshDb, false, false, kBandNames[b]);
             band(b, kDownRatio, "down_ratio", "Down Ratio", ":1", 1.0f, 20.0f, x.downRatio, true, false, kBandNames[b]);
             band(b, kUpThresh, "up_thresh", "Up Threshold", "dB", -80.0f, 0.0f, x.upThreshDb, false, false, kBandNames[b]);
-            band(b, kUpRatio, "up_ratio", "Up Ratio", ":1", 1.0f, 10.0f, x.upRatio, true, false, kBandNames[b]);
+            band(b, kUpRatio, "up_ratio", "Up Ratio", ":1", 0.2f, 10.0f, x.upRatio, true, false, kBandNames[b]);
             band(b, kAttack, "attack", "Attack", "ms", 0.5f, 200.0f, x.attackMs, true, false, kBandNames[b]);
             band(b, kRelease, "release", "Release", "ms", 5.0f, 2000.0f, x.releaseMs, true, false, kBandNames[b]);
             band(b, kGain, "gain", "Gain", "dB", -18.0f, 18.0f, x.gainDb, false, false, kBandNames[b]);

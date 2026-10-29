@@ -7,7 +7,7 @@
 
 dsp:syrinx a trn:PluginProfile ;
     rdfs:label "Syrinx" ;
-    rdfs:comment "Avian vocal synthesizer using Mindlin-Laje ODE models with ten bird presets: Wren, Thrush, Warbler, Finch, Robin, Nightjar, Pigeon, Hummingbird, Starling, and Custom. Each MIDI note plays a phrase of chirping syllables, or (Source = Audio in) a stereo input is analysed for pitch, loudness, sibilance and onsets and steers the bird voice, so it works as an effect on speech or singing." ;
+    rdfs:comment "Avian vocal synthesizer using Mindlin-Laje ODE models with eleven bird presets: Wren, Thrush, Warbler, Finch, Robin, Nightjar, Pigeon, Hummingbird, Starling, Custom and Crow (a hoarse, falling caw). Each MIDI note plays a phrase of chirping syllables, or (Source = Audio in) a stereo input is analysed for pitch, loudness, sibilance and onsets and steers the bird voice, so it works as an effect on speech or singing." ;
     trn:bundleName "syrinx.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/syrinx/> ;
@@ -16,5 +16,5 @@ dsp:syrinx a trn:PluginProfile ;
     trn:produces trn:Audio ;
     trn:genre "Ambient", "Electronic", "Nature", "Dance" ;
     trn:recommendedAfter dsp:melgen ;
-    trn:caution "Source selects the player: MIDI, Audio in (the keyboard is ignored) or Both. Audio mode needs the plugin on a track that carries audio into it; Voice Range should sit near the middle of the speaker's pitch. Ten presets share one MIDI channel; select a preset via the Selected Preset master parameter before connecting multiple Syrinx instances." ;
+    trn:caution "Source selects the player: MIDI, Audio in (the keyboard is ignored) or Both. Audio mode needs the plugin on a track that carries audio into it; Voice Range should sit near the middle of the speaker's pitch. Eleven presets share one MIDI channel; select a preset via the Selected Preset master parameter before connecting multiple Syrinx instances." ;
     pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

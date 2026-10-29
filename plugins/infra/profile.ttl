@@ -1,0 +1,54 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:infra a trn:PluginProfile ;
+    rdfs:label "Infra" ;
+    rdfs:comment "A stereo VCA driven by a beat-locked LFO. The LFO runs at a whole multiple of the host's beat rate (Auto picks the one nearest 10 Hz), kept within 1-20 Hz, with eight waveforms and a 0/90/180/270 degree phase for each channel. The default range is 0 dB down to -3 dB." ;
+    trn:bundleName "infra.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/infra/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio .
+
+dsp:infra trn:hasParameter [
+    trn:symbol "waveform" ; trn:label "Waveform" ;
+    trn:minimum 0 ; trn:maximum 7 ; trn:default 0 ;
+    rdfs:comment "0 sine, 1 triangle, 2 ramp up, 3 ramp down, 4 square, 5 soft square, 6 sample and hold, 7 smooth random"
+], [
+    trn:symbol "multiple" ; trn:label "Multiple" ;
+    trn:minimum 0 ; trn:maximum 40 ; trn:default 0 ;
+    rdfs:comment "LFO cycles per host beat; 0 = Auto, the whole multiple nearest 10 Hz. Moved into the range that keeps the rate within 1-20 Hz"
+], [
+    trn:symbol "phase_l" ; trn:label "Phase Left" ;
+    trn:minimum 0 ; trn:maximum 3 ; trn:default 1 ;
+    rdfs:comment "Left channel LFO phase: 0, 90, 180 or 270 degrees"
+], [
+    trn:symbol "phase_r" ; trn:label "Phase Right" ;
+    trn:minimum 0 ; trn:maximum 3 ; trn:default 1 ;
+    rdfs:comment "Right channel LFO phase: 0, 90, 180 or 270 degrees"
+], [
+    trn:symbol "range" ; trn:label "Range" ;
+    trn:minimum 0.0 ; trn:maximum 40.0 ; trn:default 3.0 ;
+    rdfs:comment "dB the VCA falls from the LFO peak (0 dB) to its trough; 0 is transparent"
+], [
+    trn:symbol "status_rate" ; trn:label "LFO Rate" ;
+    trn:minimum 0.0 ; trn:maximum 20.0 ; trn:default 0.0 ;
+    rdfs:comment "Output: the LFO rate in Hz now in use"
+], [
+    trn:symbol "status_multiple" ; trn:label "Multiple In Use" ;
+    trn:minimum 0 ; trn:maximum 40 ; trn:default 0 ;
+    rdfs:comment "Output: the multiple in use, with Auto resolved and the 1-20 Hz limit applied"
+], [
+    trn:symbol "status_lfo_l" ; trn:label "LFO Left" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1.0 ;
+    rdfs:comment "Output: the left LFO value, 1 = VCA at 0 dB"
+], [
+    trn:symbol "status_lfo_r" ; trn:label "LFO Right" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1.0 ;
+    rdfs:comment "Output: the right LFO value, 1 = VCA at 0 dB"
+] .

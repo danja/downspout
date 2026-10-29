@@ -600,6 +600,32 @@ static void testCrossoversStayApart()
     check("a wide setting is left alone", clampParameters(p).crossHighHz == 12000.0f);
 }
 
+// An up ratio below 1 turns the lower stage into a downward expander, and the defaults are gentle.
+static void testExpanderAndGentleDefaults()
+{
+    Band b = Parameters{}.bands[1];
+    b.downThreshDb = 0.0f; b.downRatio = 1.0f; b.upThreshDb = -30.0f; b.upRatio = 0.5f;
+    check("a 2:1 expander is idle above its threshold", bandTargetDb(b, -20.0f, 18.0f) == 0.0f);
+    check("a 2:1 expander takes 10 dB more off 10 dB under the threshold", std::fabs(bandTargetDb(b, -40.0f, 18.0f) + 10.0f) < 1e-4f);
+    check("expansion depth is capped at 60 dB", bandTargetDb(b, -120.0f, 18.0f) >= -60.0f - 1e-4f);
+    b.upRatio = 0.2f;
+    check("a 0.2 ratio is a 5:1 expander", std::fabs(bandTargetDb(b, -40.0f, 18.0f) + 40.0f) < 1e-3f);
+    check("a ratio under 0.2 clamps to 0.2", clampBand([&] { Band x = b; x.upRatio = 0.01f; return x; }()).upRatio == 0.2f);
+
+    // In the audio: a quiet tone is pulled down, a loud one is not.
+    Parameters p = only(1, 0.0f, 1.0f, -30.0f, 0.5f);
+    const double quiet = gainDb(p, 800.0, std::pow(10.0, -40.0 / 20.0), kSr, 1.2);
+    const double loud = gainDb(p, 800.0, std::pow(10.0, -10.0 / 20.0), kSr, 1.2);
+    check("the expander attenuates a quiet tone by about 10 dB", std::fabs(quiet + 10.0) < 0.8);
+    check("... and leaves a loud tone alone", std::fabs(loud) < 0.3);
+
+    // Defaults: nothing is cut by more than 6 dB at 0 dBFS... a -6 dB peak sees at most a few dB of reduction.
+    const Parameters d;
+    bool gentle = true;
+    for (const Band& x : d.bands) gentle = gentle && x.downRatio <= 2.0f && x.upRatio >= 1.0f && bandTargetDb(x, -6.0f, d.upLimitDb) > -6.0f;
+    check("the default bands are gentle", gentle);
+}
+
 int main()
 {
     testCrossoverIsFlat();
@@ -620,6 +646,7 @@ int main()
     testResetClearsMemoryOnly();
     testMidiControl();
     testParameterTableMatchesCore();
+    testExpanderAndGentleDefaults();
     testCrossoversStayApart();
     testKneeSoloAndSidechain();
     std::printf("trio_core_tests: %d passed, %d failed\n", gPassed, gFailed);

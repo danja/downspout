@@ -10,6 +10,7 @@ namespace {
 constexpr double kPi = 3.14159265358979323846;
 constexpr float kDbToNeper = 0.115129255f;  // ln(10) / 20
 constexpr float kFloorLevel = 1.0e-6f;      // -120 dB
+constexpr float kMaxExpansionDb = 60.0f;    // deepest downward expansion
 
 float clampf(float v, float lo, float hi) noexcept
 {
@@ -55,10 +56,11 @@ inline float coefficient(float ms, float sr) noexcept
 
 Parameters::Parameters()
 {
-    // The canonical "OTT" settings: lower thresholds and slower times in the lows.
-    bands[0] = {1.0f, -24.0f, 4.0f, -36.0f, 2.5f, 10.0f, 100.0f, 0.0f};
-    bands[1] = {1.0f, -20.0f, 4.0f, -32.0f, 2.5f, 5.0f, 80.0f, 0.0f};
-    bands[2] = {1.0f, -18.0f, 4.0f, -30.0f, 2.5f, 2.0f, 50.0f, 0.0f};
+    // Gentle multiband settings: light 2:1 compression from higher thresholds, a mild lift below, slower times in the lows.
+    // (The old "OTT" defaults, 4:1 from -24/-20/-18 dB with a 2.5:1 lift, cut too much on a fresh instance.)
+    bands[0] = {1.0f, -16.0f, 2.0f, -40.0f, 1.5f, 10.0f, 100.0f, 0.0f};
+    bands[1] = {1.0f, -14.0f, 2.0f, -38.0f, 1.5f, 5.0f, 80.0f, 0.0f};
+    bands[2] = {1.0f, -12.0f, 2.0f, -36.0f, 1.5f, 2.0f, 50.0f, 0.0f};
 }
 
 Band clampBand(const Band& in) noexcept
@@ -68,7 +70,7 @@ Band clampBand(const Band& in) noexcept
     b.downThreshDb = clampf(in.downThreshDb, -60.0f, 0.0f);
     b.downRatio    = clampf(in.downRatio, 1.0f, 20.0f);
     b.upThreshDb   = clampf(in.upThreshDb, -80.0f, 0.0f);
-    b.upRatio      = clampf(in.upRatio, 1.0f, 10.0f);
+    b.upRatio      = clampf(in.upRatio, 0.2f, 10.0f);
     b.attackMs     = clampf(in.attackMs, 0.5f, 200.0f);
     b.releaseMs    = clampf(in.releaseMs, 5.0f, 2000.0f);
     b.gainDb       = clampf(in.gainDb, -18.0f, 18.0f);
@@ -116,7 +118,9 @@ float bandTargetDb(const Band& raw, float levelDb, float upLimitDb, float kneeDb
     float target = -kneeCurve(levelDb - b.downThreshDb, b.downRatio, knee);
     // The lift threshold may not sit above the compress threshold, or the two would fight.
     const float upThresh = std::min(b.upThreshDb, b.downThreshDb);
-    target += std::min(kneeCurve(upThresh - levelDb, b.upRatio, knee), std::max(upLimitDb, 0.0f));
+    // A ratio above 1 lifts quiet signals (capped at upLimitDb); below 1 the slope turns negative and the same curve expands
+    // downward instead: 0.5 is a 2:1 expander (each dB under the threshold becomes 2 dB lower), 0.2 a 5:1. Depth is capped.
+    target += std::clamp(kneeCurve(upThresh - levelDb, b.upRatio, knee), -kMaxExpansionDb, std::max(upLimitDb, 0.0f));
     return target;
 }
 

@@ -215,7 +215,7 @@ private:
         row(core::kDownThresh, "Down threshold");
         row(core::kDownRatio, "Down ratio");
         row(core::kUpThresh, "Up threshold");
-        row(core::kUpRatio, "Up ratio (1 = no lift)");
+        row(core::kUpRatio, "Up ratio (<1 expands)");
         row(core::kAttack, "Attack");
         row(core::kRelease, "Release");
         row(core::kGain, "Band gain");
@@ -291,8 +291,13 @@ private:
         case core::kUpThresh:
             std::snprintf(buffer, sizeof(buffer), "%.0f dB", static_cast<double>(v));
             break;
-        case core::kDownRatio:
         case core::kUpRatio:
+            if (v < 0.995f) {   // below 1 the band expands downward: show it as an expander ratio
+                std::snprintf(buffer, sizeof(buffer), "expand %.1f : 1", static_cast<double>(1.0f / v));
+                break;
+            }
+            [[fallthrough]];
+        case core::kDownRatio:
             std::snprintf(buffer, sizeof(buffer), "%.1f : 1", static_cast<double>(v));
             break;
         case core::kAttack:

@@ -289,6 +289,10 @@ Progress as of 2026-05-27:
   rate (the first version cost 51 % of a core for eight notes at the defaults; now 9 %). Two oscillators, sub, unison, one SVF, two ADSRs, an LFO, 41 automatable parameters, no
   plugin state, 300 core checks under ASan/UBSan. See `plugins/strata/docs/design.md`. Listening and host validation in REAPER remain; Bend and Sync still alias at about
   -40 dB, and there is no table import or modulation matrix.
+- `infra` is a stereo VCA driven by a beat-locked LFO in the Magneto look (a new plugin, not a port): the LFO runs at a whole multiple of the host beat rate
+  (Auto = nearest 10 Hz), clamped to 1-20 Hz, from eight waveforms, with a 0/90/180/270 degree phase per channel and a default 0 to -3 dB range. The LFO is a function of the transport
+  position (free-running when stopped), so it is block-size independent. Ordinary parameters, no plugin state, four output parameters for the panel. See `plugins/infra/docs/design.md`.
+  Listening and host validation in REAPER remain; the BBT-to-beat mapping is the part most worth checking.
 - `trio` is a three-band dynamics processor in the Magneto look, a redesign inspired by `oxide-fx`'s Multiband Dynamics
   (`~/github/oxide-studio`, MIT/Apache-2.0), whose bands share one envelope between the left and right channels and step it
   twice per sample (halving the times and cross-steering the channels), and whose detector reads the rectified wave. Trio has
@@ -394,7 +398,7 @@ Current main gap:
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
   `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`,
-  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `grist.vst3`, `sam.vst3`, `ladder.vst3`, `glue.vst3`, `octet.vst3`, `trio.vst3`, `strata.vst3`, `quartet.vst3`, `monochord.vst3`, and `nam.vst3` bundles.
+  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `grist.vst3`, `sam.vst3`, `ladder.vst3`, `glue.vst3`, `octet.vst3`, `trio.vst3`, `infra.vst3`, `strata.vst3`, `quartet.vst3`, `monochord.vst3`, and `nam.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of

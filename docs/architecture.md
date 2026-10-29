@@ -257,6 +257,7 @@ The release script currently expects these bundles:
 - `glue.vst3`
 - `octet.vst3`
 - `trio.vst3`
+- `infra.vst3`
 - `strata.vst3`
 - `quartet.vst3`
 - `monochord.vst3`

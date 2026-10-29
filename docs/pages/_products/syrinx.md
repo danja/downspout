@@ -6,7 +6,7 @@ kind: Instrument
 category: instrument
 role: Birdsong synthesizer and voice-to-bird effect
 screenshot: /assets/plugins/syrinx.png
-summary: Avian syrinx voice based on the Mindlin-Laje biophysical model with 10 bird-species presets. MIDI notes play phrases of chirping syllables; an audio input is analysed for pitch and loudness and steers the bird, so it works on speech and singing.
+summary: Avian syrinx voice based on the Mindlin-Laje biophysical model with 11 bird-species presets. MIDI notes play phrases of chirping syllables; an audio input is analysed for pitch and loudness and steers the bird, so it works on speech and singing.
 ---
 
 ## Opinion
@@ -54,7 +54,7 @@ physical syrinx model so regime, coupling and respiration still respond.
 
 ### Presets
 
-Ten built-in presets cover a range of timbres and behaviours:
+Eleven built-in presets cover a range of timbres and behaviours:
 
 | # | Name | Character |
 |---|------|-----------|
@@ -68,6 +68,7 @@ Ten built-in presets cover a range of timbres and behaviours:
 | 8 | Hummingbird | Ultra-fast AM trill, high pitch |
 | 9 | Starling | Buzzy reed timbre, irregular roughness |
 | 10 | Custom | Blank default for user patches |
+| 11 | Crow | Hoarse, falling "caw": low nasal formants, rasping AM, chaotic regime. Set Syllables to 2-3 and Gap near 40 % for "caw caw" |
 
 ### Parameters
 
@@ -77,7 +78,7 @@ mute, level, timbre, noise, roughness, regime, harmonic, pitch offset, duration)
 (vibrato, bend, respiration, tremolo), Tract (formants, coupling, voice offset, trachea
 length) and Master (distance, gain, randomize, reset).
 
-The ten preset blocks are unchanged. The Source, Phrase and Audio Input controls are global
+The ten original preset blocks are unchanged, and the Crow block is appended after everything else (Selected Preset runs 0-10). The Source, Phrase and Audio Input controls are global
 and are appended after the original parameters, so saved projects keep their indices;
 older projects now open with three chirping syllables per note (Syllables 1, Chirp 0 restores
 the old single tone).

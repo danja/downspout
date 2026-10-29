@@ -218,11 +218,17 @@ pad). See `plugins/strata/docs/design.md`.
 
 Three-band dynamics with no latency, in the OTT manner; Drift CC 1-4 on a channel drive Amount, Time, Input and Upward limit. The signal is split at two adjustable crossovers
 (250 Hz and 2.5 kHz by default) into bands that sum back flat, and each band compresses what is loud (**Down threshold** and
-**ratio**) and lifts what is quiet (**Up threshold** and **ratio**) with its own **Attack**, **Release** and **Gain**. **Amount**
+**ratio**) and lifts (or, with an Up ratio below 1, expands downward) what is quiet (**Up threshold** and **ratio**) with its own **Attack**, **Release** and **Gain**. **Amount**
 blends the dry signal, **Time** scales every attack and release at once, and **Input** drives the bands without changing the dry
 path. The panel plots the three bands with draggable crossover lines and a live bar for what each band is doing. The defaults are
-a heavy "OTT" sound: lower Amount, or set every ratio to 1 for a plain three-band split. Upward lift raises the noise floor, so
+gentle (4:1 down and 2.5:1 up give the heavy "OTT" sound): lower Amount, or set every ratio to 1 for a plain three-band split. Upward lift raises the noise floor, so
 use it on sources that are not already noisy. See `plugins/trio/docs/design.md`.
+
+### Infra (`infra.vst3`)
+
+A stereo VCA driven by an LFO locked to the host beat, for tremolo, auto-pan and rhythmic gating. The LFO runs at a whole multiple of the beat rate (**Multiple**, Auto = nearest to 10 Hz), kept
+within 1-20 Hz, with eight waveforms and a 0, 90, 180 or 270 degree **Phase** for each channel; **Range** sets how far the gain falls from 0 dB (the default 3 dB swings 0 to -3 dB). It
+uses the transport position, so it stays on the beat; put it anywhere in an effects chain. See `plugins/infra/docs/design.md`.
 
 ### Octet (`octet.vst3`)
 

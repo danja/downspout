@@ -8,7 +8,7 @@
   Turbulence, Bird Mix). Source = MIDI / Audio in / Both.
 
 The voice is the Mindlin-Laje syrinx ODE with a closed-loop pitch lock, a tracheal formant comb
-and ten species presets. The panel uses the Magneto look. Design, formulas and assumptions are in
+and eleven species presets. The panel uses the Magneto look. Design, formulas and assumptions are in
 [docs/design-notes.md](docs/design-notes.md); parameter and CC lists are in
 [the product page](../../docs/pages/_products/syrinx.md).
 

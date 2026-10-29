@@ -12,8 +12,8 @@ summary: Three-band dynamics with adjustable flat-summing crossovers, per-band d
 
 ## Opinion
 
-Not yet auditioned in a host. The defaults are the well-known "OTT" settings, so a fresh instance is a strong, bright, dense effect:
-good on drums, synths and vocals you want forward, too much on a finished mix at 100 %, where you would lower Amount. Set every ratio to 1
+Not yet auditioned in a host. The defaults are gentle (2 : 1 down, 1.5 : 1 up); raise the ratios to 4 : 1 and 2.5 : 1 for the well-known "OTT" sound, a strong, bright, dense effect
+good on drums, synths and vocals you want forward. Set an Up ratio below 1 to use a band as a downward expander instead of a lift. Set every ratio to 1
 for a plain three-band split. It is a redesign, not a copy of the Oxide Studio device that inspired it, which gives the left and right channels
 of each band one shared envelope and steps it twice per sample.
 
@@ -35,8 +35,8 @@ both scaled by **Time**.
 | Time | 0.1-10 x | 1 |
 | Upward limit | 0-24 dB | 18 dB |
 | Band On | Off / On | On |
-| Down threshold / ratio | -60 to 0 dB / 1-20 : 1 | -24 / -20 / -18 dB, 4 : 1 |
-| Up threshold / ratio | -80 to 0 dB / 1-10 : 1 | -36 / -32 / -30 dB, 2.5 : 1 |
+| Down threshold / ratio | -60 to 0 dB / 1-20 : 1 | -16 / -14 / -12 dB, 2 : 1 |
+| Up threshold / ratio | -80 to 0 dB / 0.2-10 : 1 (below 1 = downward expander) | -40 / -38 / -36 dB, 1.5 : 1 |
 | Attack / release | 0.5-200 ms / 5-2000 ms | 10 / 100, 5 / 80, 2 / 50 ms (low, mid, high) |
 | Band gain | -18 to +18 dB | 0 dB |
 

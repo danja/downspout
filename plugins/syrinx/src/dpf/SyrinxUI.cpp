@@ -39,7 +39,7 @@ constexpr std::uint32_t kSlotOutLevel = kPresetSlots + (core::kParamOutLevel - k
 constexpr std::uint32_t kSlotOutInHz = kPresetSlots + (core::kParamOutInHz - kGlobalBase);
 constexpr std::uint32_t kSlotOutBirdHz = kPresetSlots + (core::kParamOutBirdHz - kGlobalBase);
 constexpr std::uint32_t kSlotOutVoiced = kPresetSlots + (core::kParamOutVoiced - kGlobalBase);
-constexpr std::uint32_t kSlotCount = kPresetSlots + (core::kParameterCount - kGlobalBase);
+constexpr std::uint32_t kSlotCount = kPresetSlots + (core::kLegacyParameterCount - kGlobalBase);
 
 static_assert(kSlotCount <= MagnetoUI::kMaxValues, "slot window must fit the kit");
 
@@ -59,10 +59,10 @@ std::uint32_t slotToParameter(const std::uint32_t slot, const std::uint32_t pres
 // -1 when the parameter belongs to a preset that is not on show.
 int parameterToSlot(const std::uint32_t parameter, const std::uint32_t preset)
 {
-    if (parameter >= kGlobalBase)
+    if (parameter >= kGlobalBase && parameter < core::kLegacyParameterCount)
         return static_cast<int>(kPresetSlots + (parameter - kGlobalBase));
-    if (parameter / core::kParamsPerPreset == preset)
-        return static_cast<int>(parameter % core::kParamsPerPreset);
+    if (core::presetOfParam(parameter) == static_cast<int>(preset))
+        return static_cast<int>(parameter - core::presetParam(preset, 0));
     return -1;
 }
 
@@ -128,7 +128,7 @@ protected:
             return;
         host_[index] = v;
         if (index == core::kParamSelectedPreset) {
-            preset_ = static_cast<std::uint32_t>(std::clamp(static_cast<int>(std::lround(v)), 0, 9));
+            preset_ = static_cast<std::uint32_t>(std::clamp(static_cast<int>(std::lround(v)), 0, static_cast<int>(core::kPresetCount) - 1));
             showPreset();
         }
         const int slot = parameterToSlot(index, preset_);
@@ -143,7 +143,7 @@ protected:
         host_[parameter] = v;
         setParameterValue(parameter, v);
         if (parameter == core::kParamSelectedPreset) {
-            preset_ = static_cast<std::uint32_t>(std::clamp(static_cast<int>(std::lround(v)), 0, 9));
+            preset_ = static_cast<std::uint32_t>(std::clamp(static_cast<int>(std::lround(v)), 0, static_cast<int>(core::kPresetCount) - 1));
             showPreset();
         }
     }
@@ -483,7 +483,7 @@ private:
 
     static constexpr std::array<kit::Accent, core::kPresetCount> kPresetColors = {{
         {165, 200, 110}, {120, 170, 210}, {215, 185, 90}, {205, 115, 75}, {150, 200, 135},
-        {120, 120, 160}, {175, 150, 195}, {100, 200, 175}, {205, 165, 90}, {155, 155, 155},
+        {120, 120, 160}, {175, 150, 195}, {100, 200, 175}, {205, 165, 90}, {155, 155, 155}, {96, 98, 120},
     }};
 
     std::array<float, core::kParameterCount> host_ {};

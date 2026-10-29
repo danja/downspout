@@ -14,10 +14,10 @@ inline constexpr int kBands = 3;
 
 struct Band {
     float on          = 1.0f;     // 0 off (the band passes through), 1 on
-    float downThreshDb = -24.0f;  // -60..0 dB: compress above this
-    float downRatio    = 4.0f;    // 1..20 : 1
-    float upThreshDb   = -36.0f;  // -80..0 dB: lift below this
-    float upRatio      = 2.5f;    // 1..10 : 1 (1 = no lift)
+    float downThreshDb = -16.0f;  // -60..0 dB: compress above this
+    float downRatio    = 2.0f;    // 1..20 : 1
+    float upThreshDb   = -40.0f;  // -80..0 dB: lift (or expand) below this
+    float upRatio      = 1.5f;    // 0.2..10 : 1 (1 = no lift, above 1 lifts quiet signals, below 1 expands them downward: 0.5 = 2:1 expander)
     float attackMs     = 10.0f;   // 0.5..200 ms
     float releaseMs    = 100.0f;  // 5..2000 ms
     float gainDb       = 0.0f;    // -18..+18 dB band trim

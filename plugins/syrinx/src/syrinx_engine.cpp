@@ -73,14 +73,14 @@ void Engine::setParameter(std::uint32_t index, float value)
         rebuildFx();
     // A knob on the selected preset, or a new preset or source, reaches the driven voice.
     if (index == kParamSelectedPreset || index == kParamSource
-        || (index < kPresetCount * kParamsPerPreset && index / kParamsPerPreset == selectedPreset()))
+        || presetOfParam(index) == static_cast<int>(selectedPreset()))
         drivenDirty_ = true;
 }
 
 std::uint32_t Engine::selectedPreset() const
 {
     return static_cast<std::uint32_t>(
-        std::clamp(static_cast<int>(std::round(params_[kParamSelectedPreset])), 0, 9));
+        std::clamp(static_cast<int>(std::round(params_[kParamSelectedPreset])), 0, static_cast<int>(kPresetCount) - 1));
 }
 
 void Engine::handleMidi(const std::uint8_t* data, std::uint32_t size)

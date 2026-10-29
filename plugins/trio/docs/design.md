@@ -51,6 +51,7 @@ details were redesigned.
 
 - Not listened to; no host validation (REAPER). The OTT-style defaults and the detector decay times are my choices.
 - No look-ahead and no per-band listen of the unprocessed band.
+- **Expander**: Up Ratio runs 0.2-10. Below 1 the lift slope `1 - 1/ratio` goes negative, so the same curve expands downward under the up threshold (0.5 = 2:1, 0.2 = 5:1), capped at 60 dB. Defaults were softened from the OTT set (4:1 from -24/-20/-18, 2.5:1 lift) to 2:1 from -16/-14/-12 with a 1.5:1 lift from -40/-38/-36.
 - **Knee** (0-24 dB, default 0 = the source's hard knee) is a quadratic blend centred on each threshold, the same curve as Glue's: at the threshold it already applies `slope x knee / 8`, and it meets the straight line at `knee / 2` past it. The lift side uses the same curve around the up threshold (still held at or below the down threshold).
 - **Solo** (Off/Low/Mid/High) outputs only that band after its dynamics and trim, times Output, with the dry path and Amount ignored, so you hear what that band is doing.
 - **Sidechain** selects the sidechain input (3-4) for the detectors. It is split by its own copy of the crossover filters into the same three bands (so the crossovers move it too) and each band's detector reads its band. The Input trim does not scale it. With the sidechain selected but nothing connected, the detectors fall back to the input. Appended after the meters with Knee and Solo: parameters 38-40.

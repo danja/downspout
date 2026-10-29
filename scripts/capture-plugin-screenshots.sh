@@ -69,6 +69,7 @@ plugins=(
   "glue:glue"
   "octet:octet"
   "trio:trio"
+  "infra:infra"
   "strata:strata"
   "quartet:quartet"
   "monochord:monochord"

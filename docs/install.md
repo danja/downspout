@@ -128,6 +128,7 @@ The repository currently installs sixty-one real wrapper targets:
 - `glue.vst3` with UI
 - `octet.vst3` with UI
 - `trio.vst3` with UI
+- `infra.vst3` with UI
 - `strata.vst3` with UI
 - `quartet.vst3` with UI
 - `monochord.vst3` with UI

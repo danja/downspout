@@ -82,6 +82,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | glue | glue.vst3 | audio effect (compressor, sidechain) | 4/2 | yes/no | no |
 | octet | octet.vst3 | audio effect (equalizer) | 2/2 | yes/no | no |
 | trio | trio.vst3 | audio effect (multiband dynamics, sidechain) | 4/2 | yes/no | no |
+| infra | infra.vst3 | audio effect (beat-locked LFO and stereo VCA) | 2/2 | no/no | no |
 | strata | strata.vst3 | instrument (wavetable) | 0/2 | yes/no | no |
 | quartet | quartet.vst3 | instrument (FM) | 0/2 | yes/no | no |
 | monochord | monochord.vst3 | instrument (string) | 0/2 | yes/no | no |
@@ -433,8 +434,8 @@ Per-channel pitch bend with RPN 0, voices keyed by channel and note.
 ### syrinx
 Avian syrinx voice: the Mindlin-Laje ODE solved per voice at audio rate, with the oscillator
 pitch-locked to its target f0 so contours really sweep the source, a pitch-tracking vocal-tract
-bandpass, tracheal formant comb, respiration and noise/roughness modifiers. Ten presets (Wren to
-Custom), up to eight voices. **Source** picks the player. **MIDI**: each note-on plays a phrase of
+bandpass, tracheal formant comb, respiration and noise/roughness modifiers. Eleven presets (Wren to
+Crow), up to eight voices. **Source** picks the player. **MIDI**: each note-on plays a phrase of
 1-16 short syllables (Chirp sets speed and sweep depth, Variation the spread, Gap the silence between).
 **Audio in**: the input is analysed for pitch (autocorrelation), loudness, sibilance and onsets, and
 that steers a free-running bird voice (Pitch Multiplier, Voice Range, Gate, Pitch Glide, Hiss to
@@ -695,14 +696,22 @@ Three-band dynamics, stereo, no transport, latency or plugin state; MIDI in for 
 Dynamics). Two adjustable Linkwitz-Riley crossovers (**Low** 40-1000 Hz, default 250; **High** 1-12 kHz, default 2.5 kHz, held at
 least 1.25 x the low one) split the signal into bands that sum flat; the low band is passed through the high crossover's
 all-pass. Each band has **On**, a **Down threshold** (-60 to 0 dB) and **ratio** (1-20:1) that compress what is loud, an **Up
-threshold** (-80 to 0 dB, held at or below the down one) and **ratio** (1-10:1; 1 = no lift) that lift what is quiet,
+threshold** (-80 to 0 dB, held at or below the down one) and **ratio** (0.2-10:1; 1 = no lift, below 1 expands downward: 0.5 = a 2:1 expander) that lift or expand what is quiet,
 **Attack** 0.5-200 ms, **Release** 5-2000 ms and **Gain** +-18 dB. Globally: **Input** (into the bands only), **Output**,
 **Amount** (dry/wet; 0 is bit-exact dry), **Time** (0.1-10 x on every attack and release) and **Upward limit** (0-24 dB). One
-detector per band, linked across the two channels. Defaults are the "OTT" settings, so a fresh instance is a strong effect; set
+detector per band, linked across the two channels. Defaults are gentle (2:1 down, 1.5:1 up; 4:1 and 2.5:1 give the "OTT" sound); set
 every ratio to 1 for a transparent split. Six output parameters (`status_gain_1-3`, `status_level_1-3`) drive the panel's
 per-band gain bars; the crossover lines on the plot are draggable. Upward lift raises the noise floor. **Knee** (0-24 dB, default hard) softens both thresholds; **Solo** (Off/Low/Mid/High) plays one band's processed
 signal alone (no dry, Amount ignored); **Detectors listen to** Input or Sidechain (inputs 3-4, split into the same three bands; with nothing
 connected it falls back to the input). The `status_*` meters are followed by `cc_channel`, `knee`, `solo` and `sidechain` (41 parameters).
+
+### infra
+A stereo VCA driven by a beat-locked LFO (a new plugin, no source LFO); stereo in and out, no MIDI, no latency, no plugin state, reads the host transport. The LFO runs at **Multiple**
+whole cycles per host beat, 0 = **Auto** (the multiple whose rate is nearest 10 Hz, 5 at 120 BPM), and any request is moved into the range that keeps the rate within 1-20 Hz. It is a
+function of the transport position, so it repeats exactly on every pass, and free-runs while the transport is stopped (at 120 BPM when the host reports no tempo). Eight **Waveform**s
+(sine default, triangle, ramp up, ramp down, square, soft square, sample & hold, smooth random); each channel has its own **Phase** of 0, 90, 180 or 270 degrees (default 90 on both, which puts the LFO
+at its peak on each beat). **Range** (0-40 dB, default 3) is how far the VCA falls from 0 dB at the LFO peak, so the default swings 0 to -3 dB. Four output parameters (`status_rate`,
+`status_multiple`, `status_lfo_l`, `status_lfo_r`) drive the panel (9 parameters). See `plugins/infra/docs/design.md`.
 
 ### octet
 Eight-band parametric equalizer, stereo, MIDI in for Drift (CC 1-4 on **CC Channel**, default 1, drive the band chosen by **CC Band**, default 4: Frequency, Gain, Q; CC 4 Output), no transport, latency or plugin state (a redesign, not a port, of the
@@ -927,5 +936,5 @@ a note-on), so it does not follow other channels.
 - **Need an unpitched sound:** drumkit, magneto, bubbles.
 - **Need audio processing:** filter (ladder, skream), distortion (damiano, skream, chipper), amp/cab modelling (nam), granular (beards, grist), time/pitch (keyframe,
   primefold, quefrency), space (lightverb, loopdelay, orbit, treatment, ambo),
-  rhythm/gating (e-mix, p-mix, orchid, rift), tone/dynamics (trio, octet, glue, bassops, spliff,
+  rhythm/gating (e-mix, p-mix, orchid, rift), tone/dynamics (trio, octet, infra, glue, bassops, spliff,
   helterskelter, guardian), spectral (voxmod, sinevox, resonance-garden).

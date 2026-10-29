@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdio>
+#include <string>
 #include <vector>
 
 using namespace downspout::syrinx;
@@ -594,11 +595,61 @@ static void testOriginalParameterIndicesAreStable()
     CHECK(kParamMasterGain == 211);
     CHECK(kParamSelectedPreset == 212);
     CHECK(kParamSource == 213);
-    CHECK(kParameterCount == 228);
-    for (std::uint32_t i = kFirstOutputParam; i < kParameterCount; ++i)
+    CHECK(kLegacyParameterCount == 228);
+    for (std::uint32_t i = kFirstOutputParam; i < kLegacyParameterCount; ++i)
         CHECK(getParameterSpec(i).output);
     for (std::uint32_t i = 0; i < kFirstOutputParam; ++i)
         CHECK(!getParameterSpec(i).output);
+    // Presets added later (Crow) sit after the status outputs, so none of the above moved.
+    CHECK(kParameterCount == 228 + 21);
+    CHECK(presetParam(9, 0) == 189 && presetParam(10, 0) == 228);
+    for (std::uint32_t i = kLegacyParameterCount; i < kParameterCount; ++i)
+        CHECK(!getParameterSpec(i).output && presetOfParam(i) == 10);
+    CHECK(presetOfParam(kParamDistance) == -1 && presetOfParam(kParamOutVoiced) == -1 && presetOfParam(20) == 0);
+}
+
+// The Crow: a harsh, low, noisy caw, not a whistle. Compared with the Wren at the same note it has far more energy above 1 kHz, a less pure spectrum, it stays bounded, and "caw caw" comes out as separate syllables.
+static void testCrowPreset()
+{
+    CHECK(std::string(kPresetNames[10]) == "Crow");
+    CHECK(getParameterSpec(kParamSelectedPreset).maximum == 10.0f);
+
+    auto render = [](std::uint32_t preset) {
+        Engine e(kSr);
+        e.setParameter(kParamSelectedPreset, static_cast<float>(preset));
+        e.setParameter(kParamSyllables, 2.0f);
+        e.setParameter(kParamGap, 0.4f);
+        const std::uint8_t on[] = {0x90, 60, 110};
+        e.handleMidi(on, 3);
+        std::vector<float> x(static_cast<std::size_t>(1.2f * kSr));
+        for (float& v : x) v = e.processStereo().left;
+        return x;
+    };
+    const auto crow = render(10);
+    const auto wren = render(0);
+    double peak = 0.0, energy = 0.0;
+    for (float v : crow) { peak = std::max<double>(peak, std::fabs(v)); energy += double(v) * v; }
+    CHECK(peak > 0.02 && peak <= 1.0);
+    CHECK(energy > 0.0);
+
+    // Share of the energy above 1 kHz, from Goertzel bins: a harsh caw is rich in harmonics, a Wren note is nearly a pure tone.
+    auto upperShare = [](const std::vector<float>& x) {
+        double low = 0.0, all = 0.0;
+        for (double hz = 100.0; hz < 12000.0; hz += 100.0) {
+            double re = 0.0, im = 0.0;
+            for (std::size_t n = 0; n < x.size(); ++n) {
+                const double w = 2.0 * 3.14159265358979 * hz * double(n) / kSr;
+                re += x[n] * std::cos(w); im += x[n] * std::sin(w);
+            }
+            const double m = re * re + im * im;
+            all += m; if (hz >= 1000.0) low += m;
+        }
+        return low / std::max(all, 1e-30);
+    };
+    CHECK(upperShare(crow) > 3.0 * upperShare(wren));
+
+    const auto syl = findSyllables(crow);
+    CHECK(syl.size() >= 2);
 }
 
 // Changing the preset knobs while the bird voice runs must not restart or silence it.
@@ -639,6 +690,7 @@ int main()
     testUnvoicedNoiseTurnsHissIntoTurbulence();
     testStatusOutputsReportTheInput();
     testOriginalParameterIndicesAreStable();
+    testCrowPreset();
     testLiveParameterEditKeepsTheAudioVoice();
 
     if (failures == 0) {

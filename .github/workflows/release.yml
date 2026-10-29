@@ -274,6 +274,7 @@ jobs:
             echo "- glue.vst3"
             echo "- octet.vst3"
             echo "- trio.vst3"
+            echo "- infra.vst3"
             echo "- strata.vst3"
             echo "- quartet.vst3"
             echo "- monochord.vst3"
