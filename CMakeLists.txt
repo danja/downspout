@@ -68,6 +68,8 @@ option(DOWNSPOUT_BUILD_THUMPER "Configure the Thumper kick drum generator target
 option(DOWNSPOUT_BUILD_SNATCH "Configure the Snatch snare drum generator target" ON)
 option(DOWNSPOUT_BUILD_TOPS "Configure the Tops hi-hat/cymbal generator target" ON)
 option(DOWNSPOUT_BUILD_CLATTER "Configure the Clatter General MIDI percussion generator target" ON)
+option(DOWNSPOUT_BUILD_SPENSE "Configure the Spense stereo phase disperser target" ON)
+option(DOWNSPOUT_BUILD_HEAVYVERB "Configure the HeavyVerb master-bus reverb target" ON)
 option(DOWNSPOUT_BUILD_GHOST "Configure the ghost audio-triggered MIDI target" ON)
 option(DOWNSPOUT_BUILD_SPLIFF "Configure the spliff transient processor target" ON)
 option(DOWNSPOUT_BUILD_HELTERSKELTER "Configure the helterskelter auto-wah target" ON)
@@ -409,6 +411,14 @@ endif()
 
 if(DOWNSPOUT_BUILD_CLATTER)
     add_subdirectory(plugins/clatter)
+endif()
+
+if(DOWNSPOUT_BUILD_SPENSE)
+    add_subdirectory(plugins/spense)
+endif()
+
+if(DOWNSPOUT_BUILD_HEAVYVERB)
+    add_subdirectory(plugins/heavyverb)
 endif()
 
 if(DOWNSPOUT_BUILD_GHOST)

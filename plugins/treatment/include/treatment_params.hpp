@@ -51,9 +51,23 @@ enum class ParamId : std::uint32_t {
     outResonance,
     outAbsorb,
     outDiffusion,
+    // Panel bank (appended after the original 17 so saved projects keep their
+    // indices): panels 2-4 each carry the four geometry values of panel 1.
+    panels,
+    p2Cavity, p2Gap, p2Mass, p2Resist,
+    p3Cavity, p3Gap, p3Mass, p3Resist,
+    p4Cavity, p4Gap, p4Mass, p4Resist,
+    // Special effect
+    mode,
+    sweepRate,
+    sweepDepth,
+    stereo,
+    sweepSync,
+    sweepBeats,
 };
 
-inline constexpr std::size_t kParameterCount = 17;
+inline constexpr std::size_t kParameterCount = 37;
+inline constexpr int kMaxPanels = 4;
 
 struct ParamSpec {
     const char* symbol;
@@ -88,7 +102,42 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"out_resonance", "Resonance", "Hz", 20.0f, 800.0f, 0.0f, false, true, false},
     {"out_absorb", "Peak Absorb", "", 0.0f, 1.0f, 0.0f, false, true, false},
     {"out_diffusion", "Diffusion", "Hz", 200.0f, 20000.0f, 0.0f, false, true, false},
+
+    {"panels", "Panels", "", 1.0f, 4.0f, 1.0f, true, false, false},
+    {"p2_cavity", "Panel 2 Cavity", "mm", 20.0f, 400.0f, 200.0f, false, false, false},
+    {"p2_gap", "Panel 2 Gap", "mm", 0.0f, 400.0f, 80.0f, false, false, false},
+    {"p2_mass", "Panel 2 Facing Mass", "kg/m2", 0.2f, 8.0f, 1.5f, false, false, false},
+    {"p2_resist", "Panel 2 Flow Resist", "Rayl/m", 1000.0f, 60000.0f, 12000.0f, false, false, false},
+    {"p3_cavity", "Panel 3 Cavity", "mm", 20.0f, 400.0f, 50.0f, false, false, false},
+    {"p3_gap", "Panel 3 Gap", "mm", 0.0f, 400.0f, 20.0f, false, false, false},
+    {"p3_mass", "Panel 3 Facing Mass", "kg/m2", 0.2f, 8.0f, 0.4f, false, false, false},
+    {"p3_resist", "Panel 3 Flow Resist", "Rayl/m", 1000.0f, 60000.0f, 6000.0f, false, false, false},
+    {"p4_cavity", "Panel 4 Cavity", "mm", 20.0f, 400.0f, 300.0f, false, false, false},
+    {"p4_gap", "Panel 4 Gap", "mm", 0.0f, 400.0f, 150.0f, false, false, false},
+    {"p4_mass", "Panel 4 Facing Mass", "kg/m2", 0.2f, 8.0f, 3.0f, false, false, false},
+    {"p4_resist", "Panel 4 Flow Resist", "Rayl/m", 1000.0f, 60000.0f, 20000.0f, false, false, false},
+
+    {"mode", "Mode", "", 0.0f, 1.0f, 0.0f, true, false, false},
+    {"sweep_rate", "Sweep Rate", "Hz", 0.05f, 8.0f, 0.4f, false, false, false},
+    {"sweep_depth", "Sweep Depth", "%", 0.0f, 100.0f, 0.0f, false, false, false},
+    {"stereo", "Stereo Offset", "%", 0.0f, 100.0f, 0.0f, false, false, false},
+    {"sweep_sync", "Sweep Sync", "", 0.0f, 1.0f, 0.0f, true, false, false},
+    {"sweep_beats", "Sweep Division", "", 0.0f, 6.0f, 4.0f, true, false, false},
 }};
+
+// Sweep Division choices when Sweep Sync is on: quarter-note beats per LFO cycle.
+inline constexpr std::array<float, 7> kSweepBeats = {0.25f, 0.5f, 1.0f, 2.0f, 4.0f, 8.0f, 16.0f};
+inline constexpr std::array<const char*, 7> kSweepBeatsNames =
+    {"1/16", "1/8", "1/4", "1/2", "1 bar", "2 bars", "4 bars"};
+
+// Parameter index of field `field` (0 cavity, 1 gap, 2 mass, 3 resist) of
+// panel `panel` (0-3). Panel 0 is the original block at indices 0-3.
+[[nodiscard]] constexpr std::uint32_t panelFieldIndex(const int panel, const int field) noexcept
+{
+    return panel <= 0 ? static_cast<std::uint32_t>(field)
+                      : static_cast<std::uint32_t>(ParamId::p2Cavity)
+                            + static_cast<std::uint32_t>((panel - 1) * 4 + field);
+}
 
 // ── Physical constants ─────────────────────────────────────────────────────
 //
@@ -109,6 +158,10 @@ inline constexpr float kMaxQ = 12.0f;
 // Deepest attenuation either stage may reach. Negative, because both the notch
 // and the shelf are always cuts: the panel absorbs, it never boosts.
 inline constexpr float kMaxNotchDepthDb = -24.0f;
+// Ring mode inverts the panel: the resonance is boosted instead of absorbed.
+// The boost is capped well below the cut depth because up to four panels can
+// stack on one frequency.
+inline constexpr float kMaxRingBoostDb = 9.0f;
 
 // ── Fixed MIDI controller map ──────────────────────────────────────────────
 //

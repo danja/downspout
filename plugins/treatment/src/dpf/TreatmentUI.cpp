@@ -50,6 +50,7 @@ struct Accent {
 constexpr Accent kPanelAccent { 198, 132, 58 };
 constexpr Accent kCcAccent { 92, 140, 156 };
 constexpr Accent kReadoutAccent { 124, 148, 104 };
+constexpr Accent kBankAccent { 140, 98, 150 };
 constexpr int kCreamR = 250;
 constexpr int kCreamG = 248;
 constexpr int kCreamB = 242;
@@ -66,23 +67,31 @@ enum SliderId : std::uint32_t {
     kSliderMass,
     kSliderResist,
     kSliderAmount,
+    kSliderSweepRate,
+    kSliderSweepDepth,
+    kSliderStereo,
     kSliderCount,
 };
 
-constexpr std::array<std::uint32_t, kSliderCount> kSliderParams = {
+// The first five sliders form the left column; the rest sit in the bank strip.
+constexpr std::uint32_t kLeftSliders = 5;
+
+// Panel sliders 0-3 edit the selected panel, so these are the spec parameters
+// (ranges, defaults) rather than a fixed parameter: see sliderParam().
+constexpr std::array<std::uint32_t, kSliderCount> kSliderSpecs = {
     index(ParamId::cavity),
     index(ParamId::gap),
     index(ParamId::mass),
     index(ParamId::resist),
     index(ParamId::amount),
+    index(ParamId::sweepRate),
+    index(ParamId::sweepDepth),
+    index(ParamId::stereo),
 };
 
 constexpr std::array<const char*, kSliderCount> kSliderLabels = {
     "Cavity", "Air Gap", "Facing Mass", "Flow Resist", "Amount",
-};
-
-constexpr std::array<const char*, kSliderCount> kSliderSuffix = {
-    "mm", "mm", "kg/m2", "Rayl/m", "%",
+    "Sweep Rate", "Sweep Depth", "Stereo Offset",
 };
 
 struct DropDef {
@@ -120,8 +129,9 @@ constexpr const char* kCcCommonNames(int cc)
 // more than a decade, so a linear track would leave most of the range unusable.
 [[nodiscard]] float sliderToValue(const std::uint32_t slider, const float t) noexcept
 {
-    const ParamSpec& spec = kParameterSpecs[kSliderParams[slider]];
-    const bool logarithmic = slider == kSliderCavity || slider == kSliderResist;
+    const ParamSpec& spec = kParameterSpecs[kSliderSpecs[slider]];
+    const bool logarithmic = slider == kSliderCavity || slider == kSliderResist
+        || slider == kSliderSweepRate;
 
     if (!logarithmic || spec.minimum <= 0.0f)
         return spec.minimum + t * (spec.maximum - spec.minimum);
@@ -133,8 +143,9 @@ constexpr const char* kCcCommonNames(int cc)
 
 [[nodiscard]] float valueToSlider(const std::uint32_t slider, const float value) noexcept
 {
-    const ParamSpec& spec = kParameterSpecs[kSliderParams[slider]];
-    const bool logarithmic = slider == kSliderCavity || slider == kSliderResist;
+    const ParamSpec& spec = kParameterSpecs[kSliderSpecs[slider]];
+    const bool logarithmic = slider == kSliderCavity || slider == kSliderResist
+        || slider == kSliderSweepRate;
 
     if (!logarithmic || spec.minimum <= 0.0f)
         return clampf((value - spec.minimum) / (spec.maximum - spec.minimum), 0.0f, 1.0f);
@@ -162,7 +173,12 @@ constexpr const char* kCcCommonNames(int cc)
             std::snprintf(buf, sizeof(buf), "%.0f Rayl/m", static_cast<double>(value));
         break;
     case kSliderAmount:
+    case kSliderSweepDepth:
+    case kSliderStereo:
         std::snprintf(buf, sizeof(buf), "%.0f%%", static_cast<double>(value));
+        break;
+    case kSliderSweepRate:
+        std::snprintf(buf, sizeof(buf), "%.2f Hz", static_cast<double>(value));
         break;
     default:
         std::snprintf(buf, sizeof(buf), "%.2f", static_cast<double>(value));
@@ -217,11 +233,13 @@ constexpr float kItemH = 20.0f;
 constexpr int kMaxRows = 10;
 constexpr int kTwoColLimit = 20;
 constexpr float kTrackH = 12.0f;
+constexpr float kBankY = 586.0f;     // bank / effect strip
 
 // The plot's frequency axis and floor.
 constexpr float kPlotMinHz = 20.0f;
 constexpr float kPlotMaxHz = 20000.0f;
 constexpr float kPlotFloorDb = -30.0f;
+constexpr float kPlotRingTopDb = 12.0f;   // headroom shown in Ring mode
 constexpr int kPlotSegments = 110;
 
 // The Flow Resist slider carries a tick at the impedance optimum, so the
@@ -248,12 +266,11 @@ constexpr int kPlotSegments = 110;
     return plot.x + clampf(t, 0.0f, 1.0f) * plot.w;
 }
 
-// 0 dB sits at the top of the plot and kPlotFloorDb at the bottom. kPlotFloorDb
-// is negative, so dividing by it turns the dB reading into a fraction measured
-// down from the top: 0 dB -> 0, floor -> 1.
-[[nodiscard]] float plotYForDb(const Rect& plot, const float db) noexcept
+// topDb (0, or +12 in Ring mode) sits at the top of the plot and kPlotFloorDb at
+// the bottom; the result is the dB reading as a fraction measured down from the top.
+[[nodiscard]] float plotYForDb(const Rect& plot, const float db, const float topDb) noexcept
 {
-    const float fractionDown = clampf(db / kPlotFloorDb, 0.0f, 1.0f);
+    const float fractionDown = clampf((topDb - db) / (topDb - kPlotFloorDb), 0.0f, 1.0f);
     return plot.y + fractionDown * plot.h;
 }
 
@@ -356,6 +373,30 @@ protected:
             return true;
         }
 
+        for (int k = 0; k < downspout::treatment::kMaxPanels; ++k) {
+            if (countBtn(k).contains(mx, my)) {
+                commitParam(index(ParamId::panels), static_cast<float>(k + 1));
+                return true;
+            }
+            if (editBtn(k).contains(mx, my)) {
+                if (k < panelCount()) {
+                    selected_ = k;
+                    repaint();
+                }
+                return true;
+            }
+        }
+        for (int m = 0; m < 2; ++m) {
+            if (syncBtn(m).contains(mx, my)) {
+                commitParam(index(ParamId::sweepSync), static_cast<float>(m));
+                return true;
+            }
+            if (modeBtn(m).contains(mx, my)) {
+                commitParam(index(ParamId::mode), static_cast<float>(m));
+                return true;
+            }
+        }
+
         for (int s = 0; s < static_cast<int>(kSliderCount); ++s) {
             const Rect track = sliderTrack(s);
             if (track.contains(mx, my)) {
@@ -433,6 +474,7 @@ private:
 
     std::array<float, kParameterCount> values_ {};
     int dragSlider_ = -1;
+    int selected_ = 0;   // panel the left-column sliders edit
 
     int openDrop_ = -1;
     int dropScroll_ = 0;
@@ -451,12 +493,17 @@ private:
 
     [[nodiscard]] Rect sliderTrack(const std::uint32_t slider) const noexcept
     {
+        if (slider >= kLeftSliders) {
+            const float w = (static_cast<float>(getWidth()) - 2.0f * kPad - 2.0f * 16.0f) / 3.0f;
+            return { kPad + static_cast<float>(slider - kLeftSliders) * (w + 16.0f),
+                     kBankY + 82.0f, w, kTrackH };
+        }
         return { kPad, sliderRowY(slider) + 19.0f, kSplitX - 2.0f * kPad, kTrackH };
     }
 
     [[nodiscard]] Rect bypassBox() const noexcept
     {
-        return { kPad, sliderRowY(kSliderCount) + 22.0f, kSplitX - 2.0f * kPad, 34.0f };
+        return { kPad, sliderRowY(kLeftSliders) + 22.0f, kSplitX - 2.0f * kPad, 34.0f };
     }
 
     [[nodiscard]] Rect ccDropBox(const std::uint32_t drop) const noexcept
@@ -496,8 +543,54 @@ private:
     {
         const Rect track = sliderTrack(slider);
         const float t = clampf((mx - track.x) / std::max(1.0f, track.w), 0.0f, 1.0f);
-        commitParameter(kSliderParams[slider], sliderToValue(slider, t));
+        if (slider == kSliderSweepRate && syncOn()) {
+            commitParameter(index(ParamId::sweepBeats), std::round(t * 6.0f));
+            return;
+        }
+        commitParameter(sliderParam(slider), sliderToValue(slider, t));
     }
+
+    // Panel sliders edit the selected panel; Amount and the sweep sliders are global.
+    [[nodiscard]] std::uint32_t sliderParam(const std::uint32_t slider) const noexcept
+    {
+        if (slider <= kSliderResist)
+            return downspout::treatment::panelFieldIndex(selectedPanel(), static_cast<int>(slider));
+        return kSliderSpecs[slider];
+    }
+
+    [[nodiscard]] int panelCount() const noexcept
+    {
+        return std::clamp(static_cast<int>(std::lround(values_[index(ParamId::panels)])), 1,
+                          downspout::treatment::kMaxPanels);
+    }
+
+    [[nodiscard]] int selectedPanel() const noexcept
+    {
+        return std::min(selected_, panelCount() - 1);
+    }
+
+    [[nodiscard]] bool ringMode() const noexcept { return values_[index(ParamId::mode)] >= 0.5f; }
+
+    // Bank strip buttons: panel count (4), edit-panel tabs (4), mode (2).
+    static constexpr float kBtnW = 28.0f;
+    static constexpr float kBtnH = 24.0f;
+    [[nodiscard]] Rect countBtn(const int k) const noexcept
+    {
+        return { kPad + 52.0f + static_cast<float>(k) * (kBtnW + 4.0f), kBankY + 28.0f, kBtnW, kBtnH };
+    }
+    [[nodiscard]] Rect editBtn(const int k) const noexcept
+    {
+        return { kPad + 226.0f + static_cast<float>(k) * (kBtnW + 4.0f), kBankY + 28.0f, kBtnW, kBtnH };
+    }
+    [[nodiscard]] Rect modeBtn(const int m) const noexcept
+    {
+        return { kPad + 408.0f + static_cast<float>(m) * 58.0f, kBankY + 28.0f, m == 0 ? 54.0f : 46.0f, kBtnH };
+    }
+    [[nodiscard]] Rect syncBtn(const int m) const noexcept
+    {
+        return { kPad + 580.0f + static_cast<float>(m) * 56.0f, kBankY + 28.0f, 50.0f, kBtnH };
+    }
+    [[nodiscard]] bool syncOn() const noexcept { return values_[index(ParamId::sweepSync)] >= 0.5f; }
 
     void openDrop(const int id)
     {
@@ -586,6 +679,20 @@ private:
         p.amount = values_[index(ParamId::amount)];
         p.bypass = values_[index(ParamId::bypass)];
         p.seed = values_[index(ParamId::seed)];
+        p.panels = values_[index(ParamId::panels)];
+        for (int k = 1; k < downspout::treatment::kMaxPanels; ++k) {
+            auto& g = p.extra[static_cast<std::size_t>(k - 1)];
+            g.cavity = values_[downspout::treatment::panelFieldIndex(k, 0)];
+            g.gap = values_[downspout::treatment::panelFieldIndex(k, 1)];
+            g.mass = values_[downspout::treatment::panelFieldIndex(k, 2)];
+            g.resist = values_[downspout::treatment::panelFieldIndex(k, 3)];
+        }
+        p.mode = values_[index(ParamId::mode)];
+        p.sweepRate = values_[index(ParamId::sweepRate)];
+        p.sweepDepth = values_[index(ParamId::sweepDepth)];
+        p.stereo = values_[index(ParamId::stereo)];
+        p.sweepSync = values_[index(ParamId::sweepSync)];
+        p.sweepBeats = values_[index(ParamId::sweepBeats)];
         return p;
     }
 
@@ -643,8 +750,87 @@ private:
 
     void drawColumnStrips(const float W)
     {
-        drawColumnStrip(kPad, kSplitX - 2.0f * kPad, "PANEL", kPanelAccent);
-        drawColumnStrip(kCcX, W - kCcX - kPad, "DRIFT CC ROUTING", kCcAccent);
+        char title[40];
+        std::snprintf(title, sizeof(title), "PANEL %d OF %d", selectedPanel() + 1, panelCount());
+        drawColumnStrip(kPad, kSplitX - 2.0f * kPad, title, kPanelAccent);
+        drawColumnStrip(kCcX, W - kCcX - kPad, "DRIFT CC ROUTING (PANEL 1)", kCcAccent);
+        drawBankStrip(W);
+    }
+
+    void drawBankStrip(const float W)
+    {
+        const auto& t = theme();
+        beginPath();
+        fc(kBankAccent);
+        roundedRect(kPad, kBankY, W - 2.0f * kPad, kStripH, 2.0f);
+        fill();
+        closePath();
+        fillColor(kCreamR, kCreamG, kCreamB, 255);
+        fontSize(10.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        text(kPad + 8.0f, kBankY + kStripH * 0.5f, "PANEL BANK \xc2\xb7 SPECIAL EFFECT", nullptr);
+
+        const float labelY = kBankY + 28.0f + kBtnH * 0.5f;
+        fontSize(11.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        fc(t.textDim);
+        text(kPad, labelY, "Panels", nullptr);
+        text(kPad + 180.0f, labelY, "Edit", nullptr);
+        text(kPad + 366.0f - 8.0f, labelY, "Mode", nullptr);
+        text(kPad + 530.0f, labelY, "Sweep", nullptr);
+
+        for (int k = 0; k < downspout::treatment::kMaxPanels; ++k) {
+            char n[4];
+            std::snprintf(n, sizeof(n), "%d", k + 1);
+            drawChip(countBtn(k), n, k + 1 == panelCount(), true);
+            drawChip(editBtn(k), n, k == selectedPanel(), k < panelCount());
+        }
+        drawChip(modeBtn(0), "Absorb", !ringMode(), true);
+        drawChip(modeBtn(1), "Ring", ringMode(), true);
+        drawChip(syncBtn(0), "Free", !syncOn(), true);
+        drawChip(syncBtn(1), "Sync", syncOn(), true);
+
+        for (std::uint32_t s = kLeftSliders; s < kSliderCount; ++s) {
+            const Rect track = sliderTrack(s);
+            if (s == kSliderSweepRate && syncOn()) {
+                const int div = std::clamp(static_cast<int>(std::lround(values_[index(ParamId::sweepBeats)])), 0, 6);
+                drawLabelValue(track.x, track.y - 17.0f, track.w, "Sweep Division",
+                               downspout::treatment::kSweepBeatsNames[static_cast<std::size_t>(div)]);
+                drawTrack(track, static_cast<float>(div) / 6.0f, kBankAccent);
+                continue;
+            }
+            drawLabelValue(track.x, track.y - 17.0f, track.w, kSliderLabels[s],
+                           formatSlider(s, values_[sliderParam(s)]).c_str());
+            drawTrack(track, valueToSlider(s, values_[sliderParam(s)]), kBankAccent);
+        }
+
+        fontSize(9.5f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fc(t.textDisabled);
+        text(kPad, kBankY + 104.0f,
+             "Sweep flexes each panel's facing mass: 100% = +/-1 octave, panels a quarter cycle apart.", nullptr);
+        text(kPad, kBankY + 118.0f,
+             "Ring boosts where Absorb cuts. Sync locks the sweep to the host tempo and song position.", nullptr);
+    }
+
+    void drawChip(const Rect& r, const char* label, const bool on, const bool enabled)
+    {
+        const auto& t = theme();
+        beginPath();
+        if (on)
+            fc(kBankAccent);
+        else
+            fc(t.buttonFace);
+        roundedRect(r.x, r.y, r.w, r.h, 3.0f);
+        fill();
+        closePath();
+        fontSize(11.0f);
+        textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+        if (on)
+            fillColor(kCreamR, kCreamG, kCreamB, 255);
+        else
+            fc(enabled ? t.textPrimary : t.textDisabled);
+        text(r.x + r.w * 0.5f, r.y + r.h * 0.5f, label, nullptr);
     }
 
     void drawColumnStrip(const float x, const float w, const char* title, const Accent& accent)
@@ -667,12 +853,12 @@ private:
         sc(t.panel);
         strokeWidth(1.0f);
         moveTo(kSplitX, kHeaderH);
-        lineTo(kSplitX, H);
+        lineTo(kSplitX, kBankY - 6.0f);
         stroke();
         closePath();
     }
 
-    void drawTrack(const Rect& tr, const float norm)
+    void drawTrack(const Rect& tr, const float norm, const Accent& accent = kPanelAccent)
     {
         const auto& t = theme();
         beginPath();
@@ -683,7 +869,7 @@ private:
 
         if (norm > 0.001f) {
             beginPath();
-            fc(kPanelAccent);
+            fc(accent);
             roundedRect(tr.x, tr.y, std::max(tr.h, tr.w * norm), tr.h, 6.0f);
             fill();
             closePath();
@@ -719,9 +905,9 @@ private:
     {
         const float trackW = kSplitX - 2.0f * kPad;
 
-        for (std::uint32_t s = 0; s < kSliderCount; ++s) {
+        for (std::uint32_t s = 0; s < kLeftSliders; ++s) {
             const Rect track = sliderTrack(s);
-            const std::uint32_t parameter = kSliderParams[s];
+            const std::uint32_t parameter = sliderParam(s);
             drawLabelValue(kPad, track.y - 17.0f, trackW, kSliderLabels[s],
                            formatSlider(s, values_[parameter]).c_str());
             drawTrack(track, valueToSlider(s, values_[parameter]));
@@ -739,10 +925,12 @@ private:
         drawAbsorptionPlot(plotBox());
         drawMatchLegend(plotBox());
 
-        const PanelState panel = downspout::treatment::analysePanel(coreParameters());
+        const downspout::treatment::Parameters selectedView =
+            downspout::treatment::panelView(coreParameters(), selectedPanel());
+        const PanelState panel = downspout::treatment::analysePanel(selectedView);
         const Rect plot = plotBox();
         const float readoutY = plot.y + plot.h + 22.0f;
-        const float totalMm = values_[index(ParamId::cavity)] + values_[index(ParamId::gap)];
+        const float totalMm = selectedView.cavity + selectedView.gap;
 
         char line[112];
         std::snprintf(line, sizeof(line), "total depth %.0f mm", static_cast<double>(totalMm));
@@ -771,7 +959,7 @@ private:
         fontSize(9.5f);
         textAlign(ALIGN_LEFT | ALIGN_BOTTOM);
         fc(th.textDim);
-        text(plot.x, plot.y - 5.0f, "ABSORPTION", nullptr);
+        text(plot.x, plot.y - 5.0f, ringMode() ? "RESONANCE (RING)" : "ABSORPTION", nullptr);
 
         // Scale key, bottom-right, so the vertical axis is readable.
         fontSize(8.0f);
@@ -783,7 +971,10 @@ private:
         textAlign(ALIGN_RIGHT | ALIGN_BOTTOM);
         fc(th.textDim);
         const float x = plot.x + plot.w - 4.0f;
-        text(x, plot.y + 11.0f, "0 dB", nullptr);
+        if (ringMode())
+            text(x, plot.y + 11.0f, "+12 dB", nullptr);
+        else
+            text(x, plot.y + 11.0f, "0 dB", nullptr);
         text(x, plot.y + plot.h - 2.0f, "-30 dB", nullptr);
 
         // Explain the Flow Resist tick in place, under the slider it belongs to
@@ -809,7 +1000,7 @@ private:
     void drawMatchTick(const Rect& track)
     {
         const auto& th = theme();
-        const float t = flowResistMatchPosition(values_[index(ParamId::cavity)]);
+        const float t = flowResistMatchPosition(values_[sliderParam(kSliderCavity)]);
         const float x = track.x + track.w * t;
 
         // A tick through the groove, light enough not to read as a value.
@@ -825,9 +1016,22 @@ private:
     void drawAbsorptionPlot(const Rect plot)
     {
         const auto& th = theme();
-        const PanelState panel = downspout::treatment::analysePanel(coreParameters());
-        const downspout::treatment::PanelResponse response =
-            downspout::treatment::panelCoeffs(coreParameters(), 48000.0);
+        const downspout::treatment::Parameters core = coreParameters();
+        const int count = panelCount();
+        const float topDb = ringMode() ? kPlotRingTopDb : 0.0f;
+
+        std::array<downspout::treatment::PanelResponse, downspout::treatment::kMaxPanels> responses {};
+        for (int k = 0; k < count; ++k)
+            responses[static_cast<std::size_t>(k)] =
+                downspout::treatment::panelCoeffs(downspout::treatment::panelView(core, k), 48000.0);
+
+        // The bank is a chain, so its curve is the product of the panels' curves.
+        const auto bankDb = [&](const float hz) {
+            float mag = 1.0f;
+            for (int k = 0; k < count; ++k)
+                mag *= downspout::treatment::transmissionAt(responses[static_cast<std::size_t>(k)], hz, 48000.0);
+            return 20.0f * std::log10(std::max(mag, 1.0e-4f));
+        };
 
         // Frame and 0 dB reference line.
         beginPath();
@@ -842,7 +1046,7 @@ private:
         stroke();
         closePath();
 
-        const float zeroY = plotYForDb(plot, 0.0f);
+        const float zeroY = plotYForDb(plot, 0.0f, topDb);
         beginPath();
         sc(th.border);
         strokeWidth(1.0f);
@@ -870,67 +1074,68 @@ private:
             text(x, plot.y + plot.h + 4.0f, buf, nullptr);
         }
 
+        const auto hzAt = [](const float t) {
+            return std::exp(std::log(kPlotMinHz) + t * (std::log(kPlotMaxHz) - std::log(kPlotMinHz)));
+        };
+
         // The curve itself, as filled area against 0 dB.
         beginPath();
         moveTo(plot.x, zeroY);
         for (int i = 0; i <= kPlotSegments; ++i) {
             const float t = static_cast<float>(i) / kPlotSegments;
-            const float x = plot.x + t * plot.w;
-            const float hz = std::exp(std::log(kPlotMinHz)
-                + t * (std::log(kPlotMaxHz) - std::log(kPlotMinHz)));
-            const float mag = downspout::treatment::transmissionAt(response, hz, 48000.0);
-            const float db = 20.0f * std::log10(std::max(mag, 1.0e-4f));
-            lineTo(x, plotYForDb(plot, db));
+            lineTo(plot.x + t * plot.w, plotYForDb(plot, bankDb(hzAt(t)), topDb));
         }
         lineTo(plot.x + plot.w, zeroY);
         closePath();
-        fc(kPanelAccent, 55);
+        fc(ringMode() ? kBankAccent : kPanelAccent, 55);
         fill();
 
         beginPath();
         for (int i = 0; i <= kPlotSegments; ++i) {
             const float t = static_cast<float>(i) / kPlotSegments;
             const float x = plot.x + t * plot.w;
-            const float hz = std::exp(std::log(kPlotMinHz)
-                + t * (std::log(kPlotMaxHz) - std::log(kPlotMinHz)));
-            const float mag = downspout::treatment::transmissionAt(response, hz, 48000.0);
-            const float db = 20.0f * std::log10(std::max(mag, 1.0e-4f));
-            const float y = plotYForDb(plot, db);
+            const float y = plotYForDb(plot, bankDb(hzAt(t)), topDb);
             if (i == 0)
                 moveTo(x, y);
             else
                 lineTo(x, y);
         }
-        sc(kPanelAccent);
+        sc(ringMode() ? kBankAccent : kPanelAccent);
         strokeWidth(2.0f);
         stroke();
         closePath();
 
-        // Mark the resonance, so the number above and the dip below agree.
-        const float rx = plotXForHz(plot, panel.resonanceHz);
-        const float rmag = downspout::treatment::transmissionAt(response, panel.resonanceHz, 48000.0);
-        const float ry = plotYForDb(plot, 20.0f * std::log10(std::max(rmag, 1.0e-4f)));
-        beginPath();
-        sc(th.textDim);
-        strokeWidth(1.0f);
-        moveTo(rx, plot.y + 2.0f);
-        lineTo(rx, plot.y + plot.h);
-        stroke();
-        closePath();
-        beginPath();
-        fc(kPanelAccent);
-        circle(rx, ry, 3.5f);
-        fill();
-        closePath();
+        // One marker per panel, numbered, so the dips can be traced back to the
+        // panels that dig them. The selected panel carries its frequency.
+        for (int k = 0; k < count; ++k) {
+            const PanelState panel = downspout::treatment::analysePanel(downspout::treatment::panelView(core, k));
+            const bool isSelected = k == selectedPanel();
+            const float rx = plotXForHz(plot, panel.resonanceHz);
+            const float ry = plotYForDb(plot, bankDb(panel.resonanceHz), topDb);
+            beginPath();
+            sc(th.textDim);
+            strokeWidth(isSelected ? 1.5f : 0.75f);
+            moveTo(rx, plot.y + 2.0f);
+            lineTo(rx, plot.y + plot.h);
+            stroke();
+            closePath();
+            beginPath();
+            fc(ringMode() ? kBankAccent : kPanelAccent);
+            circle(rx, ry, isSelected ? 4.5f : 3.0f);
+            fill();
+            closePath();
 
-        // Label, flipped to whichever side has room.
-        fontSize(9.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fc(th.textPrimary);
-        char label[32];
-        std::snprintf(label, sizeof(label), "%.0f Hz", static_cast<double>(panel.resonanceHz));
-        const bool labelLeft = rx > plot.x + plot.w * 0.6f;
-        text(labelLeft ? rx - 62.0f : rx + 6.0f, plot.y + 4.0f, label, nullptr);
+            char label[40];
+            if (isSelected)
+                std::snprintf(label, sizeof(label), "%d  %.0f Hz", k + 1, static_cast<double>(panel.resonanceHz));
+            else
+                std::snprintf(label, sizeof(label), "%d", k + 1);
+            fontSize(9.0f);
+            textAlign(ALIGN_LEFT | ALIGN_TOP);
+            fc(isSelected ? th.textPrimary : th.textDim);
+            const bool labelLeft = rx > plot.x + plot.w * 0.6f;
+            text(labelLeft ? rx - (isSelected ? 62.0f : 12.0f) : rx + 6.0f, plot.y + 4.0f, label, nullptr);
+        }
     }
 
     void drawSwitchRow(const Rect& box, const char* label, const bool on,

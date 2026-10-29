@@ -5,6 +5,7 @@
 #include <cmath>
 #include <complex>
 #include <cstdio>
+#include <string>
 
 static int gPassed = 0;
 static int gFailed = 0;
@@ -564,6 +565,475 @@ static void testSerialization()
     check("garbage deserialises to nullopt", !deserializeParameters("nonsense\n").has_value());
 }
 
+// ── Panel bank and special effect ───────────────────────────────────────────
+
+static Parameters bank(const int panels)
+{
+    Parameters p;
+    p.panels = static_cast<float>(panels);
+    return p;
+}
+
+static Block tone(const float hz)
+{
+    Block b;
+    for (std::uint32_t i = 0; i < kFrames; ++i)
+        b.inL[i] = b.inR[i] = 0.5f * std::sin(2.0f * 3.14159265f * hz * static_cast<float>(i)
+                                              / static_cast<float>(kSr));
+    return b;
+}
+
+// Steady-state level of a sine through a parameter set (second half of 4 blocks).
+static float levelOf(const Parameters& p, const float hz)
+{
+    EngineState s;
+    float level = 0.0f;
+    std::uint32_t n = 0;
+    for (int blk = 0; blk < 4; ++blk) {
+        Block b;
+        for (std::uint32_t i = 0; i < kFrames; ++i) {
+            const double t = static_cast<double>(blk * kFrames + i) / kSr;
+            b.inL[i] = b.inR[i] = 0.5f * static_cast<float>(std::sin(2.0 * M_PI * hz * t));
+        }
+        run(s, p, b);
+        if (blk == 3) {
+            level = rms(b.outL.data(), 0, kFrames);
+            n = kFrames;
+        }
+    }
+    return n ? level : 0.0f;
+}
+
+static void testBankDefaultsAreInert()
+{
+    const Parameters d;
+    check("default is one panel", d.panels == 1.0f);
+    check("default mode is Absorb", d.mode == 0.0f);
+    check("default sweep depth is off", d.sweepDepth == 0.0f);
+    check("default stereo offset is 0", d.stereo == 0.0f);
+    check("spec table defaults match the core",
+          kParameterSpecs[index(ParamId::panels)].defaultValue == d.panels
+              && kParameterSpecs[index(ParamId::sweepDepth)].defaultValue == d.sweepDepth
+              && kParameterSpecs[index(ParamId::mode)].defaultValue == d.mode
+              && kParameterSpecs[index(ParamId::sweepRate)].defaultValue == d.sweepRate);
+
+    bool extrasMatch = true;
+    for (int k = 1; k < kMaxPanels; ++k) {
+        const PanelGeometry& g = d.extra[static_cast<std::size_t>(k - 1)];
+        extrasMatch = extrasMatch
+            && kParameterSpecs[panelFieldIndex(k, 0)].defaultValue == g.cavity
+            && kParameterSpecs[panelFieldIndex(k, 1)].defaultValue == g.gap
+            && kParameterSpecs[panelFieldIndex(k, 2)].defaultValue == g.mass
+            && kParameterSpecs[panelFieldIndex(k, 3)].defaultValue == g.resist;
+    }
+    check("extra panel spec defaults match the core", extrasMatch);
+    check("panel 2 cavity symbol", std::string(kParameterSpecs[panelFieldIndex(1, 0)].symbol) == "p2_cavity");
+    check("panel 4 resist symbol", std::string(kParameterSpecs[panelFieldIndex(3, 3)].symbol) == "p4_resist");
+    check("original indices are stable", index(ParamId::randomise) == 13 && index(ParamId::outDiffusion) == 16
+              && index(ParamId::panels) == 17);
+}
+
+static void testPanelView()
+{
+    Parameters p = bank(3);
+    const Parameters v = panelView(p, 2);
+    check("panelView 2 is the third panel", v.cavity == p.extra[1].cavity && v.mass == p.extra[1].mass
+              && v.resist == p.extra[1].resist && v.panels == 1.0f);
+    check("panelView 0 is panel 1", panelView(p, 0).cavity == p.cavity);
+}
+
+// Panels beyond the count must not leak into the audio.
+static void testInactivePanelsAreSilent()
+{
+    Parameters a = bank(1);
+    Parameters b = bank(1);
+    b.extra[0].cavity = 350.0f;
+    b.extra[1].mass = 5.0f;
+    Block x = tone(220.0f), y = tone(220.0f);
+    EngineState sa, sb;
+    run(sa, a, x);
+    run(sb, b, y);
+    bool same = true;
+    for (std::uint32_t i = 0; i < kFrames && same; ++i)
+        same = x.outL[i] == y.outL[i];
+    check("panels beyond the count do not touch the audio", same);
+}
+
+// Every added panel must change the sound, and dig at its own resonance.
+static void testEachPanelIsAudible()
+{
+    bool allAudible = true;
+    for (int n = 2; n <= kMaxPanels; ++n) {
+        const Parameters with = bank(n);
+        const Parameters without = bank(n - 1);
+        const float hz = analysePanel(panelView(with, n - 1)).resonanceHz;
+        const float a = levelOf(with, hz);
+        const float b = levelOf(without, hz);
+        allAudible = allAudible && a < b * 0.9f;
+    }
+    check("each added panel absorbs at its own resonance", allAudible);
+
+    // Fields of panels 2-4 each move the resonance or the depth.
+    Parameters base = bank(4);
+    bool fieldsAudible = true;
+    for (int k = 1; k < kMaxPanels; ++k) {
+        for (int f = 0; f < 4; ++f) {
+            Parameters q = base;
+            PanelGeometry& g = q.extra[static_cast<std::size_t>(k - 1)];
+            float* field = f == 0 ? &g.cavity : f == 1 ? &g.gap : f == 2 ? &g.mass : &g.resist;
+            *field = f == 3 ? *field * 0.3f : f == 2 ? *field * 2.0f : *field * 0.5f + 20.0f;
+            const PanelState before = analysePanel(panelView(base, k));
+            const PanelState after = analysePanel(panelView(q, k));
+            const bool moved = std::fabs(before.resonanceHz - after.resonanceHz) > 0.5f
+                || std::fabs(before.peakAbsorb - after.peakAbsorb) > 0.01f
+                || std::fabs(before.diffusionHz - after.diffusionHz) > 1.0f;
+            fieldsAudible = fieldsAudible && moved;
+        }
+    }
+    check("every field of panels 2-4 changes the panel", fieldsAudible);
+}
+
+static void testAbsorbBankNeverBoosts()
+{
+    float worst = 0.0f;
+    for (int n = 1; n <= kMaxPanels; ++n) {
+        Parameters p = bank(n);
+        for (int i = 1; i <= 40; ++i) {
+            p.seed = static_cast<float>(i);
+            p = randomiseParameters(p);
+            float bankPeak = 0.0f;
+            for (int hz = 20; hz <= 20000; hz += 47) {
+                float mag = 1.0f;
+                for (int k = 0; k < n; ++k)
+                    mag *= transmissionAt(panelCoeffs(panelView(p, k), kSr), hz, kSr);
+                bankPeak = std::max(bankPeak, mag);
+            }
+            worst = std::max(worst, bankPeak);
+        }
+    }
+    check("an absorbing bank never exceeds unity", worst <= 1.0001f);
+}
+
+static void testRingMode()
+{
+    Parameters absorb;
+    Parameters ring;
+    ring.mode = 1.0f;
+    const float hz = analysePanel(Parameters {}).resonanceHz;
+    const float cut = transmissionAt(panelCoeffs(absorb, kSr), hz, kSr);
+    const float boost = transmissionAt(panelCoeffs(ring, kSr), hz, kSr);
+    check("absorb mode cuts at the resonance", cut < 0.9f);
+    check("ring mode boosts at the resonance", boost > 1.2f);
+
+    // Bounded: each panel caps its notch and shelf boost, so even four panels
+    // stacked on one frequency stay inside 4 * 2 * kMaxRingBoostDb.
+    float worst = 0.0f;
+    for (int i = 1; i <= 30; ++i) {
+        Parameters q = bank(4);
+        q.mode = 1.0f;
+        q.seed = static_cast<float>(i);
+        q = randomiseParameters(q);
+        for (int hz2 = 20; hz2 <= 20000; hz2 += 31) {
+            float mag = 1.0f;
+            for (int k = 0; k < 4; ++k)
+                mag *= transmissionAt(panelCoeffs(panelView(q, k), kSr), hz2, kSr);
+            worst = std::max(worst, mag);
+        }
+    }
+    check("a ring bank stays under the documented cap",
+          worst <= std::pow(10.0f, 4.0f * 2.0f * kMaxRingBoostDb / 20.0f));
+
+    // Stability: an impulse through four ring panels, swept, must decay.
+    Parameters q = bank(4);
+    q.mode = 1.0f;
+    q.sweepDepth = 100.0f;
+    q.sweepRate = 2.0f;
+    EngineState s;
+    Block b;
+    b.inL[0] = b.inR[0] = 1.0f;
+    float tail = 0.0f;
+    float peak = 0.0f;
+    for (int blk = 0; blk < 400; ++blk) {
+        run(s, q, b);
+        b.inL.fill(0.0f);
+        b.inR.fill(0.0f);
+        for (std::uint32_t i = 0; i < kFrames; ++i)
+            peak = std::max(peak, std::fabs(b.outL[i]));
+        if (blk == 399)
+            tail = rms(b.outL.data(), 0, kFrames);
+    }
+    check("a swept ring bank is finite and its impulse decays", std::isfinite(peak) && peak < 50.0f && tail < 1e-3f);
+}
+
+static void testSweep()
+{
+    // Depth 0 is the static panel; the rate is then inert.
+    {
+        Parameters a, b;
+        b.sweepRate = 5.0f;
+        Block x = tone(180.0f), y = tone(180.0f);
+        EngineState sa, sb;
+        run(sa, a, x);
+        run(sb, b, y);
+        bool same = true;
+        for (std::uint32_t i = 0; i < kFrames && same; ++i)
+            same = x.outL[i] == y.outL[i];
+        check("sweep rate is inert at depth 0", same);
+    }
+
+    // The resonance actually moves: level at the static resonance changes over time.
+    {
+        Parameters p;
+        p.sweepDepth = 100.0f;
+        p.sweepRate = 1.0f;
+        const float hz = analysePanel(p).resonanceHz;
+        EngineState s;
+        float lo = 1e9f, hi = 0.0f;
+        for (int blk = 0; blk < 200; ++blk) {
+            Block b;
+            for (std::uint32_t i = 0; i < kFrames; ++i) {
+                const double t = static_cast<double>(blk * kFrames + i) / kSr;
+                b.inL[i] = b.inR[i] = 0.5f * static_cast<float>(std::sin(2.0 * M_PI * hz * t));
+            }
+            run(s, p, b);
+            if (blk > 20) {
+                const float level = rms(b.outL.data(), 0, kFrames);
+                lo = std::min(lo, level);
+                hi = std::max(hi, level);
+            }
+        }
+        check("sweep moves the resonance over time", hi > lo * 1.5f);
+    }
+
+    // Block size must not change a swept render.
+    {
+        Parameters p = bank(3);
+        p.sweepDepth = 70.0f;
+        p.sweepRate = 3.0f;
+        p.stereo = 40.0f;
+        Block a = tone(150.0f), b = tone(150.0f);
+        { EngineState s; run(s, p, a); }
+        {
+            EngineState s;
+            const std::uint32_t cuts[] = { 37, 100, 1, 200, 174 };
+            std::uint32_t at = 0;
+            for (const std::uint32_t len : cuts) {
+                const float* ins[] = { b.inL.data() + at, b.inR.data() + at };
+                float* outs[] = { b.outL.data() + at, b.outR.data() + at };
+                processBlock(s, p, len, kSr, ins, outs);
+                at += len;
+            }
+        }
+        bool same = true;
+        for (std::uint32_t i = 0; i < kFrames && same; ++i)
+            same = nearlyEqual(a.outL[i], b.outL[i], 1e-6f) && nearlyEqual(a.outR[i], b.outR[i], 1e-6f);
+        check("swept render is independent of block size", same);
+    }
+
+    // Stereo offset decorrelates the channels, and is inert without a sweep.
+    {
+        Parameters p;
+        p.sweepDepth = 100.0f;
+        p.sweepRate = 2.0f;
+        const float hz = analysePanel(p).resonanceHz;
+        auto channelGap = [&](const Parameters& q) {
+            EngineState s;
+            float gap = 0.0f;
+            for (int blk = 0; blk < 120; ++blk) {
+                Block b;
+                for (std::uint32_t i = 0; i < kFrames; ++i) {
+                    const double t = static_cast<double>(blk * kFrames + i) / kSr;
+                    b.inL[i] = b.inR[i] = 0.5f * static_cast<float>(std::sin(2.0 * M_PI * hz * t));
+                }
+                run(s, q, b);
+                for (std::uint32_t i = 0; i < kFrames; ++i)
+                    gap = std::max(gap, std::fabs(b.outL[i] - b.outR[i]));
+            }
+            return gap;
+        };
+        Parameters wide = p;
+        wide.stereo = 100.0f;
+        check("stereo 0 keeps the channels identical", channelGap(p) == 0.0f);
+        check("stereo offset separates the channels", channelGap(wide) > 0.05f);
+
+        Parameters still;
+        still.stereo = 100.0f;
+        check("stereo offset is inert without a sweep", channelGap(still) == 0.0f);
+    }
+
+    // Amount 0 stays transparent through the whole effect.
+    {
+        Parameters p = bank(4);
+        p.amount = 0.0f;
+        p.sweepDepth = 100.0f;
+        p.sweepRate = 4.0f;
+        p.stereo = 100.0f;
+        Block b = tone(300.0f);
+        EngineState s;
+        run(s, p, b);
+        run(s, p, b);
+        float worst = 0.0f;
+        for (std::uint32_t i = kFrames / 2; i < kFrames; ++i)
+            worst = std::max(worst, std::fabs(b.outL[i] - b.inL[i]));
+        check("amount 0 is transparent with a swept four-panel bank", worst < 1e-3f);
+    }
+}
+
+static void testSyncedSweep()
+{
+    check("sync is off by default", Parameters {}.sweepSync == 0.0f);
+
+    Parameters p;
+    p.sweepDepth = 100.0f;
+    p.sweepSync = 1.0f;
+    p.sweepBeats = 4.0f;  // one 4/4 bar
+
+    // Playing: the phase is the song position, so two engines that start at the
+    // same beat render the same audio no matter how the host chops the blocks.
+    auto render = [&](const std::uint32_t chunk) {
+        EngineState s;
+        s.hostBpm = 120.0;
+        s.hostPlaying = true;
+        Block b = tone(150.0f);
+        for (std::uint32_t at = 0; at < kFrames; at += chunk) {
+            const std::uint32_t len = std::min(chunk, kFrames - at);
+            s.hostBeat = 3.0 + static_cast<double>(at) * 120.0 / (60.0 * kSr);
+            const float* ins[] = { b.inL.data() + at, b.inR.data() + at };
+            float* outs[] = { b.outL.data() + at, b.outR.data() + at };
+            processBlock(s, p, len, kSr, ins, outs);
+        }
+        return b;
+    };
+    const Block whole = render(kFrames);
+    const Block cut = render(64);
+    bool same = true;
+    for (std::uint32_t i = 0; i < kFrames && same; ++i)
+        same = nearlyEqual(whole.outL[i], cut.outL[i], 1e-5f);
+    check("a playing synced sweep follows the song position", same);
+
+    // The same beat one bar later gives the same sweep position (period = 4 beats).
+    auto at = [&](const double beat) {
+        EngineState s;
+        s.hostBpm = 120.0;
+        s.hostPlaying = true;
+        s.hostBeat = beat;
+        Block b = tone(150.0f);
+        run(s, p, b);
+        return b;
+    };
+    const Block a0 = at(1.0), a1 = at(5.0), a2 = at(2.0);
+    bool periodic = true, differs = false;
+    for (std::uint32_t i = 0; i < kFrames; ++i) {
+        periodic = periodic && nearlyEqual(a0.outL[i], a1.outL[i], 1e-5f);
+        differs = differs || std::fabs(a0.outL[i] - a2.outL[i]) > 1e-3f;
+    }
+    check("synced sweep repeats every division", periodic);
+    check("a different beat gives a different sweep position", differs);
+
+    // The division changes the sweep, and tempo scales the free-running rate.
+    Parameters q = p;
+    q.sweepBeats = 1.0f;
+    EngineState s;
+    s.hostBpm = 120.0;
+    s.hostPlaying = true;
+    s.hostBeat = 1.0;
+    Block b = tone(150.0f);
+    run(s, q, b);
+    bool divisionMatters = false;
+    for (std::uint32_t i = 0; i < kFrames; ++i)
+        divisionMatters = divisionMatters || std::fabs(b.outL[i] - a0.outL[i]) > 1e-3f;
+    check("sweep division is audible", divisionMatters);
+
+    // Sync with no host tempo falls back to the Rate control.
+    EngineState noTempo, freeRun;
+    Parameters f = p;
+    f.sweepSync = 0.0f;
+    Block x = tone(150.0f), y = tone(150.0f);
+    run(noTempo, p, x);
+    run(freeRun, f, y);
+    bool fallback = true;
+    for (std::uint32_t i = 0; i < kFrames && fallback; ++i)
+        fallback = x.outL[i] == y.outL[i];
+    check("sync without a host tempo falls back to Rate", fallback);
+
+    const auto r = deserializeParameters(serializeParameters(p));
+    check("sync state round-trips", r && r->sweepSync == 1.0f && r->sweepBeats == 4.0f);
+}
+
+static void testBankRandomise()
+{
+    Parameters one = bank(1);
+    one.seed = 11.0f;
+    const Parameters r1 = randomiseParameters(one);
+    bool untouched = true;
+    for (std::size_t k = 0; k < 3; ++k)
+        untouched = untouched && r1.extra[k].cavity == one.extra[k].cavity
+            && r1.extra[k].mass == one.extra[k].mass;
+    check("single-panel randomise leaves the other panels alone", untouched);
+
+    Parameters four = bank(4);
+    four.seed = 11.0f;
+    const Parameters r4 = randomiseParameters(four);
+    check("four-panel randomise keeps panel 1 identical to the single-panel draw",
+          r4.cavity == r1.cavity && r4.gap == r1.gap && r4.mass == r1.mass && r4.resist == r1.resist);
+    bool moved = true;
+    bool inRange = true;
+    for (std::size_t k = 0; k < 3; ++k) {
+        moved = moved && r4.extra[k].cavity != four.extra[k].cavity;
+        inRange = inRange && r4.extra[k].cavity >= 20.0f && r4.extra[k].cavity <= 400.0f
+            && r4.extra[k].mass >= 0.2f && r4.extra[k].mass <= 8.0f
+            && r4.extra[k].resist >= 1000.0f && r4.extra[k].resist <= 60000.0f
+            && r4.extra[k].gap >= 0.0f && r4.extra[k].gap <= 400.0f;
+    }
+    check("randomise redraws every active panel", moved);
+    check("randomised bank stays in range", inRange);
+    check("randomise keeps panels, mode and sweep",
+          r4.panels == 4.0f && r4.mode == four.mode && r4.sweepDepth == four.sweepDepth);
+}
+
+static void testBankSerialization()
+{
+    Parameters p = bank(3);
+    p.extra[0].cavity = 222.0f;
+    p.extra[1].resist = 31000.0f;
+    p.extra[2].mass = 2.5f;
+    p.mode = 1.0f;
+    p.sweepRate = 1.25f;
+    p.sweepDepth = 64.0f;
+    p.stereo = 30.0f;
+    const auto r = deserializeParameters(serializeParameters(p));
+    check("bank round-trips", r.has_value());
+    if (r) {
+        check("rt panels", r->panels == 3.0f);
+        check("rt extra fields", std::fabs(r->extra[0].cavity - 222.0f) < 1e-3f
+                  && std::fabs(r->extra[1].resist - 31000.0f) < 1e-1f
+                  && std::fabs(r->extra[2].mass - 2.5f) < 1e-3f);
+        check("rt effect", r->mode == 1.0f && std::fabs(r->sweepRate - 1.25f) < 1e-3f
+                  && std::fabs(r->sweepDepth - 64.0f) < 1e-3f && std::fabs(r->stereo - 30.0f) < 1e-3f);
+    }
+
+    // A version-1 project, written before the bank existed, must still load and
+    // leave the new controls at their inert defaults.
+    const auto old = deserializeParameters(
+        "version=1\ncavity=120.0\ngap=40.0\nmass=1.1\nresist=9000.0\namount=80.0\nbypass=0.0\nseed=5.0\n");
+    check("a version-1 state still loads", old.has_value());
+    if (old) {
+        check("old state keeps its panel", old->cavity == 120.0f && old->amount == 80.0f);
+        check("old state gets one panel, Absorb, no sweep",
+              old->panels == 1.0f && old->mode == 0.0f && old->sweepDepth == 0.0f);
+    }
+    check("unknown bank key is rejected", !deserializeParameters("version=2\np5_cavity=1\n").has_value());
+    check("unknown bank field is rejected", !deserializeParameters("version=2\np2_colour=1\n").has_value());
+
+    Parameters broken = bank(9);
+    broken.extra[1].mass = std::nanf("");
+    broken.sweepDepth = 900.0f;
+    broken.mode = 5.0f;
+    const Parameters c = clampParameters(broken);
+    check("bank clamp", c.panels == 4.0f && std::isfinite(c.extra[1].mass) && c.sweepDepth == 100.0f
+              && c.mode == 1.0f);
+}
+
 int main()
 {
     testResonanceFormula();
@@ -585,6 +1055,17 @@ int main()
     testRandomiseIsSeededAndInRange();
     testClamp();
     testSerialization();
+
+    testBankDefaultsAreInert();
+    testPanelView();
+    testInactivePanelsAreSilent();
+    testEachPanelIsAudible();
+    testAbsorbBankNeverBoosts();
+    testRingMode();
+    testSweep();
+    testSyncedSweep();
+    testBankRandomise();
+    testBankSerialization();
 
     std::printf("\n%d passed, %d failed\n", gPassed, gFailed);
     return gFailed == 0 ? 0 : 1;

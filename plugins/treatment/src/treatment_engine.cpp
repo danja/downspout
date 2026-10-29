@@ -210,6 +210,54 @@ Parameters clampParameters(const Parameters& raw) noexcept
     out.amount = safeValue(raw.amount, 0.0f, 100.0f, 100.0f);
     out.bypass = std::round(safeValue(raw.bypass, 0.0f, 1.0f, 0.0f));
     out.seed = std::round(safeValue(raw.seed, 1.0f, 9999.0f, 1.0f));
+
+    const Parameters defaults;
+    out.panels = std::round(safeValue(raw.panels, 1.0f, static_cast<float>(kMaxPanels), 1.0f));
+    for (int k = 1; k < kMaxPanels; ++k) {
+        const PanelGeometry& in = raw.extra[static_cast<std::size_t>(k - 1)];
+        const PanelGeometry& def = defaults.extra[static_cast<std::size_t>(k - 1)];
+        PanelGeometry& dst = out.extra[static_cast<std::size_t>(k - 1)];
+        dst.cavity = safeValue(in.cavity, specs[panelFieldIndex(k, 0)].minimum,
+                               specs[panelFieldIndex(k, 0)].maximum, def.cavity);
+        dst.gap = safeValue(in.gap, specs[panelFieldIndex(k, 1)].minimum,
+                            specs[panelFieldIndex(k, 1)].maximum, def.gap);
+        dst.mass = safeValue(in.mass, specs[panelFieldIndex(k, 2)].minimum,
+                             specs[panelFieldIndex(k, 2)].maximum, def.mass);
+        dst.resist = safeValue(in.resist, specs[panelFieldIndex(k, 3)].minimum,
+                               specs[panelFieldIndex(k, 3)].maximum, def.resist);
+    }
+    out.mode = std::round(safeValue(raw.mode, 0.0f, 1.0f, 0.0f));
+    out.sweepRate = safeValue(raw.sweepRate, specs[index(ParamId::sweepRate)].minimum,
+                              specs[index(ParamId::sweepRate)].maximum, 0.4f);
+    out.sweepDepth = safeValue(raw.sweepDepth, 0.0f, 100.0f, 0.0f);
+    out.stereo = safeValue(raw.stereo, 0.0f, 100.0f, 0.0f);
+    out.sweepSync = std::round(safeValue(raw.sweepSync, 0.0f, 1.0f, 0.0f));
+    out.sweepBeats = std::round(safeValue(raw.sweepBeats, 0.0f, 6.0f, 4.0f));
+    return out;
+}
+
+Parameters panelView(const Parameters& raw, const int panel) noexcept
+{
+    Parameters out = clampParameters(raw);
+    if (panel > 0 && panel < kMaxPanels) {
+        const PanelGeometry& g = out.extra[static_cast<std::size_t>(panel - 1)];
+        out.cavity = g.cavity;
+        out.gap = g.gap;
+        out.mass = g.mass;
+        out.resist = g.resist;
+    }
+    out.panels = 1.0f;
+    return out;
+}
+
+Parameters sweptPanel(const Parameters& panel, const float depthPercent, const float lfo) noexcept
+{
+    Parameters out = panel;
+    // f0 ~ 1/sqrt(mass): scaling mass by 2^(2*d*lfo) moves f0 by -d*lfo octaves.
+    const float octaves = std::clamp(depthPercent * 0.01f, 0.0f, 1.0f) * std::clamp(lfo, -1.0f, 1.0f);
+    out.mass = std::clamp(panel.mass * std::exp2(2.0f * octaves),
+                          kParameterSpecs[index(ParamId::mass)].minimum,
+                          kParameterSpecs[index(ParamId::mass)].maximum);
     return out;
 }
 
@@ -217,6 +265,12 @@ void activate(EngineState& state) noexcept
 {
     state.notch.fill(BiquadState {});
     state.diffusion.fill(BiquadState {});
+    for (auto& panel : state.extraNotch)
+        panel.fill(BiquadState {});
+    for (auto& panel : state.extraDiffusion)
+        panel.fill(BiquadState {});
+    state.sweepPhase = 0.0;
+    state.controlCounter = 0;
 }
 
 Parameters randomiseParameters(const Parameters& raw) noexcept
@@ -232,6 +286,19 @@ Parameters randomiseParameters(const Parameters& raw) noexcept
     out.gap = std::round(rng.range(0.0f, 180.0f));
     out.mass = std::round(rng.range(0.3f, 3.2f) * 10.0f) * 0.1f;
     out.resist = std::round(rng.range(3000.0f, 30000.0f) / 500.0f) * 500.0f;
+
+    // Further panels in the bank are drawn after panel 1, only for the panels
+    // that are active, so a single-panel Randomise is unchanged from before.
+    // Each is spread over a different band so the bank covers the spectrum
+    // instead of stacking on one frequency.
+    for (int k = 1; k < static_cast<int>(p.panels); ++k) {
+        PanelGeometry& g = out.extra[static_cast<std::size_t>(k - 1)];
+        const float scale = std::exp2(rng.range(-1.5f, 1.5f));
+        g.cavity = std::round(std::clamp(rng.range(40.0f, 300.0f), 20.0f, 400.0f));
+        g.gap = std::round(rng.range(0.0f, 200.0f));
+        g.mass = std::round(std::clamp(rng.range(0.3f, 3.2f) * scale, 0.2f, 8.0f) * 10.0f) * 0.1f;
+        g.resist = std::round(rng.range(3000.0f, 30000.0f) / 500.0f) * 500.0f;
+    }
 
     // Advance the seed so a second press differs, but stay in the 1-9999
     // range the Seed parameter allows.
@@ -257,16 +324,23 @@ PanelResponse panelCoeffs(const Parameters& rawParams, const double sampleRate) 
     // alpha is the fraction of energy absorbed at the resonance, so what gets
     // through is (1 - alpha) and the notch is 20*log10 of that. A badly matched
     // fill gives a shallower dip, not just a wider one.
-    const float notchDepthDb = std::clamp(
+    float notchDepthDb = std::clamp(
         20.0f * std::log10(std::max(1.0f - alpha, 1.0e-3f)),
         kMaxNotchDepthDb, 0.0f);
 
     // Diffusion shelf: the fill keeps absorbing above its corner, where the
     // panel resonance has already closed. Gentler than the notch because a
     // backed fill never reaches alpha = 1 up there.
-    const float shelfDepthDb = std::clamp(
+    float shelfDepthDb = std::clamp(
         -6.0f * kFillShare * alpha,
         kMaxNotchDepthDb, 0.0f);
+
+    // Ring mode mirrors the panel: where it would absorb, it resonates. Same
+    // geometry, same depth, opposite sign, capped so a stacked bank stays sane.
+    if (params.mode > 0.5f) {
+        notchDepthDb = std::min(-notchDepthDb, kMaxRingBoostDb);
+        shelfDepthDb = std::min(-shelfDepthDb, kMaxRingBoostDb);
+    }
 
     PanelResponse response;
     response.valid = peakingRBJ(panel.resonanceHz, panel.q, notchDepthDb, sr, response.notch)
@@ -296,8 +370,29 @@ float transmissionAt(const PanelResponse& response, const double hz, const doubl
     };
 
     const double total = magnitude(response.notch) * magnitude(response.diffusion);
-    return static_cast<float>(std::clamp(total, 0.0, 1.0));
+    return static_cast<float>(std::clamp(total, 0.0, 16.0));
 }
+
+namespace {
+
+void glide(BiquadState& state, const BiquadCoeffs& target, const float coeffSmooth) noexcept
+{
+    if (!state.haveCoeffs) {
+        state.coeffs = target;
+        state.haveCoeffs = true;
+        return;
+    }
+    const float k = 1.0f - coeffSmooth;
+    state.coeffs.b0 += (target.b0 - state.coeffs.b0) * k;
+    state.coeffs.b1 += (target.b1 - state.coeffs.b1) * k;
+    state.coeffs.b2 += (target.b2 - state.coeffs.b2) * k;
+    state.coeffs.a1 += (target.a1 - state.coeffs.a1) * k;
+    state.coeffs.a2 += (target.a2 - state.coeffs.a2) * k;
+}
+
+constexpr std::uint32_t kSweepGrid = 32;  // samples between sweep coefficient updates
+
+}  // namespace
 
 void processBlock(EngineState& state,
                   const Parameters& rawParams,
@@ -310,55 +405,93 @@ void processBlock(EngineState& state,
     const double sr = (sampleRate > 0.0) ? sampleRate : 48000.0;
     state.sampleRate = sr;
 
-    const PanelResponse target = panelCoeffs(params, sr);
-    const bool haveNotch = target.valid;
-    const bool haveShelf = target.valid;
-
+    const int panelCount = static_cast<int>(params.panels);
+    const bool sweeping = params.sweepDepth > 0.0f;
+    // Synced: one cycle per kSweepBeats quarter notes at the host tempo. While
+    // the transport plays the phase is read from the song position (so loops and
+    // rewinds stay locked); when stopped it free-runs at the same tempo-derived
+    // rate. Without a tempo it falls back to the Rate control.
+    const bool synced = params.sweepSync > 0.5f && state.hostBpm > 0.0;
+    const double cycleBeats = static_cast<double>(kSweepBeats[static_cast<std::size_t>(params.sweepBeats)]);
+    const bool followPosition = synced && state.hostPlaying;
+    const double beatsPerSample = synced ? state.hostBpm / (60.0 * sr) : 0.0;
+    const double phaseInc = synced ? beatsPerSample / cycleBeats
+                                   : static_cast<double>(params.sweepRate) / sr;
     const float coeffSmooth = smootherCoeff(0.005f, sr);
 
+    const auto notchOf = [&state](const int panel, const std::size_t ch) -> BiquadState& {
+        return panel == 0 ? state.notch[ch] : state.extraNotch[static_cast<std::size_t>(panel - 1)][ch];
+    };
+    const auto shelfOf = [&state](const int panel, const std::size_t ch) -> BiquadState& {
+        return panel == 0 ? state.diffusion[ch] : state.extraDiffusion[static_cast<std::size_t>(panel - 1)][ch];
+    };
+
+    // Panels beyond the count are out of the chain; clear them so re-adding one
+    // starts clean instead of ringing stale state.
+    for (int k = panelCount; k < kMaxPanels; ++k) {
+        for (std::size_t ch = 0; ch < kAudioChannels; ++ch) {
+            notchOf(k, ch) = BiquadState {};
+            shelfOf(k, ch) = BiquadState {};
+        }
+    }
+
+    auto& targets = state.targets;
+    const auto refresh = [&]() {
+        for (int k = 0; k < panelCount; ++k) {
+            const Parameters view = panelView(params, k);
+            for (std::size_t ch = 0; ch < kAudioChannels; ++ch) {
+                if (!sweeping) {
+                    targets[static_cast<std::size_t>(k)][ch] = panelCoeffs(view, sr);
+                    continue;
+                }
+                // Panels sit a quarter-cycle apart; the stereo offset moves the
+                // right channel up to half a cycle (opposite phase) from the left.
+                double phase = state.sweepPhase + 0.25 * k
+                    + (ch == 1 ? 0.005 * static_cast<double>(params.stereo) : 0.0);
+                phase -= std::floor(phase);
+                const float lfo = static_cast<float>(std::sin(2.0 * kPiDouble * phase));
+                targets[static_cast<std::size_t>(k)][ch] =
+                    panelCoeffs(sweptPanel(view, params.sweepDepth, lfo), sr);
+            }
+        }
+    };
+    if (!sweeping)
+        refresh();
+
     for (std::uint32_t frame = 0; frame < frames; ++frame) {
+        if (sweeping) {
+            if (followPosition) {
+                const double beat = state.hostBeat + static_cast<double>(frame) * beatsPerSample;
+                state.sweepPhase = beat / cycleBeats - std::floor(beat / cycleBeats);
+            }
+            if (state.controlCounter == 0)
+                refresh();
+            state.controlCounter = (state.controlCounter + 1) % kSweepGrid;
+            if (!followPosition) {
+                state.sweepPhase += phaseInc;
+                state.sweepPhase -= std::floor(state.sweepPhase);
+            }
+        }
+
         for (std::size_t channel = 0; channel < kAudioChannels; ++channel) {
             const float in = (inputs && inputs[channel])
                 ? inputs[channel][frame] : 0.0f;
-            const float x = std::isfinite(in) ? in : 0.0f;
+            float y = std::isfinite(in) ? in : 0.0f;
 
-            BiquadState& notch = state.notch[channel];
-            if (haveNotch) {
-                if (!notch.haveCoeffs) {
-                    notch.coeffs = target.notch;
-                    notch.haveCoeffs = true;
-                } else {
-                    const float k = 1.0f - coeffSmooth;
-                    notch.coeffs.b0 += (target.notch.b0 - notch.coeffs.b0) * k;
-                    notch.coeffs.b1 += (target.notch.b1 - notch.coeffs.b1) * k;
-                    notch.coeffs.b2 += (target.notch.b2 - notch.coeffs.b2) * k;
-                    notch.coeffs.a1 += (target.notch.a1 - notch.coeffs.a1) * k;
-                    notch.coeffs.a2 += (target.notch.a2 - notch.coeffs.a2) * k;
+            for (int k = 0; k < panelCount; ++k) {
+                const PanelResponse& target = targets[static_cast<std::size_t>(k)][channel];
+                BiquadState& notch = notchOf(k, channel);
+                BiquadState& shelf = shelfOf(k, channel);
+                if (target.valid) {
+                    glide(notch, target.notch, coeffSmooth);
+                    glide(shelf, target.diffusion, coeffSmooth);
                 }
+
+                float notched = 0.0f;
+                runBiquad(notch, y, notched);
+                runBiquad(shelf, notched, y);
             }
 
-            BiquadState& shelf = state.diffusion[channel];
-            if (haveShelf) {
-                if (!shelf.haveCoeffs) {
-                    shelf.coeffs = target.diffusion;
-                    shelf.haveCoeffs = true;
-                } else {
-                    const float k = 1.0f - coeffSmooth;
-                    shelf.coeffs.b0 += (target.diffusion.b0 - shelf.coeffs.b0) * k;
-                    shelf.coeffs.b1 += (target.diffusion.b1 - shelf.coeffs.b1) * k;
-                    shelf.coeffs.b2 += (target.diffusion.b2 - shelf.coeffs.b2) * k;
-                    shelf.coeffs.a1 += (target.diffusion.a1 - shelf.coeffs.a1) * k;
-                    shelf.coeffs.a2 += (target.diffusion.a2 - shelf.coeffs.a2) * k;
-                }
-            }
-
-            float notched = 0.0f;
-            runBiquad(notch, x, notched);
-
-            float treated = 0.0f;
-            runBiquad(shelf, notched, treated);
-
-            float y = treated;
             if (!std::isfinite(y))
                 y = 0.0f;
 
@@ -371,14 +504,30 @@ void processBlock(EngineState& state,
 std::string serializeParameters(const Parameters& raw)
 {
     const Parameters p = clampParameters(raw);
-    return "version=1\n"
+    std::string text = "version=2\n"
            "cavity=" + std::to_string(p.cavity) + "\n"
            "gap=" + std::to_string(p.gap) + "\n"
            "mass=" + std::to_string(p.mass) + "\n"
            "resist=" + std::to_string(p.resist) + "\n"
            "amount=" + std::to_string(p.amount) + "\n"
            "bypass=" + std::to_string(p.bypass) + "\n"
-           "seed=" + std::to_string(p.seed) + "\n";
+           "seed=" + std::to_string(p.seed) + "\n"
+           "panels=" + std::to_string(p.panels) + "\n"
+           "mode=" + std::to_string(p.mode) + "\n"
+           "sweep_rate=" + std::to_string(p.sweepRate) + "\n"
+           "sweep_depth=" + std::to_string(p.sweepDepth) + "\n"
+           "stereo=" + std::to_string(p.stereo) + "\n"
+           "sweep_sync=" + std::to_string(p.sweepSync) + "\n"
+           "sweep_beats=" + std::to_string(p.sweepBeats) + "\n";
+    for (int k = 1; k < kMaxPanels; ++k) {
+        const PanelGeometry& g = p.extra[static_cast<std::size_t>(k - 1)];
+        const std::string n = std::to_string(k + 1);
+        text += "p" + n + "_cavity=" + std::to_string(g.cavity) + "\n"
+                "p" + n + "_gap=" + std::to_string(g.gap) + "\n"
+                "p" + n + "_mass=" + std::to_string(g.mass) + "\n"
+                "p" + n + "_resist=" + std::to_string(g.resist) + "\n";
+    }
+    return text;
 }
 
 std::optional<Parameters> deserializeParameters(const std::string& text)
@@ -403,6 +552,23 @@ std::optional<Parameters> deserializeParameters(const std::string& text)
         else if (key == "amount" && parseFloat(value, v)) { p.amount = v; }
         else if (key == "bypass" && parseFloat(value, v)) { p.bypass = v; }
         else if (key == "seed" && parseFloat(value, v)) { p.seed = v; }
+        else if (key == "panels" && parseFloat(value, v)) { p.panels = v; }
+        else if (key == "mode" && parseFloat(value, v)) { p.mode = v; }
+        else if (key == "sweep_rate" && parseFloat(value, v)) { p.sweepRate = v; }
+        else if (key == "sweep_depth" && parseFloat(value, v)) { p.sweepDepth = v; }
+        else if (key == "stereo" && parseFloat(value, v)) { p.stereo = v; }
+        else if (key == "sweep_sync" && parseFloat(value, v)) { p.sweepSync = v; }
+        else if (key == "sweep_beats" && parseFloat(value, v)) { p.sweepBeats = v; }
+        else if (key.size() > 3 && key[0] == 'p' && key[1] >= '2' && key[1] <= '4' && key[2] == '_'
+                 && parseFloat(value, v)) {
+            PanelGeometry& g = p.extra[static_cast<std::size_t>(key[1] - '2')];
+            const std::string_view field = key.substr(3);
+            if (field == "cavity") g.cavity = v;
+            else if (field == "gap") g.gap = v;
+            else if (field == "mass") g.mass = v;
+            else if (field == "resist") g.resist = v;
+            else return std::nullopt;
+        }
         else { return std::nullopt; }
     }
     return clampParameters(p);

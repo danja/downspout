@@ -137,6 +137,8 @@ The repository currently installs sixty-one real wrapper targets:
 - `snatch.vst3` with UI
 - `tops.vst3` with UI
 - `clatter.vst3` with UI
+- `spense.vst3` with UI
+- `heavyverb.vst3` with UI
 - `primefold.vst3` with UI
 - `quefrency.vst3` with UI
 - `ghost.vst3` with UI

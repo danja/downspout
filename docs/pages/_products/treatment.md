@@ -6,8 +6,8 @@ kind: Audio effect
 category: processor
 role: Acoustic treatment panel
 screenshot: /assets/plugins/treatment.png
-capabilities: [audio input and output, MIDI CC input]
-summary: Physically modelled acoustic treatment panel — a mass-air-mass absorber whose resonance and absorption come from real panel geometry and fill.
+capabilities: [audio input and output, MIDI CC input, host tempo sync]
+summary: Physically modelled acoustic treatment panels — up to four mass-air-mass absorbers in series, with a Ring mode and a tempo-syncable resonance sweep for special effects.
 ---
 
 ## Opinion
@@ -40,7 +40,26 @@ that is how panels, facings and fills are actually specified.
 The panel removes energy at its resonance and again above the fill's diffusion
 corner. Amount scales the absorption itself, so at 0 % the plugin is
 bit-transparent rather than a mix, and the response stays monotonic as you sweep
-it. Nothing in the chain can ever boost.
+it. In Absorb mode nothing in the chain can ever boost.
+
+### Panel bank and special effect
+
+* **Panels (1–4)** puts that many panels in series; **Edit** chooses which one the
+  Cavity / Air Gap / Facing Mass / Flow Resist sliders drive. Amount, Bypass and the
+  CC routing are shared (CC 1–5 drive panel 1). The plot shows the combined curve
+  with a numbered marker per panel's resonance, so a bank tuned across the spectrum
+  becomes a set of physically-shaped notches.
+* **Mode: Ring** flips each panel: where it would absorb, it resonates, with the same
+  frequency and depth but capped at +9 dB per section. A swept Ring bank is a
+  pitched, vocal sort of phaser; a swept Absorb bank is a moving notch comb.
+* **Sweep** flexes every panel's facing mass with an LFO (resonance moves by up to
+  ±1 octave at 100 % depth). Panels sit a quarter cycle apart, and **Stereo Offset**
+  puts the right channel up to half a cycle away from the left. Depth 0 is a static
+  panel.
+* **Sync** locks the LFO to the host tempo and song position (division from 1/16 to
+  4 bars, default one bar). While the transport plays the sweep position is read from
+  the song, so loops and rewinds stay locked; when stopped it keeps running at the
+  tempo-derived rate. A host that provides no tempo falls back to Sweep Rate.
 
 ### Parameters
 
@@ -53,7 +72,15 @@ it. Nothing in the chain can ever boost.
 | Amount      | 0–100 %       | 100 %     | How much absorption; CC 1                      |
 | Bypass      | off/on        | off       | DSP keeps running, so toggling is click-free   |
 | Seed        | 1–9999        | 1         | Drives Randomise                               |
-| Randomise   | trigger       | —         | Builds a new plausible panel                   |
+| Randomise   | trigger       | —         | Builds a new plausible bank (every active panel) |
+| Panels      | 1–4           | 1         | Panels in series                               |
+| Panel 2–4 Cavity / Gap / Mass / Resist | as panel 1 | distinct defaults | Edited via the Edit buttons |
+| Mode        | Absorb / Ring | Absorb    | Ring boosts resonances (≤ +9 dB per section)   |
+| Sweep Rate  | 0.05–8 Hz     | 0.4 Hz    | Free-running rate; inert while Sync is on      |
+| Sweep Depth | 0–100 %       | 0 %       | 0 = static; 100 = ±1 octave                    |
+| Stereo Offset | 0–100 %     | 0 %       | L/R sweep phase offset                         |
+| Sweep Sync  | Free / Sync   | Free      | Lock the LFO to host tempo and position        |
+| Sweep Division | 1/16 – 4 bars | 1 bar  | Cycle length when synced                       |
 
 The panel reports the derived total depth, resonance, Q, peak absorption and
 fill diffusion corner, and they update live as the geometry moves.

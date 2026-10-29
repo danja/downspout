@@ -56,7 +56,30 @@ never make a signal louder. That is a property the tests assert directly.
 | Amount      | 0–100 %      | 100 %   | How much absorption; CC 1                   |
 | Bypass      | off/on       | off     | DSP keeps running, so toggling is click-free |
 | Seed        | 1–9999       | 1       | Drives Randomise                            |
-| Randomise   | trigger      | —       | Builds a new plausible panel                |
+| Randomise   | trigger      | —       | Builds a new plausible bank (every active panel) |
+| Panels      | 1–4          | 1       | Panels in series                            |
+| Panel 2–4 Cavity/Gap/Mass/Resist | as panel 1 | distinct | Appended parameters `p2_cavity` … `p4_resist` |
+| Mode        | Absorb/Ring  | Absorb  | Ring boosts resonances (≤ +9 dB per section) |
+| Sweep Rate / Depth / Stereo | 0.05–8 Hz / 0–100 % / 0–100 % | 0.4 / 0 / 0 | LFO flexes facing mass; 100 % = ±1 octave |
+| Sweep Sync / Division | Free/Sync, 1/16–4 bars | Free, 1 bar | Locks the LFO to host tempo and song position |
+
+## Panel bank and special effect
+
+Panels 2–4 are optional extra panels in series (indices appended after the
+original 17, so saved projects are unaffected). The Edit buttons choose which
+panel the four geometry sliders drive; Amount, Bypass and CC routing (panel 1)
+are shared. The plot shows the combined curve with a numbered marker per panel.
+
+*Ring* mirrors each panel (same frequency and depth, opposite sign, capped at
++9 dB per notch and shelf). *Sweep* scales each panel's facing mass by
+`2^(2·depth·lfo)`, which moves its resonance by `−depth·lfo` octaves (f0 ∝
+1/√m). Panels are a quarter cycle apart and Stereo Offset moves the right
+channel up to half a cycle away. With Sweep Sync the LFO period is a musical
+division: while the transport plays, phase = song position / division (bars and
+loops stay locked); stopped, it free-runs at the tempo-derived rate; no host
+tempo falls back to Sweep Rate. Coefficients update every 32 samples and
+glide over 5 ms, independent of block size. Assumption: tempo and position come
+from the host's BBT time (`DISTRHO_PLUGIN_WANT_TIMEPOS`).
 
 Cavity and Air Gap are in millimetres because that is how panels are specified.
 Facing Mass in kg/m² is how facing sheets are specified. Flow Resist in Rayl/m

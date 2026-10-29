@@ -268,6 +268,19 @@ Progress as of 2026-05-27:
   model that the tests hold to the real filter. It adds a logarithmic option to `MagnetoKit` sliders.
   Ordinary parameters, no plugin state. See `plugins/ladder/docs/design.md`. Listening and host
   validation in REAPER remain; the rest of the oxide-studio candidates are listed in `TODO.md`.
+- `heavyverb` is an original master-bus reverb in the Magneto look: one to six "dimensions" (default 3), each a wall pair (two delay
+  lines of distance / 343 m/s) in a Householder feedback network with its own Distance, Damping and feedback Filter, a shared Decay, pre-delay,
+  early reflections from the distances, modulation, wet cuts and width, Shimmer / Swell / Duck / Gate effects and Freeze, and fifteen
+  presets (ten typical spaces, five effects) that the panel applies as ordinary parameters. No latency, dry path untouched, no plugin state.
+  About 520 core checks. Assumptions are in `plugins/heavyverb/docs/design.md`. Listening and host validation in REAPER remain, and so does
+  an ear pass over the presets (chosen by number, not by ear).
+- `spense` is a stereo phase disperser in the Magneto look, ported from the DSP of `~/github/Dispenser`
+  (MIT, JUCE/AVX2): up to eight cascades of eight trapezoidal-SVF all-pass stages, with Frequency, Resonance, Drift
+  and Pre/Post Gain and a 0 dB clip. It reports `Stack x 7` samples of latency to the host (the source chains its stages
+  through a one-sample delay each). Changes from the source: coefficients computed once per sample rather than per cascade
+  (identical output, stack 8 about 2.5 % of a core), no first-block fade-in, switched-off cascades cleared, logarithmic
+  Resonance. The panel plots the analytic group delay that the tests hold to the measured filter. Ordinary parameters, no
+  plugin state. See `plugins/spense/docs/design.md`. Listening and host validation in REAPER remain.
 - `monochord` is an eight-voice waveguide string in the Magneto look, a redesign inspired by `oxide-dsp`'s Tension device (`~/github/oxide-studio`, MIT/Apache-2.0), whose loop filters add
   delay that is never compensated (so the string plays flat, by an estimated 14 cents at middle C), whose hammer pulse is not zero-mean, and whose single dispersion all-pass is inaudible. Monochord tunes the
   loop from its own phase delay (error about 1e-12 samples; every measurable note within 0.4 cents), sets the fundamental's decay time exactly (within 12 %), makes stiffness a four-section cascade scaled to

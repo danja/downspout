@@ -184,6 +184,26 @@ controls. Put it on a synth or bass and automate Cutoff; reach for Skream instea
 scream-style feedback filter, and Damiano after it for distortion. Resonance with full Bass Comp is
 loud, so trim Output. See `plugins/ladder/docs/design.md`.
 
+### HeavyVerb (`heavyverb.vst3`)
+
+A high-quality stereo reverb meant for the master bus, with no latency and the dry signal left alone. The room is built from one to six
+**dimensions** (three by default), each a pair of parallel walls: **Distance** in metres sets how far apart, **Damping** how fast the highs
+die, and **Filter** makes each reflection darker or thinner as it goes round. **Decay** is shared, so the tail stays smooth however many
+dimensions you use. Pre-delay, early reflections, modulation, wet low and high cuts and width shape it; **Shimmer** (an octave up or down
+fed back through the room), **Swell**, **Duck**, **Gate** and **Freeze** are the special effects. Fifteen presets: Master Glue to Canyon for
+ordinary spaces, Shimmer Pad to Frozen Cloud for effects. Put it on the master bus at a low Mix; reach for Lightverb when you want a minimal, fixed-cost reverb.
+See `plugins/heavyverb/docs/design.md`.
+
+### Spense (`spense.vst3`)
+
+Stereo phase disperser: up to eight cascades of eight all-pass filters that delay frequencies around
+**Frequency** by a few milliseconds without changing the level. **Stack** adds cascades (each reports 7
+samples of latency to the host), **Resonance** sets how broad or narrow and long the smear is (low Q gentle,
+high Q ringing), **Drift** fans the stages apart and differently on each side for a wider image, and **Pre
+Gain**, **Post Gain** and the **0 dB clip** handle level. The panel plots the group delay as you move the
+controls. Put it on kicks, snares and plucks to soften or sweep their transients, or on a bus to widen it; reach
+for Ladder or Skream instead when you want to change the tone. See `plugins/spense/docs/design.md`.
+
 ### Monochord (`monochord.vst3`)
 
 Eight-voice waveguide string that can be **plucked**, **bowed** or **struck**. The loop is tuned from its own phase delay, so notes are in tune whatever you do to the string. **Position** sets where
@@ -425,7 +445,10 @@ kg/m2 and Flow Resist in Rayl/m; Amount scales the absorption itself, so 0 % is
 transparent rather than a mix. Read-only readouts report the derived resonance,
 Q, peak absorption and diffusion corner. A seeded Randomise builds a new panel
 while preserving Amount and Bypass, and CC 1-5 read Amount, Cavity, Air Gap,
-Facing Mass and Flow Resist by default.
+Facing Mass and Flow Resist by default (they drive panel 1). Up to four panels run in
+series; a Ring mode boosts where Absorb cuts, and a Sweep LFO flexes each panel's
+facing mass (+/-1 octave), with stereo offset and optional lock to host tempo and
+song position. Good as a moving notch comb (Absorb) or a pitched phaser (Ring).
 
 ## Practical combinations
 

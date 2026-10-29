@@ -23,6 +23,8 @@ using downspout::treatment::ParamSpec;
 using downspout::treatment::kControllerMap;
 using downspout::treatment::kParameterCount;
 using downspout::treatment::kParameterSpecs;
+using downspout::treatment::index;
+using downspout::treatment::panelFieldIndex;
 
 constexpr const char* kStateKeyParameters = "parameters";
 constexpr const char* kStateKeyCavity = "cavity";
@@ -68,7 +70,7 @@ protected:
     const char* getDescription() const override
     {
         return "Physically modelled acoustic treatment panel: a mass-air-mass absorber "
-               "with a porous fill. Randomise builds a new panel; five CCs drive the geometry.";
+               "with a porous fill. Up to four panels in series, a Ring mode and a geometry sweep turn it into a special effect. Randomise builds a new bank; five CCs drive panel 1.";
     }
     const char* getMaker() const override { return "danja"; }
     const char* getHomePage() const override { return "https://danja.github.io/downspout/"; }
@@ -319,6 +321,18 @@ protected:
             values_[kOutDiffusion] = panel.diffusionHz;
         }
 
+        // Host transport for a tempo-synced sweep. Position comes from BBT; a host
+        // that gives none leaves the tempo at 0 and the sweep uses its Rate.
+        const TimePosition& tp = getTimePosition();
+        engine_.hostPlaying = tp.playing;
+        engine_.hostBpm = tp.bbt.valid ? tp.bbt.beatsPerMinute : 0.0;
+        if (tp.bbt.valid) {
+            const double beatsIntoBar = static_cast<double>(tp.bbt.beat - 1)
+                + tp.bbt.tick / std::max(1.0, tp.bbt.ticksPerBeat);
+            const double bars = static_cast<double>(tp.bbt.bar - 1) * tp.bbt.beatsPerBar;
+            engine_.hostBeat = (bars + beatsIntoBar) * 4.0 / std::max(1.0f, tp.bbt.beatType);
+        }
+
         downspout::treatment::processBlock(engine_, core(), frames, getSampleRate(),
                                            inputs, outputs);
     }
@@ -363,7 +377,7 @@ private:
     static_assert(kParamBypass == downspout::treatment::index(ParamId::bypass));
     static_assert(kParamSeed == downspout::treatment::index(ParamId::seed));
     static_assert(kParamRandomise == downspout::treatment::index(ParamId::randomise));
-    static_assert(kParameterCount == 17, "the enum above must cover every spec");
+    static_assert(kParameterCount == 37, "ParamId must cover every spec; extra parameters are mapped by core()/writeCore()");
 
     [[nodiscard]] std::uint32_t ccParameter(const ParamId target) const noexcept
     {
@@ -401,6 +415,20 @@ private:
         p.amount = values_[kParamAmount];
         p.bypass = values_[kParamBypass];
         p.seed = values_[kParamSeed];
+        p.panels = values_[index(ParamId::panels)];
+        for (int k = 1; k < downspout::treatment::kMaxPanels; ++k) {
+            auto& g = p.extra[static_cast<std::size_t>(k - 1)];
+            g.cavity = values_[panelFieldIndex(k, 0)];
+            g.gap = values_[panelFieldIndex(k, 1)];
+            g.mass = values_[panelFieldIndex(k, 2)];
+            g.resist = values_[panelFieldIndex(k, 3)];
+        }
+        p.mode = values_[index(ParamId::mode)];
+        p.sweepRate = values_[index(ParamId::sweepRate)];
+        p.sweepDepth = values_[index(ParamId::sweepDepth)];
+        p.stereo = values_[index(ParamId::stereo)];
+        p.sweepSync = values_[index(ParamId::sweepSync)];
+        p.sweepBeats = values_[index(ParamId::sweepBeats)];
         return downspout::treatment::clampParameters(p);
     }
 
@@ -414,6 +442,20 @@ private:
         values_[kParamAmount] = c.amount;
         values_[kParamBypass] = c.bypass;
         values_[kParamSeed] = c.seed;
+        values_[index(ParamId::panels)] = c.panels;
+        for (int k = 1; k < downspout::treatment::kMaxPanels; ++k) {
+            const auto& g = c.extra[static_cast<std::size_t>(k - 1)];
+            values_[panelFieldIndex(k, 0)] = g.cavity;
+            values_[panelFieldIndex(k, 1)] = g.gap;
+            values_[panelFieldIndex(k, 2)] = g.mass;
+            values_[panelFieldIndex(k, 3)] = g.resist;
+        }
+        values_[index(ParamId::mode)] = c.mode;
+        values_[index(ParamId::sweepRate)] = c.sweepRate;
+        values_[index(ParamId::sweepDepth)] = c.sweepDepth;
+        values_[index(ParamId::stereo)] = c.stereo;
+        values_[index(ParamId::sweepSync)] = c.sweepSync;
+        values_[index(ParamId::sweepBeats)] = c.sweepBeats;
     }
 
     void applyToCore() noexcept

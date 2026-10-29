@@ -155,10 +155,10 @@ The VST3-specific decisions:
 
 ## Serialisation contract
 
-`version=1`, one `key=value` per line, newline-separated:
+`version=2` (version-1 text from before the bank still loads), one `key=value` per line, newline-separated:
 
 ```
-version=1
+version=2
 cavity=...
 gap=...
 mass=...
@@ -166,6 +166,8 @@ resist=...
 amount=...
 bypass=...
 seed=...
+panels, mode, sweep_rate, sweep_depth, stereo, sweep_sync, sweep_beats
+p2_cavity, p2_gap, p2_mass, p2_resist (and p3_*, p4_*)
 ```
 
 Unknown keys are rejected (`std::nullopt`) so a malformed save cannot silently
@@ -174,7 +176,9 @@ so adding a parameter later stays backward compatible.
 
 ## Test coverage
 
-`tests/treatment_core_tests.cpp`, 48 assertions:
+`tests/treatment_core_tests.cpp`, 102 assertions (the bank adds inert-default, panel-count,
+Ring cap and stability, sweep motion, block-size independence, stereo, synced sweep,
+bank Randomise and v1 state compatibility checks):
 
 - **The model** — resonance matches the textbook formula; resonance falls with
   heavier facing and deeper cavity; `f ∝ 1/sqrt(D)` verified numerically; peak
@@ -195,6 +199,7 @@ so adding a parameter later stays backward compatible.
 
 ## Outstanding
 
-- Host validation in REAPER is pending.
-- The panel has not been reviewed against `AGENTS.md`'s screenshot criteria; a
-  catalog screenshot needs capturing first.
+- Host validation in REAPER is pending, including the synced sweep against a real
+  transport (tested in the core with simulated tempo/position only).
+- The bank and sweep have not been auditioned by ear; the Ring cap (+9 dB) and the
+  default panel 2-4 geometries are chosen by numbers.

@@ -144,6 +144,19 @@ current Downspout plugins.
   k = 4.2 (1 - 10^-u) / 0.9 so the peak height rises roughly evenly in dB (k >= 4 rings). Bass Comp
   multiplies the output by 1 + c k, which undoes the 1 / (1 + k) low-frequency loss. The plotted
   curve is H = G^4 / (1 + k G^4) with G = 1 / (1 + jf/fc), scaled by Bass Comp, Mix and Output.
+- [`HeavyVerb`]({{ '/plugins/heavyverb/' | relative_url }}): feedback delay network of 2N lines (N = 1-6 dimensions, a wall pair each),
+  line length L = distance / 343 m/s x a fixed ratio in 0.917-1.283, read with 4-point Hermite interpolation and a slow sine
+  modulation. The loop is x -> one-pole low-pass (damping, 20 kHz down to 450 Hz) -> one-pole low-pass or high-pass (filter) ->
+  gain g = 10^(-3 L / (sr RT60)) -> Householder reflection y_j = x_j - (2 / n) sum(x), which is orthogonal, so with g < 1 the loop is
+  stable and every line decays at the same RT60. Freeze sets g = 1 and removes the filters. Inputs go through four Schroeder
+  all-passes per channel first (y = -g v + v[n-D]); early reflections are taps at 0.8 and 1.2 wall spacings of travel. Shimmer: two-head
+  rotating-delay pitch shifter (read heads at (1 - ratio) samples/sample, Hann crossfade over 50 ms) into tanh, fed back at 0.4.
+- [`Spense`]({{ '/plugins/spense/' | relative_url }}): phase disperser, after Dispenser. Each stage is a trapezoidal
+  state-variable filter with g = x (1 + x^2 / 3), x = pi f / sr (a cubic stand-in for tan x) and k = 1 / Q; its output
+  in - 2 k v1 is the all-pass (s^2 - k s + 1) / (s^2 + k s + 1). Eight stages form a cascade, each reading the previous
+  stage's output one sample late (so a cascade also delays by 7 samples), and up to eight cascades run in series.
+  Drift moves stage i by drift table[i] 6.37 octaves, the factor taken from a degree-5 2^x polynomial. The plotted group
+  delay is the sum over stages of k (1 + nu^2) (1 + t^2) / (g ((1 - nu^2)^2 + k^2 nu^2)), with t = tan(w / 2), nu = t / g.
 - [`Grist`]({{ '/plugins/grist/' | relative_url }}): granular grain delay. Input history in a 7 s ring buffer; one grain per
   Window / Density, each a four-point Hermite read with a Hann/percussive window of equal mean level.
   A grain starts Blur x Window x u samples back, plus (ratio - 1) x length when pitched up so it never

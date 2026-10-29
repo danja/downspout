@@ -223,6 +223,8 @@ jobs:
             echo "- snatch.vst3"
             echo "- tops.vst3"
             echo "- clatter.vst3"
+            echo "- spense.vst3"
+            echo "- heavyverb.vst3"
             echo "- keyframe.vst3"
             echo "- primefold.vst3"
             echo "- quefrency.vst3"

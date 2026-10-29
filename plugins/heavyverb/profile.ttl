@@ -1,0 +1,188 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:heavyverb a trn:PluginProfile ;
+    rdfs:label "HeavyVerb" ;
+    rdfs:comment "Stereo master-bus reverb: one to six dimensions (wall pairs) each with its own distance in metres, damping and feedback filter, plus shimmer, swell, duck, gate and freeze effects and fifteen presets. No latency; the dry path is untouched." ;
+    trn:bundleName "heavyverb.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/heavyverb/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio .
+
+dsp:heavyverb trn:hasParameter [
+    trn:symbol "dimensions" ;
+    trn:label "Dimensions" ;
+    trn:minimum 1.0 ; trn:maximum 6.0 ; trn:default 3.0 ;
+    rdfs:comment "Number of active dimensions (wall pairs), 1-6; each is two delay lines"
+], [
+    trn:symbol "distance_1" ;
+    trn:label "Distance 1" ;
+    trn:minimum 0.5 ; trn:maximum 100.0 ; trn:default 7.0 ;
+    rdfs:comment "Wall spacing in metres of dimension 1 (logarithmic); delay = distance / 343 m/s"
+], [
+    trn:symbol "distance_2" ;
+    trn:label "Distance 2" ;
+    trn:minimum 0.5 ; trn:maximum 100.0 ; trn:default 11.0 ;
+    rdfs:comment "Wall spacing in metres of dimension 2 (logarithmic); delay = distance / 343 m/s"
+], [
+    trn:symbol "distance_3" ;
+    trn:label "Distance 3" ;
+    trn:minimum 0.5 ; trn:maximum 100.0 ; trn:default 17.0 ;
+    rdfs:comment "Wall spacing in metres of dimension 3 (logarithmic); delay = distance / 343 m/s"
+], [
+    trn:symbol "distance_4" ;
+    trn:label "Distance 4" ;
+    trn:minimum 0.5 ; trn:maximum 100.0 ; trn:default 23.0 ;
+    rdfs:comment "Wall spacing in metres of dimension 4 (logarithmic); delay = distance / 343 m/s"
+], [
+    trn:symbol "distance_5" ;
+    trn:label "Distance 5" ;
+    trn:minimum 0.5 ; trn:maximum 100.0 ; trn:default 31.0 ;
+    rdfs:comment "Wall spacing in metres of dimension 5 (logarithmic); delay = distance / 343 m/s"
+], [
+    trn:symbol "distance_6" ;
+    trn:label "Distance 6" ;
+    trn:minimum 0.5 ; trn:maximum 100.0 ; trn:default 43.0 ;
+    rdfs:comment "Wall spacing in metres of dimension 6 (logarithmic); delay = distance / 343 m/s"
+], [
+    trn:symbol "damping_1" ;
+    trn:label "Damping 1" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 35.0 ;
+    rdfs:comment "High-frequency absorption percent of dimension 1: shortens the decay of the highs"
+], [
+    trn:symbol "damping_2" ;
+    trn:label "Damping 2" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 35.0 ;
+    rdfs:comment "High-frequency absorption percent of dimension 2: shortens the decay of the highs"
+], [
+    trn:symbol "damping_3" ;
+    trn:label "Damping 3" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 35.0 ;
+    rdfs:comment "High-frequency absorption percent of dimension 3: shortens the decay of the highs"
+], [
+    trn:symbol "damping_4" ;
+    trn:label "Damping 4" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 35.0 ;
+    rdfs:comment "High-frequency absorption percent of dimension 4: shortens the decay of the highs"
+], [
+    trn:symbol "damping_5" ;
+    trn:label "Damping 5" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 35.0 ;
+    rdfs:comment "High-frequency absorption percent of dimension 5: shortens the decay of the highs"
+], [
+    trn:symbol "damping_6" ;
+    trn:label "Damping 6" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 35.0 ;
+    rdfs:comment "High-frequency absorption percent of dimension 6: shortens the decay of the highs"
+], [
+    trn:symbol "filter_1" ;
+    trn:label "Filter 1" ;
+    trn:minimum -100.0 ; trn:maximum 100.0 ; trn:default 0.0 ;
+    rdfs:comment "Tone filter in the loop of dimension 1, percent: negative is low-pass (dark), positive is high-pass (thin)"
+], [
+    trn:symbol "filter_2" ;
+    trn:label "Filter 2" ;
+    trn:minimum -100.0 ; trn:maximum 100.0 ; trn:default 0.0 ;
+    rdfs:comment "Tone filter in the loop of dimension 2, percent: negative is low-pass (dark), positive is high-pass (thin)"
+], [
+    trn:symbol "filter_3" ;
+    trn:label "Filter 3" ;
+    trn:minimum -100.0 ; trn:maximum 100.0 ; trn:default 0.0 ;
+    rdfs:comment "Tone filter in the loop of dimension 3, percent: negative is low-pass (dark), positive is high-pass (thin)"
+], [
+    trn:symbol "filter_4" ;
+    trn:label "Filter 4" ;
+    trn:minimum -100.0 ; trn:maximum 100.0 ; trn:default 0.0 ;
+    rdfs:comment "Tone filter in the loop of dimension 4, percent: negative is low-pass (dark), positive is high-pass (thin)"
+], [
+    trn:symbol "filter_5" ;
+    trn:label "Filter 5" ;
+    trn:minimum -100.0 ; trn:maximum 100.0 ; trn:default 0.0 ;
+    rdfs:comment "Tone filter in the loop of dimension 5, percent: negative is low-pass (dark), positive is high-pass (thin)"
+], [
+    trn:symbol "filter_6" ;
+    trn:label "Filter 6" ;
+    trn:minimum -100.0 ; trn:maximum 100.0 ; trn:default 0.0 ;
+    rdfs:comment "Tone filter in the loop of dimension 6, percent: negative is low-pass (dark), positive is high-pass (thin)"
+], [
+    trn:symbol "decay" ;
+    trn:label "Decay" ;
+    trn:minimum 0.1 ; trn:maximum 60.0 ; trn:default 2.5 ;
+    rdfs:comment "Reverb time (RT60) at mid frequencies, shared by every dimension; logarithmic"
+], [
+    trn:symbol "pre_delay" ;
+    trn:label "Pre-delay" ;
+    trn:minimum 0.0 ; trn:maximum 250.0 ; trn:default 12.0 ;
+    rdfs:comment "Wet signal delay in ms before the reverb; the dry path is never delayed"
+], [
+    trn:symbol "mix" ;
+    trn:label "Mix" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 25.0 ;
+    rdfs:comment "Equal-power dry/wet blend percentage; 0 returns the input bit for bit"
+], [
+    trn:symbol "width" ;
+    trn:label "Width" ;
+    trn:minimum 0.0 ; trn:maximum 150.0 ; trn:default 100.0 ;
+    rdfs:comment "Side level of the wet signal in percent; 0 is mono, 100 unchanged, 150 wider"
+], [
+    trn:symbol "modulation" ;
+    trn:label "Modulation" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 35.0 ;
+    rdfs:comment "Slow movement of the delay lengths, percent, for a smoother tail"
+], [
+    trn:symbol "low_cut" ;
+    trn:label "Low Cut" ;
+    trn:minimum 20.0 ; trn:maximum 500.0 ; trn:default 60.0 ;
+    rdfs:comment "High-pass on the wet signal in Hz (logarithmic)"
+], [
+    trn:symbol "high_cut" ;
+    trn:label "High Cut" ;
+    trn:minimum 1000.0 ; trn:maximum 20000.0 ; trn:default 14000.0 ;
+    rdfs:comment "Low-pass on the wet signal in Hz (logarithmic)"
+], [
+    trn:symbol "diffusion" ;
+    trn:label "Diffusion" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 70.0 ;
+    rdfs:comment "Input smearing percent; at 0 the input all-passes are a plain 30.4 ms delay"
+], [
+    trn:symbol "early" ;
+    trn:label "Early Level" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 40.0 ;
+    rdfs:comment "Level of the early reflections, which are placed from the dimensions distances"
+], [
+    trn:symbol "output" ;
+    trn:label "Output" ;
+    trn:minimum -24.0 ; trn:maximum 12.0 ; trn:default 0.0 ;
+    rdfs:comment "Wet output gain in dB"
+], [
+    trn:symbol "effect" ;
+    trn:label "Effect" ;
+    trn:minimum 0.0 ; trn:maximum 4.0 ; trn:default 0.0 ;
+    rdfs:comment "0 off, 1 shimmer, 2 swell, 3 duck, 4 gate"
+], [
+    trn:symbol "effect_amount" ;
+    trn:label "Effect Amount" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 50.0 ;
+    rdfs:comment "Shimmer level, swell fade-in time, duck depth, or gate hold time, depending on Effect"
+], [
+    trn:symbol "shift" ;
+    trn:label "Shimmer Shift" ;
+    trn:minimum -12.0 ; trn:maximum 24.0 ; trn:default 12.0 ;
+    rdfs:comment "Shimmer pitch shift in semitones (-12 to +24)"
+], [
+    trn:symbol "freeze" ;
+    trn:label "Freeze" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "1 holds the current tail indefinitely and stops the reverb taking input"
+], [
+    trn:symbol "preset" ;
+    trn:label "Preset" ;
+    trn:minimum 0.0 ; trn:maximum 15.0 ; trn:default 0.0 ;
+    rdfs:comment "Preset number 1-15 (0 is Custom); applied by the panel as ordinary parameter values, ignored by the engine"
+] .

@@ -96,6 +96,8 @@ plugins=(
   "snatch:snatch"
   "tops:tops"
   "clatter:clatter"
+  "spense:spense"
+  "heavyverb:heavyverb"
   "primefold:primefold"
   "quefrency:quefrency"
   "ghost:ghost"

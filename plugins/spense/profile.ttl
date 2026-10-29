@@ -1,0 +1,53 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:spense a trn:PluginProfile ;
+    rdfs:label "Spense" ;
+    rdfs:comment "Stereo phase disperser: up to eight cascades of eight all-pass filters that smear phase without changing level, with a group-delay plot. Reports stack x 7 samples of latency." ;
+    trn:bundleName "spense.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/spense/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio .
+
+dsp:spense trn:hasParameter [
+    trn:symbol "stack" ;
+    trn:label "Stack" ;
+    trn:minimum 1 ; trn:maximum 8 ; trn:default 1 ;
+    rdfs:comment "Cascades in series, eight all-pass stages each; latency is 7 samples per cascade"
+], [
+    trn:symbol "frequency" ;
+    trn:label "Frequency" ;
+    trn:minimum 40.0 ; trn:maximum 20000.0 ; trn:default 1000.0 ;
+    rdfs:comment "Centre of the dispersion in Hz (logarithmic)"
+], [
+    trn:symbol "resonance" ;
+    trn:label "Resonance" ;
+    trn:minimum 0.1 ; trn:maximum 10.0 ; trn:default 0.707 ;
+    rdfs:comment "Q of every stage (logarithmic); low is a broad gentle smear, high a narrow long one"
+], [
+    trn:symbol "drift" ;
+    trn:label "Drift" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "Fans the eight stages apart in frequency, differently on the left and right"
+], [
+    trn:symbol "pre_gain" ;
+    trn:label "Pre Gain" ;
+    trn:minimum -100.0 ; trn:maximum 12.0 ; trn:default 0.0 ;
+    rdfs:comment "Gain in dB before the stack; the bottom of the range is silence"
+], [
+    trn:symbol "post_gain" ;
+    trn:label "Post Gain" ;
+    trn:minimum -100.0 ; trn:maximum 12.0 ; trn:default 0.0 ;
+    rdfs:comment "Gain in dB after the stack; the bottom of the range is silence"
+], [
+    trn:symbol "clip" ;
+    trn:label "Clip at 0 dB" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "1 hard-clips the output at 0 dBFS after Post Gain"
+] .

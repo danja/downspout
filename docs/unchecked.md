@@ -58,3 +58,5 @@ trio
 tuney-vst
 worms
 xoxolo
+spense
+heavyverb

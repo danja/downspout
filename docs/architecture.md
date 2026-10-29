@@ -266,6 +266,8 @@ The release script currently expects these bundles:
 - `snatch.vst3`
 - `tops.vst3`
 - `clatter.vst3`
+- `spense.vst3`
+- `heavyverb.vst3`
 - `primefold.vst3`
 - `quefrency.vst3`
 - `keyframe.vst3`

@@ -92,6 +92,8 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | helterskelter | helterskelter.vst3 | audio effect (wah) | 2/2 | yes/no | yes |
 | keyframe | keyframe.vst3 | audio effect (time stretch) | 2/2 | yes/no | no |
 | ladder | ladder.vst3 | audio effect (filter) | 2/2 | yes/no | no |
+| spense | spense.vst3 | audio effect (phase disperser) | 2/2 | no/no | no |
+| heavyverb | heavyverb.vst3 | audio effect (reverb) | 2/2 | no/no | no |
 | lifeform | lifeform.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | lightverb | lightverb.vst3 | audio effect (reverb) | 2/2 | yes/yes | no |
 | loopdelay | loopdelay.vst3 | audio effect (delay/looper) | 2/2 | yes/yes | yes |
@@ -785,6 +787,29 @@ ignore MIDI). MIDI in: CC 1-4 on that channel drive Cutoff, Resonance, Drive and
 response (Drive not included) from the model the tests hold to the real filter. Resonance with full
 Bass Comp is loud; trim Output.
 
+### spense
+Stereo phase disperser (port of the Dispenser DSP): **Stack** 1-8 cascades in series, each eight second-order
+all-pass stages (trapezoidal SVF, unity gain at every frequency, so level is unchanged), **Frequency** 40-20000 Hz
+(logarithmic, default 1 kHz) and **Resonance** 0.1-10 Q (logarithmic, default 0.707; low Q a broad gentle smear,
+high Q a narrow long one), **Drift** 0-1 (fans the stages apart in frequency, differently left and right),
+**Pre Gain** and **Post Gain** -100 (silence) to +12 dB, **Clip at 0 dB** (hard clip after Post Gain). Stereo in/out,
+no MIDI, no transport, no plugin state. **Reports `Stack x 7` samples of latency to the host** (the stages are chained
+through a one-sample delay each). At Q 0.707 the group-delay peak sits at about 0.64 x Frequency; by Q 5 it is on
+Frequency. The panel plots the stack's group delay from the model the tests hold to the real filter. Use it on
+transients or to widen a sound without changing its level; use ladder or skream to change the tone instead.
+
+### heavyverb
+Stereo master-bus reverb (original, no latency, dry path untouched, Mix 0 is bit-exact dry). **Dimensions** 1-6 (default 3); each
+dimension is a wall pair: two delay lines of length **Distance** / 343 m/s (0.5-100 m, logarithmic) in a 2N-line Householder
+feedback network, with its own **Damping** (0-100 %, high-frequency absorption) and **Filter** (-100..+100 %: negative low-pass, positive
+high-pass, applied each pass). Shared: **Decay** (RT60 0.1-60 s), **Pre-delay**, **Mix** (equal power), **Width**, **Modulation**, **Diffusion**
+(at 0 the input all-passes are a 30.4 ms delay), **Early Level** (taps from the distances), **Low Cut / High Cut** on the wet, **Output**.
+**Effect** Off / Shimmer (pitch-shifted tail fed back; **Shift** -12..+24 st) / Swell (fade-in after each onset) / Duck / Gate, with
+**Effect Amount** (level, fade-in time, depth, hold time respectively), and **Freeze** (lossless hold, input off). **Preset** 0 = Custom,
+1-10 typical spaces, 11-15 effects: applied by the panel as ordinary parameters, ignored by the engine. A **Randomise** button on the Dimensions panel draws a new space the same way (keeps Mix, Output, Effect and Freeze). Stereo in/out, no MIDI, no transport,
+no plugin state, no latency. Swell, Duck and Gate follow the dry input level (gate threshold -40 dBFS). Use it on the master bus or a return;
+use lightverb for a minimal, fixed-cost four-line reverb instead.
+
 ### nam
 Neural Amp Modeler player (NeuralAmpModelerCore vendored in `third_party/`). Stereo in/out, no MIDI, no
 transport. Two plugin states: `model_file` (a `.nam`, one input and one output channel) and `ir_file` (mono or
@@ -904,7 +929,10 @@ w0 = c * sqrt(rho0 / (m D)) and an impedance match at r = rho0 c. Cavity and Air
 mm, Facing Mass in kg/m2, Flow Resist in Rayl/m; **Amount** scales absorption itself
 (0% is transparent). Read-only readouts report resonance, Q, peak absorption and
 diffusion corner. Seeded Randomise preserves Amount and Bypass. CC 1-5 read Amount,
-Cavity, Air Gap, Facing Mass, Flow Resist.
+Cavity, Air Gap, Facing Mass, Flow Resist (panel 1). **Panels** (1-4) chains panels in series
+(Edit selects the one the sliders drive); **Mode** Ring boosts resonances (<= +9 dB per
+section) where Absorb cuts; **Sweep** rate/depth/stereo flexes every panel's facing mass
+(+/-1 octave at 100%) and **Sweep Sync** locks it to host tempo and song position.
 
 ### paunchlad
 Launchpad dub performance effect and instrument: pads trigger echo throws, spring
@@ -934,7 +962,7 @@ a note-on), so it does not follow other channels.
   (birds), pratt (GM voices), floozy, gremlin (glitch), campione / mosaic (samples),
   tuney-vst. Bend-aware: see the per-channel list at the top.
 - **Need an unpitched sound:** drumkit, magneto, bubbles.
-- **Need audio processing:** filter (ladder, skream), distortion (damiano, skream, chipper), amp/cab modelling (nam), granular (beards, grist), time/pitch (keyframe,
-  primefold, quefrency), space (lightverb, loopdelay, orbit, treatment, ambo),
+- **Need audio processing:** filter (ladder, skream), phase dispersion (spense), distortion (damiano, skream, chipper), amp/cab modelling (nam), granular (beards, grist), time/pitch (keyframe,
+  primefold, quefrency), space (heavyverb, lightverb, loopdelay, orbit, treatment, ambo),
   rhythm/gating (e-mix, p-mix, orchid, rift), tone/dynamics (trio, octet, infra, glue, bassops, spliff,
   helterskelter, guardian), spectral (voxmod, sinevox, resonance-garden).

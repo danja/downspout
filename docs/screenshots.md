@@ -105,6 +105,8 @@ Current output filenames:
 - `snatch.png`
 - `tops.png`
 - `clatter.png`
+- `spense.png`
+- `heavyverb.png`
 - `primefold.png`
 - `quefrency.png`
 - `keyframe.png`
