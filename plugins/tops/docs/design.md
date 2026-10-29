@@ -6,7 +6,9 @@ Portable core (`tops_engine`, `tops_serialization`) behind a thin DPF wrapper.
 Instrument 0-9 (closed, open, pedal hat, crash, ride, splash, china, cowbell, tambourine,
 triangle), Engine 0-5 (metallic, noise, FM, physical, wavetable, ring mod), Preset 0-4
 (rock, jazz, electronic, metal, latin), Pitch 1000-12000 Hz (8000), Decay 0.01-2 s (0.08),
-Tone, Noise, Brightness, Volume, Distortion, Note Map 0-1 (Selected / General MIDI; default General MIDI).
+Tone, Noise, Brightness, Volume, Distortion, Note Map 0-1 (Selected / General MIDI; default General MIDI), then a Pan per instrument
+(-1..1, default 0 = centre; ten parameters in Instrument order, appended last so older projects keep their IDs).
+Pan is equal-power, scaled so the centre is unity gain: a centred hit is the unpanned signal. It is read when a hit starts.
 
 ## Assumptions
 - MIDI: velocity (0-1) scales level. Note Map Selected plays the Instrument parameter for any

@@ -4,6 +4,7 @@
 #include "clatter_patches.hpp"
 
 #include <array>
+#include <cmath>
 #include <cstdio>
 #include <string>
 
@@ -11,13 +12,14 @@ START_NAMESPACE_DISTRHO
 
 namespace {
 
-// Same numbering as ClatterPlugin.cpp: Sound, Note Map, Tune/Decay/Tone per family, Level, Width.
+// Same numbering as ClatterPlugin.cpp: Sound, Note Map, Tune/Decay/Tone per family, Level, Width, Pan per family.
 constexpr std::uint32_t kSound = 0;
 constexpr std::uint32_t kNoteMap = 1;
 constexpr std::uint32_t kFirstTrim = 2;
 constexpr std::uint32_t kLevel = kFirstTrim + clatter::kFamilyCount * 3;
 constexpr std::uint32_t kWidth = kLevel + 1;
-constexpr std::uint32_t kCount = kWidth + 1;
+constexpr std::uint32_t kFirstPan = kWidth + 1;
+constexpr std::uint32_t kCount = kFirstPan + clatter::kFamilyCount;
 
 constexpr kit::Accent kFamilyAccent[clatter::kFamilyCount] = {
     {198, 120, 64},   // membrane: copper
@@ -51,6 +53,8 @@ struct Tables {
             ranges[i] = {-12, 12, false};              defaults[i] = 0;
             ranges[i + 1] = {0.25f, 4, false, true};   defaults[i + 1] = 1;
             ranges[i + 2] = {0, 1, false};             defaults[i + 2] = 0.5f;
+            ranges[kFirstPan + static_cast<std::uint32_t>(f)] = {-1, 1, false};
+            defaults[kFirstPan + static_cast<std::uint32_t>(f)] = 0;
         }
         ranges[kLevel] = {0, 1, false};  defaults[kLevel] = 0.8f;
         ranges[kWidth] = {0, 1, false};  defaults[kWidth] = 0.6f;
@@ -97,8 +101,8 @@ protected:
                    "Trim each family below.");
         const float full = static_cast<float>(getWidth()) - 48.0f;
         drawSoundPanel({24.0f, 108.0f, full, 284.0f});
-        drawTrimPanel({24.0f, 402.0f, full, 176.0f});
-        drawOutputPanel({24.0f, 588.0f, full, 84.0f});
+        drawTrimPanel({24.0f, 402.0f, full, 218.0f});
+        drawOutputPanel({24.0f, 630.0f, full, 84.0f});
     }
 
 private:
@@ -153,7 +157,7 @@ private:
     void drawTrimPanel(const Rect b)
     {
         drawPanel(b, "FAMILY TRIMS", kPlotAccent,
-                  "Tune in semitones, Decay as a multiplier, Tone is brightness (neutral at 50 %; for shakers and clap it moves the noise band)");
+                  "Tune in semitones, Decay a multiplier, Tone neutral at 50 % (moves the noise band for shakers, clap), Pan shifts placement");
         const float gap = 20.0f;
         const float w = (b.w - 28.0f - gap * static_cast<float>(clatter::kFamilyCount - 1)) / static_cast<float>(clatter::kFamilyCount);
         const char* const kinds[3] = {"Tune", "Decay", "Tone"};
@@ -165,6 +169,8 @@ private:
                 drawSlider(parameter, kinds[k], format(parameter).c_str(), {x, b.y + 58.0f + 40.0f * static_cast<float>(k), w, 34.0f},
                            kFamilyAccent[family]);
             }
+            drawSlider(kFirstPan + static_cast<std::uint32_t>(family), "Pan", formatPan(kFirstPan + static_cast<std::uint32_t>(family)).c_str(),
+                       {x, b.y + 58.0f + 40.0f * 3.0f, w, 34.0f}, kFamilyAccent[family]);
         }
     }
 
@@ -180,6 +186,15 @@ private:
         x += w + gap;
         label(x, b.y + 40.0f, "Note Map");
         drawSegments(kNoteMap, kNoteMapNames, 2, {x, b.y + 56.0f, w, 24.0f}, kFamilyAccent[2]);
+    }
+
+    [[nodiscard]] std::string formatPan(const std::uint32_t parameter) const
+    {
+        char buffer[16];
+        const int pct = static_cast<int>(std::lround(static_cast<double>(value(parameter)) * 100.0));
+        if (pct == 0) return "C";
+        std::snprintf(buffer, sizeof(buffer), "%d%% %c", pct < 0 ? -pct : pct, pct < 0 ? 'L' : 'R');
+        return buffer;
     }
 
     [[nodiscard]] std::string format(const std::uint32_t parameter) const

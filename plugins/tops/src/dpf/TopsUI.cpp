@@ -4,6 +4,7 @@
 #include "tops_params.hpp"
 
 #include <array>
+#include <cmath>
 #include <cstdio>
 #include <string>
 
@@ -12,7 +13,7 @@ START_NAMESPACE_DISTRHO
 namespace {
 
 // Same order as ParamId in TopsPlugin.cpp.
-enum Param : std::uint32_t { kInstrument = 0, kEngine, kPreset, kPitch, kDecay, kTone, kNoise, kBrightness, kVolume, kDistortion, kNoteMap, kCount };
+enum Param : std::uint32_t { kInstrument = 0, kEngine, kPreset, kPitch, kDecay, kTone, kNoise, kBrightness, kVolume, kDistortion, kNoteMap, kFirstPan, kCount = kFirstPan + 10 };
 
 constexpr kit::Accent kSourceAccent {198, 120, 64};  // copper
 constexpr kit::Accent kShapeAccent {92, 140, 156};   // cold steel
@@ -40,6 +41,7 @@ struct Tables {
         ranges[kVolume] = {0, 1, false};         defaults[kVolume] = 0.7f;
         ranges[kDistortion] = {0, 1, false};     defaults[kDistortion] = 0;
         ranges[kNoteMap] = {0, 1, true};         defaults[kNoteMap] = 1;
+        for (std::uint32_t i = kFirstPan; i < kCount; ++i) { ranges[i] = {-1, 1, false}; defaults[i] = 0; }
     }
 };
 
@@ -107,6 +109,13 @@ protected:
         slider(out, 1, 0, kVolume, "Volume", kOutAccent);
         label(x, out.y + 92.0f, "Note Map (unmapped notes are ignored in GM mode)");
         drawSegments(kNoteMap, kNoteMapNames, 2, {x, out.y + 108.0f, w, 24.0f}, kOutAccent);
+
+        const Rect pan {24.0f, 622.0f, full, 156.0f};
+        drawPanel(pan, "PAN", kSourceAccent, "Stereo position of each instrument: C is centre, otherwise a percentage left or right");
+        const float pgap = 24.0f, pw = (pan.w - 28.0f - 4.0f * pgap) / 5.0f;
+        for (int i = 0; i < 10; ++i)
+            drawSlider(kFirstPan + static_cast<std::uint32_t>(i), kInstrumentNames[i], formatPan(kFirstPan + static_cast<std::uint32_t>(i)).c_str(),
+                       {pan.x + 14.0f + static_cast<float>(i % 5) * (pw + pgap), pan.y + 44.0f + 52.0f * static_cast<float>(i / 5), pw, 34.0f}, kSourceAccent);
     }
 
 private:
@@ -116,6 +125,15 @@ private:
         const float w = (b.w - 28.0f - 2.0f * gap) / 3.0f;
         drawSlider(parameter, name, format(parameter).c_str(),
                    {b.x + 14.0f + static_cast<float>(column) * (w + gap), b.y + 44.0f + 48.0f * static_cast<float>(row), w, 34.0f}, accent);
+    }
+
+    [[nodiscard]] std::string formatPan(const std::uint32_t parameter) const
+    {
+        char buffer[16];
+        const int pct = static_cast<int>(std::lround(static_cast<double>(value(parameter)) * 100.0));
+        if (pct == 0) return "C";
+        std::snprintf(buffer, sizeof(buffer), "%d%% %c", pct < 0 ? -pct : pct, pct < 0 ? 'L' : 'R');
+        return buffer;
     }
 
     [[nodiscard]] std::string format(const std::uint32_t parameter) const

@@ -57,6 +57,32 @@ int main()
     for (int i = 0; i < 10; ++i)
         for (int j = i + 1; j < 10; ++j) assert(differs(render(base, i), render(base, j)));
 
+    // Pan: per instrument, centre is the unpanned signal, the pans are equal power, and other instruments are untouched.
+    {
+        const auto stereo = [&](const tops::Params& q, int inst) {
+            tops::TopsEngine pe2; pe2.setSampleRate(44100); pe2.setParams(q); pe2.trigger(inst);
+            std::vector<float> l2(kLen, 0.0f), r2(kLen, 0.0f);
+            pe2.render(l2.data(), r2.data(), kLen);
+            return std::make_pair(l2, r2);
+        };
+        const int ride = (int)tops::Instrument::Ride, crash = (int)tops::Instrument::Crash;
+        const auto centre = stereo(base, ride);
+        assert(!differs(centre.first, centre.second));            // default: identical channels
+        assert(!differs(centre.first, render(base, ride)));       // and unchanged by the pan stage
+        tops::Params q = base; q.pan[ride] = -1.0f;
+        const auto hardL = stereo(q, ride);
+        assert(energy(hardL.second) < 1e-9 * energy(hardL.first));
+        assert(std::fabs(energy(hardL.first) / energy(centre.first) - 2.0) < 0.02);  // equal power: +3 dB on one side
+        q.pan[ride] = 0.5f;
+        const auto right = stereo(q, ride);
+        assert(energy(right.second) > 2.0 * energy(right.first));
+        assert(std::fabs(energy(right.first) + energy(right.second) - 2.0 * energy(centre.first)) < 0.02 * energy(centre.first));
+        const auto other = stereo(q, crash);                      // another instrument keeps its own (centre) pan
+        assert(!differs(other.first, other.second));
+        q.pan[ride] = -1.0f;
+        assert(energy(stereo(q, ride).first) > energy(stereo(q, ride).second));
+    }
+
     // The envelope really decays: a ride's last tenth is far below its first tenth (not a plateau,
     // and not speeding up as the old decay maths did).
     p = base; p.instrument = (int)tops::Instrument::Ride; p.decay = 0.2f;
@@ -107,9 +133,12 @@ int main()
     tops::Params r2;
     assert(tops::deserialize(tops::serialize(s), r2));
     assert(r2.instrument == 4 && r2.engine == 2 && r2.pitch == 7777 && r2.noteMap == 0);
+    s.pan[3] = -0.4f; s.pan[9] = 0.75f;
+    assert(tops::deserialize(tops::serialize(s), r2) && r2.pan[3] == -0.4f && r2.pan[9] == 0.75f && r2.pan[0] == 0.0f);
     tops::Params untouched = base;
     assert(!tops::deserialize("99 0 0 8000 0.08 0.6 0.5 0.7 0.7 0", untouched));
     assert(!tops::deserialize("nope", untouched) && untouched.instrument == base.instrument);
     assert(tops::deserialize("0 0 0 8000 0.08 0.6 0.5 0.7 0.7 0", untouched) && untouched.noteMap == 1);  // pre-note-map string: General MIDI, the default
+    assert(tops::deserialize("0 0 0 8000 0.08 0.6 0.5 0.7 0.7 0 1 9 9 9 9 9 9 9 9 9 -9", untouched) && untouched.pan[0] == 1.0f && untouched.pan[9] == -1.0f);
     return 0;
 }

@@ -17,7 +17,7 @@ Not covered anywhere yet: whistles (71, 72) and cuicas (78, 79).
 - MIDI: velocity sets level, note-off is ignored. **Note Map** `General MIDI` (default): only the
   notes above play. `Selected`: any note plays the sound chosen with the Sound parameter or the panel.
 - Per-family **Tune** (-12 to +12 st), **Decay** (x0.25 to x4) and **Tone** (0 to 1, neutral at 0.5), plus
-  **Level** and **Width** (stereo spread of each sound's fixed pan; 0.6 is the designed spread).
+  **Level** and **Width** (stereo spread of each sound's fixed pan; 0.6 is the designed spread). Each family also has a **Pan** offset (-1 to +1, 0 = designed placement).
 - Choke groups: open and mute conga, open and mute surdo, short and long guiro cut each other.
 - 16 voices; the oldest is stolen. No plugin state: every setting is an ordinary parameter.
 - Tests: `downspout_clatter_core_tests`. Design notes: `docs/design.md`.

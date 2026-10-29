@@ -61,6 +61,11 @@ void TopsEngine::trigger(int instrument, float velocity) {
     v.decayCoef = std::exp(-8.0f / std::max(1.0f, v.samplesLeft));
     v.velocity = clampf(velocity, 0.0f, 1.0f);
     v.shelfState = 0;
+    // Equal-power pan, scaled so the centre is unity gain (a centred voice is the unpanned signal).
+    const float pan = clampf(params_.pan[std::min(std::max(inst,0),kInstrumentCount-1)], -1.0f, 1.0f);
+    const float a = (pan + 1.0f) * (float)M_PI * 0.25f;
+    v.gainL = std::cos(a) * (float)M_SQRT2;
+    v.gainR = std::sin(a) * (float)M_SQRT2;
 }
 float TopsEngine::renderVoice(Voice& v) {
     if(!v.active) return 0;
@@ -105,9 +110,9 @@ float TopsEngine::renderVoice(Voice& v) {
 }
 void TopsEngine::render(float* L,float* R,int n){
     for(int i=0;i<n;i++){
-        float s=0;
-        for(auto& v: voices_) s+=renderVoice(v);
-        L[i]+=s; R[i]+=s;
+        float l=0, r=0;
+        for(auto& v: voices_){ const float s=renderVoice(v); l+=s*v.gainL; r+=s*v.gainR; }
+        L[i]+=l; R[i]+=r;
     }
 }
 bool TopsEngine::active() const { for(auto&v:voices_) if(v.active) return true; return false; }

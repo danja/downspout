@@ -37,4 +37,14 @@ dsp:tops a trn:PluginProfile ;
                     rdfs:comment "Output distortion." ] ;
     trn:parameter [ rdfs:label "Note Map" ; trn:symbol "noteMap" ; trn:range "0-1" ;
                     rdfs:comment "General MIDI is the default. Selected: any note plays the Instrument parameter. General MIDI: mapped drum notes only." ] ;
+    trn:parameter [ rdfs:label "Closed HH Pan" ; trn:symbol "closedhh_pan" ; trn:range "-1 to +1" ; rdfs:comment "Stereo position of the closed hh; 0 is centre, equal power." ] ;
+    trn:parameter [ rdfs:label "Open HH Pan" ; trn:symbol "openhh_pan" ; trn:range "-1 to +1" ; rdfs:comment "Stereo position of the open hh; 0 is centre, equal power." ] ;
+    trn:parameter [ rdfs:label "Pedal HH Pan" ; trn:symbol "pedalhh_pan" ; trn:range "-1 to +1" ; rdfs:comment "Stereo position of the pedal hh; 0 is centre, equal power." ] ;
+    trn:parameter [ rdfs:label "Crash Pan" ; trn:symbol "crash_pan" ; trn:range "-1 to +1" ; rdfs:comment "Stereo position of the crash; 0 is centre, equal power." ] ;
+    trn:parameter [ rdfs:label "Ride Pan" ; trn:symbol "ride_pan" ; trn:range "-1 to +1" ; rdfs:comment "Stereo position of the ride; 0 is centre, equal power." ] ;
+    trn:parameter [ rdfs:label "Splash Pan" ; trn:symbol "splash_pan" ; trn:range "-1 to +1" ; rdfs:comment "Stereo position of the splash; 0 is centre, equal power." ] ;
+    trn:parameter [ rdfs:label "China Pan" ; trn:symbol "china_pan" ; trn:range "-1 to +1" ; rdfs:comment "Stereo position of the china; 0 is centre, equal power." ] ;
+    trn:parameter [ rdfs:label "Cowbell Pan" ; trn:symbol "cowbell_pan" ; trn:range "-1 to +1" ; rdfs:comment "Stereo position of the cowbell; 0 is centre, equal power." ] ;
+    trn:parameter [ rdfs:label "Tambourine Pan" ; trn:symbol "tambourine_pan" ; trn:range "-1 to +1" ; rdfs:comment "Stereo position of the tambourine; 0 is centre, equal power." ] ;
+    trn:parameter [ rdfs:label "Triangle Pan" ; trn:symbol "triangle_pan" ; trn:range "-1 to +1" ; rdfs:comment "Stereo position of the triangle; 0 is centre, equal power." ] ;
     pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

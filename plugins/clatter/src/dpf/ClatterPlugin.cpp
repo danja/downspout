@@ -9,14 +9,16 @@ START_NAMESPACE_DISTRHO
 
 namespace {
 
-// Parameter order: Sound, Note Map, then Tune/Decay/Tone for each family, then Level and Width.
+// Parameter order: Sound, Note Map, then Tune/Decay/Tone for each family, then Level and Width, then a Pan
+// per family (appended last so projects saved before Pan keep their parameter IDs).
 // The UI mirrors this numbering (ClatterUI.cpp).
 constexpr uint32_t kSound = 0;
 constexpr uint32_t kNoteMap = 1;
 constexpr uint32_t kFirstTrim = 2;
 constexpr uint32_t kLevel = kFirstTrim + clatter::kFamilyCount * 3;
 constexpr uint32_t kWidth = kLevel + 1;
-constexpr uint32_t kParamCount = kWidth + 1;
+constexpr uint32_t kFirstPan = kWidth + 1;
+constexpr uint32_t kParamCount = kFirstPan + clatter::kFamilyCount;
 
 const char* const kFamilyNames[clatter::kFamilyCount] = {"Membrane", "Metal", "Wood", "Shaker", "Clap"};
 const char* const kFamilySymbols[clatter::kFamilyCount] = {"membrane", "metal", "wood", "shaker", "clap"};
@@ -74,6 +76,13 @@ protected:
         } else if (index == kWidth) {
             parameter.name = "Width"; parameter.symbol = "width";
             parameter.ranges.min = 0; parameter.ranges.max = 1; parameter.ranges.def = 0.6f;
+        } else if (index >= kFirstPan && index < kParamCount) {
+            const uint32_t family = index - kFirstPan;
+            const std::string name = std::string(kFamilyNames[family]) + " Pan";
+            const std::string symbol = std::string(kFamilySymbols[family]) + "_pan";
+            parameter.name = name.c_str();
+            parameter.symbol = symbol.c_str();
+            parameter.ranges.min = -1; parameter.ranges.max = 1; parameter.ranges.def = 0;
         }
     }
 
@@ -88,6 +97,7 @@ protected:
         }
         if (index == kLevel) return params_.level;
         if (index == kWidth) return params_.width;
+        if (index >= kFirstPan && index < kParamCount) return params_.family[index - kFirstPan].pan;
         return 0.0f;
     }
 
@@ -102,6 +112,7 @@ protected:
         }
         else if (index == kLevel) params_.level = value;
         else if (index == kWidth) params_.width = value;
+        else if (index >= kFirstPan && index < kParamCount) params_.family[index - kFirstPan].pan = value;
         engine_.setParams(params_);
     }
 

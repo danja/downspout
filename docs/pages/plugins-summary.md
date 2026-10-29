@@ -486,7 +486,7 @@ other sound controls. No CCs.
 Hi-hat and cymbal generator: ten **Instruments** (closed, open and pedal hat, crash, ride,
 splash, china, cowbell, tambourine, triangle), six engines (**Metallic**, **Noise**, **FM**,
 **Physical**, **Wavetable**, **RingMod**) and five presets. Controls: Pitch 1-12 kHz, Decay,
-Tone, Noise, Brightness, Volume, Distortion. Velocity sets level. **Note Map** General MIDI (default): notes 42 closed, 44 pedal,
+Tone, Noise, Brightness, Volume, Distortion, and a **Pan** per instrument. Velocity sets level. **Note Map** General MIDI (default): notes 42 closed, 44 pedal,
 46 open, 49 crash, 51 ride, 52 china, 54 tambourine, 55 splash, 56 cowbell, 81 triangle, others ignored;
 Selected: any note plays the selected Instrument. Closed and
 pedal hats choke a sounding open hat. No CCs.
@@ -499,7 +499,7 @@ timbales 65 66, surdos 86 (mute) 87 (open). **Metal**: agogos 67 68, mute triang
 58. **Clap + guiro**: clap 39, guiros 73 74. Whistles (71, 72) and cuicas (78, 79) are not provided. Velocity
 sets level. **Note Map** General MIDI (default): only those notes play; Selected: any note plays the **Sound**
 parameter. Each family has **Tune** (+-12 st), **Decay** (x0.25-x4) and **Tone**; **Level** and **Width** (stereo
-spread of each sound's fixed pan). Open and mute congas and surdos, and the two guiros, choke each other. 16
+spread of each sound's fixed pan) and a **Pan** offset per family. Open and mute congas and surdos, and the two guiros, choke each other. 16
 voices. No CCs.
 
 ### trajectory

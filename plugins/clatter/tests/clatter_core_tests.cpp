@@ -184,6 +184,32 @@ int main()
         assert(energy(w.r) / energy(w.l) > energy(r.r) / energy(r.l));
     }
 
+    // ---- Family pan: an offset on each sound's fixed placement, per family -------------------------------------------
+    {
+        const int conga = soundOf(63);  // a membrane sound; the claves are wood
+        const int claves = soundOf(75);
+        const Render ref = render(base, conga);
+        assert(base.family[0].pan == 0.0f);                                                  // default is inert: the designed placement
+        clatter::Params p = base; p.family[0].pan = -0.5f;                                   // an offset: left of where it was
+        const Render shifted = render(p, conga);
+        assert(energy(shifted.l) / energy(shifted.r) > 2.0 * energy(ref.l) / energy(ref.r));
+        p = base; p.width = 0.0f;                                                            // no fixed placement: pan is absolute
+        const Render ref0 = render(p, conga);
+        p.family[0].pan = -1.0f;
+        const Render left = render(p, conga);
+        assert(energy(left.l) > 20.0 * energy(left.r));                                      // hard left
+        p.family[0].pan = 1.0f;
+        const Render rt = render(p, conga);
+        assert(energy(rt.r) > 20.0 * energy(rt.l));                                          // hard right
+        assert(std::fabs(energy(left.l) + energy(left.r) - energy(ref0.l) - energy(ref0.r)) < 0.01 * (energy(ref0.l) + energy(ref0.r)));  // equal power
+        const Render other = render(p, claves);                                              // another family keeps its own placement
+        clatter::Params unpanned = p; unpanned.family[0].pan = 0.0f;
+        assert(!differs(other.l, render(unpanned, claves).l) && !differs(other.r, render(unpanned, claves).r));
+        clatter::Params mono = base; mono.width = 0.0f; mono.family[2].pan = 0.5f;           // pan still works with Width at 0
+        const Render m = render(mono, claves);
+        assert(energy(m.r) > 2.0 * energy(m.l));
+    }
+
     // ---- Choke groups ----------------------------------------------------------------------------------------------
     {
         const auto groupChokes = [&](const int firstNote, const int secondNote, const int checkFrom) {
@@ -258,13 +284,17 @@ int main()
     assert(clatter::deserialize(clatter::serialize(s), r));
     assert(r.sound == 17 && r.noteMap == 0 && r.level == 0.55f && r.width == 0.9f);
     assert(r.family[3].tune == -4.5f && r.family[3].decay == 2.5f && r.family[3].tone == 0.2f);
+    s.family[1].pan = -0.6f; s.family[4].pan = 0.25f;
+    assert(clatter::deserialize(clatter::serialize(s), r) && r.family[1].pan == -0.6f && r.family[4].pan == 0.25f && r.family[0].pan == 0.0f);
     clatter::Params untouched = base;
     assert(!clatter::deserialize("99 1", untouched));
     assert(!clatter::deserialize("0 7 0 1 0.5 0 1 0.5 0 1 0.5 0 1 0.5 0 1 0.5 0.8 0.6", untouched));
     assert(!clatter::deserialize("nope", untouched) && untouched.sound == base.sound);
     assert(clatter::deserialize("0 1 99 9 5 0 1 0.5 0 1 0.5 0 1 0.5 0 1 0.5 9 9", untouched));
     assert(untouched.family[0].tune == 12.0f && untouched.family[0].decay == 4.0f && untouched.family[0].tone == 1.0f);
-    assert(untouched.level == 1.0f && untouched.width == 1.0f);
+    assert(untouched.level == 1.0f && untouched.width == 1.0f && untouched.family[0].pan == 0.0f);  // no pans in an older string: centre offsets
+    assert(clatter::deserialize("0 1 0 1 0.5 0 1 0.5 0 1 0.5 0 1 0.5 0 1 0.5 0.8 0.6 9 -9 0 0 0", untouched));
+    assert(untouched.family[0].pan == 1.0f && untouched.family[1].pan == -1.0f);
 
     // ---- The noise generator: uniform, centred, repeatable, not stuck -----------------------------------------------
     downspout::clatter::Rng a, b;

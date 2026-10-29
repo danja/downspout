@@ -13,6 +13,7 @@ struct FamilyTrim {
     float tune = 0.0f;   // semitones, -12..12
     float decay = 1.0f;  // length multiplier, 0.25..4
     float tone = 0.5f;   // 0..1, neutral at 0.5; meaning depends on the family (see docs/design.md)
+    float pan = 0.0f;    // -1..1, added to each sound's fixed pan (after Width); 0 leaves the designed placement
 };
 
 struct Params {

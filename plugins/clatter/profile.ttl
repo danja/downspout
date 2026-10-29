@@ -37,4 +37,9 @@ dsp:clatter a trn:PluginProfile ;
     trn:parameter [ rdfs:label "Clap Tone" ; trn:symbol "clap_tone" ; trn:range "0-1" ; rdfs:comment "Moves the noise band up or down by up to an octave; neutral at 0.5." ] ;
     trn:parameter [ rdfs:label "Level" ; trn:symbol "level" ; trn:range "0-1" ; rdfs:comment "Output level." ] ;
     trn:parameter [ rdfs:label "Width" ; trn:symbol "width" ; trn:range "0-1" ; rdfs:comment "Stereo spread of each sound's fixed pan; 0 is mono, 0.6 the designed spread." ] ;
+    trn:parameter [ rdfs:label "Membrane Pan" ; trn:symbol "membrane_pan" ; trn:range "-1 to +1" ; rdfs:comment "Offset added to the fixed pan of every membrane sound (after Width); 0 keeps the designed placement." ] ;
+    trn:parameter [ rdfs:label "Metal Pan" ; trn:symbol "metal_pan" ; trn:range "-1 to +1" ; rdfs:comment "Offset added to the fixed pan of every metal sound; 0 keeps the designed placement." ] ;
+    trn:parameter [ rdfs:label "Wood Pan" ; trn:symbol "wood_pan" ; trn:range "-1 to +1" ; rdfs:comment "Offset added to the fixed pan of every wood sound; 0 keeps the designed placement." ] ;
+    trn:parameter [ rdfs:label "Shaker Pan" ; trn:symbol "shaker_pan" ; trn:range "-1 to +1" ; rdfs:comment "Offset added to the fixed pan of every shaker sound; 0 keeps the designed placement." ] ;
+    trn:parameter [ rdfs:label "Clap Pan" ; trn:symbol "clap_pan" ; trn:range "-1 to +1" ; rdfs:comment "Offset added to the fixed pan of the clap and guiros; 0 keeps the designed placement." ] ;
     pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

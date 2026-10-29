@@ -16,6 +16,7 @@ struct Voice {
     float decayCoef=0.999f;  // per-sample envelope multiplier
     float velocity=1;
     float noiseBias=0;  // added to the Noise control for this instrument
+    float gainL=1, gainR=1;  // pan of this instrument, fixed at the hit
 };
 class TopsEngine {
 public:

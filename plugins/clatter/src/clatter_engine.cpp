@@ -79,7 +79,7 @@ void ClatterEngine::trigger(const int sound, const float velocity)
     v->active = true;
     v->sound = sound;
     v->velocity = clampf(velocity, 0.0f, 1.0f);
-    const float pan = clampf(P.pan * params_.width / 0.6f, -1.0f, 1.0f);
+    const float pan = clampf(P.pan * params_.width / 0.6f + clampf(T.pan, -1.0f, 1.0f), -1.0f, 1.0f);
     v->gainL = std::cos((pan + 1.0f) * kPi * 0.25f);
     v->gainR = std::sin((pan + 1.0f) * kPi * 0.25f);
     v->freqMul = std::pow(2.0f, clampf(T.tune, -12.0f, 12.0f) / 12.0f);

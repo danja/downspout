@@ -30,6 +30,9 @@ Magneto-look panel.
   (`gain^(0.35 i)`), wood overtone and click; shakers, clap and guiros move the band by up to an octave either way.
 - Trims are read when a hit starts, so changing one never alters a note already sounding.
 - **Width** scales each sound's fixed pan (`pan x width / 0.6`, clamped), equal-power. 0 is mono.
+- **Pan** (one per family, -1..1, default 0) is added to the sound's pan after Width and the sum is clamped, so it moves a
+  whole family left or right of its designed placement; with Width at 0 it is the absolute position. Pans are the last
+  five parameters (after Width), so projects saved before they existed keep their parameter IDs.
 
 ## Levels
 Each patch has a gain that makes its peak about 0.5 at the default level (Level 0.8). The test holds every sound
