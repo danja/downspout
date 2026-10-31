@@ -274,6 +274,13 @@ Progress as of 2026-05-27:
   presets (ten typical spaces, five effects) that the panel applies as ordinary parameters. No latency, dry path untouched, no plugin state.
   About 520 core checks. Assumptions are in `plugins/heavyverb/docs/design.md`. Listening and host validation in REAPER remain, and so does
   an ear pass over the presets (chosen by number, not by ear).
+- `interleaver` is an original two-input effect in the Magneto look (A on inputs 1/2, B on 3/4, one stereo output). Time mode slices the two
+  signals into alternating A/B segments (cycle = 2 x Slice, free, or 2 x Periods x the pitch tracked on A or B by decimated autocorrelation,
+  with Balance, hard/linear/cosine edges, Crossfade, Jitter and a Stereo Split that offsets the right channel's pattern). Spectral mode is a
+  2048-point, 4x-overlap phase vocoder that trades groups of bins between A and B (Bins, Mag/Phase, Loudest) with a rotating mask (Drift). A pattern plot
+  draws the mask from the same functions the engine uses; tracked pitch and cycle length are read-only output parameters. Both modes are delayed
+  2048 samples (reported latency). Ordinary parameters, no plugin state. Assumptions in `plugins/interleaver/docs/design.md`. Listening and host
+  validation in REAPER remain.
 - `spense` is a stereo phase disperser in the Magneto look, ported from the DSP of `~/github/Dispenser`
   (MIT, JUCE/AVX2): up to eight cascades of eight trapezoidal-SVF all-pass stages, with Frequency, Resonance, Drift
   and Pre/Post Gain and a 0 dB clip. It reports `Stack x 7` samples of latency to the host (the source chains its stages

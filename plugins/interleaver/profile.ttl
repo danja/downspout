@@ -1,0 +1,93 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:interleaver a trn:PluginProfile ;
+    rdfs:label "Interleaver" ;
+    rdfs:comment "Two-input interleaving effect: input A (channels 1/2) and input B (3/4) become one stereo output, by time-domain slicing (free or locked to the tracked pitch of either input) or by phase-vocoder bin interleaving. Fixed latency of 2048 samples in both modes." ;
+    trn:bundleName "interleaver.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/interleaver/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio .
+
+dsp:interleaver trn:hasParameter [
+    trn:symbol "mode" ;
+    trn:label "Mode" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "0 Time (slice A and B in the time domain), 1 Spectral (phase-vocoder bin interleaving)"
+], [
+    trn:symbol "balance" ;
+    trn:label "Balance" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 50.0 ;
+    rdfs:comment "A share of each cycle in percent (Time) or of each bin period (Spectral); in the Loudest scheme it biases the contest by +-24 dB"
+], [
+    trn:symbol "split" ;
+    trn:label "Stereo Split" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 0.0 ;
+    rdfs:comment "Offsets the right channel pattern by this percentage of half a cycle; 100 with Balance 50 makes left and right complementary"
+], [
+    trn:symbol "slice" ;
+    trn:label "Slice" ;
+    trn:minimum 0.02 ; trn:maximum 200.0 ; trn:default 8.0 ;
+    rdfs:comment "Time mode free-running slice length in ms (logarithmic); the cycle is twice this"
+], [
+    trn:symbol "sync" ;
+    trn:label "Sync" ;
+    trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 0.0 ;
+    rdfs:comment "0 Free, 1 lock the cycle to the pitch tracked on A, 2 lock it to the pitch tracked on B"
+], [
+    trn:symbol "periods" ;
+    trn:label "Periods" ;
+    trn:minimum 0.25 ; trn:maximum 16.0 ; trn:default 1.0 ;
+    rdfs:comment "Pitch periods per slice when tracking (logarithmic); cycle = 2 x periods x pitch period"
+], [
+    trn:symbol "crossfade" ;
+    trn:label "Crossfade" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 25.0 ;
+    rdfs:comment "Edge width as a percentage of the shorter segment; ignored when Edge Shape is Hard"
+], [
+    trn:symbol "shape" ;
+    trn:label "Edge Shape" ;
+    trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 2.0 ;
+    rdfs:comment "0 Hard, 1 Linear, 2 Cosine (equal-power crossfade at each join)"
+], [
+    trn:symbol "jitter" ;
+    trn:label "Jitter" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 0.0 ;
+    rdfs:comment "Random variation of each cycle length, percent"
+], [
+    trn:symbol "scheme" ;
+    trn:label "Scheme" ;
+    trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 0.0 ;
+    rdfs:comment "Spectral: 0 Bins, 1 Mag/Phase (magnitude from one source, phase from the other), 2 Loudest (louder source wins each bin)"
+], [
+    trn:symbol "bin_width" ;
+    trn:label "Bin Width" ;
+    trn:minimum 1.0 ; trn:maximum 64.0 ; trn:default 4.0 ;
+    rdfs:comment "Spectral: bins per segment; a bin period is twice this (logarithmic)"
+], [
+    trn:symbol "drift" ;
+    trn:label "Drift" ;
+    trn:minimum -200.0 ; trn:maximum 200.0 ; trn:default 0.0 ;
+    rdfs:comment "Spectral: rotation of the bin mask in bins per second"
+], [
+    trn:symbol "output" ;
+    trn:label "Output" ;
+    trn:minimum -24.0 ; trn:maximum 12.0 ; trn:default 0.0 ;
+    rdfs:comment "Output level in dB"
+], [
+    trn:symbol "detected_hz" ;
+    trn:label "Detected Pitch" ;
+    trn:minimum 0.0 ; trn:maximum 2000.0 ; trn:default 0.0 ;
+    rdfs:comment "Read-only status output: tracked fundamental in Hz, 0 when none"
+], [
+    trn:symbol "cycle_ms" ;
+    trn:label "Cycle Length" ;
+    trn:minimum 0.0 ; trn:maximum 800.0 ; trn:default 0.0 ;
+    rdfs:comment "Read-only status output: cycle length in use in ms (Time mode)"
+] .

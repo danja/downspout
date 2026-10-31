@@ -107,6 +107,7 @@ Current output filenames:
 - `clatter.png`
 - `spense.png`
 - `heavyverb.png`
+- `interleaver.png`
 - `primefold.png`
 - `quefrency.png`
 - `keyframe.png`

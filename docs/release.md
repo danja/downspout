@@ -64,6 +64,7 @@ downspout-<version>-<platform>-vst3.zip
 ├── clatter.vst3/
 ├── spense.vst3/
 ├── heavyverb.vst3/
+├── interleaver.vst3/
 ├── primefold.vst3/
 ├── quefrency.vst3/
 ├── keyframe.vst3/

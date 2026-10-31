@@ -98,6 +98,7 @@ plugins=(
   "clatter:clatter"
   "spense:spense"
   "heavyverb:heavyverb"
+  "interleaver:interleaver"
   "primefold:primefold"
   "quefrency:quefrency"
   "ghost:ghost"

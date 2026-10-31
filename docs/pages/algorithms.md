@@ -144,6 +144,7 @@ current Downspout plugins.
   k = 4.2 (1 - 10^-u) / 0.9 so the peak height rises roughly evenly in dB (k >= 4 rings). Bass Comp
   multiplies the output by 1 + c k, which undoes the 1 / (1 + k) low-frequency loss. The plotted
   curve is H = G^4 / (1 + k G^4) with G = 1 / (1 + jf/fc), scaled by Bass Comp, Mix and Output.
+- [`Interleaver`]({{ '/plugins/interleaver/' | relative_url }}): per-sample cycle phase with a raised-cosine mask between two inputs; normalised autocorrelation pitch tracker on a 4x-decimated mono signal; 2048-point STFT (two real signals per complex FFT, Hann/Hann, 4x overlap) with per-bin source selection.
 - [`HeavyVerb`]({{ '/plugins/heavyverb/' | relative_url }}): feedback delay network of 2N lines (N = 1-6 dimensions, a wall pair each),
   line length L = distance / 343 m/s x a fixed ratio in 0.917-1.283, read with 4-point Hermite interpolation and a slow sine
   modulation. The loop is x -> one-pole low-pass (damping, 20 kHz down to 450 Hz) -> one-pole low-pass or high-pass (filter) ->

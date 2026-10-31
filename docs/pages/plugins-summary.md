@@ -94,6 +94,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | ladder | ladder.vst3 | audio effect (filter) | 2/2 | yes/no | no |
 | spense | spense.vst3 | audio effect (phase disperser) | 2/2 | no/no | no |
 | heavyverb | heavyverb.vst3 | audio effect (reverb) | 2/2 | no/no | no |
+| interleaver | interleaver.vst3 | audio effect (two-input interleaver) | 4/2 | no/no | no |
 | lifeform | lifeform.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | lightverb | lightverb.vst3 | audio effect (reverb) | 2/2 | yes/yes | no |
 | loopdelay | loopdelay.vst3 | audio effect (delay/looper) | 2/2 | yes/yes | yes |
@@ -810,6 +811,15 @@ high-pass, applied each pass). Shared: **Decay** (RT60 0.1-60 s), **Pre-delay**,
 no plugin state, no latency. Swell, Duck and Gate follow the dry input level (gate threshold -40 dBFS). Use it on the master bus or a return;
 use lightverb for a minimal, fixed-cost four-line reverb instead.
 
+### interleaver
+Two-input interleaving effect (original; 4 audio in, 2 out; no MIDI, no transport, no plugin state; reports 2048 samples of latency).
+Inputs 1/2 are **A**, 3/4 are **B** (a second bus). **Mode** Time / Spectral. **Balance** 0-100 % (A share of each cycle), **Stereo Split**
+0-100 % (shifts the right channel's pattern by up to half a cycle), **Output** -24..+12 dB. Time: **Slice** 0.02-200 ms (cycle = 2 x slice),
+**Sync** Free / Track A / Track B (autocorrelation pitch tracker, 50 Hz-1 kHz; falls back to Slice when unvoiced), **Periods** 0.25-16 (cycle = 2 x
+Periods x pitch period), **Edge Shape** Hard / Linear / Cosine, **Crossfade** 0-100 % of the shorter segment, **Jitter** 0-100 %. Spectral (2048
+FFT, hop 512): **Scheme** Bins / Mag/Phase / Loudest, **Bin Width** 1-64 (a period is 2 x width bins), **Drift** -200..+200 bins/s. Read-only
+outputs: Detected Pitch (Hz) and Cycle Length (ms). Use it on two tracks you want to fuse rather than mix.
+
 ### nam
 Neural Amp Modeler player (NeuralAmpModelerCore vendored in `third_party/`). Stereo in/out, no MIDI, no
 transport. Two plugin states: `model_file` (a `.nam`, one input and one output channel) and `ir_file` (mono or
@@ -965,4 +975,4 @@ a note-on), so it does not follow other channels.
 - **Need audio processing:** filter (ladder, skream), phase dispersion (spense), distortion (damiano, skream, chipper), amp/cab modelling (nam), granular (beards, grist), time/pitch (keyframe,
   primefold, quefrency), space (heavyverb, lightverb, loopdelay, orbit, treatment, ambo),
   rhythm/gating (e-mix, p-mix, orchid, rift), tone/dynamics (trio, octet, infra, glue, bassops, spliff,
-  helterskelter, guardian), spectral (voxmod, sinevox, resonance-garden).
+  helterskelter, guardian), spectral (voxmod, sinevox, resonance-garden), two-input interleaving (interleaver).

@@ -225,6 +225,7 @@ jobs:
             echo "- clatter.vst3"
             echo "- spense.vst3"
             echo "- heavyverb.vst3"
+            echo "- interleaver.vst3"
             echo "- keyframe.vst3"
             echo "- primefold.vst3"
             echo "- quefrency.vst3"

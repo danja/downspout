@@ -70,6 +70,7 @@ option(DOWNSPOUT_BUILD_TOPS "Configure the Tops hi-hat/cymbal generator target" 
 option(DOWNSPOUT_BUILD_CLATTER "Configure the Clatter General MIDI percussion generator target" ON)
 option(DOWNSPOUT_BUILD_SPENSE "Configure the Spense stereo phase disperser target" ON)
 option(DOWNSPOUT_BUILD_HEAVYVERB "Configure the HeavyVerb master-bus reverb target" ON)
+option(DOWNSPOUT_BUILD_INTERLEAVER "Configure the Interleaver two-input interleaving effect target" ON)
 option(DOWNSPOUT_BUILD_GHOST "Configure the ghost audio-triggered MIDI target" ON)
 option(DOWNSPOUT_BUILD_SPLIFF "Configure the spliff transient processor target" ON)
 option(DOWNSPOUT_BUILD_HELTERSKELTER "Configure the helterskelter auto-wah target" ON)
@@ -419,6 +420,10 @@ endif()
 
 if(DOWNSPOUT_BUILD_HEAVYVERB)
     add_subdirectory(plugins/heavyverb)
+endif()
+
+if(DOWNSPOUT_BUILD_INTERLEAVER)
+    add_subdirectory(plugins/interleaver)
 endif()
 
 if(DOWNSPOUT_BUILD_GHOST)

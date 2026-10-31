@@ -184,6 +184,16 @@ controls. Put it on a synth or bass and automate Cutoff; reach for Skream instea
 scream-style feedback filter, and Damiano after it for distortion. Resonance with full Bass Comp is
 loud, so trim Output. See `plugins/ladder/docs/design.md`.
 
+### Interleaver (`interleaver.vst3`)
+
+An unusual two-input effect: input A (channels 1/2) and input B (3/4) are woven into one stereo output, aiming for interesting rather than
+musical. **Time** mode alternates segments of A and B; the cycle length is a free **Slice**, or locked to the fundamental period tracked on A
+or B (**Sync**, **Periods**), so the splices follow the pitch. **Balance** sets A's share, **Edge shape** and **Crossfade** soften the joins
+(or leave them hard), **Jitter** randomises the cycle, **Stereo split** makes the right channel's pattern lag the left. **Spectral** mode
+trades groups of FFT bins: **Bins** (whole bins), **Mag/Phase** (size from one source, phase from the other) or **Loudest** (the louder source
+wins each bin), with **Bin width** and a rotating mask (**Drift**). Route a second track to channels 3/4 (REAPER: send with a channel offset).
+Latency 2048 samples in both modes. See `plugins/interleaver/docs/design.md`.
+
 ### HeavyVerb (`heavyverb.vst3`)
 
 A high-quality stereo reverb meant for the master bus, with no latency and the dry signal left alone. The room is built from one to six
