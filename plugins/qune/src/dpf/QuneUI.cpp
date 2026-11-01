@@ -90,6 +90,8 @@ std::string formatValue(const std::uint32_t parameter, const float value)
     switch (static_cast<ParamId>(parameter))
     {
     case ParamId::amount:
+        std::snprintf(buffer, sizeof(buffer), "%+d%%", static_cast<int>(std::lround(value * 100.0f)));
+        break;
     case ParamId::voicing:
     case ParamId::mix:
         std::snprintf(buffer, sizeof(buffer), "%d%%", static_cast<int>(std::lround(clampf(value, 0.0f, 1.0f) * 100.0f)));

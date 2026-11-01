@@ -153,7 +153,7 @@ void SpectralShifter::processFrame(const History& history, const std::int64_t st
     }
 
     const float ratio = std::clamp(control.ratio, 0.25f, 4.0f);
-    const float formant = std::clamp(control.formantRatio, 0.5f, 2.0f);
+    const float formant = std::clamp(control.formantRatio, 0.25f, 4.0f);
     const bool identity = std::fabs(ratio - 1.0f) < 1.0e-4f && std::fabs(formant - 1.0f) < 1.0e-4f;
 
     if (identity)

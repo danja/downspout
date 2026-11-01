@@ -610,6 +610,36 @@ void testAmountScalesTheCorrection()
     }
 }
 
+void testAmountOvershootAndInversion()
+{
+    std::printf("amount beyond the note\n");
+    // A4 +40c, chromatic: shift = amount * (-40c). Amount 2 overshoots to -40c; amount -1 moves to +80c.
+    const double sung = 440.0 * std::pow(2.0, 0.40 / 12.0);
+    for (int quality = 0; quality < 3; ++quality)
+    {
+        for (const double amount : {-1.0, 2.0})
+        {
+            Rig rig;
+            rig.p.quality = static_cast<float>(quality);
+            rig.p.scale = 0.0f;
+            rig.p.glide = 0.0f;
+            rig.p.amount = static_cast<float>(amount);
+            const auto out = renderVowel(rig, sung);
+            const double expected = 440.0 * std::pow(2.0, 0.40 * (1.0 - amount) / 12.0);
+            const double got = outputHz(out, rig.sr, expected);
+            char label[96];
+            std::snprintf(label, sizeof(label), "amount %+.0f [%s]: %.1f cents off", amount, kQualityLabel[quality],
+                          cents(got, expected));
+            checkNear(cents(got, expected), 0.0, 8.0, label);
+        }
+    }
+    check(kParameterSpecs[static_cast<std::size_t>(ParamId::amount)].minimum == -1.0f &&
+              kParameterSpecs[static_cast<std::size_t>(ParamId::amount)].maximum == 2.0f,
+          "Amount spec spans -100% to +200%");
+    check(kParameterSpecs[static_cast<std::size_t>(ParamId::formantShift)].maximum == 24.0f,
+          "Formant Shift spans +-24 st");
+}
+
 void testTransposeAddsToTheTarget()
 {
     std::printf("transpose\n");
@@ -1705,6 +1735,7 @@ int main()
     testSnapsToScaleOnEveryTier();
     testEveryScaleOnlyProducesScaleNotes();
     testAmountScalesTheCorrection();
+    testAmountOvershootAndInversion();
     testTransposeAddsToTheTarget();
     testGlideSlidesBetweenNotes();
     testStickinessHoldsTheNote();

@@ -11,8 +11,8 @@ namespace {
 constexpr double kTwoPi = 6.28318530717958647692;
 constexpr double kMinRatio = 0.25;
 constexpr double kMaxRatio = 4.0;
-constexpr double kMinFormant = 0.5;
-constexpr double kMaxFormant = 2.0;
+constexpr double kMinFormant = 0.25;
+constexpr double kMaxFormant = 4.0;
 constexpr int kMaxCorrelationSegment = 512;
 
 // Latency is two periods of the lowest pitch plus a margin: a grain reaches one

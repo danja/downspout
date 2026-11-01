@@ -225,7 +225,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"midi_ch", "MIDI In", "", 0.0f, 16.0f, 0.0f, true, false},
     {"bend_range", "Bend Range", "st", 0.0f, 24.0f, 2.0f, true, false},
 
-    {"amount", "Amount", "", 0.0f, 1.0f, 1.0f, false, false},
+    {"amount", "Amount", "", -1.0f, 2.0f, 1.0f, false, false},
     {"glide", "Glide", "ms", 0.0f, 1000.0f, 20.0f, false, false},
     {"stickiness", "Stickiness", "cents", 0.0f, 50.0f, 15.0f, false, false},
     {"transpose", "Transpose", "st", -24.0f, 24.0f, 0.0f, true, false},
@@ -234,7 +234,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"range", "Range", "", 0.0f, 3.0f, 1.0f, true, false},
     {"voicing", "Voicing", "", 0.0f, 1.0f, 0.5f, false, false},
     {"formant_mode", "Formant", "", 0.0f, 1.0f, 1.0f, true, false},
-    {"formant_shift", "Formant Shift", "st", -12.0f, 12.0f, 0.0f, false, false},
+    {"formant_shift", "Formant Shift", "st", -24.0f, 24.0f, 0.0f, false, false},
 
     {"mix", "Mix", "", 0.0f, 1.0f, 1.0f, false, false},
     {"level", "Level", "dB", -24.0f, 12.0f, 0.0f, false, false},

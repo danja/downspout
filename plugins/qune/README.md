@@ -30,7 +30,7 @@ pitch.
 | MIDI input | All channels, or one |
 | Pitch bend range | Semitones for MIDI pitch bend (applied to MIDI targets) |
 | MIDI out | Sends the target note as MIDI note-on/note-off while a pitch is corrected, one note at a time, legato. Channel and a fixed velocity are set alongside |
-| Amount | 0 leaves the pitch alone, 100 % lands it on the note |
+| Amount | -100 to +200 %. 0 leaves the pitch alone, 100 % lands it on the note. Above 100 % overshoots the note; negative values push the pitch away from it, for scrambled, detuned effects (shift is limited to +-24 st) |
 | Glide | 0 = off (notes step at once); longer times slide between notes and let some vibrato through |
 | Stickiness | Cents a pitch must travel past the halfway point before the target moves to the next note |
 | Transpose | Whole semitones added to the target. With Amount at 0 this is a plain transposer |
@@ -38,7 +38,7 @@ pitch.
 | Quality | Fast, Good or Best (below) |
 | Pitch range | Bass 40-400 Hz, Voice 90-900, Lead 160-1600, Wide 40-1600. Narrower is cheaper and, in Good, faster |
 | Formants | **Follow pitch** (resampler-style) or **Preserve** the spectral envelope. Good and Best only |
-| Formant shift | Moves the envelope by up to +-12 semitones on top of the mode. Good and Best only |
+| Formant shift | Moves the envelope by up to +-24 semitones (chipmunk to monster) on top of the mode. Good and Best only |
 | Mix, Level | Dry/corrected balance (dry is delayed to match) and output gain |
 
 ## Quality tiers
