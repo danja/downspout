@@ -107,6 +107,7 @@ plugins=(
   "treatment:treatment"
   "keyframe:keyframe"
   "qune:qune"
+  "prism:prism"
   "flues-synth-driver:flues_synth_driver"
   )
 

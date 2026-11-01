@@ -90,6 +90,7 @@ Current output filenames:
 - `trajectory.png`
 - `fathom.png`
 - `qune.png`
+- `prism.png`
 - `grist.png`
 - `sam.png`
 - `ladder.png`

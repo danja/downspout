@@ -64,7 +64,7 @@ It is timed when the pitch is detected, so it leads the delayed audio by the rep
 | No Notes | Bypass, Use scale | Use scale | MIDI modes only |
 | MIDI In | All, 1-16 | All | |
 | Bend Range | 0-24 st | 2 | |
-| Amount | 0-100 % | 100 % | |
+| Amount | -100 to +200 % | 100 % | Above 100 % overshoots the note; negative pushes the pitch away from it |
 | Glide | 0-1000 ms | 20 ms | 0 = off |
 | Stickiness | 0-50 cents | 15 | |
 | Transpose | -24 to +24 st | 0 | Whole semitones |
@@ -72,7 +72,7 @@ It is timed when the pitch is detected, so it leads the delayed audio by the rep
 | Range | Bass, Voice, Lead, Wide | Voice | 40-400, 90-900, 160-1600, 40-1600 Hz |
 | Voicing | 0-100 % | 50 % | Higher accepts breathier sound as pitched |
 | Formant | Follow pitch, Preserve | Preserve | Good and Best |
-| Formant Shift | -12 to +12 st | 0 | Good and Best |
+| Formant Shift | -24 to +24 st | 0 | Good and Best |
 | Mix | 0-100 % | 100 % | |
 | Level | -24 to +12 dB | 0 | |
 | MIDI Out | Off, On | On | Target note as note-on/off |

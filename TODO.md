@@ -235,3 +235,8 @@ resonance-garden, plank, tuney-vst, worms, beards.
 * for new material, check test coverage
 * ensure README.md and docs are up-to-date
 * read INBOX.md and fold tasks in here; check `dim` for Farelo tasks relevant to Downspout (read-only)
+
+## Prism
+
+- [ ] **Listen to it.** Core tests only; nothing has been auditioned or run in a host.
+- [ ] LFO modulation of delay/feedback (the Multiway plugin has it). Tempo sync is done; it reads only the host tempo, not the bar position.

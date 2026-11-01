@@ -122,6 +122,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | primefold | primefold.vst3 | audio effect (pitch) | 2/2 | yes/no | no |
 | quefrency | quefrency.vst3 | audio effect (formant) | 2/2 | yes/no | no |
 | qune | qune.vst3 | audio effect (pitch quantiser) | 2/2 | yes/yes | no |
+| prism | prism.vst3 | audio effect (banded spectral delay, tempo sync) | 2/2 | no/no | no |
 | resonance-garden | resonance_garden.vst3 | audio effect (resonators) | 2/2 | yes/no | no |
 | retune | retune.vst3 | MIDI processor (tuning) | 0/2 | yes/yes | no |
 | rift | rift.vst3 | audio effect (buffer) | 2/2 | yes/no | yes |
@@ -535,17 +536,34 @@ Stereo pitch quantiser. Tracks one pitch from the L+R sum (McLeod NSDF, 4 ms hop
 moves it to the nearest note of **Scale** (24 scales in the canonical ordering, **Root**) or
 to MIDI notes: **Target** = Scale, MIDI chord (nearest held pitch class, any octave) or MIDI
 note (last note played, plus pitch bend of **Bend Range**). **No Notes** chooses Bypass or
-Use scale while no key is held; **MIDI In** is All or one channel. **Amount**, **Glide**
-(0 = stepped, longer = slide), **Stickiness** (cents of hysteresis) and **Transpose**
+Use scale while no key is held; **MIDI In** is All or one channel. **Amount** (-100 to +200 %: above 100 overshoots, negative pushes away from the note),
+**Glide** (0 = stepped, longer = slide), **Stickiness** (cents of hysteresis) and **Transpose**
 (whole semitones) shape the shift. **Quality** picks Fast (splice delay line, about 4 ms,
 formants follow pitch), Good (PSOLA, 2.4 periods of the **Range** floor: 16/28/61 ms for
 Lead/Voice/Bass at 48 kHz) or Best (phase vocoder, about 43 ms); Good and Best take
-**Formant** (Follow pitch / Preserve) and **Formant Shift**. **Voicing**, **Mix**, **Level**.
+**Formant** (Follow pitch / Preserve) and **Formant Shift** (+-24 st). **Voicing**, **Mix**, **Level**.
 Unvoiced input passes through. Latency is reported to the host (it changes with Quality and
 Range) and an output parameter shows it. MIDI in maps only notes, pitch bend, CC 64 (hold)
 and CC 120/123 (clear). MIDI out (**MIDI Out**, **Out Channel**, **Out Velocity**) sends the
 quantised target as legato note-on/note-off; everything else is a host parameter. No plugin state. Monophonic: one
 pitch at a time.
+
+### prism
+Banded spectral delay, stereo. An STFT (sqrt-Hann windows, 8x overlap, FFT **Resolution** 512 /
+1024 / 2048 / 4096) reads each frequency bin back from the spectrum stored some whole number of
+frames ago and applies the sub-hop remainder as a phase rotation. The delay of a bin comes from
+up to 8 bands (**Bands**), log-spaced from 31.25 Hz to 16 kHz, interpolated in log frequency.
+Per band: **L Delay** and **R Delay** (0-2000 ms), **Feedback** (0-95 %) and **Solo** (heard
+wet only, overriding Mix). **Link L/R** makes the right side follow the left. **Sync L** and **Sync R** (ms / RATE) switch a side
+to note divisions of the host BBT tempo (13 divisions, 1/64 to 1/1 with triplets and dotted, per band
+`b1_div_l` / `b1_div_r`; 120 BPM if the host gives none; limited to 2 s); an output parameter shows the
+tempo. **Low Cut**
+(20 Hz-2 kHz) and **High Cut** (200 Hz-20 kHz) leave everything beyond them undelayed over a
+third of an octave; both are off at the ends of their ranges. **Mix**. Latency is the FFT size
+(512-4096 samples) and is reported to the host; an output parameter shows it. No MIDI, no
+plugin state: every setting is a host parameter (band parameters are
+`b1_delay_l` ... `b8_solo`). Delays between band centres are approximate; feedback repeats
+lose level at some delays (worst case about 2 dB by the fourth repeat).
 
 ### bubbles
 Water sound generator, stereo, continuous without MIDI (note-on/off optionally gates and

@@ -253,6 +253,13 @@ Progress as of 2026-05-27:
   canonical 24-scale ordering. No plugin state: every setting is a parameter. See
   `plugins/qune/docs/design.md`. Host validation in REAPER and listening tests on real
   voices remain.
+- `prism` is a banded spectral delay in the Magneto look: an STFT (sqrt-Hann, 8x overlap) in
+  which each bin is read back from the spectrum stored some whole number of frames ago, the
+  sub-hop remainder applied as a phase rotation, with per-band left/right delay (to 2 s, or note divisions of the host BBT tempo) and
+  feedback interpolated in log frequency across 1-8 bands, per-band solo, low/high cut and
+  four FFT sizes. The technique is reimplemented from the published description of the
+  Multiway plugin (AGPLv3); no code was copied. No plugin state. See
+  `plugins/prism/docs/design.md`. Host validation in REAPER and listening tests remain.
 - `grist` is a granular grain-delay effect in the Magneto look: a seven-second stereo history
   read by windowed grains (one per Window / Density, Hermite reads), each with a seeded random
   start, direction, pan, length and pitch (Pitch plus Range, optionally held to a scale), and a
@@ -418,7 +425,7 @@ Current main gap:
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
   `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`,
-  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `grist.vst3`, `sam.vst3`, `ladder.vst3`, `glue.vst3`, `octet.vst3`, `trio.vst3`, `infra.vst3`, `strata.vst3`, `quartet.vst3`, `monochord.vst3`, and `nam.vst3` bundles.
+  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `prism.vst3`, `grist.vst3`, `sam.vst3`, `ladder.vst3`, `glue.vst3`, `octet.vst3`, `trio.vst3`, `infra.vst3`, `strata.vst3`, `quartet.vst3`, `monochord.vst3`, and `nam.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of

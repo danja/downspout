@@ -323,6 +323,17 @@ gives the stepped, hard-tuned sound; a longer glide and a lower **Amount** nudge
 and formant control; the host is told the latency, so it compensates. One pitch at a time:
 not for chords or full mixes.
 
+### Prism (`prism.vst3`)
+
+Banded spectral delay. The sound is split into 1-8 bands, spaced evenly in log frequency from
+31 Hz to 16 kHz, and each band has its own left and right delay (up to 2 s) and feedback; the
+delay glides from one band centre to the next, so there are no steps. Put it on a pad, drums
+or a full mix as an insert: low bands short and high bands long gives a rising, smeared echo;
+long low bands and short high bands the reverse. Each side can be **ms** or **RATE**: note divisions of the host tempo, chosen per band. **Solo** (S) auditions one band, **Low cut**
+and **High cut** leave the extremes undelayed, **Link** makes right follow left. **Resolution**
+is the FFT size (512-4096): small is tight and transient, large is smoother. The latency equals
+the FFT size and is reported to the host.
+
 ### Magneto (`magneto.vst3`)
 
 Physically informed combustion engine generator. A four-stroke cycle drives

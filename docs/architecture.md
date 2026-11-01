@@ -251,6 +251,7 @@ The release script currently expects these bundles:
 - `trajectory.vst3`
 - `fathom.vst3`
 - `qune.vst3`
+- `prism.vst3`
 - `grist.vst3`
 - `sam.vst3`
 - `ladder.vst3`

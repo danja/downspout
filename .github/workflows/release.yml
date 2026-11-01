@@ -271,6 +271,7 @@ jobs:
             echo "- trajectory.vst3"
             echo "- fathom.vst3"
             echo "- qune.vst3"
+            echo "- prism.vst3"
             echo "- grist.vst3"
             echo "- sam.vst3"
             echo "- ladder.vst3"

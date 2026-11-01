@@ -79,6 +79,11 @@ current Downspout plugins.
   using density, block, and fade controls.
 - [`Rift`]({{ '/plugins/rift/' | relative_url }}): short-buffer capture and disruption with chop/stutter repeats,
   reverse, skip, smear, and pitch-slip actions.
+- [`Prism`]({{ '/plugins/prism/' | relative_url }}): banded spectral delay. An overlapping STFT (sqrt-Hann, 8x
+  overlap) in which each bin is read from the spectrum stored a whole number of frames ago, with the
+  remaining sub-hop delay applied as a phase rotation and corrected for its window loss; band delays
+  and feedback are interpolated in log frequency. Reimplemented from the published description of
+  the Multiway plugin; no code was copied.
 - [`Qune`]({{ '/plugins/qune/' | relative_url }}): pitch quantiser. A normalised-square-difference pitch tracker (decimated
   search, full-rate refinement, octave-error checks) picks a target note from a scale or
   from held MIDI notes; the shift is smoothed by an optional glide and applied by one of
