@@ -36,7 +36,7 @@ Each channel is processed independently; the only thing they share is the band t
   `b8_solo`), which DPF saves by symbol. Activation and sample-rate change clear audio state only.
 - **Transport.** Only the host BBT tempo is read (`beatsPerMinute`); position, loop and play state are not used, so synced delays are a delay of a given length, not a grid-locked tap. Tempo changes glide through the 100 ms band smoothing. **MIDI.** Not used.
 - **Latency.** Equal to the FFT size, reported to the host, and changed by Resolution.
-- **Origin.** The technique follows the published description of the Multiway plugin
+- **Origin.** The technique follows the published description of the [Multiway](https://github.com/mustafamazi/Multiway) plugin
   (AGPLv3). This is an independent implementation; no code was copied.
 
 ## Known limits

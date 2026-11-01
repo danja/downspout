@@ -75,7 +75,7 @@ to the host and shown on the panel. Changing **Resolution** clears the delay mem
 
 The technique (per-bin delay in the STFT domain with band interpolation, fractional delay by
 phase rotation, feedback through the stored spectra) follows the published description of
-the Multiway plugin by Mustafa Mazi. It was reimplemented from that description; no Multiway
+the [Multiway](https://github.com/mustafamazi/Multiway) plugin by Mustafa Mazi. It was reimplemented from that description; no Multiway
 code was used, as Multiway is AGPLv3 and Downspout is MIT. Prism has no LFOs or drawn shapes.
 
 ### Status

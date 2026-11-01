@@ -1,5 +1,8 @@
 # Prism design notes
 
+Prism reimplements the technique of the [Multiway](https://github.com/mustafamazi/Multiway) spectral delay (AGPLv3) from its
+published description; no Multiway code was used.
+
 ## Files
 
 | File | Role |

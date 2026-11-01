@@ -83,7 +83,7 @@ current Downspout plugins.
   overlap) in which each bin is read from the spectrum stored a whole number of frames ago, with the
   remaining sub-hop delay applied as a phase rotation and corrected for its window loss; band delays
   and feedback are interpolated in log frequency. Reimplemented from the published description of
-  the Multiway plugin; no code was copied.
+  the [Multiway](https://github.com/mustafamazi/Multiway) plugin; no code was copied.
 - [`Qune`]({{ '/plugins/qune/' | relative_url }}): pitch quantiser. A normalised-square-difference pitch tracker (decimated
   search, full-rate refinement, octave-error checks) picks a target note from a scale or
   from held MIDI notes; the shift is smoothed by an optional glide and applied by one of

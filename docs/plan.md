@@ -258,7 +258,7 @@ Progress as of 2026-05-27:
   sub-hop remainder applied as a phase rotation, with per-band left/right delay (to 2 s, or note divisions of the host BBT tempo) and
   feedback interpolated in log frequency across 1-8 bands, per-band solo, low/high cut and
   four FFT sizes. The technique is reimplemented from the published description of the
-  Multiway plugin (AGPLv3); no code was copied. No plugin state. See
+  [Multiway](https://github.com/mustafamazi/Multiway) plugin (AGPLv3); no code was copied. No plugin state. See
   `plugins/prism/docs/design.md`. Host validation in REAPER and listening tests remain.
 - `grist` is a granular grain-delay effect in the Magneto look: a seven-second stereo history
   read by windowed grains (one per Window / Density, Hermite reads), each with a seeded random
