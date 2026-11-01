@@ -79,6 +79,7 @@ current Downspout plugins.
   using density, block, and fade controls.
 - [`Rift`]({{ '/plugins/rift/' | relative_url }}): short-buffer capture and disruption with chop/stutter repeats,
   reverse, skip, smear, and pitch-slip actions.
+- [`Mouth`]({{ '/plugins/mouth/' | relative_url }}): vowel filter. Five parallel zero-delay-feedback state-variable band-passes at the formants of a vowel blended from the Csound A/E/I/O/U tables (bass, tenor, alto, soprano) by inverse-distance weighting on an x-y pad; shift scales every formant, resonance scales bandwidth, and the wet level is normalised against white noise.
 - [`Prism`]({{ '/plugins/prism/' | relative_url }}): banded spectral delay. An overlapping STFT (sqrt-Hann, 8x
   overlap) in which each bin is read from the spectrum stored a whole number of frames ago, with the
   remaining sub-hop delay applied as a phase rotation and corrected for its window loss; band delays

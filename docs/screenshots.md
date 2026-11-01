@@ -91,6 +91,7 @@ Current output filenames:
 - `fathom.png`
 - `qune.png`
 - `prism.png`
+- `mouth.png`
 - `grist.png`
 - `sam.png`
 - `ladder.png`

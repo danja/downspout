@@ -252,6 +252,7 @@ The release script currently expects these bundles:
 - `fathom.vst3`
 - `qune.vst3`
 - `prism.vst3`
+- `mouth.vst3`
 - `grist.vst3`
 - `sam.vst3`
 - `ladder.vst3`

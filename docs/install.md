@@ -123,6 +123,7 @@ The repository currently installs sixty-one real wrapper targets:
 - `fathom.vst3` with UI
 - `qune.vst3` with UI
 - `prism.vst3` with UI
+- `mouth.vst3` with UI
 - `grist.vst3` with UI
 - `sam.vst3` with UI
 - `ladder.vst3` with UI

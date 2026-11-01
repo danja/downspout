@@ -108,6 +108,7 @@ plugins=(
   "keyframe:keyframe"
   "qune:qune"
   "prism:prism"
+  "mouth:mouth"
   "flues-synth-driver:flues_synth_driver"
   )
 

@@ -240,3 +240,14 @@ resonance-garden, plank, tuney-vst, worms, beards.
 
 - [ ] **Listen to it.** Core tests only; nothing has been auditioned or run in a host.
 - [ ] LFO modulation of delay/feedback (the Multiway plugin has it). Tempo sync is done; it reads only the host tempo, not the bar position.
+
+## Filter-plugin ideas (November 2026 brainstorm)
+
+Mouth (vowel/formant morph filter) is built (core, VST3, tests, screenshot, docs); the rest are not started. Design for Mouth: `plugins/mouth/docs/design.md`.
+
+- [ ] **Scale sieve**: STFT mask (reuse the Prism/Qune engine) that passes only partials near the notes of a chosen scale or held MIDI notes, in every octave. Controls: width, floor level, odd/even tilt. Differs from `resonance-garden`: it keeps the source's own texture instead of ringing new resonators. See `docs/scales.md`.
+- [ ] **Audio-driven string / comb (extended Karplus-Strong)**: feedback comb with damping low-pass, pick-position comb and stiffness all-pass chain (clean string -> inharmonic bell -> metal), tuned from MIDI or tracked pitch. Closest existing plugins: `resonance-garden`, `spense`; build after the other two. References: CCRMA "Extended Karplus-Strong" (https://ccrma.stanford.edu/~jos/pasp/Extended_Karplus_Strong_Algorithm.html).
+- [ ] Z-plane morph filter: interpolate between two stored pole/zero sets (E-mu style). Same morphing idea as Mouth, more abstract.
+- [ ] Envelope-follower multimode filter (auto-wah). Easy, but a crowded category.
+- [ ] **Mouth: listen to it** and try it in a host (nothing auditioned). Check Voice switching for clicks on a loud sustained source and that the vowel data matches the Csound manual table (typed from memory of it).
+- [ ] Mouth phase 2: tempo-synced vowel sequencer (step list of vowel corners), reusing Prism's tempo plumbing.

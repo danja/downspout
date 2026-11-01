@@ -48,6 +48,7 @@ downspout-<version>-<platform>-vst3.zip
 ├── fathom.vst3/
 ├── qune.vst3/
 ├── prism.vst3/
+├── mouth.vst3/
 ├── grist.vst3/
 ├── sam.vst3/
 ├── ladder.vst3/

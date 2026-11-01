@@ -334,6 +334,15 @@ and **High cut** leave the extremes undelayed, **Link** makes right follow left.
 is the FFT size (512-4096): small is tight and transient, large is smoother. The latency equals
 the FFT size and is reported to the host.
 
+### Mouth (`mouth.vst3`)
+
+Vowel filter. Drag the pad to morph between A, E, I, O and U and the sound takes on that vowel:
+five formant filters, with Bass, Tenor, Alto and Soprano voices. Good on saw pads, bass lines,
+drum loops and noise; raise **Drive** or **Air** for dull or low sources. **Shift** changes the
+size of the "mouth", **Resonance** how pitched it rings, **Spread** widens it. Drift CC 1-4
+(channel set by **CC Channel**) move the vowel, shift and resonance, so Drift can make a source
+"talk". No latency.
+
 ### Magneto (`magneto.vst3`)
 
 Physically informed combustion engine generator. A four-stroke cycle drives

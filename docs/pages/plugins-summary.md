@@ -33,7 +33,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 - **Control-change conventions.** Drift lanes default to CC 1-4; the audio effects
   chipper, damiano, skream, spliff, helterskelter, treatment, magneto, beards, ghost, trajectory and fathom read
   those by default so Drift needs no configuration; ladder (Cutoff, Resonance, Drive, Mix), glue (Threshold, Ratio,
-  Makeup, Mix), trio (Amount, Time, Input, Upward limit) and octet (one band's Frequency, Gain and Q, chosen by CC Band, and Output) do too, on a **CC Channel** parameter (default 1, 0 = off). Conductor emits CC 20-24 on channel 16
+  Makeup, Mix), trio (Amount, Time, Input, Upward limit) and octet (one band's Frequency, Gain and Q, chosen by CC Band, and Output) and mouth (Vowel X, Vowel Y, Shift, Resonance) do too, on a **CC Channel** parameter (default 1, 0 = off). Conductor emits CC 20-24 on channel 16
   (Scene, Density, Energy, Mutation, Reset); bassgen, drumgen, ground, melgen, worms, bubbles,
   floozy, harmonic-atlas, sprout, lifeform, luma, polymeter, xoxolo, markov, counterpointer
   cadence, arpgen, m-mix and beards listen through a **Conductor Ch**
@@ -123,6 +123,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | quefrency | quefrency.vst3 | audio effect (formant) | 2/2 | yes/no | no |
 | qune | qune.vst3 | audio effect (pitch quantiser) | 2/2 | yes/yes | no |
 | prism | prism.vst3 | audio effect (banded spectral delay, tempo sync) | 2/2 | no/no | no |
+| mouth | mouth.vst3 | audio effect (vowel / formant filter) | 2/2 | yes/no | no |
 | resonance-garden | resonance_garden.vst3 | audio effect (resonators) | 2/2 | yes/no | no |
 | retune | retune.vst3 | MIDI processor (tuning) | 0/2 | yes/yes | no |
 | rift | rift.vst3 | audio effect (buffer) | 2/2 | yes/no | yes |
@@ -564,6 +565,18 @@ third of an octave; both are off at the ends of their ranges. **Mix**. Latency i
 plugin state: every setting is a host parameter (band parameters are
 `b1_delay_l` ... `b8_solo`). Delays between band centres are approximate; feedback repeats
 lose level at some delays (worst case about 2 dB by the fourth repeat).
+
+### mouth
+Vowel filter, stereo, no latency. Five parallel formant band-pass filters (zero-delay-feedback
+state-variable) are placed at the formants of a vowel blended from A, E, I, O and U by
+inverse-distance weighting on an x-y pad (**Vowel X**, **Vowel Y**: down = open mouth, across =
+tongue front to back). **Voice** picks the Csound formant table (Bass, Tenor, Alto, Soprano);
+**Shift** (+/-12 st) scales every formant, **Resonance** scales bandwidth (50 % as tabulated),
+**Spread** detunes formants 2-5 oppositely on left and right, **Drive** saturates before the
+filters (0 = off), **Air** returns unfiltered highs, **Mix** (0 = bit-exact dry) and **Output**.
+Wet level is normalised so noise keeps about its level. MIDI in is used only for Drift CC 1-4 on
+**CC Channel** (default 1, 0 = off): Vowel X, Vowel Y, Shift, Resonance. No plugin state.
+Colours any source; it does not take a modulator (see voxmod).
 
 ### bubbles
 Water sound generator, stereo, continuous without MIDI (note-on/off optionally gates and

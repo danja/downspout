@@ -1,0 +1,39 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:mouth a trn:PluginProfile ;
+    rdfs:label "Mouth" ;
+    rdfs:comment "Stereo vowel filter. Five parallel formant band-pass filters morph between the vowels A, E, I, O and U on an x-y pad, for bass, tenor, alto and soprano voices. Shift, resonance, stereo spread, drive and air. Puts a vowel on any sound." ;
+    trn:bundleName "mouth.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/mouth/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio, trn:MidiCC ;
+    trn:produces trn:Audio ;
+    trn:caution "No latency and no plugin state. MIDI input is used only for Drift CC 1-4 on the chosen channel (vowel X, vowel Y, shift, resonance); a CC override is released when that control is moved on the panel or by the host. Changing Voice switches the formant table at once (the vowel position is smoothed, the voice is not). Vowel data is the widely circulated Csound formant table; formant levels are normalised so white noise keeps about its level. Not auditioned in a host." ;
+    trn:parameter [ rdfs:label "Vowel X" ; trn:symbol "vowel_x" ; trn:range "0-100" ;
+                    rdfs:comment "Pad position across: front vowels (I, E) at the left, back vowels (U, O) at the right. Drift CC 1." ] ;
+    trn:parameter [ rdfs:label "Vowel Y" ; trn:symbol "vowel_y" ; trn:range "0-100" ;
+                    rdfs:comment "Pad position down: closed vowels (I, U) at the top, open (A) at the bottom. Drift CC 2." ] ;
+    trn:parameter [ rdfs:label "Voice" ; trn:symbol "voice" ; trn:range "Bass, Tenor, Alto, Soprano" ;
+                    rdfs:comment "Which formant table the vowels come from." ] ;
+    trn:parameter [ rdfs:label "Shift" ; trn:symbol "shift" ; trn:range "-12 to +12 st" ;
+                    rdfs:comment "Scales every formant frequency (gender / size). Drift CC 3." ] ;
+    trn:parameter [ rdfs:label "Resonance" ; trn:symbol "resonance" ; trn:range "0-100" ;
+                    rdfs:comment "Formant bandwidth: 50 = as tabulated, 0 = four times wider, 100 = four times narrower. Drift CC 4." ] ;
+    trn:parameter [ rdfs:label "Spread" ; trn:symbol "spread" ; trn:range "0-100" ;
+                    rdfs:comment "Detunes the upper four formants in opposite directions on the left and right for width." ] ;
+    trn:parameter [ rdfs:label "Drive" ; trn:symbol "drive" ; trn:range "0-24 dB" ;
+                    rdfs:comment "Saturation (tanh) before the filters. Off at 0; a small signal gains half the setting in dB." ] ;
+    trn:parameter [ rdfs:label "Air" ; trn:symbol "tilt" ; trn:range "0-100" ;
+                    rdfs:comment "Adds unfiltered highs (above about 4 kHz) back to the wet sound: breath and sibilants." ] ;
+    trn:parameter [ rdfs:label "Mix" ; trn:symbol "mix" ; trn:range "0-100" ;
+                    rdfs:comment "Dry/wet. At 0 the output is the input, bit for bit." ] ;
+    trn:parameter [ rdfs:label "Output" ; trn:symbol "output" ; trn:range "-24 to +12 dB" ;
+                    rdfs:comment "Gain on the wet sound." ] ;
+    trn:parameter [ rdfs:label "CC Channel" ; trn:symbol "cc_channel" ; trn:range "0-16" ;
+                    rdfs:comment "MIDI channel for Drift CC 1-4. 0 = off." ] .
