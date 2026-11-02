@@ -1,9 +1,14 @@
 #include "DistrhoPlugin.hpp"
 
 #include "sam_engine.hpp"
+#include "sam_mcp_server.hpp"
 #include "sam_params.hpp"
+#include "sam_ui_bridge.hpp"
 
+#include <atomic>
+#include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <string>
 
 START_NAMESPACE_DISTRHO
@@ -30,6 +35,16 @@ core::Transport toTransport(const TimePosition& position)
     return transport;
 }
 
+// DOWNSPOUT_SAM_MCP=0 (or off/false/no) keeps the embedded MCP server from starting at all.
+bool mcpDisabledByEnvironment()
+{
+    const char* value = std::getenv("DOWNSPOUT_SAM_MCP");
+    if (value == nullptr)
+        return false;
+    const std::string v(value);
+    return v == "0" || v == "off" || v == "false" || v == "no";
+}
+
 }  // namespace
 
 class SamPlugin : public Plugin {
@@ -38,6 +53,9 @@ public:
     {
         engine_.activate(getSampleRate());
     }
+
+    // The server holds a reference to engine_, so it is gone before the engine is.
+    ~SamPlugin() override { mcp_.reset(); }
 
 protected:
     const char* getLabel() const override { return "Sam"; }
@@ -137,12 +155,23 @@ protected:
             engine_.setText(value);
     }
 
-    float getParameterValue(const uint32_t index) const override { return engine_.getParameter(index); }
+    float getParameterValue(const uint32_t index) const override
+    {
+        if (index == core::paramIndex(core::ParamId::mcpPort))
+            return static_cast<float>(mcpPort_.load());
+        return engine_.getParameter(index);
+    }
 
     void setParameterValue(const uint32_t index, const float value) override { engine_.setParameter(index, value); }
 
     // Runtime state only: the text and the settings are the patch and must survive.
-    void activate() override { engine_.activate(getSampleRate()); }
+    // The MCP server is started here, not in the constructor, so a host scan that merely
+    // instantiates the plugin does not open a socket.
+    void activate() override
+    {
+        engine_.activate(getSampleRate());
+        startMcp();
+    }
 
     void sampleRateChanged(const double newSampleRate) override { engine_.activate(newSampleRate); }
 
@@ -171,6 +200,29 @@ protected:
 private:
     static constexpr uint32_t kMaxMidiEvents = 256;
 
+    void startMcp()
+    {
+        if (mcp_ || mcpDisabledByEnvironment())
+            return;
+        core::SamMcpServer::Hooks hooks;
+        // Called on the server thread. The engine already has the change; these tell the panel
+        // and the host. Each is best effort: a host may refuse an off-thread parameter request.
+        hooks.textChanged = [this](const std::string& text) {
+            const int port = mcpPort_.load();
+            if (port > 0)
+                core::UiBridge::publish(port, text);
+        };
+        hooks.parameterChanged = [this](const uint32_t index, const float value) {
+            requestParameterValueChange(index, value);
+        };
+        auto server = std::make_unique<core::SamMcpServer>(engine_, core::SamMcpServer::kDefaultPort, hooks);
+        if (!server->start())
+            return;  // all ten ports busy: run without remote control
+        mcpPort_.store(server->port());
+        mcp_ = std::move(server);
+        requestParameterValueChange(core::paramIndex(core::ParamId::mcpPort), static_cast<float>(mcpPort_.load()));
+    }
+
     static void setEnumeration(Parameter& parameter, const char* const* names, const std::size_t count)
     {
         // The tables are static for the life of the plugin; DPF only keeps the pointer.
@@ -192,6 +244,8 @@ private:
     }
 
     core::Engine engine_;
+    std::atomic<int> mcpPort_ {0};
+    std::unique_ptr<core::SamMcpServer> mcp_;  // after engine_: destroyed first
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SamPlugin)
 };

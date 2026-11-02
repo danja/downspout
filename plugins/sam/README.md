@@ -42,6 +42,7 @@ Words are the whitespace-separated pieces of the text. A lone `_` is a rest and 
 | Tone | 1-12 kHz low-pass, top is open | 8000 Hz |
 | Level | 0-1 | 0.70 |
 | Current Word | read-only status: slot being spoken, 0 when idle | |
+| MCP Port | read-only status: port of this instance's MCP server, 0 when off | |
 
 The panel also has the six voices from the SAM manual (SAM, Elf, Robot, Stuffy, Old Lady, Alien) as
 presets of Speed, Pitch, Throat and Mouth.
@@ -51,6 +52,12 @@ everything. Eight voices, the oldest is stolen.
 
 The text is saved with the project as the `text` state (up to 2000 characters, 512 words); every other
 setting is a parameter.
+
+## Remote control (MCP)
+
+An embedded MCP server (loopback, port 7230 and up) lets an agent or script set the words or phonemes,
+speak them now, and move the parameters while the host plays. From a shell:
+`scripts/sam-say.sh hello world`. Disable with `DOWNSPOUT_SAM_MCP=0`. See `docs/mcp.md`.
 
 ## Things to know
 

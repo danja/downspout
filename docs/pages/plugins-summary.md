@@ -879,7 +879,12 @@ host BBT, to the frame, independent of block size; a locate or loop wrap speaks 
 playhead from the matching point; silent while stopped or without BBT; **Speak** (trigger) plays one
 pass without the transport at the host tempo (120 if none). Voice: **Speed** 20-200 (lower is faster),
 **Pitch** 16-255 (Transport mode), **Mouth**, **Throat**, **Monotone**; **Tone** low-pass and **Level**.
-Output parameter `out_word` is the 1-based slot being spoken (0 idle). Words render on the audio
+Output parameter `out_word` is the 1-based slot being spoken (0 idle); `mcp_port` is the port of the
+embedded MCP server. **Remote control:** an HTTP MCP server on 127.0.0.1 (7230, then up to 7239 for further
+instances; started at first activation; `DOWNSPOUT_SAM_MCP=0` disables) with tools `say` (replace the text and
+speak it once now in either mode), `set_text`, `get_text`, `check_text` (vet words/phonemes), `set_parameter`
+/ `set_parameters` (number, boolean or panel label), `get_parameters`, `set_voice`, `get_status`, `get_port`;
+`scripts/sam-say.sh` is a command-line client (`plugins/sam/docs/mcp.md`). Words render on the audio
 thread (30-50 us); nothing is allocated. SAM has no licence; see `plugins/sam/third_party/sam/SAM-LICENSE.md`.
 
 ### rift

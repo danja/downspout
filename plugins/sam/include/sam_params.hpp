@@ -8,7 +8,7 @@ namespace downspout::sam {
 
 // ── Parameters ─────────────────────────────────────────────────────────────
 //
-// Seventeen host-writable parameters and one read-only status parameter. The
+// Seventeen host-writable parameters and two read-only status parameters. The
 // text itself is not a parameter: it travels as the "text" state.
 
 enum class ParamId : std::uint32_t {
@@ -36,9 +36,10 @@ enum class ParamId : std::uint32_t {
     level,
     // Read-only status
     outWord,
+    mcpPort,
 };
 
-inline constexpr std::size_t kParameterCount = 18;
+inline constexpr std::size_t kParameterCount = 19;
 inline constexpr std::size_t kInputParameterCount = 17;
 
 struct ParamSpec {
@@ -77,6 +78,9 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"level", "Level", "", 0.0f, 1.0f, 0.70f, false, false, false},
 
     {"out_word", "Current Word", "", 0.0f, 4096.0f, 0.0f, true, true, false},
+    // TCP port of this instance's MCP server, 0 while it is not listening. The panel reads it to
+    // find the in-process channel its server writes text changes to (see sam_ui_bridge.hpp).
+    {"mcp_port", "MCP Port", "", 0.0f, 65535.0f, 0.0f, true, true, false},
 }};
 
 [[nodiscard]] constexpr std::uint32_t paramIndex(const ParamId id) noexcept

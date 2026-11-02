@@ -19,8 +19,20 @@ endif()
 add_library(downspout_sam_core STATIC
     src/sam_speech.cpp
     src/sam_engine.cpp
+    src/sam_mcp_server.cpp
 )
-target_link_libraries(downspout_sam_core PUBLIC downspout-project-options downspout_sam_vendor)
+target_link_libraries(downspout_sam_core PUBLIC downspout-project-options downspout_sam_vendor pthread)
+if(WIN32)
+    # cpp-httplib needs the Windows 10 API set and Winsock2 (same as Campione).
+    target_compile_definitions(downspout_sam_core PUBLIC _WIN32_WINNT=0x0A00)
+    target_link_libraries(downspout_sam_core PUBLIC ws2_32)
+endif()
+# The MCP server is plain HTTP on loopback: keep SSL out of cpp-httplib.
+target_compile_options(downspout_sam_core PRIVATE
+    -UCPPHTTPLIB_OPENSSL_SUPPORT
+    -UCPPHTTPLIB_WOLFSSL_SUPPORT
+    -UCPPHTTPLIB_MBEDTLS_SUPPORT
+)
 target_include_directories(downspout_sam_core PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
@@ -57,5 +69,8 @@ endif()
 if(BUILD_TESTING)
     downspout_add_core_test(downspout_sam_core_tests
         SOURCES tests/sam_core_tests.cpp
+        LIBS downspout_sam_core)
+    downspout_add_core_test(downspout_sam_mcp_tests
+        SOURCES tests/sam_mcp_tests.cpp
         LIBS downspout_sam_core)
 endif()

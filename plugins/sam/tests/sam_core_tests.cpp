@@ -754,6 +754,82 @@ void testSpeakAuditionsWithoutTheTransport()
     pass("testSpeakAuditionsWithoutTheTransport");
 }
 
+void testSayWorksInEitherMode()
+{
+    // Keys mode, host stopped, no MIDI: say() speaks the whole text once, then stops.
+    Rig keys;
+    keys.set(ParamId::phonetic, 1.0f);
+    keys.engine.setText("UW UW UW");
+    keys.engine.say("AA IY AA");
+    const std::vector<float> spoken = keys.transport(0.0, 120.0, 4 * kQuarter, 256, 4.0, false);
+    assert(rms(spoken, 0, 4800) > 0.02);
+    assert(peak(spoken, kQuarter + 100, kQuarter + 2000) > 0.0);  // the second word follows a step later
+    assert(keys.engine.text() == "AA IY AA");
+    const std::vector<float> after = keys.transport(0.0, 120.0, 4 * kQuarter, 256, 4.0, false);
+    assert(peak(after, 0, 4 * kQuarter) == 0.0);                  // one pass only
+
+    // The first word comes from the new text, not the old: exactly what setting the text and pressing
+    // Speak gives, whether the old text was already in place or still pending.
+    Rig reference;
+    reference.set(ParamId::mode, 1.0f);
+    usePhonetic(reference, "AA IY AA");
+    reference.set(ParamId::speak, 1.0f);
+    const std::vector<float> expected = reference.transport(0.0, 120.0, 4 * kQuarter, 256, 4.0, false);
+    assert(rms(expected, 0, 4800) > 0.02);
+    for (const bool settled : {true, false}) {
+        Rig viaSay;
+        viaSay.set(ParamId::mode, 1.0f);
+        viaSay.set(ParamId::phonetic, 1.0f);
+        viaSay.engine.setText("UW UW UW");
+        if (settled)
+            (void)viaSay.transport(0.0, 120.0, 256, 256, 4.0, false);  // the old text is now in place
+        viaSay.engine.say("AA IY AA");
+        const std::vector<float> got = viaSay.transport(0.0, 120.0, 4 * kQuarter, 256, 4.0, false);
+        assert(rmsDifference(expected, got) < 1.0e-5);
+    }
+
+    // Keys mode ignores a rolling host transport for a say(): it still speaks.
+    Rig rolling;
+    rolling.set(ParamId::phonetic, 1.0f);
+    rolling.engine.say("AA IY");
+    const std::vector<float> over = rolling.transport(0.0, 120.0, 2 * kQuarter, 256, 4.0, true);
+    assert(rms(over, 0, 4800) > 0.02);
+
+    // The Speak button is still a Transport-mode control: in Keys mode it does nothing.
+    Rig button;
+    button.set(ParamId::phonetic, 1.0f);
+    button.engine.setText("AA IY AA");
+    button.set(ParamId::speak, 1.0f);
+    const std::vector<float> silent = button.transport(0.0, 120.0, 2 * kQuarter, 256, 4.0, false);
+    assert(peak(silent, 0, 2 * kQuarter) == 0.0);
+
+    // Transport mode, host stopped: the same.
+    Rig transport;
+    transport.set(ParamId::mode, 1.0f);
+    transport.set(ParamId::phonetic, 1.0f);
+    transport.engine.say("AA IY");
+    const std::vector<float> t = transport.transport(0.0, 120.0, 2 * kQuarter, 256, 4.0, false);
+    assert(rms(t, 0, 4800) > 0.02);
+    pass("testSayWorksInEitherMode");
+}
+
+void testSayDoesNotDisturbKeys()
+{
+    // Notes still play their words while and after a say().
+    Rig rig;
+    rig.set(ParamId::phonetic, 1.0f);
+    rig.engine.setText("AA IY");
+    const std::vector<float> plain = rig.keys({{0, 0, 60, 100, 0}}, 12000);
+    Rig other;
+    other.set(ParamId::phonetic, 1.0f);
+    other.engine.setText("AA IY");
+    other.engine.say("AA IY");
+    (void)other.transport(0.0, 120.0, 4 * kQuarter, 256, 4.0, false);  // say() plays out
+    const std::vector<float> after = other.keys({{0, 0, 60, 100, 0}}, 12000);
+    assert(rmsDifference(plain, after) < 1.0e-5);
+    pass("testSayDoesNotDisturbKeys");
+}
+
 void testCurrentWordStatus()
 {
     Rig rig;
@@ -1040,6 +1116,8 @@ int main()
     testLoopWrapRestartsTheText();
     testStoppingTheTransportSilencesTheWord();
     testSpeakAuditionsWithoutTheTransport();
+    testSayWorksInEitherMode();
+    testSayDoesNotDisturbKeys();
     testCurrentWordStatus();
     testEveryControlHasAnEffect();
     testSettingsDoNotLeakBetweenInstances();

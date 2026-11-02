@@ -81,6 +81,13 @@ Launches each plugin in the DPF standalone runner, captures a screenshot with
 `scrot`, and writes it to `docs/pages/assets/plugins/<name>.png`.  Requires a
 display (real or virtual).  Called during the new-plugin completion checklist.
 
+### `sam-say.sh`
+
+Command-line client for a running Sam plugin's embedded MCP server (loopback, ports
+7230-7239; needs `curl` and `jq`).  `sam-say.sh hello world` speaks a line; `-p` reads
+it as SAM phonemes; subcommands `set`, `text`, `status`, `check`, `param`, `params` and
+`voice` cover the rest (`--help`).  See `plugins/sam/docs/mcp.md`.
+
 ### `create-trance-reaper-project.py`
 
 Writes an original 96-bar, 138 BPM A-minor trance arrangement (DrumKit, Basilico,

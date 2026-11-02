@@ -7,7 +7,7 @@ category: instrument
 group: sources
 role: Speech synthesiser
 screenshot: /assets/plugins/sam.png
-capabilities: [audio output, MIDI note input, host transport]
+capabilities: [audio output, MIDI note input, host transport, MCP remote control]
 summary: The 1982 Software Automatic Mouth speech synthesiser. Type text, then play it from MIDI, one word per note sung at the key's pitch, or let the host transport read it aloud, one word per step.
 ---
 
@@ -50,3 +50,10 @@ The current word is highlighted in the box while it plays.
 
 The text is saved with the project. A word is rendered on the audio thread when it starts (a short one
 takes about 40 microseconds), so nothing is allocated and the timing is sample-accurate.
+
+## Remote control
+
+An agent or script can drive Sam while the host plays, through an embedded MCP server on the loopback
+interface (port 7230 and up). It can set the words or phonemes, speak them at once in either mode,
+vet phonemes SAM would refuse, and move any parameter. From a shell, `scripts/sam-say.sh hello world`
+speaks a line. Set `DOWNSPOUT_SAM_MCP=0` in the host's environment to keep the server off.

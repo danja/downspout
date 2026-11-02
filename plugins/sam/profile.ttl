@@ -15,7 +15,7 @@ dsp:sam a trn:PluginProfile ;
     trn:accepts trn:Midi ;
     trn:produces trn:Audio ;
     trn:requires trn:HostTransport ;
-    trn:caution "Transport mode is silent while the host is stopped (use Speak to audition) and when the host gives no bar and beat position. Keys mode ignores the transport. SAM is vendored with no licence (abandonware); see plugins/sam/third_party/sam/SAM-LICENSE.md." ;
+    trn:caution "Embeds an unauthenticated MCP server on 127.0.0.1:7230-7239 (tools: say, set_text, get_text, check_text, set_parameter, set_parameters, get_parameters, set_voice, get_status, get_port); started at first activation, disabled by DOWNSPOUT_SAM_MCP=0. Transport mode is silent while the host is stopped (use Speak to audition) and when the host gives no bar and beat position. Keys mode ignores the transport. SAM is vendored with no licence (abandonware); see plugins/sam/third_party/sam/SAM-LICENSE.md." ;
     trn:parameter [ rdfs:label "Mode" ; trn:symbol "mode" ; trn:range "Keys, Transport" ;
                     rdfs:comment "Keys: each MIDI note speaks a word. Transport: words are laid out one per step from the start bar and spoken as the playhead reaches them. Switching mode releases what the other mode started." ] ;
     trn:parameter [ rdfs:label "Speed" ; trn:symbol "speed" ; trn:range "20-200" ;
@@ -52,6 +52,8 @@ dsp:sam a trn:PluginProfile ;
                     rdfs:comment "Output gain; the sum of the voices is limited to full scale. Default 0.70." ] ;
     trn:parameter [ rdfs:label "Current Word" ; trn:symbol "out_word" ; trn:range "0-4096" ;
                     rdfs:comment "Read-only: 1-based slot of the word being spoken, 0 when idle. Drives the highlight in the panel." ] ;
+    trn:parameter [ rdfs:label "MCP Port" ; trn:symbol "mcp_port" ; trn:range "0-65535" ;
+                    rdfs:comment "Read-only: TCP port of this instance's embedded MCP server (7230-7239), 0 when it is not listening. The panel uses it to follow text set over MCP." ] ;
     trn:state [
         trn:stateKey "text" ;
         rdfs:label "Text" ;

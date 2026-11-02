@@ -43,6 +43,16 @@ Engine::Engine()
 
 void Engine::setText(const std::string& text)
 {
+    installScript(text, false);
+}
+
+void Engine::say(const std::string& text)
+{
+    installScript(text, true);
+}
+
+void Engine::installScript(const std::string& text, const bool sayAfterSwap)
+{
     auto fresh = std::make_unique<Script>(parseScript(text));
     std::unique_ptr<Script> retired;
     {
@@ -51,6 +61,7 @@ void Engine::setText(const std::string& text)
         pendingText_ = fresh->text;
         pendingScript_ = std::move(fresh);
         scriptDirty_ = true;
+        sayAfterSwap_ = sayAfterSwap_ || sayAfterSwap;
     }
     // `retired` is freed here, on the calling thread, after the lock is released.
 }
@@ -112,6 +123,7 @@ void Engine::activate(const double sampleRate)
     lastTriggered_ = -1;
     currentSlot_ = -1;
     speakRequested_.store(false);
+    sayRequested_.store(false);
     outWord_.store(0);
 }
 
@@ -129,6 +141,11 @@ void Engine::pollScript()
     if (lock.owns_lock() && scriptDirty_) {
         std::swap(script_, pendingScript_);
         scriptDirty_ = false;
+        // Only now, with the new text in place, may the speech it asked for begin.
+        if (sayAfterSwap_) {
+            sayAfterSwap_ = false;
+            sayRequested_.store(true);
+        }
     }
 }
 
@@ -207,9 +224,9 @@ void Engine::collectMidi(const Snapshot& s, const MidiEvent* midi, const std::ui
     }
 }
 
-void Engine::scheduleTransport(const Snapshot& s, const Transport& t, const std::uint32_t frames)
+void Engine::scheduleTransport(const Snapshot& s, const Transport& t, const std::uint32_t frames, const bool keysMode)
 {
-    const bool live = t.valid && t.playing;
+    const bool live = !keysMode && t.valid && t.playing;
     const double bpm = (t.valid && t.bpm > 0.0) ? t.bpm : 120.0;
     const double beatsPerBar = (t.valid && t.beatsPerBar > 0.0) ? t.beatsPerBar : 4.0;
     const double startBeat = static_cast<double>(s.startBar - 1) * beatsPerBar;
@@ -506,10 +523,18 @@ void Engine::process(const Transport& transport, const MidiEvent* midi, const st
         nextSlot_ = 0;  // the text starts again with the song
     hostWasPlaying_ = hostPlaying;
 
+    const bool say = sayRequested_.exchange(false);
+    if (say)
+        speakRequested_.store(true);  // the same one-pass audition the Speak button asks for
+
     if (s.mode == 0) {
         collectMidi(s, midi, midiCount, frames);
+        // Keys mode has no transport reading, but a say() still plays through the same scheduler,
+        // which then ignores the host's playhead and just walks the text once.
+        if (say || audition_)
+            scheduleTransport(s, transport, frames, true);
     } else {
-        scheduleTransport(s, transport, frames);
+        scheduleTransport(s, transport, frames, false);
     }
 
     std::uint32_t cursor = 0;

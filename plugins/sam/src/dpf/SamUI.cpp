@@ -2,6 +2,7 @@
 
 #include "sam_params.hpp"
 #include "sam_speech.hpp"
+#include "sam_ui_bridge.hpp"
 
 #include <algorithm>
 #include <array>
@@ -79,6 +80,28 @@ protected:
             commit(P(core::ParamId::pitch), static_cast<float>(v.pitch));
             commit(P(core::ParamId::throat), static_cast<float>(v.throat));
             commit(P(core::ParamId::mouth), static_cast<float>(v.mouth));
+        }
+    }
+
+    // Text an MCP client set arrives through the in-process bridge; the server's port, which
+    // keys this instance's channel, arrives as the mcp_port parameter.
+    void uiIdle() override
+    {
+        const int port = static_cast<int>(std::lround(value(P(core::ParamId::mcpPort))));
+        if (port <= 0)
+            return;
+        if (!bridgeSynced_) {
+            // Whatever was published before this editor opened is already in the plugin's saved
+            // text, which stateChanged delivers; only later changes are news.
+            bridgeSerial_ = core::UiBridge::serial(port);
+            bridgeSynced_ = true;
+            return;
+        }
+        std::string incoming;
+        if (core::UiBridge::fetch(port, bridgeSerial_, incoming) && incoming != text_) {
+            setText(incoming, false);
+            caret_ = std::min(caret_, text_.size());
+            repaint();
         }
     }
 
@@ -224,6 +247,8 @@ private:
     };
 
     std::string text_;
+    std::uint32_t bridgeSerial_ = 0;
+    bool bridgeSynced_ = false;
     std::size_t caret_ = 0;
     bool editing_ = false;
     int firstLine_ = 0;

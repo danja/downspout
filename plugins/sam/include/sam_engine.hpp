@@ -47,6 +47,12 @@ public:
 
     // ── Main thread ────────────────────────────────────────────────────────
     void setText(const std::string& text);
+    // Replaces the text and speaks it once from the first word, now, in either mode and whatever
+    // the host transport is doing (external control: the MCP server). In Transport mode with the
+    // host actually rolling, the transport is already reading the text aloud, so the new text is
+    // simply picked up as the playhead reaches its words. The text is swapped in before the speech
+    // is started, so the first word is never taken from the old text.
+    void say(const std::string& text);
     [[nodiscard]] std::string text() const;
     void setParameter(std::uint32_t index, float value);
     [[nodiscard]] float getParameter(std::uint32_t index) const;
@@ -106,7 +112,9 @@ private:
     [[nodiscard]] Snapshot snapshot() const;
     void addEvent(const Event& event);
     void collectMidi(const Snapshot& s, const MidiEvent* midi, std::uint32_t count, std::uint32_t frames);
-    void scheduleTransport(const Snapshot& s, const Transport& t, std::uint32_t frames);
+    // `keysMode` runs only the audition (a one-off pass over the text); the host transport is ignored.
+    void scheduleTransport(const Snapshot& s, const Transport& t, std::uint32_t frames, bool keysMode);
+    void installScript(const std::string& text, bool sayAfterSwap);
     void apply(const Snapshot& s, const Event& event);
     void renderRange(const Snapshot& s, std::uint32_t begin, std::uint32_t end, float* outL, float* outR);
 
@@ -119,11 +127,13 @@ private:
     // main-thread-writable, audio-thread-readable
     std::array<std::atomic<float>, kParameterCount> params_ {};
     std::atomic<bool> speakRequested_ {false};
+    std::atomic<bool> sayRequested_ {false};  // raised by the audio thread once a say() text is in
 
     mutable std::mutex scriptMutex_;
     std::unique_ptr<Script> pendingScript_;
     std::string pendingText_;
     bool scriptDirty_ = false;
+    bool sayAfterSwap_ = false;  // guarded by scriptMutex_
 
     // audio thread only
     std::unique_ptr<Script> script_;
