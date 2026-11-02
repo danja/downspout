@@ -470,7 +470,7 @@ void testFugueGenreIsAppendedAndAnswersAtDominant() {
     assert(static_cast<int>(GenreId::moroder) == 11);
     assert(static_cast<int>(GenreId::descending) == 12);
     assert(static_cast<int>(GenreId::descendingBars) == 13);
-    assert(static_cast<int>(GenreId::count) == 13);
+    assert(static_cast<int>(GenreId::count) == 14);
 
     Controls controls;
     controls.seed = 1701u;

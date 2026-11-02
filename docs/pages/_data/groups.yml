@@ -3,7 +3,7 @@
 # category anchors so existing links such as /#generative still land somewhere.
 - id: generators
   title: Melody, Harmony & Bass Generators
-  blurb: Write the notes for you: melodies, chords, counter-lines, basslines and long-form structure.
+  blurb: "Write the notes for you: melodies, chords, counter-lines, basslines and long-form structure."
 - id: rhythm
   title: Rhythm & Pattern Generators
   blurb: Drum patterns, polymeters, ghost notes, arpeggios and Launchpad grid sequencers.
@@ -15,7 +15,7 @@
   blurb: Gate, retune, remember, capture and modulate MIDI; drive other plugins with CC.
 - id: synths
   title: Synthesizers
-  blurb: Tonal and physically modelled instruments: FM, wavetable, waveguide, modal, drone and bass.
+  blurb: "Tonal and physically modelled instruments: FM, wavetable, waveguide, modal, drone and bass."
 - id: sources
   title: Samplers & Unusual Sound Sources
   blurb: Samplers, speech, birdsong, water, engines and glitch machines.
