@@ -115,6 +115,8 @@ At shape 0 the side is zero and a mono source comes out at unity gain in both ch
 | Side Shape  | 0–100 %    | 0 %     | Distortion amount on side path; 0 = mono output, 100 = hard clip with drive 8× |
 | Wet         | 0–100 %    | 100 %   | Wet/dry mix; dry is latency-compensated original stereo |
 | Bass 90°    | Off/Left/Right | Off | Bass below the cutoff shifted 90° between channels (see below); UI: click the button in the Controls header |
+| Delay (beats) | Off, 1/64 … 1 beat (12 steps) | Off | Main-input delay locked to the host tempo (see below); horizontal slider under the vertical ones |
+| Delay (ms)  | 0–200 ms   | 0 ms    | Main-input delay in milliseconds, added to Delay (beats) |
 
 **Ring mod:** with Attack and Release both at 0 the follower is bypassed and the main signal is
 multiplied by the signed sidechain (larger-magnitude channel): `gain = (1 - d) + d * sc`, d = Duck Depth.
@@ -137,6 +139,36 @@ chosen channel gets the leg that is 90° off the other. Output per channel is
   with the (pure-delay) dry path and partly cancels/decorrelates against it.
 - Serialized as `bassPhase` (absent in older projects = Off). DPF parameter appended last
   (`bass_phase`, index 19) so existing indices are unchanged.
+
+### Input delay (not in the LV2 original)
+
+A second way to get a bass out from under a kick: instead of (or as well as) lowering the bass,
+hold it back so it starts just after the kick. Two sliders under the vertical ones delay the main
+inputs 1–2; the sidechain is not delayed. They add:
+
+- **Delay (beats)**: 12 steps, `0, 1/64, 1/32, 1/16, 1/12, 1/8, 1/6, 1/4, 1/3, 1/2, 3/4, 1` of a beat
+  (`kBeatFractions`), converted with the host tempo every block (`bbt.beatsPerMinute`; DPF supplies
+  120 when the host gives none, and a tempo that is zero, negative or not finite is read as 120).
+  A tempo change moves the delay. `WANT_TIMEPOS` is therefore 1.
+- **Delay (ms)**: 0–200 ms.
+- The total is limited to `kMaxDelaySeconds` = 2 s (a whole beat below 30 bpm is cut to it).
+
+Where it sits: straight after the mono-feed fix and the input meter, before the ducking VCA, the mono
+sum and the dry path. So the ducker sees the delayed bass (the bass is ducked *and* late), and Wet 0 is
+still the delayed input. It is a pure time shift, not an echo, and is **not** reported to the host as
+latency (that would defeat it); only the FIR's 64 samples are.
+
+Implementation (`InputDelay`): a per-channel ring buffer sized by `prepare(state, sampleRate)` to
+`ceil(2 s × sr) + 2`. Called from the constructor and `sampleRateChanged()`; a host that never calls it
+gets it on the first block, once. Settled, the output is a whole-sample read, exact and unfiltered. When
+the target changes (slider, automation, tempo) it crossfades between the old and new tap over 10 ms;
+a further change during a fade waits for the fade to finish, so there is never a jump or a pitch glide.
+The first block after activation starts settled instead of fading in from zero. Activation clears the
+buffer, never the setting. The resolved total is exposed as the read-only `status_delay_ms` for the
+panel (the beat row shows its step in ms as `status − ms slider`).
+
+Serialized as `delayBeat` and `delayMs` (absent in older projects = off). DPF parameters appended after
+`bass_phase`: `delay_beat` (index 20), `delay_ms` (21), `status_delay_ms` (22).
 
 ### Read-only meters
 
@@ -161,7 +193,7 @@ chosen channel gets the leg that is 90° off the other. Output per channel is
 - **NUM_INPUTS = 4**: inputs 0–1 are main stereo, inputs 2–3 are sidechain. Sidechain
   ports are placed in a custom port group (ID 100) named "Sidechain" via `initPortGroup`.
 - **NUM_OUTPUTS = 2**: standard stereo output in the built-in stereo port group.
-- **WANT_TIMEPOS = 0**: plugin is not transport-aware.
+- **WANT_TIMEPOS = 1**: only for the tempo that locks Delay (beats); playing/stopped and position are not used.
 - **Latency**: 64 frames reported via `getLatencyInFrames()`; hosts should delay-compensate
   other tracks accordingly. The dry delay line is also 64 samples so wet and dry signals
   are time-aligned at any wet/dry ratio.
@@ -177,5 +209,7 @@ chosen channel gets the leg that is 90° off the other. Output per channel is
   original L−R difference in the HP path would be a straightforward routing alternative.
 - Attack/Release slider nudge in the UI uses a linear step for a log-scale parameter;
   a finer log step would be more ergonomic.
-- Bass 90° and ring mod are additions to the LV2 original. Bass 90° is not crossfaded when
+- Delay (beats) follows the tempo with a 10 ms crossfade, so a very fast tempo ramp retimes in steps
+  rather than continuously; the ms slider shifts by whole samples (21 µs at 48 kHz).
+- Bass 90°, ring mod and the input delay are additions to the LV2 original. Bass 90° is not crossfaded when
   switched; ring mod switches abruptly when attack/release reach 0.

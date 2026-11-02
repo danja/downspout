@@ -37,6 +37,9 @@ enum ParameterIndex : uint32_t {
     kParamStatusWet,
     // Appended after the bus block so existing parameter indices stay put
     kParamBassPhase,
+    kParamDelayBeat,
+    kParamDelayMs,
+    kParamStatusDelayMs,   // read-only: total input delay now in force, tempo-resolved
     kParameterCount
 };
 
@@ -57,6 +60,17 @@ ParameterEnumerationValue kBassPhaseEnumValues[3] = {
     {1.0f, "Left"},
     {2.0f, "Right"},
 };
+
+// Labels of the beat slider, in the core's table order.
+ParameterEnumerationValue kDelayBeatEnumValues[downspout::bassops::kBeatSteps];
+
+void initDelayBeatEnum()
+{
+    for (std::size_t i = 0; i < downspout::bassops::kBeatSteps; ++i) {
+        kDelayBeatEnumValues[i].value = static_cast<float>(i);
+        kDelayBeatEnumValues[i].label = downspout::bassops::kBeatNames[i];
+    }
+}
 
 std::string serializeBusConfig(bool midiEnabled, int controlChannel, bool requireGate)
 {
@@ -94,6 +108,8 @@ public:
         : Plugin(kParameterCount, 0, kStateCount)
     {
         parameters_ = downspout::bassops::clampParameters(parameters_);
+        initDelayBeatEnum();
+        downspout::bassops::prepare(engineState_, getSampleRate());
     }
 
 protected:
@@ -312,6 +328,36 @@ protected:
             parameter.enumValues.values         = kBassPhaseEnumValues;
             parameter.enumValues.deleteLater    = false;
             break;
+        case kParamDelayBeat:
+            parameter.hints         = kParameterIsAutomatable | kParameterIsInteger;
+            parameter.name          = "Delay (beats)";
+            parameter.symbol        = "delay_beat";
+            parameter.ranges.min    = 0.0f;
+            parameter.ranges.max    = static_cast<float>(downspout::bassops::kBeatSteps - 1);
+            parameter.ranges.def    = 0.0f;
+            parameter.enumValues.count          = static_cast<uint8_t>(downspout::bassops::kBeatSteps);
+            parameter.enumValues.restrictedMode = true;
+            parameter.enumValues.values         = kDelayBeatEnumValues;
+            parameter.enumValues.deleteLater    = false;
+            break;
+        case kParamDelayMs:
+            parameter.hints         = kParameterIsAutomatable;
+            parameter.name          = "Delay (ms)";
+            parameter.symbol        = "delay_ms";
+            parameter.unit          = "ms";
+            parameter.ranges.min    = 0.0f;
+            parameter.ranges.max    = downspout::bassops::kMaxDelayMs;
+            parameter.ranges.def    = 0.0f;
+            break;
+        case kParamStatusDelayMs:
+            parameter.hints         = kParameterIsOutput;
+            parameter.name          = "Effective Delay";
+            parameter.symbol        = "status_delay_ms";
+            parameter.unit          = "ms";
+            parameter.ranges.min    = 0.0f;
+            parameter.ranges.max    = static_cast<float>(downspout::bassops::kMaxDelaySeconds * 1000.0);
+            parameter.ranges.def    = 0.0f;
+            break;
         case kParamStatusWet:
             parameter.hints         = kParameterIsOutput;
             parameter.name          = "Effective Wet";
@@ -345,6 +391,9 @@ protected:
         case kParamSideShape:       return parameters_.sideShape;
         case kParamWet:             return parameters_.wet;
         case kParamBassPhase:       return static_cast<float>(parameters_.bassPhase);
+        case kParamDelayBeat:       return static_cast<float>(parameters_.delayBeat);
+        case kParamDelayMs:         return parameters_.delayMs;
+        case kParamStatusDelayMs:   return engineState_.meters.delayMs;
         case kParamInputLevel:      return engineState_.meters.inputPeak;
         case kParamScLevel:         return engineState_.meters.scLevel;
         case kParamDuckGain:        return engineState_.meters.duckGain;
@@ -373,6 +422,8 @@ protected:
         case kParamSideShape:      parameters_.sideShape = value; break;
         case kParamWet:            parameters_.wet       = value; break;
         case kParamBassPhase:      parameters_.bassPhase = static_cast<int>(std::lround(value)); break;
+        case kParamDelayBeat:      parameters_.delayBeat = static_cast<int>(std::lround(value)); break;
+        case kParamDelayMs:        parameters_.delayMs   = value; break;
         case kParamMidiEnabled:    midiEnabled_    = value >= 0.5f; break;
         case kParamControlChannel: controlChannel_ = static_cast<int>(std::lround(value)); break;
         case kParamRequireGate:    requireGate_    = value >= 0.5f; break;
@@ -384,7 +435,7 @@ protected:
             break;
         default: break;
         }
-        if (index <= kParamWet || index == kParamBassPhase) {
+        if (index <= kParamWet || index == kParamBassPhase || index == kParamDelayBeat || index == kParamDelayMs) {
             parameters_ = downspout::bassops::clampParameters(parameters_);
         }
     }
@@ -408,10 +459,17 @@ protected:
         parseBusConfig(text, midiEnabled_, controlChannel_, requireGate_);
     }
 
+    // Runtime state only: the settings, including the delay, are the patch and stay. The input delay is
+    // a musical shift, not latency, so it is not reported to the host; only the FIR's is.
     void activate() override
     {
         downspout::bassops::activate(engineState_);
         setLatency(downspout::bassops::kLatencyFrames);
+    }
+
+    void sampleRateChanged(const double newSampleRate) override
+    {
+        downspout::bassops::prepare(engineState_, newSampleRate);
     }
 
     void run(const float** inputs, float** outputs, uint32_t frames,
@@ -439,7 +497,13 @@ protected:
         audio.outL     = outputs[0];
         audio.outR     = outputs[1];
 
-        downspout::bassops::processBlock(engineState_, parameters_, busParams, frames, getSampleRate(), audio);
+        // Host tempo for the beat-locked delay. DPF always fills it (120 when the host gives none).
+        downspout::bassops::Transport transport;
+        const double bpm = getTimePosition().bbt.beatsPerMinute;
+        if (bpm > 0.0)
+            transport.bpm = bpm;
+
+        downspout::bassops::processBlock(engineState_, parameters_, busParams, frames, getSampleRate(), audio, transport);
     }
 
 private:

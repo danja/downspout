@@ -16,7 +16,9 @@ distorted mono fed to the HP path becomes the stereo-difference component after 
 decoding, generating stereo width above the crossover from the added harmonics. At Side
 Shape 0 the wet output is phase-coherent mono. A Wet control blends the processed signal
 against the latency-compensated dry stereo input. Introduces 64-sample FIR latency
-reported to the host.""" ;
+reported to the host. Two delay controls (tempo-locked beats and free ms) can hold the main
+input back so a bass note starts just after the kick; this shift is musical, not latency, and
+is not reported. Reads the host tempo.""" ;
     trn:bundleName "bassops.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/bassops/> ;
@@ -109,7 +111,35 @@ reported to the host.""" ;
         trn:max "2"^^xsd:integer
     ] ;
 
+    trn:parameter [
+        rdfs:label "Delay (beats)" ;
+        trn:symbol "delay_beat" ;
+        rdfs:comment "Delays the main stereo input (inputs 1-2) by a tempo-locked fraction of a beat, so a bass note lands just after the kick that ducks it. A pure time shift applied before ducking and before the dry path, so Wet does not bypass it; the sidechain is not delayed. Steps 0-11: Off, 1/64, 1/32, 1/16, 1/12, 1/8, 1/6, 1/4, 1/3, 1/2, 3/4, 1 beat. Follows the host tempo (120 bpm if none) and is added to Delay (ms). Not reported to the host as latency. Changes crossfade over 10 ms." ;
+        trn:default "0"^^xsd:integer ;
+        trn:min "0"^^xsd:integer ;
+        trn:max "11"^^xsd:integer
+    ] ;
+    trn:parameter [
+        rdfs:label "Delay (ms)" ;
+        trn:symbol "delay_ms" ;
+        trn:unit "ms" ;
+        rdfs:comment "Free delay of the main stereo input in milliseconds, added to Delay (beats). The total is limited to 2 seconds." ;
+        trn:default "0.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "200.0"^^xsd:float
+    ] ;
+
     ## Read-only meter outputs (not automatable; driven by the DSP)
+    trn:parameter [
+        rdfs:label "Effective Delay" ;
+        trn:symbol "status_delay_ms" ;
+        trn:unit "ms" ;
+        rdfs:comment "Total input delay now in force: the beat part at the host tempo plus the ms part, limited to 2000 ms. Read-only; the panel shows it." ;
+        trn:default "0.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "2000.0"^^xsd:float ;
+        trn:readonly true
+    ] ;
     trn:parameter [
         rdfs:label "Input Level" ;
         trn:symbol "input_level" ;

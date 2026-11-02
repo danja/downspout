@@ -31,13 +31,26 @@ void handleMidi(EngineState& state,
                                   const Parameters& params) noexcept;
 
 [[nodiscard]] Parameters clampParameters(const Parameters& raw);
+
+// Clears runtime state only (filters, follower, delay contents); never the patch.
 void activate(EngineState& state);
+
+// Sizes the input delay for `sampleRate`. Call from activate() and sampleRateChanged() so the audio
+// thread never allocates. A host that skips it is still served: processBlock then allocates once, on
+// its first block.
+void prepare(EngineState& state, double sampleRate);
+
+// Input delay in seconds for the given parameters and tempo: the beat part at `bpm` plus the ms part,
+// cut to kMaxDelaySeconds. A tempo <= 0 or not finite is read as kDefaultBpm.
+[[nodiscard]] double delaySeconds(const Parameters& parameters, double bpm) noexcept;
+
 void processBlock(EngineState& state,
                   const Parameters& parameters,
                   const BusParameters& busParams,
                   std::uint32_t nframes,
                   double sampleRate,
-                  const AudioBlock& audio);
+                  const AudioBlock& audio,
+                  const Transport& transport = Transport {});
 
 // Latency introduced by the linear-phase FIR (frames)
 inline constexpr std::uint32_t kLatencyFrames = kFirOrder / 2;

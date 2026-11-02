@@ -1,5 +1,6 @@
 #include "bassops_engine.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 
@@ -123,7 +124,33 @@ Parameters clampParameters(const Parameters& raw)
     p.sideShape = clampf(p.sideShape, 0.0f, 100.0f);
     p.wet       = clampf(p.wet,       0.0f, 100.0f);
     p.bassPhase = p.bassPhase < 0 ? 0 : (p.bassPhase > 2 ? 2 : p.bassPhase);
+    p.delayBeat = std::clamp(p.delayBeat, 0, static_cast<int>(kBeatSteps) - 1);
+    p.delayMs   = clampf(p.delayMs, 0.0f, kMaxDelayMs);
     return p;
+}
+
+double delaySeconds(const Parameters& raw, const double bpm) noexcept
+{
+    const Parameters p = clampParameters(raw);
+    const double tempo = (std::isfinite(bpm) && bpm > 0.0) ? bpm : kDefaultBpm;
+    const double beats = kBeatFractions[static_cast<std::size_t>(p.delayBeat)];
+    return std::min(beats * 60.0 / tempo + static_cast<double>(p.delayMs) * 0.001, kMaxDelaySeconds);
+}
+
+void prepare(EngineState& state, const double sampleRate)
+{
+    if (sampleRate <= 0.0)
+        return;
+    InputDelay& d = state.delay;
+    const auto size = static_cast<std::size_t>(std::ceil(kMaxDelaySeconds * sampleRate)) + 2;
+    d.bufL.assign(size, 0.0f);
+    d.bufR.assign(size, 0.0f);
+    d.write      = 0;
+    d.current    = 0;
+    d.previous   = 0;
+    d.fadeLeft   = 0;
+    d.fadeLength = std::max<std::size_t>(1, static_cast<std::size_t>(std::lround(kDelayFadeSeconds * sampleRate)));
+    d.primed     = false;
 }
 
 void activate(EngineState& state)
@@ -138,6 +165,15 @@ void activate(EngineState& state)
     state.fir.lastCutoffHz = -1.0f;
     state.quad             = {};
     state.meters           = {};
+    // The delay line keeps its size (so activation does not allocate) but forgets what was in it.
+    InputDelay& d = state.delay;
+    std::fill(d.bufL.begin(), d.bufL.end(), 0.0f);
+    std::fill(d.bufR.begin(), d.bufR.end(), 0.0f);
+    d.write    = 0;
+    d.current  = 0;
+    d.previous = 0;
+    d.fadeLeft = 0;
+    d.primed   = false;
 }
 
 void handleMidi(EngineState& state, const BusParameters& bus, const MidiControlEvent& ev)
@@ -189,7 +225,8 @@ void processBlock(EngineState& state,
                   const BusParameters& /*busParams*/,
                   std::uint32_t nframes,
                   double sampleRate,
-                  const AudioBlock& audio)
+                  const AudioBlock& audio,
+                  const Transport& transport)
 {
     if (nframes == 0 || sampleRate <= 0.0) {
         return;
@@ -210,6 +247,22 @@ void processBlock(EngineState& state,
     const float duckScale    = effectiveDuckDepth(state, p) * 0.01f;
     const float wetScale     = effectiveWet(state, p) * 0.01f;
     const float dryScale     = 1.0f - wetScale;
+
+    // Input delay. The line is sized by prepare(); a host that never called it gets it here, once.
+    const auto delayCapacity = static_cast<std::size_t>(std::ceil(kMaxDelaySeconds * sampleRate)) + 2;
+    if (state.delay.bufL.size() != delayCapacity)
+        prepare(state, sampleRate);
+    InputDelay& dl = state.delay;
+    const double wantedSeconds = delaySeconds(p, transport.bpm);
+    const std::size_t delayTarget =
+        std::min(static_cast<std::size_t>(std::lround(wantedSeconds * sampleRate)), delayCapacity - 2);
+    if (!dl.primed) {  // the first block after activation starts settled, not fading in from zero
+        dl.current  = delayTarget;
+        dl.previous = delayTarget;
+        dl.fadeLeft = 0;
+        dl.primed   = true;
+    }
+    state.meters.delayMs = static_cast<float>(wantedSeconds * 1000.0);
 
     // Precompute waveshaper coefficients (avoid per-sample exp)
     constexpr float kLn8 = 2.0794415f;
@@ -260,6 +313,31 @@ void processBlock(EngineState& state,
         const float absR = std::fabs(inR);
         if (absL > blockInPeak) { blockInPeak = absL; }
         if (absR > blockInPeak) { blockInPeak = absR; }
+
+        // Delay the main signal (the meter above read it before the delay). Settled, this is a whole-
+        // sample read: exact, no interpolation filtering. A change of delay crossfades between two taps.
+        {
+            const std::size_t n = dl.bufL.size();
+            dl.bufL[dl.write] = inL;
+            dl.bufR[dl.write] = inR;
+            if (dl.fadeLeft == 0 && dl.current != delayTarget) {
+                dl.previous = dl.current;
+                dl.current  = delayTarget;
+                dl.fadeLeft = dl.fadeLength;
+            }
+            const std::size_t atNow  = (dl.write + n - dl.current) % n;
+            if (dl.fadeLeft > 0) {
+                const float x = 1.0f - static_cast<float>(dl.fadeLeft) / static_cast<float>(dl.fadeLength);
+                const std::size_t atThen = (dl.write + n - dl.previous) % n;
+                inL = dl.bufL[atThen] * (1.0f - x) + dl.bufL[atNow] * x;
+                inR = dl.bufR[atThen] * (1.0f - x) + dl.bufR[atNow] * x;
+                --dl.fadeLeft;
+            } else {
+                inL = dl.bufL[atNow];
+                inR = dl.bufR[atNow];
+            }
+            dl.write = (dl.write + 1) % n;
+        }
 
         const float dL = inL * gain;
         const float dR = inR * gain;

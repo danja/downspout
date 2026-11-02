@@ -1,5 +1,6 @@
 #include "DistrhoUI.hpp"
 #include "downspout/look_and_feel.hpp"
+#include "bassops_core_types.hpp"
 
 #include <algorithm>
 #include <array>
@@ -34,6 +35,9 @@ enum ParameterIndex : uint32_t {
     kParamStatusDuckDepth,
     kParamStatusWet,
     kParamBassPhase,
+    kParamDelayBeat,
+    kParamDelayMs,
+    kParamStatusDelayMs,
     kParameterCount
 };
 
@@ -61,6 +65,21 @@ constexpr std::array<SliderDef, 6> kSliders = {{
     {kParamCutoffHz,  "M/S\nCutoff",  "Hz",  50.0f,  5000.0f, true,  50.0f},
     {kParamSideShape, "Side\nShape",  "%",   0.0f,    100.0f, false, 0.0f},
     {kParamWet,       "Wet",          "%",   0.0f,    100.0f, false, 0.0f},
+}};
+
+// The two horizontal sliders under the vertical ones: delay of the main inputs, so a bass note lands
+// just after the kick that ducks it. Beats is stepped and tempo-locked; ms is free.
+struct HSliderDef {
+    uint32_t    index;
+    const char* label;
+    const char* sub;
+    float       max;
+    bool        stepped;
+};
+
+constexpr std::array<HSliderDef, 2> kHSliders = {{
+    {kParamDelayBeat, "Delay",  "beat", static_cast<float>(downspout::bassops::kBeatSteps - 1), true},
+    {kParamDelayMs,   "Delay",  "ms",   downspout::bassops::kMaxDelayMs,                       false},
 }};
 
 struct MeterDef {
@@ -177,6 +196,9 @@ public:
         values_[kParamStatusDuckDepth]= 80.0f;
         values_[kParamStatusWet]      = 100.0f;
         values_[kParamBassPhase]      = 0.0f;
+        values_[kParamDelayBeat]      = 0.0f;
+        values_[kParamDelayMs]        = 0.0f;
+        values_[kParamStatusDelayMs]  = 0.0f;
 
        #ifdef DGL_NO_SHARED_RESOURCES
         createFontFromFile("sans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
@@ -218,7 +240,15 @@ protected:
         if (ev.button != 1) return false;
         const float x = static_cast<float>(ev.pos.getX());
         const float y = static_cast<float>(ev.pos.getY());
-        if (!ev.press) { dragging_ = -1; return false; }
+        if (!ev.press) { dragging_ = -1; draggingH_ = -1; return false; }
+
+        for (int i = 0; i < static_cast<int>(hSliderRects_.size()); ++i) {
+            if (hSliderRects_[i].contains(x, y)) {
+                draggingH_ = i;
+                updateFromX(i, x);
+                return true;
+            }
+        }
 
         for (int i = 0; i < static_cast<int>(sliderRects_.size()); ++i) {
             if (sliderRects_[i].contains(x, y)) {
@@ -238,6 +268,7 @@ protected:
     bool onMotion(const MotionEvent& ev) override
     {
         if (dragging_ >= 0) { updateFromY(dragging_, static_cast<float>(ev.pos.getY())); return true; }
+        if (draggingH_ >= 0) { updateFromX(draggingH_, static_cast<float>(ev.pos.getX())); return true; }
         return false;
     }
 
@@ -248,6 +279,12 @@ protected:
         for (int i = 0; i < static_cast<int>(sliderRects_.size()); ++i) {
             if (sliderRects_[i].contains(x, y)) {
                 nudge(i, ev.delta.getY() > 0.0f ? 1.0f : -1.0f);
+                return true;
+            }
+        }
+        for (int i = 0; i < static_cast<int>(hSliderRects_.size()); ++i) {
+            if (hSliderRects_[i].contains(x, y)) {
+                nudgeH(i, ev.delta.getY() > 0.0f ? 1.0f : -1.0f);
                 return true;
             }
         }
@@ -265,6 +302,8 @@ private:
 
     std::array<float, kParameterCount> values_ {};
     std::array<Rect,  kSliders.size()> sliderRects_ {};
+    std::array<Rect,  kHSliders.size()> hSliderRects_ {};   // the track of each delay slider, for hit tests
+    int draggingH_ = -1;
     Rect busMidiToggleRect_ {};
     Rect busGateToggleRect_ {};
     Rect busResetRect_ {};
@@ -302,9 +341,20 @@ private:
         text(x + 16.0f, y + 14.0f, "Controls", nullptr);
         drawBassPhaseButton(x + w - 150.0f, y + 8.0f, 136.0f);
 
+        // Total delay now in force (the beat part at the host tempo plus the ms part).
+        if (values_[kParamStatusDelayMs] > 0.05f) {
+            char total[40];
+            std::snprintf(total, sizeof(total), "input delay %.1f ms", values_[kParamStatusDelayMs]);
+            fontSize(10.0f); textAlign(ALIGN_RIGHT | ALIGN_TOP);
+            fillColor(235, 170, 90, 255);
+            text(x + w - 160.0f, y + 15.0f, total, nullptr);
+        }
+
         const float innerX = x + 14.0f;
         const float innerW = w - 28.0f;
-        const float barH   = h - 100.0f;
+        constexpr float kRowH = 30.0f, kRowGap = 4.0f;
+        const float rowsH  = 2.0f * kRowH + kRowGap;
+        const float barH   = h - 138.0f;
         const float barY   = y + 42.0f;
         const float colW   = (innerW - 5.0f * 10.0f) / 6.0f;
 
@@ -314,6 +364,64 @@ private:
             drawVSlider(kSliders[i], cx, barY, colW, barH,
                         values_[kSliders[i].index], dragging_ == i);
         }
+
+        const float rowsY = y + h - 26.0f - rowsH;
+        for (int i = 0; i < 2; ++i)
+            drawHSlider(i, innerX, rowsY + static_cast<float>(i) * (kRowH + kRowGap), innerW, kRowH);
+    }
+
+    // One delay slider: label, track, value. The beat slider has a tick per step and shows what its
+    // step comes to in ms at the host tempo (the status total less the ms slider).
+    void drawHSlider(int i, float x, float y, float w, float h)
+    {
+        const HSliderDef& def = kHSliders[static_cast<std::size_t>(i)];
+        const float labelW = 70.0f, valueW = 118.0f;
+        const float trackX = x + labelW;
+        const float trackW = w - labelW - valueW;
+        const float trackH = 14.0f;
+        const float trackY = y + (h - trackH) * 0.5f;
+        hSliderRects_[static_cast<std::size_t>(i)] = {trackX - 6.0f, y, trackW + 12.0f, h};
+
+        fontSize(11.0f); textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        fc(t_.textDim);
+        char label[24];
+        std::snprintf(label, sizeof(label), "%s  %s", def.label, def.sub);
+        text(x + 2.0f, y + h * 0.5f, label, nullptr);
+
+        beginPath(); roundedRect(trackX, trackY, trackW, trackH, trackH * 0.5f);
+        fc(t_.surface); fill(); closePath();
+
+        const float value = values_[def.index];
+        const float t = clampf(value / def.max, 0.0f, 1.0f);
+        const float fillW = std::max(trackH, trackW * t);
+        const bool active = draggingH_ == i;
+        beginPath(); roundedRect(trackX, trackY, fillW, trackH, trackH * 0.5f);
+        fillColor(active ? 220 : 175, active ? 128 : 98, 50, 255);
+        fill(); closePath();
+
+        if (def.stepped) {
+            for (std::size_t s = 1; s < downspout::bassops::kBeatSteps; ++s) {
+                const float tx = trackX + trackW * static_cast<float>(s) / def.max;
+                beginPath(); sc(t_.textDim.withAlpha(90)); strokeWidth(1.0f);
+                moveTo(tx, trackY + trackH + 2.0f); lineTo(tx, trackY + trackH + 5.0f);
+                stroke(); closePath();
+            }
+        }
+
+        char buf[48];
+        if (def.stepped) {
+            const auto step = static_cast<std::size_t>(clampf(std::round(value), 0.0f, def.max));
+            const float beatMs = std::max(0.0f, values_[kParamStatusDelayMs] - values_[kParamDelayMs]);
+            if (step == 0)
+                std::snprintf(buf, sizeof(buf), "Off");
+            else
+                std::snprintf(buf, sizeof(buf), "%s  %.1f ms", downspout::bassops::kBeatNames[step], beatMs);
+        } else {
+            std::snprintf(buf, sizeof(buf), value <= 0.0f ? "Off" : "%.1f ms", value);
+        }
+        fontSize(11.0f); textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
+        fc(t_.textPrimary);
+        text(x + w - 2.0f, y + h * 0.5f, buf, nullptr);
     }
 
     // Click to cycle Off / Left / Right: which channel's bass leads the 90 degree shift.
@@ -588,6 +696,32 @@ private:
         const Rect&      rect = sliderRects_[idx];
         const float t = clampf(1.0f - (mouseY - rect.y) / rect.h, 0.0f, 1.0f);
         commit(def.index, fromNorm(def, t));
+    }
+
+    void updateFromX(int idx, float mouseX)
+    {
+        const HSliderDef& def  = kHSliders[static_cast<std::size_t>(idx)];
+        const Rect&       rect = hSliderRects_[static_cast<std::size_t>(idx)];
+        const float t = clampf((mouseX - (rect.x + 6.0f)) / (rect.w - 12.0f), 0.0f, 1.0f);
+        commitDelay(def, def.stepped ? std::round(t * def.max) : t * def.max);
+    }
+
+    void nudgeH(int idx, float dir)
+    {
+        const HSliderDef& def = kHSliders[static_cast<std::size_t>(idx)];
+        commitDelay(def, values_[def.index] + dir * (def.stepped ? 1.0f : 1.0f));
+    }
+
+    void commitDelay(const HSliderDef& def, float value)
+    {
+        value = clampf(value, 0.0f, def.max);
+        if (def.stepped) value = std::round(value);
+        if (value == values_[def.index]) return;
+        editParameter(def.index, true);
+        setParameterValue(def.index, value);
+        editParameter(def.index, false);
+        values_[def.index] = value;
+        repaint();
     }
 
     void nudge(int idx, float dir)

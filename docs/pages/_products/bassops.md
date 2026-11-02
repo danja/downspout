@@ -50,6 +50,14 @@ is shifted. It uses a flat-magnitude allpass (Hilbert) pair, accurate across the
 range. Off by default, and when off it is not computed at all. With Wet below 100 %
 the bass partly decorrelates against the dry path.
 
+**Delay** — two horizontal sliders under the vertical ones hold the main signal back so a
+bass note starts just after the kick instead of on top of it, another way to clear the bass from
+under a kick next to ducking it. **Delay (beats)** is locked to the host tempo and steps through
+fractions of a beat (Off, 1/64 … 1 beat); **Delay (ms)** is free, 0–200 ms. They add, the panel
+shows the total in ms, and the sidechain is not delayed. It is a plain time shift (no echo), applied
+before the ducker and the dry path, so Wet does not bypass it. Changes crossfade over 10 ms, and it
+is not reported to the host as latency, since moving the bass against the kick is the point.
+
 **Ring mod** — set Attack and Release both to 0 (the bottom of their sliders) and
 the envelope follower is bypassed: the main signal is multiplied by the signed
 sidechain, so you hear sum and difference tones instead of ducking. Duck Depth blends
@@ -70,6 +78,8 @@ Output — making the ducking action immediately visible.
 | Side Shape   | 0–100 %        | 0 %     | Distortion on the HP path; 0 = mono output, 100 = hard clip ×8 drive |
 | Wet          | 0–100 %        | 100 %   | Wet/dry blend; dry is latency-compensated original stereo          |
 | Bass 90°     | Off/Left/Right | Off     | 90° bass phase shift between channels; idle when Off               |
+| Delay (beats)| Off, 1/64 … 1 beat | Off | Main-input delay locked to the host tempo; adds to Delay (ms)       |
+| Delay (ms)   | 0–200 ms       | 0 ms    | Main-input delay in milliseconds                                    |
 
 ### Routing
 
@@ -91,6 +101,6 @@ latency so wet and dry signals are time-aligned at any wet/dry ratio.
 ### Status
 
 Core DSP — envelope follower, FIR filter pair, waveshaper, bass phase quadrature,
-ring mod, and wet/dry mix — is tested. The UI is functional with live metering. The FIR coefficients are
+ring mod, input delay, and wet/dry mix — is tested. The UI is functional with live metering. The FIR coefficients are
 recomputed per-block on cutoff changes; rapid parameter automation may produce
 brief tonal artefacts at the crossover during the transition.

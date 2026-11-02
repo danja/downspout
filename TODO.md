@@ -251,3 +251,28 @@ Mouth (vowel/formant morph filter) is built (core, VST3, tests, screenshot, docs
 - [ ] Envelope-follower multimode filter (auto-wah). Easy, but a crowded category.
 - [ ] **Mouth: listen to it** and try it in a host (nothing auditioned). Check Voice switching for clicks on a loud sustained source and that the vowel data matches the Csound manual table (typed from memory of it).
 - [ ] Mouth phase 2: tempo-synced vowel sequencer (step list of vowel corners), reusing Prism's tempo plumbing.
+
+## Noise-reduction plugin (idea, November 2026; not started)
+
+Based on MOTU's Arboretum Ionizer (https://motu.com/products/motuaudio/plug/arboretum/ion.html): a multiband
+spectral processor with 512 gated bands per channel, linear-phase, used for noise reduction, EQ, dynamics,
+spectral morphing and keying. Aim for the noise-reduction side first; it is steady-state broadband noise
+(hiss, hum, HVAC, camera noise) removed in real time without the chirps, flanging and ringing that cheap
+spectral gates leave behind. Build from the general technique (STFT, per-band noise estimate, gain
+smoothing), not from the product.
+
+- [ ] **Core**: STFT analysis/resynthesis (2048-4096 FFT, 75 % overlap) with a per-bin noise-floor estimate and a per-bin gain (spectral gate / subtraction). Reuse the Prism/Qune STFT engine if it fits (shared code, needs approval before touching); otherwise keep it plugin-local.
+- [ ] **Noise profile**: a *Learn* mode that averages the spectrum of a noise-only passage into a fingerprint, plus an automatic mode that tracks the floor (minimum statistics) with no learning pass. The profile is state saved with the project (not a parameter; see `scripts/check-plugin-state.sh`) and visible in the panel.
+- [ ] **Controls**: reduction amount (dB), threshold offset, attack/release or time smoothing, frequency smoothing, and a band-limit so hum (50/60 Hz and harmonics) can be handled separately from hiss.
+- [ ] **Musical-noise suppression** is the hard part and the selling point: smooth the gain over time and frequency, and decide per bin with a decision-directed estimate; the goal is no tonal "chirps" when the signal is only noise. Write the probe before the DSP (CLAUDE.md "measure before building"): white noise in -> residual spectrum flatness and a tonal-artifact measure out, and a speech-like signal with noise -> noise reduced by the stated dB without damaging the signal beyond a bound.
+- [ ] **Latency**: report the FFT latency to the host; test that it is compensated, and that block-size changes do not move it.
+- [ ] **Stereo**: link the two channels' gains (default) so the image does not wander; optionally process mid/side.
+- [ ] **UI**: Magneto look and feel; spectrum display with the noise fingerprint, the threshold curve and the gain reduction; a *Listen to removed noise* (difference) switch to hear what is being taken out.
+- [ ] Tests: deterministic core tests (`downspout_add_core_test`), no allocation on the audio path, denormal-safe, sample rates 44.1-192 kHz, `activate()` keeps the profile.
+- [ ] Later, from the same product: spectral keying (one input's spectrum gates or ducks another, via sidechain) and frequency morph (impose one sound's spectral curve on another). Both overlap `prism`, `quefrency` and `bassops`; decide after the noise reduction exists.
+- [ ] Docs per the new-plugin checklist (install/release lists, Pages product page and group in `_data/groups.yml` (probably `dynamics` or `spectral`), plugins-summary, screenshot).
+
+## Bassops input delay (added November 2026)
+
+- [ ] **Listen and try in a host.** The two delay sliders are tested in the core (exact shift, tempo lock, crossfade, a bass note held behind a kick) and the panel and status read-out were driven through the standalone, but nothing has been auditioned or run in a DAW. Check: the beat slider follows REAPER's tempo changes; the delay feels right against a real kick; 10 ms crossfade is inaudible while dragging; automation of `delay_beat` / `delay_ms`; that delaying is not compensated by the host (it is not reported as latency).
+- [ ] Possible follow-ups: delay the sidechain instead/as well (so a kick can be pulled early); a dotted/triplet-free linear beat range; a "retrigger" mode that re-aligns the delay to the sidechain hit.

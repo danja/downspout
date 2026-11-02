@@ -666,8 +666,11 @@ treated as dual mono); a waveshaper's added harmonics, high-passed at the cutoff
 side, so bass stays clean mono and highs gain width. An optional **Bass 90** (Off/Left/Right,
 default off and idle) shifts the bass below the cutoff 90 degrees between the channels for
 low-end width. With **Attack and Release both at 0** the follower is bypassed and the main
-signal is multiplied by the signed sidechain (ring mod, blended by Duck Depth). Reports
-64-sample latency to the host.
+signal is multiplied by the signed sidechain (ring mod, blended by Duck Depth). **Delay
+(beats)** (12 steps, Off to 1 beat, locked to the host tempo, 120 bpm if none) and **Delay (ms)**
+(0-200) add together and hold the main input back before the ducker and the dry path, so a bass
+note starts just after the kick; crossfaded over 10 ms, total limited to 2 s, not reported as
+latency. Read-only `status_delay_ms` shows the total. Reports 64-sample latency to the host.
 
 ### e-mix
 Transport-aware Euclidean stereo gate: deterministic block rhythms applied to audio.

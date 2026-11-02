@@ -1,7 +1,9 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
+#include <vector>
 
 namespace downspout::bassops {
 
@@ -28,6 +30,34 @@ struct BusMidiState {
     float wetMidiValue   = 100.0f;  // 0-100 %
 };
 
+// ── Input delay ("delay ducking") ──────────────────────────────────────────────
+//
+// The main inputs can be shifted later in time, so a bass note lands just after the kick that
+// ducks it instead of on top of it. Two controls add together: a tempo-locked one in fractions
+// of a beat, and a free one in milliseconds. It is a pure time shift (no feedback, no mix) and is
+// deliberately not reported to the host as latency.
+inline constexpr std::size_t kBeatSteps = 12;
+
+// Delay in beats for each step of the beat slider. Step 0 is off.
+inline constexpr std::array<double, kBeatSteps> kBeatFractions = {{
+    0.0, 1.0 / 64.0, 1.0 / 32.0, 1.0 / 16.0, 1.0 / 12.0, 1.0 / 8.0,
+    1.0 / 6.0, 1.0 / 4.0, 1.0 / 3.0, 1.0 / 2.0, 3.0 / 4.0, 1.0,
+}};
+
+inline constexpr std::array<const char*, kBeatSteps> kBeatNames = {{
+    "Off", "1/64", "1/32", "1/16", "1/12", "1/8", "1/6", "1/4", "1/3", "1/2", "3/4", "1",
+}};
+
+inline constexpr float  kMaxDelayMs      = 200.0f;
+inline constexpr double kMaxDelaySeconds = 2.0;     // the longest total delay; longer requests are cut to it
+inline constexpr double kDelayFadeSeconds = 0.010;  // crossfade when the delay changes
+inline constexpr double kDefaultBpm      = 120.0;   // used when the host gives no tempo
+
+// What the host says about time. Only the tempo matters here.
+struct Transport {
+    double bpm = kDefaultBpm;  // <= 0 or not finite: treated as kDefaultBpm
+};
+
 struct Parameters {
     float duckDepth = 80.0f;   // 0-100 %
     float attackMs  = 10.0f;   // 1-500 ms
@@ -36,6 +66,8 @@ struct Parameters {
     float sideShape = 0.0f;    // 0=linear, 100=hard clip (waveshaper on side channel)
     float wet       = 100.0f;  // 0=dry original input, 100=fully processed
     int   bassPhase = 0;       // 0=off, 1=left bass shifted 90 deg vs right, 2=right vs left
+    int   delayBeat = 0;       // 0..kBeatSteps-1: main-input delay in fractions of a beat (0 = off)
+    float delayMs   = 0.0f;    // 0-200 ms: main-input delay, added to delayBeat
 };
 
 inline constexpr std::uint32_t kMidDelayLen = kFirOrder / 2;  // 64 samples (FIR group delay)
@@ -77,11 +109,24 @@ struct EnvFollower {
     float mainEnvR = 0.0f;
 };
 
+// Two taps one crossfade apart, so a change of delay is a smooth blend, never a jump or a pitch glide.
+struct InputDelay {
+    std::vector<float> bufL;
+    std::vector<float> bufR;
+    std::size_t write = 0;
+    std::size_t current = 0;   // delay in samples now sounding
+    std::size_t previous = 0;  // delay being faded out
+    std::size_t fadeLeft = 0;  // samples left in the crossfade; 0 = settled on `current`
+    std::size_t fadeLength = 1;
+    bool primed = false;       // false until the first block after activation, which starts settled
+};
+
 struct Meters {
     float inputPeak  = 0.0f;  // peak of main input this block, 0-1 with ballistic decay
     float scLevel    = 0.0f;  // sidechain envelope follower output, 0-1
     float duckGain   = 1.0f;  // current VCA gain, 0-1 (1=no duck, 0=full duck)
     float outputPeak = 0.0f;  // mean-abs output level, 0-1 with fast-release ballistic
+    float delayMs    = 0.0f;  // total input delay now requested (beat part at the host tempo + ms), in ms
 };
 
 struct EngineState {
@@ -90,6 +135,7 @@ struct EngineState {
     BassQuad     quad {};
     Meters       meters {};
     BusMidiState bus {};
+    InputDelay   delay {};
 };
 
 }  // namespace downspout::bassops
