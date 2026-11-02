@@ -4,6 +4,7 @@ order: 83
 bundle: syrinx.vst3
 kind: Instrument
 category: instrument
+group: sources
 role: Birdsong synthesizer and voice-to-bird effect
 screenshot: /assets/plugins/syrinx.png
 summary: Avian syrinx voice based on the Mindlin-Laje biophysical model with 11 bird-species presets. MIDI notes play phrases of chirping syllables; an audio input is analysed for pitch and loudness and steers the bird, so it works on speech and singing.

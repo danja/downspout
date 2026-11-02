@@ -4,6 +4,7 @@ order: 70
 bundle: drumgen.vst3
 kind: MIDI drum generator
 category: generative
+group: rhythm
 role: Drum pattern generator
 screenshot: /assets/plugins/drumgen.png
 capabilities: [MIDI output, MIDI input, host transport, pattern variation, fills, conductor control]

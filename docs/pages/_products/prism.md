@@ -4,6 +4,7 @@ order: 230
 bundle: prism.vst3
 kind: Audio effect
 category: processor
+group: space
 role: Banded spectral delay
 screenshot: /assets/plugins/prism.png
 capabilities: [audio input, audio output, host tempo sync, reported latency]

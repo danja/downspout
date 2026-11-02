@@ -4,6 +4,7 @@ order: 118
 bundle: orbit.vst3
 kind: Audio effect
 category: processor
+group: space
 role: Stereo spatial motion
 screenshot: /assets/plugins/orbit.png
 capabilities: [audio input, audio output, host transport, deterministic trajectory]

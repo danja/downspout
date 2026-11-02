@@ -4,6 +4,7 @@ order: 225
 bundle: nam.vst3
 kind: Audio effect
 category: processor
+group: tone
 role: Neural amp and cabinet
 screenshot: /assets/plugins/nam.png
 capabilities: [audio input, audio output]

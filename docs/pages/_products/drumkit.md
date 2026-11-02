@@ -4,6 +4,7 @@ order: 80
 bundle: drumkit.vst3
 kind: Instrument
 category: instrument
+group: drums
 role: Drum synthesizer
 screenshot: /assets/plugins/drumkit.png
 summary: Drum synth instrument with stereo output, MIDI triggering, per-voice controls, and mute strips.

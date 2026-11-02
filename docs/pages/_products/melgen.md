@@ -4,6 +4,7 @@ order: 50
 bundle: melgen.vst3
 kind: MIDI generator
 category: generative
+group: generators
 role: Melody generator
 screenshot: /assets/plugins/melgen.png
 summary: Phrase-aware melody generator with contour, answer, structure, color, range, follow, and strict subject/answer behavior.

@@ -4,6 +4,7 @@ order: 228
 bundle: heavyverb.vst3
 kind: Audio effect
 category: processor
+group: space
 role: Master-bus reverb
 screenshot: /assets/plugins/heavyverb.png
 capabilities: [audio input, audio output]

@@ -4,6 +4,7 @@ order: 20
 bundle: p_mix.vst3
 kind: Audio effect
 category: processor
+group: dynamics
 role: Probabilistic gate
 screenshot: /assets/plugins/p-mix.png
 summary: Stereo audio effect for transport-aware probabilistic switching and fades.

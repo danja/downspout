@@ -4,6 +4,7 @@ order: 235
 bundle: mouth.vst3
 kind: Audio effect
 category: processor
+group: tone
 role: Vowel filter
 screenshot: /assets/plugins/mouth.png
 capabilities: [audio input, audio output, MIDI CC input]

@@ -4,6 +4,7 @@ order: 36
 bundle: damiano.vst3
 kind: Audio effect
 category: processor
+group: tone
 role: Stereo distortion
 screenshot: /assets/plugins/damiano.png
 summary: Six-mode stereo distortion with drive, tone shelf, wet/dry mix and output gain. Linked or Split left/right processing for a binaural effect, with Drift CC control of each channel's drive and shape.

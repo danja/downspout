@@ -4,6 +4,7 @@ order: 119
 bundle: guardian.vst3
 kind: Audio effect
 category: processor
+group: dynamics
 role: Output safety
 screenshot: /assets/plugins/guardian.png
 capabilities: [audio input, audio output, bypass, input gain, attack/release, variable clipper, reported latency, diagnostics]

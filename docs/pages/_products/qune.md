@@ -4,6 +4,7 @@ order: 214
 bundle: qune.vst3
 kind: Audio effect
 category: processor
+group: spectral
 role: Pitch quantiser
 screenshot: /assets/plugins/qune.png
 capabilities: [audio input, audio output, MIDI note input, MIDI note output, reported latency]

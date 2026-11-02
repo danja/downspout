@@ -4,6 +4,7 @@ order: 224
 bundle: monochord.vst3
 kind: Instrument
 category: instrument
+group: synths
 role: Waveguide string
 screenshot: /assets/plugins/monochord.png
 capabilities: [MIDI input, audio output]

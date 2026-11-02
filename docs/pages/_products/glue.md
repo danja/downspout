@@ -4,6 +4,7 @@ order: 219
 bundle: glue.vst3
 kind: Audio effect
 category: processor
+group: dynamics
 role: Bus compressor
 screenshot: /assets/plugins/glue.png
 capabilities: [audio input, audio output]

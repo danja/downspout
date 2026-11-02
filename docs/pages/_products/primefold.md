@@ -4,6 +4,7 @@ order: 160
 bundle: primefold.vst3
 kind: Audio effect
 category: processor
+group: spectral
 role: Prime-harmonic feedback shifter
 screenshot: /assets/plugins/primefold.png
 capabilities: [audio input, audio output, MIDI CC input]

@@ -4,6 +4,7 @@ order: 215
 bundle: sinevox.vst3
 kind: Audio effect
 category: processor
+group: spectral
 role: Formant vocoder and sine-wave-speech generator
 screenshot: /assets/plugins/sinevox.png
 capabilities: [audio input and output, MIDI CC and note input, MIDI CC and note output]

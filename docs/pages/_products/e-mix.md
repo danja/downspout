@@ -4,6 +4,7 @@ order: 30
 bundle: e_mix.vst3
 kind: Audio effect
 category: processor
+group: dynamics
 role: Euclidean gate
 screenshot: /assets/plugins/e-mix.png
 summary: Transport-aware Euclidean stereo gate with density, block, pattern, and fade controls.

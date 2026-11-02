@@ -4,6 +4,7 @@ order: 221
 bundle: trio.vst3
 kind: Audio effect
 category: processor
+group: dynamics
 role: Multiband dynamics
 screenshot: /assets/plugins/trio.png
 capabilities: [audio input, audio output]

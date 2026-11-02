@@ -4,6 +4,7 @@ order: 203
 bundle: helterskelter.vst3
 kind: Audio effect
 category: processor
+group: tone
 role: Automatic wah pedal
 screenshot: /assets/plugins/helterskelter.png
 capabilities: [audio input and output, MIDI CC input, host transport]

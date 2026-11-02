@@ -4,6 +4,7 @@ order: 121
 bundle: flues_synth_driver.vst3
 kind: MIDI controller
 category: midi
+group: midi-tools
 role: Parameter-to-CC controller for the Flues synth
 screenshot: /assets/plugins/flues-synth-driver.png
 summary: Turns its panel controls into MIDI CCs and program changes that play the external Flues vocal and physical-model synthesizer.

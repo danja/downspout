@@ -4,6 +4,7 @@ order: 115
 bundle: oracle.vst3
 kind: Audio/MIDI effect
 category: processor
+group: midi-tools
 role: Listener and response
 screenshot: /assets/plugins/oracle.png
 capabilities: [audio input, audio output, MIDI input, MIDI output, analysis]

@@ -4,6 +4,7 @@ order: 217
 bundle: sam.vst3
 kind: Instrument
 category: instrument
+group: sources
 role: Speech synthesiser
 screenshot: /assets/plugins/sam.png
 capabilities: [audio output, MIDI note input, host transport]

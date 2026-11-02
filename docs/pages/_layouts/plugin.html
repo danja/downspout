@@ -7,7 +7,8 @@ layout: default
 
   <header class="plugin-hero">
     <div>
-      <p class="kicker"><a href="{{ '/#' | append: page.category | relative_url }}">{{ page.category | capitalize }}</a> · {{ page.kind }}</p>
+      {% assign grp = site.data.groups | where: "id", page.group | first %}
+      <p class="kicker"><a href="{{ '/#' | append: page.group | relative_url }}">{{ grp.title }}</a> · {{ page.kind }}</p>
       <h1>{{ page.title }}</h1>
       <p class="summary">{{ page.summary }}</p>
       <dl class="plugin-meta">

@@ -4,6 +4,7 @@ order: 159
 bundle: magneto.vst3
 kind: Instrument
 category: instrument
+group: sources
 role: Combustion engine generator
 screenshot: /assets/plugins/magneto.png
 capabilities: [audio output, MIDI note and CC input, host transport]

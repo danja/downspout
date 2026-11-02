@@ -4,6 +4,7 @@ order: 207
 bundle: pratt.vst3
 kind: Instrument
 category: instrument
+group: synths
 role: Number-theoretic synth and filter
 screenshot: /assets/plugins/pratt.png
 capabilities: [audio input, audio output, MIDI note and CC input]

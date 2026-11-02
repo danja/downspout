@@ -4,6 +4,7 @@ order: 229
 bundle: interleaver.vst3
 kind: Audio effect
 category: processor
+group: dynamics
 role: Two-input interleaver
 screenshot: /assets/plugins/interleaver.png
 capabilities: [audio input, audio output]

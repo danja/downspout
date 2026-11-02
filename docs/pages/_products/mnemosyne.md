@@ -4,6 +4,7 @@ order: 113
 bundle: mnemosyne.vst3
 kind: MIDI effect
 category: midi
+group: midi-tools
 role: Motif memory
 screenshot: /assets/plugins/mnemosyne.png
 capabilities: [MIDI input, MIDI output, host transport, persistent motif state]

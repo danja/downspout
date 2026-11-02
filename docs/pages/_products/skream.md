@@ -4,6 +4,7 @@ order: 37
 bundle: skream.vst3
 kind: Audio effect
 category: processor
+group: tone
 role: Scream filter
 screenshot: /assets/plugins/skream.png
 summary: SVF lowpass/highpass with ADAA2 feedback saturation. Recreates the Skrillex-era dubstep growl. Ten presets from classic growl to feedback drone; Cutoff and Scream modulatable via MIDI CC from Drift.

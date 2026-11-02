@@ -4,6 +4,7 @@ order: 111
 bundle: conductor.vst3
 kind: MIDI generator
 category: generative
+group: generators
 role: Long-form structure
 screenshot: /assets/plugins/conductor.png
 capabilities: [MIDI output, host transport, scene CC, deterministic form, generator control]

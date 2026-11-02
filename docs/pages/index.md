@@ -21,91 +21,80 @@ description: Screenshots and short notes for the Downspout VST3 plugin set.
        <li><a href="https://github.com/danja/flues">Flues</a> earlier LV2 plugins and Web Audio toys</li>
     </ul>
   </p>
-  <nav class="section-nav" aria-label="Plugin types">
-    <a href="#generative">Generative</a>
-    <a href="#midi">MIDI</a>
-    <a href="#instrument">Instruments</a>
-    <a href="#processor">Processors</a>
-    <a href="#launchpad">Launchpad</a>
-  </nav>
 </section>
 
-<section class="plugin-section" aria-label="Generative plugins" id="generative">
-  <h3>Generative</h3>
-  <p class="section-blurb">Sources of musical material: melody, bass, drum and harmony generators, plus audio-triggered MIDI.</p>
+{% assign all_plugins = site.products | sort: "title" %}
+
+<section class="finder" aria-label="Find a plugin">
+  <input id="plugin-filter" type="search" placeholder="Filter {{ all_plugins.size }} plugins by name or function (e.g. reverb, drum, granular, launchpad)" aria-label="Filter plugins">
+  <button type="button" id="plugin-random">Surprise me</button>
+  <span id="plugin-count" class="finder-count" aria-live="polite"></span>
+</section>
+
+<nav class="section-nav" aria-label="Plugin groups">
+  {% for g in site.data.groups %}
+    <a href="#{{ g.id }}">{{ g.title }}</a>
+  {% endfor %}
+  <a href="#all">A–Z</a>
+</nav>
+
+{% comment %} Anchors for the old category links (/#generative etc.) {% endcomment %}
+<span id="generative"></span><span id="midi"></span><span id="instrument"></span><span id="processor"></span><span id="launchpad"></span>
+
+{% for g in site.data.groups %}
+{% assign members = site.products | where: "group", g.id | sort: "order" %}
+<section class="plugin-section" aria-label="{{ g.title }}" id="{{ g.id }}" data-group>
+  <h3>{{ g.title }} <span class="group-count">{{ members.size }}</span></h3>
+  <p class="section-blurb">{{ g.blurb }}</p>
   <div class="plugin-grid">
-    {% assign products = site.products | where: "category", "generative" | sort: "order" %}
-    {% for plugin in products %}
-      <a class="plugin-card" href="{{ plugin.url | relative_url }}">
-        <img src="{{ plugin.screenshot | relative_url }}" alt="{{ plugin.title }} plugin interface">
-        <span class="plugin-kind">{{ plugin.kind }}</span>
+    {% for plugin in members %}
+      <a class="plugin-card" href="{{ plugin.url | relative_url }}" data-search="{{ plugin.title }} {{ plugin.kind }} {{ plugin.role }} {{ plugin.summary }} {{ plugin.category }} {{ g.title }}">
+        <img src="{{ plugin.screenshot | relative_url }}" alt="{{ plugin.title }} plugin interface" loading="lazy">
+        <span class="plugin-kind">{{ plugin.kind }}{% if plugin.category == "launchpad" %} · Launchpad{% endif %}</span>
         <strong>{{ plugin.title }}</strong>
         <span>{{ plugin.summary }}</span>
       </a>
     {% endfor %}
   </div>
 </section>
+{% endfor %}
 
-<section class="plugin-section" aria-label="MIDI plugins" id="midi">
-  <h3>MIDI</h3>
-  <p class="section-blurb">Processors, modulators and utilities for shaping MIDI before it reaches an instrument.</p>
-  <div class="plugin-grid">
-    {% assign products = site.products | where: "category", "midi" | sort: "order" %}
-    {% for plugin in products %}
-      <a class="plugin-card" href="{{ plugin.url | relative_url }}">
-        <img src="{{ plugin.screenshot | relative_url }}" alt="{{ plugin.title }} plugin interface">
-        <span class="plugin-kind">{{ plugin.kind }}</span>
-        <strong>{{ plugin.title }}</strong>
-        <span>{{ plugin.summary }}</span>
-      </a>
+<section class="plugin-section" id="all" aria-label="All plugins A to Z">
+  <h3>All plugins, A–Z</h3>
+  <p class="section-blurb">One line each, for when you remember the name but not the group.</p>
+  <ul class="az-list">
+    {% for plugin in all_plugins %}
+      {% assign grp = site.data.groups | where: "id", plugin.group | first %}
+      <li data-search="{{ plugin.title }} {{ plugin.role }} {{ plugin.summary }} {{ grp.title }}"><a href="{{ plugin.url | relative_url }}">{{ plugin.title }}</a> <span>{{ plugin.role }} · <a href="#{{ plugin.group }}">{{ grp.title }}</a></span></li>
     {% endfor %}
-  </div>
+  </ul>
 </section>
 
-<section class="plugin-section" aria-label="Instrument plugins" id="instrument">
-  <h3>Instruments</h3>
-  <p class="section-blurb">Playable sound sources: synths, samplers and physical models.</p>
-  <div class="plugin-grid">
-    {% assign products = site.products | where: "category", "instrument" | sort: "order" %}
-    {% for plugin in products %}
-      <a class="plugin-card" href="{{ plugin.url | relative_url }}">
-        <img src="{{ plugin.screenshot | relative_url }}" alt="{{ plugin.title }} plugin interface">
-        <span class="plugin-kind">{{ plugin.kind }}</span>
-        <strong>{{ plugin.title }}</strong>
-        <span>{{ plugin.summary }}</span>
-      </a>
-    {% endfor %}
-  </div>
-</section>
-
-<section class="plugin-section" aria-label="Processor plugins" id="processor">
-  <h3>Processors</h3>
-  <p class="section-blurb">Audio effects, mixers and analyzers for shaping sound.</p>
-  <div class="plugin-grid">
-    {% assign products = site.products | where: "category", "processor" | sort: "order" %}
-    {% for plugin in products %}
-      <a class="plugin-card" href="{{ plugin.url | relative_url }}">
-        <img src="{{ plugin.screenshot | relative_url }}" alt="{{ plugin.title }} plugin interface">
-        <span class="plugin-kind">{{ plugin.kind }}</span>
-        <strong>{{ plugin.title }}</strong>
-        <span>{{ plugin.summary }}</span>
-      </a>
-    {% endfor %}
-  </div>
-</section>
-
-<section class="plugin-section" aria-label="Launchpad plugins" id="launchpad">
-  <h3>Launchpad</h3>
-  <p class="section-blurb">Plugins built around a Launchpad grid, with pad input and LED feedback.</p>
-  <div class="plugin-grid">
-    {% assign products = site.products | where: "category", "launchpad" | sort: "order" %}
-    {% for plugin in products %}
-      <a class="plugin-card" href="{{ plugin.url | relative_url }}">
-        <img src="{{ plugin.screenshot | relative_url }}" alt="{{ plugin.title }} plugin interface">
-        <span class="plugin-kind">{{ plugin.kind }}</span>
-        <strong>{{ plugin.title }}</strong>
-        <span>{{ plugin.summary }}</span>
-      </a>
-    {% endfor %}
-  </div>
-</section>
+<script>
+(function () {
+  var input = document.getElementById('plugin-filter');
+  var count = document.getElementById('plugin-count');
+  var cards = [].slice.call(document.querySelectorAll('.plugin-card'));
+  var rows = [].slice.call(document.querySelectorAll('.az-list li'));
+  var groups = [].slice.call(document.querySelectorAll('[data-group]'));
+  function apply() {
+    var terms = input.value.toLowerCase().split(/\s+/).filter(Boolean);
+    function hit(el) {
+      var s = el.getAttribute('data-search').toLowerCase();
+      return terms.every(function (t) { return s.indexOf(t) !== -1; });
+    }
+    var shown = 0;
+    cards.forEach(function (c) { var h = hit(c); c.style.display = h ? '' : 'none'; if (h) shown++; });
+    rows.forEach(function (r) { r.style.display = hit(r) ? '' : 'none'; });
+    groups.forEach(function (g) {
+      g.style.display = g.querySelector('.plugin-card:not([style*="none"])') ? '' : 'none';
+    });
+    count.textContent = terms.length ? shown + ' match' + (shown === 1 ? '' : 'es') : '';
+  }
+  input.addEventListener('input', apply);
+  document.getElementById('plugin-random').addEventListener('click', function () {
+    var c = cards[Math.floor(Math.random() * cards.length)];
+    window.location.href = c.getAttribute('href');
+  });
+})();
+</script>

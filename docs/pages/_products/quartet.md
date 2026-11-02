@@ -4,6 +4,7 @@ order: 223
 bundle: quartet.vst3
 kind: Instrument
 category: instrument
+group: synths
 role: FM synthesizer
 screenshot: /assets/plugins/quartet.png
 capabilities: [MIDI input, audio output]

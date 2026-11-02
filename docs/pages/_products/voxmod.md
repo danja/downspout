@@ -4,6 +4,7 @@ order: 206
 bundle: voxmod.vst3
 kind: Audio effect
 category: processor
+group: spectral
 role: Vocoder and ring modulator
 screenshot: /assets/plugins/voxmod.png
 capabilities: [audio input and output, MIDI CC input]

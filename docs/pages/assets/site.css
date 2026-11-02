@@ -291,3 +291,60 @@ main {
     grid-template-columns: 1fr;
   }
 }
+
+.finder {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.finder input {
+  flex: 1 1 320px;
+  padding: 10px 14px;
+  font: inherit;
+  color: inherit;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.finder button {
+  padding: 10px 16px;
+  font: inherit;
+  color: var(--accent);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.finder button:hover {
+  border-color: color-mix(in srgb, var(--accent) 65%, var(--line));
+}
+
+.finder-count,
+.group-count {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: normal;
+}
+
+.az-list {
+  list-style: none;
+  padding: 16px 0 70px;
+  margin: 0;
+  columns: 2 340px;
+  column-gap: 32px;
+}
+
+.az-list li {
+  break-inside: avoid;
+  padding: 3px 0;
+}
+
+.az-list li span {
+  color: var(--muted);
+  font-size: 0.92rem;
+}

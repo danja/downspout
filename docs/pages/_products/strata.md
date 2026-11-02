@@ -4,6 +4,7 @@ order: 222
 bundle: strata.vst3
 kind: Instrument
 category: instrument
+group: synths
 role: Wavetable synthesizer
 screenshot: /assets/plugins/strata.png
 capabilities: [MIDI input, audio output]

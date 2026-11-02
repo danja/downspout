@@ -4,6 +4,7 @@ order: 211
 bundle: beards.vst3
 kind: Audio effect
 category: processor
+group: spectral
 role: Granular texture processor
 screenshot: /assets/plugins/beards.png
 capabilities: [audio input, audio output, MIDI CC input]

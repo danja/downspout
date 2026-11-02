@@ -4,6 +4,7 @@ order: 140
 bundle: floozy.vst3
 kind: Instrument
 category: instrument
+group: synths
 role: Hybrid physical/modulation synth
 screenshot: /assets/plugins/floozy.png
 summary: Selectable 1-8 voice (default 4) synthesizer combining distortion sources, physical-model-style excitation, feedback, filtering, modulation, and reverb.

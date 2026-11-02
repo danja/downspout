@@ -4,6 +4,7 @@ order: 220
 bundle: octet.vst3
 kind: Audio effect
 category: processor
+group: tone
 role: Eight-band equalizer
 screenshot: /assets/plugins/octet.png
 capabilities: [audio input, audio output]

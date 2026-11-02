@@ -4,6 +4,7 @@ order: 208
 bundle: retune.vst3
 kind: MIDI effect
 category: midi
+group: midi-tools
 role: Scala microtuning
 screenshot: /assets/plugins/retune.png
 capabilities: [MIDI note and CC input, MIDI output]

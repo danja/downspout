@@ -4,6 +4,7 @@ order: 226
 bundle: infra.vst3
 kind: Audio effect
 category: processor
+group: dynamics
 role: Beat-locked tremolo
 screenshot: /assets/plugins/infra.png
 capabilities: [audio input, audio output]

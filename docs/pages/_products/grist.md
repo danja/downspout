@@ -4,6 +4,7 @@ order: 216
 bundle: grist.vst3
 kind: Audio effect
 category: processor
+group: spectral
 role: Granular grain delay
 screenshot: /assets/plugins/grist.png
 capabilities: [audio input, audio output, tempo sync]

@@ -4,6 +4,7 @@ order: 209
 bundle: sprout.vst3
 kind: MIDI generator
 category: generative
+group: generators
 role: L-system melody generator
 screenshot: /assets/plugins/sprout.png
 capabilities: [transport sync, MIDI input, MIDI output]

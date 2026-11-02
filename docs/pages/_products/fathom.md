@@ -4,6 +4,7 @@ order: 213
 bundle: fathom.vst3
 kind: Instrument
 category: instrument
+group: synths
 role: Drone synthesizer
 screenshot: /assets/plugins/fathom.png
 capabilities: [audio output, MIDI note and CC input]

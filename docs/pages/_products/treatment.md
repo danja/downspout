@@ -4,6 +4,7 @@ order: 205
 bundle: treatment.vst3
 kind: Audio effect
 category: processor
+group: space
 role: Acoustic treatment panel
 screenshot: /assets/plugins/treatment.png
 capabilities: [audio input and output, MIDI CC input, host tempo sync]

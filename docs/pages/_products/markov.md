@@ -4,6 +4,7 @@ order: 210
 bundle: markov.vst3
 kind: MIDI generator
 category: generative
+group: generators
 role: Markov-chain melody generator
 screenshot: /assets/plugins/markov.png
 capabilities: [transport sync, MIDI input, MIDI output, persistent matrix state]

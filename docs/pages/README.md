@@ -13,8 +13,13 @@ touching the layouts.
 When adding or changing a plugin page, check:
 
 - the product file has `title`, `order`, `bundle`, `kind`, `category`
-  (`generative`, `midi`, `instrument`, or `processor`), `role`,
-  `screenshot`, and `summary`;
+  (`generative`, `midi`, `instrument`, `processor` or `launchpad`; now only a
+  badge/search term), `group`, `role`, `screenshot`, and `summary`;
+- `group` is one of the ids in `_data/groups.yml` (generators, rhythm, drums,
+  midi-tools, synths, sources, tone, space, spectral, dynamics). The index page
+  sections, the A-Z list and the plugin-page kicker are all built from it, so a
+  plugin without a valid `group` will not appear on the index. To add or rename
+  a group, edit `_data/groups.yml` only;
 - the referenced screenshot exists under `assets/plugins/`;
 - `scripts/capture-plugin-screenshots.sh --list` includes the plugin;
 - the plugin order keeps a readable sequence within its index-page section

@@ -4,6 +4,7 @@ order: 35
 bundle: bassops.vst3
 kind: Audio effect
 category: processor
+group: dynamics
 role: Sidechain ducker / stereo synthesiser
 screenshot: /assets/plugins/bassops.png
 summary: Four-input sidechain ducker with optional harmonic stereo synthesis, bass phase widening and a ring-mod mode. A control signal (typically a kick-drum send) ducks the main stereo signal; the ducked result is summed to mono and the harmonics added by a waveshaper, high-passed at the cutoff, are decoded as a side signal that generates stereo width above it. The bass stays clean mono.

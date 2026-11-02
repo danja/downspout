@@ -4,6 +4,7 @@ order: 130
 bundle: ground.vst3
 kind: MIDI generator
 category: generative
+group: generators
 role: Long-form bass generator
 screenshot: /assets/plugins/ground.png
 summary: Long-form bass generator with Grounded, Dub, Jazz, and other phrase styles plus a guarded bass register lane.

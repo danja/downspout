@@ -4,6 +4,7 @@ order: 157
 bundle: plank.vst3
 kind: Instrument
 category: launchpad
+group: synths
 role: Eight-voice synthesizer
 screenshot: /assets/plugins/plank.png
 summary: Eight-voice polyphonic synthesizer for the Launchpad grid, with a Plinky-derived wavetable voice and Plonk-style resonator engines.

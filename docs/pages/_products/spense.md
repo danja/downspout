@@ -4,6 +4,7 @@ order: 227
 bundle: spense.vst3
 kind: Audio effect
 category: processor
+group: space
 role: Phase disperser
 screenshot: /assets/plugins/spense.png
 capabilities: [audio input, audio output]

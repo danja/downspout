@@ -4,6 +4,7 @@ order: 204
 bundle: keyframe.vst3
 kind: Audio effect
 category: processor
+group: spectral
 role: Extrema-sampling time stretch
 screenshot: /assets/plugins/keyframe.png
 capabilities: [audio input, audio output, MIDI CC input]

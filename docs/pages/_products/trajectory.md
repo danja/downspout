@@ -4,6 +4,7 @@ order: 212
 bundle: trajectory.vst3
 kind: Instrument
 category: instrument
+group: synths
 role: Polygon-bounce synthesizer
 screenshot: /assets/plugins/trajectory.png
 capabilities: [audio output, MIDI note and CC input]

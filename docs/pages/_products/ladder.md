@@ -4,6 +4,7 @@ order: 218
 bundle: ladder.vst3
 kind: Audio effect
 category: processor
+group: tone
 role: Low-pass ladder filter
 screenshot: /assets/plugins/ladder.png
 capabilities: [audio input, audio output]

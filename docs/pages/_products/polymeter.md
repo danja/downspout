@@ -4,6 +4,7 @@ order: 114
 bundle: polymeter.vst3
 kind: MIDI generator
 category: generative
+group: rhythm
 role: Polymetric rhythm
 screenshot: /assets/plugins/polymeter.png
 capabilities: [MIDI output, host transport, Euclidean rhythm, deterministic seed]

@@ -4,6 +4,7 @@ order: 117
 bundle: resonance_garden.vst3
 kind: Audio effect
 category: processor
+group: tone
 role: MIDI-tuned resonator
 screenshot: /assets/plugins/resonance-garden.png
 capabilities: [audio input, audio output, MIDI input, resonator bank]

@@ -4,6 +4,7 @@ order: 201
 bundle: ghost.vst3
 kind: Audio/MIDI effect
 category: generative
+group: rhythm
 role: Ghost-note generator
 screenshot: /assets/plugins/ghost.png
 capabilities: [audio input, MIDI input and output, host transport]
