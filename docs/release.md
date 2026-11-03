@@ -56,6 +56,7 @@ downspout-<version>-<platform>-vst3.zip
 ├── octet.vst3/
 ├── trio.vst3/
 ├── infra.vst3/
+├── spindown.vst3/
 ├── strata.vst3/
 ├── quartet.vst3/
 ├── monochord.vst3/

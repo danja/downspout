@@ -99,6 +99,7 @@ Current output filenames:
 - `octet.png`
 - `trio.png`
 - `infra.png`
+- `spindown.png`
 - `strata.png`
 - `quartet.png`
 - `monochord.png`

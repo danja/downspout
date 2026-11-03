@@ -260,6 +260,10 @@ A stereo VCA driven by an LFO locked to the host beat, for tremolo, auto-pan and
 within 1-20 Hz, with eight waveforms and a 0, 90, 180 or 270 degree **Phase** for each channel; **Range** sets how far the gain falls from 0 dB (the default 3 dB swings 0 to -3 dB). It
 uses the transport position, so it stays on the beat; put it anywhere in an effects chain. See `plugins/infra/docs/design.md`.
 
+### Spindown (`spindown.vst3`)
+
+Tape stop and start. The tape slows to a standstill, pitch and time falling together, then spins back up and rejoins the live signal. **Stop Time** and **Start Time** (20 ms to 4 s) set the ramps and **Curve** their shape. Trigger it three ways: **Manual** (automate the Stop switch), **MIDI** (hold any note to stop it, release to start) or **Cycle** (stopped for the last **Length** beats of every 1, 2, 4 or 8 bars, locked to the host transport). CC 1-4 on the CC channel drive Stop Time, Start Time, Curve and Stop, so Drift can play it. Idle it is transparent with no latency. Put it on a drum bus or the master for the classic end-of-phrase stop; use Cycle for an automatic fill every few bars. See `plugins/spindown/docs/design.md`.
+
 ### Octet (`octet.vst3`)
 
 Eight-band parametric equalizer with no MIDI and no latency. Each band is one of: 12 or 48 dB high-pass, low shelf, bell,

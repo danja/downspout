@@ -83,6 +83,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | octet | octet.vst3 | audio effect (equalizer) | 2/2 | yes/no | no |
 | trio | trio.vst3 | audio effect (multiband dynamics, sidechain) | 4/2 | yes/no | no |
 | infra | infra.vst3 | audio effect (beat-locked LFO and stereo VCA) | 2/2 | no/no | no |
+| spindown | spindown.vst3 | audio effect (tape stop and start) | 2/2 | yes/no | no |
 | strata | strata.vst3 | instrument (wavetable) | 0/2 | yes/no | no |
 | quartet | quartet.vst3 | instrument (FM) | 0/2 | yes/no | no |
 | monochord | monochord.vst3 | instrument (string) | 0/2 | yes/no | no |
@@ -750,6 +751,9 @@ function of the transport position, so it repeats exactly on every pass, and fre
 at its peak on each beat). **Range** (0-40 dB, default 3) is how far the VCA falls from 0 dB at the LFO peak, so the default swings 0 to -3 dB. Four output parameters (`status_rate`,
 `status_multiple`, `status_lfo_l`, `status_lfo_r`) drive the panel (9 parameters). See `plugins/infra/docs/design.md`.
 
+### spindown
+Tape stop and start (a new plugin, clean-room from the general behaviour of a tape transport; the JSFX `Analog Jam` port of cStop, GPLv3, was only read as a reference). Stereo in and out, MIDI in, reads the host transport, no plugin state. The input is written to a ring buffer and read back by a head whose speed is the tape speed, so pitch and time fall together as the tape slows. **Stop Time** (20-4000 ms) takes the speed from 1 to 0 as `(1 - t/T)^Curve` (**Curve** 0.5-4, default 1.5); **Start Time** (20-4000 ms) brings it back, and a stop released part-way restarts from the speed it reached. When the tape is up to speed the output crossfades (12 ms) from the lagging head to the live input; idle, the output is the input sample for sample with no latency. **Trigger**: *Manual* (the automatable **Stop** switch), *MIDI* (any held note stops the tape, all notes released start it, sample-accurate; CC 123 clears hung notes) or *Cycle* (the tape is stopped for the last **Length** beats, 0.25-16, of every 1, 2, 4 or 8 bars, from the transport position, only while the transport plays). Controllers on the **CC Channel** (0 = off, default 1): CC 1 Stop Time, CC 2 Start Time (both logarithmic, 20-4000 ms), CC 3 Curve, CC 4 Stop (64+); a CC takes the control over until the panel or host moves that parameter again, so Drift CC 1-3 modulate it unconfigured. Two output parameters (`status_speed`, `status_delay`) drive the panel (10 parameters). See `plugins/spindown/docs/design.md`.
+
 ### octet
 Eight-band parametric equalizer, stereo, MIDI in for Drift (CC 1-4 on **CC Channel**, default 1, drive the band chosen by **CC Band**, default 4: Frequency, Gain, Q; CC 4 Output), no transport, latency or plugin state (a redesign, not a port, of the
 Oxide Studio EQ Eight). Each band has **On**, **Type** (HP 12, HP 48, Low shelf, Bell, Notch, High shelf, LP 12, LP 48),
@@ -1011,7 +1015,7 @@ a note-on), so it does not follow other channels.
   (birds), pratt (GM voices), floozy, gremlin (glitch), campione / mosaic (samples),
   tuney-vst. Bend-aware: see the per-channel list at the top.
 - **Need an unpitched sound:** drumkit, magneto, bubbles.
-- **Need audio processing:** filter (ladder, skream), phase dispersion (spense), distortion (damiano, skream, chipper), amp/cab modelling (nam), granular (beards, grist), time/pitch (keyframe,
+- **Need audio processing:** filter (ladder, skream), phase dispersion (spense), distortion (damiano, skream, chipper), amp/cab modelling (nam), granular (beards, grist), time/pitch (keyframe, spindown,
   primefold, quefrency), space (heavyverb, lightverb, loopdelay, orbit, treatment, ambo),
   rhythm/gating (e-mix, p-mix, orchid, rift), tone/dynamics (trio, octet, infra, glue, bassops, spliff,
   helterskelter, guardian), spectral (voxmod, sinevox, resonance-garden), two-input interleaving (interleaver).

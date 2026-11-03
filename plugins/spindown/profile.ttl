@@ -1,0 +1,58 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:spindown a trn:PluginProfile ;
+    rdfs:label "Spindown" ;
+    rdfs:comment "A tape-stop effect. The tape slows to a standstill, pitch and time falling together, then spins back up and rejoins the live signal. Trigger it by hand, from held MIDI notes, or on a bar cycle locked to the host. CC 1-4 on a channel take over Stop Time, Start Time, Curve and Stop." ;
+    trn:bundleName "spindown.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/spindown/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio, trn:MIDI ;
+    trn:produces trn:Audio .
+
+dsp:spindown trn:hasParameter [
+    trn:symbol "trigger" ; trn:label "Trigger" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 0 ;
+    rdfs:comment "0 manual, 1 MIDI (held notes stop the tape), 2 cycle (stopped at the end of each 1/2/4/8-bar cycle)"
+], [
+    trn:symbol "stop" ; trn:label "Stop" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "Manual trigger: 1 stops the tape. CC 4 (64 and above) sets it"
+], [
+    trn:symbol "stop_time" ; trn:label "Stop Time" ;
+    trn:minimum 20.0 ; trn:maximum 4000.0 ; trn:default 800.0 ;
+    rdfs:comment "ms from full speed to standstill (logarithmic). CC 1"
+], [
+    trn:symbol "start_time" ; trn:label "Start Time" ;
+    trn:minimum 20.0 ; trn:maximum 4000.0 ; trn:default 300.0 ;
+    rdfs:comment "ms from standstill to full speed (logarithmic). CC 2"
+], [
+    trn:symbol "curve" ; trn:label "Curve" ;
+    trn:minimum 0.5 ; trn:maximum 4.0 ; trn:default 1.5 ;
+    rdfs:comment "Speed is (1 - t/T)^Curve; 1 is a straight ramp. CC 3"
+], [
+    trn:symbol "cycle" ; trn:label "Cycle" ;
+    trn:minimum 0 ; trn:maximum 3 ; trn:default 1 ;
+    rdfs:comment "Cycle trigger: repeat length, 0 = 1 bar, 1 = 2 bars, 2 = 4 bars, 3 = 8 bars"
+], [
+    trn:symbol "length" ; trn:label "Length" ;
+    trn:minimum 0.25 ; trn:maximum 16.0 ; trn:default 2.0 ;
+    rdfs:comment "Cycle trigger: beats at the end of each cycle during which the tape is stopped"
+], [
+    trn:symbol "cc_channel" ; trn:label "CC Channel" ;
+    trn:minimum 0 ; trn:maximum 16 ; trn:default 1 ;
+    rdfs:comment "MIDI channel for CC 1-4; 0 ignores CC"
+], [
+    trn:symbol "status_speed" ; trn:label "Tape Speed" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1.0 ;
+    rdfs:comment "Output: the tape speed now, 1 = full speed"
+], [
+    trn:symbol "status_delay" ; trn:label "Tape Lag" ;
+    trn:minimum 0.0 ; trn:maximum 10000.0 ; trn:default 0.0 ;
+    rdfs:comment "Output: ms the output lags the live input"
+] .

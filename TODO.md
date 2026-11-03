@@ -2,6 +2,29 @@
 
 Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 
+## New plugin proposals (from the DSP-Ports-JSFX survey, 2026-11-03)
+
+Source: `~/github/DSP-Ports-JSFX/Plugin Ports/*.jsfx`, used as **reference**. Downspout is MIT. Where the JSFX
+original is MIT (JuKnow Chorus, ChronoDupe, Airwindows ports, lkjb ports) code may be copied with the notice kept.
+Where it is GPL (x42, zam, setBfree, Aeolus, amsynth, Dexed, cStop, chmaha's own designs) write a clean-room
+implementation from the published algorithm and do not translate the JSFX. Downspout has no meters of any kind yet.
+
+- [x] **Tape Stop** built as `spindown` (clean-room; cStop is GPLv3): core, DPF wrapper, UI, 85 core checks, lists and docs.
+      Still open: listen to it; validate in REAPER (MIDI trigger routing to an effect, Cycle against a real BBT
+      transport with loop and relocate, save/reopen, Drift CC 1-4); decide whether it wants a tone darkening as the
+      tape slows, tempo-synced Stop/Start times, and a "resume" option instead of the crossfade to live. See
+      `plugins/spindown/docs/design.md` ("Not built").
+- [ ] **Chorus** (JuKnow Chorus, MIT): rate, depth, delay, mode, width, Drift CCs. Downspout has no chorus.
+- [ ] **Meters / scope**: one plugin with EBU R128 loudness, spectrum and goniometer (x42 refs, GPL, clean-room).
+      Guardian's true-peak guard can share code. Later: correlation, K-Meter, VU, oscilloscope, test signal generator.
+- [ ] **Rotary speaker** (Dizzy / `b_whirl`, GPL, clean-room).
+- [ ] **De-esser** (Airwindows DeEss/DeBess, MIT). Spliff Cut is close but not sibilance-specific.
+- [ ] **Gate** (ZamGateX2 reference, GPL, clean-room): standalone audio noise gate with sidechain.
+- [ ] **MIDI filter / router** (Spaghetti Junction, x42 midifilter, GPL): channel/note filter and remap.
+- [ ] **Tonewheel organ** (setBfree, GPL, clean-room): large; later.
+- [ ] Lower priority: ADT/doubler (ChronoDupe, MIT), Inflator, spectral compressor, dynamic tilt, channel strip,
+      pipe organ (Aeolus), subtractive polysynth (amsynth), GM/SoundFont synth.
+
 ## Shared code follow-ups (approved, partly done)
 
 Done in October: `cmake/DownspoutTests.cmake` (`downspout_add_core_test`) replaced the copy-pasted test blocks in the plugin

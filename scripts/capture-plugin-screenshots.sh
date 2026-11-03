@@ -70,6 +70,7 @@ plugins=(
   "octet:octet"
   "trio:trio"
   "infra:infra"
+  "spindown:spindown"
   "strata:strata"
   "quartet:quartet"
   "monochord:monochord"

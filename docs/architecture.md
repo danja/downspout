@@ -260,6 +260,7 @@ The release script currently expects these bundles:
 - `octet.vst3`
 - `trio.vst3`
 - `infra.vst3`
+- `spindown.vst3`
 - `strata.vst3`
 - `quartet.vst3`
 - `monochord.vst3`
