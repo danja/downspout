@@ -1,7 +1,7 @@
 # downspout
 
-A collection of about a hundred VST3 plugins (MIT, C++/[DPF](https://github.com/DISTRHO/DPF)): generative and algorithmic MIDI tools, instruments and audio effects.
-Screenshots, notes and a plugin finder are on the [project site](https://danja.github.io/downspout/).
+About a hundred VST3 plugins (MIT, C++/[DPF](https://github.com/DISTRHO/DPF)): mostly generative and algorithmic MIDI tools, instruments and audio effects.
+There are screenshots, notes and a plugin finder on the [project site](https://danja.github.io/downspout/).
 
 ## Install All Plugins (from [Releases](https://github.com/danja/downspout/releases))
 
@@ -35,47 +35,42 @@ Copy-Item -Recurse -Force *.vst3 "C:\Program Files\Common Files\VST3\"
 
 4. Restart your DAW or force a VST3 rescan.
 
-The macOS and Windows builds are currently untested, and those packages omit
-`sidecar.vst3`. macOS may quarantine unsigned downloads; if a plugin is
+I haven't tested the macOS and Windows builds, and those packages leave out
+`sidecar.vst3`. macOS may quarantine unsigned downloads. If a plugin gets
 blocked, run `xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/*.vst3`.
 
-See [docs/install.md](docs/install.md) and [docs/release.md](docs/release.md)
-for the local install and release packaging details.
+Details of local installs and release packaging are in [docs/install.md](docs/install.md) and [docs/release.md](docs/release.md).
 
 ## About
 
-Each plugin is a portable C++ core with deterministic tests, a thin DPF wrapper and a custom NanoVG UI in a shared look. VST3 metadata uses creator `danja`
-and group `Downspout`. Some are ports or redesigns of LV2 and JSFX plugins; the plugin docs say which.
+Each plugin is a portable C++ core with deterministic tests, a thin DPF wrapper and a custom NanoVG UI in a shared look. The VST3 creator is `danja` and the group is `Downspout`.
+Some are ports or redesigns of LV2 and JSFX plugins, and the plugin docs say which.
 
 Demos: [Jack's Dream](https://youtu.be/Rd-ACU0JUdo), [another example](https://www.youtube.com/watch?v=DrAHdaJolyc).
 See also: [Transmission](https://danja.github.io/transmission/) (Generative Audio Workstation), [Valis](https://danja.github.io/valis) (Virtual Analog LLM Integrated System),
-[Flues](https://github.com/danja/flues) (earlier LV2 plugins and Web Audio toys).
+[Flues](https://github.com/danja/flues) (the earlier LV2 plugins and Web Audio toys).
 
 ## Build and Install
 
-For local development installs:
+To build and install locally:
 
 ```bash
 ./install.sh
 ```
 
-This configures `./build`, builds the enabled plugins, runs `ctest`, and
-installs VST3 bundles into `~/.vst3` by default.
-
-Useful overrides:
+That configures `./build`, builds the enabled plugins, runs `ctest` and
+installs the bundles into `~/.vst3`. To change that:
 
 ```bash
 DOWNSPOUT_VST3_DIR=/some/other/path ./install.sh
 DOWNSPOUT_RUN_TESTS=0 ./install.sh
 ```
 
-After reinstalling, restart your DAW or force a VST3 rescan. Some hosts cache
-plugin names, makers, categories, and homepage metadata independently of the
-installed bundle.
+Restart your DAW or force a rescan afterwards. Some hosts cache plugin names, makers, categories and homepage metadata separately from the bundle.
 
 ## Plugins
 
-For ports, MIDI roles and CC maps of every plugin see the [plugin reference](docs/pages/plugins-summary.md).
+The [plugin reference](docs/pages/plugins-summary.md) has the ports, MIDI roles and CC maps for every plugin.
 
 | Plugin | Bundle | Type | Notes |
 | --- | --- | --- | --- |
@@ -103,7 +98,7 @@ For ports, MIDI roles and CC maps of every plugin see the [plugin reference](doc
 | [ground](plugins/ground/README.md) | `ground.vst3` | MIDI generator | Long-form bass generator with Dub/Jazz styles, phrase planning, and guarded bass-register output. |
 | [floozy](plugins/floozy/README.md) | `floozy.vst3` | Instrument | Corrected 8-voice hybrid physical/modulation synth derived from `floozy-poly`. |
 | [basilico](plugins/basilico/README.md) | `basilico.vst3` | Instrument | Monophonic bass synth with Dub/Acid wobble, tempo sync, squelch, and upright/electric/industrial models. |
-| [campione](plugins/campione/README.md) | `campione.vst3` | Instrument | Campione — multi-zone sampler with WAV loading, REX2 slice import, wavetable auto-detection, recording, gap-fill pitch shift, and crossfade looping. |
+| [campione](plugins/campione/README.md) | `campione.vst3` | Instrument | Multi-zone sampler with WAV loading, REX2 slice import, wavetable auto-detection, recording, gap-fill pitch shift, and crossfade looping. |
 | [canticle](plugins/canticle/README.md) | `canticle.vst3` | Instrument | 12-voice keys, reed, pad, pluck, and glass synth for melody, counterpoint, and chords. |
 | [moka](plugins/moka/README.md) | `moka.vst3` | Instrument | Modal hit-object synth (xylophone, glockenspiel, woodblock, glass, metal, tube) with 10 controls, 10 presets, and selectable 1–12 voice polyphony. |
 | [tuney-vst](plugins/tuney-vst/README.md) | `tuney_vst.vst3` | Instrument/MIDI generator | Turns focused typing or stored text into microtonal synthesized audio and ordinary MIDI notes. |
@@ -172,64 +167,41 @@ For ports, MIDI roles and CC maps of every plugin see the [plugin reference](doc
 
 ## Architecture
 
-Mixgen, T-Mix, Loopdelay, and Lightverb can form a loosely coupled automatic
-mix chain through [Producer Control Bus v1](docs/producer-control-bus.md).
+Mixgen, T-Mix, Loopdelay and Lightverb can form a loosely coupled automatic mix chain through [Producer Control Bus v1](docs/producer-control-bus.md).
 
-The repeated implementation pattern is:
+Every plugin follows the same pattern. DSP, MIDI, transport and state live in a host-agnostic C++ core with deterministic tests. A thin DPF wrapper translates host timing, parameters, MIDI and state. The UI is plugin-specific and driven by the wrapper's parameters and status.
 
-1. keep DSP, MIDI, transport, and state behavior in a host-agnostic C++ core;
-2. cover deterministic core behavior with tests;
-3. translate host timing, parameters, MIDI, and state in a thin DPF wrapper;
-4. keep UI code plugin-specific and driven by wrapper parameters/status.
+Shared code is in [include/downspout](include/downspout/) and [src/common](src/common/), and the plugins are under [plugins](plugins/).
 
-The shared code lives under [include/downspout](include/downspout/) and
-[src/common](src/common/). Plugin-specific implementations live under
-[plugins](plugins/).
-
-The repository now has a shared meter model so transport-aware generators can
-distinguish simple, triple, compound, and odd groupings. Musical style behavior
-is still uneven by design: `bassgen` and `drumgen` have explicit style modes,
-while deeper pickup, phrase-ending, and folk-idiom behavior remains future work.
+There's a shared meter model, so transport-aware generators can tell simple, triple, compound and odd groupings apart. Musical style is still uneven: `bassgen` and `drumgen` have explicit style modes, while pickups, phrase endings and folk idioms are future work.
 
 ## Agent skills
 
-Reusable Claude Code skills live in `skills/<name>/SKILL.md`; `.claude/skills/<name>` holds relative
-symlinks to them so Claude Code finds them in this project. Plugin-authoring skills: `new-plugin`,
-`drum-voice-plugin`, `magneto-ui`, `plugin-core-tests`, `extend-genre-or-scale`, `debug-reaper-scan`.
-To add one, create `skills/<name>/SKILL.md` and `ln -s ../../skills/<name> .claude/skills/<name>`.
-The skills point to `CLAUDE.md` and `docs/` rather than copying them, so edit those, not the skills,
-when a rule changes.
+Claude Code skills live in `skills/<name>/SKILL.md`, with relative symlinks in `.claude/skills/<name>` so Claude Code finds them. The plugin-authoring ones are `new-plugin`,
+`drum-voice-plugin`, `magneto-ui`, `plugin-core-tests`, `extend-genre-or-scale` and `debug-reaper-scan`.
+To add one, create `skills/<name>/SKILL.md` and run `ln -s ../../skills/<name> .claude/skills/<name>`.
+The skills point at `CLAUDE.md` and `docs/` instead of copying them, so when a rule changes, edit those.
 
 ## Reference Docs
 
-- [docs/pages/plugins-summary.md](docs/pages/plugins-summary.md): dense per-plugin
-  capability reference for automated agents (ports, MIDI roles, CC maps, wiring);
-  also published on the Pages site as "Reference".
-- [docs/process.md](docs/process.md): AI-assisted development workflow,
-  instructions and skills, testing, builds, publishing, and definition of done.
-- [docs/architecture.md](docs/architecture.md): build graph, layering, state,
-  transport, UI, install, and release conventions.
-- [docs/install.md](docs/install.md): local build and VST3 install behavior.
-- [docs/release.md](docs/release.md): release artifact shape and GitHub Actions
-  workflow.
-- [docs/screenshots.md](docs/screenshots.md): automated UI screenshot capture
-  for GitHub Pages assets.
-- [docs/meter.md](docs/meter.md): shared meter model and current musical
-  limitations.
-- [docs/requirements.md](docs/requirements.md): build and dependency
-  expectations.
-- [docs/plan.md](docs/plan.md): project direction and remaining work.
+- [docs/pages/plugins-summary.md](docs/pages/plugins-summary.md): per-plugin ports, MIDI roles, CC maps and wiring, written for automated agents (also on the Pages site as "Reference")
+- [docs/process.md](docs/process.md): the AI-assisted workflow, skills, testing, builds, publishing and definition of done
+- [docs/architecture.md](docs/architecture.md): build graph, layering, state, transport, UI, install and release conventions
+- [docs/install.md](docs/install.md) and [docs/release.md](docs/release.md): local installs, release artifacts and the GitHub Actions workflow
+- [docs/screenshots.md](docs/screenshots.md): capturing UI screenshots for the Pages site
+- [docs/meter.md](docs/meter.md): the shared meter model and its musical limits
+- [docs/requirements.md](docs/requirements.md): build dependencies
+- [docs/plan.md](docs/plan.md): direction and remaining work
 
 ## Current Work
 
-Everything builds as VST3. The main remaining work is host validation (most newer plugins have only been tested with their core tests and screenshots, not in a
-DAW), release validation and incremental fixes. Priorities: validate all bundles in real hosts after clean installs and rescans; keep release packaging aligned
-with local installs; publish and verify the first tagged release. Open ideas are in [TODO.md](TODO.md) and [docs/plan.md](docs/plan.md).
+Everything builds as VST3. What's left is mostly host validation: most of the newer plugins have only had their core tests and a look at the screenshot, not a go in a DAW.
+After that, release validation, keeping packaging in step with local installs, and the first tagged release. Open ideas are in [TODO.md](TODO.md) and [docs/plan.md](docs/plan.md).
 
 ## Documentation
 
-`docs/` holds working notes, many of them drafts. The **GitHub Pages** site is built from `docs/pages` only (`.github/workflows/pages.yml`, Jekyll):
+`docs/` is working notes, a lot of them drafts. The **GitHub Pages** site is built from `docs/pages` only (Jekyll, `.github/workflows/pages.yml`).
 
-- each plugin has `docs/pages/_products/<plugin>.md`: the front matter (`summary`, `screenshot`, `group`, ...) feeds the index card and the Markdown body is the plugin page;
-- screenshots are generated by `scripts/capture-plugin-screenshots.sh` (see [docs/screenshots.md](docs/screenshots.md)); the descriptive text is in the product files;
-- preview locally: `jekyll serve --source docs/pages --destination /tmp/downspout-pages-site`.
+- Each plugin has `docs/pages/_products/<plugin>.md`. The front matter (`summary`, `screenshot`, `group` and so on) makes the index card and the Markdown body is the plugin page.
+- Screenshots come from `scripts/capture-plugin-screenshots.sh` (see [docs/screenshots.md](docs/screenshots.md)). The text is in the product files.
+- To preview locally: `jekyll serve --source docs/pages --destination /tmp/downspout-pages-site`
