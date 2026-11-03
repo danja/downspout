@@ -244,6 +244,10 @@ sine **Sub**, **Unison** (voices play in step at Amount 0, then spread in detune
 panel plots the waveform each oscillator is producing. Play it from a keyboard or from any of the generators (bassgen for a bass, melgen or harmonic-atlas for a
 pad). See `plugins/strata/docs/design.md`.
 
+### Wheelhouse (`wheelhouse.vst3`)
+
+Tonewheel organ. Ninety-one tone wheels turn all the time and a held key connects nine footages (16', 5 1/3', 8', 4', 2 2/3', 2', 1 3/5', 1 1/3', 1') to the output through **drawbars** set 0-8 in 3 dB steps. The **upper** and **lower** manuals have nine drawbars each and the **pedals** two (16' and 8'); they answer MIDI channels 1, 2 and 3 by default (set each, 0 = off). Upper-manual **percussion** adds a decaying 2nd or 3rd harmonic on the first key of a phrase and silences the 1' drawbar. **Vibrato/Chorus** V1-V3 and C1-C3 swing a short delay at 4-9 Hz on the upper and/or lower manual; **Key Click**, **Drive**, **Tone**, **Width** and **Volume** finish it, and CC 11 is the swell pedal. Four registrations (Jazz, Full, Flute, Reed) set a manual's drawbars in one click. Play it from a keyboard or from any generator (harmonic-atlas, cadence, bassgen on the pedal channel); follow it with a rotary speaker effect for the full sound. No velocity, no Leslie, no reverb. See `plugins/wheelhouse/docs/design.md`.
+
 ### Trio (`trio.vst3`)
 
 Three-band dynamics with no latency, in the OTT manner; Drift CC 1-4 on a channel drive Amount, Time, Input and Upward limit. The signal is split at two adjustable crossovers

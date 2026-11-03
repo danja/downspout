@@ -100,6 +100,7 @@ Current output filenames:
 - `trio.png`
 - `infra.png`
 - `spindown.png`
+- `wheelhouse.png`
 - `strata.png`
 - `quartet.png`
 - `monochord.png`

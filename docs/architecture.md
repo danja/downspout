@@ -261,6 +261,7 @@ The release script currently expects these bundles:
 - `trio.vst3`
 - `infra.vst3`
 - `spindown.vst3`
+- `wheelhouse.vst3`
 - `strata.vst3`
 - `quartet.vst3`
 - `monochord.vst3`

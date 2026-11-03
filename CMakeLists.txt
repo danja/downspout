@@ -99,6 +99,7 @@ option(DOWNSPOUT_BUILD_OCTET "Configure the Octet eight-band equalizer target" O
 option(DOWNSPOUT_BUILD_TRIO "Configure the Trio three-band dynamics target" ON)
 option(DOWNSPOUT_BUILD_INFRA "Configure the Infra beat-locked LFO and stereo VCA target" ON)
 option(DOWNSPOUT_BUILD_SPINDOWN "Configure the Spindown tape-stop effect target" ON)
+option(DOWNSPOUT_BUILD_WHEELHOUSE "Configure the Wheelhouse tonewheel organ target" ON)
 option(DOWNSPOUT_BUILD_STRATA "Configure the Strata wavetable synthesizer target" ON)
 option(DOWNSPOUT_BUILD_QUARTET "Configure the Quartet four-operator FM synthesizer target" ON)
 option(DOWNSPOUT_BUILD_MONOCHORD "Configure the Monochord waveguide string target" ON)
@@ -539,6 +540,10 @@ endif()
 
 if(DOWNSPOUT_BUILD_SPINDOWN)
     add_subdirectory(plugins/spindown)
+endif()
+
+if(DOWNSPOUT_BUILD_WHEELHOUSE)
+    add_subdirectory(plugins/wheelhouse)
 endif()
 
 if(DOWNSPOUT_BUILD_STRATA)

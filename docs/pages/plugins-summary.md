@@ -85,6 +85,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | infra | infra.vst3 | audio effect (beat-locked LFO and stereo VCA) | 2/2 | no/no | no |
 | spindown | spindown.vst3 | audio effect (tape stop and start) | 2/2 | yes/no | no |
 | strata | strata.vst3 | instrument (wavetable) | 0/2 | yes/no | no |
+| wheelhouse | wheelhouse.vst3 | instrument (tonewheel organ) | 0/2 | yes/no | no |
 | quartet | quartet.vst3 | instrument (FM) | 0/2 | yes/no | no |
 | monochord | monochord.vst3 | instrument (string) | 0/2 | yes/no | no |
 | nam | nam.vst3 | audio effect (neural amp + cab IR) | 2/2 | no/no | no |
@@ -754,6 +755,9 @@ at its peak on each beat). **Range** (0-40 dB, default 3) is how far the VCA fal
 ### spindown
 Tape stop and start (a new plugin, clean-room from the general behaviour of a tape transport; the JSFX `Analog Jam` port of cStop, GPLv3, was only read as a reference). Stereo in and out, MIDI in, reads the host transport, no plugin state. The input is written to a ring buffer and read back by a head whose speed is the tape speed, so pitch and time fall together as the tape slows. **Stop Time** (20-4000 ms) takes the speed from 1 to 0 as `(1 - t/T)^Curve` (**Curve** 0.5-4, default 1.5); **Start Time** (20-4000 ms) brings it back, and a stop released part-way restarts from the speed it reached. When the tape is up to speed the output crossfades (12 ms) from the lagging head to the live input; idle, the output is the input sample for sample with no latency. **Trigger**: *Manual* (the automatable **Stop** switch), *MIDI* (any held note stops the tape, all notes released start it, sample-accurate; CC 123 clears hung notes) or *Cycle* (the tape is stopped for the last **Length** beats, 0.25-16, of every 1, 2, 4 or 8 bars, from the transport position, only while the transport plays). Controllers on the **CC Channel** (0 = off, default 1): CC 1 Stop Time, CC 2 Start Time (both logarithmic, 20-4000 ms), CC 3 Curve, CC 4 Stop (64+); a CC takes the control over until the panel or host moves that parameter again, so Drift CC 1-3 modulate it unconfigured. Two output parameters (`status_speed`, `status_delay`) drive the panel (10 parameters). See `plugins/spindown/docs/design.md`.
 
+### wheelhouse
+Tonewheel organ (a new plugin, clean-room from the published behaviour of a tonewheel organ; the JSFX `Lord of the Rinks` port of setBfree, GPL, was only read as a reference). MIDI in, stereo out, no audio input, no plugin state. Ninety-one equal-tempered tone wheels (MIDI notes 24-114) turn all the time; a held key connects nine footages to the bus through that division's **drawbars** (0-8, 3 dB per step, off at 0): 16', 5 1/3', 8', 4', 2 2/3', 2', 1 3/5', 1 1/3', 1'. Footages that would need a wheel above the top one fold back by octaves. **Upper** and **Lower** manuals (C2-C7, nine drawbars each, default 888000000 and 008530000) and the **Pedals** (C2-G4, 16' and 8') answer **Upper/Lower/Pedal Channel** (default 1, 2, 3; 0 = off); velocity is ignored, as on an organ. **Percussion** (upper only, on or off, 2nd or 3rd harmonic, fast 0.35 s or slow 1.5 s to -60 dB, soft or normal) fires on the first key of a legato run and silences the 1' drawbar. The **scanner** gives V1-V3 vibrato and C1-C3 chorus (a delay swinging +-0.20/0.35/0.55 ms) at **Scanner Rate** 4-9 Hz (6.9), applied to the upper and/or lower manual (**Vibrato Upper/Lower**); the pedals bypass it and **Width** offsets the right channel's scanner. **Key Click** adds a noise burst on every key movement, **Drive** is a preamp tanh (0 is a bypass), **Tone** a low-pass (1.5-16 kHz, 100% is open), **Volume** the output. CC 11 is the swell pedal (squared); CC 123/120 release the keys on that channel. 36 parameters, no outputs. Not built: a Leslie (use a rotary effect after it), reverb, hardware drawbar CCs, tonewheel leakage, key transpose. See `plugins/wheelhouse/docs/design.md`.
+
 ### octet
 Eight-band parametric equalizer, stereo, MIDI in for Drift (CC 1-4 on **CC Channel**, default 1, drive the band chosen by **CC Band**, default 4: Frequency, Gain, Q; CC 4 Output), no transport, latency or plugin state (a redesign, not a port, of the
 Oxide Studio EQ Eight). Each band has **On**, **Type** (HP 12, HP 48, Low shelf, Bell, Notch, High shelf, LP 12, LP 48),
@@ -1014,6 +1018,7 @@ a note-on), so it does not follow other channels.
 - **Need a pitched sound:** monochord (string), strata (wavetable), quartet (FM), canticle (general), basilico (bass), moka (mallets), syrinx
   (birds), pratt (GM voices), floozy, gremlin (glitch), campione / mosaic (samples),
   tuney-vst. Bend-aware: see the per-channel list at the top.
+- **Need an organ or keys:** wheelhouse (tonewheel organ), canticle, quartet.
 - **Need an unpitched sound:** drumkit, magneto, bubbles.
 - **Need audio processing:** filter (ladder, skream), phase dispersion (spense), distortion (damiano, skream, chipper), amp/cab modelling (nam), granular (beards, grist), time/pitch (keyframe, spindown,
   primefold, quefrency), space (heavyverb, lightverb, loopdelay, orbit, treatment, ambo),

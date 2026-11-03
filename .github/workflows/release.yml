@@ -281,6 +281,7 @@ jobs:
             echo "- trio.vst3"
             echo "- infra.vst3"
             echo "- spindown.vst3"
+            echo "- wheelhouse.vst3"
             echo "- strata.vst3"
             echo "- quartet.vst3"
             echo "- monochord.vst3"

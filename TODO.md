@@ -21,7 +21,12 @@ implementation from the published algorithm and do not translate the JSFX. Downs
 - [ ] **De-esser** (Airwindows DeEss/DeBess, MIT). Spliff Cut is close but not sibilance-specific.
 - [ ] **Gate** (ZamGateX2 reference, GPL, clean-room): standalone audio noise gate with sidechain.
 - [ ] **MIDI filter / router** (Spaghetti Junction, x42 midifilter, GPL): channel/note filter and remap.
-- [ ] **Tonewheel organ** (setBfree, GPL, clean-room): large; later.
+- [x] **Tonewheel organ** built as `wheelhouse` (clean-room; setBfree is GPL): core, DPF wrapper, UI with custom drawbars,
+      104 core checks, lists and docs. Still open: listen to it and tune the by-ear voicing (percussion times and levels,
+      scanner depths, click level, master gain, drive law, the drop in drawbar level when percussion is on); validate in
+      REAPER (three MIDI channels from one keyboard track, save/reopen, drawbar drag and scroll in the real UI); CPU of a
+      full chord on a slow machine. Not built, see `plugins/wheelhouse/docs/design.md`: Leslie (the rotary speaker proposal
+      above is its natural partner), reverb, hardware drawbar CCs, tonewheel leakage and tuning error, key transpose or split.
 - [ ] Lower priority: ADT/doubler (ChronoDupe, MIT), Inflator, spectral compressor, dynamic tilt, channel strip,
       pipe organ (Aeolus), subtractive polysynth (amsynth), GM/SoundFont synth.
 

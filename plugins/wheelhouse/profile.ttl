@@ -1,0 +1,162 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:wheelhouse a trn:PluginProfile ;
+    rdfs:label "Wheelhouse" ;
+    rdfs:comment "A tonewheel organ. Ninety-one tone wheels, nine drawbars for each of the upper and lower manuals and two for the pedals (each on its own MIDI channel), upper-manual percussion, scanner vibrato and chorus, key click, drive and tone. CC 11 is the swell pedal." ;
+    trn:bundleName "wheelhouse.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/wheelhouse/> ;
+    trn:role trn:Instrument ;
+    trn:accepts trn:MIDI ;
+    trn:produces trn:Audio .
+
+dsp:wheelhouse trn:hasParameter [
+    trn:symbol "upper_16" ; trn:label "Upper 16'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 8 ;
+    rdfs:comment "Upper manual drawbar 16': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "upper_5_1_3" ; trn:label "Upper 5 1/3'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 8 ;
+    rdfs:comment "Upper manual drawbar 5 1/3': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "upper_8" ; trn:label "Upper 8'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 8 ;
+    rdfs:comment "Upper manual drawbar 8': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "upper_4" ; trn:label "Upper 4'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 0 ;
+    rdfs:comment "Upper manual drawbar 4': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "upper_2_2_3" ; trn:label "Upper 2 2/3'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 0 ;
+    rdfs:comment "Upper manual drawbar 2 2/3': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "upper_2" ; trn:label "Upper 2'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 0 ;
+    rdfs:comment "Upper manual drawbar 2': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "upper_1_3_5" ; trn:label "Upper 1 3/5'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 0 ;
+    rdfs:comment "Upper manual drawbar 1 3/5': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "upper_1_1_3" ; trn:label "Upper 1 1/3'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 0 ;
+    rdfs:comment "Upper manual drawbar 1 1/3': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "upper_1" ; trn:label "Upper 1'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 0 ;
+    rdfs:comment "Upper manual drawbar 1': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "lower_16" ; trn:label "Lower 16'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 0 ;
+    rdfs:comment "Lower manual drawbar 16': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "lower_5_1_3" ; trn:label "Lower 5 1/3'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 0 ;
+    rdfs:comment "Lower manual drawbar 5 1/3': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "lower_8" ; trn:label "Lower 8'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 8 ;
+    rdfs:comment "Lower manual drawbar 8': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "lower_4" ; trn:label "Lower 4'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 5 ;
+    rdfs:comment "Lower manual drawbar 4': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "lower_2_2_3" ; trn:label "Lower 2 2/3'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 3 ;
+    rdfs:comment "Lower manual drawbar 2 2/3': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "lower_2" ; trn:label "Lower 2'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 0 ;
+    rdfs:comment "Lower manual drawbar 2': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "lower_1_3_5" ; trn:label "Lower 1 3/5'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 0 ;
+    rdfs:comment "Lower manual drawbar 1 3/5': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "lower_1_1_3" ; trn:label "Lower 1 1/3'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 0 ;
+    rdfs:comment "Lower manual drawbar 1 1/3': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "lower_1" ; trn:label "Lower 1'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 0 ;
+    rdfs:comment "Lower manual drawbar 1': 0 off, then 3 dB per step to 8"
+], [
+    trn:symbol "pedal_16" ; trn:label "Pedal 16'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 8 ;
+    rdfs:comment "Pedal drawbar 16'"
+], [
+    trn:symbol "pedal_8" ; trn:label "Pedal 8'" ;
+    trn:minimum 0 ; trn:maximum 8 ; trn:default 0 ;
+    rdfs:comment "Pedal drawbar 8'"
+], [
+    trn:symbol "perc_on" ; trn:label "Percussion" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "Upper manual percussion on; silences the 1' drawbar"
+], [
+    trn:symbol "perc_harmonic" ; trn:label "Perc Harmonic" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "0 second harmonic (4'), 1 third harmonic (2 2/3')"
+], [
+    trn:symbol "perc_decay" ; trn:label "Perc Decay" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "0 fast (0.35 s to -60 dB), 1 slow (1.5 s)"
+], [
+    trn:symbol "perc_level" ; trn:label "Perc Level" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "0 soft (half level), 1 normal"
+], [
+    trn:symbol "vibrato" ; trn:label "Vibrato" ;
+    trn:minimum 0 ; trn:maximum 6 ; trn:default 6 ;
+    rdfs:comment "Scanner: 0 off, 1-3 vibrato V1-V3, 4-6 chorus C1-C3"
+], [
+    trn:symbol "vib_upper" ; trn:label "Vibrato Upper" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "Route the upper manual through the scanner"
+], [
+    trn:symbol "vib_lower" ; trn:label "Vibrato Lower" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "Route the lower manual through the scanner"
+], [
+    trn:symbol "scanner_rate" ; trn:label "Scanner Rate" ;
+    trn:minimum 4.0 ; trn:maximum 9.0 ; trn:default 6.9 ;
+    rdfs:comment "Hz"
+], [
+    trn:symbol "click" ; trn:label "Key Click" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.3 ;
+    rdfs:comment "Noise burst on every key movement"
+], [
+    trn:symbol "drive" ; trn:label "Drive" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.15 ;
+    rdfs:comment "Preamp overdrive; 0 is a bypass"
+], [
+    trn:symbol "tone" ; trn:label "Tone" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1.0 ;
+    rdfs:comment "Low-pass from 1.5 kHz (0) to 16 kHz (1, open)"
+], [
+    trn:symbol "width" ; trn:label "Width" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.5 ;
+    rdfs:comment "Offsets the right channel's scanner phase"
+], [
+    trn:symbol "volume" ; trn:label "Volume" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.7 ;
+    rdfs:comment "Output level"
+], [
+    trn:symbol "upper_channel" ; trn:label "Upper Channel" ;
+    trn:minimum 0 ; trn:maximum 16 ; trn:default 1 ;
+    rdfs:comment "MIDI channel of the upper manual; 0 off"
+], [
+    trn:symbol "lower_channel" ; trn:label "Lower Channel" ;
+    trn:minimum 0 ; trn:maximum 16 ; trn:default 2 ;
+    rdfs:comment "MIDI channel of the lower manual; 0 off"
+], [
+    trn:symbol "pedal_channel" ; trn:label "Pedal Channel" ;
+    trn:minimum 0 ; trn:maximum 16 ; trn:default 3 ;
+    rdfs:comment "MIDI channel of the pedals; 0 off"
+] .
