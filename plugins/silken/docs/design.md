@@ -3,7 +3,7 @@
 Original design; the filters are the standard RBJ cookbook biquads. Times, ratios and corner frequencies are typical values chosen by ear.
 
 ## Signal flow
-rumble filter -> plosive guard -> de-esser -> warmth -> presence -> air -> sparkle -> output. Per-channel filters, one detector per stage linked across
+rumble filter -> plosive guard -> gate -> harshness tamer -> de-esser -> leveller -> mud -> warmth -> presence -> air -> drive -> sparkle -> output. Per-channel filters, one detector per stage linked across
 the channels (the louder channel drives both), so the stereo image does not move. No latency: the detectors have no look-ahead, so the attack is
 0.3 ms (de-esser) and 1 ms (plosive), which lets a very fast transient through for a moment.
 
@@ -20,6 +20,15 @@ a 6 dB soft knee, at most Range. Two stages make the detector ignore a loud vowe
 gain by 3 dB). Band mode: `out = in - (1 - g) * bandpass1(in)`, which is exactly `g` at the centre and 0 dB far away. Wide mode: `out = in * g`.
 Listen: the output is the detector (both band-passes), with the EQ and sparkle bypassed. Gain only moves up at 1 ms, so a release never clicks.
 
+## Gate, harshness tamer, leveller
+- Gate: peak follower on the louder channel (1 ms attack, 80 ms release; the release is its hold), a 2:1 downward expander with the same 6 dB soft knee, at most Range;
+  the gain closes over 40 ms and opens over 2 ms. (A separate 30 ms hold was tried and removed: the envelope release already outlasts it, and no test could see it.)
+- Harshness tamer: the de-esser's mechanism (`DynBand`: two band-pass detectors, a Band cut) at 1.5-5 kHz, 3:1, with Amount as its range; 0 is off.
+- Leveller: peak detector (0.5 ms attack, 5 ms release) on the louder channel, soft-knee compressor, then the reduction itself smoothed (8 ms attack, 150 ms release).
+  Automatic make-up is half the reduction at full scale (`-threshold * (1 - 1/ratio) * 0.5`), so a quiet passage is lifted by up to ~7 dB at the defaults; Mix blends in parallel
+  as `1 + mix * (gain - 1)`. The 5 ms detector release droops between the peaks of a low tone, so the measured reduction is about 0.7 dB under the static curve.
+- Drive is `tanh(a x) / a`, `a = 1 + 2 drive`; the fundamental and third harmonic are tested against a numerical integral.
+
 ## Voice EQ and sparkle
 RBJ low shelf, peaking bell and high shelf, 20 ms smoothed gains, coefficients remade every 16 samples while something moves. A band at exactly 0 dB is skipped.
 Sparkle: `high = in - lowpass5k(in)`, `new = tanh(6 high)/6 - high` (only the distortion products), `out += sparkle * 1.5 * (new - lowpass8k(new))`. The harmonics
@@ -30,11 +39,11 @@ Both states of a biquad are flushed together below 1e-20. Flushing them one at a
 at the threshold, a permanent 1e-36 tail.
 
 ## Not built
-Look-ahead, a breath reducer or gate (see the Gate item in TODO), mid/side de-essing, a dynamic EQ for harshness, formant-aware sibilant detection,
-oversampled sparkle.
+Look-ahead; a breath reducer; mid/side de-essing; a wider dynamic EQ (resonance suppressor); formant-aware sibilant detection; oversampled drive and sparkle; a
+vocal doubler / stereo widener, pitch correction, reverb and delay (separate plugins: Retune, Chorale, LightVerb, Loopdelay already exist; see TODO.md for the rest).
 
 ## Tests
-`tests/silken_core_tests.cpp`, 195 checks: neutral and exact output gain; the rumble filter against the Butterworth formula at four corners and four sample
+`tests/silken_core_tests.cpp`, 301 checks: neutral and exact output gain; the rumble filter against the Butterworth formula at four corners and four sample
 rates; the plosive guard against a hand-computed transfer function; the de-esser against hand-computed reductions, the range cap, frequency tracking, vowel rejection
-(output and meter), Band against Wide, Listen, linking (either channel), attack and release; the EQ gains and glide; sparkle harmonics and linearity; every control audible;
+(output and meter), Band against Wide, Listen, linking (either channel), attack and release; the gate (range, 2:1 law, linking, timing), the harshness tamer, the leveller (curve, make-up, mix, attack and release, linking), mud, drive against a numerical integral; the EQ gains and glide; sparkle harmonics and linearity; every control audible;
 bit-exact block-size independence including automation; idle decay to exactly zero; garbage parameters; every sample rate. Mutation-checked.

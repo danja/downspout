@@ -23,7 +23,7 @@ public:
 
 protected:
     const char* getLabel() const override       { return "Silken"; }
-    const char* getDescription() const override { return "A vocal clean-up and polish strip: rumble filter, plosive guard, de-esser (band or wide, with listen), warmth / presence / air EQ, sparkle and output level. No latency."; }
+    const char* getDescription() const override { return "A vocal clean-up and polish strip: rumble filter, plosive guard, gate, harshness tamer, de-esser (band or wide, with listen), leveller (compressor), mud / warmth / presence / air EQ, drive, sparkle and output level. No latency."; }
     const char* getMaker() const override       { return "danja"; }
     const char* getHomePage() const override    { return "https://danja.github.io/downspout/"; }
     const char* getLicense() const override     { return "MIT"; }
@@ -60,7 +60,7 @@ protected:
     float getParameterValue(uint32_t index) const override
     {
         if (index >= core::kParameterCount) return 0.0f;
-        if (core::isOutput(index)) return meters_[index - core::kStatusEss].load();
+        if (core::isOutput(index)) return meters_[core::outputSlot(index)].load();
         return core::field(parameters_, index);
     }
 
@@ -86,12 +86,14 @@ protected:
         meters_[0].store(engine_.meters.essReductionDb);
         meters_[1].store(engine_.meters.plosiveReductionDb);
         meters_[2].store(engine_.meters.detectorDb);
+        meters_[3].store(engine_.meters.gateReductionDb);
+        meters_[4].store(engine_.meters.levelReductionDb);
     }
 
 private:
     core::Parameters  parameters_ {};
     core::EngineState engine_ {};
-    std::array<std::atomic<float>, 3> meters_ {};
+    std::array<std::atomic<float>, core::kOutputCount> meters_ {};
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SilkenPlugin)
 };

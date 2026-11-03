@@ -265,6 +265,7 @@ The release script currently expects these bundles:
 - `whirligig.vst3`
 - `chorale.vst3`
 - `silken.vst3`
+- `fresco.vst3`
 - `strata.vst3`
 - `quartet.vst3`
 - `monochord.vst3`

@@ -363,6 +363,154 @@ static void testSparkle()
 
 static const Signal kVoiceLike = sum({tone(60, 0.5f), tone(200, 0.1f), tone(1000, 0.1f), tone(6500, 0.3f), tone(12000, 0.05f)});
 
+static void testGate()
+{
+    const auto base = [] { Parameters p = neutral(); p.gateOn = 1; p.gateThrDb = -40; p.gateRangeDb = 20; return p; };
+    // Far below the threshold the expander wants more than the range: the range is what it takes off.
+    check("below the threshold the gate closes by Range", std::abs(toneGainDb(base(), 1000, 0.001f) + 20.0) < 1.0);
+    check("a quiet tone is closed by less Range: 8 dB", [] { Parameters p = neutral(); p.gateOn = 1; p.gateThrDb = -40; p.gateRangeDb = 8; return std::abs(toneGainDb(p, 1000, 0.001f) + 8.0) < 0.6; }());
+    check("above the threshold the gate is open", std::abs(toneGainDb(base(), 1000, 0.1f)) < 0.05);
+    // 2:1: 10 dB under the threshold (level -50 dB) the expander has added 10 dB.
+    check("the expander is 2:1 just under the threshold", [] {
+        Parameters p = neutral(); p.gateOn = 1; p.gateThrDb = -40; p.gateRangeDb = 40;
+        const double g = toneGainDb(p, 1000, static_cast<float>(std::pow(10.0, -50.0 / 20.0)));
+        return std::abs(g + 10.0) < 1.2;
+    }());
+    { Parameters p = base(); p.gateOn = 0; check("gate off is exact", identical(render(p, 20000, tone(1000, 0.001f), tone(1000, 0.001f)).l, render(neutral(), 20000, tone(1000, 0.001f), tone(1000, 0.001f)).l)); }
+    { Parameters p = base(); p.gateRangeDb = 0; check("range 0 does nothing", std::abs(toneGainDb(p, 1000, 0.001f)) < 0.01); }
+    // After a burst the gate closes slowly (the envelope and the gain both take tens of milliseconds); opening is fast.
+    {
+        Run run;
+        run.go(base(), 24000, tone(1000, 0.2f), tone(1000, 0.2f));
+        check("open while the signal is loud", run.state.meters.gateReductionDb < 0.1f);
+        run.go(base(), 480, silence(), silence());   // 10 ms
+        check("barely closed 10 ms after the signal drops", run.state.meters.gateReductionDb < 3.0f);
+        run.go(base(), 24000, silence(), silence());
+        check("closed half a second later", run.state.meters.gateReductionDb > 19.0f);
+        run.go(base(), 192, tone(1000, 0.2f), tone(1000, 0.2f));   // 4 ms
+        check("opens within a few milliseconds", run.state.meters.gateReductionDb < 5.0f);
+    }
+    // Linked: a loud right channel keeps the left open.
+    {
+        const Run run = render(base(), 48000, tone(1000, 0.001f), tone(1000, 0.2f));
+        check("the louder channel holds both open", toDb(amplitude(run.l, 1000, 24000, 48000) / 0.001) > -0.5);
+    }
+}
+
+static void testTame()
+{
+    const auto base = [] { Parameters p = neutral(); p.tameFreqHz = 3000; p.tameThrDb = -12; p.tameAmountDb = 12; return p; };
+    // 3 kHz at 0.5 is -6.02 dB at the detector: 5.98 dB over, x 2/3 (3:1) = 3.99 dB.
+    check("harshness tamer takes the predicted amount off", std::abs(toneGainDb(base(), 3000, 0.5f) + 3.99) < 0.8);
+    { Parameters p = base(); p.tameThrDb = -40; check("Amount caps the reduction", std::abs(toneGainDb(p, 3000, 0.5f) + 12.0) < 0.6); }
+    { Parameters p = base(); p.tameAmountDb = 0; check("Amount 0 is off", identical(render(p, 20000, tone(3000, 0.5f), tone(3000, 0.5f)).l, render(neutral(), 20000, tone(3000, 0.5f), tone(3000, 0.5f)).l)); }
+    { Parameters p = base(); p.tameFreqHz = 1800; check("Frequency moves it", toneGainDb(p, 1800, 0.5f) < -3.0 && std::abs(toneGainDb(p, 3000, 0.5f)) < 0.5); }
+    check("it leaves a 200 Hz vowel alone", std::abs(toneGainDb(base(), 200, 0.5f)) < 0.05);
+    check("and the de-esser's band alone", std::abs(toneGainDb(base(), 7000, 0.5f)) < 0.4);
+    // It cuts only around the frequency.
+    {
+        const Signal in = sum({tone(200, 0.2f), tone(3000, 0.5f)});
+        check("the tamer leaves the body of the voice alone", std::abs(componentGainDb(base(), in, 200, 0.2f)) < 0.1);
+        check("and reduces the harshness", componentGainDb(base(), in, 3000, 0.5f) < -3.0);
+    }
+}
+
+static void testLeveller()
+{
+    const auto base = [] { Parameters p = neutral(); p.levelOn = 1; p.levelThrDb = -20; p.levelRatio = 3; p.levelMix = 1; return p; };
+    // Make-up is half the reduction at full scale: 20 dB x 2/3 x 0.5 = 6.67 dB.
+    // A -40 dB tone is far under the threshold: no reduction, just the make-up.
+    check("quiet signal gets the make-up gain", std::abs(toneGainDb(base(), 1000, 0.01f) - 6.67) < 0.3);
+    // A -6.02 dB tone is 13.98 dB over: reduction 9.32, net -2.65.
+    {
+        const Run run = render(base(), 96000, tone(1000, 0.5f), tone(1000, 0.5f));
+        const double g = toDb(amplitude(run.l, 1000, 72000, 96000) / 0.5);
+        std::printf("  leveller: loud tone %.2f dB (expected -2.65), meter %.2f\n", g, static_cast<double>(run.state.meters.levelReductionDb));
+        // The static curve gives -2.65 dB / 9.32 dB. The peak detector's 5 ms release droops between the peaks of a 1 kHz tone (about 0.7 dB), so the
+        // measured reduction is a little less.
+        check("leveller follows the compression curve (within the detector's ripple)", g < -1.5 && g > -2.8);
+        check("the meter reports the reduction", run.state.meters.levelReductionDb > 7.5f && run.state.meters.levelReductionDb < 9.5f);
+    }
+    check("the loud tone ends up closer to the quiet one (levelling)", toneGainDb(base(), 1000, 0.5f) < toneGainDb(base(), 1000, 0.01f) - 5.0);
+    { Parameters p = base(); p.levelRatio = 10; const double g10 = toneGainDb(p, 1000, 0.5f); p.levelRatio = 1.5f; const double g15 = toneGainDb(p, 1000, 0.5f);
+      std::printf("  ratio 10: %.2f dB, ratio 1.5: %.2f dB\n", g10, g15);
+      check("a higher ratio takes more off a loud tone", g10 < g15 - 1.0 && g10 > -20.0); }
+    { double last = 100.0; for (const float thr : {0.0f, -10.0f, -20.0f, -30.0f}) { Parameters p = base(); p.levelThrDb = thr; const double g = toneGainDb(p, 1000, 0.5f) - toneGainDb(p, 1000, 0.5f) * 0.0;
+        (void)g; Parameters q = base(); q.levelThrDb = thr; Run run = render(q, 96000, tone(1000, 0.5f), tone(1000, 0.5f));
+        const double red = run.state.meters.levelReductionDb; check("a lower threshold reduces more", last > 99.0 || red >= last - 0.01); last = red; } }
+    // Mix: 0 is the input exactly; 0.5 is halfway in linear gain.
+    {
+        Parameters p = base(); p.levelMix = 0;
+        check("mix 0 is the input, sample for sample", identical(render(p, 30000, noise(11, 0.3f), noise(12, 0.3f)).l, render(neutral(), 30000, noise(11, 0.3f), noise(12, 0.3f)).l));
+        const double full = std::pow(10.0, toneGainDb(base(), 1000, 0.01f) / 20.0);
+        p.levelMix = 0.5f;
+        const double half = std::pow(10.0, toneGainDb(p, 1000, 0.01f) / 20.0);
+        check("mix 0.5 is halfway in linear gain", std::abs(half - (1.0 + 0.5 * (full - 1.0))) < 0.01);
+    }
+    // Attack and release: gain comes down over about 8 ms and recovers over about 150 ms.
+    {
+        Run run;
+        run.go(base(), 4800, silence(), silence());
+        run.go(base(), 192, tone(1000, 0.5f), tone(1000, 0.5f));   // 4 ms
+        const float early = run.state.meters.levelReductionDb;
+        run.go(base(), 48000, tone(1000, 0.5f), tone(1000, 0.5f));
+        const float full = run.state.meters.levelReductionDb;
+        check("the leveller attacks over milliseconds, not instantly", early < 0.7f * full && full > 8.0f);
+        run.go(base(), 4800, silence(), silence());   // 100 ms
+        const float partial = run.state.meters.levelReductionDb;
+        run.go(base(), 48000, silence(), silence());
+        check("and releases over a fraction of a second", partial > 0.2f * full && run.state.meters.levelReductionDb < 0.1f);
+    }
+    // Linked, and exactly neutral when off.
+    {
+        const Run run = render(base(), 96000, tone(1000, 0.5f), tone(1000, 0.05f));
+        const double gl = toDb(amplitude(run.l, 1000, 72000, 96000) / 0.5), gr = toDb(amplitude(run.r, 1000, 72000, 96000) / 0.05);
+        check("both channels get the same gain", std::abs(gl - gr) < 0.05);
+        const Run sw = render(base(), 96000, tone(1000, 0.05f), tone(1000, 0.5f));
+        const double swl = toDb(amplitude(sw.l, 1000, 72000, 96000) / 0.05), swr = toDb(amplitude(sw.r, 1000, 72000, 96000) / 0.5);
+        check("whichever channel is loud drives both", std::abs(swl - swr) < 0.05 && swr < -1.0);
+        Parameters off = base(); off.levelOn = 0;
+        check("leveller off is exact", identical(render(off, 20000, noise(13, 0.4f), noise(14, 0.4f)).l, render(neutral(), 20000, noise(13, 0.4f), noise(14, 0.4f)).l));
+    }
+}
+
+static void testMudAndDrive()
+{
+    for (const float db : {-9.0f, 6.0f}) {
+        Parameters p = neutral(); p.mudDb = db;
+        check("mud is its gain at 300 Hz", std::abs(toneGainDb(p, 300, 0.1f) - static_cast<double>(db)) < 0.3);
+        check("mud leaves 5 kHz alone", std::abs(toneGainDb(p, 5000, 0.1f)) < 0.2);
+        check("mud leaves 40 Hz mostly alone", std::abs(toneGainDb(p, 40, 0.1f)) < 1.0);
+    }
+    // Drive: tanh(a x) / a with a = 1 + 2 drive. Unity for small signals; the third harmonic of a 0.5 sine from a numerical integral.
+    {
+        Parameters p = neutral(); p.drive = 1.0f;
+        check("drive leaves small signals at unity", std::abs(toneGainDb(p, 1000, 0.005f)) < 0.05);
+        const double a = 3.0;
+        double h1 = 0.0, h3 = 0.0;
+        const int N = 100000;
+        for (int i = 0; i < N; ++i) {
+            const double th = 2.0 * kPi * (i + 0.5) / N, v = std::tanh(a * 0.5 * std::sin(th)) / a;
+            h1 += v * std::sin(th) * 2.0 / N; h3 += v * std::sin(3.0 * th) * 2.0 / N;
+        }
+        const Run run = render(p, 48000, tone(1000, 0.5f), tone(1000, 0.5f));
+        const double g1 = amplitude(run.l, 1000, 24000, 48000), g3 = amplitude(run.l, 3000, 24000, 48000);
+        std::printf("  drive: fundamental %.4f (expected %.4f), 3rd %.4f (expected %.4f)\n", g1, std::abs(h1), g3, std::abs(h3));
+        check("drive's fundamental matches the saturation curve", std::abs(g1 - std::abs(h1)) < 0.01 * std::abs(h1) + 1e-3);
+        check("drive's third harmonic matches the saturation curve", std::abs(g3 - std::abs(h3)) < 0.03 * std::abs(h3) + 1e-3);
+        double last = -1.0;
+        for (const float d : {0.0f, 0.25f, 0.5f, 1.0f}) {
+            Parameters q = neutral(); q.drive = d;
+            const Run r = render(q, 48000, tone(1000, 0.5f), tone(1000, 0.5f));
+            const double third = amplitude(r.l, 3000, 24000, 48000);
+            check("more drive, more third harmonic", third >= last);
+            last = third;
+        }
+        Parameters off = neutral();
+        check("drive 0 is exact", identical(render(off, 20000, noise(15, 0.5f), noise(16, 0.5f)).l, render(neutral(), 20000, noise(15, 0.5f), noise(16, 0.5f)).l));
+    }
+}
+
 static void testControlsAudible()
 {
     // Each control changes the sound when it has something to act on.
@@ -389,12 +537,27 @@ static void testControlsAudible()
     p = base; p.airDb = -6; differs("Air changes the sound", p);
     p = base; p.sparkle = 1; differs("Sparkle changes the sound", p);
     p = base; p.outputDb = -6; differs("Output changes the sound", p);
+    p = base; p.gateOn = 1; p.gateThrDb = -20; p.gateRangeDb = 20; differs("Gate changes the sound", p);
+    // The gate needs something below its threshold to act on: a quiet version of the voice-like signal (about -50 dB).
+    const Signal quiet = [](std::size_t n) { return kVoiceLike(n) * 0.003f; };
+    p = base; p.gateOn = 1; p.gateThrDb = -30; p.gateRangeDb = 5; { Parameters q = p; q.gateRangeDb = 30; const Run a = render(p, 48000, quiet, quiet), b = render(q, 48000, quiet, quiet); check("Gate Range changes the sound", maxDiff(a.l, b.l) > 1e-4); }
+    p = base; p.gateOn = 1; p.gateRangeDb = 30; { Parameters q = p; p.gateThrDb = -80; q.gateThrDb = -30; const Run a = render(p, 48000, quiet, quiet), b = render(q, 48000, quiet, quiet); check("Gate Threshold changes the sound", maxDiff(a.l, b.l) > 1e-4); }
+    p = base; p.tameAmountDb = 12; p.tameThrDb = -40; differs("Harsh Amount changes the sound", p);
+    { Parameters q = base; q.tameAmountDb = 12; q.tameThrDb = -40; Parameters r = q; r.tameFreqHz = 1600; const Run a = render(q, 48000, kVoiceLike, kVoiceLike), b = render(r, 48000, kVoiceLike, kVoiceLike); check("Harsh Frequency changes the sound", maxDiff(a.l, b.l) > 0.002); }
+    { Parameters q = base; q.tameAmountDb = 12; q.tameThrDb = -60; Parameters r = q; r.tameThrDb = -10; const Run a = render(q, 48000, kVoiceLike, kVoiceLike), b = render(r, 48000, kVoiceLike, kVoiceLike); check("Harsh Threshold changes the sound", maxDiff(a.l, b.l) > 0.002); }
+    p = base; p.levelOn = 1; differs("Leveller changes the sound", p);
+    { Parameters q = base; q.levelOn = 1; Parameters r = q; r.levelThrDb = -35; const Run a = render(q, 48000, kVoiceLike, kVoiceLike), b = render(r, 48000, kVoiceLike, kVoiceLike); check("Leveller Threshold changes the sound", maxDiff(a.l, b.l) > 0.002); }
+    { Parameters q = base; q.levelOn = 1; Parameters r = q; r.levelRatio = 8; const Run a = render(q, 48000, kVoiceLike, kVoiceLike), b = render(r, 48000, kVoiceLike, kVoiceLike); check("Leveller Ratio changes the sound", maxDiff(a.l, b.l) > 0.002); }
+    { Parameters q = base; q.levelOn = 1; Parameters r = q; r.levelMix = 0.3f; const Run a = render(q, 48000, kVoiceLike, kVoiceLike), b = render(r, 48000, kVoiceLike, kVoiceLike); check("Leveller Mix changes the sound", maxDiff(a.l, b.l) > 0.002); }
+    p = base; p.mudDb = -6; differs("Mud changes the sound", p);
+    p = base; p.drive = 0.8f; differs("Drive changes the sound", p);
 }
 
 static void testDeterminismAndStability()
 {
     Parameters p;
     p.warmthDb = 4; p.presenceDb = 3; p.airDb = 5; p.sparkle = 0.6f; p.essThrDb = -40; p.plosiveThrDb = -30; p.outputDb = -2;
+    p.gateOn = 1; p.gateThrDb = -45; p.tameAmountDb = 8; p.tameThrDb = -35; p.levelOn = 1; p.levelMix = 0.7f; p.mudDb = -3; p.drive = 0.4f;
     const Signal in = sum({noise(3, 0.2f), tone(60, 0.4f), tone(6500, 0.3f)});
     const Run whole = render(p, 48000, in, in, 48000);
     check("same input and settings give the same output", identical(whole.l, render(p, 48000, in, in, 48000).l));
@@ -408,6 +571,7 @@ static void testDeterminismAndStability()
             Run run; run.block = block;
             Parameters q = p;
             run.go(q, 10000, in, in);
+            q.levelThrDb = -30; q.gateThrDb = -30; q.tameFreqHz = 2200; q.mudDb = 4; q.drive = 0.9f; q.levelMix = 0.2f;
             q.hpfHz = 200; q.essFreqHz = 4000; q.warmthDb = -5; q.presenceDb = 8; q.airDb = -3; q.sparkle = 0.1f;
             run.go(q, 10000, in, in);
             return run;
@@ -437,6 +601,7 @@ static void testDeterminismAndStability()
         check("a very loud input stays finite", ok);
         Parameters bad;
         bad.hpfHz = std::nanf(""); bad.plosiveThrDb = 1e9f; bad.essFreqHz = -5.0f; bad.essThrDb = std::nanf(""); bad.essRangeDb = 1e9f;
+        bad.gateThrDb = std::nanf(""); bad.gateRangeDb = 1e9f; bad.tameFreqHz = -1e9f; bad.tameAmountDb = 1e9f; bad.levelRatio = 0.0f; bad.levelThrDb = 1e9f; bad.levelMix = -5.0f; bad.mudDb = std::nanf(""); bad.drive = 1e9f; bad.gateOn = std::nanf(""); bad.levelOn = 1.0f;
         bad.warmthDb = 1e9f; bad.presenceDb = -1e9f; bad.airDb = std::nanf(""); bad.sparkle = 99.0f; bad.outputDb = 1e9f; bad.essMode = std::nanf("");
         const Run run = render(bad, 24000, noise(8, 0.3f), noise(9, 0.3f));
         bool fine = true;
@@ -453,25 +618,32 @@ static void testDeterminismAndStability()
         Run run;
         run.go(p, 20000, in, in);
         resetState(run.state);
-        check("reset clears the detectors", run.state.essEnv == 0.0 && run.state.plosiveEnv == 0.0 && run.state.essGain == 1.0 && !run.state.started);
+        check("reset clears the detectors", run.state.ess.env == 0.0 && run.state.plosiveEnv == 0.0 && run.state.ess.gain == 1.0 && run.state.gateEnv == 0.0 && run.state.levelGr == 0.0 && !run.state.started);
     }
 }
 
 static void testParameters()
 {
-    check("parameter count is 18", kParameterCount == 18 && kControlCount == 15);
-    check("ids are pinned", kHpfOn == 0 && kHpf == 1 && kPlosiveOn == 2 && kPlosiveThr == 3 && kEssOn == 4 && kEssFreq == 5 && kEssThr == 6 && kEssRange == 7
+    check("parameter count is 32 (27 controls... 5 outputs)", kParameterCount == 32 && kOutputCount == 5);
+    check("the first ids are pinned (saved projects)", kHpfOn == 0 && kHpf == 1 && kPlosiveOn == 2 && kPlosiveThr == 3 && kEssOn == 4 && kEssFreq == 5 && kEssThr == 6 && kEssRange == 7
           && kEssMode == 8 && kEssListen == 9 && kWarmth == 10 && kPresence == 11 && kAir == 12 && kSparkle == 13 && kOutput == 14
           && kStatusEss == 15 && kStatusPlosive == 16 && kStatusDetector == 17);
-    check("outputs are flagged", !isOutput(kOutput) && isOutput(kStatusEss) && isOutput(kStatusDetector) && !isOutput(kParameterCount));
-    const Parameters d;
-    for (std::uint32_t i = 0; i < kControlCount; ++i) {
-        const auto& s = specs()[i];
-        check("spec default matches the core default", std::abs(field(d, i) - s.defaultValue) < 1e-6f);
-        check("default is inside the range", s.defaultValue >= s.minimum && s.defaultValue <= s.maximum);
-        check("controls are not outputs", !s.output);
+    check("ids added later are appended", kGateOn == 18 && kGateThr == 19 && kGateRange == 20 && kTameFreq == 21 && kTameThr == 22 && kTameAmount == 23
+          && kLevelOn == 24 && kLevelThr == 25 && kLevelRatio == 26 && kLevelMix == 27 && kMud == 28 && kDrive == 29 && kStatusGate == 30 && kStatusLevel == 31);
+    check("outputs are flagged", !isOutput(kOutput) && isOutput(kStatusEss) && isOutput(kStatusDetector) && isOutput(kStatusGate) && isOutput(kStatusLevel)
+          && !isOutput(kDrive) && !isOutput(kGateOn) && !isOutput(kParameterCount));
+    for (std::uint32_t i = 0; i < kParameterCount; ++i) check("isOutput agrees with the spec table", isOutput(i) == specs()[i].output);
+    {
+        std::vector<std::uint32_t> slots;
+        for (std::uint32_t i = 0; i < kParameterCount; ++i) if (isOutput(i)) slots.push_back(outputSlot(i));
+        check("output slots are 0..4 in order", slots == std::vector<std::uint32_t>({0, 1, 2, 3, 4}));
     }
-    for (std::uint32_t i = kControlCount; i < kParameterCount; ++i) check("status parameters are outputs", specs()[i].output);
+    const Parameters d;
+    for (std::uint32_t i = 0; i < kParameterCount; ++i) {
+        const auto& sp = specs()[i];
+        check("default is inside the range", sp.defaultValue >= sp.minimum && sp.defaultValue <= sp.maximum);
+        if (!sp.output) check("spec default matches the core default", std::abs(field(d, i) - sp.defaultValue) < 1e-6f);
+    }
     check("symbols are unique", [] {
         for (std::uint32_t a = 0; a < kParameterCount; ++a)
             for (std::uint32_t b = a + 1; b < kParameterCount; ++b)
@@ -494,6 +666,10 @@ int main()
     testPlosiveGuard();
     testDeEsser();
     testVoiceEq();
+    testGate();
+    testTame();
+    testLeveller();
+    testMudAndDrive();
     testSparkle();
     testControlsAudible();
     testDeterminismAndStability();

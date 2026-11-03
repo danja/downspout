@@ -104,6 +104,7 @@ Current output filenames:
 - `whirligig.png`
 - `chorale.png`
 - `silken.png`
+- `fresco.png`
 - `strata.png`
 - `quartet.png`
 - `monochord.png`

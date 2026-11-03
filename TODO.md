@@ -23,9 +23,13 @@ implementation from the published algorithm and do not translate the JSFX. Downs
       (lobes + Doppler), CC 1/2, and Beat sync (beats per turn, phase-locked to host BBT, Sync Phase). 104 core checks, mutation-checked.
       Open: listen and voice by ear; validate in REAPER (BBT lock across loop/relocate, CC 1/2); possible cabinet/overdrive stage; ~0.7 ms
       dry/wet latency is not reported to the host; input is summed to mono.
-- [x] **De-esser** built as `silken`, a vocal strip (original design): rumble filter, plosive guard, de-esser (Band/Wide, Listen, Range), warmth / presence / air,
-      sparkle, output. 195 core checks, mutation-checked. Open: try on real vocals and voice by ear, REAPER validation; ideas not built: look-ahead, breath
-      reducer, dynamic harshness EQ (resonance suppressor), mid/side de-essing, oversampled sparkle, a vocal compressor/leveller (Glue and Trio exist).
+- [x] **De-esser** built as `silken`, a vocal strip (original design): rumble filter, plosive guard, gate, harshness tamer, de-esser (Band/Wide, Listen, Range), leveller
+      (compressor), mud / warmth / presence / air, drive, sparkle, output. 301 core checks, mutation-checked. Open: try on real vocals and voice by ear (all times, ratios and
+      corners are by ear), REAPER validation. Parameter ids are append-only: 0-17 shipped first, 18-31 added later.
+- [ ] **Vocal extras left out of `silken`** (to keep its panel readable; each could be a plugin or a later addition): breath reducer (a gate/expander keyed on unvoiced
+      low-level HF between words); dynamic resonance suppressor (multi-band version of the harshness tamer); vocal doubler / ADT and stereo widener (Chorale is close
+      for the chorus part); a formant-aware sibilance detector; look-ahead for the de-esser and plosive guard (needs latency reporting); oversampled drive and sparkle;
+      mid/side de-essing; a dedicated vocal limiter / clipper at the end of the chain; auto-gain / vocal rider (slow level riding before the compressor).
 - [ ] **Gate** (ZamGateX2 reference, GPL, clean-room): standalone audio noise gate with sidechain.
 - [ ] **MIDI filter / router** (Spaghetti Junction, x42 midifilter, GPL): channel/note filter and remap.
 - [x] **Tonewheel organ** built as `wheelhouse` (clean-room; setBfree is GPL): core, DPF wrapper, UI with custom drawbars,
@@ -36,6 +40,25 @@ implementation from the published algorithm and do not translate the JSFX. Downs
       above is its natural partner), reverb, hardware drawbar CCs, tonewheel leakage and tuning error, key transpose or split.
 - [ ] Lower priority: ADT/doubler (ChronoDupe, MIT), Inflator, spectral compressor, dynamic tilt, channel strip,
       pipe organ (Aeolus), subtractive polysynth (amsynth), GM/SoundFont synth.
+
+## Spectrogram painter (built 2026-11-03 as `fresco`; heard by nobody yet)
+
+Built: `plugins/fresco` (2048-point STFT, magnitudes replaced by the picture column under a playhead; Input-phase or Tone source; free or host-timeline playhead; log or
+linear axis; Range, Contrast, Pixels, Follow input level, Mix, Output; picture path saved as DPF file state; latency 2048 reported). PNG (own inflate), PGM/PPM and BMP
+decoders written in the plugin, so nothing was vendored. Core tests 23k checks, mutation-checked, damaged-file fuzz under ASan/UBSan.
+
+Left out, in rough order of value:
+- [ ] **Listen and look**: run it in REAPER behind a spectrogram (white noise and a pad in; Tone and Input sources); check the loudness of default pictures, whether Range 60 dB and
+      the 0.02 bin amplitude are sensible, and how the default Follow input level 100 % feels (silence in is silent out: is that the right default?).
+- [ ] **JPEG** (baseline and progressive): needs a decoder written in the plugin (a few hundred lines: Huffman, IDCT, upsampling) or a vendored single header, which needs approval.
+      Most pictures people have are JPEG, so this is the biggest gap; until then the plugin tells the user to save as PNG.
+- [ ] **Video**: step through frames (one picture per column of time). Needs a decoder dependency (FFmpeg or similar): ask before adding. A raw frame-sequence folder would avoid it.
+- [ ] Interlaced PNG (refused with a message today), GIF, WebP.
+- [ ] An independent end-to-end test: render noise through a picture, compute a spectrogram with a separate STFT, and report the correlation with the picture (the current tests check
+      single bands, level, axis, time and polarity against formulas).
+- [ ] Fine pictures alias on the lower part of a log axis (a bin takes the interpolation of the rows it covers, not their average): average over the bin's row span.
+- [ ] A time-stretch separate from Length, a sync of Length to bars (Whirligig style), a Floor/dither control so very dark pixels do not vanish, a live column plot in the panel.
+- [ ] Transient-preserving or phase-locked Input mode (the current Input mode can smear drums).
 
 ## Shared code follow-ups (approved, partly done)
 

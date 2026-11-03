@@ -88,7 +88,8 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | wheelhouse | wheelhouse.vst3 | instrument (tonewheel organ) | 0/2 | yes/no | no |
 | whirligig | whirligig.vst3 | audio effect (rotary speaker) | 2/2 | yes/no | yes (Beat mode) |
 | chorale | chorale.vst3 | audio effect (chorus) | 2/2 | yes/no | no |
-| silken | silken.vst3 | audio effect (vocal strip, de-esser) | 2/2 | no/no | no |
+| silken | silken.vst3 | audio effect (vocal strip: de-esser, gate, leveller, EQ) | 2/2 | no/no | no |
+| fresco | fresco.vst3 | audio effect (spectrogram painter: picture to spectrum) | 2/2 | no/no | yes (optional playhead) |
 | quartet | quartet.vst3 | instrument (FM) | 0/2 | yes/no | no |
 | monochord | monochord.vst3 | instrument (string) | 0/2 | yes/no | no |
 | nam | nam.vst3 | audio effect (neural amp + cab IR) | 2/2 | no/no | no |
@@ -768,7 +769,10 @@ Rotary speaker (a new plugin, clean-room from the geometry of a rotating directi
 Stereo chorus (a new plugin; Juno modes after junologue-chorus, MIT, via the JuKnow Chorus JSFX port, MIT; Custom mode is original). Stereo in and out (**Input**: Stereo, a delay line per side, default; or Mono sum as in the source), MIDI in for CC 1 Rate (log), CC 2 Depth, CC 3 Width and CC 4 Mix on **CC Channel** (default 1), no MIDI out, no transport. **Mode** I, I+II, II (fixed sweeps of 0.513 and 0.863 Hz, 1.5-5.4 ms) or Custom (**Rate**, **Depth**, **Delay**, 1-4 **Voices**); **Tone**, **Width** and **Mix** apply to all. No latency (dry path undelayed); the wet signal is the L+R sum, about 6 dB above the dry for a centred signal. Settings are parameters; no state. Key parameters: Mode, Rate, Depth, Delay, Voices, Input, Tone, Width, Mix.
 
 ### silken
-Vocal clean-up and polish strip (original design, RBJ biquads). Stereo in and out, no MIDI, no transport, no latency. In order: **Rumble Filter** (high-pass, 80 Hz), **Plosive Guard** (150 Hz detector, fades towards a high-pass), **De-esser** (**Ess Frequency**, **Ess Threshold**, **Ess Range**, **Ess Mode** Band or Wide, **Ess Listen**; detector linked across channels), **Warmth**, **Presence**, **Air** (-12..+12 dB shelves and bell), **Sparkle** and **Output**. Every stage is exactly neutral when off or at zero. Settings are parameters; three output parameters feed the meters; no state.
+Vocal strip (original design, RBJ biquads). Stereo in and out, no MIDI, no transport, no latency. In signal order: **Rumble Filter** (high-pass, 80 Hz), **Plosive Guard** (150 Hz detector, fades towards a high-pass), **Gate** (2:1 expander: **Gate Threshold**, **Gate Range**; off by default), **Harsh** tamer (**Harsh Amount**, **Harsh Frequency**, **Harsh Threshold**; 0 is off), **De-esser** (**Ess Frequency**, **Ess Threshold**, **Ess Range**, **Ess Mode** Band or Wide, **Ess Listen**), **Leveller** (compressor: **Leveller Threshold**, **Leveller Ratio**, **Leveller Mix**; off by default), **Mud**, **Warmth**, **Presence**, **Air** (-12..+12 dB), **Drive**, **Sparkle** and **Output**. Detectors are linked across the channels. Every stage is exactly neutral when off or at zero. Settings are parameters; five output parameters feed the meters; no state.
+
+### fresco
+Spectrogram painter (original design: a 2048-point STFT, Hann, hop 512, magnitudes replaced). Stereo in and out, no MIDI, optional transport, **latency 2048 samples** (reported to the host). A picture is loaded from a PNG, PGM/PPM (P2/P3/P5/P6) or BMP file by the panel's **Load picture** button (JPEG, GIF, WebP and video are refused with a message; decoders are written in the plugin, no libraries added); its path is the plugin's one piece of state, so a project reopens with the same picture, and the built-in rings-and-cross picture is used when none is loaded. The picture's height is frequency (**Bottom** 20 Hz-10 kHz to **Top** 200 Hz-20 kHz, **Axis** Log or Linear) and its brightness is level (**Range** 20-100 dB, **Contrast** gamma 0.25-4, **Pixels** Bright = loud or Dark = loud; black is silence). A playhead crosses the picture in **Length** 0.5-120 s, free-running or locked to the host timeline (**Playhead**: Free loop or Follow host). **Source** Input keeps the input's phase (timing and pitch character) and imposes the picture's magnitudes; Tone paints with a steady bank of bin-centred sinusoids. **Follow input level** (default 100 %) scales the result by the input's level, so silence in is silence out; at 0 the picture drones with no input. **Mix**, **Output** -24..+12 dB. A white pixel is a 0.02-amplitude sinusoid per bin, so bright pictures are loud: trim with Output. Settings are parameters; three output parameters feed the panel (playhead, column level, loaded). Key parameters: Length, Source, Follow input, Bottom, Top, Range, Contrast, Mix.
 
 ### octet
 Eight-band parametric equalizer, stereo, MIDI in for Drift (CC 1-4 on **CC Channel**, default 1, drive the band chosen by **CC Band**, default 4: Frequency, Gain, Q; CC 4 Output), no transport, latency or plugin state (a redesign, not a port, of the
@@ -1031,9 +1035,10 @@ a note-on), so it does not follow other channels.
   (birds), pratt (GM voices), floozy, gremlin (glitch), campione / mosaic (samples),
   tuney-vst. Bend-aware: see the per-channel list at the top.
 - **Need an organ or keys:** wheelhouse (tonewheel organ), canticle, quartet. Add whirligig (rotary speaker) after an organ or guitar.
-- **Need to clean up a vocal:** silken (rumble filter, plosive guard, de-esser, presence and air), then chorale or a reverb for space.
+- **Need to put a picture in the spectrogram:** fresco (load an image, feed it noise or a drone, watch an analyser).
+- **Need to clean up a vocal:** silken (rumble filter, plosive guard, gate, de-esser, leveller, EQ, drive), then chorale or a reverb for space.
 - **Need an unpitched sound:** drumkit, magneto, bubbles.
 - **Need audio processing:** filter (ladder, skream), phase dispersion (spense), distortion (damiano, skream, chipper), amp/cab modelling (nam), granular (beards, grist), time/pitch (keyframe, spindown,
   primefold, quefrency), space (heavyverb, lightverb, loopdelay, orbit, treatment, ambo),
   rhythm/gating (e-mix, p-mix, orchid, rift), tone/dynamics (trio, octet, infra, glue, bassops, spliff,
-  helterskelter, guardian), spectral (voxmod, sinevox, resonance-garden), two-input interleaving (interleaver).
+  helterskelter, guardian), spectral (voxmod, sinevox, resonance-garden, fresco), vocals (silken), modulation (chorale, whirligig), two-input interleaving (interleaver).

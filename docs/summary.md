@@ -258,7 +258,11 @@ Stereo chorus. Each side is read through short swept delays, opposite on left an
 
 ### Silken (`silken.vst3`)
 
-Vocal clean-up and polish strip. In order: **Rumble Filter**, **Plosive Guard**, **De-esser** (Band or Wide, **Listen** to find the frequency, **Range** to limit it), **Warmth**, **Presence**, **Air**, **Sparkle** and **Output**. No latency, no MIDI. Put it first on a vocal channel.
+Vocal strip, in signal order: **Rumble Filter**, **Plosive Guard**, **Gate**, **Harshness tamer**, **De-esser** (Band or Wide, **Listen** to find the frequency, **Range** to limit it), **Leveller** (compressor with parallel Mix), **Mud**, **Warmth**, **Presence**, **Air**, **Drive**, **Sparkle** and **Output**. No latency, no MIDI. Put it first on a vocal channel; Gate and Leveller are off by default.
+
+### Fresco (`fresco.vst3`)
+
+Spectrogram painter. Load a PNG, PGM/PPM or BMP picture (**Load picture**) and it is painted into the audio: height is frequency (**Bottom**/**Top**, Log or Linear **Axis**), brightness is level (**Range**, **Contrast**, **Pixels**), and a playhead crosses the picture in **Length** seconds, free-running or following the host. **Source** Input imposes the picture on the input's phase; Tone uses a clean sinusoid bank. **Follow input level** makes silence in silent out. Latency 2048 samples. JPEG and video are not supported. Feed it white noise or a pad and open a spectrum analyser.
 
 ### Trio (`trio.vst3`)
 

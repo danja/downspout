@@ -75,6 +75,7 @@ plugins=(
   "whirligig:whirligig"
   "chorale:chorale"
   "silken:silken"
+  "fresco:fresco"
   "strata:strata"
   "quartet:quartet"
   "monochord:monochord"

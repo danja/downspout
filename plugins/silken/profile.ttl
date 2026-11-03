@@ -7,7 +7,7 @@
 
 dsp:silken a trn:PluginProfile ;
     rdfs:label "Silken" ;
-    rdfs:comment "A vocal clean-up and polish strip: rumble filter, plosive guard, de-esser (Band or Wide, with Listen), warmth / presence / air EQ, sparkle and output level. Stereo, linked detectors, no latency." ;
+    rdfs:comment "A vocal strip in signal order: rumble filter, plosive guard, gate, harshness tamer, de-esser (Band or Wide, with Listen), leveller (compressor), mud / warmth / presence / air EQ, drive, sparkle and output. Stereo, linked detectors, no latency." ;
     trn:bundleName "silken.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/silken/> ;
@@ -17,7 +17,7 @@ dsp:silken a trn:PluginProfile ;
 
 dsp:silken trn:hasParameter [
     trn:symbol "hpf_on" ; trn:label "Rumble Filter" ;
-    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1 ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
     rdfs:comment "Rumble filter switch"
 ], [
     trn:symbol "hpf" ; trn:label "Rumble Freq" ;
@@ -25,7 +25,7 @@ dsp:silken trn:hasParameter [
     rdfs:comment "Rumble filter: 2nd-order Butterworth high-pass"
 ], [
     trn:symbol "plosive_on" ; trn:label "Plosive Guard" ;
-    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1 ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
     rdfs:comment "Plosive guard switch"
 ], [
     trn:symbol "plosive_thr" ; trn:label "Plosive Threshold" ;
@@ -33,7 +33,7 @@ dsp:silken trn:hasParameter [
     rdfs:comment "Plosive guard: level of the band below 150 Hz above which it acts (ratio 6:1)"
 ], [
     trn:symbol "ess_on" ; trn:label "De-esser" ;
-    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1 ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
     rdfs:comment "De-esser switch"
 ], [
     trn:symbol "ess_freq" ; trn:label "Ess Frequency" ;
@@ -45,15 +45,15 @@ dsp:silken trn:hasParameter [
     rdfs:comment "De-esser: detector level above which it acts (ratio 4:1, soft knee)"
 ], [
     trn:symbol "ess_range" ; trn:label "Ess Range" ;
-    trn:minimum 0.0 ; trn:maximum 24 ; trn:default 10 ;
+    trn:minimum 0 ; trn:maximum 24 ; trn:default 10 ;
     rdfs:comment "De-esser: most gain reduction it will apply"
 ], [
     trn:symbol "ess_mode" ; trn:label "Ess Mode" ;
-    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0 ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
     rdfs:comment "0 Band (dynamic bell cut at the frequency), 1 Wide (the whole signal)"
 ], [
     trn:symbol "ess_listen" ; trn:label "Ess Listen" ;
-    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0 ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
     rdfs:comment "1 plays the de-esser detector instead of the signal"
 ], [
     trn:symbol "warmth" ; trn:label "Warmth" ;
@@ -69,7 +69,7 @@ dsp:silken trn:hasParameter [
     rdfs:comment "High shelf at 10 kHz"
 ], [
     trn:symbol "sparkle" ; trn:label "Sparkle" ;
-    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0 ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
     rdfs:comment "Adds harmonics of the band above 5 kHz (above 8 kHz), 0 off"
 ], [
     trn:symbol "output" ; trn:label "Output" ;
@@ -77,14 +77,70 @@ dsp:silken trn:hasParameter [
     rdfs:comment "Output level"
 ], [
     trn:symbol "status_ess" ; trn:label "De-ess Reduction" ;
-    trn:minimum 0.0 ; trn:maximum 24 ; trn:default 0.0 ;
+    trn:minimum 0 ; trn:maximum 24 ; trn:default 0 ;
     rdfs:comment "Output: de-esser gain reduction now"
 ], [
     trn:symbol "status_plosive" ; trn:label "Plosive Reduction" ;
-    trn:minimum 0.0 ; trn:maximum 24 ; trn:default 0.0 ;
+    trn:minimum 0 ; trn:maximum 24 ; trn:default 0 ;
     rdfs:comment "Output: plosive guard gain reduction now"
 ], [
     trn:symbol "status_detector" ; trn:label "Ess Detector" ;
-    trn:minimum -60.0 ; trn:maximum 0.0 ; trn:default -60.0 ;
+    trn:minimum -60 ; trn:maximum 0 ; trn:default -60 ;
     rdfs:comment "Output: level at the de-esser detector"
+], [
+    trn:symbol "gate_on" ; trn:label "Gate" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "Gate switch (2:1 downward expander on the louder channel)"
+], [
+    trn:symbol "gate_thr" ; trn:label "Gate Threshold" ;
+    trn:minimum -80 ; trn:maximum -20 ; trn:default -50 ;
+    rdfs:comment "Gate threshold"
+], [
+    trn:symbol "gate_range" ; trn:label "Gate Range" ;
+    trn:minimum 0 ; trn:maximum 40 ; trn:default 12 ;
+    rdfs:comment "Gate: most it closes by"
+], [
+    trn:symbol "tame_freq" ; trn:label "Harsh Frequency" ;
+    trn:minimum 1500 ; trn:maximum 5000 ; trn:default 3000 ;
+    rdfs:comment "Harshness tamer centre frequency (de-esser mechanism, 3:1)"
+], [
+    trn:symbol "tame_thr" ; trn:label "Harsh Threshold" ;
+    trn:minimum -60 ; trn:maximum 0 ; trn:default -30 ;
+    rdfs:comment "Harshness tamer threshold"
+], [
+    trn:symbol "tame_amount" ; trn:label "Harsh Amount" ;
+    trn:minimum 0 ; trn:maximum 12 ; trn:default 0 ;
+    rdfs:comment "Harshness tamer: most it takes off, 0 = off"
+], [
+    trn:symbol "level_on" ; trn:label "Leveller" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "Leveller (compressor) switch"
+], [
+    trn:symbol "level_thr" ; trn:label "Leveller Threshold" ;
+    trn:minimum -40 ; trn:maximum 0 ; trn:default -20 ;
+    rdfs:comment "Leveller threshold (soft knee, automatic half make-up)"
+], [
+    trn:symbol "level_ratio" ; trn:label "Leveller Ratio" ;
+    trn:minimum 1.5 ; trn:maximum 10 ; trn:default 3 ;
+    rdfs:comment "Leveller ratio"
+], [
+    trn:symbol "level_mix" ; trn:label "Leveller Mix" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "Leveller parallel mix, 0 dry to 1 compressed"
+], [
+    trn:symbol "mud" ; trn:label "Mud" ;
+    trn:minimum -12 ; trn:maximum 12 ; trn:default 0 ;
+    rdfs:comment "Bell at 300 Hz, Q 1"
+], [
+    trn:symbol "drive" ; trn:label "Drive" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "Soft saturation tanh(a x)/a, a = 1 + 2 drive"
+], [
+    trn:symbol "status_gate" ; trn:label "Gate Reduction" ;
+    trn:minimum 0 ; trn:maximum 40 ; trn:default 0 ;
+    rdfs:comment "Output: gate gain reduction now"
+], [
+    trn:symbol "status_level" ; trn:label "Leveller Reduction" ;
+    trn:minimum 0 ; trn:maximum 30 ; trn:default 0 ;
+    rdfs:comment "Output: leveller gain reduction now"
 ] .

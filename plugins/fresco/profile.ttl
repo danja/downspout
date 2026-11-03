@@ -1,0 +1,78 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:fresco a trn:PluginProfile ;
+    rdfs:label "Fresco" ;
+    rdfs:comment "Spectrogram painter: a 2048-point STFT whose magnitudes are replaced by the columns of a loaded picture (PNG, PGM/PPM or BMP; height is frequency, brightness is level) under a moving playhead, with the input's phase or a clean sinusoid bank. The picture path is the plugin's only state (key picture). Stereo, latency 2048 samples, optional host-timeline playhead, no MIDI." ;
+    trn:bundleName "fresco.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/fresco/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio .
+
+dsp:fresco trn:hasParameter [
+    trn:symbol "length" ; trn:label "Length" ;
+    trn:minimum 0.5 ; trn:maximum 120 ; trn:default 10 ;
+    rdfs:comment "Seconds for the playhead to cross the picture (logarithmic)"
+], [
+    trn:symbol "range" ; trn:label "Range" ;
+    trn:minimum 20 ; trn:maximum 100 ; trn:default 60 ;
+    rdfs:comment "Level of a nearly black pixel in dB below white; black itself is silence"
+], [
+    trn:symbol "contrast" ; trn:label "Contrast" ;
+    trn:minimum 0.25 ; trn:maximum 4 ; trn:default 1 ;
+    rdfs:comment "Gamma applied to pixel brightness before the level mapping"
+], [
+    trn:symbol "min_hz" ; trn:label "Bottom" ;
+    trn:minimum 20 ; trn:maximum 10000 ; trn:default 100 ;
+    rdfs:comment "Frequency at the bottom edge of the picture (logarithmic)"
+], [
+    trn:symbol "max_hz" ; trn:label "Top" ;
+    trn:minimum 200 ; trn:maximum 20000 ; trn:default 16000 ;
+    rdfs:comment "Frequency at the top edge of the picture (logarithmic)"
+], [
+    trn:symbol "log_axis" ; trn:label "Log Axis" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "0 = rows linear in frequency, 1 = rows log-spaced"
+], [
+    trn:symbol "invert" ; trn:label "Invert" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "1 = dark pixels are loud"
+], [
+    trn:symbol "source" ; trn:label "Source" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "0 = Input (keeps the input's phase), 1 = Tone (bin-centred sinusoid bank)"
+], [
+    trn:symbol "follow" ; trn:label "Follow Input" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "How much the input level scales the result; 1 = silence in is silence out"
+], [
+    trn:symbol "transport" ; trn:label "Follow Host" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "1 = the playhead follows the host timeline (needs a valid tempo), 0 = free-running loop"
+], [
+    trn:symbol "mix" ; trn:label "Mix" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
+    rdfs:comment "Dry to painted; the dry path is delayed by the 2048-sample latency"
+], [
+    trn:symbol "output" ; trn:label "Output" ;
+    trn:minimum -24 ; trn:maximum 12 ; trn:default 0 ;
+    rdfs:comment "Output gain"
+], [
+    trn:symbol "status_playhead" ; trn:label "Playhead" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "Output: playhead position across the picture, 0 to 1"
+], [
+    trn:symbol "status_level" ; trn:label "Column Level" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "Output: mean brightness of the current column after the mapping"
+], [
+    trn:symbol "status_loaded" ; trn:label "Picture Loaded" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "Output: 1 when a picture file is loaded, 0 when the built-in picture is in use"
+] .

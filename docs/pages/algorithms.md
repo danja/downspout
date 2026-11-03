@@ -206,6 +206,11 @@ current Downspout plugins.
   `r = rho0 c`.
 - [`Gater`]({{ '/plugins/gater/' | relative_url }}): routes a stereo input to one of two output pairs by incoming note parity
   (even to Output 1, odd to Output 2).
+- [`Spindown`]({{ '/plugins/spindown/' | relative_url }}): tape stop and start. A ring buffer read by a head whose speed is `(1 - progress)^Curve`, with one `progress` state shared by stop and start so a part-way release restarts from the speed reached; the lag integrates `1 - speed`, the read is four-point Hermite, and the output fades below 4 % speed. Idle it is bit-identical to bypass.
+- [`Fresco`]({{ '/plugins/fresco/' | relative_url }}): spectrogram painter. A 2048-point Hann STFT at hop 512 whose bin magnitudes are replaced by the picture column under a playhead (row to frequency, log or linear; brightness `g` to `10^(-Range (1-g) / 20)`), keeping the input's phase or using bin-centred sinusoids that advance `k` quarter turns per frame; overlap-added, latency 2048 samples. PNG (own inflate), PGM/PPM and BMP are decoded in the plugin.
+- [`Whirligig`]({{ '/plugins/whirligig/' | relative_url }}): rotary speaker. A Linkwitz-Riley split feeds a horn and a drum rotor, each with its own speed and inertia; two microphones hear each rotor with a directional amplitude lobe and a Doppler delay of +-r/c on a fractional delay line. Beat mode locks the turn angle to the host beat position.
+- [`Chorale`]({{ '/plugins/chorale/' | relative_url }}): chorus. Short fractional delays swept by triangle LFOs (0.513 and 0.863 Hz, 1.5-5.4 ms for the Juno voicings), opposite on left and right, with a pre- and post-filter; Custom mode spreads 1-4 voices round the cycle.
+- [`Silken`]({{ '/plugins/silken/' | relative_url }}): vocal strip of RBJ biquads and linked soft-knee dynamics: rumble high-pass, plosive guard (150 Hz detector cross-fading to a high-pass), expander gate, de-esser and harshness tamer (two cascaded band-pass detectors driving a dynamic bell cut), leveller, EQ, drive and sparkle.
 
 ## MIDI effects
 
@@ -237,6 +242,7 @@ current Downspout plugins.
 
 ## Instruments
 
+- [`Wheelhouse`]({{ '/plugins/wheelhouse/' | relative_url }}): tonewheel organ. 91 always-running sine wheels (note `24 + w`, equal temperament) summed through per-division drawbar contacts (3 dB steps, footage offsets such as 16' -12, 8' 0, 4' +12) with octave foldback above wheel 114, single-trigger percussion, scanner vibrato, key click, `tanh` drive and a one-pole tone.
 - [`Basilico`]({{ '/plugins/basilico/' | relative_url }}): a monophonic bass synth with glide, accent, body, drive,
   tempo-aware wobble modulation for amplitude/filter/phase movement, and acid
   squelch across upright, electric, dub, acid, and industrial tones.

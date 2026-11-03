@@ -19,6 +19,7 @@ namespace {
 constexpr kit::Accent kCleanAccent {120, 132, 96};     // sage
 constexpr kit::Accent kEssAccent {198, 132, 58};       // amber
 constexpr kit::Accent kPolishAccent {150, 120, 170};   // lilac
+constexpr kit::Accent kDynAccent {170, 118, 82};       // copper
 constexpr kit::Accent kMeterAccent {92, 140, 156};     // steel
 
 struct Tables {
@@ -53,6 +54,8 @@ public:
             setValue(core::kStatusEss, 6.5f);
             setValue(core::kStatusPlosive, 9.0f);
             setValue(core::kStatusDetector, -18.0f);
+            setValue(core::kStatusGate, 0.0f);
+            setValue(core::kStatusLevel, 5.5f);
         }
     }
 
@@ -69,14 +72,15 @@ protected:
     {
         beginFrame();
         drawHeader("SILKEN", "vocal clean-up and polish",
-                   "Rumble filter, plosive guard and de-esser clean a voice up; warmth, presence, air and sparkle polish it. Signal flows left to right; every stage is neutral when off.");
+                   "A vocal strip in signal order: clean up (rumble, plosives, harshness), de-ess, even out (gate, leveller), then polish (EQ, drive, sparkle). Every stage is neutral when off.");
         const float full = static_cast<float>(getWidth()) - 48.0f;
-        const float gap = 12.0f, y = 108.0f, h = 280.0f;
-        const float wClean = 270.0f, wPolish = 250.0f, wEss = full - wClean - wPolish - 2.0f * gap;
-        drawClean({24.0f, y, wClean, h});
-        drawEss({24.0f + wClean + gap, y, wEss, h});
-        drawPolish({24.0f + wClean + wEss + 2.0f * gap, y, wPolish, h});
-        drawMeters({24.0f, y + h + 12.0f, full, 104.0f});
+        const float gap = 12.0f, y = 108.0f, h = 330.0f;
+        const float w = (full - 3.0f * gap) / 4.0f;
+        drawClean({24.0f, y, w, h});
+        drawEss({24.0f + (w + gap), y, w, h});
+        drawDynamics({24.0f + 2.0f * (w + gap), y, w, h});
+        drawPolish({24.0f + 3.0f * (w + gap), y, w, h});
+        drawMeters({24.0f, y + h + 12.0f, full, 90.0f});
     }
 
 private:
@@ -102,26 +106,40 @@ private:
         }
     }
 
+    static void reductionText(char* buf, const std::size_t size, const float db)
+    {
+        if (db < 0.05f) std::snprintf(buf, size, "0.0 dB");
+        else std::snprintf(buf, size, "-%.1f dB", static_cast<double>(db));
+    }
+
+    void slider(const std::uint32_t id, const char* name, const char* format, const float scale, const Rect r, const kit::Accent accent)
+    {
+        char buf[40];
+        std::snprintf(buf, sizeof(buf), format, static_cast<double>(value(id)) * static_cast<double>(scale));
+        drawSlider(id, name, buf, r, accent);
+    }
+
     void drawClean(const Rect b)
     {
-        drawPanel(b, "CLEAN-UP", kCleanAccent, "rumble and plosives");
+        drawPanel(b, "CLEAN-UP", kCleanAccent, "rumble, plosives, harshness");
         const float pad = 14.0f, w = b.w - 2.0f * pad;
         static constexpr const char* kOff[2] = {"Off", "On"};
         label(b.x + pad, b.y + 56.0f, "Rumble filter", false, 12.0f, ALIGN_LEFT | ALIGN_MIDDLE);
         drawSegments(core::kHpfOn, kOff, 2, {b.x + pad + 110.0f, b.y + 44.0f, w - 110.0f, 24.0f}, kCleanAccent);
-        char buf[32];
-        std::snprintf(buf, sizeof(buf), "%.0f Hz", static_cast<double>(value(core::kHpf)));
         setDim(intValue(core::kHpfOn) == 0);
-        drawSlider(core::kHpf, "Frequency (12 dB/oct high-pass)", buf, {b.x + pad, b.y + 80.0f, w, 28.0f}, kCleanAccent);
+        slider(core::kHpf, "Frequency (12 dB/oct high-pass)", "%.0f Hz", 1.0f, {b.x + pad, b.y + 76.0f, w, 28.0f}, kCleanAccent);
         setDim(false);
-        label(b.x + pad, b.y + 148.0f, "Plosive guard", false, 12.0f, ALIGN_LEFT | ALIGN_MIDDLE);
-        drawSegments(core::kPlosiveOn, kOff, 2, {b.x + pad + 110.0f, b.y + 136.0f, w - 110.0f, 24.0f}, kCleanAccent);
-        std::snprintf(buf, sizeof(buf), "%.0f dB", static_cast<double>(value(core::kPlosiveThr)));
+        label(b.x + pad, b.y + 128.0f, "Plosive guard", false, 12.0f, ALIGN_LEFT | ALIGN_MIDDLE);
+        drawSegments(core::kPlosiveOn, kOff, 2, {b.x + pad + 110.0f, b.y + 116.0f, w - 110.0f, 24.0f}, kCleanAccent);
         setDim(intValue(core::kPlosiveOn) == 0);
-        drawSlider(core::kPlosiveThr, "Threshold (low band, 150 Hz)", buf, {b.x + pad, b.y + 172.0f, w, 28.0f}, kCleanAccent);
+        slider(core::kPlosiveThr, "Threshold (low band, 150 Hz)", "%.0f dB", 1.0f, {b.x + pad, b.y + 148.0f, w, 28.0f}, kCleanAccent);
         setDim(false);
-        label(b.x + pad, b.y + b.h - 38.0f, "Breath bursts on p and b lose their", true, 11.0f, ALIGN_LEFT | ALIGN_MIDDLE);
-        label(b.x + pad, b.y + b.h - 22.0f, "thump; ordinary speech is left alone.", true, 11.0f, ALIGN_LEFT | ALIGN_MIDDLE);
+        label(b.x + pad, b.y + 200.0f, "Harshness tamer (0 dB = off)", false, 12.0f, ALIGN_LEFT | ALIGN_MIDDLE);
+        slider(core::kTameAmount, "Amount (most it takes off)", "%.1f dB", 1.0f, {b.x + pad, b.y + 212.0f, w, 28.0f}, kCleanAccent);
+        setDim(value(core::kTameAmount) <= 0.0f);
+        slider(core::kTameFreq, "Frequency", "%.2f kHz", 0.001f, {b.x + pad, b.y + 250.0f, w, 28.0f}, kCleanAccent);
+        slider(core::kTameThr, "Threshold", "%.0f dB", 1.0f, {b.x + pad, b.y + 288.0f, w, 28.0f}, kCleanAccent);
+        setDim(false);
     }
 
     void drawEss(const Rect b)
@@ -133,19 +151,37 @@ private:
         static constexpr const char* kMode[2] = {"Band", "Wide"};
         static constexpr const char* kListen[2] = {"Off", "Listen"};
         label(b.x + pad, b.y + 56.0f, "De-esser", false, 12.0f, ALIGN_LEFT | ALIGN_MIDDLE);
-        drawSegments(core::kEssOn, kOff, 2, {b.x + pad + 70.0f, b.y + 44.0f, w - 70.0f, 24.0f}, kEssAccent);
+        drawSegments(core::kEssOn, kOff, 2, {b.x + pad + 80.0f, b.y + 44.0f, w - 80.0f, 24.0f}, kEssAccent);
         setDim(intValue(core::kEssOn) == 0);
         label(b.x + pad, b.y + 92.0f, "Cut", false, 12.0f, ALIGN_LEFT | ALIGN_MIDDLE);
-        drawSegments(core::kEssMode, kMode, 2, {b.x + pad + 70.0f, b.y + 80.0f, w - 70.0f, 24.0f}, kEssAccent);
+        drawSegments(core::kEssMode, kMode, 2, {b.x + pad + 80.0f, b.y + 80.0f, w - 80.0f, 24.0f}, kEssAccent);
         label(b.x + pad, b.y + 128.0f, "Monitor", false, 12.0f, ALIGN_LEFT | ALIGN_MIDDLE);
-        drawSegments(core::kEssListen, kListen, 2, {b.x + pad + 70.0f, b.y + 116.0f, w - 70.0f, 24.0f}, kEssAccent);
-        char buf[32];
-        std::snprintf(buf, sizeof(buf), "%.2f kHz", static_cast<double>(value(core::kEssFreq)) / 1000.0);
-        drawSlider(core::kEssFreq, "Frequency", buf, {b.x + pad, b.y + 152.0f, w, 28.0f}, kEssAccent);
-        std::snprintf(buf, sizeof(buf), "%.0f dB", static_cast<double>(value(core::kEssThr)));
-        drawSlider(core::kEssThr, "Threshold", buf, {b.x + pad, b.y + 192.0f, w, 28.0f}, kEssAccent);
-        std::snprintf(buf, sizeof(buf), "%.0f dB", static_cast<double>(value(core::kEssRange)));
-        drawSlider(core::kEssRange, "Range (most it will take off)", buf, {b.x + pad, b.y + 232.0f, w, 28.0f}, kEssAccent);
+        drawSegments(core::kEssListen, kListen, 2, {b.x + pad + 80.0f, b.y + 116.0f, w - 80.0f, 24.0f}, kEssAccent);
+        slider(core::kEssFreq, "Frequency", "%.2f kHz", 0.001f, {b.x + pad, b.y + 152.0f, w, 28.0f}, kEssAccent);
+        slider(core::kEssThr, "Threshold", "%.0f dB", 1.0f, {b.x + pad, b.y + 192.0f, w, 28.0f}, kEssAccent);
+        slider(core::kEssRange, "Range (most it will take off)", "%.0f dB", 1.0f, {b.x + pad, b.y + 232.0f, w, 28.0f}, kEssAccent);
+        setDim(false);
+        label(b.x + pad, b.y + b.h - 34.0f, "Press Listen and sweep Frequency until you", true, 11.0f, ALIGN_LEFT | ALIGN_MIDDLE);
+        label(b.x + pad, b.y + b.h - 18.0f, "hear the s sounds alone, then set Threshold.", true, 11.0f, ALIGN_LEFT | ALIGN_MIDDLE);
+    }
+
+    void drawDynamics(const Rect b)
+    {
+        drawPanel(b, "EVEN OUT", kDynAccent, "gate and leveller");
+        const float pad = 14.0f, w = b.w - 2.0f * pad;
+        static constexpr const char* kOff[2] = {"Off", "On"};
+        label(b.x + pad, b.y + 56.0f, "Gate", false, 12.0f, ALIGN_LEFT | ALIGN_MIDDLE);
+        drawSegments(core::kGateOn, kOff, 2, {b.x + pad + 110.0f, b.y + 44.0f, w - 110.0f, 24.0f}, kDynAccent);
+        setDim(intValue(core::kGateOn) == 0);
+        slider(core::kGateThr, "Threshold", "%.0f dB", 1.0f, {b.x + pad, b.y + 76.0f, w, 28.0f}, kDynAccent);
+        slider(core::kGateRange, "Range (how far it closes)", "%.0f dB", 1.0f, {b.x + pad, b.y + 114.0f, w, 28.0f}, kDynAccent);
+        setDim(false);
+        label(b.x + pad, b.y + 172.0f, "Leveller", false, 12.0f, ALIGN_LEFT | ALIGN_MIDDLE);
+        drawSegments(core::kLevelOn, kOff, 2, {b.x + pad + 110.0f, b.y + 160.0f, w - 110.0f, 24.0f}, kDynAccent);
+        setDim(intValue(core::kLevelOn) == 0);
+        slider(core::kLevelThr, "Threshold", "%.0f dB", 1.0f, {b.x + pad, b.y + 192.0f, w, 28.0f}, kDynAccent);
+        slider(core::kLevelRatio, "Ratio", "%.1f : 1", 1.0f, {b.x + pad, b.y + 230.0f, w, 28.0f}, kDynAccent);
+        slider(core::kLevelMix, "Mix (parallel)", "%.0f %%", 100.0f, {b.x + pad, b.y + 268.0f, w, 28.0f}, kDynAccent);
         setDim(false);
     }
 
@@ -153,35 +189,43 @@ private:
     {
         drawPanel(b, "POLISH", kPolishAccent, "tone and level");
         const float pad = 14.0f, w = b.w - 2.0f * pad;
-        char buf[32];
-        const struct { std::uint32_t id; const char* name; const char* format; bool signedValue; } rows[5] = {
-            {core::kWarmth, "Warmth (low shelf, 200 Hz)", "%+.1f dB", true},
-            {core::kPresence, "Presence (bell, 3.2 kHz)", "%+.1f dB", true},
-            {core::kAir, "Air (high shelf, 10 kHz)", "%+.1f dB", true},
-            {core::kSparkle, "Sparkle (new harmonics)", "%.0f %%", false},
-            {core::kOutput, "Output", "%+.1f dB", true}};
+        const struct { std::uint32_t id; const char* name; const char* format; float scale; } rows[7] = {
+            {core::kMud, "Mud (bell, 300 Hz)", "%+.1f dB", 1.0f},
+            {core::kWarmth, "Warmth (low shelf, 200 Hz)", "%+.1f dB", 1.0f},
+            {core::kPresence, "Presence (bell, 3.2 kHz)", "%+.1f dB", 1.0f},
+            {core::kAir, "Air (high shelf, 10 kHz)", "%+.1f dB", 1.0f},
+            {core::kDrive, "Drive (soft saturation)", "%.0f %%", 100.0f},
+            {core::kSparkle, "Sparkle (new harmonics)", "%.0f %%", 100.0f},
+            {core::kOutput, "Output", "%+.1f dB", 1.0f}};
         float y = b.y + 40.0f;
         for (const auto& r : rows) {
-            const double v = static_cast<double>(value(r.id)) * (r.id == core::kSparkle ? 100.0 : 1.0);
-            std::snprintf(buf, sizeof(buf), r.format, v);
-            drawSlider(r.id, r.name, buf, {b.x + pad, y, w, 28.0f}, kPolishAccent);
-            y += 46.0f;
+            slider(r.id, r.name, r.format, r.scale, {b.x + pad, y, w, 28.0f}, kPolishAccent);
+            y += 40.0f;
         }
     }
 
     void drawMeters(const Rect b)
     {
         drawPanel(b, "WHAT IT IS DOING", kMeterAccent, "live");
-        const float pad = 14.0f, gap = 20.0f;
-        const float colW = (b.w - 2.0f * pad - 2.0f * gap) / 3.0f;
-        char buf[40];
+        const float pad = 14.0f, gap = 16.0f;
+        const float colW = (b.w - 2.0f * pad - 4.0f * gap) / 5.0f;
+        char buf[48];
         const float det = value(core::kStatusDetector), thr = value(core::kEssThr);
-        std::snprintf(buf, sizeof(buf), "%.0f dB (threshold %.0f)", static_cast<double>(det), static_cast<double>(thr));
-        drawBar({b.x + pad, b.y + 40.0f, colW, 40.0f}, (det + 60.0f) / 60.0f, kEssAccent, "Sibilance level", buf, (thr + 60.0f) / 60.0f);
-        std::snprintf(buf, sizeof(buf), "-%.1f dB", static_cast<double>(value(core::kStatusEss)));
-        drawBar({b.x + pad + colW + gap, b.y + 40.0f, colW, 40.0f}, value(core::kStatusEss) / 24.0f, kEssAccent, "De-esser reduction", buf);
-        std::snprintf(buf, sizeof(buf), "-%.1f dB", static_cast<double>(value(core::kStatusPlosive)));
-        drawBar({b.x + pad + 2.0f * (colW + gap), b.y + 40.0f, colW, 40.0f}, value(core::kStatusPlosive) / 24.0f, kCleanAccent, "Plosive reduction", buf);
+        std::snprintf(buf, sizeof(buf), "%.0f dB (thr %.0f)", static_cast<double>(det), static_cast<double>(thr));
+        float x = b.x + pad;
+        drawBar({x, b.y + 40.0f, colW, 40.0f}, (det + 60.0f) / 60.0f, kEssAccent, "Sibilance level", buf, (thr + 60.0f) / 60.0f);
+        x += colW + gap;
+        reductionText(buf, sizeof(buf), value(core::kStatusEss));
+        drawBar({x, b.y + 40.0f, colW, 40.0f}, value(core::kStatusEss) / 24.0f, kEssAccent, "De-esser", buf);
+        x += colW + gap;
+        reductionText(buf, sizeof(buf), value(core::kStatusPlosive));
+        drawBar({x, b.y + 40.0f, colW, 40.0f}, value(core::kStatusPlosive) / 24.0f, kCleanAccent, "Plosive guard", buf);
+        x += colW + gap;
+        reductionText(buf, sizeof(buf), value(core::kStatusGate));
+        drawBar({x, b.y + 40.0f, colW, 40.0f}, value(core::kStatusGate) / 40.0f, kDynAccent, "Gate", buf);
+        x += colW + gap;
+        reductionText(buf, sizeof(buf), value(core::kStatusLevel));
+        drawBar({x, b.y + 40.0f, colW, 40.0f}, value(core::kStatusLevel) / 30.0f, kDynAccent, "Leveller", buf);
     }
 
     bool demo_ = false;

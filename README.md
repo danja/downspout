@@ -1,5 +1,8 @@
 # downspout
 
+A collection of about a hundred VST3 plugins (MIT, C++/[DPF](https://github.com/DISTRHO/DPF)): generative and algorithmic MIDI tools, instruments and audio effects.
+Screenshots, notes and a plugin finder are on the [project site](https://danja.github.io/downspout/).
+
 ## Install All Plugins (from [Releases](https://github.com/danja/downspout/releases))
 
 1. Download the zip for your platform from GitHub Releases:
@@ -41,22 +44,12 @@ for the local install and release packaging details.
 
 ## About
 
-A bunch of mostly generative, algorithmic plugins based around DPF and VST3.
+Each plugin is a portable C++ core with deterministic tests, a thin DPF wrapper and a custom NanoVG UI in a shared look. VST3 metadata uses creator `danja`
+and group `Downspout`. Some are ports or redesigns of LV2 and JSFX plugins; the plugin docs say which.
 
-The repository is organized around portable C++ cores, deterministic tests, thin
-DPF wrappers, and custom NanoVG UIs. VST3 metadata is normalized across the
-plugins with creator `danja`, group `Downspout`, and plugin-specific categories.
-
-Demo -
-
-* [Jack's Dream](https://youtu.be/Rd-ACU0JUdo) 
-* [Another example](https://www.youtube.com/watch?v=DrAHdaJolyc) 
-
-### See also : 
-
-* [Transmission](https://danja.github.io/transmission/) Generative Audio Workstation
-* [Valis](https://danja.github.io/valis) Virtual Analog LLM Integrated System
-* [Flues](https://github.com/danja/flues) earlier LV2 plugins and Web Audio toys
+Demos: [Jack's Dream](https://youtu.be/Rd-ACU0JUdo), [another example](https://www.youtube.com/watch?v=DrAHdaJolyc).
+See also: [Transmission](https://danja.github.io/transmission/) (Generative Audio Workstation), [Valis](https://danja.github.io/valis) (Virtual Analog LLM Integrated System),
+[Flues](https://github.com/danja/flues) (earlier LV2 plugins and Web Audio toys).
 
 ## Build and Install
 
@@ -81,6 +74,8 @@ plugin names, makers, categories, and homepage metadata independently of the
 installed bundle.
 
 ## Plugins
+
+For ports, MIDI roles and CC maps of every plugin see the [plugin reference](docs/pages/plugins-summary.md).
 
 | Plugin | Bundle | Type | Notes |
 | --- | --- | --- | --- |
@@ -158,6 +153,7 @@ installed bundle.
 | [Whirligig](plugins/whirligig/README.md) | `whirligig.vst3` | Audio effect | Rotary speaker: drum and horn rotors, two microphones, Slow/Fast inertia, optional lock to the host tempo and bar position, CC 1/2 speed switch. |
 | [Chorale](plugins/chorale/README.md) | `chorale.vst3` | Audio effect | Stereo chorus: Juno-style I / I+II / II voicings or a Custom 1-4 voice chorus, Tone, Width, Mix, CC 1-4. |
 | [Silken](plugins/silken/README.md) | `silken.vst3` | Audio effect | Vocal strip: rumble filter, plosive guard, de-esser (band/wide, listen), warmth / presence / air EQ, sparkle, output. |
+| [Fresco](plugins/fresco/README.md) | `fresco.vst3` | Audio effect | Spectrogram painter: loads a PNG, PGM/PPM or BMP picture and paints it into the audio's spectrogram (height = frequency, brightness = level, playhead sweeps the picture). |
 | [Octet](plugins/octet/README.md) | `octet.vst3` | Audio effect | Eight-band parametric equalizer: bell, shelves, notch, 12 and 48 dB cuts, Stereo/Left-Right/Mid-Side with per-band channel assignment, and a draggable response plot. |
 | [Glue](plugins/glue/README.md) | `glue.vst3` | Audio effect | Stereo-linked bus compressor: soft knee, sidechain high-pass, peak or RMS detector, auto release, soft clip, parallel mix, with a transfer-curve and gain-reduction display. |
 | [Sam](plugins/sam/README.md) | `sam.vst3` | Instrument | Speech synthesiser: SAM (Software Automatic Mouth, 1982) as a MIDI instrument that speaks a word per note at the key's pitch, or as text-to-speech with the words locked to the host transport. Editable text, SAM's voice presets. SAM's source is vendored without a licence: see plugins/sam/third_party/sam/SAM-LICENSE.md. |
@@ -226,52 +222,14 @@ when a rule changes.
 
 ## Current Work
 
-All current wrapper targets build as VST3 bundles. The main remaining work is
-host validation, release validation, and incremental DAW-facing fixes rather
-than large architecture changes.
-
-Near-term priorities:
-
-1. validate all twenty-five bundles in real hosts after clean installs and rescans;
-2. keep release packaging aligned with local installs;
-3. extend musical style vocabulary where it improves actual generator behavior;
-4. publish and verify the first public tagged release artifact.
+Everything builds as VST3. The main remaining work is host validation (most newer plugins have only been tested with their core tests and screenshots, not in a
+DAW), release validation and incremental fixes. Priorities: validate all bundles in real hosts after clean installs and rescans; keep release packaging aligned
+with local installs; publish and verify the first tagged release. Open ideas are in [TODO.md](TODO.md) and [docs/plan.md](docs/plan.md).
 
 ## Documentation
 
-There's a mess of rough drafts in the /docs dir plus :
+`docs/` holds working notes, many of them drafts. The **GitHub Pages** site is built from `docs/pages` only (`.github/workflows/pages.yml`, Jekyll):
 
-**GitHub Pages** is built from docs/pages, not from the root docs.
-
-  The editable plugin screenshot text is here:
-
-  - Card text and plugin-page summary: summary: in each file under docs/pages/_products
-  - Longer plugin-page notes: Markdown body below the front matter in the same file
-  - Screenshot path: screenshot: in the same front matter, pointing at docs/pages/assets/plugins
-
-  Example: docs/pages/_products/bassgen.md:1
-
-  summary: Transport-synced bassline generator...
-  ---
-
-  ## Functionality
-
-  BassGen creates...
-
-  How it renders:
-
-  - Index cards use plugin.summary in docs/pages/index.md:17
-  - Individual plugin pages use page.summary, page.screenshot, then the Markdown body in docs/pages/_layouts/plugin.html:10
-  - Jekyll collection config is in docs/pages/_config.yml:6
-
-  Build/deploy path:
-
-  - GitHub Actions workflow: .github/workflows/pages.yml:1
-  - It runs actions/jekyll-build-pages with source: docs/pages
-  - It deploys the generated _site artifact to GitHub Pages
-
-  For local preview from repo root:
-
-  jekyll serve --source docs/pages --destination /tmp/downspout-pages-site
-
-  Screenshot generation is separate. The PNGs are regenerated by scripts/capture-plugin-screenshots.sh, documented in docs/screenshots.md:1, but the descriptive text is in _products/*.md.
+- each plugin has `docs/pages/_products/<plugin>.md`: the front matter (`summary`, `screenshot`, `group`, ...) feeds the index card and the Markdown body is the plugin page;
+- screenshots are generated by `scripts/capture-plugin-screenshots.sh` (see [docs/screenshots.md](docs/screenshots.md)); the descriptive text is in the product files;
+- preview locally: `jekyll serve --source docs/pages --destination /tmp/downspout-pages-site`.
