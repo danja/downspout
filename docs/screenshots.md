@@ -102,6 +102,7 @@ Current output filenames:
 - `spindown.png`
 - `wheelhouse.png`
 - `whirligig.png`
+- `chorale.png`
 - `strata.png`
 - `quartet.png`
 - `monochord.png`

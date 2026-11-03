@@ -263,6 +263,7 @@ The release script currently expects these bundles:
 - `spindown.vst3`
 - `wheelhouse.vst3`
 - `whirligig.vst3`
+- `chorale.vst3`
 - `strata.vst3`
 - `quartet.vst3`
 - `monochord.vst3`

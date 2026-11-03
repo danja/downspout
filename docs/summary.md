@@ -252,6 +252,10 @@ Tonewheel organ. Ninety-one tone wheels turn all the time and a held key connect
 
 Rotary speaker. The input is summed to mono and split at the **Crossover** (800 Hz) into a drum and a horn rotor; each has Slow and Fast rates, an **Accel** inertia, **Depth** (swell) and **Doppler** (pitch), heard by two microphones **Mic Angle** apart. Speed is Stop, Slow or Fast (CC 1 and CC 2). **Sync: Beat** turns the rates into beats per turn and phase-locks the rotors to the host BBT position (**Sync Phase** offsets the turn). Use it after Wheelhouse or a guitar.
 
+### Chorale (`chorale.vst3`)
+
+Stereo chorus. The input is summed to mono and read through short swept delays, opposite on left and right. **Mode** I, I+II and II are the fixed Juno-style voicings; **Custom** has **Rate**, **Depth**, **Delay** and one to four **Voices**. **Tone**, **Width** and **Mix** apply to all; CC 1-4 drive Rate, Depth, Width and Mix. Use it on pads, keys, guitars and Wheelhouse.
+
 ### Trio (`trio.vst3`)
 
 Three-band dynamics with no latency, in the OTT manner; Drift CC 1-4 on a channel drive Amount, Time, Input and Upward limit. The signal is split at two adjustable crossovers

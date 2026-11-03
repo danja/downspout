@@ -1,0 +1,86 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:chorale a trn:PluginProfile ;
+    rdfs:label "Chorale" ;
+    rdfs:comment "A stereo chorus. The input is summed to mono and read through short swept delays, opposite on left and right. Modes I, I+II and II are the Juno-style voicings (after junologue-chorus, MIT); Custom is one to four sine-swept voices with Rate, Depth and Delay. Tone, Width and Mix apply to all. CC 1-4 take over Rate, Depth, Width and Mix." ;
+    trn:bundleName "chorale.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/chorale/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio, trn:MIDI ;
+    trn:produces trn:Audio .
+
+dsp:chorale trn:hasParameter [
+    trn:symbol "mode" ; trn:label "Mode" ;
+    trn:minimum 0.0 ; trn:maximum 3 ; trn:default 1 ;
+    rdfs:comment "0 Juno I, 1 Juno I+II, 2 Juno II, 3 Custom"
+], [
+    trn:symbol "tone" ; trn:label "Tone" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.5 ;
+    rdfs:comment "Opens both wet low-pass filters (squared law), 0 dark to 1 bright"
+], [
+    trn:symbol "mix" ; trn:label "Mix" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.5 ;
+    rdfs:comment "Dry to wet, equal power"
+], [
+    trn:symbol "rate" ; trn:label "Rate" ;
+    trn:minimum 0.05 ; trn:maximum 8 ; trn:default 0.8 ;
+    rdfs:comment "Custom: LFO rate. CC 1 (logarithmic)"
+], [
+    trn:symbol "depth" ; trn:label "Depth" ;
+    trn:minimum 0 ; trn:maximum 10 ; trn:default 3 ;
+    rdfs:comment "Custom: sweep either side of Delay, held below Delay. CC 2"
+], [
+    trn:symbol "delay" ; trn:label "Delay" ;
+    trn:minimum 1 ; trn:maximum 30 ; trn:default 8 ;
+    rdfs:comment "Custom: centre delay"
+], [
+    trn:symbol "voices" ; trn:label "Voices" ;
+    trn:minimum 1.0 ; trn:maximum 4 ; trn:default 2 ;
+    rdfs:comment "Custom: number of voices, 1 to 4"
+], [
+    trn:symbol "width" ; trn:label "Width" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1 ;
+    rdfs:comment "0 mono wet to 1 full stereo wet. CC 3"
+], [
+    trn:symbol "cc_channel" ; trn:label "CC Channel" ;
+    trn:minimum 0.0 ; trn:maximum 16.0 ; trn:default 1 ;
+    rdfs:comment "MIDI channel for CC 1-4 (Rate, Depth, Width, Mix), 0 = off"
+], [
+    trn:symbol "status_tap1" ; trn:label "Voice 1 Sweep" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0 ;
+    rdfs:comment "Output: where voice 1 is in its sweep, 0 short .. 1 long"
+], [
+    trn:symbol "status_tap2" ; trn:label "Voice 2 Sweep" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0 ;
+    rdfs:comment "Output: voice 2 sweep position"
+], [
+    trn:symbol "status_tap3" ; trn:label "Voice 3 Sweep" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0 ;
+    rdfs:comment "Output: voice 3 sweep position"
+], [
+    trn:symbol "status_tap4" ; trn:label "Voice 4 Sweep" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0 ;
+    rdfs:comment "Output: voice 4 sweep position"
+], [
+    trn:symbol "status_rate" ; trn:label "Rate Now" ;
+    trn:minimum 0.05 ; trn:maximum 8 ; trn:default 0.8 ;
+    rdfs:comment "Output: Rate in force (a controller can override)"
+], [
+    trn:symbol "status_depth" ; trn:label "Depth Now" ;
+    trn:minimum 0 ; trn:maximum 10 ; trn:default 3 ;
+    rdfs:comment "Output: Depth in force"
+], [
+    trn:symbol "status_width" ; trn:label "Width Now" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1 ;
+    rdfs:comment "Output: Width in force"
+], [
+    trn:symbol "status_mix" ; trn:label "Mix Now" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.5 ;
+    rdfs:comment "Output: Mix in force"
+] .

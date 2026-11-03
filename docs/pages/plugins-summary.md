@@ -87,6 +87,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | strata | strata.vst3 | instrument (wavetable) | 0/2 | yes/no | no |
 | wheelhouse | wheelhouse.vst3 | instrument (tonewheel organ) | 0/2 | yes/no | no |
 | whirligig | whirligig.vst3 | audio effect (rotary speaker) | 2/2 | yes/no | yes (Beat mode) |
+| chorale | chorale.vst3 | audio effect (chorus) | 2/2 | yes/no | no |
 | quartet | quartet.vst3 | instrument (FM) | 0/2 | yes/no | no |
 | monochord | monochord.vst3 | instrument (string) | 0/2 | yes/no | no |
 | nam | nam.vst3 | audio effect (neural amp + cab IR) | 2/2 | no/no | no |
@@ -761,6 +762,9 @@ Tonewheel organ (a new plugin, clean-room from the published behaviour of a tone
 
 ### whirligig
 Rotary speaker (a new plugin, clean-room from the geometry of a rotating directional source; the JSFX `Dizzy` port, GPL, was only a reference). Stereo in (summed to mono) and out, MIDI in for CC 1 (64+ Fast, else Slow) and CC 2 (64+ Stop, else Slow) on **CC Channel** (default 1), no MIDI out. A Linkwitz-Riley crossover (**Crossover**, default 800 Hz) feeds a drum and a horn rotor, each with Slow and Fast rates, **Accel** inertia, **Depth** (swell) and **Doppler**, heard by two microphones **Mic Angle** apart. **Sync: Beat** reads the host tempo and BBT position (stopped or no transport: 120 BPM, free-running) and locks each rotor at a chosen number of beats per turn, with **Sync Phase**. Settings are parameters; no state; wet and dry both sit about 0.7 ms behind the input (not reported). Key parameters: Speed, Sync, rates, Crossover, Depth, Doppler, Mic Angle, Mix.
+
+### chorale
+Stereo chorus (a new plugin; Juno modes after junologue-chorus, MIT, via the JuKnow Chorus JSFX port, MIT; Custom mode is original). Stereo in (summed to mono) and out, MIDI in for CC 1 Rate (log), CC 2 Depth, CC 3 Width and CC 4 Mix on **CC Channel** (default 1), no MIDI out, no transport. **Mode** I, I+II, II (fixed sweeps of 0.513 and 0.863 Hz, 1.5-5.4 ms) or Custom (**Rate**, **Depth**, **Delay**, 1-4 **Voices**); **Tone**, **Width** and **Mix** apply to all. No latency (dry path undelayed); the wet signal is the L+R sum, about 6 dB above the dry for a centred signal. Settings are parameters; no state. Key parameters: Mode, Rate, Depth, Delay, Voices, Tone, Width, Mix.
 
 ### octet
 Eight-band parametric equalizer, stereo, MIDI in for Drift (CC 1-4 on **CC Channel**, default 1, drive the band chosen by **CC Band**, default 4: Frequency, Gain, Q; CC 4 Output), no transport, latency or plugin state (a redesign, not a port, of the

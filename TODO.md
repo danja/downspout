@@ -14,7 +14,9 @@ implementation from the published algorithm and do not translate the JSFX. Downs
       transport with loop and relocate, save/reopen, Drift CC 1-4); decide whether it wants a tone darkening as the
       tape slows, tempo-synced Stop/Start times, and a "resume" option instead of the crossfade to live. See
       `plugins/spindown/docs/design.md` ("Not built").
-- [ ] **Chorus** (JuKnow Chorus, MIT): rate, depth, delay, mode, width, Drift CCs. Downspout has no chorus.
+- [x] **Chorus** built as `chorale` (JuKnow Chorus / junologue-chorus, MIT, notice kept): Juno modes I, I+II, II plus a Custom 1-4 voice mode
+      (Rate, Depth, Delay), Tone, Width, Mix, CC 1-4. 184 core checks incl. a reference transcription of the source, mutation-checked.
+      Open: listen (Custom voicing by ear), REAPER validation, possibly feedback/flanger, tempo-synced rate, a vibrato (100 % wet) switch.
 - [ ] **Meters / scope**: one plugin with EBU R128 loudness, spectrum and goniometer (x42 refs, GPL, clean-room).
       Guardian's true-peak guard can share code. Later: correlation, K-Meter, VU, oscilloscope, test signal generator.
 - [x] **Rotary speaker** built as `whirligig` (clean-room; Dizzy/b_whirl is GPL): LR4 crossover, drum and horn rotors with inertia, two mics
