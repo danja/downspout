@@ -133,6 +133,7 @@ The repository currently installs sixty-one real wrapper targets:
 - `infra.vst3` with UI
 - `spindown.vst3` with UI
 - `wheelhouse.vst3` with UI
+- `whirligig.vst3` with UI
 - `strata.vst3` with UI
 - `quartet.vst3` with UI
 - `monochord.vst3` with UI

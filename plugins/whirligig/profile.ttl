@@ -1,0 +1,134 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:whirligig a trn:PluginProfile ;
+    rdfs:label "Whirligig" ;
+    rdfs:comment "A rotary speaker (Leslie-style). The input is summed to mono, split at a crossover into a drum and a horn rotor, each with its own speed, inertia, swell and Doppler, and picked up by two microphones. Speeds run free in Hz or lock to the host tempo and bar position (Beat mode). CC 1 and CC 2 on a channel set Fast and Stop." ;
+    trn:bundleName "whirligig.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/whirligig/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio, trn:MIDI ;
+    trn:produces trn:Audio .
+
+dsp:whirligig trn:hasParameter [
+    trn:symbol "speed" ; trn:label "Speed" ;
+    trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 1 ;
+    rdfs:comment "0 stop, 1 slow, 2 fast. CC 1 (64+ fast, below slow) and CC 2 (64+ stop, below slow) take over until this is moved"
+], [
+    trn:symbol "horn_slow" ; trn:label "Horn Slow" ;
+    trn:minimum 0.3 ; trn:maximum 1.5 ; trn:default 0.8 ;
+    rdfs:comment "Horn rate at Slow in Free mode"
+], [
+    trn:symbol "horn_fast" ; trn:label "Horn Fast" ;
+    trn:minimum 4.0 ; trn:maximum 9.0 ; trn:default 6.7 ;
+    rdfs:comment "Horn rate at Fast in Free mode"
+], [
+    trn:symbol "drum_slow" ; trn:label "Drum Slow" ;
+    trn:minimum 0.3 ; trn:maximum 1.2 ; trn:default 0.67 ;
+    rdfs:comment "Drum rate at Slow in Free mode"
+], [
+    trn:symbol "drum_fast" ; trn:label "Drum Fast" ;
+    trn:minimum 3.0 ; trn:maximum 8.0 ; trn:default 5.7 ;
+    rdfs:comment "Drum rate at Fast in Free mode"
+], [
+    trn:symbol "horn_accel" ; trn:label "Horn Accel" ;
+    trn:minimum 0.1 ; trn:maximum 4.0 ; trn:default 0.8 ;
+    rdfs:comment "Time constant of the horn speed change"
+], [
+    trn:symbol "drum_accel" ; trn:label "Drum Accel" ;
+    trn:minimum 0.5 ; trn:maximum 10.0 ; trn:default 3.5 ;
+    rdfs:comment "Time constant of the drum speed change (the drum is heavier)"
+], [
+    trn:symbol "crossover" ; trn:label "Crossover" ;
+    trn:minimum 300.0 ; trn:maximum 2000.0 ; trn:default 800 ;
+    rdfs:comment "Linkwitz-Riley 4th-order split between drum (below) and horn (above)"
+], [
+    trn:symbol "horn_depth" ; trn:label "Horn Depth" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.6 ;
+    rdfs:comment "Horn amplitude modulation depth"
+], [
+    trn:symbol "horn_doppler" ; trn:label "Horn Doppler" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1 ;
+    rdfs:comment "Horn Doppler (pitch) amount, 1 = full radius"
+], [
+    trn:symbol "drum_depth" ; trn:label "Drum Depth" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.4 ;
+    rdfs:comment "Drum amplitude modulation depth"
+], [
+    trn:symbol "drum_doppler" ; trn:label "Drum Doppler" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.8 ;
+    rdfs:comment "Drum Doppler (pitch) amount, 1 = full radius"
+], [
+    trn:symbol "mic_angle" ; trn:label "Mic Angle" ;
+    trn:minimum 0.0 ; trn:maximum 180.0 ; trn:default 90 ;
+    rdfs:comment "Angle between the left and right microphones"
+], [
+    trn:symbol "horn_level" ; trn:label "Horn Level" ;
+    trn:minimum -24.0 ; trn:maximum 12.0 ; trn:default 0 ;
+    rdfs:comment "Horn band level"
+], [
+    trn:symbol "drum_level" ; trn:label "Drum Level" ;
+    trn:minimum -24.0 ; trn:maximum 12.0 ; trn:default 0 ;
+    rdfs:comment "Drum band level"
+], [
+    trn:symbol "mix" ; trn:label "Mix" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1 ;
+    rdfs:comment "Dry/wet (the dry path is delay-matched)"
+], [
+    trn:symbol "output" ; trn:label "Output" ;
+    trn:minimum -24.0 ; trn:maximum 12.0 ; trn:default 0 ;
+    rdfs:comment "Output level"
+], [
+    trn:symbol "cc_channel" ; trn:label "CC Channel" ;
+    trn:minimum 0.0 ; trn:maximum 16.0 ; trn:default 1 ;
+    rdfs:comment "MIDI channel for CC 1 and CC 2, 0 = off"
+], [
+    trn:symbol "sync" ; trn:label "Sync" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0 ;
+    rdfs:comment "0 Free (Hz), 1 Beat: rotors lock to the host tempo and BBT position"
+], [
+    trn:symbol "horn_slow_div" ; trn:label "Horn Slow Beats" ;
+    trn:minimum 0.0 ; trn:maximum 11 ; trn:default 3 ;
+    rdfs:comment "Beat mode: beats per turn at Slow (index into 8,4,3,2,1.5,1,3/4,1/2,1/3,1/4,1/6,1/8)"
+], [
+    trn:symbol "horn_fast_div" ; trn:label "Horn Fast Beats" ;
+    trn:minimum 0.0 ; trn:maximum 11 ; trn:default 8 ;
+    rdfs:comment "Beat mode: beats per turn at Fast (same table)"
+], [
+    trn:symbol "drum_slow_div" ; trn:label "Drum Slow Beats" ;
+    trn:minimum 0.0 ; trn:maximum 11 ; trn:default 2 ;
+    rdfs:comment "Beat mode: beats per turn at Slow (same table)"
+], [
+    trn:symbol "drum_fast_div" ; trn:label "Drum Fast Beats" ;
+    trn:minimum 0.0 ; trn:maximum 11 ; trn:default 7 ;
+    rdfs:comment "Beat mode: beats per turn at Fast (same table)"
+], [
+    trn:symbol "sync_phase" ; trn:label "Sync Phase" ;
+    trn:minimum 0.0 ; trn:maximum 360.0 ; trn:default 0 ;
+    rdfs:comment "Beat mode: where in the turn the rotors are at the start of the song, degrees"
+], [
+    trn:symbol "status_horn_hz" ; trn:label "Horn Rate" ;
+    trn:minimum 0.0 ; trn:maximum 9.0 ; trn:default 0 ;
+    rdfs:comment "Output: horn speed now"
+], [
+    trn:symbol "status_drum_hz" ; trn:label "Drum Rate" ;
+    trn:minimum 0.0 ; trn:maximum 8.0 ; trn:default 0 ;
+    rdfs:comment "Output: drum speed now"
+], [
+    trn:symbol "status_horn_turn" ; trn:label "Horn Angle" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0 ;
+    rdfs:comment "Output: horn angle, 0..1 of a turn"
+], [
+    trn:symbol "status_drum_turn" ; trn:label "Drum Angle" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0 ;
+    rdfs:comment "Output: drum angle, 0..1 of a turn"
+], [
+    trn:symbol "status_locked" ; trn:label "Locked" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0 ;
+    rdfs:comment "Output: 1 while both rotors are phase-locked to the transport"
+] .

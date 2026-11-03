@@ -86,6 +86,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | spindown | spindown.vst3 | audio effect (tape stop and start) | 2/2 | yes/no | no |
 | strata | strata.vst3 | instrument (wavetable) | 0/2 | yes/no | no |
 | wheelhouse | wheelhouse.vst3 | instrument (tonewheel organ) | 0/2 | yes/no | no |
+| whirligig | whirligig.vst3 | audio effect (rotary speaker) | 2/2 | yes/no | yes (Beat mode) |
 | quartet | quartet.vst3 | instrument (FM) | 0/2 | yes/no | no |
 | monochord | monochord.vst3 | instrument (string) | 0/2 | yes/no | no |
 | nam | nam.vst3 | audio effect (neural amp + cab IR) | 2/2 | no/no | no |
@@ -758,6 +759,9 @@ Tape stop and start (a new plugin, clean-room from the general behaviour of a ta
 ### wheelhouse
 Tonewheel organ (a new plugin, clean-room from the published behaviour of a tonewheel organ; the JSFX `Lord of the Rinks` port of setBfree, GPL, was only read as a reference). MIDI in, stereo out, no audio input, no plugin state. Ninety-one equal-tempered tone wheels (MIDI notes 24-114) turn all the time; a held key connects nine footages to the bus through that division's **drawbars** (0-8, 3 dB per step, off at 0): 16', 5 1/3', 8', 4', 2 2/3', 2', 1 3/5', 1 1/3', 1'. Footages that would need a wheel above the top one fold back by octaves. **Upper** and **Lower** manuals (C2-C7, nine drawbars each, default 888000000 and 008530000) and the **Pedals** (C2-G4, 16' and 8') answer **Upper/Lower/Pedal Channel** (default 1, 2, 3; 0 = off); velocity is ignored, as on an organ. **Percussion** (upper only, on or off, 2nd or 3rd harmonic, fast 0.35 s or slow 1.5 s to -60 dB, soft or normal) fires on the first key of a legato run and silences the 1' drawbar. The **scanner** gives V1-V3 vibrato and C1-C3 chorus (a delay swinging +-0.20/0.35/0.55 ms) at **Scanner Rate** 4-9 Hz (6.9), applied to the upper and/or lower manual (**Vibrato Upper/Lower**); the pedals bypass it and **Width** offsets the right channel's scanner. **Key Click** adds a noise burst on every key movement, **Drive** is a preamp tanh (0 is a bypass), **Tone** a low-pass (1.5-16 kHz, 100% is open), **Volume** the output. CC 11 is the swell pedal (squared); CC 123/120 release the keys on that channel. 36 parameters, no outputs. Not built: a Leslie (use a rotary effect after it), reverb, hardware drawbar CCs, tonewheel leakage, key transpose. See `plugins/wheelhouse/docs/design.md`.
 
+### whirligig
+Rotary speaker (a new plugin, clean-room from the geometry of a rotating directional source; the JSFX `Dizzy` port, GPL, was only a reference). Stereo in (summed to mono) and out, MIDI in for CC 1 (64+ Fast, else Slow) and CC 2 (64+ Stop, else Slow) on **CC Channel** (default 1), no MIDI out. A Linkwitz-Riley crossover (**Crossover**, default 800 Hz) feeds a drum and a horn rotor, each with Slow and Fast rates, **Accel** inertia, **Depth** (swell) and **Doppler**, heard by two microphones **Mic Angle** apart. **Sync: Beat** reads the host tempo and BBT position (stopped or no transport: 120 BPM, free-running) and locks each rotor at a chosen number of beats per turn, with **Sync Phase**. Settings are parameters; no state; wet and dry both sit about 0.7 ms behind the input (not reported). Key parameters: Speed, Sync, rates, Crossover, Depth, Doppler, Mic Angle, Mix.
+
 ### octet
 Eight-band parametric equalizer, stereo, MIDI in for Drift (CC 1-4 on **CC Channel**, default 1, drive the band chosen by **CC Band**, default 4: Frequency, Gain, Q; CC 4 Output), no transport, latency or plugin state (a redesign, not a port, of the
 Oxide Studio EQ Eight). Each band has **On**, **Type** (HP 12, HP 48, Low shelf, Bell, Notch, High shelf, LP 12, LP 48),
@@ -1018,7 +1022,7 @@ a note-on), so it does not follow other channels.
 - **Need a pitched sound:** monochord (string), strata (wavetable), quartet (FM), canticle (general), basilico (bass), moka (mallets), syrinx
   (birds), pratt (GM voices), floozy, gremlin (glitch), campione / mosaic (samples),
   tuney-vst. Bend-aware: see the per-channel list at the top.
-- **Need an organ or keys:** wheelhouse (tonewheel organ), canticle, quartet.
+- **Need an organ or keys:** wheelhouse (tonewheel organ), canticle, quartet. Add whirligig (rotary speaker) after an organ or guitar.
 - **Need an unpitched sound:** drumkit, magneto, bubbles.
 - **Need audio processing:** filter (ladder, skream), phase dispersion (spense), distortion (damiano, skream, chipper), amp/cab modelling (nam), granular (beards, grist), time/pitch (keyframe, spindown,
   primefold, quefrency), space (heavyverb, lightverb, loopdelay, orbit, treatment, ambo),

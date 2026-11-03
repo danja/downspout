@@ -101,6 +101,7 @@ Current output filenames:
 - `infra.png`
 - `spindown.png`
 - `wheelhouse.png`
+- `whirligig.png`
 - `strata.png`
 - `quartet.png`
 - `monochord.png`

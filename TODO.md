@@ -17,7 +17,10 @@ implementation from the published algorithm and do not translate the JSFX. Downs
 - [ ] **Chorus** (JuKnow Chorus, MIT): rate, depth, delay, mode, width, Drift CCs. Downspout has no chorus.
 - [ ] **Meters / scope**: one plugin with EBU R128 loudness, spectrum and goniometer (x42 refs, GPL, clean-room).
       Guardian's true-peak guard can share code. Later: correlation, K-Meter, VU, oscilloscope, test signal generator.
-- [ ] **Rotary speaker** (Dizzy / `b_whirl`, GPL, clean-room).
+- [x] **Rotary speaker** built as `whirligig` (clean-room; Dizzy/b_whirl is GPL): LR4 crossover, drum and horn rotors with inertia, two mics
+      (lobes + Doppler), CC 1/2, and Beat sync (beats per turn, phase-locked to host BBT, Sync Phase). 104 core checks, mutation-checked.
+      Open: listen and voice by ear; validate in REAPER (BBT lock across loop/relocate, CC 1/2); possible cabinet/overdrive stage; ~0.7 ms
+      dry/wet latency is not reported to the host; input is summed to mono.
 - [ ] **De-esser** (Airwindows DeEss/DeBess, MIT). Spliff Cut is close but not sibilance-specific.
 - [ ] **Gate** (ZamGateX2 reference, GPL, clean-room): standalone audio noise gate with sidechain.
 - [ ] **MIDI filter / router** (Spaghetti Junction, x42 midifilter, GPL): channel/note filter and remap.

@@ -72,6 +72,7 @@ plugins=(
   "infra:infra"
   "spindown:spindown"
   "wheelhouse:wheelhouse"
+  "whirligig:whirligig"
   "strata:strata"
   "quartet:quartet"
   "monochord:monochord"
