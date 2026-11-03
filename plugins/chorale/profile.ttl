@@ -7,7 +7,7 @@
 
 dsp:chorale a trn:PluginProfile ;
     rdfs:label "Chorale" ;
-    rdfs:comment "A stereo chorus. The input is summed to mono and read through short swept delays, opposite on left and right. Modes I, I+II and II are the Juno-style voicings (after junologue-chorus, MIT); Custom is one to four sine-swept voices with Rate, Depth and Delay. Tone, Width and Mix apply to all. CC 1-4 take over Rate, Depth, Width and Mix." ;
+    rdfs:comment "A stereo chorus. Each side (or, in Mono input, the L+R sum) is read through short swept delays, opposite on left and right. Modes I, I+II and II are the Juno-style voicings (after junologue-chorus, MIT); Custom is one to four sine-swept voices with Rate, Depth and Delay. Tone, Width and Mix apply to all. CC 1-4 take over Rate, Depth, Width and Mix." ;
     trn:bundleName "chorale.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/chorale/> ;
@@ -47,6 +47,10 @@ dsp:chorale trn:hasParameter [
     trn:symbol "width" ; trn:label "Width" ;
     trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1 ;
     rdfs:comment "0 mono wet to 1 full stereo wet. CC 3"
+], [
+    trn:symbol "input" ; trn:label "Input" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1.0 ;
+    rdfs:comment "0 Mono (L + R summed into one delay line, as in the Juno source), 1 Stereo (a delay line per side, keeps the image)"
 ], [
     trn:symbol "cc_channel" ; trn:label "CC Channel" ;
     trn:minimum 0.0 ; trn:maximum 16.0 ; trn:default 1 ;

@@ -5,7 +5,7 @@
 
 namespace downspout::chorale {
 
-// A stereo chorus with two voicings.
+// A stereo chorus with two voicings. Input is Stereo (each side feeds its own delay line, so the image survives) or Mono (L + R summed, as in the source).
 //
 // Modes I, I+II and II follow the junologue-chorus emulation of a 1980s polysynth ensemble chorus by Peter Allwin (MIT,
 // https://github.com/peterall/junologue-chorus, via the JuKnow Chorus JSFX port, MIT): the input is summed to mono, soft-limited, low-passed
@@ -46,6 +46,7 @@ struct Parameters {
     float delay = 8.0f;      // ms, Custom
     float voices = 2.0f;     // 1..4, Custom
     float width = 1.0f;      // 0 mono wet .. 1 full stereo wet
+    float input = 1.0f;      // 0 Mono (L + R summed into one delay line, as in the source), 1 Stereo (a delay line per side)
     float ccChannel = 1.0f;  // 0 = ignore CC
 };
 
@@ -69,7 +70,7 @@ struct OnePole {
 };
 
 struct EngineState {
-    std::array<float, kRing> ring {};
+    std::array<float, kRing> ring {}, ringR {};   // ringR is used in Stereo input only
     int widx = 0;
     double lfo1 = -1.0, lfo2 = -1.0;      // Juno triangles, -1..1
     double phase = 0.0;                   // Custom, turns
@@ -78,7 +79,7 @@ struct EngineState {
     double fr = 0.5;                      // smoothed tone
     double delayMs = 8.0, depthMs = 3.0, widthNow = 1.0, rateNow = 0.8;
     int coefCounter = 0;
-    OnePole pre, postL, postR;
+    OnePole pre, preR, postL, postR;
     std::array<bool, kCcTargetCount> ccActive {};
     std::array<float, kCcTargetCount> ccValue {};   // 0..1
     bool started = false;

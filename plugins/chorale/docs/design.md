@@ -8,7 +8,7 @@
 - **Custom** is Downspout's own.
 
 ## Signal flow
-`(L + R)` -> soft limiter `x(27 + x^2)/(27 + 9x^2)` -> one-pole low-pass -> delay line (8192 samples) -> two taps per voice (left and right,
+Mono input: `(L + R)`; Stereo input (default): each side separately at `2 x`. -> soft limiter `x(27 + x^2)/(27 + 9x^2)` -> one-pole low-pass -> delay line (8192 samples; one per side in Stereo input) -> two taps per voice (the left tap reads the left line, the right tap the right line,
 linear interpolation) -> Width -> one-pole low-pass per side -> `dry * sqrt(1 - Mix) + wet * sqrt(Mix)`.
 
 - Juno: mode I uses sweep 1, II sweep 2, I+II both at 1/sqrt(2). The left tap is `T0min + (T0max - T0min) p`, the right `T1min + (T1max - T1min)(1 - p)`
@@ -22,7 +22,8 @@ linear interpolation) -> Width -> one-pole low-pass per side -> `dry * sqrt(1 - 
 - State: all settings are parameters (no `WANT_STATE`). A controller takeover is runtime only and is released when the host or panel sets that control.
 - Activation clears the delay line, filters and LFOs, never the settings.
 - Controllers: CC 1 Rate (logarithmic), CC 2 Depth, CC 3 Width, CC 4 Mix, on the CC channel. The panel shows the value in force with "(CC)".
-- Deliberate source behaviours kept: the input is summed (not averaged), so the wet path is about +6 dB for a centred signal; the soft limiter
+- Input: Mono sum is the source behaviour and is exact against the reference. Stereo (the default) gives each side its own line at twice its input, so a
+  centred signal is bit-identical to Mono and a hard-panned one stays on its side. Both are +6 dB wet for a centred signal, as the source is; the soft limiter
   adds a little saturation to loud input.
 - The default mode is I+II (the source defaulted to I).
 
@@ -30,7 +31,7 @@ linear interpolation) -> Width -> one-pole low-pass per side -> `dry * sqrt(1 - 
 Feedback (flanger), tempo-synced rate, a vibrato-only (100 % wet) switch, higher-order interpolation, oversampling the limiter.
 
 ## Tests
-`tests/chorale_core_tests.cpp`, 184 checks: the Juno modes against an independent straight-line transcription of the source algorithm (max error ~4e-8);
+`tests/chorale_core_tests.cpp`, 205 checks: the Juno modes against an independent straight-line transcription of the source algorithm (max error ~4e-8);
 dry path and mix law; Custom delay, depth, rate and voice spread measured by correlation against the input; width, tone, modes and every control having an effect;
 the Custom controls inert in the Juno modes; click-free mode changes; controllers (channel, number, sample accuracy, release, status); bit-exact block-size
 independence; every sample rate down to the longest delay; idle decay to exact zero; garbage parameters. Mutation-checked.

@@ -41,15 +41,17 @@ void setTone(EngineState& s, const double fr, const double sampleRate) noexcept
     setOnePole(s.postL, kPostMinHz + f2 * (kPostMaxHz - kPostMinHz), sampleRate);
     s.postR.ff0 = s.postL.ff0;
     s.postR.fb1 = s.postL.fb1;
+    s.preR.ff0 = s.pre.ff0;
+    s.preR.fb1 = s.pre.fb1;
 }
 
 // The delay line is read as the source reads it: position 1 is the sample just written (no delay), so a delay of d samples is position d + 1.
-double readLine(const EngineState& s, const double pos) noexcept
+double readLine(const EngineState& s, const std::array<float, kRing>& ring, const double pos) noexcept
 {
     const int base = static_cast<int>(std::floor(pos));
     const double frac = pos - base;
-    const double a = s.ring[static_cast<std::size_t>((s.widx + base) & kRingMask)];
-    const double b = s.ring[static_cast<std::size_t>((s.widx + base + 1) & kRingMask)];
+    const double a = ring[static_cast<std::size_t>((s.widx + base) & kRingMask)];
+    const double b = ring[static_cast<std::size_t>((s.widx + base + 1) & kRingMask)];
     return a + frac * (b - a);
 }
 
@@ -68,6 +70,7 @@ Parameters clampParameters(const Parameters& p) noexcept
     c.delay = clampf(p.delay, kDelayMin, kDelayMax, 8.0f);
     c.voices = std::round(clampf(p.voices, 1.0f, static_cast<float>(kMaxVoices), 2.0f));
     c.width = clampf(p.width, 0.0f, 1.0f, 1.0f);
+    c.input = std::round(clampf(p.input, 0.0f, 1.0f, 1.0f));
     c.ccChannel = std::round(clampf(p.ccChannel, 0.0f, 16.0f, 1.0f));
     return c;
 }
@@ -103,6 +106,7 @@ void processBlock(EngineState& s, const Parameters& params, const float sampleRa
     const int mode = static_cast<int>(p.mode);
     const int voices = static_cast<int>(p.voices);
     const int ccChannel = static_cast<int>(p.ccChannel);
+    const bool stereo = p.input >= 0.5f;
 
     double tga = 0.0, tgb = 0.0, tgc = 0.0;
     switch (mode) {
@@ -174,9 +178,16 @@ void processBlock(EngineState& s, const Parameters& params, const float sampleRa
         s.rateNow += (tRate - s.rateNow) * smooth;
 
         const double inL = inLeft[n], inR = inRight[n];
-        double w = runOnePole(s.pre, softLimit(inL + inR));
+        // Mono: one line holding L + R. Stereo: a line per side, each at twice its input, so a centred signal is the same in both.
+        double w = runOnePole(s.pre, stereo ? softLimit(2.0 * inL) : softLimit(inL + inR));
         if (std::abs(w) < 1e-20) w = 0.0;
         s.ring[static_cast<std::size_t>(s.widx)] = static_cast<float>(w);
+        if (stereo) {
+            double wR = runOnePole(s.preR, softLimit(2.0 * inR));
+            if (std::abs(wR) < 1e-20) wR = 0.0;
+            s.ringR[static_cast<std::size_t>(s.widx)] = static_cast<float>(wR);
+        }
+        const std::array<float, kRing>& lineR = stereo ? s.ringR : s.ring;
         s.widx = (s.widx - 1) & kRingMask;
 
         s.lfo1 += 2.0 * kRate1 / sr;
@@ -189,18 +200,18 @@ void processBlock(EngineState& s, const Parameters& params, const float sampleRa
         double wl = 0.0, wr = 0.0;
         if (s.ga > 0.0 || s.gb > 0.0) {
             const double p1 = std::abs(s.lfo1), p2 = std::abs(s.lfo2);
-            wl += s.ga * readLine(s, clampPos((kT0Min + (kT0Max - kT0Min) * p1) * sr))
-                + s.gb * readLine(s, clampPos((kT0Min + (kT0Max - kT0Min) * p2) * sr));
-            wr += s.ga * readLine(s, clampPos((kT1Min + (kT1Max - kT1Min) * (1.0 - p1)) * sr))
-                + s.gb * readLine(s, clampPos((kT1Min + (kT1Max - kT1Min) * (1.0 - p2)) * sr));
+            wl += s.ga * readLine(s, s.ring, clampPos((kT0Min + (kT0Max - kT0Min) * p1) * sr))
+                + s.gb * readLine(s, s.ring, clampPos((kT0Min + (kT0Max - kT0Min) * p2) * sr));
+            wr += s.ga * readLine(s, lineR, clampPos((kT1Min + (kT1Max - kT1Min) * (1.0 - p1)) * sr))
+                + s.gb * readLine(s, lineR, clampPos((kT1Min + (kT1Max - kT1Min) * (1.0 - p2)) * sr));
         }
         if (s.gc > 0.0) {
             const double depth = std::min(s.depthMs, std::max(0.0, s.delayMs - 0.05));   // the sweep never reaches negative delay
             double cl = 0.0, cr = 0.0;
             for (int v = 0; v < voices; ++v) {
                 const double sweep = std::sin(2.0 * kPi * (s.phase + static_cast<double>(v) / (2.0 * voices)));
-                cl += readLine(s, clampPos((s.delayMs + depth * sweep) * 0.001 * sr + 1.0));
-                cr += readLine(s, clampPos((s.delayMs - depth * sweep) * 0.001 * sr + 1.0));
+                cl += readLine(s, s.ring, clampPos((s.delayMs + depth * sweep) * 0.001 * sr + 1.0));
+                cr += readLine(s, lineR, clampPos((s.delayMs - depth * sweep) * 0.001 * sr + 1.0));
             }
             wl += s.gc * cl / voices;
             wr += s.gc * cr / voices;

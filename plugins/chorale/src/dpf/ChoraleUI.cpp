@@ -68,7 +68,7 @@ protected:
     {
         beginFrame();
         drawHeader("CHORALE", "stereo chorus",
-                   "Mono-summed input, short delays that sweep up and down, opposite on left and right. Pick a Juno voicing or build your own.");
+                   "Short delays that sweep up and down, opposite on left and right, so each side drifts against the other. Pick a Juno voicing or build your own.");
         const float full = static_cast<float>(getWidth()) - 48.0f;
         drawVoices({24.0f, 108.0f, full, 196.0f});
         const float gap = 12.0f, y = 316.0f, h = 224.0f;
@@ -172,15 +172,18 @@ private:
         const float pad = 14.0f, w = b.w - 2.0f * pad;
         char buf[32];
         std::snprintf(buf, sizeof(buf), "%.0f %%", static_cast<double>(value(core::kTone) * 100.0f));
-        drawSlider(core::kTone, "Tone (filter opening)", buf, {b.x + pad, b.y + 44.0f, w, 28.0f}, kSoundAccent);
+        drawSlider(core::kTone, "Tone (filter opening)", buf, {b.x + pad, b.y + 38.0f, w, 28.0f}, kSoundAccent);
         std::string s = shownValue(core::kWidth, core::kStatusWidth, "%.0f %%", 100.0f);
-        drawSlider(core::kWidth, "Width (0 = mono wet)", s.c_str(), {b.x + pad, b.y + 92.0f, w, 28.0f}, kSoundAccent);
+        drawSlider(core::kWidth, "Width (0 = mono wet)", s.c_str(), {b.x + pad, b.y + 76.0f, w, 28.0f}, kSoundAccent);
         s = shownValue(core::kMix, core::kStatusMix, "%.0f %%", 100.0f);
-        drawSlider(core::kMix, "Mix (dry to wet)", s.c_str(), {b.x + pad, b.y + 140.0f, w, 28.0f}, kSoundAccent);
+        drawSlider(core::kMix, "Mix (dry to wet)", s.c_str(), {b.x + pad, b.y + 114.0f, w, 28.0f}, kSoundAccent);
+        static constexpr const char* kInputs[2] = {"Mono sum", "Stereo"};
+        label(b.x + pad, b.y + 162.0f, "Input", false, 12.0f, ALIGN_LEFT | ALIGN_MIDDLE);
+        drawSegments(core::kInput, kInputs, 2, {b.x + pad + 48.0f, b.y + 150.0f, w - 48.0f, 24.0f}, kSoundAccent);
         const int ch = intValue(core::kCcChannel);
         if (ch == 0) std::snprintf(buf, sizeof(buf), "CC off");
         else         std::snprintf(buf, sizeof(buf), "ch %d: CC1-4", ch);
-        drawStepper(core::kCcChannel, "CC channel (Rate Depth Width Mix)", buf, {b.x + pad, b.y + 186.0f, w, 22.0f});
+        drawStepper(core::kCcChannel, "CC channel (Rate Depth Width Mix)", buf, {b.x + pad, b.y + 188.0f, w, 22.0f});
     }
 
     bool demo_ = false;

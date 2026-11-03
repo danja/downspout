@@ -1,7 +1,7 @@
 # Chorale
 
-A stereo chorus. The input is summed to mono, delayed by a few milliseconds that sweep up and down, and read in opposite directions
-for the left and right outputs. Three fixed Juno-style voicings (I, I+II, II) and a Custom chorus of one to four voices. Design and
+A stereo chorus. The signal is delayed by a few milliseconds that sweep up and down, read in opposite directions
+for the left and right outputs. By default each side has its own delay line, so a stereo source keeps its image. Three fixed Juno-style voicings (I, I+II, II) and a Custom chorus of one to four voices. Design and
 assumptions are in [docs/design.md](docs/design.md).
 
 | Control | Range | Default | Notes |
@@ -14,8 +14,8 @@ assumptions are in [docs/design.md](docs/design.md).
 | Delay | 1-30 ms | 8 ms | Custom: centre delay |
 | Voices | 1-4 | 2 | Custom: spread round the cycle |
 | Width | 0-100 % | 100 % | 0 is a mono wet signal. CC 3 |
+| Input | Mono sum, Stereo | Stereo | Stereo: a delay line per side. Mono sum: L + R into one line, as in the Juno source |
 | CC Channel | 0 (off), 1-16 | 1 | CC 1-4 take over Rate, Depth, Width, Mix until the control is moved again |
 
-Audio: stereo in, stereo out. MIDI in for CC 1-4; nothing is passed on. No latency: the dry path is not delayed. The wet signal is the sum of
-L and R (as in the source), so it sits about 6 dB above the dry for a centred signal. Settings are ordinary automatable parameters; there is no
+Audio: stereo in, stereo out. MIDI in for CC 1-4; nothing is passed on. No latency: the dry path is not delayed. The wet signal is twice its input (Mono sum: L + R), so it sits about 6 dB above the dry for a centred signal, the same in both Input settings. Settings are ordinary automatable parameters; there is no
 plugin state. Eight output parameters feed the panel.

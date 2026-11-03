@@ -88,6 +88,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | wheelhouse | wheelhouse.vst3 | instrument (tonewheel organ) | 0/2 | yes/no | no |
 | whirligig | whirligig.vst3 | audio effect (rotary speaker) | 2/2 | yes/no | yes (Beat mode) |
 | chorale | chorale.vst3 | audio effect (chorus) | 2/2 | yes/no | no |
+| silken | silken.vst3 | audio effect (vocal strip, de-esser) | 2/2 | no/no | no |
 | quartet | quartet.vst3 | instrument (FM) | 0/2 | yes/no | no |
 | monochord | monochord.vst3 | instrument (string) | 0/2 | yes/no | no |
 | nam | nam.vst3 | audio effect (neural amp + cab IR) | 2/2 | no/no | no |
@@ -764,7 +765,10 @@ Tonewheel organ (a new plugin, clean-room from the published behaviour of a tone
 Rotary speaker (a new plugin, clean-room from the geometry of a rotating directional source; the JSFX `Dizzy` port, GPL, was only a reference). Stereo in (summed to mono) and out, MIDI in for CC 1 (64+ Fast, else Slow) and CC 2 (64+ Stop, else Slow) on **CC Channel** (default 1), no MIDI out. A Linkwitz-Riley crossover (**Crossover**, default 800 Hz) feeds a drum and a horn rotor, each with Slow and Fast rates, **Accel** inertia, **Depth** (swell) and **Doppler**, heard by two microphones **Mic Angle** apart. **Sync: Beat** reads the host tempo and BBT position (stopped or no transport: 120 BPM, free-running) and locks each rotor at a chosen number of beats per turn, with **Sync Phase**. Settings are parameters; no state; wet and dry both sit about 0.7 ms behind the input (not reported). Key parameters: Speed, Sync, rates, Crossover, Depth, Doppler, Mic Angle, Mix.
 
 ### chorale
-Stereo chorus (a new plugin; Juno modes after junologue-chorus, MIT, via the JuKnow Chorus JSFX port, MIT; Custom mode is original). Stereo in (summed to mono) and out, MIDI in for CC 1 Rate (log), CC 2 Depth, CC 3 Width and CC 4 Mix on **CC Channel** (default 1), no MIDI out, no transport. **Mode** I, I+II, II (fixed sweeps of 0.513 and 0.863 Hz, 1.5-5.4 ms) or Custom (**Rate**, **Depth**, **Delay**, 1-4 **Voices**); **Tone**, **Width** and **Mix** apply to all. No latency (dry path undelayed); the wet signal is the L+R sum, about 6 dB above the dry for a centred signal. Settings are parameters; no state. Key parameters: Mode, Rate, Depth, Delay, Voices, Tone, Width, Mix.
+Stereo chorus (a new plugin; Juno modes after junologue-chorus, MIT, via the JuKnow Chorus JSFX port, MIT; Custom mode is original). Stereo in and out (**Input**: Stereo, a delay line per side, default; or Mono sum as in the source), MIDI in for CC 1 Rate (log), CC 2 Depth, CC 3 Width and CC 4 Mix on **CC Channel** (default 1), no MIDI out, no transport. **Mode** I, I+II, II (fixed sweeps of 0.513 and 0.863 Hz, 1.5-5.4 ms) or Custom (**Rate**, **Depth**, **Delay**, 1-4 **Voices**); **Tone**, **Width** and **Mix** apply to all. No latency (dry path undelayed); the wet signal is the L+R sum, about 6 dB above the dry for a centred signal. Settings are parameters; no state. Key parameters: Mode, Rate, Depth, Delay, Voices, Input, Tone, Width, Mix.
+
+### silken
+Vocal clean-up and polish strip (original design, RBJ biquads). Stereo in and out, no MIDI, no transport, no latency. In order: **Rumble Filter** (high-pass, 80 Hz), **Plosive Guard** (150 Hz detector, fades towards a high-pass), **De-esser** (**Ess Frequency**, **Ess Threshold**, **Ess Range**, **Ess Mode** Band or Wide, **Ess Listen**; detector linked across channels), **Warmth**, **Presence**, **Air** (-12..+12 dB shelves and bell), **Sparkle** and **Output**. Every stage is exactly neutral when off or at zero. Settings are parameters; three output parameters feed the meters; no state.
 
 ### octet
 Eight-band parametric equalizer, stereo, MIDI in for Drift (CC 1-4 on **CC Channel**, default 1, drive the band chosen by **CC Band**, default 4: Frequency, Gain, Q; CC 4 Output), no transport, latency or plugin state (a redesign, not a port, of the
@@ -1027,6 +1031,7 @@ a note-on), so it does not follow other channels.
   (birds), pratt (GM voices), floozy, gremlin (glitch), campione / mosaic (samples),
   tuney-vst. Bend-aware: see the per-channel list at the top.
 - **Need an organ or keys:** wheelhouse (tonewheel organ), canticle, quartet. Add whirligig (rotary speaker) after an organ or guitar.
+- **Need to clean up a vocal:** silken (rumble filter, plosive guard, de-esser, presence and air), then chorale or a reverb for space.
 - **Need an unpitched sound:** drumkit, magneto, bubbles.
 - **Need audio processing:** filter (ladder, skream), phase dispersion (spense), distortion (damiano, skream, chipper), amp/cab modelling (nam), granular (beards, grist), time/pitch (keyframe, spindown,
   primefold, quefrency), space (heavyverb, lightverb, loopdelay, orbit, treatment, ambo),

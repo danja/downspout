@@ -284,6 +284,7 @@ jobs:
             echo "- wheelhouse.vst3"
             echo "- whirligig.vst3"
             echo "- chorale.vst3"
+            echo "- silken.vst3"
             echo "- strata.vst3"
             echo "- quartet.vst3"
             echo "- monochord.vst3"

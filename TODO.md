@@ -15,7 +15,7 @@ implementation from the published algorithm and do not translate the JSFX. Downs
       tape slows, tempo-synced Stop/Start times, and a "resume" option instead of the crossfade to live. See
       `plugins/spindown/docs/design.md` ("Not built").
 - [x] **Chorus** built as `chorale` (JuKnow Chorus / junologue-chorus, MIT, notice kept): Juno modes I, I+II, II plus a Custom 1-4 voice mode
-      (Rate, Depth, Delay), Tone, Width, Mix, CC 1-4. 184 core checks incl. a reference transcription of the source, mutation-checked.
+      (Rate, Depth, Delay), Tone, Width, Mix, CC 1-4. 205 core checks incl. a reference transcription of the source, mutation-checked.
       Open: listen (Custom voicing by ear), REAPER validation, possibly feedback/flanger, tempo-synced rate, a vibrato (100 % wet) switch.
 - [ ] **Meters / scope**: one plugin with EBU R128 loudness, spectrum and goniometer (x42 refs, GPL, clean-room).
       Guardian's true-peak guard can share code. Later: correlation, K-Meter, VU, oscilloscope, test signal generator.
@@ -23,7 +23,9 @@ implementation from the published algorithm and do not translate the JSFX. Downs
       (lobes + Doppler), CC 1/2, and Beat sync (beats per turn, phase-locked to host BBT, Sync Phase). 104 core checks, mutation-checked.
       Open: listen and voice by ear; validate in REAPER (BBT lock across loop/relocate, CC 1/2); possible cabinet/overdrive stage; ~0.7 ms
       dry/wet latency is not reported to the host; input is summed to mono.
-- [ ] **De-esser** (Airwindows DeEss/DeBess, MIT). Spliff Cut is close but not sibilance-specific.
+- [x] **De-esser** built as `silken`, a vocal strip (original design): rumble filter, plosive guard, de-esser (Band/Wide, Listen, Range), warmth / presence / air,
+      sparkle, output. 195 core checks, mutation-checked. Open: try on real vocals and voice by ear, REAPER validation; ideas not built: look-ahead, breath
+      reducer, dynamic harshness EQ (resonance suppressor), mid/side de-essing, oversampled sparkle, a vocal compressor/leveller (Glue and Trio exist).
 - [ ] **Gate** (ZamGateX2 reference, GPL, clean-room): standalone audio noise gate with sidechain.
 - [ ] **MIDI filter / router** (Spaghetti Junction, x42 midifilter, GPL): channel/note filter and remap.
 - [x] **Tonewheel organ** built as `wheelhouse` (clean-room; setBfree is GPL): core, DPF wrapper, UI with custom drawbars,

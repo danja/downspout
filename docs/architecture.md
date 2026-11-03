@@ -264,6 +264,7 @@ The release script currently expects these bundles:
 - `wheelhouse.vst3`
 - `whirligig.vst3`
 - `chorale.vst3`
+- `silken.vst3`
 - `strata.vst3`
 - `quartet.vst3`
 - `monochord.vst3`

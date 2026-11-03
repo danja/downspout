@@ -254,7 +254,11 @@ Rotary speaker. The input is summed to mono and split at the **Crossover** (800 
 
 ### Chorale (`chorale.vst3`)
 
-Stereo chorus. The input is summed to mono and read through short swept delays, opposite on left and right. **Mode** I, I+II and II are the fixed Juno-style voicings; **Custom** has **Rate**, **Depth**, **Delay** and one to four **Voices**. **Tone**, **Width** and **Mix** apply to all; CC 1-4 drive Rate, Depth, Width and Mix. Use it on pads, keys, guitars and Wheelhouse.
+Stereo chorus. Each side is read through short swept delays, opposite on left and right (**Input** Stereo keeps the image; Mono sum is the Juno original). **Mode** I, I+II and II are the fixed Juno-style voicings; **Custom** has **Rate**, **Depth**, **Delay** and one to four **Voices**. **Tone**, **Width** and **Mix** apply to all; CC 1-4 drive Rate, Depth, Width and Mix. Use it on pads, keys, guitars and Wheelhouse.
+
+### Silken (`silken.vst3`)
+
+Vocal clean-up and polish strip. In order: **Rumble Filter**, **Plosive Guard**, **De-esser** (Band or Wide, **Listen** to find the frequency, **Range** to limit it), **Warmth**, **Presence**, **Air**, **Sparkle** and **Output**. No latency, no MIDI. Put it first on a vocal channel.
 
 ### Trio (`trio.vst3`)
 

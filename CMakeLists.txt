@@ -102,6 +102,7 @@ option(DOWNSPOUT_BUILD_SPINDOWN "Configure the Spindown tape-stop effect target"
 option(DOWNSPOUT_BUILD_WHEELHOUSE "Configure the Wheelhouse tonewheel organ target" ON)
 option(DOWNSPOUT_BUILD_WHIRLIGIG "Configure the Whirligig rotary speaker target" ON)
 option(DOWNSPOUT_BUILD_CHORALE "Configure the Chorale chorus target" ON)
+option(DOWNSPOUT_BUILD_SILKEN "Configure the Silken vocal strip target" ON)
 option(DOWNSPOUT_BUILD_STRATA "Configure the Strata wavetable synthesizer target" ON)
 option(DOWNSPOUT_BUILD_QUARTET "Configure the Quartet four-operator FM synthesizer target" ON)
 option(DOWNSPOUT_BUILD_MONOCHORD "Configure the Monochord waveguide string target" ON)
@@ -554,6 +555,10 @@ endif()
 
 if(DOWNSPOUT_BUILD_CHORALE)
     add_subdirectory(plugins/chorale)
+endif()
+
+if(DOWNSPOUT_BUILD_SILKEN)
+    add_subdirectory(plugins/silken)
 endif()
 
 if(DOWNSPOUT_BUILD_STRATA)

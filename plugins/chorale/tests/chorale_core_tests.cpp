@@ -184,7 +184,7 @@ static void testJunoMatchesReference()
     const Case cases[] = {{0, 0.5f, 0.5f}, {1, 0.5f, 0.5f}, {2, 0.5f, 0.5f}, {0, 0.0f, 1.0f}, {1, 1.0f, 0.3f}, {2, 0.8f, 1.0f}, {1, 0.2f, 0.0f}};
     for (const auto& c : cases) {
         Parameters p;
-        p.mode = static_cast<float>(c.mode); p.tone = c.tone; p.mix = c.mix;
+        p.mode = static_cast<float>(c.mode); p.tone = c.tone; p.mix = c.mix; p.input = 0.0f;   // the source sums L + R
         const Run run = render(p, frames, noise(1, 0.3f), noise(2, 0.3f));
         std::vector<double> rl, rr;
         reference(c.mode, c.tone, c.mix, run.inL, run.inR, rl, rr);
@@ -293,6 +293,42 @@ static void testVoices()
             check("each voice count sounds different", maxDiff(runs[static_cast<std::size_t>(a)].l, runs[static_cast<std::size_t>(b)].l) > 0.01);
 }
 
+static void testStereoInput()
+{
+    // A centred signal is the same either way, bit for bit.
+    for (int mode = 0; mode < kModeCount; ++mode) {
+        Parameters a = custom(); a.mode = static_cast<float>(mode); a.mix = 0.6f; a.depth = 3.0f; a.input = 0.0f;
+        Parameters b = a; b.input = 1.0f;
+        const Run ra = render(a, 30000, noise(40, 0.3f), noise(40, 0.3f));
+        const Run rb = render(b, 30000, noise(40, 0.3f), noise(40, 0.3f));
+        check("a centred signal sounds the same in Mono and Stereo input", identical(ra.l, rb.l) && identical(ra.r, rb.r));
+    }
+    // A signal on the left only: Stereo keeps it on the left, Mono sends it to both sides.
+    for (int mode = 0; mode < kModeCount; ++mode) {
+        Parameters p = custom(); p.mode = static_cast<float>(mode); p.mix = 1.0f; p.depth = 3.0f; p.input = 1.0f;
+        const Run st = render(p, 48000, noise(41, 0.3f), silence());
+        check("Stereo input: a left-only signal stays left", rms(st.l, 24000, 48000) > 0.05 && rms(st.r, 24000, 48000) == 0.0);
+        const Run sr = render(p, 48000, silence(), noise(41, 0.3f));
+        check("Stereo input: a right-only signal stays right", rms(sr.r, 24000, 48000) > 0.05 && rms(sr.l, 24000, 48000) == 0.0);
+        p.input = 0.0f;
+        const Run mono = render(p, 48000, noise(41, 0.3f), silence());
+        check("Mono input: a left-only signal reaches both sides", rms(mono.l, 24000, 48000) > 0.05 && rms(mono.r, 24000, 48000) > 0.05);
+    }
+    // Independent left and right material is not mixed together.
+    {
+        Parameters p = custom(); p.mix = 1.0f; p.input = 1.0f; p.voices = 1;
+        const Run run = render(p, 24000, noise(42, 0.05f), noise(43, 0.05f));
+        double cl = 0.0, cx = 0.0, ee = 0.0, ff = 0.0;
+        for (std::size_t n = 12000; n < 24000; ++n) {
+            cl += static_cast<double>(run.inL[n - 384]) * run.l[n];
+            cx += static_cast<double>(run.inR[n - 384]) * run.l[n];
+            ee += static_cast<double>(run.inL[n - 384]) * run.inL[n - 384];
+            ff += static_cast<double>(run.inR[n - 384]) * run.inR[n - 384];
+        }
+        check("Stereo input: the left output carries only the left input", cl / ee > 1.7 && std::abs(cx) / ff < 0.1);
+    }
+}
+
 static void testWidthAndTone()
 {
     Parameters p = custom(); p.depth = 4.0f; p.rate = 1.0f; p.width = 0.0f;
@@ -371,6 +407,7 @@ static void testControlsAudible()
     p = base(); p.delay = 15.0f; differs("Delay changes the sound", p);
     p = base(); p.voices = 4; differs("Voices changes the sound", p);
     p = base(); p.width = 0.1f; differs("Width changes the sound", p);
+    p = base(); p.input = 0.0f; differs("Input changes the sound", p);
 }
 
 static void testControllers()
@@ -501,7 +538,7 @@ static void testIdleAndStability()
     {
         Parameters bad;
         bad.mode = std::nanf(""); bad.tone = 1e9f; bad.mix = -3.0f; bad.rate = std::nanf(""); bad.depth = 1e9f; bad.delay = -1e9f;
-        bad.voices = 99.0f; bad.width = 7.0f; bad.ccChannel = -4.0f;
+        bad.voices = 99.0f; bad.input = 9.0f; bad.width = 7.0f; bad.ccChannel = -4.0f;
         const Run run = render(bad, 24000, noise(30, 0.3f), noise(31, 0.3f));
         bool ok = true;
         for (std::size_t i = 0; i < run.l.size(); ++i) ok = ok && std::isfinite(run.l[i]) && std::isfinite(run.r[i]);
@@ -535,9 +572,9 @@ static void testMetersAndReset()
 
 static void testParameters()
 {
-    check("parameter count is 17", kParameterCount == 17 && kControlCount == 9);
+    check("parameter count is 18", kParameterCount == 18 && kControlCount == 10);
     check("ids are pinned", kMode == 0 && kTone == 1 && kMix == 2 && kRate == 3 && kDepth == 4 && kDelay == 5 && kVoices == 6 && kWidth == 7
-          && kCcChannel == 8 && kStatusTap1 == 9 && kStatusMix == 16);
+          && kInput == 8 && kCcChannel == 9 && kStatusTap1 == 10 && kStatusMix == 17);
     check("outputs are flagged", !isOutput(kCcChannel) && isOutput(kStatusTap1) && isOutput(kStatusMix) && !isOutput(kParameterCount));
     const Parameters d;
     for (std::uint32_t i = 0; i < kControlCount; ++i) {
@@ -566,6 +603,7 @@ int main()
     testDryAndMix();
     testCustomDelayRateDepth();
     testVoices();
+    testStereoInput();
     testWidthAndTone();
     testModes();
     testControlsAudible();

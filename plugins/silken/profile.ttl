@@ -1,0 +1,90 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:silken a trn:PluginProfile ;
+    rdfs:label "Silken" ;
+    rdfs:comment "A vocal clean-up and polish strip: rumble filter, plosive guard, de-esser (Band or Wide, with Listen), warmth / presence / air EQ, sparkle and output level. Stereo, linked detectors, no latency." ;
+    trn:bundleName "silken.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/silken/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio .
+
+dsp:silken trn:hasParameter [
+    trn:symbol "hpf_on" ; trn:label "Rumble Filter" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1 ;
+    rdfs:comment "Rumble filter switch"
+], [
+    trn:symbol "hpf" ; trn:label "Rumble Freq" ;
+    trn:minimum 20 ; trn:maximum 300 ; trn:default 80 ;
+    rdfs:comment "Rumble filter: 2nd-order Butterworth high-pass"
+], [
+    trn:symbol "plosive_on" ; trn:label "Plosive Guard" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1 ;
+    rdfs:comment "Plosive guard switch"
+], [
+    trn:symbol "plosive_thr" ; trn:label "Plosive Threshold" ;
+    trn:minimum -40 ; trn:maximum 0 ; trn:default -20 ;
+    rdfs:comment "Plosive guard: level of the band below 150 Hz above which it acts (ratio 6:1)"
+], [
+    trn:symbol "ess_on" ; trn:label "De-esser" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1 ;
+    rdfs:comment "De-esser switch"
+], [
+    trn:symbol "ess_freq" ; trn:label "Ess Frequency" ;
+    trn:minimum 2000 ; trn:maximum 12000 ; trn:default 6500 ;
+    rdfs:comment "De-esser centre frequency"
+], [
+    trn:symbol "ess_thr" ; trn:label "Ess Threshold" ;
+    trn:minimum -60 ; trn:maximum 0 ; trn:default -30 ;
+    rdfs:comment "De-esser: detector level above which it acts (ratio 4:1, soft knee)"
+], [
+    trn:symbol "ess_range" ; trn:label "Ess Range" ;
+    trn:minimum 0.0 ; trn:maximum 24 ; trn:default 10 ;
+    rdfs:comment "De-esser: most gain reduction it will apply"
+], [
+    trn:symbol "ess_mode" ; trn:label "Ess Mode" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0 ;
+    rdfs:comment "0 Band (dynamic bell cut at the frequency), 1 Wide (the whole signal)"
+], [
+    trn:symbol "ess_listen" ; trn:label "Ess Listen" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0 ;
+    rdfs:comment "1 plays the de-esser detector instead of the signal"
+], [
+    trn:symbol "warmth" ; trn:label "Warmth" ;
+    trn:minimum -12 ; trn:maximum 12 ; trn:default 0 ;
+    rdfs:comment "Low shelf at 200 Hz"
+], [
+    trn:symbol "presence" ; trn:label "Presence" ;
+    trn:minimum -12 ; trn:maximum 12 ; trn:default 0 ;
+    rdfs:comment "Bell at 3.2 kHz, Q 0.9"
+], [
+    trn:symbol "air" ; trn:label "Air" ;
+    trn:minimum -12 ; trn:maximum 12 ; trn:default 0 ;
+    rdfs:comment "High shelf at 10 kHz"
+], [
+    trn:symbol "sparkle" ; trn:label "Sparkle" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0 ;
+    rdfs:comment "Adds harmonics of the band above 5 kHz (above 8 kHz), 0 off"
+], [
+    trn:symbol "output" ; trn:label "Output" ;
+    trn:minimum -24 ; trn:maximum 12 ; trn:default 0 ;
+    rdfs:comment "Output level"
+], [
+    trn:symbol "status_ess" ; trn:label "De-ess Reduction" ;
+    trn:minimum 0.0 ; trn:maximum 24 ; trn:default 0.0 ;
+    rdfs:comment "Output: de-esser gain reduction now"
+], [
+    trn:symbol "status_plosive" ; trn:label "Plosive Reduction" ;
+    trn:minimum 0.0 ; trn:maximum 24 ; trn:default 0.0 ;
+    rdfs:comment "Output: plosive guard gain reduction now"
+], [
+    trn:symbol "status_detector" ; trn:label "Ess Detector" ;
+    trn:minimum -60.0 ; trn:maximum 0.0 ; trn:default -60.0 ;
+    rdfs:comment "Output: level at the de-esser detector"
+] .

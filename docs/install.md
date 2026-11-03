@@ -135,6 +135,7 @@ The repository currently installs sixty-one real wrapper targets:
 - `wheelhouse.vst3` with UI
 - `whirligig.vst3` with UI
 - `chorale.vst3` with UI
+- `silken.vst3` with UI
 - `strata.vst3` with UI
 - `quartet.vst3` with UI
 - `monochord.vst3` with UI

@@ -103,6 +103,7 @@ Current output filenames:
 - `wheelhouse.png`
 - `whirligig.png`
 - `chorale.png`
+- `silken.png`
 - `strata.png`
 - `quartet.png`
 - `monochord.png`
