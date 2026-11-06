@@ -343,7 +343,7 @@ resonance-garden, plank, tuney-vst, worms, beards.
 
 Mouth (vowel/formant morph filter) is built (core, VST3, tests, screenshot, docs); the rest are not started. Design for Mouth: `plugins/mouth/docs/design.md`.
 
-- [ ] **Scale sieve**: STFT mask (reuse the Prism/Qune engine) that passes only partials near the notes of a chosen scale or held MIDI notes, in every octave. Controls: width, floor level, odd/even tilt. Differs from `resonance-garden`: it keeps the source's own texture instead of ringing new resonators. See `docs/scales.md`.
+- [x] **Scale sieve** built as `sieve`: STFT mask (sqrt-Hann, 1024-pt, hop 256), keeps partials near a scale's notes (or held MIDI notes) in every octave. Controls: Root, Scale, Source, MIDI In, Width, Floor, Tilt, Mix, Level. Core tests + VST3 build pass. Listen/audit pending.
 - [ ] **Audio-driven string / comb (extended Karplus-Strong)**: feedback comb with damping low-pass, pick-position comb and stiffness all-pass chain (clean string -> inharmonic bell -> metal), tuned from MIDI or tracked pitch. Closest existing plugins: `resonance-garden`, `spense`; build after the other two. References: CCRMA "Extended Karplus-Strong" (https://ccrma.stanford.edu/~jos/pasp/Extended_Karplus_Strong_Algorithm.html).
 - [ ] Z-plane morph filter: interpolate between two stored pole/zero sets (E-mu style). Same morphing idea as Mouth, more abstract.
 - [ ] Envelope-follower multimode filter (auto-wah). Easy, but a crowded category.

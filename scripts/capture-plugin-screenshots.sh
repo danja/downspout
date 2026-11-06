@@ -115,6 +115,7 @@ plugins=(
   "qune:qune"
   "prism:prism"
   "mouth:mouth"
+  "sieve:sieve"
   "flues-synth-driver:flues_synth_driver"
   )
 

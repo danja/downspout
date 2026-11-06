@@ -1,0 +1,25 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:sieve a trn:PluginProfile ;
+    rdfs:label "Sieve" ;
+    rdfs:comment "Spectral sieve: an STFT mask that keeps only partials near the notes of a chosen scale (or held MIDI notes), in every octave. Keeps the source's own texture instead of ringing new resonators." ;
+    trn:bundleName "sieve.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/sieve/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio ;
+    trn:parameter [ rdfs:label "Root" ; trn:symbol "root" ; trn:range "0-11" ] ;
+    trn:parameter [ rdfs:label "Scale" ; trn:symbol "scale" ; trn:range "0-23" ] ;
+    trn:parameter [ rdfs:label "Source" ; trn:symbol "source" ; trn:range "0-1" ] ;
+    trn:parameter [ rdfs:label "MIDI In" ; trn:symbol "midi_ch" ; trn:range "0-16" ] ;
+    trn:parameter [ rdfs:label "Width" ; trn:symbol "width" ; trn:range "1-200 cents" ] ;
+    trn:parameter [ rdfs:label "Floor" ; trn:symbol "floor" ; trn:range "-80-0 dB" ] ;
+    trn:parameter [ rdfs:label "Tilt" ; trn:symbol "tilt" ; trn:range "-1-1" ] ;
+    trn:parameter [ rdfs:label "Mix" ; trn:symbol "mix" ; trn:range "0-100 %" ] ;
+    trn:parameter [ rdfs:label "Level" ; trn:symbol "level" ; trn:range "-24-12 dB" ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

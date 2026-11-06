@@ -130,6 +130,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | qune | qune.vst3 | audio effect (pitch quantiser) | 2/2 | yes/yes | no |
 | prism | prism.vst3 | audio effect (banded spectral delay, tempo sync) | 2/2 | no/no | no |
 | mouth | mouth.vst3 | audio effect (vowel / formant filter) | 2/2 | yes/no | no |
+| sieve | sieve.vst3 | audio effect (spectral sieve) | 2/2 | no/no | no |
 | resonance-garden | resonance_garden.vst3 | audio effect (resonators) | 2/2 | yes/no | no |
 | retune | retune.vst3 | MIDI processor (tuning) | 0/2 | yes/yes | no |
 | rift | rift.vst3 | audio effect (buffer) | 2/2 | yes/no | yes |
@@ -583,6 +584,12 @@ filters (0 = off), **Air** returns unfiltered highs, **Mix** (0 = bit-exact dry)
 Wet level is normalised so noise keeps about its level. MIDI in is used only for Drift CC 1-4 on
 **CC Channel** (default 1, 0 = off): Vowel X, Vowel Y, Shift, Resonance. No plugin state.
 Colours any source; it does not take a modulator (see voxmod).
+
+### sieve
+Spectral sieve, stereo, ~1024 samples latency. An STFT mask keeps only partials near the notes of a
+chosen scale (or held MIDI notes), in every octave, preserving the source's own texture. Controls:
+**Root**, **Scale**, **Source** (Scale/Held MIDI), **MIDI In**, **Width** (cents half-width),
+**Floor** (dB minimum gain), **Tilt** (odd/even harmonic tilt), **Mix**, **Level**. No plugin state.
 
 ### bubbles
 Water sound generator, stereo, continuous without MIDI (note-on/off optionally gates and
