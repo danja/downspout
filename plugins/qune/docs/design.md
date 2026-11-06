@@ -66,8 +66,9 @@ Events are queued per `processBlock` call (capacity 64, drained by the wrapper a
 call); if the queue is too full to take a change it is skipped and retried so a note-off is
 never lost. Timing is detection time, which leads the delayed audio by the latency.
 
-Stickiness keeps the previous target while it is a neighbour of the best note and less than
-the stickiness further from `m`. The shift is `amount * (t - m) + transpose`. A one-pole
+Stickiness keeps the previous target while it is a neighbour of the best note and the best note
+is less than the stickiness (in cents past the halfway point, doubled to an improvement
+threshold in semitones) closer than it. The shift is `amount * (t - m) + transpose`. A one-pole
 filter on the shift implements **Glide**; because it smooths the shift rather than the target,
 a long glide lets part of the natural vibrato through (the same model as other tuners' retune
 speed). Unvoiced input releases the shift in 5 ms; a new phrase starts at its target rather

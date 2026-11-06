@@ -41,6 +41,18 @@ implementation from the published algorithm and do not translate the JSFX. Downs
 - [ ] Lower priority: ADT/doubler (ChronoDupe, MIT), Inflator, spectral compressor, dynamic tilt, channel strip,
       pipe organ (Aeolus), subtractive polysynth (amsynth), GM/SoundFont synth.
 
+## New plugins (from INBOX, 2026-11-06)
+
+- [ ] **PadGen** (new plugin, from INBOX): design and build a pad generator. Decide scope (ambient pad
+      synth vs MIDI generator vs both), sound engine, and how it differs from existing instruments
+      (Basilico, Canticle, Moka, Quartet, Strata, Monochord). Follow the new-plugin checklist.
+- [ ] **Audio-to-MIDI generator** (new plugin, from INBOX): generate MIDI output from audio input, with
+      various processing options and a user-selectable input-signal type (melody / bass / chords / drums).
+      Overlaps Qune (pitch tracking) but broader; reuse Qune's tracker if it fits (shared code, needs
+      approval). Follow the new-plugin checklist.
+- [ ] **Survey `https://github.com/Ka1-S/LYNX`** (Farelo task t20259e38295b) for potential plugins;
+      report candidates and whether any overlap existing Downspout plugins.
+
 ## Spectrogram painter (built 2026-11-03 as `fresco`; heard by nobody yet)
 
 Built: `plugins/fresco` (2048-point STFT, magnitudes replaced by the picture column under a playhead; Input-phase or Tone source; free or host-timeline playhead; log or
@@ -144,6 +156,10 @@ are what the core tests never touch.
 
 ## Qune
 
+- [ ] **Bug (from INBOX): Qune does not stick to notes enough** — the output defaults to being
+      almost identical to the input. Investigate the quantisation/hold logic so the emitted MIDI
+      follows the detected pitch more aggressively instead of passing the input through. Check the
+      default Amount / stickiness and the note-confirmation hops before blaming the tracker.
 - [ ] **Listen to it.** Every number in `plugins/qune/docs/design.md` is from synthetic vowels,
       noise and silence. Run a real vocal, a bass and a lead through all three tiers and
       judge the artefacts the tests cannot: smearing in Good on low notes, a "tube" sound in
@@ -163,6 +179,13 @@ are what the core tests never touch.
 - [ ] Good tier latency is 2.4 periods of the range floor (28 ms for Voice). Ideas to lower
       it: shorter asymmetric grains, or choosing the floor from the first tracked pitch.
 - [ ] Optional: a per-note enable mask on top of the 24 scales; a manual "hold this note" key.
+
+## Treatment
+
+- [ ] **Host validation in REAPER** (Farelo task t545a1867c482, "multiple panels / special effect"):
+      the multi-panel bank, Ring mode and geometry sweep are built; validate in a host (save/reopen,
+      synced sweep against a real transport, CC 1-5). Not yet auditioned by ear.
+- [ ] Bank/sweep audition: is the Ring cap (+9 dB) and the default panel 2-4 geometries right?
 
 ## Plank
 
@@ -253,6 +276,9 @@ are what the core tests never touch.
   outside this repo; keep their portable cores free of DPF code so they move cleanly.
 * Later candidate: chord-graph walker. A shared voice-leading helper in generative-common is only worth it
   if a second plugin needs it (shared code, needs approval).
+* **Review `~/github/auricle-algo`** (from INBOX) for potential improvements to drumgen, bassgen,
+  melgen, counterpointer and cadence: study its algorithms/approaches and decide which ideas to port,
+  keeping portable cores free of DPF code. Record findings in each plugin's docs before coding.
 
 ## New plugins from the oxide-studio review (October 2026)
 
@@ -282,6 +308,7 @@ None has been listened to or run in a host. Remaining per plugin:
 ## Evaluate Manually in Reaper
 
 helterskelter, keyframe, ladder, glue, octet, trio, strata, quartet, monochord, ghost, spliff, ambo,
+treatment,
 arpgen, conductor, drift, harmonic-atlas, mnemosyne, magneto, moka, mosaic, oracle, orbit, polymeter,
 resonance-garden, plank, tuney-vst, worms, beards.
 

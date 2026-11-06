@@ -121,7 +121,11 @@ void updateControl(EngineState& s, const Parameters& p)
     const float detected = hzToMidi(result.f0Hz);
     s.detectedNote = detected;
 
-    const float hysteresis = p.stickiness / 100.0f;
+    // Stickiness is labelled in cents the pitch must travel *past the halfway
+    // point* before the target moves. The improvement (previousDistance -
+    // bestDistance) reaches that only at twice the cents value, because the two
+    // distances sum to one semitone. See README "Stickiness".
+    const float hysteresis = 2.0f * p.stickiness / 100.0f;
     const auto source = static_cast<Source>(clampInt(p.source, 0, 2));
     const bool haveNotes = s.noteCount > 0;
 
