@@ -1,0 +1,21 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:zmorph a trn:PluginProfile ;
+    rdfs:label "Zmorph" ;
+    rdfs:comment "Z-plane morph filter: morphs between two pole/zero sets (low-pass to high-pass) with cutoff, resonance and morph controls." ;
+    trn:bundleName "zmorph.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/zmorph/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio ;
+    trn:parameter [ rdfs:label "Cutoff" ; trn:symbol "cutoff" ; trn:range "20-20000 Hz" ] ;
+    trn:parameter [ rdfs:label "Resonance" ; trn:symbol "resonance" ; trn:range "0-0.99" ] ;
+    trn:parameter [ rdfs:label "Morph" ; trn:symbol "morph" ; trn:range "0-1" ] ;
+    trn:parameter [ rdfs:label "Mix" ; trn:symbol "mix" ; trn:range "0-100 %" ] ;
+    trn:parameter [ rdfs:label "Level" ; trn:symbol "level" ; trn:range "-24-12 dB" ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

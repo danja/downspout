@@ -116,6 +116,7 @@ plugins=(
   "prism:prism"
   "mouth:mouth"
   "sieve:sieve"
+  "zmorph:zmorph"
   "flues-synth-driver:flues_synth_driver"
   )
 

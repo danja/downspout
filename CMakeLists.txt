@@ -83,6 +83,7 @@ option(DOWNSPOUT_BUILD_QUNE "Configure the Qune pitch quantiser target" ON)
 option(DOWNSPOUT_BUILD_PRISM "Configure the Prism banded spectral delay target" ON)
 option(DOWNSPOUT_BUILD_MOUTH "Configure the Mouth vowel formant filter target" ON)
 option(DOWNSPOUT_BUILD_SIEVE "Configure the Sieve spectral sieve target" ON)
+option(DOWNSPOUT_BUILD_ZMORPH "Configure the Zmorph z-plane morph filter target" ON)
 option(DOWNSPOUT_BUILD_BEARDS "Configure the Beards granular texture processor target" ON)
 option(DOWNSPOUT_BUILD_PRIMEFOLD "Configure the primefold prime-harmonic shifter target" ON)
 option(DOWNSPOUT_BUILD_QUEFRENCY "Configure the quefrency cepstral shifter target" ON)
@@ -517,6 +518,10 @@ endif()
 
 if(DOWNSPOUT_BUILD_SIEVE)
     add_subdirectory(plugins/sieve)
+endif()
+
+if(DOWNSPOUT_BUILD_ZMORPH)
+    add_subdirectory(plugins/zmorph)
 endif()
 
 if(DOWNSPOUT_BUILD_GRIST)

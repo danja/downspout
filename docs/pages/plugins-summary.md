@@ -131,6 +131,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | prism | prism.vst3 | audio effect (banded spectral delay, tempo sync) | 2/2 | no/no | no |
 | mouth | mouth.vst3 | audio effect (vowel / formant filter) | 2/2 | yes/no | no |
 | sieve | sieve.vst3 | audio effect (spectral sieve) | 2/2 | no/no | no |
+| zmorph | zmorph.vst3 | audio effect (z-plane morph filter) | 2/2 | no/no | no |
 | resonance-garden | resonance_garden.vst3 | audio effect (resonators) | 2/2 | yes/no | no |
 | retune | retune.vst3 | MIDI processor (tuning) | 0/2 | yes/yes | no |
 | rift | rift.vst3 | audio effect (buffer) | 2/2 | yes/no | yes |
@@ -590,6 +591,11 @@ Spectral sieve, stereo, ~1024 samples latency. An STFT mask keeps only partials 
 chosen scale (or held MIDI notes), in every octave, preserving the source's own texture. Controls:
 **Root**, **Scale**, **Source** (Scale/Held MIDI), **MIDI In**, **Width** (cents half-width),
 **Floor** (dB minimum gain), **Tilt** (odd/even harmonic tilt), **Mix**, **Level**. No plugin state.
+
+### zmorph
+Z-plane morph filter, stereo, no latency. Morphs between low-pass and high-pass shapes at the chosen
+**Cutoff** and **Resonance**. Controls: **Cutoff**, **Resonance**, **Morph** (0 = low-pass, 1 = high-pass),
+**Mix**, **Level**. No plugin state.
 
 ### bubbles
 Water sound generator, stereo, continuous without MIDI (note-on/off optionally gates and

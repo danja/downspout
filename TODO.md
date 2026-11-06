@@ -345,7 +345,7 @@ Mouth (vowel/formant morph filter) is built (core, VST3, tests, screenshot, docs
 
 - [x] **Scale sieve** built as `sieve`: STFT mask (sqrt-Hann, 1024-pt, hop 256), keeps partials near a scale's notes (or held MIDI notes) in every octave. Controls: Root, Scale, Source, MIDI In, Width, Floor, Tilt, Mix, Level. Core tests + VST3 build pass. Listen/audit pending.
 - [ ] **Audio-driven string / comb (extended Karplus-Strong)**: feedback comb with damping low-pass, pick-position comb and stiffness all-pass chain (clean string -> inharmonic bell -> metal), tuned from MIDI or tracked pitch. Closest existing plugins: `resonance-garden`, `spense`; build after the other two. References: CCRMA "Extended Karplus-Strong" (https://ccrma.stanford.edu/~jos/pasp/Extended_Karplus_Strong_Algorithm.html).
-- [ ] Z-plane morph filter: interpolate between two stored pole/zero sets (E-mu style). Same morphing idea as Mouth, more abstract.
+- [x] **Z-plane morph filter** built as `zmorph`: morphs between low-pass and high-pass shapes at chosen cutoff/resonance. Controls: Cutoff, Resonance, Morph, Mix, Level. Core tests + VST3 build pass. Listen/audit pending.
 - [ ] Envelope-follower multimode filter (auto-wah). Easy, but a crowded category.
 - [ ] **Mouth: listen to it** and try it in a host (nothing auditioned). Check Voice switching for clicks on a loud sustained source and that the vowel data matches the Csound manual table (typed from memory of it).
 - [ ] Mouth phase 2: tempo-synced vowel sequencer (step list of vowel corners), reusing Prism's tempo plumbing.

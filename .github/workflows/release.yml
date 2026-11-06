@@ -274,6 +274,7 @@ jobs:
             echo "- prism.vst3"
             echo "- mouth.vst3"
             echo "- sieve.vst3"
+            echo "- zmorph.vst3"
             echo "- grist.vst3"
             echo "- sam.vst3"
             echo "- ladder.vst3"
