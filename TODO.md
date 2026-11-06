@@ -149,7 +149,9 @@ Standalone `g++ -std=c++20 -Wall -Wextra -fsyntax-only` over `plugins/*/src/*.cp
 and others will not compile). Re-run after any wrapper or state change: the wrapper callbacks
 are what the core tests never touch.
 
-* Last full sweep 2026-10-23: zero warnings in 159 core files (`plugins/sam` needs `-Iplugins/sam/third_party/sam`).
+* Last full sweep 2026-11-06: zero warnings in all plugin core files under `-Wall -Wextra` (nam
+  shows only unused-parameter warnings in vendored NAM headers). Includes the new shared
+  `voice_leading.hpp` and the markov/bassgen/cadence/drumgen changes.
 * `campione` loader: the `smpl` loop end is inclusive in the WAV spec, but the engine wraps at
   `position >= loopEnd`, so the last loop sample is skipped (one frame). Changing it means
   adjusting load, save and the engine together; decide whether it is worth it.
@@ -276,9 +278,20 @@ are what the core tests never touch.
   outside this repo; keep their portable cores free of DPF code so they move cleanly.
 * Later candidate: chord-graph walker. A shared voice-leading helper in generative-common is only worth it
   if a second plugin needs it (shared code, needs approval).
-* **Review `~/github/auricle-algo`** (from INBOX) for potential improvements to drumgen, bassgen,
-  melgen, counterpointer and cadence: study its algorithms/approaches and decide which ideas to port,
-  keeping portable cores free of DPF code. Record findings in each plugin's docs before coding.
+* [x] **Review `~/github/auricle-algo`** (from INBOX): findings recorded in
+      `docs/auricle-algo-review.md`.
+* [x] **Shared voice-leading helper** (from auricle review): created
+      `plugins/generative-common/include/voice_leading.hpp` (header-only: resolvePitch,
+      resolveChord), compiles and integrated into markov (octave placement), bassgen
+      (noteFromSemitoneOffset) and cadence (nearest_midi_for_pc). melgen and
+      counterpointer use scale-note search rather than fixed-pitch-class octave
+      selection, so no direct adoption there.
+* [x] **Markov stay/leap params** (from auricle review): added `stay_prob` and `leap_prob`
+      params (default off), wired into walkNote, UI, profile.ttl; tests pass.
+* [x] **Drumgen voice links** (from auricle review): added `voiceLinksEnabled` control plus a
+      deterministic post-pass (snare->clap answer, kick->clave gap fill, closed_hat<->open_hat
+      interlock), serialized (voiceLinks=1), gated; tests pass. Full editable link graph is
+      not implemented.
 
 ## New plugins from the oxide-studio review (October 2026)
 

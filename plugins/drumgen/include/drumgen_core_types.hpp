@@ -109,6 +109,11 @@ struct Controls {
     int caRule = 0;
     int caTarget = 0;
     int caEvery = 1;  // loops per automaton generation, 1-8
+    // Voice links (auricle-style Relations): off by default. When on, a
+    // deterministic post-pass applies a fixed set of role-aware inter-voice
+    // relations (kick->perc gap fill, snare->clap answer, closed_hat<->open_hat
+    // interlock) to the generated lanes.
+    bool voiceLinksEnabled = false;
 };
 
 struct DrumStepCell {

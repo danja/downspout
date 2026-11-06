@@ -1,5 +1,7 @@
 #include "markov_core.hpp"
 
+#include "voice_leading.hpp"
+
 #include <algorithm>
 #include <charconv>
 #include <cmath>
@@ -331,22 +333,52 @@ WalkNote walkNote(const Model& model, const Params& params, const Matrix& matrix
     WalkNote result;
     std::array<float, kStates> row {};
     for (int i = 0; i <= std::max(0, k); ++i) {
-        nextRow(model, params, matrix, previous2, previous1, row);
-        const int state = sampleRow(row, randomUnit(phraseSeed, static_cast<std::uint64_t>(i)));
+        const float stayProb = pv(params, kStayProb);
+        const float leapProb = pv(params, kLeapProb);
 
-        // Place it in the register: the octave nearest the last note (or the middle of the range for the first).
-        const int target = previousNote >= 0 ? previousNote : centre;
-        const int absolutePc = (rootPc + state) % 12;
-        int best = -1;
-        int bestDistance = 1 << 20;
-        for (int n = low; n <= high; ++n) {
-            if (n % 12 != absolutePc) continue;
-            const int distance = std::abs(n - target);
-            if (distance < bestDistance) {
-                best = n;
-                bestDistance = distance;
+        nextRow(model, params, matrix, previous2, previous1, row);
+        int state = sampleRow(row, randomUnit(phraseSeed, static_cast<std::uint64_t>(i)));
+
+        // Stay: occasionally hold the previous state instead of moving.
+        bool stayed = false;
+        if (stayProb > 0.0f && previous1 >= 0 && previous1 < kStates &&
+            randomUnit(phraseSeed ^ 0x5a5a5a5aULL, static_cast<std::uint64_t>(i)) < stayProb) {
+            state = previous1;
+            stayed = true;
+        }
+
+        // Leap: occasionally jump to a random allowed state, bypassing the matrix.
+        if (!stayed && leapProb > 0.0f &&
+            randomUnit(phraseSeed ^ 0xa5a5a5a5ULL, static_cast<std::uint64_t>(i)) < leapProb) {
+            const std::uint16_t mask = scaleMask(iv(params, kScale));
+            int allowedStates[kStates];
+            int allowedCount = 0;
+            for (int st = 0; st < kStates; ++st)
+                if (allowed(mask, st))
+                    allowedStates[allowedCount++] = st;
+            if (allowedCount > 0) {
+                const int pick = static_cast<int>(randomUnit(phraseSeed ^ 0x12345678ULL, static_cast<std::uint64_t>(i)) *
+                                                  static_cast<float>(allowedCount));
+                state = allowedStates[std::min(pick, allowedCount - 1)];
             }
         }
+
+        // Place it in the register: the octave nearest the last note (or the middle of the range for the first).
+        // Uses the shared voice-leading helper (resolvePitch, smoothness 1.0 = nearest octave).
+        const int target = previousNote >= 0 ? previousNote : centre;
+        const int absolutePc = (rootPc + state) % 12;
+        // Candidate absolute note with the right pitch class, near the range.
+        int base = absolutePc;
+        while (base < low) base += 12;
+        const float resolved = downspout::generative::resolvePitch(static_cast<float>(target),
+                                                                  static_cast<float>(base),
+                                                                  1.0f, 100.0f);
+        int best = static_cast<int>(std::lround(resolved));
+        // Keep the pitch class and clamp into [low, high].
+        while (best > high) best -= 12;
+        while (best < low) best += 12;
+        if (best < low || best > high || best % 12 != absolutePc)
+            best = std::clamp(centre, low, high);
         if (best < 0) best = std::clamp(centre, 0, 127);
 
         result = {state, std::clamp(best, 0, 127)};

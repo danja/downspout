@@ -1,5 +1,7 @@
 #include "cadence_harmony.hpp"
 
+#include "voice_leading.hpp"
+
 #include "cadence_rng.hpp"
 
 #include <algorithm>
@@ -612,20 +614,23 @@ int register_center(int reg) {
 }
 
 int nearest_midi_for_pc(int pc, int target) {
-    int best_note = 60 + pc;
-    int best_distance = 999;
-    for (int octave = -1; octave <= 10; ++octave) {
-        const int candidate = octave * 12 + pc;
-        if (candidate < 0 || candidate > 127) {
-            continue;
+    // Shared voice-leading helper: pick the octave of pitch class `pc` closest to `target`.
+    const float resolved = downspout::generative::resolvePitch(
+        static_cast<float>(target), static_cast<float>(pc), 1.0f, 100.0f);
+    int best = static_cast<int>(std::lround(resolved));
+    if (best < 0 || best > 127 || (best % 12 + 12) % 12 != ((pc % 12) + 12) % 12) {
+        // Fallback to manual search if resolvePitch landed off the pitch class.
+        int best_note = 60 + pc;
+        int best_distance = 999;
+        for (int octave = -1; octave <= 10; ++octave) {
+            const int c = octave * 12 + pc;
+            if (c < 0 || c > 127) continue;
+            const int d = std::abs(c - target);
+            if (d < best_distance) { best_distance = d; best_note = c; }
         }
-        const int distance = std::abs(candidate - target);
-        if (distance < best_distance) {
-            best_distance = distance;
-            best_note = candidate;
-        }
+        return best_note;
     }
-    return best_note;
+    return best;
 }
 
 void apply_spread_to_notes(int* notes, int count, float spread) {

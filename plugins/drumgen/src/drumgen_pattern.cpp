@@ -2370,6 +2370,7 @@ void regeneratePattern(PatternState& pattern,
     applyGenreSignature(nextPattern, controls);
     applyDiddleyStyleOverlay(nextPattern, controls);
     cleanupPattern(nextPattern, controls);
+    applyVoiceLinks(nextPattern, controls);
 
     nextPattern.version = kPatternStateVersion;
     pattern = nextPattern;
@@ -2422,6 +2423,61 @@ void refreshBar(PatternState& pattern,
     applyDiddleyStyleOverlay(nextPattern, controls);
     cleanupPattern(nextPattern, controls);
     pattern = nextPattern;
+}
+
+namespace {
+
+inline bool hasHit(const PatternState& p, int lane, int step) noexcept
+{
+    return p.lanes[lane].steps[step].velocity > 0;
+}
+
+}  // namespace
+
+void applyVoiceLinks(PatternState& pattern, const Controls& controls)
+{
+    if (!controls.voiceLinksEnabled) return;
+    if (pattern.totalSteps <= 0) return;
+    const int steps = pattern.totalSteps;
+    const auto weak = [](int s) { return (s % 2) != 0; };
+
+    // 1. Answer: snare (lane 2) -> clap (lane 1). Add clap two steps after a snare
+    //    hit, only where clap is currently empty.
+    for (int pos = 0; pos + 2 < steps; ++pos) {
+        if (hasHit(pattern, 2, pos) && !hasHit(pattern, 1, pos + 2)) {
+            pattern.lanes[1].steps[pos + 2].velocity = pattern.lanes[2].steps[pos].velocity;
+            pattern.lanes[1].steps[pos + 2].flags = 0;
+        }
+    }
+
+    // 2. Gap fill: kick (lane 0) -> clave (lane 10). Add clave on weak slots where
+    //    kick is silent and clave is empty.
+    for (int pos = 0; pos < steps; ++pos) {
+        if (weak(pos) && !hasHit(pattern, 0, pos) && !hasHit(pattern, 10, pos)) {
+            pattern.lanes[10].steps[pos].velocity = 80;
+        }
+    }
+
+    // 3. Interlock: closed_hat (4) vs open_hat (6). Where both hit, move open_hat to
+    //    the next free weak slot within 4 steps.
+    for (int pos = 0; pos < steps; ++pos) {
+        if (!hasHit(pattern, 4, pos) || !hasHit(pattern, 6, pos)) continue;
+        // find next free weak slot
+        int target = -1;
+        for (int off = 1; off <= 4; ++off) {
+            const int cand = (pos + off) % steps;
+            if (weak(cand) && !hasHit(pattern, 6, cand) && !hasHit(pattern, 4, cand)) {
+                target = cand;
+                break;
+            }
+        }
+        if (target >= 0) {
+            pattern.lanes[6].steps[pos].velocity = 0;
+            pattern.lanes[6].steps[pos].flags = 0;
+            if (pattern.lanes[6].steps[target].velocity == 0)
+                pattern.lanes[6].steps[target].velocity = 90;
+        }
+    }
 }
 
 void refreshFillBar(PatternState& pattern,

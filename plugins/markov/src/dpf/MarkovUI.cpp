@@ -499,6 +499,11 @@ private:
         drawSlider(core::kLow, "Lowest note", low.c_str(), cellOf(b, 1, 1), kMelodyAccent);
         std::snprintf(buf, sizeof(buf), "%d", intValue(core::kOctaves));
         drawSlider(core::kOctaves, "Octaves", buf, cellOf(b, 1, 2), kMelodyAccent);
+
+        std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::lround(value(core::kStayProb) * 100.0f)));
+        drawSlider(core::kStayProb, "Stay probability", buf, cellOf(b, 0, 3), kMelodyAccent);
+        std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::lround(value(core::kLeapProb) * 100.0f)));
+        drawSlider(core::kLeapProb, "Leap probability", buf, cellOf(b, 1, 3), kMelodyAccent);
     }
 
     void drawTimingPanel(const Rect b)

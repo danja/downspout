@@ -23,4 +23,8 @@ void refreshFillBar(PatternState& pattern,
                     const ::downspout::Meter& meter,
                     int barIndex);
 
+// Voice links (auricle-style Relations): deterministic post-pass over the
+// generated lanes. No-op unless controls.voiceLinksEnabled is set.
+void applyVoiceLinks(PatternState& pattern, const Controls& controls);
+
 }  // namespace downspout::drumgen

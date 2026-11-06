@@ -654,7 +654,7 @@ void testParameterTable()
     // Indices are saved in projects: pin the ones that exist.
     assert(kRoot == 0 && kScale == 1 && kLow == 2 && kOctaves == 3 && kOrder == 4 && kChaos == 5 && kGrid == 6);
     assert(kSeed == 11 && kLearn == 13 && kClearLearned == 16 && kConductorCh == 17);
-    assert(kStatusState == 18 && kStatusLearned == 19 && kParameterCount == 20);
+    assert(kStatusState == 18 && kStatusLearned == 19 && kStayProb == 20 && kLeapProb == 21 && kParameterCount == 22);
     assert(kParameterSpecs[kClearLearned].maximum == 65535);
     assert(kParameterSpecs[kStatusState].output && kParameterSpecs[kStatusLearned].output);
     for (std::size_t i = 0; i < kParameterSpecs.size(); ++i) {

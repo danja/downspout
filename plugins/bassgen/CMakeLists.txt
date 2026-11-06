@@ -9,6 +9,7 @@ add_library(downspout_bassgen_core STATIC
 target_link_libraries(downspout_bassgen_core PUBLIC downspout-project-options)
 target_include_directories(downspout_bassgen_core PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${PROJECT_SOURCE_DIR}/plugins/generative-common/include"
 )
 
 add_library(downspout_bassgen_port INTERFACE)

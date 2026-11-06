@@ -57,4 +57,8 @@ dsp:markov a trn:PluginProfile ;
                     rdfs:comment "Read-only: the pitch class (above the root) of the latest note; -1 when stopped." ] ;
     trn:parameter [ rdfs:label "Learned transitions" ; trn:symbol "status_learned" ; trn:range "0-1000000" ;
                     rdfs:comment "Read-only: how many transitions have been learned." ] ;
+    trn:parameter [ rdfs:label "Stay probability" ; trn:symbol "stay_prob" ; trn:range "0-100 %" ;
+                    rdfs:comment "Chance a step reuses the previous pitch class instead of moving." ] ;
+    trn:parameter [ rdfs:label "Leap probability" ; trn:symbol "leap_prob" ; trn:range "0-100 %" ;
+                    rdfs:comment "Chance a step jumps to a random scale note, bypassing the transition matrix. Default off." ] ;
     pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

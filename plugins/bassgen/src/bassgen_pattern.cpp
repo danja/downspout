@@ -1,5 +1,7 @@
 #include "bassgen_pattern.hpp"
 
+#include "voice_leading.hpp"
+
 #include "bassgen_rng.hpp"
 
 #include <algorithm>
@@ -253,16 +255,13 @@ constexpr ScaleDef kScales[] = {
                                          const int semitoneOffset,
                                          const int previousNote) {
     const int base = controls.rootNote + registerOffset(controls.reg);
-    int best = clampi(base + semitoneOffset, 0, 127);
-    int bestDistance = std::abs(best - previousNote);
-    for (int octave = -2; octave <= 4; ++octave) {
-        const int candidate = clampi(base + semitoneOffset + octave * 12, 0, 127);
-        const int distance = std::abs(candidate - previousNote);
-        if (distance < bestDistance) {
-            best = candidate;
-            bestDistance = distance;
-        }
-    }
+    const float resolved = downspout::generative::resolvePitch(
+        static_cast<float>(previousNote),
+        static_cast<float>(base + semitoneOffset), 1.0f, 100.0f);
+    int best = static_cast<int>(std::lround(resolved));
+    while (best > 127) best -= 12;
+    while (best < 0) best += 12;
+    if (best < 0 || best > 127) best = clampi(base + semitoneOffset, 0, 127);
     return best;
 }
 

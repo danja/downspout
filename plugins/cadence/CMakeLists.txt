@@ -10,6 +10,7 @@ add_library(downspout_cadence_core STATIC
 target_link_libraries(downspout_cadence_core PUBLIC downspout-project-options)
 target_include_directories(downspout_cadence_core PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${PROJECT_SOURCE_DIR}/plugins/generative-common/include"
 )
 
 add_library(downspout_cadence_port INTERFACE)

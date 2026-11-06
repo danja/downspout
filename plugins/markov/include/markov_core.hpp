@@ -47,6 +47,8 @@ enum Param : std::uint32_t {
     kConductorCh,
     kStatusState,
     kStatusLearned,
+    kStayProb,
+    kLeapProb,
     kParameterCount
 };
 
@@ -73,6 +75,8 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs {{
     {"conductor_ch", "Conductor ch", 0, 16, 0, true},
     {"status_state", "Current state", -1, 11, -1, true, true},
     {"status_learned", "Learned transitions", 0, 1000000, 0, true, true},
+    {"stay_prob", "Stay probability", 0.0f, 1.0f, 0.0f},
+    {"leap_prob", "Leap probability", 0.0f, 1.0f, 0.0f},
 }};
 
 // What the chain knows. `base` is the matrix you draw or pick a style for; the learned tables count
