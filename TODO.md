@@ -2,6 +2,8 @@
 
 Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 
+Make a new plugin that will be entirely your design, except for two constraints : it shouldn't overlap too much with existing Downspout plugins and it should be *interesting*. Document the key steps of the development process in a file under docs/ - this should be written in a way that can help other agents build plugins.
+
 ## New plugin proposals (from the DSP-Ports-JSFX survey, 2026-11-03)
 
 Source: `~/github/DSP-Ports-JSFX/Plugin Ports/*.jsfx`, used as **reference**. Downspout is MIT. Where the JSFX
@@ -50,7 +52,7 @@ before it the repository had none.
 - [ ] **PadGen** (new plugin, from INBOX): design and build a pad generator. Decide scope (ambient pad
       synth vs MIDI generator vs both), sound engine, and how it differs from existing instruments
       (Basilico, Canticle, Moka, Quartet, Strata, Monochord). Follow the new-plugin checklist.
-- [ ] **Audio-to-MIDI generator** (new plugin, from INBOX): generate MIDI output from audio input, with
+- [ ] **Audio-to-MIDI generator** (new plugin, from INBOX): generate polyphonic MIDI output from audio input, with
       various processing options and a user-selectable input-signal type (melody / bass / chords / drums).
       Overlaps Qune (pitch tracking) but broader; reuse Qune's tracker if it fits (shared code, needs
       approval). Follow the new-plugin checklist.
