@@ -105,6 +105,9 @@ downspout-<version>-<platform>-vst3.zip
 ├── treatment.vst3/
 ├── voxmod.vst3/
 ├── sinevox.vst3/
+├── sieve.vst3/
+├── zmorph.vst3/
+├── scope.vst3/
 ├── LICENSE
 └── README.md
 ```

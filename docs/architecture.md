@@ -309,6 +309,9 @@ The release script currently expects these bundles:
 - `treatment.vst3`
 - `voxmod.vst3`
 - `sinevox.vst3`
+- `sieve.vst3`
+- `zmorph.vst3`
+- `scope.vst3`
 
 This list should match the bundles installed by `install.sh`; if a plugin is
 added to the local install path, release packaging should be updated in the same

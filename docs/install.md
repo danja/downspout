@@ -157,6 +157,9 @@ The repository currently installs sixty-one real wrapper targets:
 - `voxmod.vst3` with UI
 - `sinevox.vst3` with UI
 - `keyframe.vst3` with UI
+- `sieve.vst3` with UI
+- `zmorph.vst3` with UI
+- `scope.vst3` with UI
 
 The next install-related validation is host-side confirmation that all bundles behave correctly in `Release` builds.
 

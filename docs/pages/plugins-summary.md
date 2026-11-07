@@ -132,6 +132,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | mouth | mouth.vst3 | audio effect (vowel / formant filter) | 2/2 | yes/no | no |
 | sieve | sieve.vst3 | audio effect (spectral sieve) | 2/2 | no/no | no |
 | zmorph | zmorph.vst3 | audio effect (z-plane morph filter) | 2/2 | no/no | no |
+| scope | scope.vst3 | audio effect (spectrum / meter) | 2/2 | no/no | no |
 | resonance-garden | resonance_garden.vst3 | audio effect (resonators) | 2/2 | yes/no | no |
 | retune | retune.vst3 | MIDI processor (tuning) | 0/2 | yes/yes | no |
 | rift | rift.vst3 | audio effect (buffer) | 2/2 | yes/no | yes |
@@ -596,6 +597,12 @@ chosen scale (or held MIDI notes), in every octave, preserving the source's own 
 Z-plane morph filter, stereo, no latency. Morphs between low-pass and high-pass shapes at the chosen
 **Cutoff** and **Resonance**. Controls: **Cutoff**, **Resonance**, **Morph** (0 = low-pass, 1 = high-pass),
 **Mix**, **Level**. No plugin state.
+
+### scope
+Spectrum analyser and level meter, stereo, no latency. Audio passes through. 64 log-spaced
+bands (20 Hz to 20 kHz) with a labelled frequency grid and a 60/90/120 dB scale; levels view
+shows peak, RMS and correlation. Controls: **Range** (60/90/120 dB), **Speed**,
+**Peak hold** (off/on), **Display** (spectrum/levels). No plugin state.
 
 ### bubbles
 Water sound generator, stereo, continuous without MIDI (note-on/off optionally gates and

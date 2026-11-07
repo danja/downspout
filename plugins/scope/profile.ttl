@@ -1,0 +1,20 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:scope a trn:PluginProfile ;
+    rdfs:label "Scope" ;
+    rdfs:comment "Spectrum analyzer and level meter: 64 log-spaced bands, peak, RMS and correlation. Audio passes through." ;
+    trn:bundleName "scope.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/scope/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio ;
+    trn:parameter [ rdfs:label "Range" ; trn:symbol "range" ; trn:range "0-2 (60/90/120 dB)" ] ;
+    trn:parameter [ rdfs:label "Speed" ; trn:symbol "speed" ; trn:range "0-1" ] ;
+    trn:parameter [ rdfs:label "Peak hold" ; trn:symbol "hold" ; trn:range "0-1 (off/on)" ] ;
+    trn:parameter [ rdfs:label "Mode" ; trn:symbol "mode" ; trn:range "0-1 (spectrum/levels)" ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

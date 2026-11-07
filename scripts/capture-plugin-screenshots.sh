@@ -117,6 +117,7 @@ plugins=(
   "mouth:mouth"
   "sieve:sieve"
   "zmorph:zmorph"
+  "scope:scope"
   "flues-synth-driver:flues_synth_driver"
   )
 

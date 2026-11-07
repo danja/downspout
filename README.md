@@ -164,6 +164,9 @@ The [plugin reference](docs/pages/plugins-summary.md) has the ports, MIDI roles 
 | [Voxmod](plugins/voxmod/README.md) | `voxmod.vst3` | Audio effect | Combined vocoder and ring modulator: a filter-bank vocoder analysing inputs 1/2 colours the modulator on 3/4, in parallel with a band-limited ring modulator, blended by Mix. |
 | [Sinevox](plugins/sinevox/README.md) | `sinevox.vst3` | Audio effect | Formant tracker with two voices: speech on inputs 1/2 is analysed for up to eight formants (frequency, Q, amplitude) that drive a band-pass vocoder bank on 3/4 or a bank of sine oscillators (sine-wave speech). MIDI CC and note control, formants out as CCs or notes. |
 | [Keyframe](plugins/keyframe/README.md) | `keyframe.vst3` | Audio effect | Extrema-sampling time stretch after DAFx26: the input reduces to timestamped local extrema whose spacing drives the overlap-add splice length. No transient detector. |
+| [Sieve](plugins/sieve/README.md) | `sieve.vst3` | Audio effect | Spectral sieve: an STFT mask that keeps only partials near the notes of a chosen scale or held MIDI notes, in every octave. |
+| [Zmorph](plugins/zmorph/README.md) | `zmorph.vst3` | Audio effect | Z-plane morph filter: morphs between two pole/zero sets (low-pass to high-pass) with cutoff, resonance and morph controls. |
+| [Scope](plugins/scope/README.md) | `scope.vst3` | Audio effect | Spectrum analyser and level meter: 64 log-spaced bands from 20 Hz to 20 kHz with a labelled axis, peak/RMS/correlation, audio passes through. |
 
 ## Architecture
 

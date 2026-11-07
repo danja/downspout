@@ -7,6 +7,18 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 (No open entries from before October 2026: the screenshot script now always captures on a private Xvfb.)
 
+## Scope: a live display debugged on a stale standalone (2026-11-07)
+- **What happened:** A JACK-standalone screenshot of `scope` fed a 1 kHz sine showed a low-frequency hump
+  and no 1 kHz peak, so the analyser looked wrong. Pixel analysis of the bands was trusted for a while before
+  noticing `build/bin/scope` was dated from an earlier build: only `scope-vst3` had been rebuilt after the
+  last UI change.
+- **Root cause:** `cmake --build --target scope-vst3` does not relink the `scope-jack` standalone, and the
+  screenshot/testing path used the stale executable. Nothing was wrong with the DSP; the engine probe and
+  the rebuilt standalone both showed the correct single band at 1 kHz.
+- **Prevention:** Before running a standalone for a live check, rebuild that same target (`<plugin>-jack`)
+  and check the binary's mtime. When a live capture disagrees with core tests, record the plugin's actual
+  output (`jack_capture -p Scope:out_1`) and measure it, rather than debugging the analyser from screenshots.
+
 ## Syrinx: a pitch contour that only moved a filter, and a probe that measured the tails (2026-10-24)
 - **What happened:** "Not chirpy" had been tuned at the parameter level (Bend, Duration, presets) for a long time with no
   effect. The first measurement probe reported f0 ranges of 469-2900 Hz per preset because it included the quiet release

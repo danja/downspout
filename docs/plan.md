@@ -421,6 +421,27 @@ Progress as of 2026-05-27:
   time and pitch rates, reference hold, fixed reported latency with a matched dry
   delay, deterministic tests, and a first VST3 wrapper target with UI via vendored
   DPF;
+- `sieve` now exists as a spectral sieve: an STFT mask (1024-pt sqrt-Hann, hop 256)
+  that keeps only partials within a settable cents width of the notes of a chosen
+  scale, or of held MIDI notes, in every octave, with a gain floor, odd/even
+  harmonic tilt, mix and output level. Unlike `resonance-garden` it keeps the
+  source's texture instead of ringing new resonators. Latency is reported. Core
+  tests and a Magneto-look VST3 UI; listening and host validation remain;
+- `zmorph` now exists as a z-plane morph filter whose biquad coefficients are
+  linearly interpolated between a low-pass and a high-pass shape at the chosen
+  cutoff and resonance, with mix and output level. No latency. Core tests and a
+  Magneto-look VST3 UI; listening and host validation remain;
+- `scope` now exists as a spectrum analyser and level meter that passes audio
+  through untouched: a 2048-pt sqrt-Hann STFT at 75 % overlap, normalised so a
+  full-scale sine reads 0 dB, collapsed into 64 log-spaced bands from 20 Hz to
+  20 kHz (each band takes its loudest bin), with peak hold and labelled frequency
+  and dB grids; a Levels view adds per-channel peak/RMS meters and correlation.
+  Controls are Range (60/90/120 dB), Speed, Peak hold and Display. The analysis
+  bands and meters are read-only output parameters pushed to the UI with
+  `requestParameterValueChange`, so the VST3 shows live data. No plugin state.
+  Core tests and a Magneto-look VST3 UI; the live display was verified in the
+  JACK standalone with a 1 kHz sine (recorded output measured at -6.02 dBFS peak
+  and -9.03 dBFS RMS), while host validation in REAPER remains;
 - `install.sh` exists as the intended build/install entrypoint for local VST deployment.
 
 Current main gap:
@@ -439,7 +460,7 @@ Current main gap:
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
   `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`,
-  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `prism.vst3`, `mouth.vst3`, `grist.vst3`, `sam.vst3`, `ladder.vst3`, `glue.vst3`, `octet.vst3`, `trio.vst3`, `infra.vst3`, `spindown.vst3`, `wheelhouse.vst3`, `whirligig.vst3`, `chorale.vst3`, `silken.vst3`, `fresco.vst3`, `strata.vst3`, `quartet.vst3`, `monochord.vst3`, and `nam.vst3` bundles.
+  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `prism.vst3`, `mouth.vst3`, `grist.vst3`, `sam.vst3`, `ladder.vst3`, `glue.vst3`, `octet.vst3`, `trio.vst3`, `infra.vst3`, `spindown.vst3`, `wheelhouse.vst3`, `whirligig.vst3`, `chorale.vst3`, `silken.vst3`, `fresco.vst3`, `strata.vst3`, `quartet.vst3`, `monochord.vst3`, `nam.vst3`, `sieve.vst3`, `zmorph.vst3`, and `scope.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of

@@ -7,7 +7,8 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 Source: `~/github/DSP-Ports-JSFX/Plugin Ports/*.jsfx`, used as **reference**. Downspout is MIT. Where the JSFX
 original is MIT (JuKnow Chorus, ChronoDupe, Airwindows ports, lkjb ports) code may be copied with the notice kept.
 Where it is GPL (x42, zam, setBfree, Aeolus, amsynth, Dexed, cStop, chmaha's own designs) write a clean-room
-implementation from the published algorithm and do not translate the JSFX. Downspout has no meters of any kind yet.
+implementation from the published algorithm and do not translate the JSFX. `scope` now supplies metering and analysis;
+before it the repository had none.
 
 - [x] **Tape Stop** built as `spindown` (clean-room; cStop is GPLv3): core, DPF wrapper, UI, 85 core checks, lists and docs.
       Still open: listen to it; validate in REAPER (MIDI trigger routing to an effect, Cycle against a real BBT
@@ -17,8 +18,11 @@ implementation from the published algorithm and do not translate the JSFX. Downs
 - [x] **Chorus** built as `chorale` (JuKnow Chorus / junologue-chorus, MIT, notice kept): Juno modes I, I+II, II plus a Custom 1-4 voice mode
       (Rate, Depth, Delay), Tone, Width, Mix, CC 1-4. 205 core checks incl. a reference transcription of the source, mutation-checked.
       Open: listen (Custom voicing by ear), REAPER validation, possibly feedback/flanger, tempo-synced rate, a vibrato (100 % wet) switch.
-- [ ] **Meters / scope**: one plugin with EBU R128 loudness, spectrum and goniometer (x42 refs, GPL, clean-room).
-      Guardian's true-peak guard can share code. Later: correlation, K-Meter, VU, oscilloscope, test signal generator.
+- [x] **Meters / scope** built as `scope`: spectrum analyzer + level meter (peak, RMS, correlation). Audio passes through.
+      64 log-spaced bands (20 Hz - 20 kHz), labelled frequency/dB grids, Range 60/90/120 dB, Peak hold, Spectrum/Levels
+      display; audio passes through. Core tests + VST3 build pass, and the live display was verified in the JACK standalone
+      with a 1 kHz sine (recorded pass-through measured -6.02 dBFS peak, -9.03 dBFS RMS). Open: try it in REAPER and while
+      listening; EBU R128 loudness, goniometer and K-Meter are later.
 - [x] **Rotary speaker** built as `whirligig` (clean-room; Dizzy/b_whirl is GPL): LR4 crossover, drum and horn rotors with inertia, two mics
       (lobes + Doppler), CC 1/2, and Beat sync (beats per turn, phase-locked to host BBT, Sync Phase). 104 core checks, mutation-checked.
       Open: listen and voice by ear; validate in REAPER (BBT lock across loop/relocate, CC 1/2); possible cabinet/overdrive stage; ~0.7 ms
