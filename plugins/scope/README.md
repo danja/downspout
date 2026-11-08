@@ -15,3 +15,7 @@ Spectrum analyser and level meter. Audio passes through untouched.
 - **Display**: spectrum or levels.
 
 Magneto look. No latency, no plugin state.
+
+The frequency grid is a fixed 20 Hz-20 kHz log axis, so at sample rates above 40 kHz the labels
+match the bands. Below 40 kHz the analyser's top band is the Nyquist frequency while the axis
+still reads 20 kHz.

@@ -7,6 +7,32 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 (No open entries from before October 2026: the screenshot script now always captures on a private Xvfb.)
 
+## Sieve: a "passing" core test hid a resynthesis that read each sample as it was written (2026-11-08)
+- **What happened:** `TODO.md`, the README and the product page all said "core tests + VST3 build pass", so
+  Sieve was treated as finished except for its panel. A probe with **Floor** at 0 dB (a mask of unity in every
+  bin, which must be a pure STFT delay) put white noise out 17.7 dB down with a best-lag correlation of 0.0085,
+  and a sine on a scale note came out at -43 dB. In `processBlock` the frame is written at
+  `base = frameCounter % kFftSize` and read at `outIdx = (frameCounter - kFftSize) % kFftSize` — the same index —
+  so each output sample is read at `window[0] = 0` as it is written and the other three overlap-add
+  contributions land 1 024 samples late. Dead code ("align? use simple") was left in the same loop.
+- **Root cause:** The core suite was two `assert`s for allocation and finiteness. No test asked the engine to do
+  the one thing an STFT mask must do (round-trip the input), so silent misalignment passed.
+- **Prevention:** For any STFT/overlap-add plugin, the first test is round-trip identity with a unity mask:
+  output equals the input delayed by the reported latency (level within 0.1 dB, correlation > 0.999). Then test
+  one bin at a time. Allocation, finiteness and "does not crash" are smoke checks, not core tests, and a doc
+  must not describe them as "core tests pass".
+
+## Sieve: wrapper identity copy-pasted from Mouth (2026-11-08)
+- **What happened:** DAWs listed Sieve as a second Mouth. `plugins/sieve/src/dpf/DistrhoPluginInfo.h` had
+  `DISTRHO_PLUGIN_NAME "Mouth"`, Mouth's URI, `it.hyperdata.downspout.mouth`, `DISTRHO_PLUGIN_UNIQUE_ID Mout`
+  and Mouth's include guard; only the UI size and I/O counts had been edited.
+- **Root cause:** The file was copied from `plugins/mouth` to start the plugin, and nothing in the build or the
+  release checks inspects plugin metadata: `check-bundle-lists.sh` compares bundle filenames, and DPF derives
+  the class id and name from these macros without complaining that two plugins share them.
+- **Prevention:** After copying a plugin skeleton, diff `DistrhoPluginInfo.h` against the source plugin and
+  read every identity macro (`NAME`, `URI`, `CLAP_ID`, `BRAND_ID`, `UNIQUE_ID`, guard, `VST3_CATEGORIES`).
+  Check the built bundle: `strings <bundle>.so | grep -i <source plugin>` must be empty.
+
 ## Scope: a live display debugged on a stale standalone (2026-11-07)
 - **What happened:** A JACK-standalone screenshot of `scope` fed a 1 kHz sine showed a low-frequency hump
   and no 1 kHz peak, so the analyser looked wrong. Pixel analysis of the bands was trusted for a while before

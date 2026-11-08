@@ -8,7 +8,7 @@ group: space
 role: Phase disperser
 screenshot: /assets/plugins/spense.png
 capabilities: [audio input, audio output]
-summary: A stereo phase disperser: up to eight cascades of eight all-pass filters that delay frequencies near a chosen centre without changing level, with a live group-delay plot.
+summary: "A stereo phase disperser: up to eight cascades of eight all-pass filters that delay frequencies near a chosen centre without changing level, with a live group-delay plot."
 ---
 
 ## Opinion

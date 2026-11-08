@@ -132,6 +132,8 @@ Current output filenames:
 - `tuney-vst.png`
 - `voxmod.png`
 - `sinevox.png`
+- `sieve.png`
+- `zmorph.png`
 
 This list is out of date in places: it predates several plugins, and
 `docs/pages/_products/*.md` is the authoritative record of which catalog

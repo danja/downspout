@@ -2,7 +2,47 @@
 
 Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 
+## Priority
+
+Sam plugin isn't accepting text input, the edit box is broken. In the JACK standalone it works: with the
+  standalone's own port (`SAM_PORT=<port> scripts/sam-say.sh`; 7230 is the REAPER-hosted Sam) Transport,
+  Clear and typing all reach the engine. Under Carla as a VST3 the buttons and Clear land but typed
+  characters arrive partially or not at all, so the fault lies in the VST3 key/character path, not the
+  edit box core. Next: trace `third_party/DPF/distrho/src/DistrhoUIVST3.cpp` `onKeyDown` ->
+  `DistrhoUIInternal.hpp` `handlePluginKeyboardVST` -> `onCharacterInput`, and check whether space and
+  focus changes swallow keys.
+
+Sieve is not usable yet: the wet path is broken. With a mask of unity in every bin, an STFT round
+  trip must be a pure delay; instead white noise comes out 17.7 dB down and uncorrelated with the
+  input (best-lag correlation 0.0085 over 2 048 lags), and a sine sitting on a scale note is
+  cancelled to -43 dB rather than passed. In `processBlock` the new frame is written at
+  `base = frameCounter % kFftSize` and read at `outIdx = (frameCounter - kFftSize) % kFftSize`,
+  which is the same index: each output sample is read the instant it is written (at `window[0]` = 0)
+  while the three other overlap-add contributions arrive 1 024 samples later. Dead code sits just
+  above at `src/sieve_engine.cpp:192-196` ("align? use simple"). Fix the FIFO/overlap-add
+  alignment, then replace the 2-assert smoke test with a real one (unity mask = delayed input;
+  on-scale sine passes within a dB; a sine between the notes is attenuated by the stated **Floor**)
+  before touching the panel. Identity was wrong too and is fixed 2026-11-08: the wrapper said
+  "Mouth", used Mouth's URI, CLAP id and `Mout` unique id, so a DAW listed it as a second Mouth.
+
+Sieve and zmorph "core tests" are smoke tests (2 and 1 `assert`, both via `<cassert>` without
+  `downspout/test_assert.h`, so they would pass vacuously under `NDEBUG`). Scope has 20 checks and
+  the header. Bring all three up to the usual standard: assert observable effects, and show every
+  control has an audible or visible effect.
+
+Chorale should allow syncing to transport BBT. Confirmed still open: `plugins/chorale/docs/design.md`
+  lists a tempo-synced rate under "Not built", and the plugin reads no host tempo or BBT.
+
+Cleared 2026-11-08: NAM is built and wired (`-DDOWNSPOUT_BUILD_NAM=ON`, 99/99 `.vst3` bundles in
+  `build/bin`, all release/install/screenshot/Pages lists). Sieve/zmorph/scope now have full Pages
+  front matter, a group (so they appear in the catalogue), `sieve.png` and `zmorph.png` captured;
+  `scripts/package-built-bundles.sh` lists all three; the empty `plugins/perc/` skeleton is gone.
+
+## Fun
+
 Make a new plugin that will be entirely your design, except for two constraints : it shouldn't overlap too much with existing Downspout plugins and it should be *interesting*. Document the key steps of the development process in a file under docs/ - this should be written in a way that can help other agents build plugins.
+
+Add two Ascending patterns to Bassgen corresponding to the existing Descending ones.
 
 ## New plugin proposals (from the DSP-Ports-JSFX survey, 2026-11-03)
 
@@ -349,9 +389,9 @@ resonance-garden, plank, tuney-vst, worms, beards.
 
 Mouth (vowel/formant morph filter) is built (core, VST3, tests, screenshot, docs); the rest are not started. Design for Mouth: `plugins/mouth/docs/design.md`.
 
-- [x] **Scale sieve** built as `sieve`: STFT mask (sqrt-Hann, 1024-pt, hop 256), keeps partials near a scale's notes (or held MIDI notes) in every octave. Controls: Root, Scale, Source, MIDI In, Width, Floor, Tilt, Mix, Level. Core tests + VST3 build pass. Listen/audit pending.
+- [x] **Scale sieve** built as `sieve`: STFT mask (sqrt-Hann, 1024-pt, hop 256), keeps partials near a scale's notes (or held MIDI notes) in every octave. Controls: Root, Scale, Source, MIDI In, Width, Floor, Tilt, Mix, Level. VST3 build passes; the wet path does not work yet and the core test is a smoke test — see Priority.
 - [ ] **Audio-driven string / comb (extended Karplus-Strong)**: feedback comb with damping low-pass, pick-position comb and stiffness all-pass chain (clean string -> inharmonic bell -> metal), tuned from MIDI or tracked pitch. Closest existing plugins: `resonance-garden`, `spense`; build after the other two. References: CCRMA "Extended Karplus-Strong" (https://ccrma.stanford.edu/~jos/pasp/Extended_Karplus_Strong_Algorithm.html).
-- [x] **Z-plane morph filter** built as `zmorph`: morphs between low-pass and high-pass shapes at chosen cutoff/resonance. Controls: Cutoff, Resonance, Morph, Mix, Level. Core tests + VST3 build pass. Listen/audit pending.
+- [x] **Z-plane morph filter** built as `zmorph`: morphs between low-pass and high-pass shapes at chosen cutoff/resonance. Controls: Cutoff, Resonance, Morph, Mix, Level. VST3 build passes, the response is measured (see the product page); the core test is a smoke test and nothing has been auditioned.
 - [ ] Envelope-follower multimode filter (auto-wah). Easy, but a crowded category.
 - [ ] **Mouth: listen to it** and try it in a host (nothing auditioned). Check Voice switching for clicks on a loud sustained source and that the vowel data matches the Csound manual table (typed from memory of it).
 - [ ] Mouth phase 2: tempo-synced vowel sequencer (step list of vowel corners), reusing Prism's tempo plumbing.

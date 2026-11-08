@@ -1,13 +1,13 @@
-#ifndef DOWNSPOUT_MOUTH_DISTRHO_PLUGIN_INFO_H_INCLUDED
-#define DOWNSPOUT_MOUTH_DISTRHO_PLUGIN_INFO_H_INCLUDED
+#ifndef DOWNSPOUT_SIEVE_DISTRHO_PLUGIN_INFO_H_INCLUDED
+#define DOWNSPOUT_SIEVE_DISTRHO_PLUGIN_INFO_H_INCLUDED
 
 #define DISTRHO_PLUGIN_BRAND   "Downspout"
-#define DISTRHO_PLUGIN_NAME    "Mouth"
-#define DISTRHO_PLUGIN_URI     "https://danja.github.io/downspout/plugins/mouth"
-#define DISTRHO_PLUGIN_CLAP_ID "it.hyperdata.downspout.mouth"
+#define DISTRHO_PLUGIN_NAME    "Sieve"
+#define DISTRHO_PLUGIN_URI     "https://danja.github.io/downspout/plugins/sieve"
+#define DISTRHO_PLUGIN_CLAP_ID "it.hyperdata.downspout.sieve"
 
 #define DISTRHO_PLUGIN_BRAND_ID DnSp
-#define DISTRHO_PLUGIN_UNIQUE_ID Mout
+#define DISTRHO_PLUGIN_UNIQUE_ID Siev
 
 #define DOWNSPOUT_PLUGIN_VERSION_MAJOR  0
 #define DOWNSPOUT_PLUGIN_VERSION_MINOR  1

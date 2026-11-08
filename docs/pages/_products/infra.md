@@ -8,7 +8,7 @@ group: dynamics
 role: Beat-locked tremolo
 screenshot: /assets/plugins/infra.png
 capabilities: [audio input, audio output]
-summary: A stereo VCA driven by a beat-locked LFO: a whole multiple of the host beat rate within 1-20 Hz, eight waveforms, and a 0/90/180/270 degree phase for each channel.
+summary: "A stereo VCA driven by a beat-locked LFO: a whole multiple of the host beat rate within 1-20 Hz, eight waveforms, and a 0/90/180/270 degree phase for each channel."
 ---
 
 ## Opinion

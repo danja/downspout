@@ -8,7 +8,7 @@ group: spectral
 role: Spectrogram painter
 screenshot: /assets/plugins/fresco.png
 capabilities: [audio input, audio output, transport]
-summary: Paints a picture (PNG, PGM/PPM or BMP) into the audio's spectrogram: height is frequency, brightness is level, and a free-running or host-locked playhead sweeps the picture.
+summary: "Paints a picture (PNG, PGM/PPM or BMP) into the audio's spectrogram: height is frequency, brightness is level, and a free-running or host-locked playhead sweeps the picture."
 ---
 
 ## Opinion

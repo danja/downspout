@@ -592,11 +592,13 @@ Spectral sieve, stereo, ~1024 samples latency. An STFT mask keeps only partials 
 chosen scale (or held MIDI notes), in every octave, preserving the source's own texture. Controls:
 **Root**, **Scale**, **Source** (Scale/Held MIDI), **MIDI In**, **Width** (cents half-width),
 **Floor** (dB minimum gain), **Tilt** (odd/even harmonic tilt), **Mix**, **Level**. No plugin state.
+**Not usable yet:** the overlap-add is misaligned, so the wet path does not resynthesise the input
+(a unity mask comes out 17.7 dB down); Mix 0 is dry and correct. See `plugins/sieve/docs/design.md`.
 
 ### zmorph
 Z-plane morph filter, stereo, no latency. Morphs between low-pass and high-pass shapes at the chosen
 **Cutoff** and **Resonance**. Controls: **Cutoff**, **Resonance**, **Morph** (0 = low-pass, 1 = high-pass),
-**Mix**, **Level**. No plugin state.
+**Mix**, **Level**. No plugin state. At Morph 50 % the two shapes cancel at the cutoff, giving a notch.
 
 ### scope
 Spectrum analyser and level meter, stereo, no latency. Audio passes through. 64 log-spaced
