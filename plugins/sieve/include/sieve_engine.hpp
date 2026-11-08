@@ -17,11 +17,12 @@ struct Engine {
     // STFT state per channel
     struct Channel {
         std::vector<float> fifo;     // input ring, size fftSize
-        std::vector<float> accum;    // output overlap-add ring
-        std::vector<float> window;   // sqrt-hann
-        int fifoPos = 0;
+        std::vector<float> accum;    // overlap-add ring, size 2 * fftSize
+        std::vector<float> window;   // periodic sqrt-hann, size fftSize
+        int fifoPos = 0;             // next fifo slot to write (oldest sample)
+        int outPos = 0;              // accum slot of the sample being output
         int hopCounter = 0;
-        std::int64_t frameCounter = 0;
+        std::uint64_t samples = 0;   // samples seen, for the start-up delay
     };
     std::array<Channel, 2> channels;
 
@@ -41,6 +42,9 @@ struct Engine {
 void activate(Engine& e, double sampleRate);
 void reset(Engine& e);
 int latencySamples(const Engine& e) noexcept;
+// Set or clear one held note. Used for the "Held MIDI" source; the caller is
+// responsible for channel filtering.
+void setHeldNote(Engine& e, int note, bool down) noexcept;
 void processBlock(Engine& e, const Params& p, const float* inL, const float* inR,
                   float* outL, float* outR, std::uint32_t frames,
                   const std::uint8_t* midi, std::uint32_t midiCount);
