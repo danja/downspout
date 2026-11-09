@@ -147,6 +147,8 @@ protected:
 
     bool onCharacterInput(const CharacterInputEvent& ev) override
     {
+        std::fprintf(stderr, "SAMUI char editing=%d character=%d keycode=%d string0=%d mod=%d\n",
+                     int(editing_), int(ev.character), int(ev.keycode), int(ev.string[0]), int(ev.mod));
         if (!editing_)
             return false;
         const char c = ev.string[0] != '\0' ? ev.string[0] : (ev.character >= 0x20 && ev.character < 0x7f ? static_cast<char>(ev.character) : 0);
@@ -157,6 +159,8 @@ protected:
 
     bool onKeyboard(const KeyboardEvent& ev) override
     {
+        std::fprintf(stderr, "SAMUI key editing=%d key=%d keycode=%d press=%d mod=%d\n",
+                     int(editing_), int(ev.key), int(ev.keycode), int(ev.press), int(ev.mod));
         if (!editing_)
             return false;
         const bool command = (ev.mod & (kModifierControl | kModifierSuper)) != 0;
