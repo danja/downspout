@@ -60,6 +60,17 @@ See also: [Transmission](https://danja.github.io/transmission/) (Generative Audi
 * `libserd-dev`
 * `libdbus-1-dev`
 
+For dev :
+
+```
+sudo apt install -y \
+  carla cmake ninja-build build-essential pkg-config \
+  libx11-dev libxcursor-dev libxext-dev libxrandr-dev libxfixes-dev \
+  libgl1-mesa-dev libjack-jackd2-dev \
+  xvfb xdotool x11-utils imagemagick \
+  jackd2 jq
+```
+
 To build and install locally:
 
 ```bash

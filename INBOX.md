@@ -1,0 +1,1 @@
+* check conventions used for VSTs flagged as instruments or effects in Ableton etc, check current plugin settings - eg. I got a report Bassgen didn't seem right
