@@ -50,7 +50,15 @@ Demos: [Jack's Dream](https://youtu.be/Rd-ACU0JUdo), [another example](https://w
 See also: [Transmission](https://danja.github.io/transmission/) (Generative Audio Workstation), [Valis](https://danja.github.io/valis) (Virtual Analog LLM Integrated System),
 [Flues](https://github.com/danja/flues) (the earlier LV2 plugins and Web Audio toys).
 
-## Build and Install
+## Build and Install on Linux
+
+### Prerequisites
+
+*at least - TODO check*
+
+* `libsord-dev`
+* `libserd-dev`
+* `libdbus-1-dev`
 
 To build and install locally:
 
