@@ -43,6 +43,7 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - `WANT_STATE` without `WANT_FULL_STATE` makes the host save defaults from `initState()` into every project. `Plugin`'s third constructor argument is *stateCount*. Run `scripts/check-plugin-state.sh`. DPF already saves ordinary parameters, so state is only for non-parameter data.
 - `activate()` and `sampleRateChanged()` must clear runtime state only, never call `init()` or reset the patch. Cover with a `testHostActivationKeepsThePatch`-style test.
 - Core tests never touch the DPF wrapper, so a green build proves nothing about state or lifecycle: change a setting, save, reopen in a host.
+- Embedded VST3 UIs under Carla: Carla focuses its own X11 wrapper, not DPF/pugl's deeper view, so a UI that needs typing must grab focus on click (`getWindow().focus()`). Verify by typing with XTEST and reading the engine text; `xdotool getwindowfocus` reports the wrapper even when typing works.
 - Recursive filters on idle voices decay into denormals (4x CPU): skip idle voices, zero their state, flush tiny values per block, and time new recursive DSP over a long decay.
 
 **Screenshots and UI**

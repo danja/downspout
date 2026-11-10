@@ -94,13 +94,17 @@ word when the host starts playing, so a part lines up with the text on every pas
 - Output is a mono voice copied to both channels; the audio port is a stereo group.
 - The VST3 category is Instrument | Synth. `DISTRHO_PLUGIN_IS_SYNTH` is set, as for Magneto.
 - MIDI sysex and events longer than three bytes are dropped.
-- Not validated in a plugin host yet (see `TODO.md`). Everything above is tested through the core;
-  the wrapper was also run as the JACK standalone under Xvfb, driven by a throwaway client that sent
-  MIDI and acted as timebase master with BBT. Keys mode spoke the right words at the right times;
-  Transport output, recorded and cross-correlated against the core's offline render, matched at a
-  constant lag (0.989 to 1.000 over four windows, 0.3 ms of jitter, JACK's tick resolution); and the
-  panel highlighted the word being spoken. Typing, caret movement, wrapping and mode switching in the
-  text box were driven with xdotool.
+- Validated as a VST3 under Carla (2026-11-10). Carla gives keyboard focus to its own X11 host wrapper
+  rather than the DPF/pugl view, so Sam grabs focus for its window on a left mouse press
+  (`getWindow().focus()` in `SamUI::onMouse`); without that, buttons and Clear landed but typed
+  characters never reached the view. Typing into the field, Clear, and the engine text read back over
+  MCP were checked in the in-process Carla host and through `carla-single`.
+- Everything above is tested through the core; the wrapper was also run as the JACK standalone under
+  Xvfb, driven by a throwaway client that sent MIDI and acted as timebase master with BBT. Keys mode
+  spoke the right words at the right times; Transport output, recorded and cross-correlated against
+  the core's offline render, matched at a constant lag (0.989 to 1.000 over four windows, 0.3 ms of
+  jitter, JACK's tick resolution); and the panel highlighted the word being spoken. Typing, caret
+  movement, wrapping and mode switching in the text box were driven with xdotool.
 
 ## Not done
 

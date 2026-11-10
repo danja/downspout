@@ -7,6 +7,20 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 (No open entries from before October 2026: the screenshot script now always captures on a private Xvfb.)
 
+## Sam: Carla's VST3 wrapper kept keyboard focus off the plugin view (2026-11-10)
+- **What happened:** In the JACK standalone, typing into Sam's text box reached the engine. Under Carla
+  loaded as an in-process VST3, buttons and Clear worked but typed characters arrived partially or not at
+  all. The X window tree was `Carla host wrapper` → an intermediate child → the DGL view; Carla gives
+  keyboard focus to the wrapper, so X key events never reached the view (`xdotool getwindowfocus` kept
+  reporting the wrapper). Focusing the DGL window by hand made typing work, confirming the path.
+- **Root cause:** DPF only grabs focus itself for standalone windows. When embedded, the host owns focus,
+  and Carla's `X11PluginUI::idle()` focuses its immediate child rather than DPF/pugl's deeper view. Sam's
+  `onMouse` therefore set `editing_` but the view never received the keys.
+- **Prevention:** Any embedded DPF UI that needs typing must grab focus for its own window on a click,
+  as `SamUI::onMouse` now does with `getWindow().focus()`. Verify by typing with XTEST and reading the
+  engine text over MCP; do not trust `xdotool getwindowfocus`, which reported the wrapper even when the
+  text arrived.
+
 ## Sieve: a "passing" core test hid a resynthesis that read each sample as it was written (2026-11-08)
 - **What happened:** `TODO.md`, the README and the product page all said "core tests + VST3 build pass", so
   Sieve was treated as finished except for its panel. A probe with **Floor** at 0 dB (a mask of unity in every

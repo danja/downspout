@@ -4,14 +4,6 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 
 ## Priority
 
-Sam plugin isn't accepting text input, the edit box is broken. In the JACK standalone it works: with the
-  standalone's own port (`SAM_PORT=<port> scripts/sam-say.sh`; 7230 is the REAPER-hosted Sam) Transport,
-  Clear and typing all reach the engine. Under Carla as a VST3 the buttons and Clear land but typed
-  characters arrive partially or not at all, so the fault lies in the VST3 key/character path, not the
-  edit box core. Next: trace `third_party/DPF/distrho/src/DistrhoUIVST3.cpp` `onKeyDown` ->
-  `DistrhoUIInternal.hpp` `handlePluginKeyboardVST` -> `onCharacterInput`, and check whether space and
-  focus changes swallow keys.
-
 Sieve is not usable yet: the wet path is broken. With a mask of unity in every bin, an STFT round
   trip must be a pure delay; instead white noise comes out 17.7 dB down and uncorrelated with the
   input (best-lag correlation 0.0085 over 2 048 lags), and a sine sitting on a scale note is
@@ -32,6 +24,11 @@ Sieve and zmorph "core tests" are smoke tests (2 and 1 `assert`, both via `<cass
 
 Chorale should allow syncing to transport BBT. Confirmed still open: `plugins/chorale/docs/design.md`
   lists a tempo-synced rate under "Not built", and the plugin reads no host tempo or BBT.
+
+Cleared 2026-11-10: Sam accepts typed text under Carla's in-process VST3 host. Carla gives keyboard
+  focus to its X11 host wrapper, not the DGL view, so `SamUI::onMouse` grabs focus on a left press
+  (`getWindow().focus()`). Verified by typing into the field and reading the engine text over MCP;
+  `carla-single` and the Sam core/MCP tests still pass.
 
 Cleared 2026-11-08: NAM is built and wired (`-DDOWNSPOUT_BUILD_NAM=ON`, 99/99 `.vst3` bundles in
   `build/bin`, all release/install/screenshot/Pages lists). Sieve/zmorph/scope now have full Pages
