@@ -83,7 +83,7 @@ protected:
     }
 
     void run(const float** inputs, float** outputs, const uint32_t frames,
-             const MidiEvent* /*events*/, const uint32_t /*eventCount*/) override
+             const MidiEvent* events, const uint32_t eventCount) override
     {
         core::Params p;
         p.root = params_[0];
@@ -95,7 +95,13 @@ protected:
         p.tilt = params_[6];
         p.mix = params_[7];
         p.level = params_[8];
-        core::processBlock(engine_, p, inputs[0], inputs[1], outputs[0], outputs[1], frames, nullptr, 0);
+        for (uint32_t i = 0; i < eventCount; ++i)
+        {
+            const MidiEvent& event = events[i];
+            if (event.size < 3) continue;
+            core::handleMidiNote(engine_, event.data[0], event.data[1], event.data[2], p.midiCh);
+        }
+        core::processBlock(engine_, p, inputs[0], inputs[1], outputs[0], outputs[1], frames);
         reportLatency();
     }
 

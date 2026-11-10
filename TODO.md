@@ -4,26 +4,23 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 
 ## Priority
 
-Sieve is not usable yet: the wet path is broken. With a mask of unity in every bin, an STFT round
-  trip must be a pure delay; instead white noise comes out 17.7 dB down and uncorrelated with the
-  input (best-lag correlation 0.0085 over 2 048 lags), and a sine sitting on a scale note is
-  cancelled to -43 dB rather than passed. In `processBlock` the new frame is written at
-  `base = frameCounter % kFftSize` and read at `outIdx = (frameCounter - kFftSize) % kFftSize`,
-  which is the same index: each output sample is read the instant it is written (at `window[0]` = 0)
-  while the three other overlap-add contributions arrive 1 024 samples later. Dead code sits just
-  above at `src/sieve_engine.cpp:192-196` ("align? use simple"). Fix the FIFO/overlap-add
-  alignment, then replace the 2-assert smoke test with a real one (unity mask = delayed input;
-  on-scale sine passes within a dB; a sine between the notes is attenuated by the stated **Floor**)
-  before touching the panel. Identity was wrong too and is fixed 2026-11-08: the wrapper said
-  "Mouth", used Mouth's URI, CLAP id and `Mout` unique id, so a DAW listed it as a second Mouth.
-
-Sieve and zmorph "core tests" are smoke tests (2 and 1 `assert`, both via `<cassert>` without
-  `downspout/test_assert.h`, so they would pass vacuously under `NDEBUG`). Scope has 20 checks and
-  the header. Bring all three up to the usual standard: assert observable effects, and show every
-  control has an audible or visible effect.
+zmorph and scope "core tests" need the usual standard: zmorph is a 1-assert smoke test via
+  `<cassert>` without `downspout/test_assert.h`, so it passes vacuously under `NDEBUG`; scope has 20
+  checks and the header. Bring both up to the usual standard: assert observable effects, and show
+  every control has an audible or visible effect.
 
 Chorale should allow syncing to transport BBT. Confirmed still open: `plugins/chorale/docs/design.md`
   lists a tempo-synced rate under "Not built", and the plugin reads no host tempo or BBT.
+
+Cleared 2026-11-10: Sieve is usable. A unity mask is a pure 1024-sample delay (white noise within
+  0.01 dB, correlation 1.000000, single-tap impulse) and the result is block-size invariant. The
+  2-assert smoke test is replaced by tests for Width, Floor, Tilt, Mix, Level, Root/Scale, held MIDI
+  and channel filtering. The wrapper now applies channel-filtered note events, the panel shows Root,
+  Scale and Source names, and the stale "wet path broken" README/design/Pages text is corrected.
+
+Sieve screenshot needs a human visual check: `docs/pages/assets/plugins/sieve.png` was recaptured
+  after the panel began showing Root/Scale/Source names, but this agent cannot view images. Confirm
+  the labels and value units are not clipped at 920x640.
 
 Cleared 2026-11-10: Sam accepts typed text under Carla's in-process VST3 host. Carla gives keyboard
   focus to its X11 host wrapper, not the DGL view, so `SamUI::onMouse` grabs focus on a left press

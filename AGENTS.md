@@ -38,6 +38,8 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - Before concluding the DSP is wrong, derive the reference from the formula for the stated order and check one point by hand (a 4-pole is -40 log10(1 + m^2), not half that). When a metric mixes two effects (resonant peak and passband loss), neutralise one before measuring the other.
 - A bound on output level is the wrong stability test for cascaded boosts (they legitimately exceed 100 dB): check that the impulse response decays.
 - Build output: filter with `grep -E "error:|Error [0-9]"` and check the exit status. After adding a test, confirm it actually ran (count/runtime changed) before saying it passes.
+- An STFT/overlap-add effect's first test is a unity-mask round trip: output equals the input delayed by the reported latency (level within 0.1 dB, correlation > 0.999, nearest best lag), plus a single-tap impulse response and block-size invariance. Allocation and finiteness are smoke checks, not core tests.
+- To allocate n elements write `std::vector<float> v(n)`, not `v{n}`: braces choose the initializer-list constructor and make a one-element vector. A new test that segfaults should go through `-fsanitize=address` before you suspect the DSP.
 
 **Host lifecycle and state**
 - `WANT_STATE` without `WANT_FULL_STATE` makes the host save defaults from `initState()` into every project. `Plugin`'s third constructor argument is *stateCount*. Run `scripts/check-plugin-state.sh`. DPF already saves ordinary parameters, so state is only for non-parameter data.

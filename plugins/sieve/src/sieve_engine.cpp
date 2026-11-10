@@ -111,23 +111,30 @@ void setHeldNote(Engine& e, int note, bool down) noexcept {
     e.heldNotes[static_cast<std::size_t>(note)] = down;
 }
 
+bool midiChannelMatches(const std::uint8_t status, const float midiCh) noexcept {
+    const int kind = status & 0xF0;
+    if (kind != 0x80 && kind != 0x90) return false;
+    const int wanted = static_cast<int>(std::lround(midiCh));
+    if (wanted <= 0) return true;
+    return static_cast<int>(status & 0x0F) + 1 == wanted;
+}
+
+bool handleMidiNote(Engine& e, const std::uint8_t status, const std::uint8_t note,
+                    const std::uint8_t velocity, const float midiCh) noexcept {
+    if (!midiChannelMatches(status, midiCh)) return false;
+    const bool down = (status & 0xF0) == 0x90 && velocity > 0;
+    setHeldNote(e, note, down);
+    return true;
+}
+
 void processBlock(Engine& e, const Params& p, const float* inL, const float* inR,
-                  float* outL, float* outR, std::uint32_t frames,
-                  const std::uint8_t* midi, std::uint32_t midiCount) {
+                  float* outL, float* outR, const std::uint32_t frames) {
     if (!e.allocated) {
         for (std::uint32_t i = 0; i < frames; ++i) { outL[i] = inL[i]; outR[i] = inR[i]; }
         return;
     }
-    // Packed note events (status, note, velocity) for callers that do not use
-    // setHeldNote(); the DPF wrapper uses setHeldNote() so it can filter by channel.
-    for (std::uint32_t i = 0; i < midiCount; i += 3) {
-        if (i + 2 >= midiCount) break;
-        const int status = midi[i];
-        const int note = midi[i + 1];
-        const int vel = midi[i + 2];
-        if ((status & 0xF0) == 0x90 && vel > 0) e.heldNotes[note] = true;
-        else if ((status & 0xF0) == 0x80 || ((status & 0xF0) == 0x90 && vel == 0)) e.heldNotes[note] = false;
-    }
+    // The wrapper applies channel-filtered note events with handleMidiNote();
+    // recompute the count here so the mask sees the current held set.
     e.heldCount = 0;
     for (int n = 0; n < 128; ++n) if (e.heldNotes[n]) ++e.heldCount;
 
@@ -142,7 +149,6 @@ void processBlock(Engine& e, const Params& p, const float* inL, const float* inR
         const float freq = (float)b * (float)e.sampleRate / (float)kFftSize;
         if (freq < 1.0f) { e.mask[b] = std::complex<float>(1.0f, 0.0f); continue; }
         const float midiNote = 69.0f + 12.0f * std::log2(freq / 440.0f);
-        int nearestMidi = -1;
         int centsDist = 10000;
         if (p.source >= 0.5f && e.heldCount > 0) {
             // nearest held note
@@ -152,11 +158,10 @@ void processBlock(Engine& e, const Params& p, const float* inL, const float* inR
                 const int d = (int)std::lround(std::fabs(midiNote - (float)n) * 100.0f);
                 if (d < bestD) { bestD = d; best = n; }
             }
-            if (best >= 0) { nearestMidi = best; centsDist = bestD; }
+            if (best >= 0) centsDist = bestD;
         } else {
             // Scale source, and the fallback when Held MIDI has no notes held
             const int nm = nearestScaleMidi((int)std::lround(midiNote), root, scale);
-            nearestMidi = nm;
             centsDist = (int)std::lround(std::fabs(midiNote - (float)nm) * 100.0f);
         }
         // gaussian gain

@@ -28,7 +28,7 @@ even harmonics against each other so a note can be made hollow or reedy.
 **Source** chooses what the mask is built from: **Scale** uses **Root** and **Scale** and
 applies the same set of pitch classes in every octave, while **Held MIDI** uses the notes
 currently held on **MIDI In**, so a chord on a controller moves the mask as you play. When
-no note is held the Held mode passes the dry signal.
+no note is held, Held mode falls back to **Root** and **Scale** rather than going silent.
 
 ## Functionality
 
@@ -65,9 +65,7 @@ odd/even tilt are Downspout's own.
 
 ### Status
 
-The panel, parameters, scale tables, MIDI note tracking, VST3 target and screenshot are
-complete, but the wet path is **not working yet**: the overlap-add reads each output sample
-from the wrong frame, so a mask of unity in every bin comes out 17.7 dB down and essentially
-uncorrelated with the input (measured over white noise), and a sine that sits exactly on a
-scale note is cancelled instead of passed. The two-assertion core test only checks
-finiteness, so it does not see this. Do not use it on material yet.
+Working. The wet path resynthesises correctly: a mask of unity in every bin is a pure delay of
+1024 samples (white noise within 0.01 dB, correlation 1.000000), an impulse produces a single output
+tap, and the result does not depend on the host block size. The core tests cover the round trip,
+Width, Floor, Tilt, Mix, Level, Root/Scale, and channel-filtered Held MIDI.

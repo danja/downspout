@@ -91,6 +91,10 @@ Sprout (`plugins/sprout`) uses the same 24-scale canonical ordering as plank (0 
 bebopMinor, no separate `pentatonic` row) and its tests pin the ordinals and hold an independent copy of
 every scale's semitone set.
 
+Sieve (`plugins/sieve`) uses the same 24-scale canonical ordering as plank (0 = chromatic through 23 =
+bebopMinor, no separate `pentatonic` row) for its STFT mask, and its tests hold an independent copy of
+every scale's semitone set. Root is a separate 0-11 pitch class (C through B).
+
 ## Pitch content
 
 Ordinals are stable, but the notes under an ordinal are a separate matter. Every plugin's table

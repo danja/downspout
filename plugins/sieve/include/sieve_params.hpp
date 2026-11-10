@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -47,6 +48,28 @@ inline constexpr std::array<std::array<int, 12>, kScaleCount> kScaleIntervals = 
 inline constexpr std::array<int, kScaleCount> kScaleDegreeCount = {
     12,7,7,7,7,7,7,7,7,7,7,7,7,7,5,5,6,6,7,8,8,8,8,8
 };
+
+// Display names in the canonical ordinals of docs/scales.md.
+inline constexpr std::array<const char*, kScaleCount> kScaleNames = {{
+    "Chromatic", "Major", "Ionian", "Minor", "Harmonic Minor", "Melodic Minor", "Dorian", "Phrygian",
+    "Lydian", "Mixolydian", "Locrian", "Phrygian Dominant", "Neapolitan Major", "Neapolitan Minor",
+    "Pentatonic Major", "Pentatonic Minor", "Blues", "Whole Tone", "Altered", "Half-Whole Dim",
+    "Whole-Half Dim", "Bebop Dominant", "Bebop Major", "Bebop Minor",
+}};
+
+inline constexpr std::array<const char*, 12> kRootNames = {{
+    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+}};
+
+inline const char* scaleName(const int scale) noexcept
+{
+    return kScaleNames[static_cast<std::size_t>(std::clamp(scale, 0, kScaleCount - 1))];
+}
+
+inline const char* rootName(const int root) noexcept
+{
+    return kRootNames[static_cast<std::size_t>(((root % 12) + 12) % 12)];
+}
 
 // Parameters
 enum ParamId : int {

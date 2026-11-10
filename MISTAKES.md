@@ -21,20 +21,16 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
   engine text over MCP; do not trust `xdotool getwindowfocus`, which reported the wrapper even when the
   text arrived.
 
-## Sieve: a "passing" core test hid a resynthesis that read each sample as it was written (2026-11-08)
-- **What happened:** `TODO.md`, the README and the product page all said "core tests + VST3 build pass", so
-  Sieve was treated as finished except for its panel. A probe with **Floor** at 0 dB (a mask of unity in every
-  bin, which must be a pure STFT delay) put white noise out 17.7 dB down with a best-lag correlation of 0.0085,
-  and a sine on a scale note came out at -43 dB. In `processBlock` the frame is written at
-  `base = frameCounter % kFftSize` and read at `outIdx = (frameCounter - kFftSize) % kFftSize` — the same index —
-  so each output sample is read at `window[0] = 0` as it is written and the other three overlap-add
-  contributions land 1 024 samples late. Dead code ("align? use simple") was left in the same loop.
-- **Root cause:** The core suite was two `assert`s for allocation and finiteness. No test asked the engine to do
-  the one thing an STFT mask must do (round-trip the input), so silent misalignment passed.
-- **Prevention:** For any STFT/overlap-add plugin, the first test is round-trip identity with a unity mask:
-  output equals the input delayed by the reported latency (level within 0.1 dB, correlation > 0.999). Then test
-  one bin at a time. Allocation, finiteness and "does not crash" are smoke checks, not core tests, and a doc
-  must not describe them as "core tests pass".
+## Sieve: a test vector sized by an initializer list held one element (2026-11-10)
+- **What happened:** While replacing Sieve's smoke test, `Buffers` used
+  `std::vector<float> inL {std::size_t(kTotal)};`. That is the initializer-list constructor, so each
+  buffer had one element holding 16384.0f. The first write past index 0 overflowed the heap and the
+  test segfaulted; ASAN then pointed at the line.
+- **Root cause:** Braces prefer `initializer_list` over the size constructor for a single integer.
+  The same syntax works for structs and `std::array`, so it reads plausibly.
+- **Prevention:** To allocate n elements use `std::vector<float> v(n)` or `v(static_cast<std::size_t>(n))`,
+  never `v{n}`. When a new test segfaults, run it under `-fsanitize=address` before guessing at the
+  DSP; the report names the exact write.
 
 ## Sieve: wrapper identity copy-pasted from Mouth (2026-11-08)
 - **What happened:** DAWs listed Sieve as a second Mouth. `plugins/sieve/src/dpf/DistrhoPluginInfo.h` had

@@ -45,8 +45,17 @@ int latencySamples(const Engine& e) noexcept;
 // Set or clear one held note. Used for the "Held MIDI" source; the caller is
 // responsible for channel filtering.
 void setHeldNote(Engine& e, int note, bool down) noexcept;
+
+// True for a note-on/note-off status on the selected channel. `midiCh` is 0 for
+// all channels, otherwise 1-16. Other message types never match.
+[[nodiscard]] bool midiChannelMatches(std::uint8_t status, float midiCh) noexcept;
+
+// Apply one note event if it passes the channel filter. A note-on with velocity 0
+// is a note-off. Returns whether the event matched.
+bool handleMidiNote(Engine& e, std::uint8_t status, std::uint8_t note,
+                    std::uint8_t velocity, float midiCh) noexcept;
+
 void processBlock(Engine& e, const Params& p, const float* inL, const float* inR,
-                  float* outL, float* outR, std::uint32_t frames,
-                  const std::uint8_t* midi, std::uint32_t midiCount);
+                  float* outL, float* outR, std::uint32_t frames);
 
 }  // namespace downspout::sieve
