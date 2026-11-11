@@ -1,7 +1,6 @@
 #include "spense_core.hpp"
 
 #include <algorithm>
-#include <bit>
 #include <cmath>
 
 namespace downspout::spense {
@@ -31,9 +30,9 @@ float fastExp2(const float x) noexcept
     const float i = std::floor(x);
     const float f = x - i;
     const float r = 1.0000000f + f * (0.6931472f + f * (0.2402265f + f * (0.0555041f + f * (0.0096181f + f * 0.0013333f))));
-    std::int32_t bits = std::bit_cast<std::int32_t>(r);
+    std::int32_t bits = bitCast<std::int32_t>(r);
     bits += static_cast<std::int32_t>(i) << 23;
-    return std::bit_cast<float>(bits);
+    return bitCast<float>(bits);
 }
 
 float stageFrequency(const float centreHz, const float drift, const float offset, const float maxHz) noexcept

@@ -176,6 +176,23 @@ DPF `win64` action path; Wine validation is currently an additional local
 diagnostic rather than a release-workflow gate. See
 [cross-platform.md](cross-platform.md) for the current platform status.
 
+CI parity note: the GitHub Actions Windows job cross-builds on an
+`ubuntu-22.04` runner through `distrho/dpf-cmake-action@v1`, which installs
+jammy's mingw-w64 (GCC 10.3, posix threads) and pins `cmake/jammy` (3.22.1).
+That toolchain — not the local distro's MinGW — is the effective C++ library
+minimum for plugin code, so library features newer than libstdc++ 10 (for
+example `std::bit_cast`, GCC 11) fail only on CI while local cross-builds stay
+green. The action's build step also runs under step-level `continue-on-error`,
+so its failure surfaces downstream as empty bundle skeletons in
+`scripts/package-built-bundles.sh`, not as a red step. To reproduce a Windows
+CI failure locally with the exact toolchain, extract jammy's mingw debs under
+`build/toolchains/mingw12/` and run `repro-win64.sh` from that directory
+(`configure`, then `build`); it mirrors the action's win64 cmake invocation
+and gives a local, readable compile log. CI log text needs authentication to
+read; the exit code and failure step are available anonymously through the
+check-run `/annotations` endpoint, and a missing `downspout-win64-*` action
+artifact means the action's internal build step died.
+
 Automated tests do not replace listening and host validation. Effects and
 instruments are tested in real sessions for routing, automation, saved-state
 recall, transport behavior, bypass, controller interaction, visual usability,

@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <array>
-#include <bit>
 #include <cmath>
 #include <cstdio>
 #include <vector>
@@ -108,9 +107,9 @@ static float refExp2(float x)
     const float i = std::floor(x);
     const float f = x - i;
     const float r = 1.0f + f * (0.6931472f + f * (0.2402265f + f * (0.0555041f + f * (0.0096181f + f * 0.0013333f))));
-    int32_t v = std::bit_cast<int32_t>(r);
+    int32_t v = bitCast<int32_t>(r);
     v += static_cast<int32_t>(i) << 23;
-    return std::bit_cast<float>(v);
+    return bitCast<float>(v);
 }
 
 // One Dispenser CascadeAPF over a buffer with constant, already-settled parameters.
@@ -145,6 +144,15 @@ static void refCascade(std::vector<float>& buf, const std::array<float, 8>& tabl
         }
         sample = hist[7];
     }
+}
+
+// The bit pun behind fastExp2/refExp2, checked against known patterns rather than against itself.
+static void testBitCast()
+{
+    check("bitCast reads the pattern of 1.0f", bitCast<std::int32_t>(1.0f) == 0x3F800000);
+    check("bitCast rebuilds 1.0f from its bits", bitCast<float>(0x3F800000) == 1.0f);
+    check("bitCast round-trips", bitCast<float>(bitCast<std::int32_t>(0.5f)) == 0.5f);
+    check("bitCast handles a negative zero", bitCast<std::int32_t>(-0.0f) == static_cast<std::int32_t>(0x80000000));
 }
 
 static void testMatchesTheSourceAlgorithm()
@@ -534,6 +542,7 @@ static void testParameterTableMatchesCore()
 
 int main()
 {
+    testBitCast();
     testMatchesTheSourceAlgorithm();
     testMagnitudeIsFlat();
     testPhaseMatchesModel();

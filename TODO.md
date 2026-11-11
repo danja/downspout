@@ -4,6 +4,9 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 
 ## Priority
 
+Check every plugin's VST3 class definition and set Steinberg-appropriate subCategories (Instrument, Fx,
+  and anything more specific). From INBOX.
+  
 zmorph and scope "core tests" need the usual standard: zmorph is a 1-assert smoke test via
   `<cassert>` without `downspout/test_assert.h`, so it passes vacuously under `NDEBUG`; scope has 20
   checks and the header. Bring both up to the usual standard: assert observable effects, and show
@@ -32,15 +35,16 @@ Cleared 2026-11-08: NAM is built and wired (`-DDOWNSPOUT_BUILD_NAM=ON`, 99/99 `.
   front matter, a group (so they appear in the catalogue), `sieve.png` and `zmorph.png` captured;
   `scripts/package-built-bundles.sh` lists all three; the empty `plugins/perc/` skeleton is gone.
 
-Windows CI probe: the build step has failed every run since Oct 30 (first consistent failure bd443b1,
-  which added heavyverb and spense; last pass 4a05771) and is masked by job-level `continue-on-error`,
-  so it does not fail the workflow. The dpf-cmake-action build exits 2 and
-  `scripts/package-built-bundles.sh` then finds no bundles. Deferred 2026-11-11 while the Linux OOM fix
-  (package-release.sh's uncapped `--parallel`) landed; needs its own diagnosis — CI logs require auth to
-  read and mingw cannot be installed locally without sudo.
+Windows CI probe: root cause found and fixed 2026-11-11, pending a green run. The build step failed
+  every run since Oct 30 (heavyverb and spense arrived in 6b480128; last pass 4a05771) because
+  spense's `std::bit_cast` does not exist in the CI cross-compiler's libstdc++ 10 (jammy mingw
+  GCC 10.3 via distrho/dpf-cmake-action; the local MinGW is GCC 13, which is why local builds stayed
+  green). Now a memcpy pun in `plugins/spense` (core and test reference); 139/139 core checks pass
+  and a full win64 cross-build with the exact jammy toolchain
+  (`build/toolchains/mingw12/repro-win64.sh`) verifies it. Remaining: push, watch the Windows probe
+  go green and the win64 artifact appear; see MISTAKES.md for how the failure was pinned down.
 
-Check every plugin's VST3 class definition and set Steinberg-appropriate subCategories (Instrument, Fx,
-  and anything more specific). From INBOX.
+
 
 ## Fun
 

@@ -45,6 +45,10 @@ a3 v3`), whose all-pass is `in - 2 k bandpass`, i.e. `(s^2 - k s + 1) / (s^2 + k
    source used a 0.7 skew. The range and default are unchanged.
 6. **No mono bus.** Stereo in and out only (the source also offered mono); a missing right input is
    treated as the left.
+7. **The float/int pun in `fastExp2` is a memcpy helper, not `std::bit_cast`.** The Windows CI
+   cross-compiler (jammy mingw-w64, GCC 10.3) predates libstdc++'s `std::bit_cast` (GCC 11), so
+   `bitCast` in `spense_core.hpp` does the same operation with `std::memcpy`; the tests' literal
+   reference uses it too, and a known-pattern check pins it down.
 
 Not ported: the JUCE editor, the AVX2/NEON intrinsics (the compiler vectorises the eight-stage
 loop), the standalone build.

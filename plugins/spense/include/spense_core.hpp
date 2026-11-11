@@ -2,6 +2,8 @@
 
 #include <array>
 #include <cstdint>
+#include <cstring>
+#include <type_traits>
 
 namespace downspout::spense {
 
@@ -9,6 +11,19 @@ namespace downspout::spense {
 // DSP in ~/github/Dispenser (MIT, JUCE/AVX2); see docs/design.md for what was kept and changed.
 //
 //   input -> Pre Gain -> Stack x (8 all-pass stages) -> Post Gain -> optional 0 dB clip -> output
+
+// float <-> int bit pun for fastExp2. std::bit_cast needs libstdc++ 11, but the Windows CI
+// cross-compiler (jammy mingw-w64, GCC 10.3) stops at it; memcpy is the same operation on
+// every compiler the repo builds with and compiles down to a plain register move.
+template <typename To, typename From>
+[[nodiscard]] inline To bitCast(const From from) noexcept
+{
+    static_assert(std::is_trivially_copyable_v<To> && std::is_trivially_copyable_v<From>);
+    static_assert(sizeof(To) == sizeof(From));
+    To to {};
+    std::memcpy(&to, &from, sizeof(To));
+    return to;
+}
 
 inline constexpr int kStagesPerCascade = 8;
 inline constexpr int kMaxStack = 8;
