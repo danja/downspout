@@ -146,6 +146,11 @@ Useful overrides:
   Set to `0` to skip Linux shared-object stripping.
 - `DOWNSPOUT_RUN_TESTS`
   Set to `0` to skip `ctest`.
+- `DOWNSPOUT_BUILD_JOBS`
+  Parallel build job count. Default: the machine's core count
+  (`nproc`). The build is always capped: an uncapped `cmake --build
+  --parallel` runs bare `make -j` (unlimited jobs) with the Makefiles
+  generator, which can exhaust memory on small machines.
 
 ## GitHub Actions
 

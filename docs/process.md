@@ -142,7 +142,7 @@ cmake -S . -B build/windows-x86_64 \
   -DBUILD_TESTING=OFF \
   -DDOWNSPOUT_BUILD_SIDECAR=OFF \
   -DDOWNSPOUT_BUILD_AI_COORDINATOR=OFF
-cmake --build build/windows-x86_64 --target <plugin>-vst3 --parallel
+cmake --build build/windows-x86_64 --target <plugin>-vst3 --parallel "$(nproc)"
 ```
 
 Sidecar is excluded because it has Linux-only runtime dependencies. Cross-built

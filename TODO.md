@@ -32,6 +32,16 @@ Cleared 2026-11-08: NAM is built and wired (`-DDOWNSPOUT_BUILD_NAM=ON`, 99/99 `.
   front matter, a group (so they appear in the catalogue), `sieve.png` and `zmorph.png` captured;
   `scripts/package-built-bundles.sh` lists all three; the empty `plugins/perc/` skeleton is gone.
 
+Windows CI probe: the build step has failed every run since Oct 30 (first consistent failure bd443b1,
+  which added heavyverb and spense; last pass 4a05771) and is masked by job-level `continue-on-error`,
+  so it does not fail the workflow. The dpf-cmake-action build exits 2 and
+  `scripts/package-built-bundles.sh` then finds no bundles. Deferred 2026-11-11 while the Linux OOM fix
+  (package-release.sh's uncapped `--parallel`) landed; needs its own diagnosis — CI logs require auth to
+  read and mingw cannot be installed locally without sudo.
+
+Check every plugin's VST3 class definition and set Steinberg-appropriate subCategories (Instrument, Fx,
+  and anything more specific). From INBOX.
+
 ## Fun
 
 Make a new plugin that will be entirely your design, except for two constraints : it shouldn't overlap too much with existing Downspout plugins and it should be *interesting*. Document the key steps of the development process in a file under docs/ - this should be written in a way that can help other agents build plugins.
@@ -339,7 +349,11 @@ All seven are built, wired and tested (core suites under ASan/UBSan where noted 
 None has been listened to or run in a host. Remaining per plugin:
 
 * **ladder**: listen (is Bass Comp 50 % the right default? the defaults sit 3.5 dB below unity); aliasing at
-  high drive is not measured.
+  high drive is not measured. External review (Nov 2026): the Huovilainen + Mystran cheap-ZDF design is
+      judged sound and the tanh approximation good, but self-resonance pitch is expected to go flat under
+      heavy gain, and coefficients are smoothed linearly per-frame — spiky with variable host block sizes —
+      instead of slew-limiting the base parameters. Consider slew limiting and measure resonance pitch
+      tracking at high drive.
 * **glue**: listen (is the auto-release table 40-800 ms / 8 dB depth right? the 10 ms RMS window?);
   check in a host that Look-ahead's reported latency is compensated.
 * **octet**: listen to and look at the new spectrum analyser in a host (Off/Pre/Post; does the 40 dB/s fall and the 0 dB-at-full-scale scale read well? is a 4.5 dB/oct tilt wanted?); the CC band mapping (Frequency/Gain/Q of one band + Output) is my choice: confirm it suits a Drift lane.

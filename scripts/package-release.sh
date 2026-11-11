@@ -154,7 +154,10 @@ build_command=(cmake --build "$build_dir" --config "$build_type")
 if [[ -n "${DOWNSPOUT_BUILD_JOBS:-}" ]]; then
   build_command+=(--parallel "$DOWNSPOUT_BUILD_JOBS")
 else
-  build_command+=(--parallel)
+  # `--parallel` with no count makes the Makefiles generator run bare
+  # `make -j` (unlimited jobs), which OOM-kills cc1plus on memory-limited
+  # CI runners. Match install.sh and cap the default to the core count.
+  build_command+=(--parallel "$(nproc)")
 fi
 
 echo "Building downspout"

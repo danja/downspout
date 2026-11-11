@@ -150,3 +150,9 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 **What happened:** "\xc2\xb11 octave" in the UI string parsed as `\xb11` and clipped the line.
 **Root cause:** C `\x` escapes consume every following hex digit.
 **Prevention:** write "+/-" or split the literal; review UI text at full resolution.
+
+## package-release.sh: `cmake --build --parallel` with no count means unlimited jobs (2026-11-11)
+
+**What happened.** The Linux CI job died around 92 % with `c++: fatal error: Killed signal terminated program cc1plus`; some runs instead reported the build step as *cancelled* ("The operation was canceled") while the job still failed. Local builds through `install.sh` never showed the problem.
+**Root cause.** `scripts/package-release.sh` appended `--parallel` with no job count when `DOWNSPOUT_BUILD_JOBS` was unset. For the Makefiles generator that runs bare `make -j` — *unlimited* parallelism — so a 4-vCPU/16 GB GitHub runner started dozens of concurrent `cc1plus` processes and the OOM killer fired; when it killed the runner agent the step reads "cancelled" rather than "failed". `install.sh` never hit it because it passes `--parallel "$(nproc)"`.
+**Prevention.** Never pass `--parallel` without a count: for the Makefiles generator it is not a sensible default, it is unlimited jobs. Cap the default to the core count and keep an env override for constrained runners. A CI step that ends "cancelled" with no error text is a runner-agent kill (usually OOM), not a user cancellation. Measure before "fixing" it another way: a full cold `-j4` Release build of all ~95 plugins peaked at ~3.5 GB of compile memory, so a cap costs nothing and the OOM was scheduling, not a leak.
