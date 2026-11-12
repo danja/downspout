@@ -3,6 +3,7 @@
 
 #define DISTRHO_PLUGIN_BRAND "Downspout"
 #define DISTRHO_PLUGIN_NAME "Gater"
+#define DISTRHO_PLUGIN_VST3_CATEGORIES "Fx|Dynamics"
 #define DISTRHO_PLUGIN_URI "http://danja.github.io/downspout/gater"
 #define DISTRHO_PLUGIN_CLAP_ID "it.hyperdata.downspout.gater"
 
