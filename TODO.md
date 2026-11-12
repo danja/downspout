@@ -4,51 +4,48 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 
 ## Priority
 
-Check every plugin's VST3 class definition and set Steinberg-appropriate subCategories (Instrument, Fx,
-  and anything more specific). From INBOX.
-  
+Check every plugin's VST3 class definition and set Steinberg-appropriate subCategories (Instrument, Fx, and anything more specific).
+
 zmorph and scope "core tests" need the usual standard: zmorph is a 1-assert smoke test via
-  `<cassert>` without `downspout/test_assert.h`, so it passes vacuously under `NDEBUG`; scope has 20
-  checks and the header. Bring both up to the usual standard: assert observable effects, and show
-  every control has an audible or visible effect.
+`<cassert>` without `downspout/test_assert.h`, so it passes vacuously under `NDEBUG`; scope has 20
+checks and the header. Bring both up to the usual standard: assert observable effects, and show
+every control has an audible or visible effect.
 
 Chorale should allow syncing to transport BBT. Confirmed still open: `plugins/chorale/docs/design.md`
-  lists a tempo-synced rate under "Not built", and the plugin reads no host tempo or BBT.
+lists a tempo-synced rate under "Not built", and the plugin reads no host tempo or BBT.
 
 Cleared 2026-11-10: Sieve is usable. A unity mask is a pure 1024-sample delay (white noise within
-  0.01 dB, correlation 1.000000, single-tap impulse) and the result is block-size invariant. The
-  2-assert smoke test is replaced by tests for Width, Floor, Tilt, Mix, Level, Root/Scale, held MIDI
-  and channel filtering. The wrapper now applies channel-filtered note events, the panel shows Root,
-  Scale and Source names, and the stale "wet path broken" README/design/Pages text is corrected.
+0.01 dB, correlation 1.000000, single-tap impulse) and the result is block-size invariant. The
+2-assert smoke test is replaced by tests for Width, Floor, Tilt, Mix, Level, Root/Scale, held MIDI
+and channel filtering. The wrapper now applies channel-filtered note events, the panel shows Root,
+Scale and Source names, and the stale "wet path broken" README/design/Pages text is corrected.
 
 Sieve screenshot needs a human visual check: `docs/pages/assets/plugins/sieve.png` was recaptured
-  after the panel began showing Root/Scale/Source names, but this agent cannot view images. Confirm
-  the labels and value units are not clipped at 920x640.
+after the panel began showing Root/Scale/Source names, but this agent cannot view images. Confirm
+the labels and value units are not clipped at 920x640.
 
 Cleared 2026-11-10: Sam accepts typed text under Carla's in-process VST3 host. Carla gives keyboard
-  focus to its X11 host wrapper, not the DGL view, so `SamUI::onMouse` grabs focus on a left press
-  (`getWindow().focus()`). Verified by typing into the field and reading the engine text over MCP;
-  `carla-single` and the Sam core/MCP tests still pass.
+focus to its X11 host wrapper, not the DGL view, so `SamUI::onMouse` grabs focus on a left press
+(`getWindow().focus()`). Verified by typing into the field and reading the engine text over MCP;
+`carla-single` and the Sam core/MCP tests still pass.
 
 Cleared 2026-11-08: NAM is built and wired (`-DDOWNSPOUT_BUILD_NAM=ON`, 99/99 `.vst3` bundles in
-  `build/bin`, all release/install/screenshot/Pages lists). Sieve/zmorph/scope now have full Pages
-  front matter, a group (so they appear in the catalogue), `sieve.png` and `zmorph.png` captured;
-  `scripts/package-built-bundles.sh` lists all three; the empty `plugins/perc/` skeleton is gone.
+`build/bin`, all release/install/screenshot/Pages lists). Sieve/zmorph/scope now have full Pages
+front matter, a group (so they appear in the catalogue), `sieve.png` and `zmorph.png` captured;
+`scripts/package-built-bundles.sh` lists all three; the empty `plugins/perc/` skeleton is gone.
 
 Windows CI probe: root cause found and fixed 2026-11-11, pending a green run. The build step failed
-  every run since Oct 30 (heavyverb and spense arrived in 6b480128; last pass 4a05771) because
-  spense's `std::bit_cast` does not exist in the CI cross-compiler's libstdc++ 10 (jammy mingw
-  GCC 10.3 via distrho/dpf-cmake-action; the local MinGW is GCC 13, which is why local builds stayed
-  green). Now a memcpy pun in `plugins/spense` (core and test reference); 139/139 core checks pass
-  and a full win64 cross-build with the exact jammy toolchain
-  (`build/toolchains/mingw12/repro-win64.sh`) verifies it. Remaining: push, watch the Windows probe
-  go green and the win64 artifact appear; see MISTAKES.md for how the failure was pinned down.
-
-
+every run since Oct 30 (heavyverb and spense arrived in 6b480128; last pass 4a05771) because
+spense's `std::bit_cast` does not exist in the CI cross-compiler's libstdc++ 10 (jammy mingw
+GCC 10.3 via distrho/dpf-cmake-action; the local MinGW is GCC 13, which is why local builds stayed
+green). Now a memcpy pun in `plugins/spense` (core and test reference); 139/139 core checks pass
+and a full win64 cross-build with the exact jammy toolchain
+(`build/toolchains/mingw12/repro-win64.sh`) verifies it. Remaining: push, watch the Windows probe
+go green and the win64 artifact appear; see MISTAKES.md for how the failure was pinned down.
 
 ## Fun
 
-Make a new plugin that will be entirely your design, except for two constraints : it shouldn't overlap too much with existing Downspout plugins and it should be *interesting*. Document the key steps of the development process in a file under docs/ - this should be written in a way that can help other agents build plugins.
+Make a new plugin that will be entirely your design, except for two constraints : it shouldn't overlap too much with existing Downspout plugins and it should be _interesting_. Document the key steps of the development process in a file under docs/ - this should be written in a way that can help other agents build plugins.
 
 Add two Ascending patterns to Bassgen corresponding to the existing Descending ones.
 
@@ -114,6 +111,7 @@ linear axis; Range, Contrast, Pixels, Follow input level, Mix, Output; picture p
 decoders written in the plugin, so nothing was vendored. Core tests 23k checks, mutation-checked, damaged-file fuzz under ASan/UBSan.
 
 Left out, in rough order of value:
+
 - [ ] **Listen and look**: run it in REAPER behind a spectrogram (white noise and a pad in; Tone and Input sources); check the loudness of default pictures, whether Range 60 dB and
       the 0.02 bin amplitude are sensible, and how the default Follow input level 100 % feels (silence in is silent out: is that the right default?).
 - [ ] **JPEG** (baseline and progressive): needs a decoder written in the plugin (a few hundred lines: Huffman, IDCT, upsampling) or a vendored single header, which needs approval.
@@ -203,10 +201,10 @@ Standalone `g++ -std=c++20 -Wall -Wextra -fsyntax-only` over `plugins/*/src/*.cp
 and others will not compile). Re-run after any wrapper or state change: the wrapper callbacks
 are what the core tests never touch.
 
-* Last full sweep 2026-11-06: zero warnings in all plugin core files under `-Wall -Wextra` (nam
+- Last full sweep 2026-11-06: zero warnings in all plugin core files under `-Wall -Wextra` (nam
   shows only unused-parameter warnings in vendored NAM headers). Includes the new shared
   `voice_leading.hpp` and the markov/bassgen/cadence/drumgen changes.
-* `campione` loader: the `smpl` loop end is inclusive in the WAV spec, but the engine wraps at
+- `campione` loader: the `smpl` loop end is inclusive in the WAV spec, but the engine wraps at
   `position >= loopEnd`, so the last loop sample is skipped (one frame). Changing it means
   adjusting load, save and the engine together; decide whether it is worth it.
 
@@ -255,26 +253,26 @@ are what the core tests never touch.
 
 ## Other
 
-* `skream` **Morph LP-HP** (bipolar, default off): not yet listened to in a host; try it with Drift
+- `skream` **Morph LP-HP** (bipolar, default off): not yet listened to in a host; try it with Drift
   on Cutoff. Decisions worth a listen: the morph weight follows cutoff position linearly (t = 0.5
   is a notch at the cutoff), and it only reshapes the forward filter, not the Scream feedback
   high-pass.
-* **Damiano Linked/Split stereo** (`plugins/damiano/docs/porting-notes.md`): not yet auditioned in a
+- **Damiano Linked/Split stereo** (`plugins/damiano/docs/porting-notes.md`): not yet auditioned in a
   host: try Split with Soft left and Fuzz right, and two Drift lanes on CC Drive / CC Drive R.
   Verify an old project (pre-split state) loads Linked. Open: "shape" is the stepped waveshaper
   mode; a continuous shape (asymmetry/bias) would be new DSP. Tone and Folds are not CC-controlled.
-* `voxmod`: host validation in REAPER still pending.
-* `sinevox`: host validation in REAPER pending, in particular (1) that the host routes
+- `voxmod`: host validation in REAPER still pending.
+- `sinevox`: host validation in REAPER pending, in particular (1) that the host routes
   MIDI out from an effect, (2) the 4-in layout (speech 1/2, carrier 3/4) and (3) that
   saved projects restore the patch. Not yet auditioned on real speech: high voices
   (f0 > ~300 Hz) may lock onto harmonics; fricatives give wide unsteady tracks. Ideas:
   pitch-aware analysis window, a fixed per-formant frequency range, an optional noise
   source for unvoiced frames in vocoder mode, panel following CC changes (needs an
   output mirror parameter).
-* `keyframe`: the leash diagram is static at unity rates because drift is genuinely ~0 there;
+- `keyframe`: the leash diagram is static at unity rates because drift is genuinely ~0 there;
   a splice halo was added so it reads live during crossfades. If it still reads dead at
   defaults, the diagram needs a rethink, not another lamp.
-* **Beards** host validation and follow-ups: load `beards.vst3` in REAPER, route Drift (CC 1-4)
+- **Beards** host validation and follow-ups: load `beards.vst3` in REAPER, route Drift (CC 1-4)
   and Conductor (ch 16) into it, and listen: the DSP is a port but has only been checked
   by core tests and a headless UI capture. Not ported from Beads: delay (multitap) mode,
   CV/gate inputs, wow and flutter, 24 kHz Tape rate. The reverb is a new Griesinger tank,
@@ -282,13 +280,13 @@ are what the core tests never touch.
 
 ## Pratt
 
-* **Verify in a host (REAPER):** load, play notes, filter an audio track, save/reopen state.
+- **Verify in a host (REAPER):** load, play notes, filter an audio track, save/reopen state.
   Nothing has been listened to. Also confirm the host accepts an instrument with audio inputs.
-* Listen to drum levels (normalised per hit, consistent at ~0.15); check voice-stealing clicks.
-* GM Program mode queues a warm-up per Program Change (last 8 voices); host-check that
+- Listen to drum levels (normalised per hit, consistent at ~0.15); check voice-stealing clicks.
+- GM Program mode queues a warm-up per Program Change (last 8 voices); host-check that
   switching programs on several channels no longer glitches on first notes. Offline-tested only.
-* Catalogue screenshot shows Synth mode (filter dimmed); consider a Synth + Filter capture.
-* **Timbre Index** (separate fixed filter chain, default 1 = off) is tested; not yet listened to.
+- Catalogue screenshot shows Synth mode (filter dimmed); consider a Synth + Filter capture.
+- **Timbre Index** (separate fixed filter chain, default 1 = off) is tested; not yet listened to.
   Open: it is limited to one index <= 8192 (degree <= 13), so very dark voices still lean on
   Rolloff; a second chain or a larger limit would need `kMaxSections` raised and a warm-up that
   touches only the indices in use (see `plugins/pratt/docs/high-base.md`). Filter mode keeps
@@ -296,53 +294,53 @@ are what the core tests never touch.
 
 ## Generators and MIDI tools (host and listening checks, small follow-ups)
 
-* **melgen Inertia** and **counterpointer Inertia** (scoring term; Counterpoint mode only, not Bass
+- **melgen Inertia** and **counterpointer Inertia** (scoring term; Counterpoint mode only, not Bass
   Descend): not yet listened to in a host.
-* **Retune** (`plugins/retune/`): host validation, a catalogue screenshot with a real `.scl` loaded (the
+- **Retune** (`plugins/retune/`): host validation, a catalogue screenshot with a real `.scl` loaded (the
   standalone shows 12-TET), `.kbm` support, saving scale contents with the session (only the path is
   saved), and an audition against a per-channel-bend synth.
-* **Per-channel pitch bend** (needed for Retune): done for canticle, moka, floozy, syrinx, basilico,
+- **Per-channel pitch bend** (needed for Retune): done for canticle, moka, floozy, syrinx, basilico,
   gremlin, campione, mosaic, strata, quartet, monochord (pratt already bends per channel; plank, magneto and drumkit are not
   applicable). Remaining: audition them with Retune in a host, confirm pratt's default Bend Range suits
   Retune's 2 st, and add a Bend Range control where a synth has a fixed range, noting it in each README.
-* **Sprout**: host validation, a rule editor (grammars are built in), listening to which grammars sound
+- **Sprout**: host validation, a rule editor (grammars are built in), listening to which grammars sound
   good at which Step size; its MIDI input (held-notes pitch source, Drift CC 1-4, Conductor CC 21-24) is
   not yet auditioned (try harmonic-atlas into it, Pitch source = Held). Open: MIDI is applied at block
   start, not sample-accurately; no pass-through of incoming MIDI.
-* **drumgen** (`Generation every`) and **CA lanes in drumgen and xoxolo**: not yet listened to (try Rule 90
+- **drumgen** (`Generation every`) and **CA lanes in drumgen and xoxolo**: not yet listened to (try Rule 90
   and 30 on Hats; mark the hat and percussion lanes in xoxolo). Open: xoxolo's grid shows the programmed
   pattern, not the evolved row now playing.
-* **Magneto look and feel:** `include/downspout/dpf/MagnetoKit.hpp` is shared by Retune, Sprout, Markov,
+- **Magneto look and feel:** `include/downspout/dpf/MagnetoKit.hpp` is shared by Retune, Sprout, Markov,
   Damiano and the newer instruments and effects. Older generator plugins still use `GenerativePanelUI`
   (mosaic, polymeter, etc.); restyle if wanted. Retune, Sprout and Markov were rebuilt against the shared
   header but not re-screenshotted; confirm they look unchanged.
-* **Gravity** is in `harmonic-atlas`. `cadence` (learned harmony) has not had it; its progression model is
+- **Gravity** is in `harmonic-atlas`. `cadence` (learned harmony) has not had it; its progression model is
   different, so decide whether a gravity bias on the learned transitions makes sense.
-* **Atlas voice-leading** is local to `harmonic-atlas`. Listen to it; the chords sit low (around C3-C4)
+- **Atlas voice-leading** is local to `harmonic-atlas`. Listen to it; the chords sit low (around C3-C4)
   because only the bottom and top of the range are penalised, so consider a centre pull.
-* **Markov**: not yet auditioned in a host (each style, Order 2 after learning a line, Learned mix at 50 %).
+- **Markov**: not yet auditioned in a host (each style, Order 2 after learning a line, Learned mix at 50 %).
   Open: learning assumes one melodic line (chords blur the counts); the matrix editor has click-to-cycle,
   drag-to-paint and right-click-to-zero but no undo; no MIDI pass-through; the editor does not move while a
   CC drives a control.
-* **Conductor awareness** (lifeform, luma, polymeter, xoxolo, counterpointer, cadence, arpgen, m-mix; off by
+- **Conductor awareness** (lifeform, luma, polymeter, xoxolo, counterpointer, cadence, arpgen, m-mix; off by
   default) is not yet auditioned in a host. Still without it: `mnemosyne` (only Novelty and a seed re-roll
   would fit, and its core takes parameters const, so it needs wrapper-level handling), `sidecar` (its wrapper
   is tangled up with the server path), `tuney-vst`.
-* **Jig port (from Farelo, `#jigdaw`):** port Sprout, Markov and Moka from Downspout to Jig format. Lives
+- **Jig port (from Farelo, `#jigdaw`):** port Sprout, Markov and Moka from Downspout to Jig format. Lives
   outside this repo; keep their portable cores free of DPF code so they move cleanly.
-* Later candidate: chord-graph walker. A shared voice-leading helper in generative-common is only worth it
+- Later candidate: chord-graph walker. A shared voice-leading helper in generative-common is only worth it
   if a second plugin needs it (shared code, needs approval).
-* [x] **Review `~/github/auricle-algo`** (from INBOX): findings recorded in
+- [x] **Review `~/github/auricle-algo`** (from INBOX): findings recorded in
       `docs/auricle-algo-review.md`.
-* [x] **Shared voice-leading helper** (from auricle review): created
+- [x] **Shared voice-leading helper** (from auricle review): created
       `plugins/generative-common/include/voice_leading.hpp` (header-only: resolvePitch,
       resolveChord), compiles and integrated into markov (octave placement), bassgen
       (noteFromSemitoneOffset) and cadence (nearest_midi_for_pc). melgen and
       counterpointer use scale-note search rather than fixed-pitch-class octave
       selection, so no direct adoption there.
-* [x] **Markov stay/leap params** (from auricle review): added `stay_prob` and `leap_prob`
+- [x] **Markov stay/leap params** (from auricle review): added `stay_prob` and `leap_prob`
       params (default off), wired into walkNote, UI, profile.ttl; tests pass.
-* [x] **Drumgen voice links** (from auricle review): added `voiceLinksEnabled` control plus a
+- [x] **Drumgen voice links** (from auricle review): added `voiceLinksEnabled` control plus a
       deterministic post-pass (snare->clap answer, kick->clave gap fill, closed_hat<->open_hat
       interlock), serialized (voiceLinks=1), gated; tests pass. Full editable link graph is
       not implemented.
@@ -352,24 +350,24 @@ are what the core tests never touch.
 All seven are built, wired and tested (core suites under ASan/UBSan where noted in their `docs/design.md`).
 None has been listened to or run in a host. Remaining per plugin:
 
-* **ladder**: listen (is Bass Comp 50 % the right default? the defaults sit 3.5 dB below unity); aliasing at
+- **ladder**: listen (is Bass Comp 50 % the right default? the defaults sit 3.5 dB below unity); aliasing at
   high drive is not measured. External review (Nov 2026): the Huovilainen + Mystran cheap-ZDF design is
-      judged sound and the tanh approximation good, but self-resonance pitch is expected to go flat under
-      heavy gain, and coefficients are smoothed linearly per-frame — spiky with variable host block sizes —
-      instead of slew-limiting the base parameters. Consider slew limiting and measure resonance pitch
-      tracking at high drive.
-* **glue**: listen (is the auto-release table 40-800 ms / 8 dB depth right? the 10 ms RMS window?);
+  judged sound and the tanh approximation good, but self-resonance pitch is expected to go flat under
+  heavy gain, and coefficients are smoothed linearly per-frame — spiky with variable host block sizes —
+  instead of slew-limiting the base parameters. Consider slew limiting and measure resonance pitch
+  tracking at high drive.
+- **glue**: listen (is the auto-release table 40-800 ms / 8 dB depth right? the 10 ms RMS window?);
   check in a host that Look-ahead's reported latency is compensated.
-* **octet**: listen to and look at the new spectrum analyser in a host (Off/Pre/Post; does the 40 dB/s fall and the 0 dB-at-full-scale scale read well? is a 4.5 dB/oct tilt wanted?); the CC band mapping (Frequency/Gain/Q of one band + Output) is my choice: confirm it suits a Drift lane.
-* **trio**: listen (the OTT defaults are strong; the detector decay times are my choice); check the sidechain
+- **octet**: listen to and look at the new spectrum analyser in a host (Off/Pre/Post; does the 40 dB/s fall and the 0 dB-at-full-scale scale read well? is a 4.5 dB/oct tilt wanted?); the CC band mapping (Frequency/Gain/Q of one band + Output) is my choice: confirm it suits a Drift lane.
+- **trio**: listen (the OTT defaults are strong; the detector decay times are my choice); check the sidechain
   routing in a host.
-* **strata**: listen; oversampled warps (Bend -42.6 dB, Sync -38.5 dB, Fold -33.1 dB aliasing at note 60,
+- **strata**: listen; oversampled warps (Bend -42.6 dB, Sync -38.5 dB, Fold -33.1 dB aliasing at note 60,
   amount 0.7); table import; a modulation matrix; Fold + Sync
   worst case is about 90 % of a core.
-* **quartet**: listen; user waveform (the source's 16-harmonic one); per-operator key and velocity scaling;
+- **quartet**: listen; user waveform (the source's 16-harmonic one); per-operator key and velocity scaling;
   4x oversampling for bright FM at the top of the keyboard.
-* **monochord**: listen; sympathetic strings / several strings per note; frequency-dependent T60; bow noise.
-* Decided not to build (revisit if wanted): **Electric piano** and **Collision** (a few modal filters each,
+- **monochord**: listen; sympathetic strings / several strings per note; frequency-dependent T60; bow noise.
+- Decided not to build (revisit if wanted): **Electric piano** and **Collision** (a few modal filters each,
   covered by Moka and Quartet); the **Meld** engines (Swarm, Harmonic, Sub, NoiseLoop, FM, Fold, Chip,
   Bitcrush, Formant, Chord, Resonator, Shepard: mostly overlap Strata and Quartet; Shepard and Chord are the
   least covered); a **Drift-style analog synth** (overlaps Basilico and Strata with a filter); spectral
@@ -385,12 +383,12 @@ resonance-garden, plank, tuney-vst, worms, beards.
 
 ## Recurring - check periodically
 
-* remove tasks that have been done from this file
-* check MISTAKES.md for any systematic problems, promote info on these to CLAUDE.md
-* if an issue in MISTAKES.md has been fully resolved, remove it from the file
-* for new material, check test coverage
-* ensure README.md and docs are up-to-date
-* read INBOX.md and fold tasks in here; check `dim` for Farelo tasks relevant to Downspout (read-only)
+- remove tasks that have been done from this file
+- check MISTAKES.md for any systematic problems, promote info on these to CLAUDE.md
+- if an issue in MISTAKES.md has been fully resolved, remove it from the file
+- for new material, check test coverage
+- ensure README.md and docs are up-to-date
+- read INBOX.md and fold tasks in here; check `dim` for Farelo tasks relevant to Downspout (read-only)
 
 ## Prism
 
@@ -418,12 +416,12 @@ spectral gates leave behind. Build from the general technique (STFT, per-band no
 smoothing), not from the product.
 
 - [ ] **Core**: STFT analysis/resynthesis (2048-4096 FFT, 75 % overlap) with a per-bin noise-floor estimate and a per-bin gain (spectral gate / subtraction). Reuse the Prism/Qune STFT engine if it fits (shared code, needs approval before touching); otherwise keep it plugin-local.
-- [ ] **Noise profile**: a *Learn* mode that averages the spectrum of a noise-only passage into a fingerprint, plus an automatic mode that tracks the floor (minimum statistics) with no learning pass. The profile is state saved with the project (not a parameter; see `scripts/check-plugin-state.sh`) and visible in the panel.
+- [ ] **Noise profile**: a _Learn_ mode that averages the spectrum of a noise-only passage into a fingerprint, plus an automatic mode that tracks the floor (minimum statistics) with no learning pass. The profile is state saved with the project (not a parameter; see `scripts/check-plugin-state.sh`) and visible in the panel.
 - [ ] **Controls**: reduction amount (dB), threshold offset, attack/release or time smoothing, frequency smoothing, and a band-limit so hum (50/60 Hz and harmonics) can be handled separately from hiss.
 - [ ] **Musical-noise suppression** is the hard part and the selling point: smooth the gain over time and frequency, and decide per bin with a decision-directed estimate; the goal is no tonal "chirps" when the signal is only noise. Write the probe before the DSP (CLAUDE.md "measure before building"): white noise in -> residual spectrum flatness and a tonal-artifact measure out, and a speech-like signal with noise -> noise reduced by the stated dB without damaging the signal beyond a bound.
 - [ ] **Latency**: report the FFT latency to the host; test that it is compensated, and that block-size changes do not move it.
 - [ ] **Stereo**: link the two channels' gains (default) so the image does not wander; optionally process mid/side.
-- [ ] **UI**: Magneto look and feel; spectrum display with the noise fingerprint, the threshold curve and the gain reduction; a *Listen to removed noise* (difference) switch to hear what is being taken out.
+- [ ] **UI**: Magneto look and feel; spectrum display with the noise fingerprint, the threshold curve and the gain reduction; a _Listen to removed noise_ (difference) switch to hear what is being taken out.
 - [ ] Tests: deterministic core tests (`downspout_add_core_test`), no allocation on the audio path, denormal-safe, sample rates 44.1-192 kHz, `activate()` keeps the profile.
 - [ ] Later, from the same product: spectral keying (one input's spectrum gates or ducks another, via sidechain) and frequency morph (impose one sound's spectral curve on another). Both overlap `prism`, `quefrency` and `bassops`; decide after the noise reduction exists.
 - [ ] Docs per the new-plugin checklist (install/release lists, Pages product page and group in `_data/groups.yml` (probably `dynamics` or `spectral`), plugins-summary, screenshot).
