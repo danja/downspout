@@ -2,10 +2,6 @@
 
 Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 
-## Fun
-
-Make a new plugin that will be entirely your design, except for two constraints : it shouldn't overlap too much with existing Downspout plugins and it should be _interesting_. Document the key steps of the development process in a file under docs/ - this should be written in a way that can help other agents build plugins.
-
 ## New plugin proposals (from the DSP-Ports-JSFX survey, 2026-11-03)
 
 - [ ] **Vocal extras left out of `silken`** (to keep its panel readable; each could be a plugin or a later addition): breath reducer (a gate/expander keyed on unvoiced
@@ -149,6 +145,9 @@ are what the core tests never touch.
 
 ## Other
 
+- **Bore** host audition in REAPER: check the playable range and level, confirm
+  Pressure/Embouchure/Bell/Breath and CC 1-4 are musically useful, and save/reopen
+  a project. The core suite and VST3 build pass; it has not yet been heard in a host.
 - `skream` **Morph LP-HP** (bipolar, default off): not yet listened to in a host; try it with Drift
   on Cutoff. Decisions worth a listen: the morph weight follows cutoff position linearly (t = 0.5
   is a notch at the cutoff), and it only reshapes the forward filter, not the Scream feedback

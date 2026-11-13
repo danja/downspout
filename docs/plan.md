@@ -134,6 +134,12 @@ The initial scaffold and first-port work are complete enough that the project
 now has a stable implementation pattern: portable core, deterministic tests,
 thin DPF wrapper, custom UI, local install script, and release packaging.
 
+Original design example (2026-11-13): `bore` is an eight-voice lip-reed
+waveguide instrument with a portable core, deterministic signal-path tests,
+thin DPF wrapper and a UI that explains the excitation and resonator. Its
+development guide records the design, testing and packaging sequence for
+future plugin authors. Host listening remains pending.
+
 Progress as of 2026-05-27:
 
 - root planning and requirements documents exist;

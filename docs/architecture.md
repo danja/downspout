@@ -270,6 +270,7 @@ The release script currently expects these bundles:
 - `quartet.vst3`
 - `monochord.vst3`
 - `nam.vst3`
+- `bore.vst3`
 - `thumper.vst3`
 - `snatch.vst3`
 - `tops.vst3`

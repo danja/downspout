@@ -88,6 +88,7 @@ Current output filenames:
 - `magneto.png`
 - `beards.png`
 - `trajectory.png`
+- `bore.png`
 - `fathom.png`
 - `qune.png`
 - `prism.png`

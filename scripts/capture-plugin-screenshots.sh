@@ -53,6 +53,7 @@ plugins=(
   "ambo:ambo"
   "floozy:floozy"
   "basilico:basilico"
+  "bore:bore"
    "canticle:canticle"
    "moka:moka"
   "luma:luma"

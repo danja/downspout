@@ -30,10 +30,14 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
   `scripts/check-plugin-state.sh` audits this.
 - **Determinism.** Generators derive random choices from a seed plus absolute musical
   position (not wall clock), so loops, restarts and offline renders reproduce.
-- **Control-change conventions.** Drift lanes default to CC 1-4; the audio effects
-  chipper, damiano, skream, spliff, helterskelter, treatment, magneto, beards, ghost, trajectory and fathom read
-  those by default so Drift needs no configuration; ladder (Cutoff, Resonance, Drive, Mix), glue (Threshold, Ratio,
-  Makeup, Mix), trio (Amount, Time, Input, Upward limit) and octet (one band's Frequency, Gain and Q, chosen by CC Band, and Output) and mouth (Vowel X, Vowel Y, Shift, Resonance) do too, on a **CC Channel** parameter (default 1, 0 = off). Conductor emits CC 20-24 on channel 16
+- **Control-change conventions.** Drift lanes default to CC 1-4; chipper,
+  damiano, skream, spliff, helterskelter, treatment, magneto, beards, ghost,
+  trajectory and bore read those by default, so Drift needs no configuration
+  (Bore's **MIDI In** selects accepted channels). Ladder (Cutoff, Resonance,
+  Drive, Mix), glue (Threshold, Ratio, Makeup, Mix), trio (Amount, Time, Input,
+  Upward limit), octet (one band's Frequency, Gain and Q, chosen by CC Band, and
+  Output) and mouth (Vowel X, Vowel Y, Shift, Resonance) use a **CC Channel**
+  parameter (default 1, 0 = off). Conductor emits CC 20-24 on channel 16
   (Scene, Density, Energy, Mutation, Reset); bassgen, drumgen, ground, melgen, worms, bubbles,
   floozy, harmonic-atlas, sprout, lifeform, luma, polymeter, xoxolo, markov, counterpointer
   cadence, arpgen, m-mix and beards listen through a **Conductor Ch**
@@ -59,6 +63,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | bassgen | bassgen.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | bassops | bassops.vst3 | audio effect (sidechain) | 4/2 | yes/no | no |
 | beards | beards.vst3 | audio effect (granular) | 2/2 | yes/no | no |
+| bore | bore.vst3 | instrument (lip-reed waveguide) | 0/2 | yes/no | no |
 | bubbles | bubbles.vst3 | instrument (water) | 0/2 | yes/no | yes |
 | cadence | cadence.vst3 | MIDI processor | 0/2 | yes/yes | yes |
 | campione | campione.vst3 | instrument (sampler) | 2/2 | yes/no | no |
@@ -428,6 +433,13 @@ filter and stereo phase/flange targets with 0-360 degree start offset), and a
 **Squelch** acid macro. Follows per-channel pitch bend (sounding note's channel, RPN 0
 range, applied instantly rather than gliding). Host tempo used for wobble sync. Bypass
 silences it.
+
+### bore
+Eight-voice MIDI instrument with a driven lip-like oscillator exciting a note-tuned
+feedback delay; Pressure controls drive and loop sustain, Embouchure detunes the reed,
+Bell changes feedback damping, and Breath adds filtered noise. CC 1-4 follow those
+controls and CC 7 is Level. A deliberately compact waveguide sound-design model, not
+a calibrated brass simulation. No transport or audio input.
 
 ### canticle
 Twelve-voice instrument with keys, reed, pad, pluck and glass timbres for melody,

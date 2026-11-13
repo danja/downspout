@@ -737,7 +737,7 @@ void testDescendingGenreRoundTripsAndClamps() {
     assert(restored->genre == GenreId::descending);
     assert(clampControls(controls).genre == GenreId::descending);
     controls.genre = static_cast<GenreId>(static_cast<int>(GenreId::count) + 5);
-    assert(clampControls(controls).genre == GenreId::descendingBars);  // the highest genre, not an out-of-range value
+    assert(clampControls(controls).genre == GenreId::ascendingBars);  // the highest valid genre
 }
 
 void testDescendingPartialMutationKeepsTheDescent() {

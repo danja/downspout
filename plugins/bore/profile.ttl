@@ -1,0 +1,37 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:bore a trn:PluginProfile ;
+    rdfs:label "Bore" ;
+    rdfs:comment "Eight-voice MIDI instrument: a driven lip-like oscillator excites a pitch-tuned feedback delay with adjustable embouchure, bell damping and breath noise." ;
+    trn:bundleName "bore.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/bore/> ;
+    trn:role trn:InstrumentPlugin ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Audio ;
+    trn:caution "A compact waveguide sound-design model, not a measured simulation of a particular brass instrument. Note frequency is bounded to 20 Hz-12 kHz." ;
+    trn:parameter [ rdfs:label "Pressure" ; trn:symbol "pressure" ; trn:range "0-100%" ;
+                    rdfs:comment "Controls reed drive and feedback sustain. MIDI CC 1." ] ;
+    trn:parameter [ rdfs:label "Embouchure" ; trn:symbol "embouchure" ; trn:range "0.8-1.2x" ;
+                    rdfs:comment "Tunes the lip oscillator relative to the note's bore delay. MIDI CC 2." ] ;
+    trn:parameter [ rdfs:label "Bell" ; trn:symbol "bell" ; trn:range "0-100%" ;
+                    rdfs:comment "Sets the feedback low-pass brightness. MIDI CC 3." ] ;
+    trn:parameter [ rdfs:label "Breath" ; trn:symbol "breath" ; trn:range "0-100%" ;
+                    rdfs:comment "Adds filtered noise to the reed excitation. MIDI CC 4." ] ;
+    trn:parameter [ rdfs:label "Attack" ; trn:symbol "attack" ; trn:range "1-1000 ms" ;
+                    rdfs:comment "Per-note envelope rise time." ] ;
+    trn:parameter [ rdfs:label "Release" ; trn:symbol "release" ; trn:range "20-4000 ms" ;
+                    rdfs:comment "Per-note exponential release time." ] ;
+    trn:parameter [ rdfs:label "Velocity" ; trn:symbol "velocity" ; trn:range "0-100%" ;
+                    rdfs:comment "Note-velocity sensitivity." ] ;
+    trn:parameter [ rdfs:label "Level" ; trn:symbol "level" ; trn:range "0-100%" ;
+                    rdfs:comment "Output level. MIDI CC 7." ] ;
+    trn:parameter [ rdfs:label "MIDI In" ; trn:symbol "midi_ch" ; trn:range "Off, 1-16, All" ;
+                    rdfs:comment "MIDI channel filter. CC 120 stops all sound; CC 123 releases all notes." ] ;
+    trn:parameter [ rdfs:label "Active Voices" ; trn:symbol "out_voices" ; trn:range "0-8" ;
+                    rdfs:comment "Read-only voice activity for the UI." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

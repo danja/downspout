@@ -117,6 +117,7 @@ The [plugin reference](docs/pages/plugins-summary.md) has the ports, MIDI roles 
 | [ground](plugins/ground/README.md) | `ground.vst3` | MIDI generator | Long-form bass generator with Dub/Jazz styles, phrase planning, and guarded bass-register output. |
 | [floozy](plugins/floozy/README.md) | `floozy.vst3` | Instrument | Corrected 8-voice hybrid physical/modulation synth derived from `floozy-poly`. |
 | [basilico](plugins/basilico/README.md) | `basilico.vst3` | Instrument | Monophonic bass synth with Dub/Acid wobble, tempo sync, squelch, and upright/electric/industrial models. |
+| [Bore](plugins/bore/README.md) | `bore.vst3` | Instrument | Eight-voice lip-reed waveguide: MIDI pitch tunes a feedback bore, with pressure, embouchure, bell and breath controls. |
 | [campione](plugins/campione/README.md) | `campione.vst3` | Instrument | Multi-zone sampler with WAV loading, REX2 slice import, wavetable auto-detection, recording, gap-fill pitch shift, and crossfade looping. |
 | [canticle](plugins/canticle/README.md) | `canticle.vst3` | Instrument | 12-voice keys, reed, pad, pluck, and glass synth for melody, counterpoint, and chords. |
 | [moka](plugins/moka/README.md) | `moka.vst3` | Instrument | Modal hit-object synth (xylophone, glockenspiel, woodblock, glass, metal, tube) with 10 controls, 10 presets, and selectable 1–12 voice polyphony. |
