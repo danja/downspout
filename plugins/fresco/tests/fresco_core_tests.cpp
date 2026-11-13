@@ -102,6 +102,30 @@ Parameters linearParams()
     return p;
 }
 
+double rowSpanForBin(const Parameters& p, const double frequency, const double height = 1000.0)
+{
+    const double binWidth = kSr / kFrame;
+    const double low = std::max(static_cast<double>(p.minHz), frequency - binWidth * 0.5);
+    const double high = std::min(static_cast<double>(p.maxHz), frequency + binWidth * 0.5);
+    const auto row = [&](const double hz) {
+        const double fraction = p.logAxis >= 0.5f
+                                    ? std::log(static_cast<double>(p.maxHz) / hz) /
+                                          std::log(static_cast<double>(p.maxHz) / p.minHz)
+                                    : (p.maxHz - hz) / (p.maxHz - p.minHz);
+        return fraction * height;
+    };
+    return std::abs(row(high) - row(low));
+}
+
+double magnitudeForBrightness(const Parameters& p, const double brightness)
+{
+    const double v = p.invert >= 0.5f ? 1.0 - brightness : brightness;
+    if (v <= 0.0)
+        return 0.0;
+    const double g = std::pow(v, p.contrast);
+    return std::pow(10.0, -p.rangeDb * (1.0 - g) / 20.0);
+}
+
 // 3000 Hz is bin 120 and sits at the picture's mid-height in the linear 1-5 kHz map: rows 499 and 500 straddle it.
 const std::vector<int> kMidRows = {499, 500};
 
@@ -292,12 +316,13 @@ void testBandIsPaintedAtItsFrequencyWithTheRightLevel()
     const Render o = runSilent(p, &im, 2.0);
     const std::size_t from = static_cast<std::size_t>(0.5 * kSr), n = static_cast<std::size_t>(1.0 * kSr);
     const double at = amplitudeAt(o.l, from, n, 3000.0);
-    CHECK(near(at, kBinAmplitude, kBinAmplitude * 0.03));
+    const double rowCoverage = 2.0 / rowSpanForBin(p, 3000.0);
+    CHECK(near(at, kBinAmplitude * rowCoverage, kBinAmplitude * rowCoverage * 0.03));
     // nothing at the other bins of the picture or outside it
     for (const double hz : {1500.0, 2000.0, 2500.0, 3500.0, 4500.0, 6000.0, 500.0})
         CHECK(amplitudeAt(o.l, from, n, hz) < at * 0.002);
     // both channels are painted, with the same level but different phases (so the pair is not a mono image)
-    CHECK(near(amplitudeAt(o.r, from, n, 3000.0), kBinAmplitude, kBinAmplitude * 0.03));
+    CHECK(near(amplitudeAt(o.r, from, n, 3000.0), at, at * 0.03));
     double diff = 0;
     for (std::size_t i = from; i < from + n; ++i) diff += std::abs(o.l[i] - o.r[i]);
     CHECK(diff / static_cast<double>(n) > 0.002);
@@ -309,12 +334,14 @@ void testHeightMapsToFrequencyTopIsHigh()
     const Image im = band(8, {249, 250}, 0, 8);
     const Render o = runSilent(linearParams(), &im, 1.5);
     const std::size_t from = static_cast<std::size_t>(0.5 * kSr), n = static_cast<std::size_t>(0.8 * kSr);
-    CHECK(near(amplitudeAt(o.l, from, n, 4000.0), kBinAmplitude, kBinAmplitude * 0.03));
+    const Parameters p = linearParams();
+    const double rowCoverage = 2.0 / rowSpanForBin(p, 4000.0);
+    CHECK(near(amplitudeAt(o.l, from, n, 4000.0), kBinAmplitude * rowCoverage, kBinAmplitude * rowCoverage * 0.03));
     CHECK(amplitudeAt(o.l, from, n, 2000.0) < kBinAmplitude * 0.003);
     // and rows 749/750 are 2000 Hz
     const Image lo = band(8, {749, 750}, 0, 8);
     const Render q = runSilent(linearParams(), &lo, 1.5);
-    CHECK(near(amplitudeAt(q.l, from, n, 2000.0), kBinAmplitude, kBinAmplitude * 0.03));
+    CHECK(near(amplitudeAt(q.l, from, n, 2000.0), kBinAmplitude * rowCoverage, kBinAmplitude * rowCoverage * 0.03));
     CHECK(amplitudeAt(q.l, from, n, 4000.0) < kBinAmplitude * 0.003);
 }
 
@@ -326,31 +353,68 @@ void testLogAxis()
     p.logAxis = 1.0f; p.minHz = 100.0f; p.maxHz = 6400.0f;
     const Render o = runSilent(p, &im, 1.5);
     const std::size_t from = static_cast<std::size_t>(0.5 * kSr), n = static_cast<std::size_t>(0.8 * kSr);
-    CHECK(near(amplitudeAt(o.l, from, n, 800.0), kBinAmplitude, kBinAmplitude * 0.03));
+    const double logRowCoverage = 2.0 / rowSpanForBin(p, 800.0);
+    CHECK(near(amplitudeAt(o.l, from, n, 800.0), kBinAmplitude * logRowCoverage, kBinAmplitude * logRowCoverage * 0.03));
     CHECK(amplitudeAt(o.l, from, n, 3000.0) < kBinAmplitude * 0.003);
     // the same picture on the linear axis puts the band at the arithmetic middle instead
     p.logAxis = 0.0f;
     const Render q = runSilent(p, &im, 1.5);
-    CHECK(near(amplitudeAt(q.l, from, n, 3250.0), kBinAmplitude, kBinAmplitude * 0.03));
+    const double linearRowCoverage = 2.0 / rowSpanForBin(p, 3250.0);
+    CHECK(near(amplitudeAt(q.l, from, n, 3250.0), kBinAmplitude * linearRowCoverage, kBinAmplitude * linearRowCoverage * 0.03));
     CHECK(amplitudeAt(q.l, from, n, 800.0) < kBinAmplitude * 0.003);
+}
+
+void testLogAxisAveragesEachBinRowSpan()
+{
+    Image im;
+    im.width = 1;
+    im.height = 1000;
+    im.luma.assign(static_cast<std::size_t>(im.height), 0);
+
+    Parameters p = linearParams();
+    p.logAxis = 1.0f;
+    p.minHz = 100.0f;
+    p.maxHz = 6400.0f;
+    const int bin = 5;  // 125 Hz; its interval covers many image rows on this log axis
+    const double center = bin * kSr / kFrame;
+    const double binWidth = kSr / kFrame;
+    const double low = std::max(static_cast<double>(p.minHz), center - binWidth * 0.5);
+    const double high = std::min(static_cast<double>(p.maxHz), center + binWidth * 0.5);
+    const auto row = [&](const double hz) {
+        return std::log(static_cast<double>(p.maxHz) / hz) /
+               std::log(static_cast<double>(p.maxHz) / p.minHz) * im.height;
+    };
+    const double top = row(high), bottom = row(low);
+    const int brightRow = static_cast<int>(std::lround((top + bottom) * 0.5 - 0.5));
+    im.luma[static_cast<std::size_t>(brightRow)] = 255;
+
+    std::array<float, kBins> mags {};
+    columnMagnitudes(im, p, kSr, 0.0, mags.data());
+    const double rowSpan = bottom - top;
+    const double coveredFraction = 1.0 / rowSpan;
+    const double expected = coveredFraction;
+    CHECK(rowSpan > 10.0);
+    CHECK(near(mags[static_cast<std::size_t>(bin)], expected, expected * 1e-5));
+    CHECK(mags[static_cast<std::size_t>(bin)] < 1.0f);
 }
 
 void testBrightnessMapping()
 {
-    // a pixel at level 128, range 60 dB, contrast 1: g = 128/255, amplitude = A * 10^(-60 (1 - g) / 20)
+    // Two 128-level rows are averaged over the bin span before the range and contrast mappings.
     const Image im = band(8, kMidRows, 0, 8, 128);
     Parameters p = linearParams();
     const std::size_t from = static_cast<std::size_t>(0.5 * kSr), n = static_cast<std::size_t>(0.8 * kSr);
-    const double g = 128.0 / 255.0;
-    const double want = kBinAmplitude * std::pow(10.0, -60.0 * (1.0 - g) / 20.0);
+    const double coverage = 2.0 / rowSpanForBin(p, 3000.0);
+    const double pixelMagnitude = magnitudeForBrightness(p, 128.0 / 255.0);
+    const double want = kBinAmplitude * coverage * pixelMagnitude;
     CHECK(near(amplitudeAt(runSilent(p, &im, 1.5).l, from, n, 3000.0), want, want * 0.04));
     // range 30 dB: louder
     p.rangeDb = 30.0f;
-    const double want30 = kBinAmplitude * std::pow(10.0, -30.0 * (1.0 - g) / 20.0);
+    const double want30 = kBinAmplitude * coverage * magnitudeForBrightness(p, 128.0 / 255.0);
     CHECK(near(amplitudeAt(runSilent(p, &im, 1.5).l, from, n, 3000.0), want30, want30 * 0.04));
     // contrast 2: g^2
     p = linearParams(); p.contrast = 2.0f;
-    const double want2 = kBinAmplitude * std::pow(10.0, -60.0 * (1.0 - g * g) / 20.0);
+    const double want2 = kBinAmplitude * coverage * magnitudeForBrightness(p, 128.0 / 255.0);
     CHECK(near(amplitudeAt(runSilent(p, &im, 1.5).l, from, n, 3000.0), want2, want2 * 0.04));
     // black is silence, exactly
     const Image black = band(8, {}, 0, 0);
@@ -365,7 +429,8 @@ void testInvertAndFrequencyWindow()
     p.invert = 1.0f;
     const std::size_t from = static_cast<std::size_t>(0.5 * kSr), n = static_cast<std::size_t>(0.8 * kSr);
     const Render o = runSilent(p, &im, 1.5);
-    CHECK(amplitudeAt(o.l, from, n, 3000.0) < kBinAmplitude * 0.003);
+    const double bandCoverage = 2.0 / rowSpanForBin(p, 3000.0);
+    CHECK(near(amplitudeAt(o.l, from, n, 3000.0), kBinAmplitude * (1.0 - bandCoverage), kBinAmplitude * 0.03));
     CHECK(near(amplitudeAt(o.l, from, n, 2000.0), kBinAmplitude, kBinAmplitude * 0.03));
     // Inverted: everything between 1 and 5 kHz is lit, nothing outside
     CHECK(amplitudeAt(o.l, from, n, 700.0) < kBinAmplitude * 0.003);
@@ -390,14 +455,14 @@ void testPlayheadMovesAcrossThePicture()
     const Render o = runSilent(p, &im, 4.0);
     const std::size_t n = static_cast<std::size_t>(0.8 * kSr);
     const std::size_t a = static_cast<std::size_t>(0.6 * kSr), b = static_cast<std::size_t>(2.6 * kSr);
-    CHECK(amplitudeAt(o.l, a, n, 3000.0) > kBinAmplitude * 0.9);
+    CHECK(amplitudeAt(o.l, a, n, 3000.0) > kBinAmplitude * 0.3);
     CHECK(amplitudeAt(o.l, a, n, 2000.0) < kBinAmplitude * 0.02);
-    CHECK(amplitudeAt(o.l, b, n, 2000.0) > kBinAmplitude * 0.9);
+    CHECK(amplitudeAt(o.l, b, n, 2000.0) > kBinAmplitude * 0.3);
     CHECK(amplitudeAt(o.l, b, n, 3000.0) < kBinAmplitude * 0.02);
     // doubling the length doubles the time spent: at 2.6 s a 8 s sweep is still on the left half
     p.lengthS = 8.0f;
     const Render q = runSilent(p, &im, 3.5);
-    CHECK(amplitudeAt(q.l, b, n, 3000.0) > kBinAmplitude * 0.9);
+    CHECK(amplitudeAt(q.l, b, n, 3000.0) > kBinAmplitude * 0.3);
 }
 
 void testTransportFollowsTheTimeline()
@@ -417,9 +482,9 @@ void testTransportFollowsTheTimeline()
         }
         return amplitudeAt(o.l, static_cast<std::size_t>(0.3 * kSr), static_cast<std::size_t>(0.6 * kSr), 3000.0);
     };
-    CHECK(at(2.0) > kBinAmplitude * 0.9);     // 1 s into an 8 s sweep: left half
+    CHECK(at(2.0) > kBinAmplitude * 0.3);     // 1 s into an 8 s sweep: left half
     CHECK(at(10.0) < kBinAmplitude * 0.02);   // 5 s: right half
-    CHECK(at(18.0) > kBinAmplitude * 0.9);    // 9 s wraps to 1 s
+    CHECK(at(18.0) > kBinAmplitude * 0.3);    // 9 s wraps to 1 s
     // free-run ignores the transport entirely
     p.transport = 0.0f;
     Transport tr; tr.playing = true; tr.valid = true; tr.bpm = 120.0; tr.beatPosition = 10.0;
@@ -574,6 +639,7 @@ int main()
     testBandIsPaintedAtItsFrequencyWithTheRightLevel();
     testHeightMapsToFrequencyTopIsHigh();
     testLogAxis();
+    testLogAxisAveragesEachBinRowSpan();
     testBrightnessMapping();
     testInvertAndFrequencyWindow();
     testPlayheadMovesAcrossThePicture();

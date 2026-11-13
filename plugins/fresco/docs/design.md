@@ -8,10 +8,10 @@ Per channel: input -> 2048-sample frame, periodic Hann, every 512 samples (75 % 
 output queue. The queue plays one hop behind the frame, so the wet path is exactly **2048 samples** late (measured, `kLatency`); the dry path for Mix is delayed by the same amount.
 
 ## The picture to magnitudes
-For each frame the playhead (0..1) picks a column (linear interpolation between columns); for each bin `k` at `f = k sr / 2048` between Bottom and Top the row is
-`ln(Top/f)/ln(Top/Bottom)` (Log) or `(Top-f)/(Top-Bottom)` (Linear) of the height, interpolated between rows, inverted if Pixels is Dark = loud, raised to
-Contrast, and mapped to `10^(-Range (1-g) / 20)`; a pixel that is exactly black stays silent. A bin that falls between two pixel rows takes their interpolation, not an average over
-the rows it spans, so a very fine picture is aliased at the bottom of a log axis (many rows share a bin).
+For each frame the playhead (0..1) picks a column (linear interpolation between columns); each FFT bin's frequency interval (one bin width, clipped to Bottom and Top) maps to
+a row interval using `ln(Top/f)/ln(Top/Bottom)` (Log) or `(Top-f)/(Top-Bottom)` (Linear). At each row centre, brightness is linearly interpolated across the playhead's
+column, inverted if Pixels is Dark = loud, raised to Contrast, and mapped to `10^(-Range (1-g) / 20)` before the magnitudes are area-averaged over the row interval. A pixel that
+is exactly black stays silent. Averaging magnitudes prevents a fine picture from aliasing where one bin spans many rows, especially at the bottom of a log axis.
 
 ## Phase and level
 - **Tone**: bin `k` is a sinusoid with a random start phase (per channel, fixed seed) that advances `k` quarter turns per frame (hop = N/4), so consecutive frames are coherent: a lit

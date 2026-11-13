@@ -45,7 +45,6 @@ Left out, in rough order of value:
 - [ ] Interlaced PNG (refused with a message today), GIF, WebP.
 - [ ] An independent end-to-end test: render noise through a picture, compute a spectrogram with a separate STFT, and report the correlation with the picture (the current tests check
       single bands, level, axis, time and polarity against formulas).
-- [ ] Fine pictures alias on the lower part of a log axis (a bin takes the interpolation of the rows it covers, not their average): average over the bin's row span.
 - [ ] A time-stretch separate from Length, a sync of Length to bars (Whirligig style), a Floor/dither control so very dark pixels do not vanish, a live column plot in the panel.
 - [ ] Transient-preserving or phase-locked Input mode (the current Input mode can smear drums).
 

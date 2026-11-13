@@ -88,6 +88,30 @@ float pixel(const Image& im, const double x, const double y) noexcept
     return static_cast<float>((top * (1.0 - ty) + bottom * ty) / 255.0);
 }
 
+float averagePixelRows(const Image& im, const double x, const double top, const double bottom, const Parameters& p) noexcept
+{
+    const double lo = std::clamp(top, 0.0, static_cast<double>(im.height));
+    const double hi = std::clamp(bottom, 0.0, static_cast<double>(im.height));
+    const double span = hi - lo;
+    const auto magnitude = [&](const double brightness) {
+        const double v = p.invert >= 0.5f ? 1.0 - brightness : brightness;
+        if (v <= 0.0)
+            return 0.0;
+        const double g = std::pow(v, p.contrast);
+        return std::pow(10.0, -p.rangeDb * (1.0 - g) / 20.0);
+    };
+    if (!(span > 0.0))
+        return static_cast<float>(magnitude(pixel(im, x, lo - 0.5)));
+
+    double area = 0.0;
+    for (int row = static_cast<int>(std::floor(lo)); row < im.height && row < hi; ++row) {
+        const double overlap = std::min(hi, static_cast<double>(row + 1)) - std::max(lo, static_cast<double>(row));
+        if (overlap > 0.0)
+            area += magnitude(pixel(im, x, row)) * overlap;
+    }
+    return static_cast<float>(area / span);
+}
+
 }  // namespace
 
 Parameters clampParameters(const Parameters& in) noexcept
@@ -122,15 +146,17 @@ void columnMagnitudes(const Image& image, const Parameters& p, const float sampl
     if (image.empty()) return;
     const double x = std::min(std::max(playhead, 0.0), 1.0) * image.width - 0.5;
     const double lo = p.minHz, hi = p.maxHz, lnRatio = std::log(hi / lo);
+    const double binWidth = static_cast<double>(sampleRate) / kFrame;
     for (int k = 1; k < kFrame / 2; ++k) {
         const double f = static_cast<double>(k) * sampleRate / kFrame;
         if (f < lo || f > hi) continue;
-        const double fraction = p.logAxis >= 0.5f ? std::log(hi / f) / lnRatio : (hi - f) / (hi - lo);
-        float v = pixel(image, x, fraction * image.height - 0.5);
-        if (p.invert >= 0.5f) v = 1.0f - v;
-        if (v <= 0.0f) continue;
-        const float g = std::pow(v, p.contrast);
-        mags[k] = g <= 0.0f ? 0.0f : std::pow(10.0f, -p.rangeDb * (1.0f - g) / 20.0f);
+        const double binLow = std::max(lo, f - binWidth * 0.5);
+        const double binHigh = std::min(hi, f + binWidth * 0.5);
+        const auto row = [&](const double hz) {
+            const double fraction = p.logAxis >= 0.5f ? std::log(hi / hz) / lnRatio : (hi - hz) / (hi - lo);
+            return fraction * image.height;
+        };
+        mags[k] = averagePixelRows(image, x, row(binHigh), row(binLow), p);
     }
 }
 
