@@ -42,9 +42,7 @@ Left out, in rough order of value:
 - [ ] **JPEG** (baseline and progressive): needs a decoder written in the plugin (a few hundred lines: Huffman, IDCT, upsampling) or a vendored single header, which needs approval.
       Most pictures people have are JPEG, so this is the biggest gap; until then the plugin tells the user to save as PNG.
 - [ ] **Video**: step through frames (one picture per column of time). Needs a decoder dependency (FFmpeg or similar): ask before adding. A raw frame-sequence folder would avoid it.
-- [ ] Interlaced PNG (refused with a message today), GIF, WebP.
-- [ ] An independent end-to-end test: render noise through a picture, compute a spectrogram with a separate STFT, and report the correlation with the picture (the current tests check
-      single bands, level, axis, time and polarity against formulas).
+- [ ] GIF, WebP.
 - [ ] A time-stretch separate from Length, a sync of Length to bars (Whirligig style), a Floor/dither control so very dark pixels do not vanish, a live column plot in the panel.
 - [ ] Transient-preserving or phase-locked Input mode (the current Input mode can smear drums).
 

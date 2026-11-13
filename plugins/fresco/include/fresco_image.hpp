@@ -32,7 +32,7 @@ inline constexpr std::size_t kMaxFileBytes = 64u << 20;
 // Brightness of a colour: Rec. 709 weights on the stored (gamma-encoded) values, which is what a viewer shows.
 [[nodiscard]] std::uint8_t lumaOf(int r, int g, int b) noexcept;
 
-// PNG (all colour types and bit depths, no interlacing), Netpbm P2/P3/P5/P6, and uncompressed BMP (8, 24 and 32 bit).
+// PNG (all colour types and bit depths, including Adam7 interlacing), Netpbm P2/P3/P5/P6, and uncompressed BMP (8, 24 and 32 bit).
 // JPEG, GIF, WebP and the rest are refused with a message that says so. Transparent pixels are treated as black.
 [[nodiscard]] DecodeResult decodeImage(const std::uint8_t* data, std::size_t size);
 [[nodiscard]] DecodeResult loadImageFile(const std::string& path);

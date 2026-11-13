@@ -29,8 +29,8 @@ transport holds a column, the position being frozen).
 `setState("picture", path)` runs on the host's main thread, decodes the file (`loadImageFile`), and hands the audio thread an immutable `shared_ptr<const Image>`. An empty or
 unreadable path falls back to the built-in picture so the plugin does not go silent for want of a file. Pictures are converted to 8-bit brightness (Rec. 709 weights on the stored
 values; alpha treated as black) and reduced to at most 2048 pixels on a side. Limits: 8192 x 8192 and 16 Mpixel before reduction, 64 MB file; the inflate stops at the size the
-header promises, so a damaged file cannot allocate more. PNG: all colour types and bit depths, not interlaced; PNM: P2/P3/P5/P6; BMP: 8, 24 and 32 bit uncompressed.
+header promises, so a damaged file cannot allocate more. PNG: all colour types and bit depths, including Adam7 interlacing; PNM: P2/P3/P5/P6; BMP: 8, 24 and 32 bit uncompressed.
 
 ## Not done
-JPEG, GIF and video (video needs a decoder dependency such as FFmpeg, which needs approval); interlaced PNG; a pitch-tracking or transient-preserving mode; oversampled
+JPEG, GIF, WebP and video (video needs a decoder dependency such as FFmpeg, which needs approval); a pitch-tracking or transient-preserving mode; oversampled
 resynthesis for pictures with very fine detail; panel preview of the live column levels.

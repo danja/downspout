@@ -30,7 +30,7 @@ int val(const int x, const int y, const int c) { return (7 * x + 13 * y + 50 * c
 
 int expectedPixel(const std::string& name, const int x, const int y)
 {
-    if (name == "gray8" || name == "gray16" || name == "graya8") return val(x, y, 0);
+    if (name == "gray8" || name == "gray8_adam7" || name == "gray16" || name == "graya8") return val(x, y, 0);
     if (name.rfind("rgb8", 0) == 0) return lum(val(x, y, 0), val(x, y, 1), val(x, y, 2));
     if (name == "rgba8") return (lum(val(x, y, 0), val(x, y, 1), val(x, y, 2)) * 128 + 127) / 255;
     if (name == "pal4") { const int i = (x + y) % 16; return lum(i * 16, 255 - i * 16, i * 5); }
@@ -75,6 +75,29 @@ double amplitudeAt(const std::vector<float>& x, const std::size_t from, const st
         wsum += w;
     }
     return 2.0 * std::sqrt(re * re + im * im) / wsum;
+}
+
+std::array<double, kBins> independentStft(const std::vector<float>& x, const std::size_t from)
+{
+    // A rectangular analysis window isolates these exact-bin tones; this direct DFT is independent of Fresco's FFT.
+    std::array<double, kBins> magnitudes {};
+    constexpr double windowSum = kFrame;
+
+    for (int k = 1; k < kFrame / 2; ++k) {
+        const double angle = 2.0 * kPi * k / kFrame;
+        const double stepCos = std::cos(angle), stepSin = -std::sin(angle);
+        double phaseCos = 1.0, phaseSin = 0.0, re = 0.0, im = 0.0;
+        for (int n = 0; n < kFrame; ++n) {
+            const double sample = x[from + static_cast<std::size_t>(n)];
+            re += sample * phaseCos;
+            im += sample * phaseSin;
+            const double nextCos = phaseCos * stepCos - phaseSin * stepSin;
+            phaseSin = phaseSin * stepCos + phaseCos * stepSin;
+            phaseCos = nextCos;
+        }
+        magnitudes[static_cast<std::size_t>(k)] = 2.0 * std::hypot(re, im) / windowSum;
+    }
+    return magnitudes;
 }
 
 double rms(const std::vector<float>& x, const std::size_t from, const std::size_t n)
@@ -143,7 +166,7 @@ void testPngDecoders()
         if (bad) std::printf("  %s: %d pixels differ\n", n.name, bad);
         CHECK(bad == 0);
     }
-    CHECK(fresco_test::pngs().size() == 9);
+    CHECK(fresco_test::pngs().size() == 10);
 }
 
 void testPnmAndBmp()
@@ -214,10 +237,10 @@ void testRefusals()
     expect({1, 2, 3, 4, 5, 6, 7, 8, 9}, "unrecognised");
     expect({1, 2, 3}, "short");
     CHECK(!loadImageFile("/nonexistent/picture.png").ok);
-    // interlaced PNG is refused with a message that says why
+    // Unknown PNG interlace methods are rejected explicitly.
     std::vector<std::uint8_t> p = fresco_test::pngs()[0].bytes;
-    p[28] = 1;   // IHDR interlace byte: 8 signature + 8 chunk header + 12 into the body
-    expect(p, "interlaced");
+    p[28] = 2;   // IHDR interlace byte: 8 signature + 8 chunk header + 12 into the body
+    expect(p, "interlace method");
     // a PNG claiming 60000 x 60000 pixels is refused before any allocation
     std::vector<std::uint8_t> big = fresco_test::pngs()[0].bytes;
     big[16] = 0; big[17] = 0; big[18] = 0xEA; big[19] = 0x60; big[20] = 0; big[21] = 0; big[22] = 0xEA; big[23] = 0x60;
@@ -396,6 +419,79 @@ void testLogAxisAveragesEachBinRowSpan()
     CHECK(rowSpan > 10.0);
     CHECK(near(mags[static_cast<std::size_t>(bin)], expected, expected * 1e-5));
     CHECK(mags[static_cast<std::size_t>(bin)] < 1.0f);
+}
+
+void testRenderedSpectrumMatchesPictureWithIndependentStft()
+{
+    Image im;
+    im.width = 1;
+    im.height = 256;
+    im.luma.resize(static_cast<std::size_t>(im.height));
+    for (int row = 0; row < im.height; ++row)
+        im.luma[static_cast<std::size_t>(row)] = static_cast<std::uint8_t>(64 + 191 * row / (im.height - 1));
+
+    Parameters p;
+    p.minHz = 100.0f;
+    p.maxHz = 16000.0f;
+    p.logAxis = 1.0f;
+    p.source = static_cast<float>(Source::Tone);
+    p.follow = 0.0f;
+    const Render rendered = runSilent(p, &im, 1.0);
+    constexpr std::size_t start = 10000;
+    const auto measured = independentStft(rendered.l, start);
+
+    double expectedSum = 0.0, measuredSum = 0.0;
+    std::array<double, kBins> expected {};
+    std::array<bool, kBins> included {};
+    for (int k = 1; k < kFrame / 2; ++k) {
+        const double frequency = static_cast<double>(k) * kSr / kFrame;
+        if (frequency < p.minHz || frequency > p.maxHz)
+            continue;
+        const double binWidth = kSr / kFrame;
+        const double low = std::max(static_cast<double>(p.minHz), frequency - binWidth * 0.5);
+        const double high = std::min(static_cast<double>(p.maxHz), frequency + binWidth * 0.5);
+        const auto imageRow = [&](const double hz) {
+            return std::log(static_cast<double>(p.maxHz) / hz) /
+                   std::log(static_cast<double>(p.maxHz) / p.minHz) * im.height;
+        };
+        const double top = imageRow(high), bottom = imageRow(low);
+        double binMagnitude = 0.0;
+        for (int row = static_cast<int>(std::floor(top)); row < bottom && row < im.height; ++row) {
+            const double coverage = std::min(bottom, static_cast<double>(row + 1)) -
+                                    std::max(top, static_cast<double>(row));
+            const double brightness = im.at(0, row) / 255.0;
+            const double pixelMagnitude = magnitudeForBrightness(p, brightness);
+            binMagnitude += std::max(0.0, coverage) * pixelMagnitude;
+        }
+        expected[static_cast<std::size_t>(k)] = kBinAmplitude * binMagnitude / (bottom - top);
+        included[static_cast<std::size_t>(k)] = true;
+        expectedSum += expected[static_cast<std::size_t>(k)];
+        measuredSum += measured[static_cast<std::size_t>(k)];
+    }
+
+    int count = 0;
+    double covariance = 0.0, expectedVariance = 0.0, measuredVariance = 0.0;
+    double maxRelativeError = 0.0;
+    const double meanExpected = expectedSum / std::count(included.begin(), included.end(), true);
+    const double meanMeasured = measuredSum / std::count(included.begin(), included.end(), true);
+    for (int k = 1; k < kFrame / 2; ++k) {
+        if (!included[static_cast<std::size_t>(k)])
+            continue;
+        const double want = expected[static_cast<std::size_t>(k)];
+        const double got = measured[static_cast<std::size_t>(k)];
+        const double dx = want - meanExpected, dy = got - meanMeasured;
+        covariance += dx * dy;
+        expectedVariance += dx * dx;
+        measuredVariance += dy * dy;
+        maxRelativeError = std::max(maxRelativeError, std::abs(got - want) / want);
+        ++count;
+    }
+    const double correlation = covariance / std::sqrt(expectedVariance * measuredVariance);
+    std::printf("Fresco independent STFT: %d bins, picture correlation %.7f, max relative error %.5f\n",
+                count, correlation, maxRelativeError);
+    CHECK(count > 500);
+    CHECK(correlation > 0.9999);
+    CHECK(maxRelativeError < 0.01);
 }
 
 void testBrightnessMapping()
@@ -640,6 +736,7 @@ int main()
     testHeightMapsToFrequencyTopIsHigh();
     testLogAxis();
     testLogAxisAveragesEachBinRowSpan();
+    testRenderedSpectrumMatchesPictureWithIndependentStft();
     testBrightnessMapping();
     testInvertAndFrequencyWindow();
     testPlayheadMovesAcrossThePicture();

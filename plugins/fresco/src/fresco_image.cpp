@@ -233,7 +233,7 @@ DecodeResult decodePng(const std::uint8_t* d, const std::size_t size)
     if (!haveHeader) return fail("PNG has no header");
     if (!sawEnd && idat.empty()) return fail("PNG has no image data");
     if (!sizeOk(static_cast<std::uint64_t>(width), static_cast<std::uint64_t>(height))) return fail("PNG dimensions are zero or too large");
-    if (interlace != 0) return fail("interlaced PNG is not supported: re-save it without interlacing");
+    if (interlace != 0 && interlace != 1) return fail("PNG interlace method is not valid");
     int channels;
     switch (colour) {
     case 0: channels = 1; if (depth != 1 && depth != 2 && depth != 4 && depth != 8 && depth != 16) return fail("PNG bit depth is not valid"); break;
@@ -245,65 +245,89 @@ DecodeResult decodePng(const std::uint8_t* d, const std::size_t size)
     }
     if (colour == 3 && palette.empty()) return fail("PNG palette is missing");
     const std::size_t bitsPerPixel = static_cast<std::size_t>(channels) * static_cast<std::size_t>(depth);
-    const std::size_t stride = (static_cast<std::size_t>(width) * bitsPerPixel + 7) / 8;
-    const std::size_t expected = (stride + 1) * static_cast<std::size_t>(height);
+    struct Pass { int x, y, dx, dy; };
+    static constexpr std::array<Pass, 7> adam7 = {{{0, 0, 8, 8}, {4, 0, 8, 8}, {0, 4, 4, 8}, {2, 0, 4, 4},
+                                                    {0, 2, 2, 4}, {1, 0, 2, 2}, {0, 1, 1, 2}}};
+    const Pass full {0, 0, 1, 1};
+    const int passCount = interlace == 1 ? static_cast<int>(adam7.size()) : 1;
+    const auto extent = [](const int fullSize, const int start, const int step) {
+        return fullSize <= start ? 0 : (fullSize - start + step - 1) / step;
+    };
+    const auto passAt = [&](const int i) -> const Pass& { return interlace == 1 ? adam7[static_cast<std::size_t>(i)] : full; };
+    std::size_t expected = 0;
+    for (int i = 0; i < passCount; ++i) {
+        const Pass& pass = passAt(i);
+        const int passWidth = extent(width, pass.x, pass.dx), passHeight = extent(height, pass.y, pass.dy);
+        if (passWidth == 0 || passHeight == 0) continue;
+        const std::size_t stride = (static_cast<std::size_t>(passWidth) * bitsPerPixel + 7) / 8;
+        expected += (stride + 1) * static_cast<std::size_t>(passHeight);
+    }
 
     std::vector<std::uint8_t> raw;
     raw.reserve(expected);
     if (!inflateZlib(idat.data(), idat.size(), expected, raw) || raw.size() != expected) return fail("PNG image data is damaged");
 
     const std::size_t bpp = std::max<std::size_t>(1, bitsPerPixel / 8);
-    std::vector<std::uint8_t> prev(stride, 0), cur(stride, 0);
     Image image;
     image.width = width; image.height = height;
     image.luma.resize(static_cast<std::size_t>(width) * static_cast<std::size_t>(height));
-    for (int y = 0; y < height; ++y) {
-        const std::uint8_t* line = raw.data() + static_cast<std::size_t>(y) * (stride + 1);
-        const int filter = line[0];
-        const std::uint8_t* src = line + 1;
-        for (std::size_t i = 0; i < stride; ++i) {
-            const int a = i >= bpp ? cur[i - bpp] : 0, b = prev[i], c = i >= bpp ? prev[i - bpp] : 0;
-            int v = src[i];
-            switch (filter) {
-            case 0: break;
-            case 1: v += a; break;
-            case 2: v += b; break;
-            case 3: v += (a + b) / 2; break;
-            case 4: {
-                const int p = a + b - c, pa = std::abs(p - a), pb = std::abs(p - b), pc = std::abs(p - c);
-                v += (pa <= pb && pa <= pc) ? a : (pb <= pc ? b : c);
-                break;
-            }
-            default: return fail("PNG has an unknown row filter");
-            }
-            cur[i] = static_cast<std::uint8_t>(v);
-        }
-        for (int x = 0; x < width; ++x) {
-            int r = 0, g = 0, bl = 0, alpha = 255;
-            if (colour == 0 || colour == 3) {
-                int sample;
-                if (depth == 8) sample = cur[static_cast<std::size_t>(x)];
-                else if (depth == 16) sample = cur[static_cast<std::size_t>(x) * 2];
-                else {
-                    const int perByte = 8 / depth, shift = 8 - depth * (x % perByte + 1);
-                    sample = (cur[static_cast<std::size_t>(x / perByte)] >> shift) & ((1 << depth) - 1);
+    std::size_t rawPos = 0;
+    for (int i = 0; i < passCount; ++i) {
+        const Pass& pass = passAt(i);
+        const int passWidth = extent(width, pass.x, pass.dx), passHeight = extent(height, pass.y, pass.dy);
+        if (passWidth == 0 || passHeight == 0) continue;
+        const std::size_t stride = (static_cast<std::size_t>(passWidth) * bitsPerPixel + 7) / 8;
+        std::vector<std::uint8_t> prev(stride, 0), cur(stride, 0);
+        for (int py = 0; py < passHeight; ++py) {
+            const std::uint8_t* line = raw.data() + rawPos;
+            rawPos += stride + 1;
+            const int filter = line[0];
+            const std::uint8_t* src = line + 1;
+            for (std::size_t byte = 0; byte < stride; ++byte) {
+                const int a = byte >= bpp ? cur[byte - bpp] : 0, b = prev[byte], c = byte >= bpp ? prev[byte - bpp] : 0;
+                int v = src[byte];
+                switch (filter) {
+                case 0: break;
+                case 1: v += a; break;
+                case 2: v += b; break;
+                case 3: v += (a + b) / 2; break;
+                case 4: {
+                    const int predictor = a + b - c, pa = std::abs(predictor - a), pb = std::abs(predictor - b), pc = std::abs(predictor - c);
+                    v += (pa <= pb && pa <= pc) ? a : (pb <= pc ? b : c);
+                    break;
                 }
-                if (colour == 3) {
-                    if (static_cast<std::size_t>(sample) * 3 + 2 >= palette.size()) return fail("PNG uses a colour outside its palette");
-                    r = palette[static_cast<std::size_t>(sample) * 3]; g = palette[static_cast<std::size_t>(sample) * 3 + 1]; bl = palette[static_cast<std::size_t>(sample) * 3 + 2];
+                default: return fail("PNG has an unknown row filter");
+                }
+                cur[byte] = static_cast<std::uint8_t>(v);
+            }
+            for (int x = 0; x < passWidth; ++x) {
+                int r = 0, g = 0, bl = 0, alpha = 255;
+                if (colour == 0 || colour == 3) {
+                    int sample;
+                    if (depth == 8) sample = cur[static_cast<std::size_t>(x)];
+                    else if (depth == 16) sample = cur[static_cast<std::size_t>(x) * 2];
+                    else {
+                        const int perByte = 8 / depth, shift = 8 - depth * (x % perByte + 1);
+                        sample = (cur[static_cast<std::size_t>(x / perByte)] >> shift) & ((1 << depth) - 1);
+                    }
+                    if (colour == 3) {
+                        if (static_cast<std::size_t>(sample) * 3 + 2 >= palette.size()) return fail("PNG uses a colour outside its palette");
+                        r = palette[static_cast<std::size_t>(sample) * 3]; g = palette[static_cast<std::size_t>(sample) * 3 + 1]; bl = palette[static_cast<std::size_t>(sample) * 3 + 2];
+                    } else {
+                        const int v = depth == 8 || depth == 16 ? sample : sample * 255 / ((1 << depth) - 1);
+                        r = g = bl = v;
+                    }
                 } else {
-                    const int v = depth == 8 || depth == 16 ? sample : sample * 255 / ((1 << depth) - 1);
-                    r = g = bl = v;
+                    const std::size_t step = depth == 8 ? 1 : 2;
+                    const std::uint8_t* px = cur.data() + static_cast<std::size_t>(x) * static_cast<std::size_t>(channels) * step;
+                    if (colour == 4) { r = g = bl = px[0]; alpha = px[step]; }
+                    else { r = px[0]; g = px[step]; bl = px[2 * step]; if (colour == 6) alpha = px[3 * step]; }
                 }
-            } else {
-                const std::size_t step = depth == 8 ? 1 : 2;
-                const std::uint8_t* px = cur.data() + static_cast<std::size_t>(x) * static_cast<std::size_t>(channels) * step;
-                if (colour == 4) { r = g = bl = px[0]; alpha = px[step]; }
-                else { r = px[0]; g = px[step]; bl = px[2 * step]; if (colour == 6) alpha = px[3 * step]; }
+                const int imageX = pass.x + x * pass.dx, imageY = pass.y + py * pass.dy;
+                image.luma[static_cast<std::size_t>(imageY) * static_cast<std::size_t>(width) + static_cast<std::size_t>(imageX)] = over(lumaOf(r, g, bl), alpha);
             }
-            image.luma[static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)] = over(lumaOf(r, g, bl), alpha);
+            std::swap(prev, cur);
         }
-        std::swap(prev, cur);
     }
     return finish(std::move(image));
 }
