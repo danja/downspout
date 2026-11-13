@@ -16,7 +16,7 @@ enum ParamId : int {
     kRange = 0,   // 0 = 60 dB, 1 = 90 dB, 2 = 120 dB display range
     kSpeed,       // ballistics (0 slow .. 1 fast)
     kHold,        // peak hold off/on
-    kMode,        // 0 spectrum, 1 levels
+    kMode,        // 0 spectrum, 1 levels, 2 oscilloscope
     kPeakL,       // output: peak L in dB
     kPeakR,       // output: peak R in dB
     kRmsL,        // output: RMS L in dB
@@ -35,7 +35,7 @@ struct Params {
     float rangeDb = 60.0f;   // display floor in dB (positive)
     float speed = 0.5f;      // 0..1 ballistics
     float hold = 1.0f;       // peak hold off/on
-    float mode = 0.0f;       // 0 spectrum, 1 levels
+    float mode = 0.0f;       // 0 spectrum, 1 levels, 2 oscilloscope
 };
 
 struct ParameterSpec {
@@ -61,7 +61,7 @@ struct ParameterTable {
         specs[kRange] = {"range", "Range", "dB", 0.0f, 2.0f, 0.0f, true, false};
         specs[kSpeed] = {"speed", "Speed", "", 0.0f, 1.0f, 0.5f, false, false};
         specs[kHold] = {"hold", "Peak hold", "", 0.0f, 1.0f, 1.0f, true, false};
-        specs[kMode] = {"mode", "Mode", "", 0.0f, 1.0f, 0.0f, true, false};
+        specs[kMode] = {"mode", "Mode", "", 0.0f, 2.0f, 0.0f, true, false};
         specs[kPeakL] = {"peak_l", "Peak L", "dB", -120.0f, 0.0f, -120.0f, false, true};
         specs[kPeakR] = {"peak_r", "Peak R", "dB", -120.0f, 0.0f, -120.0f, false, true};
         specs[kRmsL] = {"rms_l", "RMS L", "dB", -120.0f, 0.0f, -120.0f, false, true};

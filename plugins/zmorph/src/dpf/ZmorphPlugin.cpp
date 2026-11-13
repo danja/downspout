@@ -78,7 +78,8 @@ protected:
         applyConfiguration();
     }
 
-    void run(const float** inputs, float** outputs, const uint32_t frames) override
+    void run(const float** inputs, float** outputs, const uint32_t frames,
+             const MidiEvent* midiEvents, const uint32_t midiEventCount) override
     {
         core::Params p;
         p.cutoff = params_[0];
@@ -86,6 +87,43 @@ protected:
         p.morph = params_[2];
         p.mix = params_[3];
         p.level = params_[4];
+        p.noteTracking = false;
+        p.noteCutoff = 0.0f;
+
+        if (midiEvents != nullptr) {
+            for (uint32_t i = 0; i < midiEventCount; ++i) {
+                const MidiEvent& event = midiEvents[i];
+                const uint8_t* const data = event.size > MidiEvent::kDataSize ? event.dataExt : event.data;
+                if (event.size < 3)
+                    continue;
+                const uint8_t status = data[0] & 0xF0u;
+                const uint8_t channel = data[0] & 0x0Fu;
+                const uint8_t data1 = data[1];
+                const uint8_t data2 = data[2];
+                (void)channel;
+
+                if (status == 0x90u && data2 > 0) {
+                    const float cutoff = core::noteToCutoff(static_cast<int>(data1));
+                    p.noteCutoff = cutoff;
+                    p.noteTracking = true;
+                    params_[0] = cutoff;
+                    requestParameterValueChange(0, cutoff);
+                }
+                else if (status == 0x80u || (status == 0x90u && data2 == 0)) {
+                    p.noteTracking = false;
+                    p.noteCutoff = 0.0f;
+                }
+                else if (status == 0xB0u) {
+                    core::ParamId target = core::kCutoff;
+                    if (core::controllerTarget(data1, target)) {
+                        const float value = core::controllerToParameter(target, data2);
+                        params_[static_cast<uint32_t>(target)] = value;
+                        requestParameterValueChange(static_cast<uint32_t>(target), value);
+                    }
+                }
+            }
+        }
+
         core::processBlock(engine_, p, inputs[0], inputs[1], outputs[0], outputs[1], frames);
     }
 

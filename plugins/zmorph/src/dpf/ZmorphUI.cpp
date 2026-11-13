@@ -50,7 +50,7 @@ protected:
     {
         beginFrame();
         drawHeader("Zmorph", "z-plane morph", "");
-        Rect b {10.0f, 40.0f, (float)getWidth() - 20.0f, (float)getHeight() - 50.0f};
+        Rect b {10.0f, 82.0f, (float)getWidth() - 20.0f, (float)getHeight() - 92.0f};
         drawPanel(b, "ZMORPH", kAccent);
         char buf[32];
         auto cell = [&](int col, int row) {

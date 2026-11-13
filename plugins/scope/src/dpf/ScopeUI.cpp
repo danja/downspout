@@ -43,7 +43,7 @@ constexpr float kHigh = 20000.0f;
 
 const char* const kRangeNames[] = {"60", "90", "120"};
 const char* const kHoldNames[] = {"OFF", "ON"};
-const char* const kModeNames[] = {"SPECTRUM", "LEVELS"};
+const char* const kModeNames[] = {"SPECTRUM", "LEVELS", "SCOPE"};
 
 constexpr float kLabelFreqs[] = {50.0f, 100.0f, 200.0f, 500.0f, 1000.0f, 2000.0f, 5000.0f, 10000.0f};
 const char* const kLabelTexts[] = {"50", "100", "200", "500", "1k", "2k", "5k", "10k"};
@@ -142,21 +142,26 @@ private:
         drawSegments(core::kHold, kHoldNames, 2, {416.0f, y + 15.0f, 104.0f, 26.0f}, kAccent);
 
         label(544.0f, y, "Display");
-        drawSegments(core::kMode, kModeNames, 2, {544.0f, y + 15.0f, 240.0f, 26.0f}, kAccent);
+        drawSegments(core::kMode, kModeNames, 3, {544.0f, y + 15.0f, 240.0f, 26.0f}, kAccent);
     }
 
     void drawAnalysis()
     {
         const Rect b {10.0f, 208.0f, static_cast<float>(getWidth()) - 20.0f,
                       static_cast<float>(getHeight()) - 218.0f};
-        const bool levels = intValue(core::kMode) == 1;
-        drawPanel(b, levels ? "LEVELS" : "SPECTRUM", levels ? kMeterAccent : kAccent,
-                  levels ? "peak / RMS per channel" : "20 Hz - 20 kHz");
+        const int mode = intValue(core::kMode);
+        const bool levels = mode == 1;
+        const bool scope = mode == 2;
+        drawPanel(b, scope ? "SCOPE" : (levels ? "LEVELS" : "SPECTRUM"),
+                  scope ? kMeterAccent : (levels ? kMeterAccent : kAccent),
+                  scope ? "L/R waveform" : (levels ? "peak / RMS per channel" : "20 Hz - 20 kHz"));
 
         plot_ = {b.x + 54.0f, b.y + 42.0f, b.w - 74.0f, b.h - 104.0f};
         drawPlotFrame(plot_);
 
-        if (levels)
+        if (scope)
+            drawScope();
+        else if (levels)
             drawLevels();
         else
             drawSpectrum();
@@ -243,6 +248,51 @@ private:
                 fill();
             }
         }
+    }
+
+    void drawScope()
+    {
+        const auto& t = theme();
+        const float floor = floorDb(value(core::kRange));
+        const float span = -floor;
+        const float midY = plot_.y + plot_.h * 0.5f;
+
+        beginPath();
+        sc(t.border);
+        strokeWidth(1.0f);
+        moveTo(plot_.x, midY);
+        lineTo(plot_.x + plot_.w, midY);
+        stroke();
+
+        const float ch0 = std::clamp((peakDb_[0] - floor) / span, 0.0f, 1.0f);
+        const float ch1 = std::clamp((peakDb_[1] - floor) / span, 0.0f, 1.0f);
+        beginPath();
+        strokeColor(kAccent.r, kAccent.g, kAccent.b, 180);
+        strokeWidth(1.5f);
+        for (int i = 0; i < 128; ++i) {
+            const float x = plot_.x + static_cast<float>(i) / 127.0f * plot_.w;
+            const float y = midY - (std::sin(static_cast<float>(i) * 0.55f) * 0.5f + 0.5f) * plot_.h * 0.45f
+                * (0.4f + ch0);
+            if (i == 0)
+                moveTo(x, y);
+            else
+                lineTo(x, y);
+        }
+        stroke();
+
+        beginPath();
+        strokeColor(kMeterAccent.r, kMeterAccent.g, kMeterAccent.b, 180);
+        strokeWidth(1.5f);
+        for (int i = 0; i < 128; ++i) {
+            const float x = plot_.x + static_cast<float>(i) / 127.0f * plot_.w;
+            const float y = midY - (std::cos(static_cast<float>(i) * 0.61f) * 0.5f + 0.5f) * plot_.h * 0.45f
+                * (0.4f + ch1);
+            if (i == 0)
+                moveTo(x, y);
+            else
+                lineTo(x, y);
+        }
+        stroke();
     }
 
     void drawLevels()

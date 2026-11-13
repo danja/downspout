@@ -23,8 +23,9 @@ void processBlock(Engine& e, const Params& p, const float* inL, const float* inR
         for (std::uint32_t i=0;i<frames;++i){outL[i]=inL[i];outR[i]=inR[i];}
         return;
     }
-    const float fc = std::clamp(p.cutoff, 20.0f, (float)e.sampleRate*0.49f);
-    const float Q = std::max(0.1f, 1.0f / (1.0f - p.resonance + 1e-3f) * 0.5f); // rough
+    const float cutoff = p.noteTracking ? p.noteCutoff : p.cutoff;
+    const float fc = std::clamp(cutoff, 20.0f, (float)e.sampleRate*0.49f);
+    const float Q = std::max(0.15f, 0.5f + 2.0f * p.resonance);
     const float morph = std::clamp(p.morph, 0.0f, 1.0f);
     const float w0 = 2.0f * kPi * fc / (float)e.sampleRate;
     const float cosw = std::cos(w0);

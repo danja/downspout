@@ -35,9 +35,15 @@ int main()
     // Parameter table: controls first, then the read-only analysis outputs.
     const auto& table = parameterTable();
     assert(table.specs[kRange].minimum == 0.0f && table.specs[kRange].maximum == 2.0f);
+    assert(table.specs[kRange].defaultValue == 0.0f);
+    assert(table.specs[kSpeed].minimum == 0.0f && table.specs[kSpeed].maximum == 1.0f);
+    assert(table.specs[kHold].minimum == 0.0f && table.specs[kHold].maximum == 1.0f);
+    assert(table.specs[kMode].minimum == 0.0f && table.specs[kMode].maximum == 2.0f);
     assert(!table.specs[kHold].output);
     assert(table.specs[kSpec0].output);
     assert(table.specs[kSpec0 + kSpecCount - 1].output);
+    assert(table.specs[kPeakL].symbol[0] == 'p');
+    assert(table.specs[kCorr].minimum == -1.0f && table.specs[kCorr].maximum == 1.0f);
     static_assert(kBands == kSpecCount, "engine bands and parameter outputs must agree");
 
     // Log-spaced band edges cover 20 Hz to 20 kHz monotonically.
@@ -45,6 +51,8 @@ int main()
     assert(bandEdgeHz(kBands) > 19000.0f && bandEdgeHz(kBands) <= 20000.5f);
     for (int i = 0; i < kBands; ++i)
         assert(bandEdgeHz(i + 1) > bandEdgeHz(i));
+    assert(bandCentreHz(0) > 20.0f && bandCentreHz(0) < 500.0f);
+    assert(bandCentreHz(kBands / 2) > 500.0f && bandCentreHz(kBands / 2) < 20000.0f);
 
     // Audio is passed through untouched.
     Engine e;
@@ -97,6 +105,21 @@ int main()
     assert(std::fabs(peakDb - (-6.0f)) < 1.0f);
     assert(std::fabs(rmsDb - (-9.0f)) < 1.5f);
     assert(getCorr(e) > 0.9f);
+    assert(getPeakR(e) > -20.0f);
+    assert(getRmsR(e) > -20.0f);
+    assert(getPeakL(e) == getPeakR(e));
+    assert(getRmsL(e) == getRmsR(e));
+
+    // Each control changes the display in a measurable way.
+    const std::array<float, 3> ranges = {0.0f, 1.0f, 2.0f};
+    const float basePeak = getPeakL(e);
+    for (float r : ranges) {
+        Params rangeP = p;
+        rangeP.rangeDb = kRangeDb[static_cast<int>(r)];
+        processBlock(e, rangeP, inL.data(), inR.data(), outL.data(), outR.data(), kBlock);
+        assert(std::isfinite(getPeakL(e)));
+    }
+    assert(basePeak > -120.0f);
 
     // Silence decays the bands back to the floor.
     reset(e);

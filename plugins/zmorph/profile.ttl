@@ -6,7 +6,7 @@
 
 dsp:zmorph a trn:PluginProfile ;
     rdfs:label "Zmorph" ;
-    rdfs:comment "Z-plane morph filter: morphs between two pole/zero sets (low-pass to high-pass) with cutoff, resonance and morph controls." ;
+    rdfs:comment "Z-plane morph filter: morphs between two pole/zero sets (low-pass to high-pass), with MIDI note-following cutoff and CC 1-4 mapped to resonance, morph, mix and level." ;
     trn:bundleName "zmorph.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/zmorph/> ;
