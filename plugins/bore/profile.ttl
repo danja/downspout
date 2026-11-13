@@ -6,7 +6,7 @@
 
 dsp:bore a trn:PluginProfile ;
     rdfs:label "Bore" ;
-    rdfs:comment "Eight-voice MIDI instrument: a driven lip-like oscillator excites a pitch-tuned feedback delay with adjustable embouchure, bell damping and breath noise." ;
+    rdfs:comment "Eight-voice MIDI instrument: nonlinear reed flow excites a damped pitch-tuned waveguide, with turbulent instability and upper-mode capture." ;
     trn:bundleName "bore.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/bore/> ;
@@ -22,6 +22,10 @@ dsp:bore a trn:PluginProfile ;
                     rdfs:comment "Sets the feedback low-pass brightness. MIDI CC 3." ] ;
     trn:parameter [ rdfs:label "Breath" ; trn:symbol "breath" ; trn:range "0-100%" ;
                     rdfs:comment "Adds filtered noise to the reed excitation. MIDI CC 4." ] ;
+    trn:parameter [ rdfs:label "Reed Instability" ; trn:symbol "reed_instability" ; trn:range "0-100%" ;
+                    rdfs:comment "Adds turbulent airflow noise and slow lip flutter. MIDI CC 5." ] ;
+    trn:parameter [ rdfs:label "Register Capture" ; trn:symbol "register_capture" ; trn:range "0-100%" ;
+                    rdfs:comment "Raises reed resonance from the bore fundamental toward its fourth mode; nonlinear coupling may capture an upper harmonic. MIDI CC 6." ] ;
     trn:parameter [ rdfs:label "Attack" ; trn:symbol "attack" ; trn:range "1-1000 ms" ;
                     rdfs:comment "Per-note envelope rise time." ] ;
     trn:parameter [ rdfs:label "Release" ; trn:symbol "release" ; trn:range "20-4000 ms" ;

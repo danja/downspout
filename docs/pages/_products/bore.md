@@ -8,18 +8,21 @@ group: synths
 role: Lip-reed waveguide instrument
 screenshot: /assets/plugins/bore.png
 capabilities: [audio output, MIDI note and CC input]
-summary: "An eight-voice lip-reed instrument: MIDI pitch tunes the feedback bore; Pressure, Embouchure, Bell and Breath shape the sound."
+summary: "An eight-voice lip-reed instrument: nonlinear reed flow excites a pitch-tuned bore with controllable turbulence and upper-mode capture."
 ---
 
 ## Functionality
 
-Bore uses a driven lip-like oscillator to excite a pitch-tuned feedback delay.
-Pressure changes reed drive and loop sustain, Embouchure moves the lip oscillator
-relative to the bore, Bell changes feedback damping, and Breath adds filtered
-noise. It is a compact waveguide sound-design model, not a calibrated trumpet
-simulation. There are eight MIDI voices, an Attack/Release envelope, velocity
-sensitivity and a channel filter.
+Bore couples nonlinear reed flow to a damped, pitch-tuned waveguide. Pressure
+changes reed drive and loop sustain, Embouchure moves the reed resonance relative
+to the bore, Bell changes feedback damping, and Breath adds filtered noise. Reed
+Instability adds turbulent-flow noise and slow lip flutter. Register Capture
+biases the reed resonance toward upper bore modes, where nonlinear coupling can
+catch a harmonic above the played note. It is a compact physical sound-design
+model, not a calibrated trumpet simulation. There are eight MIDI voices, an
+Attack/Release envelope, velocity sensitivity and a channel filter.
 
-CC 1-4 control Pressure, Embouchure, Bell and Breath; CC 7 controls Level.
+CC 1-6 control Pressure, Embouchure, Bell, Breath, Reed Instability and Register
+Capture; CC 7 controls Level.
 The core tests and VST3 build pass. Listening and host save/reopen validation
 remain pending.

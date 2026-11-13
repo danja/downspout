@@ -25,7 +25,7 @@ protected:
     const char* getLabel() const override { return "Bore"; }
     const char* getDescription() const override
     {
-        return "Eight-voice lip-reed instrument with a pitch-tuned feedback bore and adjustable embouchure, bell and breath.";
+        return "Eight-voice lip-reed waveguide with turbulent instability and upper-register capture.";
     }
     const char* getMaker() const override { return "danja"; }
     const char* getHomePage() const override { return "https://danja.github.io/downspout/"; }

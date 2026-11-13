@@ -52,7 +52,7 @@ protected:
     {
         beginFrame();
         drawHeader("BORE", "lip-reed / feedback bore",
-                   "MIDI pitch sets the bore length; pressure drives a buzzing reed, and the bell opens the resonant tone.");
+                   "Turbulent reed flow can flutter; the bore may catch an upper harmonic instead of the played note.");
         drawInstrument({24.0f, 108.0f, 350.0f, 480.0f});
         drawMouthpiece({390.0f, 108.0f, 506.0f, 250.0f});
         drawPerformance({390.0f, 370.0f, 506.0f, 218.0f});
@@ -126,11 +126,14 @@ private:
         std::snprintf(status, sizeof(status), "Voices sounding: %d / %d",
                       intValue(idx(core::ParamId::outVoices)), static_cast<int>(core::kVoiceCount));
         label(b.x + 18.0f, b.y + 306.0f, status, false, 14.0f);
-        label(b.x + 18.0f, b.y + 344.0f, "Pressure raises loop sustain and reed bite.", true, 12.0f);
-        label(b.x + 18.0f, b.y + 364.0f, "Embouchure detunes the lip against the bore.", true, 12.0f);
-        label(b.x + 18.0f, b.y + 384.0f, "Bell changes bore damping; Breath adds air.", true, 12.0f);
-        label(b.x + 18.0f, b.y + 425.0f, "A designed waveguide voice, not a sampled horn.", true, 11.0f);
-        label(b.x + 18.0f, b.y + 443.0f, "Eight-note polyphony. CC 1-4 shape the tone.", true, 11.0f);
+        const float left = b.x + 18.0f;
+        const float right = b.x + 184.0f;
+        slider(core::ParamId::reedInstability, "Instability  (CC 5)",
+               {left, b.y + 344.0f, 148.0f, 42.0f}, kMouthAccent);
+        slider(core::ParamId::registerCapture, "Register capture  (CC 6)",
+               {right, b.y + 344.0f, 148.0f, 42.0f}, kBoreAccent);
+        label(left, b.y + 402.0f, "Turbulent flow adds noise and lip flutter.", true, 11.0f);
+        label(left, b.y + 422.0f, "Upper bore modes can catch: octave or more.", true, 11.0f);
     }
 
     void drawMouthpiece(const Rect b)

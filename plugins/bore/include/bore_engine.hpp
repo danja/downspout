@@ -38,6 +38,7 @@ private:
         float velocity = 1.0f;
         float boreFilter = 0.0f;
         float breathFilter = 0.0f;
+        float flutterFilter = 0.0f;
         double lipPhase = 0.0;
         std::uint32_t writeIndex = 0;
         std::uint32_t samplesWritten = 0;
@@ -53,7 +54,7 @@ private:
     [[nodiscard]] std::size_t allocateVoice(int note, std::uint8_t channel) noexcept;
     void renderSegment(float* left, float* right, std::uint32_t frames) noexcept;
 
-    std::array<float, kInputParameterCount> parameters_ {};
+    std::array<float, kParameterCount> parameters_ {};
     std::array<Voice, kVoiceCount> voices_ {};
     double sampleRate_ = 48000.0;
     std::uint64_t age_ = 0;
@@ -62,6 +63,8 @@ private:
     float bell_ = 0.68f;
     float breath_ = 0.12f;
     float level_ = 0.65f;
+    float reedInstability_ = 0.18f;
+    float registerCapture_ = 0.0f;
     float smoothCoefficient_ = 0.0f;
 };
 

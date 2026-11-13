@@ -97,8 +97,10 @@ void testParameterContract()
     assert(kParameterSpecs.size() == kParameterCount);
     assert(kInputParameterCount + 1 == kParameterCount);
     Engine engine;
-    for (std::size_t i = 0; i < kInputParameterCount; ++i)
-        assert(engine.getParameter(static_cast<std::uint32_t>(i)) == kParameterSpecs[i].defaultValue);
+    for (std::size_t i = 0; i < kParameterCount; ++i) {
+        const float expected = kParameterSpecs[i].output ? 0.0f : kParameterSpecs[i].defaultValue;
+        assert(engine.getParameter(static_cast<std::uint32_t>(i)) == expected);
+    }
     engine.setParameter(id(ParamId::pressure), 2.0f);
     assert(engine.getParameter(id(ParamId::pressure)) == 1.0f);
     engine.setParameter(id(ParamId::embouchure), std::nanf(""));
@@ -120,6 +122,15 @@ void testPitchedVoiceAndVelocity()
     const double fundamental = amplitudeAt(audio.left, 2048, 4096, 261.625565);
     const double subharmonic = amplitudeAt(audio.left, 2048, 4096, 130.812782);
     assert(fundamental > subharmonic * 2.0);
+
+    Engine captured;
+    captured.setParameter(id(ParamId::registerCapture), 1.0f / 3.0f);
+    captured.activate(kSampleRate);
+    const Audio upperRegister = render(captured, 112, {noteOn(60)});
+    const double capturedFundamental = amplitudeAt(upperRegister.left, 2048, 4096, 261.625565);
+    const double capturedSecond = amplitudeAt(upperRegister.left, 2048, 4096, 523.25113);
+    const double defaultSecond = amplitudeAt(audio.left, 2048, 4096, 523.25113);
+    assert(capturedSecond / capturedFundamental > 1.5 * defaultSecond / fundamental);
 
     Engine quiet;
     quiet.activate(kSampleRate);
@@ -178,11 +189,13 @@ void testReleaseAndAllSoundOff()
 void testControlsChangeTheSound()
 {
     const Audio baseline = renderWithParameter(ParamId::pressure, 0.58f);
-    for (const auto& test : std::array<std::pair<ParamId, float>, 4> {{
+    for (const auto& test : std::array<std::pair<ParamId, float>, 6> {{
              {ParamId::pressure, 0.2f},
              {ParamId::embouchure, 1.17f},
              {ParamId::bell, 0.05f},
              {ParamId::breath, 1.0f},
+             {ParamId::reedInstability, 1.0f},
+             {ParamId::registerCapture, 1.0f / 3.0f},
          }}) {
         const Audio changed = renderWithParameter(test.first, test.second);
         const std::size_t begin = 2048;
@@ -215,9 +228,13 @@ void testActivationKeepsThePatch()
     Engine engine;
     engine.setParameter(id(ParamId::pressure), 0.31f);
     engine.setParameter(id(ParamId::bell), 0.22f);
+    engine.setParameter(id(ParamId::reedInstability), 0.73f);
+    engine.setParameter(id(ParamId::registerCapture), 0.4f);
     engine.activate(96000.0);
     assert(engine.getParameter(id(ParamId::pressure)) == 0.31f);
     assert(engine.getParameter(id(ParamId::bell)) == 0.22f);
+    assert(engine.getParameter(id(ParamId::reedInstability)) == 0.73f);
+    assert(engine.getParameter(id(ParamId::registerCapture)) == 0.4f);
     assert(engine.activeVoices() == 0);
 }
 
@@ -225,11 +242,14 @@ void testControllersAndBlockSegmentation()
 {
     Engine fromControl;
     fromControl.activate(kSampleRate);
-    render(fromControl, 1, {control(1, 127), control(2, 0), control(3, 64), control(4, 127), control(7, 32)});
+    render(fromControl, 1, {control(1, 127), control(2, 0), control(3, 64), control(4, 127),
+                            control(5, 96), control(6, 32), control(7, 32)});
     assert(fromControl.getParameter(id(ParamId::pressure)) == 1.0f);
     assert(fromControl.getParameter(id(ParamId::embouchure)) == 0.8f);
     assert(std::abs(fromControl.getParameter(id(ParamId::bell)) - 64.0f / 127.0f) < 1.0e-6f);
     assert(fromControl.getParameter(id(ParamId::breath)) == 1.0f);
+    assert(std::abs(fromControl.getParameter(id(ParamId::reedInstability)) - 96.0f / 127.0f) < 1.0e-6f);
+    assert(std::abs(fromControl.getParameter(id(ParamId::registerCapture)) - 32.0f / 127.0f) < 1.0e-6f);
     assert(std::abs(fromControl.getParameter(id(ParamId::level)) - 32.0f / 127.0f) < 1.0e-6f);
 
     Engine whole;
@@ -262,6 +282,8 @@ void testPolyphonicPeakAndStability()
     engine.setParameter(id(ParamId::breath), 1.0f);
     engine.setParameter(id(ParamId::velocity), 0.0f);
     engine.setParameter(id(ParamId::level), 1.0f);
+    engine.setParameter(id(ParamId::reedInstability), 1.0f);
+    engine.setParameter(id(ParamId::registerCapture), 1.0f);
     engine.activate(192000.0);
     std::vector<MidiMessage> notes;
     for (std::uint8_t note = 36; note < 108; note = static_cast<std::uint8_t>(note + 10))

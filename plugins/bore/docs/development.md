@@ -9,8 +9,8 @@ building another plugin in this repository.
 Before choosing DSP, compare the proposed sound source with the existing
 instruments. Downspout already has strings and modal objects, wavetable and FM
 synths, a tonewheel organ, birdsong and drum voices. Bore therefore models a
-different excitation-and-resonance pair: a lip-like oscillator coupled to a
-pitch-tuned air-column delay. It does not claim to model a specific trumpet,
+different excitation-and-resonance pair: nonlinear reed flow coupled to a
+pitch-tuned air-column waveguide. It does not claim to model a specific trumpet,
 trombone or player.
 
 Write the boundary down early. Bore is an eight-voice MIDI instrument with
@@ -24,12 +24,15 @@ Each control was tied to a signal-path decision before the UI was drawn:
 - Pressure changes the nonlinear reed drive and the feedback gain.
 - Embouchure changes the lip oscillator frequency relative to the bore.
 - Bell controls the feedback low-pass cutoff; Breath adds filtered noise.
+- Reed Instability adds turbulent-flow noise and slow lip flutter.
+- Register Capture raises the reed resonance toward upper bore modes, allowing
+  nonlinear feedback to favor a harmonic above the played note.
 - Attack and Release shape a per-note envelope; Velocity controls sensitivity.
 - Level and MIDI In are ordinary host parameters.
 
-CC 1-4 follow the four tone controls in panel order, and CC 7 controls Level.
-The status output is read-only. Parameters are ordinary host state, so the
-wrapper does not invent a second serialization format.
+CC 1-6 follow the six tone/instability controls in panel order, and CC 7
+controls Level. The status output is read-only. Parameters are ordinary host
+state, so the wrapper does not invent a second serialization format.
 
 ## 3. Make the core portable and bounded
 
@@ -40,12 +43,15 @@ without knowing about host classes. The engine has fixed voice storage and
 performs no allocation in `process()`.
 
 The loop delay is `sampleRate / frequency`, with note frequency bounded to
-20 Hz-12 kHz and the delay bounded by the fixed buffer. The reed source is a
-driven sine plus filtered noise; the loop gain rises from 0.82 to 0.97 with
-Pressure. Bell maps to a low-pass cutoff from 900 Hz to the lesser of 15 kHz
-and 42% of sample rate. These are sound-design approximations, not measured
-brass acoustics; describe that distinction anywhere the UI or docs explain the
-model.
+20 Hz-12 kHz and the delay bounded by the fixed buffer. A nonlinear reed
+aperture gates Bernoulli-style airflow from the pressure difference between the
+mouth and reflected bore wave. Reed Instability adds filtered turbulent flow
+and slow aperture/frequency flutter. Register Capture shifts reed resonance
+from the fundamental toward the fourth bore mode; the feedback delay supplies
+the resonant modes rather than directly transposing the MIDI note. Bell maps to
+a low-pass cutoff from 900 Hz to the lesser of 15 kHz and 42% of sample rate.
+These are sound-design approximations, not measured brass acoustics; describe
+that distinction anywhere the UI or docs explain the model.
 
 Attack reaches about 99% over its displayed time. Release falls by about 60 dB
 over its displayed time, then the voice is retired below the -100 dB runtime
@@ -61,6 +67,8 @@ The core suite checks:
   independent direct DFT;
 - note velocity, envelope release, controller mapping, channel filtering and
   all-sound-off behavior;
+- audible effects of Reed Instability and Register Capture, including increased
+  second-harmonic energy when the reed is tuned near the second bore mode;
 - that the tone controls change rendered audio, not just stored parameter
   values;
 - finite, bounded output with eight voices at a high sample rate and maximum

@@ -19,6 +19,8 @@ enum class ParamId : std::uint32_t {
     level,
     midiCh,
     outVoices,
+    reedInstability,
+    registerCapture,
 };
 
 struct ParamSpec {
@@ -32,8 +34,8 @@ struct ParamSpec {
     bool output = false;
 };
 
-inline constexpr std::size_t kParameterCount = 10;
-inline constexpr std::size_t kInputParameterCount = 9;
+inline constexpr std::size_t kParameterCount = 12;
+inline constexpr std::size_t kInputParameterCount = 11;
 inline constexpr std::size_t kVoiceCount = 8;
 inline constexpr std::size_t kMaxDelaySamples = 16384;
 
@@ -48,6 +50,8 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"level", "Level", "", 0.0f, 1.0f, 0.65f, false, false},
     {"midi_ch", "MIDI In", "", 0.0f, 17.0f, 17.0f, true, false},
     {"out_voices", "Active Voices", "", 0.0f, 8.0f, 0.0f, true, true},
+    {"reed_instability", "Reed Instability", "", 0.0f, 1.0f, 0.18f, false, false},
+    {"register_capture", "Register Capture", "", 0.0f, 1.0f, 0.0f, false, false},
 }};
 
 inline constexpr std::array<const char*, 18> kMidiChannelNames = {{
@@ -55,14 +59,15 @@ inline constexpr std::array<const char*, 18> kMidiChannelNames = {{
     "Ch 9", "Ch 10", "Ch 11", "Ch 12", "Ch 13", "Ch 14", "Ch 15", "Ch 16", "All",
 }};
 
-inline constexpr std::array<ParamId, 5> kControllerTargets = {{
-    ParamId::pressure, ParamId::embouchure, ParamId::bell, ParamId::breath, ParamId::level,
+inline constexpr std::array<ParamId, 7> kControllerTargets = {{
+    ParamId::pressure, ParamId::embouchure, ParamId::bell, ParamId::breath,
+    ParamId::reedInstability, ParamId::registerCapture, ParamId::level,
 }};
-inline constexpr std::array<std::uint8_t, 5> kControllerNumbers = {{1, 2, 3, 4, 7}};
+inline constexpr std::array<std::uint8_t, 7> kControllerNumbers = {{1, 2, 3, 4, 5, 6, 7}};
 
 [[nodiscard]] inline float clampParameter(const std::uint32_t index, const float raw) noexcept
 {
-    if (index >= kInputParameterCount)
+    if (index >= kParameterCount || kParameterSpecs[index].output)
         return 0.0f;
     const ParamSpec& spec = kParameterSpecs[index];
     const float value = std::isfinite(raw) ? raw : spec.defaultValue;

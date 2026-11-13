@@ -146,8 +146,10 @@ are what the core tests never touch.
 ## Other
 
 - **Bore** host audition in REAPER: check the playable range and level, confirm
-  Pressure/Embouchure/Bell/Breath and CC 1-4 are musically useful, and save/reopen
-  a project. The core suite and VST3 build pass; it has not yet been heard in a host.
+  Pressure/Embouchure/Bell/Breath, Reed Instability, and Register Capture are
+  musically useful (CC 1-6), especially whether upper-mode capture sounds
+  plausible, and save/reopen a project. The core suite and VST3 build pass; it
+  has not yet been heard in a host.
 - `skream` **Morph LP-HP** (bipolar, default off): not yet listened to in a host; try it with Drift
   on Cutoff. Decisions worth a listen: the morph weight follows cutoff position linearly (t = 0.5
   is a notch at the cutoff), and it only reshapes the forward filter, not the Scream feedback
