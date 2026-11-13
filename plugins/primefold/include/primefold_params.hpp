@@ -43,7 +43,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"lvl2", "2x", "", 0.0f, 1.0f, 0.70f, false, false},
     {"lvl3", "3x", "", 0.0f, 1.0f, 0.50f, false, false},
     {"lvl5", "5x", "", 0.0f, 1.0f, 0.40f, false, false},
-    {"feedback", "Feedback", "", 0.0f, 0.90f, 0.35f, false, false},
+    {"feedback", "Feedback", "", 0.0f, 1.0f, 0.35f, false, false},
     {"damp", "Damp", "", 0.0f, 1.0f, 0.50f, false, false},
     {"grain", "Grain", "", 0.0f, 2.0f, 1.0f, true, false},
     {"mix", "Mix", "", 0.0f, 1.0f, 0.60f, false, false},

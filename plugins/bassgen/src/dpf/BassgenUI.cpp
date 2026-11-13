@@ -100,7 +100,7 @@ constexpr const char* kScaleNames[] = {
 };
 
 constexpr const char* kGenreNames[] = {
-    "Techno", "Acid", "House", "Electro", "Dub", "Ambient", "Funk", "Sabbath", "Jazz", "Fugue", "Rock", "Moroder", "Descending", "Descend/bar"
+    "Techno", "Acid", "House", "Electro", "Dub", "Ambient", "Funk", "Sabbath", "Jazz", "Fugue", "Rock", "Moroder", "Descending", "Descend/bar", "Ascending", "Ascend/bar"
 };
 
 constexpr const char* kStyleNames[] = {
@@ -128,7 +128,7 @@ constexpr const char* kConductorChNames[] = {
 
 constexpr SelectorDef kSelectors[] = {
     {kParamScale, "Scale", kScaleNames, 23},
-    {kParamGenre, "Genre", kGenreNames, 14},
+    {kParamGenre, "Genre", kGenreNames, 16},
     {kParamStyleMode, "Style", kStyleNames, 6},
     {kParamSubdivision, "Subdivision", kSubdivisionNames, 5},
     {kParamChannel, "Channel", kChannelNames, 16},

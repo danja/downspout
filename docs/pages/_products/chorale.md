@@ -13,8 +13,7 @@ summary: A stereo chorus with the three Juno-style voicings and a Custom mode of
 
 ## Opinion
 
-Not yet auditioned in a host. I+II is the classic wide ensemble sound, a good first stop on a pad or a clean guitar; I alone is subtler, II is a quicker wobble.
-Switch to Custom for slower, deeper or more voluminous choruses, and pull Width down to hear how much of the movement is the stereo spread.
+Pretty good. Hard _not_ to use at max settings, is fun.
 
 ## Functionality
 

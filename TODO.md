@@ -2,24 +2,9 @@
 
 Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 
-## Priority
-
-zmorph needs midi input with the cutoff following notes and CC1-CC4 assigned to other parameters. Its UI needs attention, there's a title bar on top of a title bar.
-
-zmorph and scope "core tests" need the usual standard: zmorph is a 1-assert smoke test via
-`<cassert>` without `downspout/test_assert.h`, so it passes vacuously under `NDEBUG`; scope has 20
-checks and the header. Bring both up to the usual standard: assert observable effects, and show
-every control has an audible or visible effect.
-
-basilico Drive section isn't making a lot of difference. Make the effects more marked, add a couple more.
-
-add oscilloscope to scope plugin, give it standard controls
-
 ## Fun
 
 Make a new plugin that will be entirely your design, except for two constraints : it shouldn't overlap too much with existing Downspout plugins and it should be _interesting_. Document the key steps of the development process in a file under docs/ - this should be written in a way that can help other agents build plugins.
-
-Add two Ascending patterns to Bassgen corresponding to the existing Descending ones.
 
 ## New plugin proposals (from the DSP-Ports-JSFX survey, 2026-11-03)
 
@@ -148,32 +133,6 @@ are what the core tests never touch.
   `position >= loopEnd`, so the last loop sample is skipped (one frame). Changing it means
   adjusting load, save and the engine together; decide whether it is worth it.
 
-## Qune
-
-- [ ] **Bug (from INBOX): Qune does not stick to notes enough** — the output defaults to being
-      almost identical to the input. Investigate the quantisation/hold logic so the emitted MIDI
-      follows the detected pitch more aggressively instead of passing the input through. Check the
-      default Amount / stickiness and the note-confirmation hops before blaming the tracker.
-- [ ] **Listen to it.** Every number in `plugins/qune/docs/design.md` is from synthetic vowels,
-      noise and silence. Run a real vocal, a bass and a lead through all three tiers and
-      judge the artefacts the tests cannot: smearing in Good on low notes, a "tube" sound in
-      Best, Fast's splices on voice. Then tune the tracker defaults (Voicing 50 %, Stickiness
-      15 cents, the 0.95 lobe tolerance, the 2-hop jump confirmation) on that material.
-- [ ] **Host validation in REAPER.** Latency reporting while Quality or Range changes under
-      automation, MIDI note/bend/pedal input, sample-rate change, project save and reopen (all
-      settings are parameters, so no state to verify beyond that). The core tests never touch
-      the wrapper.
-- [ ] **MIDI out in a host.** Core tests cover the messages; check that REAPER routes the
-      output to a synth, that legato note-on-before-note-off behaves on a mono synth, and
-      whether the detection-time timing wants an optional delay to match the audio latency.
-      Possible extras: velocity from input level, a minimum note length, a pitch-bend output
-      for the cents the audio still differs from the note (Amount < 100 %).
-- [ ] The pitch trace is untested against a host that never refreshes output parameters
-      (it would stay empty, with its "feed a voice" hint); try Bitwig and Ardour as well.
-- [ ] Good tier latency is 2.4 periods of the range floor (28 ms for Voice). Ideas to lower
-      it: shorter asymmetric grains, or choosing the floor from the first tracked pitch.
-- [ ] Optional: a per-note enable mask on top of the 24 scales; a manual "hold this note" key.
-
 ## Treatment
 
 - [ ] **Host validation in REAPER** (Farelo task t545a1867c482, "multiple panels / special effect"):
@@ -270,20 +229,6 @@ are what the core tests never touch.
   outside this repo; keep their portable cores free of DPF code so they move cleanly.
 - Later candidate: chord-graph walker. A shared voice-leading helper in generative-common is only worth it
   if a second plugin needs it (shared code, needs approval).
-- [x] **Review `~/github/auricle-algo`** (from INBOX): findings recorded in
-      `docs/auricle-algo-review.md`.
-- [x] **Shared voice-leading helper** (from auricle review): created
-      `plugins/generative-common/include/voice_leading.hpp` (header-only: resolvePitch,
-      resolveChord), compiles and integrated into markov (octave placement), bassgen
-      (noteFromSemitoneOffset) and cadence (nearest_midi_for_pc). melgen and
-      counterpointer use scale-note search rather than fixed-pitch-class octave
-      selection, so no direct adoption there.
-- [x] **Markov stay/leap params** (from auricle review): added `stay_prob` and `leap_prob`
-      params (default off), wired into walkNote, UI, profile.ttl; tests pass.
-- [x] **Drumgen voice links** (from auricle review): added `voiceLinksEnabled` control plus a
-      deterministic post-pass (snare->clap answer, kick->clave gap fill, closed_hat<->open_hat
-      interlock), serialized (voiceLinks=1), gated; tests pass. Full editable link graph is
-      not implemented.
 
 ## New plugins from the oxide-studio review (October 2026)
 
@@ -339,9 +284,7 @@ resonance-garden, plank, tuney-vst, worms, beards.
 
 Mouth (vowel/formant morph filter) is built (core, VST3, tests, screenshot, docs); the rest are not started. Design for Mouth: `plugins/mouth/docs/design.md`.
 
-- [x] **Scale sieve** built as `sieve`: STFT mask (sqrt-Hann, 1024-pt, hop 256), keeps partials near a scale's notes (or held MIDI notes) in every octave. Controls: Root, Scale, Source, MIDI In, Width, Floor, Tilt, Mix, Level. VST3 build passes; the wet path does not work yet and the core test is a smoke test — see Priority.
 - [ ] **Audio-driven string / comb (extended Karplus-Strong)**: feedback comb with damping low-pass, pick-position comb and stiffness all-pass chain (clean string -> inharmonic bell -> metal), tuned from MIDI or tracked pitch. Closest existing plugins: `resonance-garden`, `spense`; build after the other two. References: CCRMA "Extended Karplus-Strong" (https://ccrma.stanford.edu/~jos/pasp/Extended_Karplus_Strong_Algorithm.html).
-- [x] **Z-plane morph filter** built as `zmorph`: morphs between low-pass and high-pass shapes at chosen cutoff/resonance. Controls: Cutoff, Resonance, Morph, Mix, Level. VST3 build passes, the response is measured (see the product page); the core test is a smoke test and nothing has been auditioned.
 - [ ] Envelope-follower multimode filter (auto-wah). Easy, but a crowded category.
 - [ ] **Mouth: listen to it** and try it in a host (nothing auditioned). Check Voice switching for clicks on a loud sustained source and that the vowel data matches the Csound manual table (typed from memory of it).
 - [ ] Mouth phase 2: tempo-synced vowel sequencer (step list of vowel corners), reusing Prism's tempo plumbing.

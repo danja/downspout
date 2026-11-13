@@ -12,7 +12,7 @@ summary: Transport-synced bassline generator with style, scale, Moroder/Fugue/Ja
 
 ## Opinion
 
-Not bad at all. Excels at very repetitive patterns (Conductor &  Ground are useful adjuncts).
+Not bad at all. Excels at very repetitive patterns (Conductor & Ground are useful adjuncts). I'm a bit bored of the ones it defaults to.
 
 ## Functionality
 

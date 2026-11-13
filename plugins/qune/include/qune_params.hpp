@@ -227,7 +227,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
 
     {"amount", "Amount", "", -1.0f, 2.0f, 1.0f, false, false},
     {"glide", "Glide", "ms", 0.0f, 1000.0f, 20.0f, false, false},
-    {"stickiness", "Stickiness", "cents", 0.0f, 50.0f, 15.0f, false, false},
+    {"stickiness", "Stickiness", "cents", 0.0f, 50.0f, 30.0f, false, false},
     {"transpose", "Transpose", "st", -24.0f, 24.0f, 0.0f, true, false},
 
     {"quality", "Quality", "", 0.0f, 2.0f, 1.0f, true, false},
@@ -259,7 +259,7 @@ struct Parameters {
 
     float amount = 1.0f;
     float glide = 20.0f;
-    float stickiness = 15.0f;
+    float stickiness = 30.0f;
     float transpose = 0.0f;
 
     float quality = 1.0f;

@@ -44,6 +44,9 @@ int main()
     assert(table.specs[kSpec0 + kSpecCount - 1].output);
     assert(table.specs[kPeakL].symbol[0] == 'p');
     assert(table.specs[kCorr].minimum == -1.0f && table.specs[kCorr].maximum == 1.0f);
+    assert(table.specs[kLufsMomentaryL].output);
+    assert(table.specs[kLufsIntegratedR].output);
+    assert(table.specs[kWaveL0].output);
     static_assert(kBands == kSpecCount, "engine bands and parameter outputs must agree");
 
     // Log-spaced band edges cover 20 Hz to 20 kHz monotonically.
@@ -105,12 +108,11 @@ int main()
     assert(std::fabs(peakDb - (-6.0f)) < 1.0f);
     assert(std::fabs(rmsDb - (-9.0f)) < 1.5f);
     assert(getCorr(e) > 0.9f);
-    assert(getPeakR(e) > -20.0f);
-    assert(getRmsR(e) > -20.0f);
-    assert(getPeakL(e) == getPeakR(e));
-    assert(getRmsL(e) == getRmsR(e));
+    assert(std::isfinite(getMomentaryLufs(e)) && std::isfinite(getShortLufs(e)) && std::isfinite(getIntegratedLufs(e)));
+    assert(getMomentaryLufs(e) < -2.0f && getShortLufs(e) < -2.0f && getIntegratedLufs(e) < -2.0f);
+    assert(std::fabs(getWaveformL(e)[0]) <= 1.0f && std::fabs(getWaveformR(e)[0]) <= 1.0f);
+    assert(getWaveformL(e)[0] != getWaveformL(e)[64]);
 
-    // Each control changes the display in a measurable way.
     const std::array<float, 3> ranges = {0.0f, 1.0f, 2.0f};
     const float basePeak = getPeakL(e);
     for (float r : ranges) {

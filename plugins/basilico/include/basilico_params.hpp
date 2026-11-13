@@ -144,4 +144,44 @@ inline constexpr std::array<const char*, 5> kWobbleShapeNames = {{
     "Square",
 }};
 
+// Downspout convention: CC 1-4 are the four most audible controls so drift's
+// default lane output maps naturally to the live panel.
+inline constexpr std::uint8_t kCcCutoff = 1;
+inline constexpr std::uint8_t kCcResonance = 2;
+inline constexpr std::uint8_t kCcDrive = 3;
+inline constexpr std::uint8_t kCcOutput = 4;
+
+struct ControllerMapping {
+    std::uint8_t controller;
+    ParamId target;
+    const char* label;
+};
+
+inline constexpr std::array<ControllerMapping, 4> kControllerMap = {{
+    {kCcCutoff, ParamId::cutoff, "Cutoff"},
+    {kCcResonance, ParamId::resonance, "Resonance"},
+    {kCcDrive, ParamId::drive, "Drive"},
+    {kCcOutput, ParamId::output, "Output"},
+}};
+
+[[nodiscard]] inline bool controllerTarget(const std::uint8_t controller, ParamId& target) noexcept
+{
+    for (const ControllerMapping& mapping : kControllerMap)
+    {
+        if (mapping.controller == controller)
+        {
+            target = mapping.target;
+            return true;
+        }
+    }
+    return false;
+}
+
+[[nodiscard]] inline float controllerToParameter(const ParamId target, const std::uint8_t value) noexcept
+{
+    const auto& spec = kParameterSpecs[static_cast<std::size_t>(target)];
+    const float normalized = static_cast<float>(value) / 127.0f;
+    return spec.minimum + normalized * (spec.maximum - spec.minimum);
+}
+
 } // namespace downspout::basilico

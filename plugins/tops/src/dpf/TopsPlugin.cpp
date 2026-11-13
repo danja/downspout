@@ -1,14 +1,34 @@
 #include "DistrhoPlugin.hpp"
 #include "tops_core_types.hpp"
 #include "tops_params.hpp"
+#include <algorithm>
 #include <cstring>
 #include <string>
 #include <cmath>
 START_NAMESPACE_DISTRHO
-namespace { enum ParamId:uint32_t{pInstrument=0,pEngine,pPreset,pPitch,pDecay,pTone,pNoise,pBrightness,pVolume,pDistortion,pNoteMap,pFirstPan,kParamCount=pFirstPan+tops::kInstrumentCount}; }
+namespace {
+enum ParamId:uint32_t {
+    pInstrument=0,
+    pEngine,
+    pPreset,
+    pPitch,
+    pDecay,
+    pTone,
+    pNoise,
+    pBrightness,
+    pVolume,
+    pDistortion,
+    pNoteMap,
+    pFirstPan,
+    kParamCount=pFirstPan+tops::kInstrumentCount,
+    kOutputLastTrigger=kParamCount,
+    kOutputFlashLevel=kParamCount+1,
+    kParameterCount=kOutputFlashLevel+1,
+};
+}
 class TopsPlugin : public Plugin {
 public:
-    TopsPlugin():Plugin(kParamCount,0,0){ params_=tops::Params(); engine_.setSampleRate((int)getSampleRate()); engine_.setParams(params_);}
+    TopsPlugin():Plugin(kParameterCount,0,0){ params_=tops::Params(); engine_.setSampleRate((int)getSampleRate()); engine_.setParams(params_); lastTrigger_=0.0f; flashLevel_=0.0f; }
 protected:
     const char* getLabel() const override{return "Tops";}
     const char* getDescription() const override{return "Hi-hat and cymbal generator";}
@@ -19,7 +39,10 @@ protected:
     int64_t getUniqueId() const override{return d_cconst('T','o','p','s');}
     void initAudioPort(const bool input,const uint32_t index,AudioPort& port) override{ Plugin::initAudioPort(input,index,port); if(index<2) port.groupId=kPortGroupStereo; port.name=String(input?"Input ":"Output ")+String((int)(index+1)); port.symbol=String(input?"in_":"out_")+String((int)(index+1));}
     void initParameter(uint32_t index,Parameter& parameter) override{
-        if(index>=kParamCount) return; parameter.hints=kParameterIsAutomatable;
+        if(index >= kParameterCount) return;
+        if(index == kOutputLastTrigger) { parameter.name="Last Trigger"; parameter.symbol="status_last_trigger"; parameter.hints=kParameterIsOutput | kParameterIsInteger; parameter.ranges.min=0; parameter.ranges.max=9; parameter.ranges.def=0; return; }
+        if(index == kOutputFlashLevel) { parameter.name="Trigger Flash"; parameter.symbol="status_trigger_flash"; parameter.hints=kParameterIsOutput; parameter.ranges.min=0; parameter.ranges.max=1; parameter.ranges.def=0; return; }
+        parameter.hints=kParameterIsAutomatable;
         switch(index){
             case pInstrument: parameter.name="Instrument";parameter.symbol="instrument";parameter.ranges.min=0;parameter.ranges.max=9;parameter.ranges.def=0;parameter.hints|=kParameterIsInteger;break;
             case pEngine: parameter.name="Engine";parameter.symbol="engine";parameter.ranges.min=0;parameter.ranges.max=5;parameter.ranges.def=0;parameter.hints|=kParameterIsInteger;break;
@@ -40,7 +63,7 @@ protected:
         }
     }
     float getParameterValue(uint32_t index) const override{
-        switch(index){ case pInstrument:return (float)params_.instrument; case pEngine:return (float)params_.engine; case pPreset:return (float)params_.preset; case pPitch:return params_.pitch; case pDecay:return params_.decay; case pTone:return params_.tone; case pNoise:return params_.noise; case pBrightness:return params_.brightness; case pVolume:return params_.volume; case pDistortion:return params_.distortion; case pNoteMap:return (float)params_.noteMap;}
+        switch(index){ case pInstrument:return (float)params_.instrument; case pEngine:return (float)params_.engine; case pPreset:return (float)params_.preset; case pPitch:return params_.pitch; case pDecay:return params_.decay; case pTone:return params_.tone; case pNoise:return params_.noise; case pBrightness:return params_.brightness; case pVolume:return params_.volume; case pDistortion:return params_.distortion; case pNoteMap:return (float)params_.noteMap; case kOutputLastTrigger:return lastTrigger_; case kOutputFlashLevel:return flashLevel_; }
         if(index>=pFirstPan && index<kParamCount) return params_.pan[index-pFirstPan];
         return 0;
     }
@@ -54,7 +77,11 @@ protected:
         for(uint32_t i=0;i<midiEventCount;i++){ const MidiEvent&e=midiEvents[i]; if(e.size<3 || (e.data[0]&0xF0)!=0x90 || e.data[2]==0) continue;
             int inst=-1;  // -1 = the Instrument parameter
             if(params_.noteMap==(int)tops::NoteMap::GeneralMidi){ inst=tops::TopsEngine::instrumentForNote(e.data[1]); if(inst<0) continue; }
+            else inst = params_.instrument;
+            lastTrigger_ = static_cast<float>(inst);
+            flashLevel_ = 1.0f;
             engine_.trigger(inst,(float)e.data[2]/127.0f); }
+        flashLevel_ = std::max(0.0f, flashLevel_ * 0.85f);
         float* L=outputs[0]; float* R=outputs[1];
         for(uint32_t i=0;i<frames;i++){L[i]=0;R[i]=0;}
         engine_.render(L,R,(int)frames);
@@ -62,6 +89,8 @@ protected:
 private:
     tops::Params params_;
     tops::TopsEngine engine_;
+    float lastTrigger_;
+    float flashLevel_;
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TopsPlugin)
 };
 Plugin* createPlugin(){return new TopsPlugin();}

@@ -85,6 +85,14 @@ public:
             peakDb_ = {-9.4f, -11.2f};
             rmsDb_ = {-14.8f, -16.1f};
             corr_ = 0.71f;
+            lufsMomentary_ = {-12.4f, -14.3f};
+            lufsShort_ = {-14.2f, -15.9f};
+            lufsIntegrated_ = {-13.7f, -16.1f};
+            for (int i = 0; i < core::kWaveformSize; ++i) {
+                const float t = static_cast<float>(i) / static_cast<float>(core::kWaveformSize - 1);
+                waveL_[static_cast<std::size_t>(i)] = 0.55f * std::sin(t * 6.28318f + 0.5f);
+                waveR_[static_cast<std::size_t>(i)] = 0.48f * std::sin(t * 9.42478f + 1.1f);
+            }
         }
     }
 
@@ -98,13 +106,35 @@ protected:
             repaint();
             return;
         }
-        if (index >= static_cast<uint32_t>(core::kPeakL) && index < static_cast<uint32_t>(core::kSpec0)) {
+        if (index >= static_cast<uint32_t>(core::kWaveR0) && index < static_cast<uint32_t>(core::kSpec0)) {
+            const int sub = static_cast<int>(index - core::kWaveR0);
+            if (sub >= 0 && sub < core::kWaveformSize) {
+                waveR_[static_cast<std::size_t>(sub)] = v;
+                repaint();
+            }
+            return;
+        }
+        if (index >= static_cast<uint32_t>(core::kWaveL0) && index < static_cast<uint32_t>(core::kWaveR0)) {
+            const int sub = static_cast<int>(index - core::kWaveL0);
+            if (sub >= 0 && sub < core::kWaveformSize) {
+                waveL_[static_cast<std::size_t>(sub)] = v;
+                repaint();
+            }
+            return;
+        }
+        if (index >= static_cast<uint32_t>(core::kPeakL) && index < static_cast<uint32_t>(core::kWaveL0)) {
             switch (index) {
             case core::kPeakL: peakDb_[0] = v; break;
             case core::kPeakR: peakDb_[1] = v; break;
             case core::kRmsL: rmsDb_[0] = v; break;
             case core::kRmsR: rmsDb_[1] = v; break;
             case core::kCorr: corr_ = v; break;
+            case core::kLufsMomentaryL: lufsMomentary_[0] = v; break;
+            case core::kLufsMomentaryR: lufsMomentary_[1] = v; break;
+            case core::kLufsShortL: lufsShort_[0] = v; break;
+            case core::kLufsShortR: lufsShort_[1] = v; break;
+            case core::kLufsIntegratedL: lufsIntegrated_[0] = v; break;
+            case core::kLufsIntegratedR: lufsIntegrated_[1] = v; break;
             default: break;
             }
             repaint();
@@ -253,8 +283,6 @@ private:
     void drawScope()
     {
         const auto& t = theme();
-        const float floor = floorDb(value(core::kRange));
-        const float span = -floor;
         const float midY = plot_.y + plot_.h * 0.5f;
 
         beginPath();
@@ -264,15 +292,15 @@ private:
         lineTo(plot_.x + plot_.w, midY);
         stroke();
 
-        const float ch0 = std::clamp((peakDb_[0] - floor) / span, 0.0f, 1.0f);
-        const float ch1 = std::clamp((peakDb_[1] - floor) / span, 0.0f, 1.0f);
+        const float gainL = std::max(0.25f, 0.35f + std::clamp((peakDb_[0] + 12.0f) / 24.0f, 0.0f, 1.0f));
+        const float gainR = std::max(0.25f, 0.35f + std::clamp((peakDb_[1] + 12.0f) / 24.0f, 0.0f, 1.0f));
+
         beginPath();
         strokeColor(kAccent.r, kAccent.g, kAccent.b, 180);
         strokeWidth(1.5f);
-        for (int i = 0; i < 128; ++i) {
-            const float x = plot_.x + static_cast<float>(i) / 127.0f * plot_.w;
-            const float y = midY - (std::sin(static_cast<float>(i) * 0.55f) * 0.5f + 0.5f) * plot_.h * 0.45f
-                * (0.4f + ch0);
+        for (int i = 0; i < core::kWaveformSize; ++i) {
+            const float x = plot_.x + static_cast<float>(i) / static_cast<float>(core::kWaveformSize - 1) * plot_.w;
+            const float y = midY - waveL_[static_cast<std::size_t>(i)] * plot_.h * 0.45f * gainL;
             if (i == 0)
                 moveTo(x, y);
             else
@@ -283,10 +311,9 @@ private:
         beginPath();
         strokeColor(kMeterAccent.r, kMeterAccent.g, kMeterAccent.b, 180);
         strokeWidth(1.5f);
-        for (int i = 0; i < 128; ++i) {
-            const float x = plot_.x + static_cast<float>(i) / 127.0f * plot_.w;
-            const float y = midY - (std::cos(static_cast<float>(i) * 0.61f) * 0.5f + 0.5f) * plot_.h * 0.45f
-                * (0.4f + ch1);
+        for (int i = 0; i < core::kWaveformSize; ++i) {
+            const float x = plot_.x + static_cast<float>(i) / static_cast<float>(core::kWaveformSize - 1) * plot_.w;
+            const float y = midY - waveR_[static_cast<std::size_t>(i)] * plot_.h * 0.45f * gainR;
             if (i == 0)
                 moveTo(x, y);
             else
@@ -347,15 +374,14 @@ private:
                 fill();
             }
 
-            char buf[48];
-            std::snprintf(buf, sizeof(buf), "%6.1f / %6.1f dB", peaks[ch], rms[ch]);
+            char buf[64];
+            std::snprintf(buf, sizeof(buf), "%6.1f / %6.1f dB   %5.1f LUFS", peaks[ch], rms[ch], lufsMomentary_[ch]);
             fc(t.textPrimary);
             fontSize(12.0f);
             textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
             text(plot_.x + plot_.w, y + 12.0f, buf, nullptr);
         }
 
-        // Correlation: -1 (out of phase) .. +1 (mono).
         const float corr = meterCorr();
         const float cy = plot_.y + 132.0f;
         label(plot_.x, cy - 14.0f, "CORRELATION");
@@ -371,12 +397,20 @@ private:
         const float half = cw * 0.5f * std::fabs(corr);
         rect(corr >= 0.0f ? centre : centre - half, cy - 6.0f, std::max(1.0f, half), 12.0f);
         fill();
-        char buf[32];
-        std::snprintf(buf, sizeof(buf), "%+.2f", corr);
+        char corrText[32];
+        std::snprintf(corrText, sizeof(corrText), "%+.2f", corr);
         fc(t.textPrimary);
         fontSize(12.0f);
         textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
-        text(plot_.x + plot_.w, cy, buf, nullptr);
+        text(plot_.x + plot_.w, cy, corrText, nullptr);
+
+        char lufsText[96];
+        std::snprintf(lufsText, sizeof(lufsText), "LUFS short %5.1f / %5.1f   integrated %5.1f / %5.1f",
+                      lufsShort_[0], lufsShort_[1], lufsIntegrated_[0], lufsIntegrated_[1]);
+        fc(t.textPrimary);
+        fontSize(12.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        text(plot_.x + 12.0f, plot_.y + plot_.h - 22.0f, lufsText, nullptr);
     }
 
     void drawReadout(const Rect& b)
@@ -388,14 +422,17 @@ private:
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         text(b.x + 54.0f, b.y + b.h - 40.0f, line, nullptr);
 
-        std::snprintf(line, sizeof(line), "RMS    L %6.1f   R %6.1f dB      Corr %+.2f",
-                      meterRms(0), meterRms(1), meterCorr());
+        std::snprintf(line, sizeof(line), "RMS    L %6.1f   R %6.1f dB      Corr %+.2f   LUFS %5.1f / %5.1f",
+                      meterRms(0), meterRms(1), meterCorr(), lufsShort_[0], lufsShort_[1]);
         text(b.x + 54.0f, b.y + b.h - 22.0f, line, nullptr);
     }
 
     float meterPeak(const int ch) const { return peakDb_[static_cast<std::size_t>(ch)]; }
     float meterRms(const int ch) const { return rmsDb_[static_cast<std::size_t>(ch)]; }
     float meterCorr() const { return corr_; }
+    float meterMomentaryLufs(const int ch) const { return lufsMomentary_[static_cast<std::size_t>(ch)]; }
+    float meterShortLufs(const int ch) const { return lufsShort_[static_cast<std::size_t>(ch)]; }
+    float meterIntegratedLufs(const int ch) const { return lufsIntegrated_[static_cast<std::size_t>(ch)]; }
 
     float freqX(const float hz) const
     {
@@ -404,11 +441,16 @@ private:
 
     std::array<float, core::kSpecCount> bands_ {};
     std::array<float, core::kSpecCount> holds_ {};
+    std::array<float, core::kWaveformSize> waveL_ {};
+    std::array<float, core::kWaveformSize> waveR_ {};
     std::array<float, 2> holdLevel_ {-120.0f, -120.0f};
     Rect plot_ {};
     bool demo_ = false;
     std::array<float, 2> peakDb_ {-120.0f, -120.0f};
     std::array<float, 2> rmsDb_ {-120.0f, -120.0f};
+    std::array<float, 2> lufsMomentary_ {-120.0f, -120.0f};
+    std::array<float, 2> lufsShort_ {-120.0f, -120.0f};
+    std::array<float, 2> lufsIntegrated_ {-120.0f, -120.0f};
     float corr_ = 0.0f;
 };
 

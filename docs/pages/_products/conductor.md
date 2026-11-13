@@ -7,13 +7,14 @@ category: generative
 group: generators
 role: Long-form structure
 screenshot: /assets/plugins/conductor.png
-capabilities: [MIDI output, host transport, scene CC, deterministic form, generator control]
+capabilities:
+  [MIDI output, host transport, scene CC, deterministic form, generator control]
 summary: Bar-aligned intro, development, break, reprise, and coda commands for autonomous patches.
 ---
 
 ## Opinion
 
-New, I've only just started experimenting.
+Useful for automating musical arrangement but it's a bit unpredictable regarding what will sound good, UI unintuitive.
 
 ## Functionality
 

@@ -2,6 +2,7 @@
 #include "clatter_core_types.hpp"
 #include "clatter_params.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
 
@@ -19,6 +20,9 @@ constexpr uint32_t kLevel = kFirstTrim + clatter::kFamilyCount * 3;
 constexpr uint32_t kWidth = kLevel + 1;
 constexpr uint32_t kFirstPan = kWidth + 1;
 constexpr uint32_t kParamCount = kFirstPan + clatter::kFamilyCount;
+constexpr uint32_t kOutputLastTrigger = kParamCount;
+constexpr uint32_t kOutputFlashLevel = kParamCount + 1;
+constexpr uint32_t kParameterCount = kOutputFlashLevel + 1;
 
 const char* const kFamilyNames[clatter::kFamilyCount] = {"Membrane", "Metal", "Wood", "Shaker", "Clap"};
 const char* const kFamilySymbols[clatter::kFamilyCount] = {"membrane", "metal", "wood", "shaker", "clap"};
@@ -27,10 +31,12 @@ const char* const kFamilySymbols[clatter::kFamilyCount] = {"membrane", "metal", 
 
 class ClatterPlugin : public Plugin {
 public:
-    ClatterPlugin() : Plugin(kParamCount, 0, 0)
+    ClatterPlugin() : Plugin(kParameterCount, 0, 0)
     {
         engine_.setSampleRate(static_cast<int>(getSampleRate()));
         engine_.setParams(params_);
+        lastTrigger_ = 0.0f;
+        flashLevel_ = 0.0f;
     }
 
 protected:
@@ -52,6 +58,18 @@ protected:
 
     void initParameter(const uint32_t index, Parameter& parameter) override
     {
+        if (index == kOutputLastTrigger) {
+            parameter.name = "Last Trigger"; parameter.symbol = "status_last_trigger";
+            parameter.hints = kParameterIsOutput | kParameterIsInteger;
+            parameter.ranges.min = 0; parameter.ranges.max = clatter::kSoundCount - 1; parameter.ranges.def = 0;
+            return;
+        }
+        if (index == kOutputFlashLevel) {
+            parameter.name = "Trigger Flash"; parameter.symbol = "status_trigger_flash";
+            parameter.hints = kParameterIsOutput;
+            parameter.ranges.min = 0; parameter.ranges.max = 1; parameter.ranges.def = 0;
+            return;
+        }
         parameter.hints = kParameterIsAutomatable;
         if (index == kSound) {
             parameter.name = "Sound"; parameter.symbol = "sound";
@@ -88,6 +106,8 @@ protected:
 
     float getParameterValue(const uint32_t index) const override
     {
+        if (index == kOutputLastTrigger) return lastTrigger_;
+        if (index == kOutputFlashLevel) return flashLevel_;
         if (index == kSound) return static_cast<float>(params_.sound);
         if (index == kNoteMap) return static_cast<float>(params_.noteMap);
         if (index >= kFirstTrim && index < kLevel) {
@@ -129,8 +149,11 @@ protected:
                                   ? clatter::ClatterEngine::soundForNote(e.data[1])
                                   : params_.sound;
             if (sound < 0) continue;
+            lastTrigger_ = static_cast<float>(sound);
+            flashLevel_ = 1.0f;
             engine_.trigger(sound, static_cast<float>(e.data[2]) / 127.0f);
         }
+        flashLevel_ = std::max(0.0f, flashLevel_ * 0.85f);
         float* left = outputs[0];
         float* right = outputs[1];
         for (uint32_t i = 0; i < frames; ++i) { left[i] = 0.0f; right[i] = 0.0f; }
@@ -140,6 +163,8 @@ protected:
 private:
     clatter::Params params_;
     clatter::ClatterEngine engine_;
+    float lastTrigger_;
+    float flashLevel_;
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClatterPlugin)
 };
 

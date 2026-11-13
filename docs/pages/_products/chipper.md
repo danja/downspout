@@ -12,7 +12,7 @@ summary: 1980s video game lo-fi processor. Bitwise quantization (bit depth 1–1
 
 ## Opinion
 
-The sample-rate reduction is the most characterful control — dropping to sr/8 gives instant Game Boy, sr/16 pushes into Atari territory. Bit depth works best below 6 bits where the quantisation noise becomes musically aggressive rather than merely grainy. Jitter is subtle at low settings but adds organic timing instability that separates Chipper from clinical bit-crushers.
+It does the job nicely.
 
 ## Functionality
 
@@ -26,18 +26,18 @@ Input → Sample-and-Hold (Rate Div, Jitter) → Bit Quantise (Bit Depth) → Dr
 
 ### Parameters
 
-| Parameter    | Range         | Default | Notes                                                                   |
-|--------------|---------------|---------|-------------------------------------------------------------------------|
-| Bit Depth    | 1–16 bits     | 8       | Quantisation resolution; 16 = no reduction; 8 ≈ original Game Boy DAC  |
-| Rate Div     | 1–64          | 8       | Hold every Nth input sample; 1 = no reduction; sr/8 ≈ 6 kHz at 48 kHz |
-| Jitter       | 0–100 %       | 0 %     | Fraction of Rate Div randomised per hold cycle; 0 = deterministic       |
-| Mix          | 0–100 %       | 100 %   | Dry/wet blend; 0 % passes input unchanged                               |
-| Output Gain  | −12 to +12 dB | 0 dB    | Post-processing level trim                                              |
+| Parameter    | Range         | Default | Notes                                                                            |
+| ------------ | ------------- | ------- | -------------------------------------------------------------------------------- |
+| Bit Depth    | 1–16 bits     | 8       | Quantisation resolution; 16 = no reduction; 8 ≈ original Game Boy DAC            |
+| Rate Div     | 1–64          | 8       | Hold every Nth input sample; 1 = no reduction; sr/8 ≈ 6 kHz at 48 kHz            |
+| Jitter       | 0–100 %       | 0 %     | Fraction of Rate Div randomised per hold cycle; 0 = deterministic                |
+| Mix          | 0–100 %       | 100 %   | Dry/wet blend; 0 % passes input unchanged                                        |
+| Output Gain  | −12 to +12 dB | 0 dB    | Post-processing level trim                                                       |
 | CC Bit Depth | 0–127         | 1       | MIDI CC# that overrides Bit Depth in real time (0 = off); default = Drift lane 1 |
 | CC Rate Div  | 0–127         | 2       | MIDI CC# that overrides Rate Div in real time (0 = off); default = Drift lane 2  |
 | CC Jitter    | 0–127         | 3       | MIDI CC# that overrides Jitter in real time (0 = off); default = Drift lane 3    |
 | CC Mix       | 0–127         | 4       | MIDI CC# that overrides Mix in real time (0 = off); default = Drift lane 4       |
-| CC Channel   | 1–16          | 1       | MIDI channel for all four CC overrides                                  |
+| CC Channel   | 1–16          | 1       | MIDI channel for all four CC overrides                                           |
 
 ### Drift routing
 

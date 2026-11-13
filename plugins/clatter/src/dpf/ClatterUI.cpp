@@ -20,6 +20,9 @@ constexpr std::uint32_t kLevel = kFirstTrim + clatter::kFamilyCount * 3;
 constexpr std::uint32_t kWidth = kLevel + 1;
 constexpr std::uint32_t kFirstPan = kWidth + 1;
 constexpr std::uint32_t kCount = kFirstPan + clatter::kFamilyCount;
+constexpr std::uint32_t kLastTrigger = kCount;
+constexpr std::uint32_t kFlashLevel = kCount + 1;
+constexpr std::uint32_t kParameterCount = kFlashLevel + 1;
 
 constexpr kit::Accent kFamilyAccent[clatter::kFamilyCount] = {
     {198, 120, 64},   // membrane: copper
@@ -42,8 +45,8 @@ const char* const kShortNames[clatter::kSoundCount] = {
     "Hand Clap", "Short Guiro", "Long Guiro"};
 
 struct Tables {
-    std::array<kit::Range, kCount> ranges {};
-    std::array<float, kCount> defaults {};
+    std::array<kit::Range, kParameterCount> ranges {};
+    std::array<float, kParameterCount> defaults {};
     Tables()
     {
         ranges[kSound] = {0, clatter::kSoundCount - 1, true};  defaults[kSound] = 0;
@@ -58,6 +61,8 @@ struct Tables {
         }
         ranges[kLevel] = {0, 1, false};  defaults[kLevel] = 0.8f;
         ranges[kWidth] = {0, 1, false};  defaults[kWidth] = 0.6f;
+        ranges[kLastTrigger] = {0, clatter::kSoundCount - 1, true}; defaults[kLastTrigger] = 0;
+        ranges[kFlashLevel] = {0, 1, false}; defaults[kFlashLevel] = 0;
     }
 };
 
@@ -72,7 +77,7 @@ const Tables& tables()
 class ClatterUI : public MagnetoUI
 {
 public:
-    ClatterUI() : MagnetoUI(tables().ranges.data(), kCount, tables().defaults.data()) {}
+    ClatterUI() : MagnetoUI(tables().ranges.data(), kParameterCount, tables().defaults.data()) {}
 
 protected:
     void onAction(const int /*id*/) override {}
@@ -127,11 +132,15 @@ private:
                 const Rect cell {b.x + 14.0f + kLabelW + static_cast<float>(col) * (kCellW + kGap), y, kCellW, kCellH};
                 cells_[static_cast<std::size_t>(index)] = cell;
                 const bool selected = intValue(kSound) == index;
+                const bool flashing = value(kFlashLevel) > 0.05f && intValue(kLastTrigger) == index;
                 beginPath();
-                if (selected) fillColor(accent.r, accent.g, accent.b, 255); else fc(t.buttonFace);
+                if (selected || flashing)
+                    fillColor(accent.r, accent.g, accent.b, flashing ? static_cast<int>(180.0f + value(kFlashLevel) * 75.0f) : 255);
+                else
+                    fc(t.buttonFace);
                 roundedRect(cell.x, cell.y, cell.w, cell.h, downspout::laf::kRadiusSmall);
                 fill();
-                if (!selected) {
+                if (!selected && !flashing) {
                     beginPath();
                     strokeColor(accent.r, accent.g, accent.b, 150);
                     strokeWidth(1.0f);
@@ -139,7 +148,7 @@ private:
                     stroke();
                 }
                 textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-                if (selected) fillColor(250, 248, 242, 255); else fc(t.textPrimary);
+                if (selected || flashing) fillColor(250, 248, 242, 255); else fc(t.textPrimary);
                 fontSize(11.0f);
                 text(cell.x + cell.w * 0.5f, cell.y + 12.0f, kShortNames[index], nullptr);
                 if (selected) fillColor(250, 248, 242, 200); else fc(t.textDim);

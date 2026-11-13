@@ -75,6 +75,10 @@ Implementation status:
   scale degrees up. Most beat starts are pinned so the line keeps a pulse. The
   `Rhythm` action refits the same line to the new rhythm instead of copying notes
   by index;
+- the appended Ascend/bar genre (ID 15) mirrors that idea in reverse: each bar starts on the root and
+  climbs toward its own peak; the appended Ascending genre (ID 14) does the same for the whole pattern,
+  ending on the upper line and starting on the root while `Color` allows limited backtracking or pauses
+  without breaking the overall ascent;
 - the general `Color` control is serialized and exposed in the UI, and affects
   Jazz dominant color, Fugue leading tones, and genre-specific tension choices
   for Funk, Acid, Dub, Ambient, Sabbath, Rock, Moroder, Descending (wander), and the electronic

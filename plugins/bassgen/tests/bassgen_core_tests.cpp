@@ -471,7 +471,9 @@ void testFugueGenreIsAppendedAndAnswersAtDominant() {
     assert(static_cast<int>(GenreId::moroder) == 11);
     assert(static_cast<int>(GenreId::descending) == 12);
     assert(static_cast<int>(GenreId::descendingBars) == 13);
-    assert(static_cast<int>(GenreId::count) == 14);
+    assert(static_cast<int>(GenreId::ascending) == 14);
+    assert(static_cast<int>(GenreId::ascendingBars) == 15);
+    assert(static_cast<int>(GenreId::count) == 16);
 
     Controls controls;
     controls.seed = 1701u;
@@ -583,6 +585,20 @@ Controls descendingControls(const std::uint32_t seed, const float color) {
     Controls controls;
     controls.seed = seed;
     controls.genre = GenreId::descending;
+    controls.scale = ScaleId::minor;
+    controls.rootNote = 36;
+    controls.reg = 1;
+    controls.lengthBeats = 16;
+    controls.subdivision = SubdivisionId::sixteenth;
+    controls.density = 0.5f;
+    controls.color = color;
+    return controls;
+}
+
+Controls ascendingControls(const std::uint32_t seed, const float color) {
+    Controls controls;
+    controls.seed = seed;
+    controls.genre = GenreId::ascending;
     controls.scale = ScaleId::minor;
     controls.rootNote = 36;
     controls.reg = 1;
@@ -784,6 +800,60 @@ void testDescendingBarsDiffersFromWholePatternDescent() {
     for (int round = 0; round < 4; ++round) {
         regeneratePattern(b, bars, ::downspout::Meter {}, true, false);
         assert(notesOf(b).back() == bars.rootNote + registerOffset(bars.reg));
+    }
+}
+
+void testAscendingWithoutColorIsAStrictStaircase() {
+    for (int scale = 0; scale < static_cast<int>(ScaleId::count); ++scale) {
+        for (const float density : {0.15f, 0.5f, 0.9f}) {
+            for (const SubdivisionId subdivision : {SubdivisionId::eighth, SubdivisionId::sixteenth, SubdivisionId::quarter}) {
+                Controls controls = ascendingControls(90u + static_cast<std::uint32_t>(scale), 0.0f);
+                controls.scale = static_cast<ScaleId>(scale);
+                controls.density = density;
+                controls.subdivision = subdivision;
+
+                PatternState pattern;
+                regeneratePattern(pattern, controls, ::downspout::Meter {}, true, true);
+                const std::vector<int> notes = notesOf(pattern);
+                assert(notes.size() >= 2);
+                for (std::size_t i = 1; i < notes.size(); ++i) {
+                    assert(notes[i] >= notes[i - 1]);
+                }
+                assert(notes.front() == controls.rootNote + registerOffset(controls.reg));
+                assert(notes.back() >= notes.front() + 3);
+                assert(notes.back() <= notes.front() + 24);
+                assert(eventStartingAt(pattern, 0) != nullptr);
+            }
+        }
+    }
+}
+
+void testAscendingBarsRestartsTheAscentInEveryBar() {
+    for (const float color : {0.0f, 0.8f}) {
+        for (std::uint32_t seed = 1; seed <= 20; ++seed) {
+            Controls controls = ascendingControls(seed, color);
+            controls.genre = GenreId::ascendingBars;
+            PatternState pattern;
+            regeneratePattern(pattern, controls, ::downspout::Meter {}, true, true);
+            const int root = controls.rootNote + registerOffset(controls.reg);
+            int bars = 0;
+            int index = 0;
+            while (index < pattern.eventCount) {
+                const int bar = pattern.events[index].startStep / pattern.stepsPerBar;
+                int last = index;
+                while (last + 1 < pattern.eventCount &&
+                       pattern.events[last + 1].startStep / pattern.stepsPerBar == bar) {
+                    last += 1;
+                }
+                assert(pattern.events[index].note == root);  // every bar starts on the root
+                if (color == 0.0f) {
+                    for (int i = index + 1; i <= last; ++i) assert(pattern.events[i].note >= pattern.events[i - 1].note);
+                }
+                bars += 1;
+                index = last + 1;
+            }
+            assert(bars >= 2);
+        }
     }
 }
 
@@ -1422,6 +1492,8 @@ int main() {
     testDescendingPartialMutationKeepsTheDescent();
     testDescendingBarsRestartsTheDescentInEveryBar();
     testDescendingBarsDiffersFromWholePatternDescent();
+    testAscendingWithoutColorIsAStrictStaircase();
+    testAscendingBarsRestartsTheAscentInEveryBar();
     testBebopDominantScaleConstrainsGeneratedNotes();
     testStateSanitization();
     testEngineRewindResyncAndStopNoteOff();

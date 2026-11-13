@@ -333,6 +333,8 @@ void testNearestInMask()
     check(nearestInMask(65.6f, pent, 64, 0.30f).note == 64, "stays on E inside the stickiness band");
     check(nearestInMask(65.6f, pent, 64, 0.10f).note == 67, "leaves E once past the band");
     check(nearestInMask(65.6f, pent, 60, 0.50f).note == 67, "an unrelated previous note is ignored");
+    check(kParameterSpecs[static_cast<std::size_t>(ParamId::stickiness)].defaultValue == 30.0f,
+          "default stickiness is tuned to hold a note through typical drift");
 
     // Exact tie resolves downward, deterministically.
     check(nearestInMask(61.0f, cMajor, -1, 0.0f).note == 60, "exact tie goes down");

@@ -12,7 +12,7 @@ summary: Stereo ambient effect with rearrangeable time, spectral, tape, shimmer,
 
 ## Opinion
 
-It's still a good idea, but the implementation isn't great, definitely needs a few more sysles before it's likely to be useful.
+It's still a good idea and does work for a quick random effect. But the implementation isn't great, far from intuitive in use, definitely needs a few more cycles.
 
 ## Functionality
 

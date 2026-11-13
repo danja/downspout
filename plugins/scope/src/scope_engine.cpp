@@ -58,6 +58,12 @@ float bandCentreHz(const int band) noexcept
     return bandHz(48000.0, (static_cast<double>(band) + 0.5) / static_cast<double>(kBands));
 }
 
+float lufsFromPower(const float power)
+{
+    const float safePower = std::max(power, 1.0e-12f);
+    return -0.691f + 10.0f * std::log10(safePower);
+}
+
 void activate(Engine& e, const double sr)
 {
     e.sampleRate = sr;
@@ -78,14 +84,22 @@ void activate(Engine& e, const double sr)
     e.fifoPos = 0;
     e.hopCounter = 0;
     e.filled = 0;
+    e.waveformPos = 0;
+    e.waveformCounter = 0;
+    e.waveformFresh = false;
     e.demoPhase = 0.0f;
     e.fftBuf.assign(n, std::complex<float>(0.0f, 0.0f));
     e.spectrum.assign(kBins, -120.0f);
     e.bands.fill(-120.0f);
+    e.waveformL.fill(0.0f);
+    e.waveformR.fill(0.0f);
     e.fresh = false;
     e.primed = false;
     e.peakL = e.peakR = e.rmsL = e.rmsR = 0.0f;
     e.corr = 0.0f;
+    e.momentaryL = e.momentaryR = -120.0f;
+    e.shortL = e.shortR = -120.0f;
+    e.integratedL = e.integratedR = -120.0f;
     e.accLL = e.accRR = e.accLR = 0.0f;
 }
 
@@ -97,13 +111,21 @@ void reset(Engine& e)
     e.fifoPos = 0;
     e.hopCounter = 0;
     e.filled = 0;
+    e.waveformPos = 0;
+    e.waveformCounter = 0;
+    e.waveformFresh = false;
     e.demoPhase = 0.0f;
     std::fill(e.spectrum.begin(), e.spectrum.end(), -120.0f);
     e.bands.fill(-120.0f);
+    e.waveformL.fill(0.0f);
+    e.waveformR.fill(0.0f);
     e.fresh = false;
     e.primed = false;
     e.peakL = e.peakR = e.rmsL = e.rmsR = 0.0f;
     e.corr = 0.0f;
+    e.momentaryL = e.momentaryR = -120.0f;
+    e.shortL = e.shortR = -120.0f;
+    e.integratedL = e.integratedR = -120.0f;
     e.accLL = e.accRR = e.accLR = 0.0f;
 }
 
@@ -137,16 +159,33 @@ void processBlock(Engine& e, const Params& p, const float* inL, const float* inR
         outL[i] = a;
         outR[i] = b;
 
+        e.waveformL[static_cast<std::size_t>(e.waveformPos)] = a;
+        e.waveformR[static_cast<std::size_t>(e.waveformPos)] = b;
+        ++e.waveformCounter;
+        if (e.waveformCounter >= 64) {
+            e.waveformCounter = 0;
+            e.waveformFresh = true;
+        }
+        e.waveformPos = (e.waveformPos + 1) % kWaveformSize;
+
         // Peak with a slow release, so the readout is a peak meter rather than
         // a sample-value display.
         e.peakL = std::max(e.peakL * 0.9995f, std::fabs(a));
         e.peakR = std::max(e.peakR * 0.9995f, std::fabs(b));
 
-        e.rmsL += (a * a - e.rmsL) * rmsCoeff;
-        e.rmsR += (b * b - e.rmsR) * rmsCoeff;
+        const float powerL = a * a;
+        const float powerR = b * b;
+        e.rmsL += (powerL - e.rmsL) * rmsCoeff;
+        e.rmsR += (powerR - e.rmsR) * rmsCoeff;
+        e.momentaryL += (powerL - e.momentaryL) * 0.08f;
+        e.momentaryR += (powerR - e.momentaryR) * 0.08f;
+        e.shortL += (e.momentaryL - e.shortL) * 0.005f;
+        e.shortR += (e.momentaryR - e.shortR) * 0.005f;
+        e.integratedL += (e.momentaryL - e.integratedL) * 0.0004f;
+        e.integratedR += (e.momentaryR - e.integratedR) * 0.0004f;
 
-        e.accLL = e.accLL * 0.999f + a * a;
-        e.accRR = e.accRR * 0.999f + b * b;
+        e.accLL = e.accLL * 0.999f + powerL;
+        e.accRR = e.accRR * 0.999f + powerR;
         e.accLR = e.accLR * 0.999f + a * b;
         const float denom = std::sqrt(e.accLL * e.accRR);
         e.corr = denom > 1.0e-12f ? e.accLR / denom : 0.0f;
@@ -210,5 +249,13 @@ float getPeakR(const Engine& e) { return e.peakR; }
 float getRmsL(const Engine& e) { return std::sqrt(e.rmsL); }
 float getRmsR(const Engine& e) { return std::sqrt(e.rmsR); }
 float getCorr(const Engine& e) { return e.corr; }
+float getMomentaryLufs(const Engine& e) { return lufsFromPower(e.momentaryL); }
+float getMomentaryRufs(const Engine& e) { return lufsFromPower(e.momentaryR); }
+float getShortLufs(const Engine& e) { return lufsFromPower(e.shortL); }
+float getShortRufs(const Engine& e) { return lufsFromPower(e.shortR); }
+float getIntegratedLufs(const Engine& e) { return lufsFromPower(e.integratedL); }
+float getIntegratedRufs(const Engine& e) { return lufsFromPower(e.integratedR); }
+const std::array<float, kWaveformSize>& getWaveformL(const Engine& e) { return e.waveformL; }
+const std::array<float, kWaveformSize>& getWaveformR(const Engine& e) { return e.waveformR; }
 
 }  // namespace downspout::scope

@@ -13,10 +13,7 @@ summary: Granular texture processor after Mutable Instruments Beads — a 4 seco
 
 ## Opinion
 
-Best as a send on something sustained. A pad at Size 60%, Density 75%, Feedback 30%
-turns into a slowly shifting cloud; a drum loop at short Size and high Density becomes
-rhythmic grit. Put Drift on it and let Position and Density wander. The Tape quality
-adds a dark, crunchy character that sits well under a mix.
+Pretty much untested.
 
 ## Functionality
 
@@ -39,22 +36,22 @@ but the panel does not follow.
 
 ### Parameters
 
-| Parameter | Range | Default | Notes |
-|-----------|-------|---------|-------|
-| Position | 0–100 % | 50 % | CC 1. Scatter randomises per grain |
-| Size | 0–100 % | 50 % | CC 2. Below 33 % reverse |
-| Shape | 0–100 % | 50 % | CC 5. Envelope plot shown on the panel |
-| Pitch | −24 to +24 st | 0 | CC 6 |
-| Density | 0–100 % | 75 % | CC 3, Conductor 21. 48–52 % is silent |
-| Feedback | 0–100 % | 0 % | CC 7 |
-| Dry/Wet | 0–100 % | 50 % | CC 4, Conductor 22 |
-| Reverb | 0–100 % | 0 % | CC 8 |
-| Freeze | off, on | off | CC 64 |
-| Scatter (Position, Size, Shape, Pitch) | 0–100 % | 0 % | CC 10, 11, 12, 9; Conductor 23 |
-| Quality | Digital, Vintage, Tape | Digital | |
-| Grain | trigger | — | Conductor 24 = 127 |
-| MIDI in | Off, 1–16, All | Off | |
-| Conductor | Off, 1–16 | Off | |
+| Parameter                              | Range                  | Default | Notes                                  |
+| -------------------------------------- | ---------------------- | ------- | -------------------------------------- |
+| Position                               | 0–100 %                | 50 %    | CC 1. Scatter randomises per grain     |
+| Size                                   | 0–100 %                | 50 %    | CC 2. Below 33 % reverse               |
+| Shape                                  | 0–100 %                | 50 %    | CC 5. Envelope plot shown on the panel |
+| Pitch                                  | −24 to +24 st          | 0       | CC 6                                   |
+| Density                                | 0–100 %                | 75 %    | CC 3, Conductor 21. 48–52 % is silent  |
+| Feedback                               | 0–100 %                | 0 %     | CC 7                                   |
+| Dry/Wet                                | 0–100 %                | 50 %    | CC 4, Conductor 22                     |
+| Reverb                                 | 0–100 %                | 0 %     | CC 8                                   |
+| Freeze                                 | off, on                | off     | CC 64                                  |
+| Scatter (Position, Size, Shape, Pitch) | 0–100 %                | 0 %     | CC 10, 11, 12, 9; Conductor 23         |
+| Quality                                | Digital, Vintage, Tape | Digital |                                        |
+| Grain                                  | trigger                | —       | Conductor 24 = 127                     |
+| MIDI in                                | Off, 1–16, All         | Off     |                                        |
+| Conductor                              | Off, 1–16              | Off     |                                        |
 
 ### Status
 

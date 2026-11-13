@@ -12,7 +12,7 @@ summary: Four-input sidechain ducker with optional harmonic stereo synthesis, ba
 
 ## Opinion
 
-Still new, I haven't tested much. But it basically works, should be useful.
+Is very dependent on the kind of input signal. The stereo FX aren't quite there yet, and the ducking envelope needs calibrating better.
 
 ## Functionality
 
@@ -69,17 +69,17 @@ Output — making the ducking action immediately visible.
 
 ### Parameters
 
-| Parameter    | Range          | Default | Notes                                                              |
-|--------------|----------------|---------|---------------------------------------------------------------------|
-| Duck Depth   | 0–100 %        | 80 %    | 0 = bypass ducker; 100 = full silence on sidechain hit             |
-| Attack       | 0–500 ms       | 10 ms   | Envelope follower rise time; 0 = instant (ring mod with Release 0) |
-| Release      | 0–2000 ms      | 100 ms  | Envelope follower fall time; 0 = instant (ring mod with Attack 0)  |
-| M/S Cutoff   | 50–5000 Hz     | 200 Hz  | LP/HP crossover; typical 80–300 Hz                                 |
-| Side Shape   | 0–100 %        | 0 %     | Distortion on the HP path; 0 = mono output, 100 = hard clip ×8 drive |
-| Wet          | 0–100 %        | 100 %   | Wet/dry blend; dry is latency-compensated original stereo          |
-| Bass 90°     | Off/Left/Right | Off     | 90° bass phase shift between channels; idle when Off               |
-| Delay (beats)| Off, 1/64 … 1 beat | Off | Main-input delay locked to the host tempo; adds to Delay (ms)       |
-| Delay (ms)   | 0–200 ms       | 0 ms    | Main-input delay in milliseconds                                    |
+| Parameter     | Range              | Default | Notes                                                                |
+| ------------- | ------------------ | ------- | -------------------------------------------------------------------- |
+| Duck Depth    | 0–100 %            | 80 %    | 0 = bypass ducker; 100 = full silence on sidechain hit               |
+| Attack        | 0–500 ms           | 10 ms   | Envelope follower rise time; 0 = instant (ring mod with Release 0)   |
+| Release       | 0–2000 ms          | 100 ms  | Envelope follower fall time; 0 = instant (ring mod with Attack 0)    |
+| M/S Cutoff    | 50–5000 Hz         | 200 Hz  | LP/HP crossover; typical 80–300 Hz                                   |
+| Side Shape    | 0–100 %            | 0 %     | Distortion on the HP path; 0 = mono output, 100 = hard clip ×8 drive |
+| Wet           | 0–100 %            | 100 %   | Wet/dry blend; dry is latency-compensated original stereo            |
+| Bass 90°      | Off/Left/Right     | Off     | 90° bass phase shift between channels; idle when Off                 |
+| Delay (beats) | Off, 1/64 … 1 beat | Off     | Main-input delay locked to the host tempo; adds to Delay (ms)        |
+| Delay (ms)    | 0–200 ms           | 0 ms    | Main-input delay in milliseconds                                     |
 
 ### Routing
 

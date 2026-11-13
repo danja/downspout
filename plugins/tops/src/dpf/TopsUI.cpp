@@ -13,7 +13,7 @@ START_NAMESPACE_DISTRHO
 namespace {
 
 // Same order as ParamId in TopsPlugin.cpp.
-enum Param : std::uint32_t { kInstrument = 0, kEngine, kPreset, kPitch, kDecay, kTone, kNoise, kBrightness, kVolume, kDistortion, kNoteMap, kFirstPan, kCount = kFirstPan + 10 };
+enum Param : std::uint32_t { kInstrument = 0, kEngine, kPreset, kPitch, kDecay, kTone, kNoise, kBrightness, kVolume, kDistortion, kNoteMap, kFirstPan, kCount = kFirstPan + 10, kLastTrigger = kCount, kFlashLevel = kCount + 1, kParameterCount = kFlashLevel + 1 };
 
 constexpr kit::Accent kSourceAccent {198, 120, 64};  // copper
 constexpr kit::Accent kShapeAccent {92, 140, 156};   // cold steel
@@ -26,8 +26,8 @@ const char* const kPresetNames[5] = {"Rock", "Jazz", "Electronic", "Metal", "Lat
 const char* const kNoteMapNames[2] = {"Any note plays the selected instrument", "General MIDI drum notes"};
 
 struct Tables {
-    std::array<kit::Range, kCount> ranges {};
-    std::array<float, kCount> defaults {};
+    std::array<kit::Range, kParameterCount> ranges {};
+    std::array<float, kParameterCount> defaults {};
     Tables()
     {
         ranges[kInstrument] = {0, 9, true};      defaults[kInstrument] = 0;
@@ -42,6 +42,8 @@ struct Tables {
         ranges[kDistortion] = {0, 1, false};     defaults[kDistortion] = 0;
         ranges[kNoteMap] = {0, 1, true};         defaults[kNoteMap] = 1;
         for (std::uint32_t i = kFirstPan; i < kCount; ++i) { ranges[i] = {-1, 1, false}; defaults[i] = 0; }
+        ranges[kLastTrigger] = {0, 9, true};    defaults[kLastTrigger] = 0;
+        ranges[kFlashLevel] = {0, 1, false};     defaults[kFlashLevel] = 0;
     }
 };
 
@@ -56,10 +58,25 @@ const Tables& tables()
 class TopsUI : public MagnetoUI
 {
 public:
-    TopsUI() : MagnetoUI(tables().ranges.data(), kCount, tables().defaults.data()) {}
+    TopsUI() : MagnetoUI(tables().ranges.data(), kParameterCount, tables().defaults.data()) {}
 
 protected:
     void onAction(const int /*id*/) override {}
+
+    bool onMouse(const MouseEvent& ev) override
+    {
+        if (ev.button == 1 && ev.press) {
+            const float mx = static_cast<float>(ev.pos.getX());
+            const float my = static_cast<float>(ev.pos.getY());
+            for (int i = 0; i < tops::kInstrumentCount; ++i) {
+                if (instrumentCells_[static_cast<std::size_t>(i)].contains(mx, my)) {
+                    commit(kInstrument, static_cast<float>(i));
+                    return true;
+                }
+            }
+        }
+        return MagnetoUI::onMouse(ev);
+    }
 
     // A preset is a one-shot: it sends its sound values to the host, then they are ordinary parameters.
     void sendValue(const std::uint32_t parameter, const float v) override
@@ -89,7 +106,7 @@ protected:
 
         drawPanel({24.0f, 108.0f, full, 200.0f}, "SOURCE", kSourceAccent, "a preset sets decay, brightness and noise once");
         label(x, 148.0f, "Instrument");
-        drawSegments(kInstrument, kInstrumentNames, 10, {x, 166.0f, w, 28.0f}, kSourceAccent);
+        drawInstrumentSegments({x, 166.0f, w, 28.0f}, kSourceAccent);
         label(x, 204.0f, "Engine");
         drawSegments(kEngine, kEngineNames, 6, {x, 222.0f, w, 28.0f}, kSourceAccent);
         label(x, 260.0f, "Preset");
@@ -119,6 +136,42 @@ protected:
     }
 
 private:
+    void drawInstrumentSegments(const Rect b, const Accent accent)
+    {
+        const auto& t = theme();
+        const float gap = 6.0f;
+        const float w = (b.w - gap * 9.0f) / 10.0f;
+        const int selected = intValue(kInstrument);
+        const int triggered = static_cast<int>(std::lround(value(kLastTrigger)));
+        const float flash = value(kFlashLevel);
+        for (int i = 0; i < 10; ++i) {
+            const Rect box {b.x + static_cast<float>(i) * (w + gap), b.y, w, b.h};
+            instrumentCells_[static_cast<std::size_t>(i)] = box;
+            const bool lit = flash > 0.05f && triggered == i;
+            beginPath();
+            if (i == selected || lit)
+                fillColor(accent.r, accent.g, accent.b, lit ? static_cast<int>(180.0f + flash * 75.0f) : 255);
+            else
+                fc(t.buttonFace);
+            roundedRect(box.x, box.y, box.w, box.h, downspout::laf::kRadiusSmall);
+            fill();
+            if (i != selected && !lit) {
+                beginPath();
+                sc(t.border);
+                strokeWidth(1.0f);
+                roundedRect(box.x, box.y, box.w, box.h, downspout::laf::kRadiusSmall);
+                stroke();
+            }
+            if (i == selected || lit)
+                fillColor(250, 248, 242, 255);
+            else
+                fc(t.textPrimary);
+            fontSize(13.0f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            text(box.x + box.w * 0.5f, box.y + box.h * 0.5f, kInstrumentNames[i], nullptr);
+        }
+    }
+
     void slider(const Rect b, const int column, const int row, const std::uint32_t parameter, const char* name, const Accent accent)
     {
         const float gap = 24.0f;
@@ -148,6 +201,8 @@ private:
             std::snprintf(buffer, sizeof(buffer), "%.0f%%", v * 100.0);
         return buffer;
     }
+
+    std::array<Rect, tops::kInstrumentCount> instrumentCells_ {};
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TopsUI)
 };

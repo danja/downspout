@@ -149,6 +149,37 @@ void allModelsRender()
     }
 }
 
+void sendMidi(BasilicoEngine& engine, const std::uint8_t status, const std::uint8_t d1, const std::uint8_t d2)
+{
+    const std::uint8_t bytes[3] {status, d1, d2};
+    engine.handleMidi(bytes, 3);
+}
+
+void cc14ControllersMapToAudibleControls()
+{
+    BasilicoEngine engine {48000.0f};
+    engine.setParameter(ParamId::cutoff, 0.0f);
+    engine.setParameter(ParamId::resonance, 0.0f);
+    engine.setParameter(ParamId::drive, 0.0f);
+    engine.setParameter(ParamId::output, 0.0f);
+
+    sendMidi(engine, 0xb0, 1, 127);
+    require(std::fabs(engine.getParameter(ParamId::cutoff) - 1.0f) < 1.0e-6f,
+            "basilico CC 1 should drive cutoff to max");
+
+    sendMidi(engine, 0xb0, 2, 64);
+    require(std::fabs(engine.getParameter(ParamId::resonance) - (64.0f / 127.0f)) < 1.0e-3f,
+            "basilico CC 2 should map resonance across its full range");
+
+    sendMidi(engine, 0xb0, 3, 32);
+    require(std::fabs(engine.getParameter(ParamId::drive) - (32.0f / 127.0f)) < 1.0e-3f,
+            "basilico CC 3 should map drive across its full range");
+
+    sendMidi(engine, 0xb0, 4, 0);
+    require(std::fabs(engine.getParameter(ParamId::output) - 0.0f) < 1.0e-6f,
+            "basilico CC 4 should drive output to minimum");
+}
+
 void noteOffStops()
 {
     BasilicoEngine engine {48000.0f};
@@ -547,12 +578,6 @@ void extremeParametersStayFinite()
 
 } // namespace
 
-void sendMidi(BasilicoEngine& engine, const std::uint8_t status, const std::uint8_t d1, const std::uint8_t d2)
-{
-    const std::uint8_t bytes[3] {status, d1, d2};
-    engine.handleMidi(bytes, 3);
-}
-
 // Full bend up is 0x3fff: LSB 127, MSB 127.
 void bendUp(BasilicoEngine& engine, const int channel)
 {
@@ -632,6 +657,7 @@ int main()
 {
     defaultsAndClamping();
     allModelsRender();
+    cc14ControllersMapToAudibleControls();
     noteOffStops();
     tracksMidiPitch();
     glideMovesTowardTarget();

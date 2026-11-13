@@ -60,6 +60,8 @@ enum class GenreId : std::int32_t {
     moroder,
     descending,
     descendingBars,
+    ascending,
+    ascendingBars,
     count
 };
 

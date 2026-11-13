@@ -1007,9 +1007,13 @@ constexpr ScaleDef kScales[] = {
     }
 }
 
-// Both Descending genres share rhythm, durations and wander; they differ only in how long one descent is.
+// Both directional genres share rhythm, durations and wander; they differ only in how long one line is.
 [[nodiscard]] bool isDescendingGenre(const GenreId genre) {
     return genre == GenreId::descending || genre == GenreId::descendingBars;
+}
+
+[[nodiscard]] bool isAscendingGenre(const GenreId genre) {
+    return genre == GenreId::ascending || genre == GenreId::ascendingBars;
 }
 
 [[nodiscard]] float genreDensityBias(GenreId genre, bool strong) {
@@ -1027,7 +1031,10 @@ constexpr ScaleDef kScales[] = {
     case GenreId::rock: return strong ? 1.55f : 0.18f;
     case GenreId::moroder: return strong ? 1.10f : 1.34f;
     case GenreId::descending:
-    case GenreId::descendingBars: return strong ? 1.18f : 0.92f;
+    case GenreId::descendingBars:
+    case GenreId::ascending:
+    case GenreId::ascendingBars:
+        return strong ? 1.18f : 0.92f;
     default: return 1.0f;
     }
 }
@@ -1189,12 +1196,12 @@ void reinforceJazzWalkingBeats(std::array<bool, kMaxPatternSteps>& onset,
     }
 }
 
-// Descending: a line needs a steady pulse to walk down, so most beat starts are pinned (the first always).
-void reinforceDescendingBeats(std::array<bool, kMaxPatternSteps>& onset,
+// Directional figures need a steady pulse, so most beat starts are pinned (the first always).
+void reinforceDirectionalBeats(std::array<bool, kMaxPatternSteps>& onset,
                               const PatternState& pattern,
                               const Controls& controls,
                               Rng& rng) {
-    if (!isDescendingGenre(controls.genre) ||
+    if ((!isDescendingGenre(controls.genre) && !isAscendingGenre(controls.genre)) ||
         pattern.stepsPerBeat <= 0 ||
         pattern.patternSteps <= 0) {
         return;
@@ -1326,6 +1333,8 @@ void reinforceMoroderPulse(std::array<bool, kMaxPatternSteps>& onset,
         break;
     case GenreId::descending:
     case GenreId::descendingBars:
+    case GenreId::ascending:
+    case GenreId::ascendingBars:
         holdBias = clampf(holdBias * 0.85f + 0.10f, 0.0f, 1.0f);
         break;
     default:
@@ -1562,6 +1571,35 @@ void buildSabbathDegreeCell(std::array<int, 4>& cell, int cellLen, Rng& rng) {
     return clampi(std::min(degree, previousDegree + 2), 0, span + 1);
 }
 
+[[nodiscard]] int ascendingDegreeForEvent(const Controls& controls,
+                                         Rng& rng,
+                                         const int index,
+                                         const int eventCount,
+                                         const int previousDegree) {
+    if (eventCount <= 1 || index == 0) {
+        return 0;
+    }
+
+    const int span = descendingSpan(controls, eventCount);
+    const float progress = static_cast<float>(index) / static_cast<float>(eventCount - 1);
+    const int ideal = static_cast<int>(std::lround(static_cast<float>(span) * progress));
+    if (index >= eventCount - 1) {
+        return span;
+    }
+
+    const float wander = controls.color * 0.7f;
+    const float roll = rng.nextFloat();
+    int degree = ideal;
+    if (roll < wander * 0.40f) {
+        degree = ideal - rng.nextInt(1, 2);  // step back down
+    } else if (roll < wander * 0.70f) {
+        degree = previousDegree;             // pause
+    } else if (roll < wander) {
+        degree = ideal + 1;                  // dip ahead of the line
+    }
+    return clampi(std::max(degree, previousDegree - 2), 0, span + 1);
+}
+
 void ensureFirstEvent(PatternState& pattern, const Controls& controls) {
     if (pattern.eventCount > 0) {
         return;
@@ -1611,7 +1649,7 @@ void generateRhythm(PatternState& pattern,
         reinforceStyleAnchors(onset, pattern, controls, rng);
     }
     reinforceJazzWalkingBeats(onset, pattern, controls, rng);
-    reinforceDescendingBeats(onset, pattern, controls, rng);
+    reinforceDirectionalBeats(onset, pattern, controls, rng);
     reinforceFugueSubjectSteps(onset, pattern, controls, rng);
     reinforceRockBeatAnchors(onset, pattern, controls);
     reinforceMoroderPulse(onset, pattern, controls, rng);
@@ -1646,8 +1684,9 @@ void generateNotes(PatternState& pattern, const Controls& controls, Rng& rng) {
         buildSabbathDegreeCell(sabbathCell, sabbathCellLen, rng);
     }
 
-    // Descending runs one descent per group of events: the whole pattern, or one bar for Descending (bars).
-    const bool perBar = controls.genre == GenreId::descendingBars && pattern.stepsPerBar > 0;
+    // Directional runs one figure per group of events: the whole pattern, or one bar for the corresponding per-bar version.
+    const bool perBar = (controls.genre == GenreId::descendingBars || controls.genre == GenreId::ascendingBars) &&
+                        pattern.stepsPerBar > 0;
     int groupFirst = 0;
     int groupCount = pattern.eventCount;
     for (int index = 0; index < pattern.eventCount; ++index) {
@@ -1686,7 +1725,9 @@ void generateNotes(PatternState& pattern, const Controls& controls, Rng& rng) {
                         ? moroderDegreeForEvent(pattern, controls, rng, event, prevDegree)
                         : isDescendingGenre(controls.genre)
                             ? descendingDegreeForEvent(controls, rng, index - groupFirst, groupCount, prevDegree)
-                            : chooseDegree(rng, controls, strong, prevDegree);
+                            : isAscendingGenre(controls.genre)
+                                ? ascendingDegreeForEvent(controls, rng, index - groupFirst, groupCount, prevDegree)
+                                : chooseDegree(rng, controls, strong, prevDegree);
             prevDegree = degree;
             event.note = noteFromDegree(controls, degree);
             prevJazzNote = event.note;

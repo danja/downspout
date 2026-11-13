@@ -239,7 +239,7 @@ ModelProfile profileForModel(const int model)
         profile.envScale = 0.25f;
         profile.decayScale = 0.75f;
         profile.sustainScale = 0.65f;
-        profile.driveScale = 0.35f;
+        profile.driveScale = 0.55f;
         profile.forcedWave = 1;
         profile.forcedDrive = 0;
         break;
@@ -253,7 +253,7 @@ ModelProfile profileForModel(const int model)
         profile.envScale = 0.35f;
         profile.decayScale = 0.95f;
         profile.sustainScale = 0.85f;
-        profile.driveScale = 0.60f;
+        profile.driveScale = 0.82f;
         break;
     case 2: // Dub.
         profile.oscMix = 0.40f;
@@ -265,7 +265,7 @@ ModelProfile profileForModel(const int model)
         profile.envScale = 0.18f;
         profile.decayScale = 0.45f;
         profile.sustainScale = 0.55f;
-        profile.driveScale = 0.45f;
+        profile.driveScale = 0.72f;
         profile.forcedWave = 0;
         profile.forcedDrive = 1;
         break;
@@ -279,7 +279,7 @@ ModelProfile profileForModel(const int model)
         profile.envScale = 0.90f;
         profile.decayScale = 0.60f;
         profile.sustainScale = 0.55f;
-        profile.driveScale = 1.25f;
+        profile.driveScale = 1.55f;
         profile.forcedDrive = 2;
         break;
     case 4: // Industrial.
@@ -292,7 +292,7 @@ ModelProfile profileForModel(const int model)
         profile.envScale = 0.45f;
         profile.decayScale = 0.55f;
         profile.sustainScale = 0.70f;
-        profile.driveScale = 1.75f;
+        profile.driveScale = 2.15f;
         profile.forcedDrive = 3;
         break;
     case 5: // Reese — dark detuned saw, dominant sub, minimal filter movement.
@@ -305,7 +305,7 @@ ModelProfile profileForModel(const int model)
         profile.envScale = 0.08f;
         profile.decayScale = 0.85f;
         profile.sustainScale = 0.92f;
-        profile.driveScale = 0.72f;
+        profile.driveScale = 0.92f;
         profile.forcedWave = 2;
         break;
     default: // Hoover — nasal, sweeping, high resonance filter dive.
@@ -318,7 +318,7 @@ ModelProfile profileForModel(const int model)
         profile.envScale = 1.0f;
         profile.decayScale = 0.28f;
         profile.sustainScale = 0.28f;
-        profile.driveScale = 1.55f;
+        profile.driveScale = 1.95f;
         profile.forcedWave = 2;
         break;
     }
@@ -494,7 +494,13 @@ public:
             if (note == 120 || note == 123)
                 allNotesOff();
             else
-                handleBendRpn(channel, note, value);
+            {
+                ParamId target = ParamId::cutoff;
+                if (controllerTarget(note, target))
+                    setParameter(static_cast<std::uint32_t>(target), controllerToParameter(target, value));
+                else
+                    handleBendRpn(channel, note, value);
+            }
             break;
         default:
             break;
@@ -731,31 +737,39 @@ private:
     float applyDrive(float input, const int driveType, const ModelProfile& profile) const
     {
         const float squelch = params_.values[static_cast<std::size_t>(ParamId::squelch)];
-        const float drive = params_.values[static_cast<std::size_t>(ParamId::drive)] * profile.driveScale + squelch * 0.18f;
-        input = sanitizeAudio(input + std::sin(phase_ * kTwoPi) * squelch * drive * 0.12f);
+        const float drive = params_.values[static_cast<std::size_t>(ParamId::drive)] * profile.driveScale + squelch * 0.22f;
+        const float drivePhase = std::sin(phase_ * kTwoPi);
+        // Add a small pre-drive wobble so the drive section is obvious even at modest
+        // drive settings; the tanh/sine shaping still keeps the output bounded.
+        input = sanitizeAudio(input + drivePhase * squelch * drive * 0.18f);
         switch (std::clamp(driveType, 0, 3))
         {
-        case 0: // Clean — gentle soft saturation, unchanged.
-            return std::tanh(input * (1.0f + drive * 1.5f));
+        case 0: // Clean — a more obvious soft saturation with extra harmonic shimmer.
+        {
+            const float gain = 1.4f + drive * 4.4f;
+            const float shaped = std::tanh(input * gain) + std::sin(input * (2.0f + drive * 18.0f)) * (0.12f + drive * 0.26f);
+            return sanitizeAudio(shaped * (0.82f + drive * 0.55f));
+        }
         case 1: // Amp — hard saturation with x|x| shaping for odd harmonics.
         {
-            const float gained = input * (1.0f + drive * 18.0f);
-            const float shaped = gained + gained * std::fabs(gained) * drive * 0.35f;
-            return std::tanh(shaped) * 0.82f;
+            const float gained = input * (1.4f + drive * 24.0f);
+            const float shaped = gained + std::copysign(gained * std::fabs(gained) * (0.55f + drive * 0.75f), gained);
+            return sanitizeAudio(std::tanh(shaped) * (0.76f + drive * 0.38f));
         }
-        case 2: // Acid — resonant sine injection with 3rd harmonic feedback.
+        case 2: // Acid — resonant sine injection with a stronger 3rd/5th harmonic stack.
         {
-            const float mod = std::sin(phase_ * kTwoPi) * drive * 0.50f;
-            const float third = std::sin(phase_ * kTwoPi * 3.0f) * drive * 0.28f;
-            const float gained = (input + mod + third) * (1.0f + drive * 14.0f);
-            return std::tanh(gained);
+            const float mod = std::sin(phase_ * kTwoPi) * (0.85f + drive * 1.25f);
+            const float third = std::sin(phase_ * kTwoPi * 3.0f) * (0.50f + drive * 1.10f);
+            const float fifth = std::sin(phase_ * kTwoPi * 5.0f) * drive * 0.20f;
+            const float gained = (input + mod + third + fifth) * (1.35f + drive * 18.0f);
+            return sanitizeAudio(std::tanh(gained) * (0.90f + drive * 0.48f));
         }
         default: // Fold — aggressive wave folding, dominates at high drive.
         {
-            const float foldGain = 2.5f + drive * 22.0f;
+            const float foldGain = 3.2f + drive * 30.0f;
             const float folded = std::sin(input * foldGain);
-            const float foldMix = 0.40f + drive * 0.55f;
-            return sanitizeAudio((folded * foldMix + input * (1.0f - foldMix)) * (1.8f + drive * 0.8f));
+            const float foldMix = 0.30f + drive * 0.72f;
+            return sanitizeAudio((folded * foldMix + input * (1.0f - foldMix)) * (2.0f + drive * 1.15f));
         }
         }
     }

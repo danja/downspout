@@ -10,6 +10,10 @@ screenshot: /assets/plugins/flues-synth-driver.png
 summary: Turns its panel controls into MIDI CCs and program changes that play the external Flues vocal and physical-model synthesizer.
 ---
 
+## Opinion
+
+It works but is rather niche.
+
 ## Functionality
 
 Flues Synth Driver is a control surface for the external Flues synthesizer. It

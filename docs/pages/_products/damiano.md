@@ -12,7 +12,7 @@ summary: Six-mode stereo distortion with drive, tone shelf, wet/dry mix and outp
 
 ## Opinion
 
-Covers the range from light warmth to aggressive fuzz. The Wavefold mode in particular produces sounds nothing else in the collection does. The MIDI CC drive link makes it a natural partner to Drift.
+Covers the range from light warmth to aggressive fuzz, nice for adding aggresion. The Wavefold mode in particular produces sounds nothing else in the collection does. The MIDI CC drive link makes it a natural partner to Drift.
 
 ## Functionality
 
@@ -20,30 +20,30 @@ Damiano is a stereo distortion with six selectable waveshaping modes. Each mode 
 
 ### Modes
 
-| Mode      | Character                                                                 |
-|-----------|---------------------------------------------------------------------------|
-| Soft      | Polynomial soft-clip — gentle rounding, clean at low drive               |
-| Tanh      | Hyperbolic-tangent waveshaper with output normalisation                   |
+| Mode      | Character                                                                            |
+| --------- | ------------------------------------------------------------------------------------ |
+| Soft      | Polynomial soft-clip — gentle rounding, clean at low drive                           |
+| Tanh      | Hyperbolic-tangent waveshaper with output normalisation                              |
 | Fuzz      | Asymptotic fuzz — positive and negative halves shaped differently for even harmonics |
-| Overdrive | Biased tanh with DC cancellation, Tube-Screamer-style even-harmonic character |
-| Tube      | Asymmetric: tanh on the positive half, x/√(1+x²) on the negative half    |
-| Wavefold  | Triangle-wave folder applied in series for dense harmonic folding         |
+| Overdrive | Biased tanh with DC cancellation, Tube-Screamer-style even-harmonic character        |
+| Tube      | Asymmetric: tanh on the positive half, x/√(1+x²) on the negative half                |
+| Wavefold  | Triangle-wave folder applied in series for dense harmonic folding                    |
 
 ### Parameters
 
-| Parameter   | Range          | Default | Notes                                                              |
-|-------------|----------------|---------|---------------------------------------------------------------------|
-| Drive       | 1–10           | 2       | Waveshaping gain; behaviour varies by mode                         |
-| Tone        | 0–100 %        | 50 %    | High-shelf: below 50 % darkens, above 50 % brightens              |
-| Folds       | 1–8            | 2       | Cascade depth in Wavefold mode; greyed out in other modes          |
-| Mix         | 0–100 %        | 100 %   | Wet/dry blend                                                      |
-| Output Gain | −24 to +24 dB  | 0 dB    | Post-distortion level trim                                         |
-| CC Drive    | off / 1–127    | off     | MIDI CC number that overrides Drive in real time (left, or both when Linked) |
-| CC Shape    | off / 1–127    | off     | MIDI CC number that selects the Mode in six steps (left, or both when Linked) |
-| CC Channel  | 1–16           | 1       | MIDI channel to listen on (shared)                                 |
-| Stereo      | Linked / Split | Linked  | Split enables the right-channel settings below                     |
-| Right Mode, Drive, Tone, Folds | as left | Tanh, 2, 50 %, 2 | Used only in Split                         |
-| CC Drive R, CC Shape R | off / 1–127 | off | Right-channel CC numbers (Split only)                         |
+| Parameter                      | Range          | Default          | Notes                                                                         |
+| ------------------------------ | -------------- | ---------------- | ----------------------------------------------------------------------------- |
+| Drive                          | 1–10           | 2                | Waveshaping gain; behaviour varies by mode                                    |
+| Tone                           | 0–100 %        | 50 %             | High-shelf: below 50 % darkens, above 50 % brightens                          |
+| Folds                          | 1–8            | 2                | Cascade depth in Wavefold mode; greyed out in other modes                     |
+| Mix                            | 0–100 %        | 100 %            | Wet/dry blend                                                                 |
+| Output Gain                    | −24 to +24 dB  | 0 dB             | Post-distortion level trim                                                    |
+| CC Drive                       | off / 1–127    | off              | MIDI CC number that overrides Drive in real time (left, or both when Linked)  |
+| CC Shape                       | off / 1–127    | off              | MIDI CC number that selects the Mode in six steps (left, or both when Linked) |
+| CC Channel                     | 1–16           | 1                | MIDI channel to listen on (shared)                                            |
+| Stereo                         | Linked / Split | Linked           | Split enables the right-channel settings below                                |
+| Right Mode, Drive, Tone, Folds | as left        | Tanh, 2, 50 %, 2 | Used only in Split                                                            |
+| CC Drive R, CC Shape R         | off / 1–127    | off              | Right-channel CC numbers (Split only)                                         |
 
 ### Tone shelf
 

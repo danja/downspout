@@ -57,19 +57,19 @@ int main()
 {
     using namespace downspout::primefold;
 
-    // 1. Clamping keeps feedback <= 0.90 and grain integral.
+    // 1. Clamping keeps feedback <= 1.0 and grain integral.
     {
         Parameters p;
         p.feedback = 5.0f;
         p.grain = 9.0f;
         p.dry = -1.0f;
         const Parameters c = clampParameters(p);
-        CHECK(c.feedback == 0.90f, "feedback clamped to 0.90");
+        CHECK(c.feedback == 1.0f, "feedback clamped to 1.0");
         CHECK(c.grain == 2.0f, "grain clamped integral");
         CHECK(c.dry == 0.0f, "dry clamped");
     }
 
-    // 2. Silence in -> silence out (no self-oscillation at default feedback).
+    // 2. Silence in -> silence out at default settings; at full feedback the loop can self-oscillate.
     {
         auto st = std::make_unique<EngineState>();
         activate(*st, 48000.0, 1024);
@@ -79,6 +79,25 @@ int main()
         float* outs[2] = {oL.data(), oR.data()};
         processBlock(*st, p, 4096, ins, outs);
         CHECK(peak(oL, 0) == 0.0f && peak(oR, 0) == 0.0f, "silence stays silent");
+    }
+
+    {
+        auto st = std::make_unique<EngineState>();
+        activate(*st, 48000.0, 1024);
+        Parameters p;
+        p.feedback = 1.0f;
+        p.level2 = 1.0f;
+        p.level3 = 1.0f;
+        p.level5 = 1.0f;
+        p.mix = 1.0f;
+        p.dry = 0.0f;
+        p.level = 1.0f;
+        std::vector<float> z(4096, 0.0f), oL(4096), oR(4096);
+        z[128] = 1.0f;
+        const float* ins[2] = {z.data(), z.data()};
+        float* outs[2] = {oL.data(), oR.data()};
+        processBlock(*st, p, 4096, ins, outs);
+        CHECK(peak(oL, 0) > 0.05f || peak(oR, 0) > 0.05f, "full feedback can self-oscillate after an impulse");
     }
 
     // 3. Each prime voice shifts a sine by its ratio with feedback at zero.

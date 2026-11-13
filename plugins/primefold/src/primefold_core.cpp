@@ -65,7 +65,7 @@ Parameters clampParameters(const Parameters& raw) noexcept
     p.level2 = clampf(p.level2, 0.0f, 1.0f);
     p.level3 = clampf(p.level3, 0.0f, 1.0f);
     p.level5 = clampf(p.level5, 0.0f, 1.0f);
-    p.feedback = clampf(p.feedback, 0.0f, 0.90f);
+    p.feedback = clampf(p.feedback, 0.0f, 1.0f);
     p.damp = clampf(p.damp, 0.0f, 1.0f);
     p.grain = clampf(std::round(p.grain), 0.0f, 2.0f);
     p.mix = clampf(p.mix, 0.0f, 1.0f);

@@ -32,7 +32,7 @@ pitch.
 | MIDI out | Sends the target note as MIDI note-on/note-off while a pitch is corrected, one note at a time, legato. Channel and a fixed velocity are set alongside |
 | Amount | -100 to +200 %. 0 leaves the pitch alone, 100 % lands it on the note. Above 100 % overshoots the note; negative values push the pitch away from it, for scrambled, detuned effects (shift is limited to +-24 st) |
 | Glide | 0 = off (notes step at once); longer times slide between notes and let some vibrato through |
-| Stickiness | Cents a pitch must travel past the halfway point before the target moves to the next note |
+| Stickiness | Cents a pitch must travel past the halfway point before the target moves to the next note; the default is 30 cents, which keeps a held note stable through small drift |
 | Transpose | Whole semitones added to the target. With Amount at 0 this is a plain transposer |
 | Voicing | How noisy a sound can be and still count as pitched |
 | Quality | Fast, Good or Best (below) |

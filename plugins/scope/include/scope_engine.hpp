@@ -25,6 +25,12 @@ struct Engine {
     std::vector<float> spectrum;
     // log-spaced bands for the UI
     std::array<float, kBands> bands {};
+    // waveform samples for the oscilloscope view
+    std::array<float, kWaveformSize> waveformL {};
+    std::array<float, kWaveformSize> waveformR {};
+    int waveformPos = 0;
+    int waveformCounter = 0;
+    bool waveformFresh = false;
     // set when a new FFT frame (and therefore a new band set) is ready
     bool fresh = false;
     bool primed = false;
@@ -32,6 +38,9 @@ struct Engine {
     float peakL = 0.0f, peakR = 0.0f;
     float rmsL = 0.0f, rmsR = 0.0f;
     float corr = 0.0f;
+    float momentaryL = -120.0f, momentaryR = -120.0f;
+    float shortL = -120.0f, shortR = -120.0f;
+    float integratedL = -120.0f, integratedR = -120.0f;
     float accLL = 0.0f, accRR = 0.0f, accLR = 0.0f;
 };
 
@@ -51,5 +60,13 @@ float getPeakR(const Engine& e);
 float getRmsL(const Engine& e);
 float getRmsR(const Engine& e);
 float getCorr(const Engine& e);
+float getMomentaryLufs(const Engine& e);
+float getMomentaryRufs(const Engine& e);
+float getShortLufs(const Engine& e);
+float getShortRufs(const Engine& e);
+float getIntegratedLufs(const Engine& e);
+float getIntegratedRufs(const Engine& e);
+const std::array<float, kWaveformSize>& getWaveformL(const Engine& e);
+const std::array<float, kWaveformSize>& getWaveformR(const Engine& e);
 
 }  // namespace downspout::scope
