@@ -126,14 +126,16 @@ private:
         std::snprintf(status, sizeof(status), "Voices sounding: %d / %d",
                       intValue(idx(core::ParamId::outVoices)), static_cast<int>(core::kVoiceCount));
         label(b.x + 18.0f, b.y + 306.0f, status, false, 14.0f);
-        const float left = b.x + 18.0f;
-        const float right = b.x + 184.0f;
+        const Rect instability {b.x + 10.0f, b.y + 328.0f, b.w - 20.0f, 140.0f};
+        drawPanel(instability, "INSTABILITY", kMouthAccent, "reed + bore imperfections");
+        const float left = instability.x + 12.0f;
+        const float right = instability.x + 169.0f;
         slider(core::ParamId::reedInstability, "Instability  (CC 5)",
-               {left, b.y + 344.0f, 148.0f, 42.0f}, kMouthAccent);
+               {left, instability.y + 40.0f, 149.0f, 42.0f}, kMouthAccent);
         slider(core::ParamId::registerCapture, "Register capture  (CC 6)",
-               {right, b.y + 344.0f, 148.0f, 42.0f}, kBoreAccent);
-        label(left, b.y + 402.0f, "Turbulent flow adds noise and lip flutter.", true, 11.0f);
-        label(left, b.y + 422.0f, "Upper bore modes can catch: octave or more.", true, 11.0f);
+               {right, instability.y + 40.0f, 149.0f, 42.0f}, kBoreAccent);
+        label(left, instability.y + 108.0f, "Turbulence + lip flutter", true, 10.0f);
+        label(right, instability.y + 108.0f, "Pressure + tighter lip", true, 10.0f);
     }
 
     void drawMouthpiece(const Rect b)

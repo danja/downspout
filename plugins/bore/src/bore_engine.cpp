@@ -114,6 +114,10 @@ void Engine::noteOn(const int note, const int velocity, const std::uint8_t chann
     voice.boreFilter = 0.0f;
     voice.breathFilter = 0.0f;
     voice.flutterFilter = 0.0f;
+    voice.reedOpening = 0.48f;
+    voice.previousFlow = 0.0f;
+    voice.flowHighpass = 0.0f;
+    voice.flowInitialized = false;
     voice.lipPhase = 0.0;
     voice.writeIndex = 0;
     voice.samplesWritten = 0;
@@ -147,6 +151,10 @@ void Engine::allSoundOff(const std::uint8_t channel) noexcept
         voice.boreFilter = 0.0f;
         voice.breathFilter = 0.0f;
         voice.flutterFilter = 0.0f;
+        voice.reedOpening = 0.48f;
+        voice.previousFlow = 0.0f;
+        voice.flowHighpass = 0.0f;
+        voice.flowInitialized = false;
         voice.writeIndex = 0;
         voice.samplesWritten = 0;
     }
@@ -236,6 +244,9 @@ void Engine::renderSegment(float* const left, float* const right, const std::uin
         const float boreCoefficient = onePoleCoefficient(cutoff, sr);
         const float breathCoefficient = onePoleCoefficient(static_cast<float>(std::min(7000.0, sr * 0.35)), sr);
         const float flutterCoefficient = onePoleCoefficient(static_cast<float>(std::min(12.0, sr * 0.1)), sr);
+        const float flutterNormalization = std::sqrt(3.0f * (2.0f - flutterCoefficient) / flutterCoefficient);
+        const float reedOpeningCoefficient = onePoleCoefficient(static_cast<float>(std::min(1800.0, sr * 0.35)), sr);
+        const float flowBlockerCoefficient = 1.0f - onePoleCoefficient(static_cast<float>(std::min(5.0, sr * 0.1)), sr);
         float sample = 0.0f;
 
         for (Voice& voice : voices_) {
@@ -270,10 +281,10 @@ void Engine::renderSegment(float* const left, float* const right, const std::uin
             const float airNoise = noise(voice.random);
             voice.breathFilter += breathCoefficient * (airNoise - voice.breathFilter);
             voice.flutterFilter += flutterCoefficient * (airNoise - voice.flutterFilter);
-            const float flutter = reedInstability_ * (0.08f * voice.flutterFilter + 0.025f * voice.breathFilter);
-            const double registerRatio = 1.0 + 3.0 * static_cast<double>(registerCapture_);
+            const float slowFlutter = voice.flutterFilter * flutterNormalization;
+            const float flutter = reedInstability_ * (0.035f * slowFlutter + 0.012f * voice.breathFilter);
             const double lipFrequency = std::min(frequency * static_cast<double>(embouchure_) *
-                                                     registerRatio * (1.0 + static_cast<double>(flutter)),
+                                                     (1.0 + static_cast<double>(flutter)),
                                                  sr * 0.45);
             const float lip = static_cast<float>(std::sin(voice.lipPhase));
             voice.lipPhase += 2.0 * kPi * lipFrequency / sr;
@@ -282,17 +293,35 @@ void Engine::renderSegment(float* const left, float* const right, const std::uin
             const float drive = 1.0f + pressure_ * 5.0f;
             const float mouthPressure = pressure_ * voice.velocity;
             const float borePressure = std::clamp(voice.boreFilter * 2.0f, 0.0f, mouthPressure);
-            const float aperture = std::clamp(0.48f + 0.36f * lip +
-                                                  reedInstability_ * 0.12f * voice.flutterFilter,
-                                              0.02f, 0.98f);
+            const float pressureDrive = std::clamp((mouthPressure - 0.18f) / 0.55f, 0.0f, 1.0f);
+            const float embouchureDrive = std::clamp((embouchure_ - 0.8f) / 0.4f, 0.0f, 1.0f);
+            const float captureDrive = registerCapture_ * pressureDrive * embouchureDrive;
+            const float reedRestOpening = 0.48f - 0.18f * captureDrive;
+            const float reedOpeningDepth = 0.36f + 0.52f * captureDrive;
+            const float targetOpening = std::clamp(reedRestOpening + reedOpeningDepth * lip +
+                                                       reedInstability_ * 0.1f * slowFlutter,
+                                                   0.02f, 0.98f);
+            voice.reedOpening += reedOpeningCoefficient * (targetOpening - voice.reedOpening);
+            const float aperture = voice.reedOpening;
             const float flow = aperture * std::sqrt(std::max(0.0f, mouthPressure - borePressure));
             const float unopposedFlow = aperture * std::sqrt(std::max(0.0f, mouthPressure));
             const float acousticLoad = unopposedFlow - flow;
-            const float turbulence = reedInstability_ * 0.12f * voice.breathFilter;
+            float acousticFlow = 0.0f;
+            if (!voice.flowInitialized) {
+                voice.previousFlow = flow;
+                voice.flowInitialized = true;
+            } else {
+                voice.flowHighpass = flow - voice.previousFlow +
+                                     flowBlockerCoefficient * voice.flowHighpass;
+                voice.previousFlow = flow;
+                acousticFlow = voice.flowHighpass;
+            }
+            const float turbulence = reedInstability_ * 0.15f * voice.breathFilter;
             const float reed = std::tanh(drive * lip + 2.5f * acousticLoad +
                                          breath_ * voice.breathFilter * 0.35f + turbulence);
             const float feedback = 0.82f + pressure_ * 0.15f;
-            const float excitation = pressure_ * (0.035f + 0.01f * breath_) * reed;
+            const float excitation = pressure_ * (0.035f + 0.01f * breath_) * reed +
+                                     captureDrive * 0.08f * acousticFlow;
             voice.bore[voice.writeIndex] = excitation + feedback * voice.boreFilter;
             voice.writeIndex = (voice.writeIndex + 1) % static_cast<std::uint32_t>(kMaxDelaySamples);
             voice.samplesWritten = std::min(voice.samplesWritten + 1, static_cast<std::uint32_t>(kMaxDelaySamples));

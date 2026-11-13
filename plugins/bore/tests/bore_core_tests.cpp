@@ -64,6 +64,14 @@ float peak(const std::vector<float>& audio, const std::size_t begin, const std::
     return result;
 }
 
+float maxStep(const std::vector<float>& audio)
+{
+    float result = 0.0f;
+    for (std::size_t i = 1; i < audio.size(); ++i)
+        result = std::max(result, std::abs(audio[i] - audio[i - 1]));
+    return result;
+}
+
 double amplitudeAt(const std::vector<float>& audio, const std::size_t begin, const std::size_t count, const double hz)
 {
     double real = 0.0;
@@ -82,6 +90,18 @@ double rms(const std::vector<float>& samples, const std::size_t begin, const std
     for (std::size_t i = begin; i < std::min(end, samples.size()); ++i)
         sum += static_cast<double>(samples[i]) * samples[i];
     return std::sqrt(sum / static_cast<double>(end - begin));
+}
+
+double rmsDifference(const std::vector<float>& a, const std::vector<float>& b,
+                     const std::size_t begin, const std::size_t end)
+{
+    const std::size_t count = std::min({end, a.size(), b.size()}) - begin;
+    double sum = 0.0;
+    for (std::size_t i = begin; i < begin + count; ++i) {
+        const double difference = static_cast<double>(a[i] - b[i]);
+        sum += difference * difference;
+    }
+    return std::sqrt(sum / static_cast<double>(count));
 }
 
 Audio renderWithParameter(const ParamId parameter, const float value)
@@ -123,19 +143,47 @@ void testPitchedVoiceAndVelocity()
     const double subharmonic = amplitudeAt(audio.left, 2048, 4096, 130.812782);
     assert(fundamental > subharmonic * 2.0);
 
-    Engine captured;
-    captured.setParameter(id(ParamId::registerCapture), 1.0f / 3.0f);
-    captured.activate(kSampleRate);
-    const Audio upperRegister = render(captured, 112, {noteOn(60)});
-    const double capturedFundamental = amplitudeAt(upperRegister.left, 2048, 4096, 261.625565);
-    const double capturedSecond = amplitudeAt(upperRegister.left, 2048, 4096, 523.25113);
-    const double defaultSecond = amplitudeAt(audio.left, 2048, 4096, 523.25113);
-    assert(capturedSecond / capturedFundamental > 1.5 * defaultSecond / fundamental);
-
     Engine quiet;
     quiet.activate(kSampleRate);
     const Audio soft = render(quiet, 112, {noteOn(60, 20)});
     assert(rms(soft.left, 2048, 6144) < rms(audio.left, 2048, 6144));
+}
+
+void testRegisterCaptureRequiresPressureAndEmbouchure()
+{
+    Engine captureBaseline;
+    captureBaseline.setParameter(id(ParamId::pressure), 1.0f);
+    captureBaseline.setParameter(id(ParamId::embouchure), 1.2f);
+    captureBaseline.activate(kSampleRate);
+    const Audio baseRegister = render(captureBaseline, 112, {noteOn(60)});
+    Engine captured;
+    captured.setParameter(id(ParamId::pressure), 1.0f);
+    captured.setParameter(id(ParamId::embouchure), 1.2f);
+    captured.setParameter(id(ParamId::registerCapture), 1.0f);
+    captured.activate(kSampleRate);
+    const Audio upperRegister = render(captured, 112, {noteOn(60)});
+    const double baseFundamental = amplitudeAt(baseRegister.left, 2048, 4096, 261.625565);
+    const double baseSecond = amplitudeAt(baseRegister.left, 2048, 4096, 523.25113);
+    const double capturedFundamental = amplitudeAt(upperRegister.left, 2048, 4096, 261.625565);
+    const double capturedSecond = amplitudeAt(upperRegister.left, 2048, 4096, 523.25113);
+    assert(capturedSecond / capturedFundamental > 1.5 * baseSecond / baseFundamental);
+    assert(maxStep(upperRegister.left) < 0.04f);
+
+    for (const auto& condition : std::array<std::pair<float, float>, 2> {{{0.2f, 1.2f}, {1.0f, 0.8f}}}) {
+        Engine plain;
+        Engine withCapture;
+        for (Engine* testEngine : {&plain, &withCapture}) {
+            testEngine->setParameter(id(ParamId::pressure), condition.first);
+            testEngine->setParameter(id(ParamId::embouchure), condition.second);
+        }
+        withCapture.setParameter(id(ParamId::registerCapture), 1.0f);
+        plain.activate(kSampleRate);
+        withCapture.activate(kSampleRate);
+        const Audio unmodified = render(plain, 112, {noteOn(60)});
+        const Audio modified = render(withCapture, 112, {noteOn(60)});
+        for (std::size_t i = 0; i < unmodified.left.size(); ++i)
+            assert(unmodified.left[i] == modified.left[i]);
+    }
 }
 
 void testMIDIChannelAndSampleAccurateOnset()
@@ -204,6 +252,16 @@ void testControlsChangeTheSound()
             difference += std::abs(static_cast<double>(baseline.left[i] - changed.left[i]));
         assert(difference > 1.0);
     }
+
+    const Audio stableReed = renderWithParameter(ParamId::reedInstability, 0.0f);
+    const Audio unstableReed = renderWithParameter(ParamId::reedInstability, 1.0f);
+    assert(rmsDifference(stableReed.left, unstableReed.left, 2048, 6144) >
+           0.02 * rms(stableReed.left, 2048, 6144));
+
+    const Audio captureOff = renderWithParameter(ParamId::registerCapture, 0.0f);
+    const Audio captureOn = renderWithParameter(ParamId::registerCapture, 1.0f);
+    assert(rmsDifference(captureOff.left, captureOn.left, 2048, 6144) >
+           0.02 * rms(captureOff.left, 2048, 6144));
 
     const Audio quiet = renderWithParameter(ParamId::level, 0.0f);
     assert(peak(quiet.left, 0, quiet.left.size()) == 0.0f);
@@ -302,6 +360,7 @@ int main()
 {
     testParameterContract();
     testPitchedVoiceAndVelocity();
+    testRegisterCaptureRequiresPressureAndEmbouchure();
     testMIDIChannelAndSampleAccurateOnset();
     testReleaseAndAllSoundOff();
     testControlsChangeTheSound();

@@ -25,8 +25,8 @@ Each control was tied to a signal-path decision before the UI was drawn:
 - Embouchure changes the lip oscillator frequency relative to the bore.
 - Bell controls the feedback low-pass cutoff; Breath adds filtered noise.
 - Reed Instability adds turbulent-flow noise and slow lip flutter.
-- Register Capture raises the reed resonance toward upper bore modes, allowing
-  nonlinear feedback to favor a harmonic above the played note.
+- Register Capture feeds more AC reed flow into the bore; high pressure and
+  tighter embouchure can let a nonlinear upper mode catch.
 - Attack and Release shape a per-note envelope; Velocity controls sensitivity.
 - Level and MIDI In are ordinary host parameters.
 
@@ -46,12 +46,13 @@ The loop delay is `sampleRate / frequency`, with note frequency bounded to
 20 Hz-12 kHz and the delay bounded by the fixed buffer. A nonlinear reed
 aperture gates Bernoulli-style airflow from the pressure difference between the
 mouth and reflected bore wave. Reed Instability adds filtered turbulent flow
-and slow aperture/frequency flutter. Register Capture shifts reed resonance
-from the fundamental toward the fourth bore mode; the feedback delay supplies
-the resonant modes rather than directly transposing the MIDI note. Bell maps to
-a low-pass cutoff from 900 Hz to the lesser of 15 kHz and 42% of sample rate.
-These are sound-design approximations, not measured brass acoustics; describe
-that distinction anywhere the UI or docs explain the model.
+and slow aperture/frequency flutter. Register Capture adds the AC component of
+reed flow to the bore after removing its slow mean; its strength depends on
+mouth pressure and Embouchure, so upper modes can catch without directly
+transposing the MIDI note. Bell maps to a low-pass cutoff from 900 Hz to the
+lesser of 15 kHz and 42% of sample rate. These are sound-design approximations,
+not measured brass acoustics; describe that distinction anywhere the UI or
+docs explain the model.
 
 Attack reaches about 99% over its displayed time. Release falls by about 60 dB
 over its displayed time, then the voice is retired below the -100 dB runtime
@@ -68,7 +69,8 @@ The core suite checks:
 - note velocity, envelope release, controller mapping, channel filtering and
   all-sound-off behavior;
 - audible effects of Reed Instability and Register Capture, including increased
-  second-harmonic energy when the reed is tuned near the second bore mode;
+  second-harmonic energy at high pressure/tighter Embouchure and no capture when
+  mouth pressure is below the onset threshold or Embouchure is at its loose limit;
 - that the tone controls change rendered audio, not just stored parameter
   values;
 - finite, bounded output with eight voices at a high sample rate and maximum

@@ -25,7 +25,7 @@ dsp:bore a trn:PluginProfile ;
     trn:parameter [ rdfs:label "Reed Instability" ; trn:symbol "reed_instability" ; trn:range "0-100%" ;
                     rdfs:comment "Adds turbulent airflow noise and slow lip flutter. MIDI CC 5." ] ;
     trn:parameter [ rdfs:label "Register Capture" ; trn:symbol "register_capture" ; trn:range "0-100%" ;
-                    rdfs:comment "Raises reed resonance from the bore fundamental toward its fourth mode; nonlinear coupling may capture an upper harmonic. MIDI CC 6." ] ;
+                    rdfs:comment "Couples nonlinear reed airflow into the bore; high pressure and tighter embouchure can favor upper-mode capture without transposing the MIDI note. MIDI CC 6." ] ;
     trn:parameter [ rdfs:label "Attack" ; trn:symbol "attack" ; trn:range "1-1000 ms" ;
                     rdfs:comment "Per-note envelope rise time." ] ;
     trn:parameter [ rdfs:label "Release" ; trn:symbol "release" ; trn:range "20-4000 ms" ;

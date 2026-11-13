@@ -39,6 +39,10 @@ private:
         float boreFilter = 0.0f;
         float breathFilter = 0.0f;
         float flutterFilter = 0.0f;
+        float reedOpening = 0.48f;
+        float previousFlow = 0.0f;
+        float flowHighpass = 0.0f;
+        bool flowInitialized = false;
         double lipPhase = 0.0;
         std::uint32_t writeIndex = 0;
         std::uint32_t samplesWritten = 0;

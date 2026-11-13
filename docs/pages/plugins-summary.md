@@ -438,10 +438,11 @@ silences it.
 Eight-voice MIDI instrument with a driven lip-like oscillator exciting a note-tuned
 feedback delay; Pressure controls drive and loop sustain, Embouchure detunes the reed,
 Bell changes feedback damping, and Breath adds filtered noise. Reed Instability adds
-turbulent-flow noise and lip flutter; Register Capture biases the reed toward upper
-bore modes that can catch above the played note. CC 1-6 map in that order and CC 7
-is Level. A compact, nonlinear waveguide model, not a calibrated brass simulation.
-No transport or audio input.
+turbulent-flow noise and lip flutter; Register Capture couples nonlinear airflow
+more strongly into the waveguide. Upper-mode capture depends on Pressure and
+Embouchure and does not directly transpose the played note. CC 1-6 map in that
+order and CC 7 is Level. A compact, nonlinear waveguide model, not a calibrated
+brass simulation. No transport or audio input.
 
 ### canticle
 Twelve-voice instrument with keys, reed, pad, pluck and glass timbres for melody,
