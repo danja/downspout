@@ -52,6 +52,10 @@ dsp:chorale trn:hasParameter [
     trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1.0 ;
     rdfs:comment "0 Mono (L + R summed into one delay line, as in the Juno source), 1 Stereo (a delay line per side, keeps the image)"
 ], [
+    trn:symbol "sync" ; trn:label "Sync" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "0 free running, 1 host tempo sync using transport BPM to scale Rate"
+], [
     trn:symbol "cc_channel" ; trn:label "CC Channel" ;
     trn:minimum 0.0 ; trn:maximum 16.0 ; trn:default 1 ;
     rdfs:comment "MIDI channel for CC 1-4 (Rate, Depth, Width, Mix), 0 = off"

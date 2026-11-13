@@ -4,44 +4,16 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 
 ## Priority
 
-Check every plugin's VST3 class definition and set Steinberg-appropriate subCategories (Instrument, Fx, and anything more specific).
+zmorph needs midi input with the cutoff following notes and CC1-CC4 assigned to other parameters. Its UI needs attention, there's a title bar on top of a title bar.
 
 zmorph and scope "core tests" need the usual standard: zmorph is a 1-assert smoke test via
 `<cassert>` without `downspout/test_assert.h`, so it passes vacuously under `NDEBUG`; scope has 20
 checks and the header. Bring both up to the usual standard: assert observable effects, and show
 every control has an audible or visible effect.
 
-Chorale should allow syncing to transport BBT. Confirmed still open: `plugins/chorale/docs/design.md`
-lists a tempo-synced rate under "Not built", and the plugin reads no host tempo or BBT.
+basilico Drive section isn't making a lot of difference. Make the effects more marked, add a couple more.
 
-Cleared 2026-11-10: Sieve is usable. A unity mask is a pure 1024-sample delay (white noise within
-0.01 dB, correlation 1.000000, single-tap impulse) and the result is block-size invariant. The
-2-assert smoke test is replaced by tests for Width, Floor, Tilt, Mix, Level, Root/Scale, held MIDI
-and channel filtering. The wrapper now applies channel-filtered note events, the panel shows Root,
-Scale and Source names, and the stale "wet path broken" README/design/Pages text is corrected.
-
-Sieve screenshot needs a human visual check: `docs/pages/assets/plugins/sieve.png` was recaptured
-after the panel began showing Root/Scale/Source names, but this agent cannot view images. Confirm
-the labels and value units are not clipped at 920x640.
-
-Cleared 2026-11-10: Sam accepts typed text under Carla's in-process VST3 host. Carla gives keyboard
-focus to its X11 host wrapper, not the DGL view, so `SamUI::onMouse` grabs focus on a left press
-(`getWindow().focus()`). Verified by typing into the field and reading the engine text over MCP;
-`carla-single` and the Sam core/MCP tests still pass.
-
-Cleared 2026-11-08: NAM is built and wired (`-DDOWNSPOUT_BUILD_NAM=ON`, 99/99 `.vst3` bundles in
-`build/bin`, all release/install/screenshot/Pages lists). Sieve/zmorph/scope now have full Pages
-front matter, a group (so they appear in the catalogue), `sieve.png` and `zmorph.png` captured;
-`scripts/package-built-bundles.sh` lists all three; the empty `plugins/perc/` skeleton is gone.
-
-Windows CI probe: root cause found and fixed 2026-11-11, pending a green run. The build step failed
-every run since Oct 30 (heavyverb and spense arrived in 6b480128; last pass 4a05771) because
-spense's `std::bit_cast` does not exist in the CI cross-compiler's libstdc++ 10 (jammy mingw
-GCC 10.3 via distrho/dpf-cmake-action; the local MinGW is GCC 13, which is why local builds stayed
-green). Now a memcpy pun in `plugins/spense` (core and test reference); 139/139 core checks pass
-and a full win64 cross-build with the exact jammy toolchain
-(`build/toolchains/mingw12/repro-win64.sh`) verifies it. Remaining: push, watch the Windows probe
-go green and the win64 artifact appear; see MISTAKES.md for how the failure was pinned down.
+add oscilloscope to scope plugin, give it standard controls
 
 ## Fun
 
@@ -51,44 +23,12 @@ Add two Ascending patterns to Bassgen corresponding to the existing Descending o
 
 ## New plugin proposals (from the DSP-Ports-JSFX survey, 2026-11-03)
 
-Source: `~/github/DSP-Ports-JSFX/Plugin Ports/*.jsfx`, used as **reference**. Downspout is MIT. Where the JSFX
-original is MIT (JuKnow Chorus, ChronoDupe, Airwindows ports, lkjb ports) code may be copied with the notice kept.
-Where it is GPL (x42, zam, setBfree, Aeolus, amsynth, Dexed, cStop, chmaha's own designs) write a clean-room
-implementation from the published algorithm and do not translate the JSFX. `scope` now supplies metering and analysis;
-before it the repository had none.
-
-- [x] **Tape Stop** built as `spindown` (clean-room; cStop is GPLv3): core, DPF wrapper, UI, 85 core checks, lists and docs.
-      Still open: listen to it; validate in REAPER (MIDI trigger routing to an effect, Cycle against a real BBT
-      transport with loop and relocate, save/reopen, Drift CC 1-4); decide whether it wants a tone darkening as the
-      tape slows, tempo-synced Stop/Start times, and a "resume" option instead of the crossfade to live. See
-      `plugins/spindown/docs/design.md` ("Not built").
-- [x] **Chorus** built as `chorale` (JuKnow Chorus / junologue-chorus, MIT, notice kept): Juno modes I, I+II, II plus a Custom 1-4 voice mode
-      (Rate, Depth, Delay), Tone, Width, Mix, CC 1-4. 205 core checks incl. a reference transcription of the source, mutation-checked.
-      Open: listen (Custom voicing by ear), REAPER validation, possibly feedback/flanger, tempo-synced rate, a vibrato (100 % wet) switch.
-- [x] **Meters / scope** built as `scope`: spectrum analyzer + level meter (peak, RMS, correlation). Audio passes through.
-      64 log-spaced bands (20 Hz - 20 kHz), labelled frequency/dB grids, Range 60/90/120 dB, Peak hold, Spectrum/Levels
-      display; audio passes through. Core tests + VST3 build pass, and the live display was verified in the JACK standalone
-      with a 1 kHz sine (recorded pass-through measured -6.02 dBFS peak, -9.03 dBFS RMS). Open: try it in REAPER and while
-      listening; EBU R128 loudness, goniometer and K-Meter are later.
-- [x] **Rotary speaker** built as `whirligig` (clean-room; Dizzy/b_whirl is GPL): LR4 crossover, drum and horn rotors with inertia, two mics
-      (lobes + Doppler), CC 1/2, and Beat sync (beats per turn, phase-locked to host BBT, Sync Phase). 104 core checks, mutation-checked.
-      Open: listen and voice by ear; validate in REAPER (BBT lock across loop/relocate, CC 1/2); possible cabinet/overdrive stage; ~0.7 ms
-      dry/wet latency is not reported to the host; input is summed to mono.
-- [x] **De-esser** built as `silken`, a vocal strip (original design): rumble filter, plosive guard, gate, harshness tamer, de-esser (Band/Wide, Listen, Range), leveller
-      (compressor), mud / warmth / presence / air, drive, sparkle, output. 301 core checks, mutation-checked. Open: try on real vocals and voice by ear (all times, ratios and
-      corners are by ear), REAPER validation. Parameter ids are append-only: 0-17 shipped first, 18-31 added later.
 - [ ] **Vocal extras left out of `silken`** (to keep its panel readable; each could be a plugin or a later addition): breath reducer (a gate/expander keyed on unvoiced
       low-level HF between words); dynamic resonance suppressor (multi-band version of the harshness tamer); vocal doubler / ADT and stereo widener (Chorale is close
       for the chorus part); a formant-aware sibilance detector; look-ahead for the de-esser and plosive guard (needs latency reporting); oversampled drive and sparkle;
       mid/side de-essing; a dedicated vocal limiter / clipper at the end of the chain; auto-gain / vocal rider (slow level riding before the compressor).
 - [ ] **Gate** (ZamGateX2 reference, GPL, clean-room): standalone audio noise gate with sidechain.
 - [ ] **MIDI filter / router** (Spaghetti Junction, x42 midifilter, GPL): channel/note filter and remap.
-- [x] **Tonewheel organ** built as `wheelhouse` (clean-room; setBfree is GPL): core, DPF wrapper, UI with custom drawbars,
-      104 core checks, lists and docs. Still open: listen to it and tune the by-ear voicing (percussion times and levels,
-      scanner depths, click level, master gain, drive law, the drop in drawbar level when percussion is on); validate in
-      REAPER (three MIDI channels from one keyboard track, save/reopen, drawbar drag and scroll in the real UI); CPU of a
-      full chord on a slow machine. Not built, see `plugins/wheelhouse/docs/design.md`: Leslie (the rotary speaker proposal
-      above is its natural partner), reverb, hardware drawbar CCs, tonewheel leakage and tuning error, key transpose or split.
 - [ ] Lower priority: ADT/doubler (ChronoDupe, MIT), Inflator, spectral compressor, dynamic tilt, channel strip,
       pipe organ (Aeolus), subtractive polysynth (amsynth), GM/SoundFont synth.
 

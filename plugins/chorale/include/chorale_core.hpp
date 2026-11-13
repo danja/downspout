@@ -41,13 +41,20 @@ struct Parameters {
     float mode = 1.0f;       // 0 I, 1 I+II, 2 II, 3 Custom
     float tone = 0.5f;       // 0..1: both low-pass filters, squared law as in the source
     float mix = 0.5f;        // 0..1: equal power
-    float rate = 0.8f;       // Hz, Custom
+    float rate = 0.8f;       // Hz, Custom. In sync mode it scales with the host BPM.
     float depth = 3.0f;      // ms either side of Delay, Custom
     float delay = 8.0f;      // ms, Custom
     float voices = 2.0f;     // 1..4, Custom
     float width = 1.0f;      // 0 mono wet .. 1 full stereo wet
     float input = 1.0f;      // 0 Mono (L + R summed into one delay line, as in the source), 1 Stereo (a delay line per side)
+    float sync = 0.0f;       // 0 free, 1 host tempo sync (BBT)
     float ccChannel = 1.0f;  // 0 = ignore CC
+};
+
+struct Transport {
+    bool valid = false;
+    bool playing = false;
+    double bpm = 120.0;
 };
 
 struct MidiEvent {
@@ -98,6 +105,7 @@ void releaseCc(EngineState& state, CcTarget target) noexcept;
 void resetState(EngineState& state) noexcept;
 
 void processBlock(EngineState& state, const Parameters& params, float sampleRate, std::uint32_t frames, const MidiEvent* events,
-                  std::uint32_t eventCount, const float* inLeft, const float* inRight, float* outLeft, float* outRight) noexcept;
+                  std::uint32_t eventCount, const float* inLeft, const float* inRight, float* outLeft, float* outRight,
+                  const Transport* transport = nullptr) noexcept;
 
 }  // namespace downspout::chorale

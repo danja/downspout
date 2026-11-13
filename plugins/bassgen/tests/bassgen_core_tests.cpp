@@ -124,6 +124,7 @@ void testDeterministicGeneration() {
 
 void testSubdivisionStepCounts() {
     assert(stepsPerBeatForSubdivision(SubdivisionId::quarter) == 1);
+    assert(stepsPerBeatForSubdivision(SubdivisionId::quarterTriplet) == 3);
     assert(stepsPerBeatForSubdivision(SubdivisionId::eighth) == 2);
     assert(stepsPerBeatForSubdivision(SubdivisionId::sixteenth) == 4);
     assert(stepsPerBeatForSubdivision(SubdivisionId::sixteenthTriplet) == 6);

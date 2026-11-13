@@ -108,7 +108,7 @@ constexpr const char* kStyleNames[] = {
 };
 
 constexpr const char* kSubdivisionNames[] = {
-    "1/8", "1/16", "1/16T", "1/4"
+    "1/8", "1/16", "1/16T", "1/4", "1/4T"
 };
 
 constexpr const char* kChannelNames[] = {
@@ -130,7 +130,7 @@ constexpr SelectorDef kSelectors[] = {
     {kParamScale, "Scale", kScaleNames, 23},
     {kParamGenre, "Genre", kGenreNames, 14},
     {kParamStyleMode, "Style", kStyleNames, 6},
-    {kParamSubdivision, "Subdivision", kSubdivisionNames, 4},
+    {kParamSubdivision, "Subdivision", kSubdivisionNames, 5},
     {kParamChannel, "Channel", kChannelNames, 16},
     {kParamInputMatchMode, "Follow Mode", kInputMatchNames, 3},
     {kParamConductorChannel, "Conductor Ch", kConductorChNames, 17},

@@ -10,7 +10,7 @@ namespace downspout::chorale {
 // Parameter indices are stable: never reorder, only append.
 // 0-9 controls, then eight output (status) parameters the panel reads.
 enum ParameterId : std::uint32_t {
-    kMode = 0, kTone, kMix, kRate, kDepth, kDelay, kVoices, kWidth, kInput, kCcChannel,
+    kMode = 0, kTone, kMix, kRate, kDepth, kDelay, kVoices, kWidth, kInput, kSync, kCcChannel,
     kStatusTap1, kStatusTap2, kStatusTap3, kStatusTap4, kStatusRate, kStatusDepth, kStatusWidth, kStatusMix,
     kParameterCount
 };
@@ -40,6 +40,7 @@ struct ParameterSpec {
         {"voices", "Voices", "", 1.0f, static_cast<float>(kMaxVoices), d.voices, true, false},
         {"width", "Width", "", 0.0f, 1.0f, d.width, false, false},
         {"input", "Input", "", 0.0f, 1.0f, d.input, true, false},
+        {"sync", "Sync", "", 0.0f, 1.0f, d.sync, true, false},
         {"cc_channel", "CC Channel", "", 0.0f, 16.0f, d.ccChannel, true, false},
         {"status_tap1", "Voice 1 Sweep", "", 0.0f, 1.0f, 0.0f, false, true},
         {"status_tap2", "Voice 2 Sweep", "", 0.0f, 1.0f, 0.0f, false, true},
@@ -66,6 +67,7 @@ inline float& field(Parameters& p, const std::uint32_t index) noexcept
     case kVoices:    return p.voices;
     case kWidth:     return p.width;
     case kInput:     return p.input;
+    case kSync:      return p.sync;
     case kCcChannel: return p.ccChannel;
     default:         return unused;
     }

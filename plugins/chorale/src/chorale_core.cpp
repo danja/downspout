@@ -71,6 +71,7 @@ Parameters clampParameters(const Parameters& p) noexcept
     c.voices = std::round(clampf(p.voices, 1.0f, static_cast<float>(kMaxVoices), 2.0f));
     c.width = clampf(p.width, 0.0f, 1.0f, 1.0f);
     c.input = std::round(clampf(p.input, 0.0f, 1.0f, 1.0f));
+    c.sync = std::round(clampf(p.sync, 0.0f, 1.0f, 0.0f));
     c.ccChannel = std::round(clampf(p.ccChannel, 0.0f, 16.0f, 1.0f));
     return c;
 }
@@ -98,15 +99,18 @@ void resetState(EngineState& state) noexcept
 }
 
 void processBlock(EngineState& s, const Parameters& params, const float sampleRate, const std::uint32_t frames, const MidiEvent* events,
-                  const std::uint32_t eventCount, const float* inLeft, const float* inRight, float* outLeft, float* outRight) noexcept
+                  const std::uint32_t eventCount, const float* inLeft, const float* inRight, float* outLeft, float* outRight,
+                  const Transport* transport) noexcept
 {
     const Parameters p = clampParameters(params);
+    const bool sync = p.sync > 0.5f && transport != nullptr && transport->valid && transport->playing && transport->bpm > 0.0;
     const double sr = std::max(8000.0, static_cast<double>(sampleRate));
     const double smooth = 1.0 - std::exp(-1.0 / (kSmoothSeconds * sr));
     const int mode = static_cast<int>(p.mode);
     const int voices = static_cast<int>(p.voices);
     const int ccChannel = static_cast<int>(p.ccChannel);
     const bool stereo = p.input >= 0.5f;
+    const double rateScale = sync ? std::max(0.000001, transport->bpm / 120.0) : 1.0;
 
     double tga = 0.0, tgb = 0.0, tgc = 0.0;
     switch (mode) {
@@ -124,7 +128,8 @@ void processBlock(EngineState& s, const Parameters& params, const float sampleRa
             const auto i = static_cast<std::size_t>(t);
             return s.ccActive[i] ? ccToValue(t, s.ccValue[i]) : param;
         };
-        tRate = value(kCcRate, p.rate);
+        const double baseRate = sync ? p.rate * rateScale : p.rate;
+        tRate = value(kCcRate, static_cast<float>(baseRate));
         tDepth = value(kCcDepth, p.depth);
         tWidth = value(kCcWidth, p.width);
         tMix = value(kCcMix, p.mix);

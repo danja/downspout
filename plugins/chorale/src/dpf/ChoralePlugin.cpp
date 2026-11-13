@@ -11,6 +11,19 @@ START_NAMESPACE_DISTRHO
 
 namespace core = downspout::chorale;
 
+namespace {
+core::Transport toCoreTransport(const TimePosition& timePos)
+{
+    core::Transport transport;
+    transport.playing = timePos.playing;
+    transport.valid = timePos.bbt.valid;
+    if (timePos.bbt.valid) {
+        transport.bpm = timePos.bbt.beatsPerMinute;
+    }
+    return transport;
+}
+}  // namespace
+
 // A stereo chorus. The controls are ordinary automatable parameters, which DPF saves by symbol, so there is no plugin state. The sweep
 // positions and the Rate, Depth, Width and Mix actually in force are output parameters, measured from the audio, that the panel reads.
 // CC 1-4 on the CC channel take Rate, Depth, Width and Mix over until the panel or host moves that control again.
@@ -96,8 +109,10 @@ protected:
             m.data2 = e.size > 2 ? e.data[2] : 0;
             midi_.push_back(m);
         }
+        const TimePosition& pos = getTimePosition();
+        const core::Transport transport = toCoreTransport(pos);
         core::processBlock(engine_, parameters_, static_cast<float>(getSampleRate()), frames, midi_.data(), static_cast<uint32_t>(midi_.size()),
-                           inputs[0], inputs[1], outputs[0], outputs[1]);
+                           inputs[0], inputs[1], outputs[0], outputs[1], &transport);
         for (std::size_t i = 0; i < core::kMaxVoices; ++i) meters_[i].store(engine_.meters.tap[i]);
         meters_[4].store(engine_.meters.rate);
         meters_[5].store(engine_.meters.depth);

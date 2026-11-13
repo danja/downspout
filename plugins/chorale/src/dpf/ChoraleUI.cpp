@@ -180,10 +180,13 @@ private:
         static constexpr const char* kInputs[2] = {"Mono sum", "Stereo"};
         label(b.x + pad, b.y + 162.0f, "Input", false, 12.0f, ALIGN_LEFT | ALIGN_MIDDLE);
         drawSegments(core::kInput, kInputs, 2, {b.x + pad + 48.0f, b.y + 150.0f, w - 48.0f, 24.0f}, kSoundAccent);
+        static constexpr const char* kSync[2] = {"Free", "BBT"};
+        label(b.x + pad, b.y + 196.0f, "Sync", false, 12.0f, ALIGN_LEFT | ALIGN_MIDDLE);
+        drawSegments(core::kSync, kSync, 2, {b.x + pad + 48.0f, b.y + 184.0f, w - 48.0f, 24.0f}, kSoundAccent);
         const int ch = intValue(core::kCcChannel);
         if (ch == 0) std::snprintf(buf, sizeof(buf), "CC off");
         else         std::snprintf(buf, sizeof(buf), "ch %d: CC1-4", ch);
-        drawStepper(core::kCcChannel, "CC channel (Rate Depth Width Mix)", buf, {b.x + pad, b.y + 188.0f, w, 22.0f});
+        drawStepper(core::kCcChannel, "CC channel (Rate Depth Width Mix)", buf, {b.x + pad, b.y + 220.0f, w, 22.0f});
     }
 
     bool demo_ = false;

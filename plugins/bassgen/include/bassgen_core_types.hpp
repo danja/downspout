@@ -68,6 +68,7 @@ enum class SubdivisionId : std::int32_t {
     sixteenth,
     sixteenthTriplet,
     quarter,
+    quarterTriplet,
     count
 };
 

@@ -28,7 +28,7 @@ linear interpolation) -> Width -> one-pole low-pass per side -> `dry * sqrt(1 - 
 - The default mode is I+II (the source defaulted to I).
 
 ## Not built
-Feedback (flanger), tempo-synced rate, a vibrato-only (100 % wet) switch, higher-order interpolation, oversampling the limiter.
+Feedback (flanger), a vibrato-only (100 % wet) switch, higher-order interpolation, oversampling the limiter. Tempo sync is available via the Sync toggle and scales Rate with the host BBT tempo.
 
 ## Tests
 `tests/chorale_core_tests.cpp`, 205 checks: the Juno modes against an independent straight-line transcription of the source algorithm (max error ~4e-8);

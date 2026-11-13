@@ -71,6 +71,7 @@ constexpr std::array<SliderDef, 11> kMainSliders = {{
 
 enum class DropKind : std::uint8_t {
     Division,  // 1/2/4/8 beats
+    GateBeats, // 1..8 beats
     Channel,   // 1-16
     CcNumber,  // off + 1-127 with common names
 };
@@ -82,8 +83,9 @@ struct DropDef {
     DropKind    kind;
 };
 
-constexpr std::array<DropDef, 1> kMainDrops = {{
+constexpr std::array<DropDef, 2> kMainDrops = {{
     { kParamDivision, "Division", "division", DropKind::Division },
+    { kParamGateBeats, "Gate Beats", "gate_beats", DropKind::GateBeats },
 }};
 
 constexpr std::array<DropDef, 5> kCCDropDefs = {{
@@ -173,6 +175,7 @@ constexpr int kCreamB = 242;
 {
     switch (kind) {
     case DropKind::Division: return 4;
+    case DropKind::GateBeats: return 8;
     case DropKind::Channel:  return 16;
     case DropKind::CcNumber: return 129;
     }
@@ -184,6 +187,9 @@ void dropItemText(DropKind kind, int item, char* buf, std::size_t size)
     switch (kind) {
     case DropKind::Division:
         std::snprintf(buf, size, "%s", kDivisionChoices[item]);
+        break;
+    case DropKind::GateBeats:
+        std::snprintf(buf, size, "%d beats", item + 1);
         break;
     case DropKind::Channel:
         std::snprintf(buf, size, "Ch %d", item + 1);
@@ -204,6 +210,7 @@ void dropItemText(DropKind kind, int item, char* buf, std::size_t size)
 {
     switch (kind) {
     case DropKind::Division: return std::clamp(static_cast<int>(std::lround(value)), 0, 3);
+    case DropKind::GateBeats: return std::clamp(static_cast<int>(std::lround(value)) - 1, 0, 7);
     case DropKind::Channel:  return std::clamp(static_cast<int>(std::lround(value)) - 1, 0, 15);
     case DropKind::CcNumber: return std::clamp(static_cast<int>(std::lround(value)), 0, 127);
     }
@@ -214,6 +221,7 @@ void dropItemText(DropKind kind, int item, char* buf, std::size_t size)
 {
     switch (kind) {
     case DropKind::Division: return static_cast<float>(item);
+    case DropKind::GateBeats: return static_cast<float>(item + 1);
     case DropKind::Channel:  return static_cast<float>(item + 1);
     case DropKind::CcNumber: return static_cast<float>(item);
     }
@@ -433,16 +441,16 @@ private:
 
     [[nodiscard]] const DropDef& openDef() const noexcept
     {
-        if (openDrop_ == 0)
-            return kMainDrops[0];
-        return kCCDropDefs[static_cast<std::size_t>(openDrop_ - 1)];
+        if (openDrop_ >= 0 && openDrop_ < static_cast<int>(kMainDrops.size()))
+            return kMainDrops[static_cast<std::size_t>(openDrop_)];
+        return kCCDropDefs[static_cast<std::size_t>(openDrop_ - static_cast<int>(kMainDrops.size()))];
     }
 
     [[nodiscard]] DropKind openKind() const noexcept { return openDef().kind; }
 
     [[nodiscard]] const Accent& popupAccent() const noexcept
     {
-        return openDrop_ == 0 ? kMainAccent : kCcAccent;
+        return openDrop_ < static_cast<int>(kMainDrops.size()) ? kMainAccent : kCcAccent;
     }
 
     // Left column rows: Mode segment, 4 sliders, Division drop, 5 sliders,
@@ -454,6 +462,7 @@ private:
             if (r == 0) y += kSegH;
             else if (r <= 4) y += kSliderH;
             else if (r == 5) y += kDropH;
+            else if (r == 6) y += kDropH;
             else if (r <= 10) y += kSliderH;
             else if (r == 11) y += kSwitchH;
             else if (r <= 13) y += kSliderH;
@@ -465,14 +474,16 @@ private:
     [[nodiscard]] int mainSliderRow(int s) const noexcept
     {
         if (s < 4) return 1 + s;
-        if (s < 9) return 2 + s;
-        return 3 + s;
+        if (s < 5) return -1;
+        if (s < 9) return 7 + (s - 5);
+        return 12 + (s - 9);
     }
 
     [[nodiscard]] Rect mainTrack(int s) const noexcept
     {
         const float trackW = kDivX - kMainX - kPad;
-        return { kMainX, mainRowY(mainSliderRow(s)) + 19.0f, trackW, 12.0f };
+        const int row = mainSliderRow(s);
+        return { kMainX, row >= 0 ? mainRowY(row) + 19.0f : 0.0f, trackW, 12.0f };
     }
 
     [[nodiscard]] Rect segBox() const noexcept
@@ -486,10 +497,11 @@ private:
         return segBox().contains(mx, my) ? 0 : -1;
     }
 
-    [[nodiscard]] Rect mainDropBox() const noexcept
+    [[nodiscard]] Rect mainDropBox(int which = 0) const noexcept
     {
         const float trackW = kDivX - kMainX - kPad;
-        return { kMainX, mainRowY(5) + 19.0f, trackW, 22.0f };
+        const int row = which == 0 ? 5 : 6;
+        return { kMainX, mainRowY(row) + 19.0f, trackW, 22.0f };
     }
 
     [[nodiscard]] Rect switchBox(int which) const noexcept
@@ -515,19 +527,20 @@ private:
     // Combined header ids: 0 = Division, 1..5 = CC dropdowns.
     [[nodiscard]] int dropHeaderAt(float mx, float my) const noexcept
     {
-        if (mainDropBox().contains(mx, my))
-            return 0;
+        for (int d = 0; d < static_cast<int>(kMainDrops.size()); ++d)
+            if (mainDropBox(d).contains(mx, my))
+                return d;
         for (int d = 0; d < static_cast<int>(kCCDropDefs.size()); ++d)
             if (ccDropBox(d).contains(mx, my))
-                return 1 + d;
+                return static_cast<int>(kMainDrops.size()) + d;
         return -1;
     }
 
     [[nodiscard]] Rect openHeaderBox() const noexcept
     {
-        if (openDrop_ == 0)
-            return mainDropBox();
-        return ccDropBox(openDrop_ - 1);
+        if (openDrop_ >= 0 && openDrop_ < static_cast<int>(kMainDrops.size()))
+            return mainDropBox(openDrop_);
+        return ccDropBox(openDrop_ - static_cast<int>(kMainDrops.size()));
     }
 
     void commitParam(uint32_t index, const char* key, float v)
@@ -779,7 +792,7 @@ private:
         // Division dropdown.
         {
             const DropDef& def = kMainDrops[0];
-            const Rect box = mainDropBox();
+            const Rect box = mainDropBox(0);
             char current[32];
             dropItemText(def.kind, dropCurrentItem(def.kind, values_[def.index]),
                          current, sizeof(current));
@@ -787,7 +800,18 @@ private:
             drawDropBox(box, current);
         }
 
-        for (int s = 4; s < 9; ++s) {
+        // Gate Beats dropdown.
+        {
+            const DropDef& def = kMainDrops[1];
+            const Rect box = mainDropBox(1);
+            char current[32];
+            dropItemText(def.kind, dropCurrentItem(def.kind, values_[def.index]),
+                         current, sizeof(current));
+            drawLabelValue(kMainX, box.y - 17.0f, trackW, def.label, current);
+            drawDropBox(box, current);
+        }
+
+        for (int s = 5; s < 9; ++s) {
             const SliderDef& def = kMainSliders[static_cast<std::size_t>(s)];
             const Rect tr        = mainTrack(s);
             drawLabelValue(kMainX, tr.y - 17.0f, trackW, def.label,

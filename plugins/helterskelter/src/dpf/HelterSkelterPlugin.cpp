@@ -133,7 +133,7 @@ protected:
         case kParamResonance:   parameter.name = "Resonance";   parameter.symbol = "resonance";   parameter.ranges = { 0.5f, 12.0f, 4.0f }; break;
         case kParamBaseFreq:    parameter.name = "Base Freq";   parameter.symbol = "base_freq";   parameter.ranges = { 100.0f, 2000.0f, 400.0f }; break;
         case kParamDivision:    parameter.name = "Division";    parameter.symbol = "division";    parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 3.0f, 2.0f }; break;
-        case kParamGateBeats:   parameter.name = "Gate Beats";  parameter.symbol = "gate_beats";  parameter.ranges = { 0.5f, 8.0f, 2.0f }; break;
+        case kParamGateBeats:   parameter.name = "Gate Beats";  parameter.symbol = "gate_beats";  parameter.hints = kParameterIsInteger; parameter.ranges = { 1.0f, 8.0f, 2.0f }; break;
         case kParamAttack:      parameter.name = "Attack";      parameter.symbol = "attack";      parameter.ranges = { 1.0f, 500.0f, 20.0f }; break;
         case kParamDecay:       parameter.name = "Decay";       parameter.symbol = "decay";       parameter.ranges = { 5.0f, 1000.0f, 150.0f }; break;
         case kParamSustain:     parameter.name = "Sustain";     parameter.symbol = "sustain";     parameter.ranges = { 0.0f, 1.0f, 0.7f }; break;

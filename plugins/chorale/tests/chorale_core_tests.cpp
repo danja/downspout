@@ -546,6 +546,23 @@ static void testIdleAndStability()
     }
 }
 
+static void testTransportSync()
+{
+    Parameters p = custom();
+    p.mode = 3.0f; p.rate = 1.0f; p.sync = 1.0f;
+    EngineState state;
+    std::vector<float> inL(4096), inR(4096);
+    std::generate(inL.begin(), inL.end(), []() { static std::uint32_t x = 1; return static_cast<float>(std::sin((x++ % 97) * 0.37)); });
+    std::generate(inR.begin(), inR.end(), []() { static std::uint32_t x = 2; return static_cast<float>(std::cos((x++ % 73) * 0.41)); });
+    std::vector<float> outL(4096), outR(4096);
+    Transport transport; transport.valid = true; transport.playing = true; transport.bpm = 240.0;
+    processBlock(state, p, static_cast<float>(kSr), 4096, nullptr, 0, inL.data(), inR.data(), outL.data(), outR.data(), &transport);
+
+    const auto rateNow = state.meters.rate;
+    check("transport sync scales rate from the host BPM", rateNow > 1.9f && rateNow < 2.1f);
+    check("transport sync uses a non-zero tempo scale", state.meters.rate != p.rate);
+}
+
 static void testMetersAndReset()
 {
     Parameters p; p.mode = 0;
@@ -572,9 +589,9 @@ static void testMetersAndReset()
 
 static void testParameters()
 {
-    check("parameter count is 18", kParameterCount == 18 && kControlCount == 10);
+    check("parameter count is 19", kParameterCount == 19 && kControlCount == 11);
     check("ids are pinned", kMode == 0 && kTone == 1 && kMix == 2 && kRate == 3 && kDepth == 4 && kDelay == 5 && kVoices == 6 && kWidth == 7
-          && kInput == 8 && kCcChannel == 9 && kStatusTap1 == 10 && kStatusMix == 17);
+          && kInput == 8 && kSync == 9 && kCcChannel == 10 && kStatusTap1 == 11 && kStatusMix == 18);
     check("outputs are flagged", !isOutput(kCcChannel) && isOutput(kStatusTap1) && isOutput(kStatusMix) && !isOutput(kParameterCount));
     const Parameters d;
     for (std::uint32_t i = 0; i < kControlCount; ++i) {
@@ -610,6 +627,7 @@ int main()
     testControllers();
     testDeterminismAndBlocks();
     testIdleAndStability();
+    testTransportSync();
     testMetersAndReset();
     std::printf("chorale core tests: %d passed, %d failed\n", gPassed, gFailed);
     return gFailed == 0 ? 0 : 1;
