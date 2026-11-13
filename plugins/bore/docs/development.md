@@ -46,13 +46,14 @@ The loop delay is `sampleRate / frequency`, with note frequency bounded to
 20 Hz-12 kHz and the delay bounded by the fixed buffer. A nonlinear reed
 aperture gates Bernoulli-style airflow from the pressure difference between the
 mouth and reflected bore wave. Reed Instability adds filtered turbulent flow
-and slow aperture/frequency flutter. Register Capture adds the AC component of
-reed flow to the bore after removing its slow mean; its strength depends on
-mouth pressure and Embouchure, so upper modes can catch without directly
-transposing the MIDI note. Bell maps to a low-pass cutoff from 900 Hz to the
-lesser of 15 kHz and 42% of sample rate. These are sound-design approximations,
-not measured brass acoustics; describe that distinction anywhere the UI or
-docs explain the model.
+and slow aperture/frequency flutter. A damped reed-opening pole softens valve
+closure; a DC blocker removes mean airflow before the acoustic component enters
+the delay line, initialized on the first flow sample to avoid a note-on impulse.
+Register Capture scales that AC flow by mouth pressure and Embouchure, so upper
+modes can catch without directly transposing the MIDI note. Bell maps to a
+low-pass cutoff from 900 Hz to the lesser of 15 kHz and 42% of sample rate.
+These are sound-design approximations, not measured brass acoustics; describe
+that distinction anywhere the UI or docs explain the model.
 
 Attack reaches about 99% over its displayed time. Release falls by about 60 dB
 over its displayed time, then the voice is retired below the -100 dB runtime
