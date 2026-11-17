@@ -55,8 +55,10 @@ H underneath) and **rows are scale degrees**, with the bottom row the lowest.
 
 Click a selector to open a drop-down list of every value, with the current one
 highlighted, and click an item to choose it. Click anywhere else to close the list
-without changing anything. Long lists (the 24 scales, the 88 root notes) flow into
-columns so they are visible at once; the root list shows note names.
+without changing anything. Long lists (the 32 scales, the 88 root notes) flow into
+columns so they are visible at once; the root list shows note names. The eight scales
+appended from Plinky are Hirajoshi, Insen, Iwato, Minyo, Triad Maj, Triad Min, Fifths
+and Romanian.
 
 | Selector | What it does |
 |---|---|

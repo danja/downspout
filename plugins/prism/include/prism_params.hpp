@@ -11,9 +11,11 @@ namespace downspout::prism {
 
 // ── Layout ─────────────────────────────────────────────────────────────────
 //
-// Six global parameters, then four per band (L delay, R delay, feedback, solo)
-// for up to eight bands, then one read-only output. Band parameters of bands
-// beyond "Bands" are kept (and saved) but have no effect.
+// Eight global parameters, then six per band (L delay, R delay, feedback, solo,
+// L division, R division) for up to eight bands, then three appended LFO controls
+// and two read-only outputs. The LFO controls are appended after the band block
+// so existing band parameter IDs stay stable in saved projects. Band parameters
+// of bands beyond "Bands" are kept (and saved) but have no effect.
 
 inline constexpr std::size_t kMaxBands = 8;
 inline constexpr std::size_t kFftSizeCount = 4;
@@ -48,7 +50,20 @@ enum BandField : std::uint32_t {
     kFieldsPerBand,
 };
 
-inline constexpr std::uint32_t kInputParameterCount = kGlobalCount + kMaxBands * kFieldsPerBand;
+// End of the original band block. Kept separate from the input count now that global
+// LFO controls are appended after it, so callers can still recognise band parameters.
+inline constexpr std::uint32_t kBandParameterEnd = kGlobalCount + kMaxBands * kFieldsPerBand;
+
+// Appended after the band block: a free-running LFO and separate depths for delay and
+// feedback. Both depths default to zero, so an existing patch is unchanged.
+enum AppendedParam : std::uint32_t {
+    kLfoRate = kBandParameterEnd,
+    kLfoDelayDepth,
+    kLfoFeedbackDepth,
+};
+
+inline constexpr std::uint32_t kAppendedParameterCount = 3;
+inline constexpr std::uint32_t kInputParameterCount = kBandParameterEnd + kAppendedParameterCount;
 inline constexpr std::uint32_t kOutLatency = kInputParameterCount;
 inline constexpr std::uint32_t kOutTempo = kInputParameterCount + 1;  // the tempo in use, for the panel
 inline constexpr std::uint32_t kParameterCount = kInputParameterCount + 2;
@@ -155,6 +170,9 @@ inline ParamSpec make(const char* symbol, const char* name, const char* unit, co
             std::snprintf(name, sizeof(name), "Band %zu R Division", b + 1);
             s[bandParam(b, kDivR)] = detail::make(symbol, name, "", 0.0f, static_cast<float>(kDivisionCount - 1), 7.0f, true);
         }
+        s[kLfoRate] = detail::make("lfo_rate", "LFO Rate", "Hz", 0.05f, 10.0f, 1.0f, false, false, true);
+        s[kLfoDelayDepth] = detail::make("lfo_delay_depth", "LFO Delay Depth", "%", 0.0f, 100.0f, 0.0f, false);
+        s[kLfoFeedbackDepth] = detail::make("lfo_feedback_depth", "LFO Feedback Depth", "%", 0.0f, 100.0f, 0.0f, false);
         s[kOutLatency] = detail::make("out_latency", "Latency", "ms", 0.0f, 400.0f, 0.0f, false, true);
         s[kOutTempo] = detail::make("out_tempo", "Tempo", "BPM", 20.0f, 300.0f, kDefaultTempo, false, true);
         return s;

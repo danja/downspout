@@ -145,6 +145,70 @@ static void testLoopWrap()
     std::puts("PASS: loop position stays within loop range");
 }
 
+static void testLoopEndFrameIsPlayed()
+{
+    SampleZone z = makeToneZone(60, 0, 127, 44100.0, 24);
+    for (std::size_t i = 0; i < z.data.size(); ++i)
+        z.data[i] = 0.01f * static_cast<float>(i + 1);
+    z.loopEnabled    = true;
+    z.loopStart      = 10;
+    z.loopEnd        = 12;
+    z.crossfadeFrames = 0;
+    z.attackMs       = 0.0f;
+    z.decayMs        = 0.0f;
+    z.sustainLevel   = 1.0f;
+    assert(loopFrameCount(z) == 3u && "inclusive loop end counts its own frame");
+
+    Parameters params;
+    params.masterVolume = 1.0f;
+    EngineState state;
+    activate(state);
+    const MidiInputEvent noteOn { 0, 3, {0x90, 60, 127, 0} };
+    const auto out = runBlock(state, params, {z}, {noteOn}, 24);
+
+    // At rate 1 the cursor reads frames 10, 11, 12, 10, 11, 12, ... The old
+    // wrap at loopEnd produced 10, 11, 10, 11, ... and never played frame 12.
+    for (int n = 0; n < 9; ++n) {
+        const float want = z.data[static_cast<std::size_t>(10 + n % 3)];
+        assert(std::fabs(out[static_cast<std::size_t>(10 + n)] - want) < 1e-6f &&
+               "loop repeats all frames including the inclusive end");
+    }
+    assert(std::fabs(out[12] - z.data[12]) < 1e-6f && "the first pass plays loopEnd");
+    assert(std::fabs(out[15] - z.data[12]) < 1e-6f && "the second pass plays loopEnd");
+    std::puts("PASS: inclusive loop end is played");
+}
+
+static void testLoopCrossfadeKeepsEndFrame()
+{
+    SampleZone z = makeToneZone(60, 0, 127, 44100.0, 24);
+    for (std::size_t i = 0; i < z.data.size(); ++i)
+        z.data[i] = 0.02f * static_cast<float>(i + 1);
+    z.loopEnabled    = true;
+    z.loopStart      = 10;
+    z.loopEnd        = 19;
+    z.crossfadeFrames = 4;
+    z.attackMs       = 0.0f;
+    z.decayMs        = 0.0f;
+    z.sustainLevel   = 1.0f;
+
+    Parameters params;
+    params.masterVolume = 1.0f;
+    EngineState state;
+    activate(state);
+    const MidiInputEvent noteOn { 0, 3, {0x90, 60, 127, 0} };
+    const auto out = runBlock(state, params, {z}, {noteOn}, 24);
+
+    // The four tail frames 16..19 blend into head frames 10..13. The last one
+    // must still use loopEnd with weight 1/4, not jump straight to frame 14.
+    const auto near = [](float got, float want) { return std::fabs(got - want) < 1e-5f; };
+    assert(near(out[16], z.data[16]) && "crossfade starts with tail only");
+    assert(near(out[17], 0.75f * z.data[17] + 0.25f * z.data[11]) && "second crossfade frame");
+    assert(near(out[18], 0.50f * z.data[18] + 0.50f * z.data[12]) && "third crossfade frame");
+    assert(near(out[19], 0.25f * z.data[19] + 0.75f * z.data[13]) && "loopEnd is heard before the wrap");
+    assert(near(out[20], z.data[14]) && "the loop continues from the crossfade head");
+    std::puts("PASS: loop crossfade blends the inclusive end frame");
+}
+
 static void testComputePlaybackRate()
 {
     SampleZone z;
@@ -309,6 +373,8 @@ int main()
     testGapFill();
     testPolyphonyLimit();
     testLoopWrap();
+    testLoopEndFrameIsPlayed();
+    testLoopCrossfadeKeepsEndFrame();
     testComputePlaybackRate();
     testSerializationRoundTrip();
     testParamsSerializationRoundTrip();

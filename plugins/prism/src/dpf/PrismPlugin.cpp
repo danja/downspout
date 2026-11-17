@@ -88,7 +88,7 @@ protected:
             names = core::kSyncNames.data();
             count = core::kSyncNames.size();
         }
-        else if (index >= core::kGlobalCount && index < core::kInputParameterCount &&
+        else if (index >= core::kGlobalCount && index < core::kBandParameterEnd &&
                  ((index - core::kGlobalCount) % core::kFieldsPerBand == core::kDivL ||
                   (index - core::kGlobalCount) % core::kFieldsPerBand == core::kDivR))
         {

@@ -133,7 +133,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | primefold | primefold.vst3 | audio effect (pitch) | 2/2 | yes/no | no |
 | quefrency | quefrency.vst3 | audio effect (formant) | 2/2 | yes/no | no |
 | qune | qune.vst3 | audio effect (pitch quantiser) | 2/2 | yes/yes | no |
-| prism | prism.vst3 | audio effect (banded spectral delay, tempo sync) | 2/2 | no/no | no |
+| prism | prism.vst3 | audio effect (banded spectral delay, tempo sync, LFO) | 2/2 | no/no | no |
 | mouth | mouth.vst3 | audio effect (vowel / formant filter) | 2/2 | yes/no | no |
 | sieve | sieve.vst3 | audio effect (spectral sieve) | 2/2 | yes/no | no |
 | zmorph | zmorph.vst3 | audio effect (z-plane morph filter) | 2/2 | no/no | no |
@@ -584,7 +584,9 @@ Per band: **L Delay** and **R Delay** (0-2000 ms), **Feedback** (0-95 %) and **S
 wet only, overriding Mix). **Link L/R** makes the right side follow the left. **Sync L** and **Sync R** (ms / RATE) switch a side
 to note divisions of the host BBT tempo (13 divisions, 1/64 to 1/1 with triplets and dotted, per band
 `b1_div_l` / `b1_div_r`; 120 BPM if the host gives none; limited to 2 s); an output parameter shows the
-tempo. **Low Cut**
+tempo. A free-running **LFO** (0.05-10 Hz, `lfo_rate`) has separate **LFO Delay Depth** and
+**LFO Feedback Depth** controls (0-100 %, default 0) that scale the band delays and feedback by
+`1 ± depth × sine`; the rate is inert until a depth is raised. **Low Cut**
 (20 Hz-2 kHz) and **High Cut** (200 Hz-20 kHz) leave everything beyond them undelayed over a
 third of an octave; both are off at the ends of their ranges. **Mix**. Latency is the FFT size
 (512-4096 samples) and is reported to the host; an output parameter shows it. No MIDI, no
@@ -651,8 +653,8 @@ live input into a new zone with auto root-note detection; beat slicing; embedded
 server (default on) for programmatic zone control (`docs/mcp.md`). Global MIDI channel
 filter (0 = all). Voices keyed by note and channel; per-channel pitch bend with the Bend
 Range control (0-24, default 2, no RPN). Eight voices, oldest stolen. A zone pinned to one channel will not sound for
-Retune's other channels. Zone data and sample paths are state. Loop end is treated as
-exclusive (the WAV `smpl` spec is inclusive, so the last loop frame is skipped).
+Retune's other channels. Zone data and sample paths are state. Loop points follow the WAV
+`smpl` convention: both are inclusive frame indices, and the last loop frame is played.
 
 ### mosaic
 Four-slot WAV sampler with MIDI and autonomous triggering (**Trigger source** MIDI,
@@ -667,8 +669,10 @@ Eight-voice touch-synth derived from Plinky, driven from a Launchpad grid (each 
 voice, each row a scale degree; polyphony held rather than allocated). PolyBLEP oscillator
 pair morphing across 17 band-limited wavetables, resonant two-pole filter, two envelopes,
 tape delay, shimmer reverb, mid/side width, and several resonator engines. Emits LED and
-note MIDI (note-on/off on a base channel, with a MIDI thru switch). 24 scales, ordering
-governed by `docs/scales.md`. Input notes are grid presses, not pitches, so pitch bend is
+note MIDI (note-on/off on a base channel, with a MIDI thru switch). 32 scales: the
+original 24 plus eight appended Plinky scales (Hirajoshi, Insen, Iwato, Minyo, major/minor
+triads, fifths and Romanian), with ordering governed by `docs/scales.md`. Input notes
+are grid presses, not pitches, so pitch bend is
 not applicable. Persistent state; host validation pending.
 
 ## Audio effects

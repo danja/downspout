@@ -39,8 +39,16 @@ The table below is the authoritative superset. Ordinal 0 starts at `chromatic` (
 | 22 | bebopDominant | `bebopDominant` | `SCALE_BEBOP_DOMINANT` | Bebop Dominant |
 | 23 | bebopMajor | `bebopMajor` | `SCALE_BEBOP_MAJOR` | Bebop Major |
 | 24 | bebopMinor | `bebopMinor` | `SCALE_BEBOP_MINOR` | Bebop Minor |
+| 25 | hirajoshi | `hirajoshi` | — | Hirajoshi |
+| 26 | insen | `insen` | — | Insen |
+| 27 | iwato | `iwato` | — | Iwato |
+| 28 | minyo | `minyo` | — | Minyo |
+| 29 | triadMajor | `triadMajor` | — | Major Triad |
+| 30 | triadMinor | `triadMinor` | — | Minor Triad |
+| 31 | fifths | `fifths` | — | Fifths |
+| 32 | romanian | `romanian` | — | Romanian |
 
-Row 16 (`pentatonic`) is a generic single-scale entry used by lifeform and luma in place of the separate pentMajor/pentMinor pair. New plugins should prefer the explicit pair (14/15).
+Row 16 (`pentatonic`) is a generic single-scale entry used by lifeform and luma in place of the separate pentMajor/pentMinor pair. New plugins should prefer the explicit pair (14/15). Plank omits row 16, so its local ordinal matches the canonical row through 15 and is one less from canonical row 17 onward. Rows 25-32 were appended from Plinky's pinned `scaletab` (`ee4a340fe66fd2705299b4c15381acec44008f42`) and occupy Plank local ordinals 24-31; no existing ordinal moved.
 
 ## Per-plugin scale coverage
 
@@ -73,27 +81,36 @@ Row 16 (`pentatonic`) is a generic single-scale entry used by lifeform and luma 
 | bebopDominant | 20 | 20 | 20 | 21 | 21 | — | 13 | — | 21 |
 | bebopMajor | 21 | 21 | 21 | 22 | 22 | — | 14 | — | 22 |
 | bebopMinor | 22 | 22 | 22 | 23 | 23 | — | 15 | 15 | 23 |
-| **count** | **23** | **23** | **23** | **24** | **24** | **13** | **16** | **16** | **24** |
+| hirajoshi | — | — | — | — | — | — | — | — | 24 |
+| insen | — | — | — | — | — | — | — | — | 25 |
+| iwato | — | — | — | — | — | — | — | — | 26 |
+| minyo | — | — | — | — | — | — | — | — | 27 |
+| triadMajor | — | — | — | — | — | — | — | — | 28 |
+| triadMinor | — | — | — | — | — | — | — | — | 29 |
+| fifths | — | — | — | — | — | — | — | — | 30 |
+| romanian | — | — | — | — | — | — | — | — | 31 |
+| **count** | **23** | **23** | **23** | **24** | **24** | **13** | **16** | **16** | **32** |
 
 Markov (`plugins/markov`) uses the same 24-scale ordering and masks its transition matrix with the scale; its
 tests hold an independent copy of every scale's semitone set.
 
-Qune (`plugins/qune`) uses the same 24-scale canonical ordering as plank (0 = chromatic through
-23 = bebopMinor, no separate `pentatonic` row), applies the scale as a pitch-class mask to
-pitch correction, and its tests pin the ordinals and hold an independent copy of every scale's
-semitone set. Its scale list is a dropdown, as in bassgen.
+Qune (`plugins/qune`) uses the same 24-scale subset that Plank had before its Plinky append
+(0 = chromatic through 23 = bebopMinor, no separate `pentatonic` row), applies the scale as a
+pitch-class mask to pitch correction, and its tests pin the ordinals and hold an independent copy
+of every scale's semitone set. Its scale list is a dropdown, as in bassgen.
 
 Resonance Garden (`plugins/resonance-garden`) uses bassgen's 23-scale ordering (0 = Major through 22 =
 Bebop Minor) for its internal fallback bank, as a dropdown. Its tests pin the ordinals and hold an
 independent copy of every scale's semitone set.
 
-Sprout (`plugins/sprout`) uses the same 24-scale canonical ordering as plank (0 = chromatic through 23 =
-bebopMinor, no separate `pentatonic` row) and its tests pin the ordinals and hold an independent copy of
-every scale's semitone set.
+Sprout (`plugins/sprout`) uses the same 24-scale subset that Plank had before its Plinky append
+(0 = chromatic through 23 = bebopMinor, no separate `pentatonic` row) and its tests pin the
+ordinals and hold an independent copy of every scale's semitone set.
 
-Sieve (`plugins/sieve`) uses the same 24-scale canonical ordering as plank (0 = chromatic through 23 =
-bebopMinor, no separate `pentatonic` row) for its STFT mask, and its tests hold an independent copy of
-every scale's semitone set. Root is a separate 0-11 pitch class (C through B).
+Sieve (`plugins/sieve`) uses the same 24-scale subset that Plank had before its Plinky append
+(0 = chromatic through 23 = bebopMinor, no separate `pentatonic` row) for its STFT mask, and its
+tests hold an independent copy of every scale's semitone set. Root is a separate 0-11 pitch class
+(C through B).
 
 ## Pitch content
 
@@ -110,15 +127,27 @@ that disagrees is wrong, not different.
 | bebopDominant | 0 2 4 5 7 9 10 11 |
 | bebopMajor | 0 2 4 5 7 8 9 11 |
 | bebopMinor | 0 2 3 4 5 7 9 10 |
+| hirajoshi | 0 2 3 7 8 |
+| insen | 0 1 5 7 10 |
+| iwato | 0 1 5 6 10 |
+| minyo | 0 2 5 7 9 |
+| triadMajor | 0 4 7 |
+| triadMinor | 0 3 7 |
+| fifths | 0 7 |
+| romanian | 0 2 3 6 7 9 10 |
 
 The diminished and bebop scales have eight notes; a table that stores seven has dropped one.
+The eight Plinky additions are deliberately short two-, three- and five-note scales. Plank's
+`kScaleDegreeCount` is the authority for how many table slots are real degrees; the zero padding
+after a short scale is never read as a degree.
 
 **History.** Until 2026-10-06 the two Neapolitan scales were `0 1 4 5 7 9 11` and
 `0 1 3 5 7 8 10` in every plugin. The second is simply Phrygian, so the repository had a duplicate
 scale under another name, and the first was not Neapolitan major. Both were corrected in all
 thirteen plugin tables at once. Saved projects keep their ordinals, but the notes under 12 and 13
 now differ, so a project using either scale sounds different when reopened. Plank's tests hold an
-independent reference set for all 24 scales (`testEveryPadStaysInTheChosenScale`).
+independent reference set for all 32 scales (`testEveryPadStaysInTheChosenScale`) and pin the
+appended Plinky tables separately (`testPlinkyAppendOnlyScales`).
 
 ## Naming conventions
 
@@ -135,11 +164,15 @@ These assertions exist to catch mid-enum insertions. They must remain passing:
 
 - `bassgen`: `ScaleId::minor == 2`, `ScaleId::bebopMinor == 22`, `ScaleId::count == 23`
 - `counterpointer`: `SCALE_BEBOP_MINOR == 23`, `SCALE_COUNT == 24`
-- `plank`: `ScaleId::minor == 3`, `ScaleId::bebopMinor == 23`, `ScaleId::count == 24`
+- `plank`: `ScaleId::minor == 3`, `ScaleId::bebopMinor == 23`, `ScaleId::hirajoshi == 24`,
+  `ScaleId::romanian == 31`, `ScaleId::count == 32`
 - `resonance-garden`: `kScaleCount == 23`, `scaleName(2) == "Minor"`, `scaleName(22) == "Bebop Minor"`
 - `qune`: `ScaleId::minor == 3`, `ScaleId::bebopMinor == 23`, `ScaleId::count == 24`
-  (same canonical ordering as plank)
-  (plank uses the canonical 0-based ordering, so its ordinals line up with the
-  table above rather than being offset like lifeform's)
+  (same 24-ordinal subset as Plank's original list, not including its eight appended scales)
+
+Plank's local ordinals equal the canonical row through 15, then skip the generic `pentatonic`
+row 16, so canonical rows 17-24 are local 16-23 and the new canonical rows 25-32 are local
+24-31. This is an offset like lifeform's, but it starts later because Plank keeps the explicit
+pentMajor/pentMinor pair.
 
 If a test pin fails after a scale change, the change was an insertion rather than an append — revert and append instead.

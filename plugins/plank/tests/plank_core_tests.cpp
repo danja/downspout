@@ -966,17 +966,25 @@ void testScaleIdsMatchTheCanonicalReference()
     require(static_cast<std::uint32_t>(ScaleId::major) == 1, "major should be ordinal 1");
     require(static_cast<std::uint32_t>(ScaleId::minor) == 3, "minor should be ordinal 3");
     require(static_cast<std::uint32_t>(ScaleId::bebopMinor) == 23, "bebopMinor should be ordinal 23");
-    require(static_cast<std::uint32_t>(ScaleId::count) == 24, "there should be 24 scales");
-    require(kScaleNames.size() == 24u, "every scale needs a display name");
-    require(kScaleIntervals.size() == 24u, "every scale needs an interval table");
-    require(kScaleDegreeCount.size() == 24u, "every scale needs a degree count");
+    require(static_cast<std::uint32_t>(ScaleId::hirajoshi) == 24, "hirajoshi should be ordinal 24");
+    require(static_cast<std::uint32_t>(ScaleId::insen) == 25, "insen should be ordinal 25");
+    require(static_cast<std::uint32_t>(ScaleId::iwato) == 26, "iwato should be ordinal 26");
+    require(static_cast<std::uint32_t>(ScaleId::minyo) == 27, "minyo should be ordinal 27");
+    require(static_cast<std::uint32_t>(ScaleId::triadMajor) == 28, "triadMajor should be ordinal 28");
+    require(static_cast<std::uint32_t>(ScaleId::triadMinor) == 29, "triadMinor should be ordinal 29");
+    require(static_cast<std::uint32_t>(ScaleId::fifths) == 30, "fifths should be ordinal 30");
+    require(static_cast<std::uint32_t>(ScaleId::romanian) == 31, "romanian should be ordinal 31");
+    require(static_cast<std::uint32_t>(ScaleId::count) == 32, "there should be 32 scales");
+    require(kScaleNames.size() == 32u, "every scale needs a display name");
+    require(kScaleIntervals.size() == 32u, "every scale needs an interval table");
+    require(kScaleDegreeCount.size() == 32u, "every scale needs a degree count");
 
     for (std::size_t scale = 0; scale < kScaleIntervals.size(); ++scale)
     {
         const std::size_t degrees = kScaleDegreeCount[scale];
         const bool chromatic = scale == static_cast<std::size_t>(ScaleId::chromatic);
-        require(chromatic ? degrees == 12 : (degrees >= 5 && degrees <= 8),
-                "a scale needs between five and eight degrees (chromatic has twelve)");
+        require(chromatic ? degrees == 12 : (degrees >= 2 && degrees <= 8),
+                "a scale needs between two and eight degrees (chromatic has twelve)");
         require(kScaleIntervals[scale][0] == 0, "a scale must start on its root");
         if (!chromatic)
             require(kScaleIntervals[scale][degrees - 1] < 12,
@@ -995,6 +1003,56 @@ void testScaleIdsMatchTheCanonicalReference()
         {
             require(scaleStepOf(scale, 7) == 12,
                     "a seven-note scale's eighth row should be the octave");
+        }
+    }
+}
+
+// Independent copy of the eight scales appended from Plinky's `scaletab`.
+// Their ordinals are append-only; these checks pin the names, padded interval
+// tables and the first eight rungs of each ladder without reading the tables
+// through the production wrapper.
+void testPlinkyAppendOnlyScales()
+{
+    struct NewScale {
+        ScaleId id;
+        std::uint32_t ordinal;
+        const char* name;
+        std::size_t degrees;
+        std::array<int, 8> intervals;
+        std::array<int, 8> ladder;
+    };
+    const std::array<NewScale, 8> added = {{
+        {ScaleId::hirajoshi, 24u, "Hirajoshi", 5u,
+         {{0, 2, 3, 7, 8, 0, 0, 0}}, {{0, 2, 3, 7, 8, 12, 14, 15}}},
+        {ScaleId::insen, 25u, "Insen", 5u,
+         {{0, 1, 5, 7, 10, 0, 0, 0}}, {{0, 1, 5, 7, 10, 12, 13, 17}}},
+        {ScaleId::iwato, 26u, "Iwato", 5u,
+         {{0, 1, 5, 6, 10, 0, 0, 0}}, {{0, 1, 5, 6, 10, 12, 13, 17}}},
+        {ScaleId::minyo, 27u, "Minyo", 5u,
+         {{0, 2, 5, 7, 9, 0, 0, 0}}, {{0, 2, 5, 7, 9, 12, 14, 17}}},
+        {ScaleId::triadMajor, 28u, "Triad Maj", 3u,
+         {{0, 4, 7, 0, 0, 0, 0, 0}}, {{0, 4, 7, 12, 16, 19, 24, 28}}},
+        {ScaleId::triadMinor, 29u, "Triad Min", 3u,
+         {{0, 3, 7, 0, 0, 0, 0, 0}}, {{0, 3, 7, 12, 15, 19, 24, 27}}},
+        {ScaleId::fifths, 30u, "Fifths", 2u,
+         {{0, 7, 0, 0, 0, 0, 0, 0}}, {{0, 7, 12, 19, 24, 31, 36, 43}}},
+        {ScaleId::romanian, 31u, "Romanian", 7u,
+         {{0, 2, 3, 6, 7, 9, 10, 0}}, {{0, 2, 3, 6, 7, 9, 10, 12}}},
+    }};
+
+    for (const NewScale& scale : added)
+    {
+        const std::size_t ordinal = static_cast<std::size_t>(scale.id);
+        require(ordinal == scale.ordinal, "new scale ordinals must stay appended in order");
+        require(std::string(kScaleNames[ordinal]) == scale.name, "new scale display name");
+        require(static_cast<std::size_t>(kScaleDegreeCount[ordinal]) == scale.degrees,
+                "new scale degree count");
+        for (std::size_t i = 0; i < 8u; ++i)
+        {
+            require(static_cast<int>(kScaleIntervals[ordinal][i]) == scale.intervals[i],
+                    "new scale interval table and zero padding");
+            require(scaleStepOf(ordinal, static_cast<int>(i)) == scale.ladder[i],
+                    "new scale ladder rung");
         }
     }
 }
@@ -1256,6 +1314,14 @@ void testEveryPadStaysInTheChosenScale()
         {0, 2, 4, 5, 7, 9, 10, 11},              // bebop dominant
         {0, 2, 4, 5, 7, 8, 9, 11},               // bebop major
         {0, 2, 3, 4, 5, 7, 9, 10},               // bebop minor
+        {0, 2, 3, 7, 8},                         // hirajoshi
+        {0, 1, 5, 7, 10},                        // insen
+        {0, 1, 5, 6, 10},                        // iwato
+        {0, 2, 5, 7, 9},                         // minyo
+        {0, 4, 7},                               // major triad
+        {0, 3, 7},                               // minor triad
+        {0, 7},                                  // fifths
+        {0, 2, 3, 6, 7, 9, 10},                  // romanian
     };
     require(reference.size() == static_cast<std::size_t>(ScaleId::count), "one reference set per scale");
 
@@ -1320,12 +1386,23 @@ void testEveryPadStaysInTheChosenScale()
         Processor column;
         column.init(48000.0);
         column.setParameter(p(ParamId::scale), static_cast<float>(scale));
+        // Plinky's stride fans short scales out across several octaves. Start at
+        // the lowest Root so this checks scale ordering, not Plank's separate
+        // fold of notes above MIDI 127 back down an octave.
+        column.setParameter(p(ParamId::root), 21.0f);
         column.setParameter(p(ParamId::microtune), 0.0f);
         for (std::size_t col = 0; col < kGridWidth; ++col)
         {
             for (std::size_t row = 1; row < kGridHeight; ++row)
-                require(column.noteForCell(row, col) > column.noteForCell(row - 1, col),
-                        "notes must ascend up a column");
+            {
+                const int current = column.noteForCell(row, col);
+                const int previous = column.noteForCell(row - 1, col);
+                const std::string message = "notes must ascend up a column (scale " +
+                                            std::to_string(scale) + ", col " + std::to_string(col) +
+                                            ", row " + std::to_string(row) + ", " +
+                                            std::to_string(previous) + " -> " + std::to_string(current) + ")";
+                require(current > previous, message.c_str());
+            }
         }
     }
 }
@@ -1768,6 +1845,7 @@ int main()
     testCellParametersAreEdgeTriggered();
     testParameterClamping();
     testScaleIdsMatchTheCanonicalReference();
+    testPlinkyAppendOnlyScales();
     testEmptyProcessIsSafe();
     testMicrotuneIsCentsNotSemitones();
     testUnisonSpreadIgnoresTheColumn();

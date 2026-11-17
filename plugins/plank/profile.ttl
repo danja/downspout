@@ -15,4 +15,6 @@ dsp:plank a trn:PluginProfile ;
     trn:accepts trn:Midi ;
     trn:produces trn:Audio, trn:Midi, trn:MelodyMidi ;
     trn:requires trn:Launchpad ;
-    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux ;
+    trn:parameter [ rdfs:label "Scale" ; trn:symbol "scale" ; trn:range "0-31" ;
+                    rdfs:comment "32 append-only scale ordinals: 0-23 are the original set, 24-31 are the added Plinky scales Hirajoshi, Insen, Iwato, Minyo, Triad Maj, Triad Min, Fifths and Romanian." ] .

@@ -59,6 +59,13 @@ std::string hzText(const float hz)
     return buffer;
 }
 
+std::string rateText(const float hz)
+{
+    char buffer[24];
+    std::snprintf(buffer, sizeof(buffer), "%.2f Hz", static_cast<double>(hz));
+    return buffer;
+}
+
 // Short frequency label for the plot axis and band rows.
 std::string axisHz(const float hz)
 {
@@ -103,7 +110,7 @@ protected:
             }
         } else if (linked && parameter == core::kSyncL) {
             commit(core::kSyncR, v);
-        } else if (linked && parameter >= core::kGlobalCount && parameter < core::kInputParameterCount) {
+        } else if (linked && parameter >= core::kGlobalCount && parameter < core::kBandParameterEnd) {
             const std::uint32_t rel = (parameter - core::kGlobalCount) % core::kFieldsPerBand;
             if (rel == core::kDelayL || rel == core::kDivL) {
                 const std::uint32_t right = parameter + 1;  // R follows L in the band layout
@@ -330,7 +337,7 @@ private:
 
     void drawControlsPanel(const Rect b)
     {
-        drawPanel(b, "SPECTRUM", kControlAccent, "bands, resolution, cuts");
+        drawPanel(b, "SPECTRUM", kControlAccent, "bands, resolution, cuts, LFO");
         const float x = b.x + 14.0f;
         const float w = b.w - 28.0f;
         float y = b.y + 46.0f;
@@ -338,7 +345,7 @@ private:
         char count[16];
         std::snprintf(count, sizeof(count), "%d", bandCount());
         drawSlider(core::kBands, "Bands", count, {x, y, w, 34.0f}, kControlAccent);
-        y += 50.0f;
+        y += 46.0f;
 
         label(x, y, "Resolution (FFT size)");
         drawSegments(core::kSize, core::kFftSizeNames.data(), static_cast<int>(core::kFftSizeCount), {x, y + 17.0f, w, 28.0f},
@@ -348,11 +355,11 @@ private:
         std::snprintf(latency, sizeof(latency), "latency %d ms: larger = smoother, slower to change",
                       static_cast<int>(std::lround(1000.0 * core::kFftSizes[static_cast<std::size_t>(sizeIndex)] / std::max(8000.0, getSampleRate()))));
         label(x, y + 50.0f, latency, true, 11.0f);
-        y += 80.0f;
+        y += 72.0f;
 
         label(x, y, "Link left and right");
         drawSegments(core::kLink, core::kLinkNames.data(), 2, {x, y + 17.0f, w, 28.0f}, kControlAccent);
-        y += 64.0f;
+        y += 56.0f;
 
         char tempoLine[64];
         std::snprintf(tempoLine, sizeof(tempoLine), "Tempo sync (host tempo %d BPM)", static_cast<int>(std::lround(tempo())));
@@ -362,24 +369,31 @@ private:
         drawSegments(core::kSyncR, core::kSyncNames.data(), 2, {x + half + 12.0f, y + 17.0f, half, 28.0f}, kRightColour);
         label(x, y + 48.0f, "Left", true, 10.0f);
         label(x + half + 12.0f, y + 48.0f, "Right", true, 10.0f);
-        y += 76.0f;
+        y += 68.0f;
 
         const float lowCut = value(core::kLowCut);
         const float highCut = value(core::kHighCut);
         drawSlider(core::kLowCut, "Low cut", lowCut <= core::kMinLowCutHz ? "off" : hzText(lowCut).c_str(), {x, y, w, 34.0f},
                    kControlAccent);
-        y += 44.0f;
+        y += 40.0f;
         drawSlider(core::kHighCut, "High cut", highCut >= core::kMaxHighCutHz ? "off" : hzText(highCut).c_str(), {x, y, w, 34.0f},
                    kControlAccent);
-        y += 44.0f;
+        y += 40.0f;
         char mix[16];
         std::snprintf(mix, sizeof(mix), "%d%%", static_cast<int>(std::lround(value(core::kMix) * 100.0f)));
         drawSlider(core::kMix, "Mix (dry / delayed)", mix, {x, y, w, 34.0f}, kControlAccent);
-        y += 52.0f;
+        y += 48.0f;
 
-        label(x, y, "Delays blend smoothly between band centres.", true, 11.0f);
-        label(x, y + 14.0f, "Cuts leave everything beyond them undelayed.", true, 11.0f);
-        label(x, y + 28.0f, "S solos one band, delayed sound only.", true, 11.0f);
+        label(x, y, "LFO (free-running)");
+        drawSlider(core::kLfoRate, "Rate", rateText(value(core::kLfoRate)).c_str(), {x, y + 16.0f, w, 34.0f}, kPlotAccent);
+        char delayDepth[16], feedbackDepth[16];
+        std::snprintf(delayDepth, sizeof(delayDepth), "%d%%", static_cast<int>(std::lround(value(core::kLfoDelayDepth))));
+        std::snprintf(feedbackDepth, sizeof(feedbackDepth), "%d%%", static_cast<int>(std::lround(value(core::kLfoFeedbackDepth))));
+        drawSlider(core::kLfoDelayDepth, "Delay depth", delayDepth, {x, y + 56.0f, half, 34.0f}, kPlotAccent);
+        drawSlider(core::kLfoFeedbackDepth, "Feedback depth", feedbackDepth, {x + half + 12.0f, y + 56.0f, half, 34.0f},
+                   kPlotAccent);
+        label(x, y + 94.0f, "Depths scale delay and feedback.", true, 10.0f);
+        label(x, y + 106.0f, "Rate is free, not tempo-locked.", true, 10.0f);
     }
 };
 

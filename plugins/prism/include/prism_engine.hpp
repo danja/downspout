@@ -57,6 +57,7 @@ struct Engine {
     float mappedLowCut = -1.0f;
     float mappedHighCut = -1.0f;
     double bpm = kDefaultTempo;  // host tempo for synced delays
+    double lfoPhase = 0.0;       // free-running oscillator phase, radians
     float mixSmoothed = 0.5f;
     bool mixPrimed = false;  // the first block starts the mix at its parameter value
 

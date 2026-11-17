@@ -34,12 +34,12 @@ in L/R --> [pre drive] --> 5 parallel band-pass formants (shared by both channel
 ## Vowel data
 
 Base table: five vowels A E I O U, per voice type (bass, tenor, alto, soprano), five formants
-each: frequency (Hz), level (dB), bandwidth (Hz). The widely circulated Csound formant tables
-are the starting point (soprano /a/: 800, 1150, 2900, 3900, 4950 Hz; 0, -6, -32, -20,
--50 dB; 80, 90, 120, 130, 140 Hz). **These numbers were written from memory of that table and
-must be checked against a source (Csound manual appendix, or Peterson and Barney 1952
-averages) before shipping**; hold an independent expected copy in the test, as the repo's
-table-driven-data rule requires.
+each: frequency (Hz), level (dB), bandwidth (Hz). The values were checked row by row on
+2026-11-17 against the Csound 7 Manual appendix "Formant Values"
+(https://csound.com/manual/misc/formants), which also lists countertenor; Mouth uses the four
+voice types above. That check found and corrected one transcription error in Tenor O's
+bandwidths (now 70, 80, 100, 130, 135 Hz). The test holds a full independent copy of all 20
+rows, as the repo's table-driven-data rule requires.
 
 Optional later: a second row of vowels (AE, schwa, ER) for a 2-D map with more than five
 corners.

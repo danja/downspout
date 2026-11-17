@@ -7,8 +7,8 @@ category: processor
 group: space
 role: Banded spectral delay
 screenshot: /assets/plugins/prism.png
-capabilities: [audio input, audio output, host tempo sync, reported latency]
-summary: Splits the sound into 1-8 frequency bands and delays each one separately on the left and right, in milliseconds or note divisions of the host tempo, with its own feedback. Per-band solo, low and high cut, four FFT sizes.
+capabilities: [audio input, audio output, host tempo sync, free-running LFO, reported latency]
+summary: Splits the sound into 1-8 frequency bands and delays each one separately on the left and right, in milliseconds or note divisions of the host tempo, with its own feedback. Per-band solo, low and high cut, LFO delay/feedback sweep, four FFT sizes.
 ---
 
 ## Opinion
@@ -22,7 +22,8 @@ It is most at home on sustained or rhythmic material: pads, drum loops, a full m
 **Feedback** turns each band into its own repeating tail; with a few bands at different times
 you get interlocking, slowly decaying patterns that a normal delay cannot make. The **delay by
 frequency** plot on the panel shows the shape you have made. **Solo** a band to hear what it is
-contributing.
+contributing. Turn up one of the **LFO** depths and the shape starts to breathe: short rates
+wobble the echoes, slow ones make long sweeps.
 
 It is a creative effect, not a precise one: delays between band centres are blended, not exact,
 and repeats lose a little level at some delay times.
@@ -46,6 +47,12 @@ picks a note division (1/64 to 1/1, with triplets and dotted values) of the host
 tempo; 120 BPM if the host gives none), so the echoes sit on the beat at any tempo, with a
 different division per band for polyrhythmic smears. A division longer than 2 s at the current
 tempo is limited to 2 s and the panel says so. Tempo changes glide rather than click.
+
+**LFO.** A free-running sine (0.05-10 Hz, not locked to the host tempo) is advanced once per FFT
+hop. **LFO Delay Depth** scales every band's delay by `1 ± (depth × sine)` and **LFO Feedback
+Depth** scales its feedback the same way; both are clamped to the normal parameter ranges. With
+both depths at zero, which is the default, the rate has no effect and an existing patch is
+unchanged. One oscillator is shared, so the two depths move together.
 
 **Low Cut** and **High Cut** fade the delay and feedback out over a third of an octave and leave
 everything beyond them undelayed; each is off at the end of its range. **Link L/R** makes the
@@ -71,16 +78,21 @@ to the host and shown on the panel. Changing **Resolution** clears the delay mem
 | Band n L / R Division | 1/64 ... 1/1 (13) | 1/8 / 1/8D | Used while that side is RATE |
 | Band n Feedback | 0-95 % | 30 % | |
 | Band n Solo | Off, On | Off | |
+| LFO Rate | 0.05-10 Hz | 1 Hz | Free-running; inert at zero depths |
+| LFO Delay Depth | 0-100 % | 0 % | Scales every band's delay |
+| LFO Feedback Depth | 0-100 % | 0 % | Scales every band's feedback |
 
 ### Origin
 
 The technique (per-bin delay in the STFT domain with band interpolation, fractional delay by
 phase rotation, feedback through the stored spectra) follows the published description of
 the [Multiway](https://github.com/mustafamazi/Multiway) plugin by Mustafa Mazi. It was reimplemented from that description; no Multiway
-code was used, as Multiway is AGPLv3 and Downspout is MIT. Prism has no LFOs or drawn shapes.
+code was used, as Multiway is AGPLv3 and Downspout is MIT. Prism now has a shared free-running
+LFO, but no per-target phases or drawn modulation shapes.
 
 ### Status
 
-Core DSP, about 6 900 deterministic checks, the VST3 target and the catalogue screenshot are
+Core DSP, about 7 200 deterministic checks, the VST3 target and the catalogue screenshot are
 complete. It has not been auditioned and has not been run in a host, so latency reporting, host
-tempo handling and resolution switching under automation are unverified outside the test rig.
+tempo handling, LFO movement and resolution switching under automation are unverified outside
+the test rig.

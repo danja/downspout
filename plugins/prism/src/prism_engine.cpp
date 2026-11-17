@@ -37,6 +37,7 @@ void applySize(Engine& e, const int index)
     e.maxFrames = framesForDelay(e.sampleRate, e.hop);
     e.rows = e.maxFrames + 1;
     e.hopCounter = 0;
+    e.lfoPhase = 0.0;
     e.mappedBands = 0;  // bin -> band map is stale
     e.mappedLowCut = -1.0f;
     e.mappedHighCut = -1.0f;
@@ -55,8 +56,8 @@ void applySize(Engine& e, const int index)
            e.smoothed[static_cast<std::size_t>(hi) * 3 + field] * t;
 }
 
-// Once per hop: smooth the band values, then rebuild each bin's delay, rotation, feedback
-// and solo weight.
+// Once per hop: advance the LFO, smooth the band values, then rebuild each bin's delay,
+// rotation, feedback and solo weight.
 void updateFrame(Engine& e, const Parameters& p)
 {
     const int bands = p.bands();
@@ -108,6 +109,16 @@ void updateFrame(Engine& e, const Parameters& p)
     }
     e.smoothedValid = true;
 
+    // One shared, free-running oscillator. It is measured per hop, after the band-value
+    // smoothing, so modulation still reaches the LFO rate control at the top of its range.
+    const double rate = std::clamp(static_cast<double>(p[kLfoRate]), 0.0, 10.0);
+    e.lfoPhase += 2.0 * kPi * rate * static_cast<double>(e.hop) / sr;
+    if (e.lfoPhase >= 2.0 * kPi)
+        e.lfoPhase -= 2.0 * kPi * std::floor(e.lfoPhase / (2.0 * kPi));
+    const float lfo = static_cast<float>(std::sin(e.lfoPhase));
+    const float delayDepth = std::clamp(p[kLfoDelayDepth] * 0.01f, 0.0f, 1.0f);
+    const float feedbackDepth = std::clamp(p[kLfoFeedbackDepth] * 0.01f, 0.0f, 1.0f);
+
     // Solo: 1 at a soloed band's centre, 0 at the others, interpolated like everything else.
     std::uint32_t mask = 0;
     for (int b = 0; b < bands; ++b)
@@ -134,12 +145,14 @@ void updateFrame(Engine& e, const Parameters& p)
         const auto i = static_cast<std::size_t>(k);
         const double hz = static_cast<double>(k) * sr / e.fftSize;
         const float cut = e.binCut[i];
-        e.binFeedback[i] = std::clamp(interpolate(e, i, 2, bands) * 0.01f * cut, 0.0f, kMaxFeedback);
+        const float feedbackPct = interpolate(e, i, 2, bands) * (1.0f + feedbackDepth * lfo);
+        e.binFeedback[i] = std::clamp(feedbackPct * 0.01f * cut, 0.0f, kMaxFeedback);
 
         for (std::size_t c = 0; c < 2; ++c)
         {
             auto& ch = e.channels[c];
-            const float ms = std::clamp(interpolate(e, i, c, bands), 0.0f, kMaxDelayMs);
+            const float delayMs = interpolate(e, i, c, bands) * (1.0f + delayDepth * lfo);
+            const float ms = std::clamp(delayMs, 0.0f, kMaxDelayMs);
             const double delaySamples = static_cast<double>(ms) * 0.001 * static_cast<double>(cut) * sr;
             // Nearest whole frame; what is left over is within half a hop either way.
             const double exact = delaySamples / e.hop;

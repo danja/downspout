@@ -102,9 +102,13 @@ octave early.
 whole-half diminished, three bebop) were stored as seven notes, so their last
 degree was dropped and the top row of a column played an out-of-scale pitch. All are
 corrected, and the same Neapolitan fix was applied to every plugin that carries the
-scale; `docs/scales.md` holds the pitch sets. `testEveryPadStaysInTheChosenScale`
-checks every pad against independent pitch-class sets for all 24 scales, in Unison,
-Scale and Stride spreads, across several strides and rotations.
+scale; `docs/scales.md` holds the pitch sets. Eight integer scales from Plinky's
+`scaletab` (Hirajoshi, Insen, Iwato, Minyo, triad major/minor, fifths and Romanian)
+were appended later at local ordinals 24-31, so existing saved scale numbers still
+mean what they did before. `testEveryPadStaysInTheChosenScale` checks every pad
+against independent pitch-class sets for all 32 scales, in Unison, Scale and Stride
+spreads, across several strides and rotations; `testPlinkyAppendOnlyScales` pins the
+new names, tables and ladders.
 
 **Resonator engines come from Plonk, not Plinky.** `Engine` adds six modal models
 (beam, marimba, drumhead, membrane, plate, string) after the Intellijel/AAS Plonk

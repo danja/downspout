@@ -435,7 +435,7 @@ private:
     // ── Drop-down lists ─────────────────────────────────────────────────────
     //
     // Clicking a selector opens a list of every value; the current one is
-    // highlighted. Long lists (24 scales, 88 root notes) flow into columns, so the
+    // highlighted. Long lists (32 scales, 88 root notes) flow into columns, so the
     // whole list is visible at once without scrolling.
 
     static constexpr float kItemH = 18.0f;

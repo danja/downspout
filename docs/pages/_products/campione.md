@@ -22,8 +22,10 @@ pitch-shift it to the target pitch. The gap-fill algorithm generates smooth
 pitch-shifted transitions for notes that fall between recorded samples.
 
 Loop points are snapped to zero crossings to eliminate clicks at loop
-boundaries. Crossfade looping blends the loop end back into the start to
-produce smooth sustained tones from short recordings.
+boundaries. Both markers are inclusive frame indices, as in a WAV `smpl` chunk,
+so the loop plays every frame from the start marker through the end marker.
+Crossfade looping blends that last frame back into the start to produce smooth
+sustained tones from short recordings.
 
 Audio recording is built in: the plugin can capture live input directly into a
 new sample zone. After recording, it runs auto-pitch detection to set the root

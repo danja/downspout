@@ -7,6 +7,67 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 (No open entries from before October 2026: the screenshot script now always captures on a private Xvfb.)
 
+## Campione: inclusive WAV loop end treated as an exclusive cursor bound (2026-11-17)
+- **What happened:** The WAV `smpl` loader and all saved zone representations store `loopEnd` as the last played
+  frame, but `processBlock()` wrapped the cursor when `position >= loopEnd`. The final loop frame was therefore never
+  read, and the crossfade threshold and `framesLeft` calculation skipped it too.
+- **Root cause:** One numeric field served two conventions: an inclusive marker in state and an exclusive bound in the
+  playback cursor. Loop-length helpers also used `loopEnd - loopStart`, one short of the number of frames in the loop.
+- **Prevention:** Convert once at the point of use: keep the stored inclusive marker, derive `loopEnd + 1` for the
+  cursor, crossfade threshold and remaining frames, and use a named `loopFrameCount()` helper for every length. Add
+  deterministic tests with distinct sample values at the loop end, both with and without crossfade; a constant test
+  signal cannot reveal a skipped frame. The first draft placed `loopFrameCount()` above `SampleZone` with only a
+  forward declaration, so the inline body used an incomplete type; helpers that inspect members belong after the
+  struct definition.
+
+## Mouth: formant table typed from memory (2026-11-17)
+- **What happened:** The vowel table was written from recollection of the Csound formant tables. A row-by-row check
+  against the Csound 7 Manual appendix "Formant Values" found one error: Tenor O bandwidths were
+  `40,80,100,120,120` instead of `70,80,100,130,135`. The first test draft held only the first two formant
+  frequencies for two voices, so it could not catch a bandwidth transcription error.
+- **Root cause:** Treating remembered table-driven data as authoritative and testing only a subset of its columns.
+- **Prevention:** Use a named source before shipping numeric tables; keep a full independent copy of the reference in
+  the test and compare every field, not just the values used by an audio measurement.
+
+## Plank: short-scale column test crossed MIDI 127 (2026-11-17)
+- **What happened:** After appending the two- and three-note Plinky scales, `testEveryPadStaysInTheChosenScale`
+  failed on Triad Maj at column 7, row 7 with `124 -> 117`. The interval table was correct. Plinky's `stride()`
+  legitimately fans a short scale across several octaves; at the default Root the top note reached MIDI 129 and
+  Plank's range fold wrapped it down an octave.
+- **Root cause:** The column-ordering check used the default Root, mixing scale ordering with the separate
+  MIDI 0-127 fold. The assertion message also omitted scale/row/column, so finding the case took a rebuild.
+- **Prevention:** Check monotonic ladders at the minimum Root (or otherwise below the fold) and keep a separate
+  test for MIDI-range folding. Include scale, column and row in grid assertion messages. Verify the upstream
+  Plinky algorithm before changing behaviour: its `stride()` has no octave cap, so the spread itself is intended.
+
+## Prism LFO: enum sentinel treated as a count, and overlapping echo windows (2026-11-17)
+- **What happened:** Appending the LFO controls initially sized the parameter array from an enum's final sentinel value
+  (`kAppendedCount == 59`) as if it were a count, making 61 parameters into 117 and producing ~1 500 duplicate-symbol
+  failures. A new delay-modulation test then measured two impulses only 4 800 samples apart at a 2 Hz LFO; the echo
+  windows overlapped, so one impulse's peak was counted as the other's and the reported delays were ~72/108 ms instead
+  of 50/150 ms.
+- **Root cause:** An enum value after the last item is the *next index*, not the number of items. The test used a fast
+  LFO so the delay kept changing while an echo passed, and placed the impulses close enough that their echoes shared a
+  window; the peak detector then measured the wrong echo.
+- **Prevention:** Name enum sentinels clearly and define a separate `k...ParameterCount = 3`; assert the expected total
+  parameter count immediately. For time-varying delay tests, lower the LFO rate so the delay is quasi-static during an
+  echo and space events by more than the largest search window; print intermediate peak lags when a new measurement
+  fails rather than adjusting the tolerance. The first LFO screenshot's two note lines reached the panel edge, so the
+  lines were shortened and raised before the capture was accepted; measure text bounds in the rendered PNG.
+
+## Batch verification harnesses: wrong target and wrong path slice (2026-11-17)
+- **What happened:** A batch VST3 build used `harmonic-atlas-vst3`, but CMake names the target
+  `harmonic_atlas-vst3` (underscore), so that target failed with "No rule to make target". A later
+  `-Wall -Wextra` sweep derived a plugin name with `path.parts[1]` from an absolute path under
+  `/old/new-danny/...`, got `old`, and reported hundreds of bogus missing-header errors.
+- **Root cause:** Target names are not derivable from directory names (hyphens become underscores in
+  some plugins but not all), and absolute path components were mistaken for path segments relative to
+  the repository root.
+- **Prevention:** Discover target names with `cmake --build build --target help` before a batch build,
+  and check every target's exit status rather than assuming the list is valid. In scripts use
+  `path.relative_to(root).parts` for repository-relative names; sanity-check that the derived set
+  looks like plugin names before compiling hundreds of files.
+
 ## Chorale: a phaser allpass written as a low-pass, and a peak detector fooled by ripples (2026-11-17)
 - **What happened:** Adding Phaser mode, a click test failed with a 0.18 sample-to-sample jump at the end of the
   switch, and a boundedness check failed. The allpass section state had been updated as

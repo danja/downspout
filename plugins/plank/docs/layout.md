@@ -91,7 +91,8 @@ one lights pink:
 | 89 | Whole Tone |
 
 This is a performance shortlist. The `Scale` selector in the UI and in the host
-reaches all 24 scales; if one of those is chosen, no side button is lit.
+reaches all 32 scales, including the eight appended Plinky scales (Hirajoshi through
+Romanian); if one of those is chosen, no side button is lit.
 
 ## What the LEDs show
 

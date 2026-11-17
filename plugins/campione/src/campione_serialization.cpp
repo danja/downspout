@@ -101,6 +101,7 @@ std::string serializeZones(const std::vector<SampleZone>& zones) {
         out += "midi_channel="    + std::to_string(z.midiChannel)    + "\n";
         out += "loop_enabled="    + std::to_string(z.loopEnabled ? 1 : 0) + "\n";
         out += "loop_start="      + std::to_string(z.loopStart)      + "\n";
+        // Inclusive last frame, matching the WAV smpl convention and the engine cursor.
         out += "loop_end="        + std::to_string(z.loopEnd)        + "\n";
         out += "crossfade_frames=" + std::to_string(z.crossfadeFrames) + "\n";
         out += "source_path="     + z.sourcePath                     + "\n";

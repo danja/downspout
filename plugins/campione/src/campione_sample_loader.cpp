@@ -232,7 +232,9 @@ ZoneLoadResult loadWavZone(const std::string& path)
         }
     }
 
-    // Apply embedded smpl chunk data: root note and loop points.
+    // Apply embedded smpl chunk data: root note and loop points. The WAV spec stores
+    // both markers as frame indices with an inclusive end, and SampleZone keeps them
+    // unchanged; the engine converts to an exclusive end when it wraps the cursor.
     if (smpl.hasUnityNote) {
         result.zone.rootNote       = smpl.unityNote;
         result.hasEmbeddedRootNote = true;

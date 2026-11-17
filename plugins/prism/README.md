@@ -2,10 +2,10 @@
 
 Banded spectral delay. The sound is split into 1-8 frequency bands and each band is delayed
 separately on the left and right, with its own feedback. Delays glide between band centres, so
-there are no steps.
+there are no steps. A free-running LFO can sweep delay, feedback or both.
 
 Magneto look: header, accent-banded panels, a plot of delay against frequency, a table of
-bands (solo, left delay, right delay, feedback) and a column of spectrum controls.
+bands (solo, left delay, right delay, feedback) and a column of spectrum and LFO controls.
 
 ## Signal flow
 
@@ -29,12 +29,16 @@ Each channel is processed independently; the only thing they share is the band t
 | Resolution | FFT size 512-4096. Sets latency and the time/frequency trade-off |
 | Low Cut, High Cut | Nothing beyond the cutoff is delayed (a third-of-an-octave ramp). Off at the end of the range |
 | Mix | Dry / delayed |
+| LFO Rate | 0.05-10 Hz, free-running (not locked to the host tempo). Inert while both depths are zero |
+| LFO Delay Depth | 0-100 %. Scales every band's delay by `1 +/- (depth x LFO)`, clamped to 0-2000 ms |
+| LFO Feedback Depth | 0-100 %. Scales every band's feedback by the same oscillator, clamped to 0-95 % |
 
 ## Documented assumptions
 
 - **State.** None. Every setting is a parameter (band parameters are `b1_delay_l` ...
-  `b8_solo`), which DPF saves by symbol. Activation and sample-rate change clear audio state only.
-- **Transport.** Only the host BBT tempo is read (`beatsPerMinute`); position, loop and play state are not used, so synced delays are a delay of a given length, not a grid-locked tap. Tempo changes glide through the 100 ms band smoothing. **MIDI.** Not used.
+  `b8_solo`, plus `lfo_rate`, `lfo_delay_depth` and `lfo_feedback_depth`), which DPF saves by
+  symbol. Activation and sample-rate change clear audio state only, including the LFO phase.
+- **Transport.** Only the host BBT tempo is read (`beatsPerMinute`); position, loop and play state are not used, so synced delays are a delay of a given length, not a grid-locked tap. Tempo changes glide through the 100 ms band smoothing. The LFO is also free-running: neither it nor synced repeats use the bar position. **MIDI.** Not used.
 - **Latency.** Equal to the FFT size, reported to the host, and changed by Resolution.
 - **Origin.** The technique follows the published description of the [Multiway](https://github.com/mustafamazi/Multiway) plugin
   (AGPLv3). This is an independent implementation; no code was copied.
@@ -46,7 +50,8 @@ Each channel is processed independently; the only thing they share is the band t
 - Feedback repeats lose level at some delay times: the sub-hop part of the delay costs
   `cos(pi r / N)` per trip round the loop. Measured worst case over a delay sweep: about 0.5,
   1.2 and 2.3 dB below ideal at the second, third and fourth repeat.
-- Synced delays are note lengths at the current tempo; they are not phase-locked to the bar grid, and a tempo ramp moves repeats already in the loop only as they are re-read.
+- Synced delays are note lengths at the current tempo; they are not phase-locked to the bar grid, and a tempo ramp moves repeats already in the loop only as they are re-read. The LFO is free-running for the same reason.
+- The LFO is sampled once per hop and one sine is shared by delay and feedback; a separate phase or drawn shape is not provided.
 - A fractional-sample delay spreads a sharp transient slightly (it is not a sample-accurate delay).
 - Per-bin delays make neighbouring bins phase-incoherent, which can sound metallic on
   sustained tones at long delays.

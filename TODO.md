@@ -22,8 +22,10 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
       various processing options and a user-selectable input-signal type (melody / bass / chords / drums).
       Overlaps Qune (pitch tracking) but broader; reuse Qune's tracker if it fits (shared code, needs
       approval). Follow the new-plugin checklist.
-- [ ] **Survey `https://github.com/Ka1-S/LYNX`** (Farelo task t20259e38295b) for potential plugins;
-      report candidates and whether any overlap existing Downspout plugins.
+- [x] **Survey `https://github.com/Ka1-S/LYNX`** (Farelo task t20259e38295b): reported candidates and overlap in
+      `docs/lynx-survey.md`. Best small gaps are a level-independent transient designer, a stereo matrix/enhancer
+      and a cheap fixed-band denoiser; the largest true gap is a sample/SF2 player. Most LYNX mixing engines overlap
+      `guardian`, `glue`, `trio`, `octet`, `silken`, `heavyverb`, `loopdelay`, `qune` or `sinevox`.
 
 ## From INBOX (2026-11-17)
 
@@ -174,12 +176,16 @@ Standalone `g++ -std=c++20 -Wall -Wextra -fsyntax-only` over `plugins/*/src/*.cp
 and others will not compile). Re-run after any wrapper or state change: the wrapper callbacks
 are what the core tests never touch.
 
-- Last full sweep 2026-11-06: zero warnings in all plugin core files under `-Wall -Wextra` (nam
-  shows only unused-parameter warnings in vendored NAM headers). Includes the new shared
-  `voice_leading.hpp` and the markov/bassgen/cadence/drumgen changes.
-- `campione` loader: the `smpl` loop end is inclusive in the WAV spec, but the engine wraps at
-  `position >= loopEnd`, so the last loop sample is skipped (one frame). Changing it means
-  adjusting load, save and the engine together; decide whether it is worth it.
+- Last full sweep 2026-11-17: zero warnings in all 187 plugin core source files under `-Wall -Wextra`
+  (using each plugin's CMake include flags; nam no longer reports vendored-header warnings in this sweep).
+  The changed UI wrapper targets also rebuilt cleanly with CMake's `-Wall -Wextra` during the Reroll work.
+  Previous full sweep 2026-11-06 included the new shared `voice_leading.hpp` and the
+  markov/bassgen/cadence/drumgen changes.
+- [x] `campione` loop end: keep the WAV `smpl` convention (both markers inclusive) and wrap the
+      cursor at `loopEnd + 1`, including the marker frame in playback and the crossfade. Added a shared
+      `loopFrameCount()` so the engine, loop-point snapping, state updates and MCP edits all agree;
+      deterministic tests cover a plain loop and a four-frame crossfade. State serialization was
+      already inclusive, so saved patches keep their existing loop numbers and now play the last frame.
 
 ## Treatment
 
@@ -193,10 +199,14 @@ are what the core tests never touch.
 - [ ] Host validation in REAPER, especially the resonator engines: CPU load, audio out, and
       the patch surviving playback start and a sample-rate change (the fixes are covered by
       offline tests only, and the original "no audio" symptom was never reproduced offline).
-- [ ] Plinky's other scales (Hirajoshi, Insen, Iwato, Minyo, major and minor triads, fifths,
-      Romanian) are not in Plank. Adding them means appending to `docs/scales.md`. The
-      microtonal ones (Harmonics, Hexany, Just) also need a cents-based table, which the
+- [x] Plinky's other integer scales (Hirajoshi, Insen, Iwato, Minyo, major and minor triads,
+      fifths, Romanian) were appended at Plank local ordinals 24-31 on 2026-11-17. The
+      canonical rows 25-32, tests, wrapper labels, docs, profile and screenshot were updated.
+      The microtonal ones (Harmonics, Hexany, Just) still need a cents-based table, which the
       current integer ladder cannot express.
+- [ ] Visual acceptance of Plank's fresh capture is pending: the 752x700 screenshot was recaptured and
+      checked programmatically, but this session cannot view images. Inspect
+      `docs/pages/assets/plugins/plank.png` at full resolution when image review is available.
 
 ## Other
 
@@ -262,10 +272,10 @@ are what the core tests never touch.
 - **drumgen** (`Generation every`) and **CA lanes in drumgen and xoxolo**: not yet listened to (try Rule 90
   and 30 on Hats; mark the hat and percussion lanes in xoxolo). Open: xoxolo's grid shows the programmed
   pattern, not the evolved row now playing.
-- **Magneto look and feel:** `include/downspout/dpf/MagnetoKit.hpp` is shared by Retune, Sprout, Markov,
-  Damiano and the newer instruments and effects. Older generator plugins still use `GenerativePanelUI`
-  (mosaic, polymeter, etc.); restyle if wanted. Retune, Sprout and Markov were rebuilt against the shared
-  header but not re-screenshotted; confirm they look unchanged.
+- [x] **Magneto look and feel:** checked the shared-header rebuilds. Retune's fresh capture is pixel-identical to
+  the catalogue image; Markov's was stale (the Clear matrix / Randomise buttons were missing) and has been refreshed.
+  Sprout's fresh capture is pixel-identical to the one recaptured for its new Reroll button. Older generator plugins
+  still use `GenerativePanelUI` (mosaic, polymeter, etc.); restyling them remains an open choice.
 - **Gravity** is in `harmonic-atlas`. `cadence` (learned harmony) has not had it; its progression model is
   different, so decide whether a gravity bias on the learned transitions makes sense.
 - **Atlas voice-leading** is local to `harmonic-atlas`. Listen to it; the chords sit low (around C3-C4)
@@ -331,7 +341,12 @@ resonance-garden, plank, tuney-vst, worms, beards.
 ## Prism
 
 - [ ] **Listen to it.** Core tests only; nothing has been auditioned or run in a host.
-- [ ] LFO modulation of delay/feedback (the Multiway plugin has it). Tempo sync is done; it reads only the host tempo, not the bar position.
+- [ ] **Visual acceptance of the LFO panel:** the fresh capture was checked for size and text bounds, but this agent
+      cannot view images, so a human should confirm the layout at full resolution.
+- [x] LFO modulation of delay/feedback: added a free-running 0.05-10 Hz oscillator with separate Delay Depth and
+      Feedback Depth controls (both default to zero, so existing patches are unchanged). Appended after the band block
+      so saved parameter IDs stay stable. Core tests cover delay at both extremes, feedback-tail change, rate inertness
+      and phase reset; profile, docs, UI and screenshot updated. The LFO is not bar-locked, like the existing tempo sync.
 
 ## Filter-plugin ideas (November 2026 brainstorm)
 
@@ -339,7 +354,11 @@ Mouth (vowel/formant morph filter) is built (core, VST3, tests, screenshot, docs
 
 - [ ] **Audio-driven string / comb (extended Karplus-Strong)**: feedback comb with damping low-pass, pick-position comb and stiffness all-pass chain (clean string -> inharmonic bell -> metal), tuned from MIDI or tracked pitch. Closest existing plugins: `resonance-garden`, `spense`; build after the other two. References: CCRMA "Extended Karplus-Strong" (https://ccrma.stanford.edu/~jos/pasp/Extended_Karplus_Strong_Algorithm.html).
 - [ ] Envelope-follower multimode filter (auto-wah). Easy, but a crowded category.
-- [ ] **Mouth: listen to it** and try it in a host (nothing auditioned). Check Voice switching for clicks on a loud sustained source and that the vowel data matches the Csound manual table (typed from memory of it).
+- [ ] **Mouth: listen to it** and try it in a host (nothing auditioned). Check Voice switching for
+      clicks on a loud sustained source.
+- [x] Mouth vowel table verified against the Csound 7 Manual appendix "Formant Values" on
+      2026-11-17. All 20 bass/tenor/alto/soprano x A/E/I/O/U rows match after correcting Tenor O
+      bandwidths to 70/80/100/130/135 Hz; the core test now holds the full independent reference.
 - [ ] Mouth phase 2: tempo-synced vowel sequencer (step list of vowel corners), reusing Prism's tempo plumbing.
 
 ## Noise-reduction plugin (idea, November 2026; not started)

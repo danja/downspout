@@ -91,6 +91,7 @@ std::string savePatch(const PatchData& patch, const std::string& filePath)
         std::fprintf(f, "    dsp:midiChannel \"%d\"^^xsd:integer ;\n",    z.midiChannel);
         std::fprintf(f, "    dsp:loopEnabled \"%s\"^^xsd:boolean ;\n",    z.loopEnabled ? "true" : "false");
         std::fprintf(f, "    dsp:loopStart \"%u\"^^xsd:integer ;\n",      z.loopStart);
+        // Inclusive last frame, as stored by the WAV smpl loader and used by the engine.
         std::fprintf(f, "    dsp:loopEnd \"%u\"^^xsd:integer ;\n",        z.loopEnd);
         std::fprintf(f, "    dsp:attackMs \"%.6g\"^^xsd:float ;\n",       z.attackMs);
         std::fprintf(f, "    dsp:decayMs \"%.6g\"^^xsd:float ;\n",        z.decayMs);

@@ -6,8 +6,9 @@
 namespace downspout::mouth {
 
 // Five formants per vowel: frequency (Hz), level relative to the first formant (dB) and
-// bandwidth (Hz). This is the widely circulated Csound formant table for bass, tenor,
-// alto and soprano voices. The tests hold an independent copy of the first two formants.
+// bandwidth (Hz). Values are the bass, tenor, alto and soprano tables from the Csound 7
+// Manual appendix "Formant Values" (https://csound.com/manual/misc/formants), checked
+// row by row on 2026-11-17. The tests hold a full independent copy of the reference.
 inline constexpr std::size_t kFormants = 5;
 inline constexpr std::size_t kVowels = 5;  // a, e, i, o, u
 inline constexpr std::size_t kVoices = 4;  // bass, tenor, alto, soprano
@@ -35,7 +36,7 @@ inline constexpr std::array<std::array<VowelData, kVowels>, kVoices> kVowelTable
         {{650, 1080, 2650, 2900, 3250}, {0, -6, -7, -8, -22}, {80, 90, 120, 130, 140}},
         {{400, 1700, 2600, 3200, 3580}, {0, -14, -12, -14, -20}, {70, 80, 100, 120, 120}},
         {{290, 1870, 2800, 3250, 3540}, {0, -15, -18, -20, -30}, {40, 90, 100, 120, 120}},
-        {{400, 800, 2600, 2800, 3000}, {0, -10, -12, -12, -26}, {40, 80, 100, 120, 120}},
+        {{400, 800, 2600, 2800, 3000}, {0, -10, -12, -12, -26}, {70, 80, 100, 130, 135}},
         {{350, 600, 2700, 2900, 3300}, {0, -20, -17, -14, -26}, {40, 80, 100, 120, 120}},
     }},
     // Alto

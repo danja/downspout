@@ -51,6 +51,13 @@ position through `setTempo`, recomputed every hop and passed through the same 10
 as the milliseconds, so a tempo change glides. The panel gets the tempo through an output
 parameter (`out_tempo`), since a DPF UI has no transport.
 
+A free-running LFO is advanced once per hop by `2π x rate x hop / sampleRate` and wraps at `2π`.
+Its sine is applied after band smoothing and interpolation, so it reaches the delays and feedback
+directly: `delay_ms = band_ms x (1 + delayDepth x sine)` and `feedback_pct = band_pct x
+(1 + feedbackDepth x sine)`, each clamped to the existing parameter range. Both depths default to
+zero; the rate is inert then. One oscillator is shared, so the two depths move in step. The phase
+is runtime state: reset (and therefore host activation and sample-rate change) returns it to zero.
+
 Smoothing, per hop: band values 100 ms, solo weight 30 ms; the mix is smoothed per sample (50
 ms) and starts at its parameter value on the first block.
 
@@ -68,13 +75,17 @@ ms) and starts at its parameter value on the first block.
 - Solo isolates the soloed band (>30x in amplitude); cuts leave their region undelayed (>10x).
 - 95 % feedback on all bands stays bounded and the tail decays.
 - Tempo sync: 1/8 at 120 BPM, 1/4 at 90, 1/8T at 120, 1/16 at 140 and 1/2 at 60 land within 2.5 samples of the expected time; the unsynced side keeps its milliseconds; linked follows the left; a division beyond 2 s is limited; a tempo change mid-play moves the delay to the new length.
+- LFO: two impulses 5 s apart at 0.1 Hz move a 100 ms band delay to about 150 ms and 50 ms; with
+  zero depth both stay at 100 ms. Feedback depth changes the decay of an impulse tail and stays
+  finite. Changing Rate with both depths at their defaults is bit-for-bit silent; reset restarts
+  the LFO phase.
 - Output is identical at host block sizes 1, 37 and 4096.
 - Speed (loaded machine, an upper bound): 512 at 96 kHz about 19 % of real time; 4096 at 48 kHz
   about 7 %.
 
 ## Not done
 
-- LFOs / shaper and a drawn modulation shape, as in the plugin that inspired it.
+- Per-target LFO phase, extra shapes and a drawn modulation curve.
 - Locking synced repeats to the bar grid (only the tempo is read, not the position).
 - Per-bin phase coherence (the technique is metallic on sustained tones at long delays).
 - Listening tests; host validation.

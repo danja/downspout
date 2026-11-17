@@ -145,9 +145,9 @@ void applyLoopPoints(SampleZone& zone, float crossfadeDurationMs)
     zone.loopStart = findLoopStart(zone.data, zone.channelCount, zone.loopEnd, searchWindow);
     if (zone.loopStart >= zone.loopEnd) zone.loopStart = 0;
 
-    // Crossfade frames
+    // Crossfade frames. The stored loop end is inclusive, so count it in the loop length.
     zone.crossfadeFrames = static_cast<std::uint32_t>((crossfadeDurationMs / 1000.0f) * zone.sampleRate);
-    const std::uint32_t loopLength = zone.loopEnd - zone.loopStart;
+    const std::uint32_t loopLength = loopFrameCount(zone);
     if (zone.crossfadeFrames > loopLength / 2) zone.crossfadeFrames = loopLength / 2;
 }
 

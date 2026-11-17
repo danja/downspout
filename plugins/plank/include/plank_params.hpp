@@ -30,12 +30,13 @@ inline constexpr std::size_t kCellCount = kGridWidth * kGridHeight;
 
 // ── Scales ──────────────────────────────────────────────────────────────────
 //
-// Ordinals match the canonical table in docs/scales.md (chromatic 0 through
-// bebopMinor 23) so host state stays interoperable and the reference document
-// can track coverage. Append-only: never insert ahead of an existing row.
+// Ordinals are Plank-local and append-only. They match docs/scales.md rows 0-15,
+// then skip the generic pentatonic row 16, so blues onward are one less than the
+// canonical row number (bebopMinor is 23 here, 24 there). Host state stores these
+// local integers: never insert ahead of an existing row.
 //
-// Eight intervals per scale, index 7 always the octave, so grid row 7 is one
-// octave above row 0.
+// Eight slots per scale, but only kScaleDegreeCount[scale] are real degrees. The
+// ladder wraps per octave, so row 7 is an octave only for seven-note scales.
 
 enum class ScaleId : std::uint32_t {
     chromatic = 0,
@@ -62,6 +63,14 @@ enum class ScaleId : std::uint32_t {
     bebopDominant,
     bebopMajor,
     bebopMinor,
+    hirajoshi,
+    insen,
+    iwato,
+    minyo,
+    triadMajor,
+    triadMinor,
+    fifths,
+    romanian,
     count,
 };
 
@@ -90,6 +99,14 @@ inline constexpr std::array<const char*, static_cast<std::size_t>(ScaleId::count
     "Bebop Dom",
     "Bebop Major",
     "Bebop Min",
+    "Hirajoshi",
+    "Insen",
+    "Iwato",
+    "Minyo",
+    "Triad Maj",
+    "Triad Min",
+    "Fifths",
+    "Romanian",
 }};
 
 // A performance-scale subset reachable from the eight side buttons. Indices are
@@ -137,6 +154,14 @@ inline constexpr std::array<std::array<std::uint8_t, 8>, static_cast<std::size_t
         {{0, 2, 4, 5, 7, 9, 10, 11}},   // bebop dominant
         {{0, 2, 4, 5, 7, 8, 9, 11}},    // bebop major
         {{0, 2, 3, 4, 5, 7, 9, 10}},    // bebop minor
+        {{0, 2, 3, 7, 8, 0, 0, 0}},     // hirajoshi
+        {{0, 1, 5, 7, 10, 0, 0, 0}},    // insen
+        {{0, 1, 5, 6, 10, 0, 0, 0}},    // iwato
+        {{0, 2, 5, 7, 9, 0, 0, 0}},     // minyo
+        {{0, 4, 7, 0, 0, 0, 0, 0}},     // major triad
+        {{0, 3, 7, 0, 0, 0, 0, 0}},     // minor triad
+        {{0, 7, 0, 0, 0, 0, 0, 0}},     // fifths
+        {{0, 2, 3, 6, 7, 9, 10, 0}},    // romanian
     }};
 
 // How many entries of kScaleIntervals are real degrees. Everything past this is
@@ -166,6 +191,14 @@ inline constexpr std::array<std::uint8_t, static_cast<std::size_t>(ScaleId::coun
     8,  // bebop dominant
     8,  // bebop major
     8,  // bebop minor
+    5,  // hirajoshi
+    5,  // insen
+    5,  // iwato
+    5,  // minyo
+    3,  // major triad
+    3,  // minor triad
+    2,  // fifths
+    7,  // romanian
 }};
 
 // ── Modulation ──────────────────────────────────────────────────────────────

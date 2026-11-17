@@ -33,6 +33,9 @@ ParameterEnumerationValue kScaleEnumValues[] = {
     {15.0f, kScaleNames[15]}, {16.0f, kScaleNames[16]}, {17.0f, kScaleNames[17]},
     {18.0f, kScaleNames[18]}, {19.0f, kScaleNames[19]}, {20.0f, kScaleNames[20]},
     {21.0f, kScaleNames[21]}, {22.0f, kScaleNames[22]}, {23.0f, kScaleNames[23]},
+    {24.0f, kScaleNames[24]}, {25.0f, kScaleNames[25]}, {26.0f, kScaleNames[26]},
+    {27.0f, kScaleNames[27]}, {28.0f, kScaleNames[28]}, {29.0f, kScaleNames[29]},
+    {30.0f, kScaleNames[30]}, {31.0f, kScaleNames[31]},
 };
 
 ParameterEnumerationValue kSpreadEnumValues[] = {

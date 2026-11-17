@@ -227,12 +227,16 @@ void processBlock(EngineState& state,
             if (totalFrames == 0) { v.active = false; continue; }
 
             const bool loopValid = zone.loopEnabled && zone.loopEnd > zone.loopStart;
+            // loopEnd is the last frame played; the cursor uses the following frame as its
+            // exclusive end, so the marker frame itself is not skipped.
+            const double loopEndExclusive = static_cast<double>(zone.loopEnd) + 1.0;
+            const double loopLength = loopEndExclusive - static_cast<double>(zone.loopStart);
 
             // Crossfade entry check (before reading)
             if (loopValid && !v.inCrossfade && zone.crossfadeFrames > 0 &&
-                zone.loopEnd >= zone.crossfadeFrames)
+                loopLength >= static_cast<double>(zone.crossfadeFrames))
             {
-                const double threshold = static_cast<double>(zone.loopEnd) - zone.crossfadeFrames;
+                const double threshold = loopEndExclusive - static_cast<double>(zone.crossfadeFrames);
                 if (v.position >= threshold) {
                     v.inCrossfade = true;
                     v.crossfadePosition = static_cast<double>(zone.loopStart) +
@@ -249,8 +253,7 @@ void processBlock(EngineState& state,
 
             // Blend with loop head during crossfade
             if (v.inCrossfade && zone.crossfadeFrames > 0) {
-                const float framesLeft = static_cast<float>(
-                    static_cast<double>(zone.loopEnd) - v.position);
+                const float framesLeft = static_cast<float>(loopEndExclusive - v.position);
                 const float wTail = std::clamp(
                     framesLeft / static_cast<float>(zone.crossfadeFrames), 0.0f, 1.0f);
                 const float wHead = 1.0f - wTail;
@@ -319,8 +322,9 @@ void processBlock(EngineState& state,
             v.position += rate;
             if (v.inCrossfade) v.crossfadePosition += rate;
 
-            // Loop wrap
-            if (loopValid && v.position >= static_cast<double>(zone.loopEnd)) {
+            // Loop wrap: one past the inclusive end returns to the loop start (or to the
+            // crossfade head position, which has advanced by then).
+            if (loopValid && v.position >= loopEndExclusive) {
                 v.position = v.inCrossfade ? v.crossfadePosition
                                            : static_cast<double>(zone.loopStart);
                 v.inCrossfade = false;

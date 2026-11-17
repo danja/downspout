@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -19,8 +20,8 @@ struct SampleZone {
     int channelCount = 1;
     double sampleRate = 44100.0;
     bool loopEnabled = false;
-    std::uint32_t loopStart = 0;
-    std::uint32_t loopEnd = 0;
+    std::uint32_t loopStart = 0;  // first loop frame, inclusive
+    std::uint32_t loopEnd = 0;    // last loop frame, inclusive (WAV smpl convention)
     std::uint32_t crossfadeFrames = 0;
     std::string sourcePath;
     // ADSR
@@ -37,6 +38,18 @@ struct SampleZone {
     bool  muted          = false;
     int   octaveShift    = 0;      // -6..+6 octaves applied on top of root-note pitch shift
 };
+
+// WAV smpl loop points are frame indices with an inclusive end. SampleZone keeps
+// that convention: a loop plays frames loopStart..loopEnd, so its length is +1.
+[[nodiscard]] inline std::uint32_t loopFrameCount(const SampleZone& zone) noexcept
+{
+    if (zone.loopEnd < zone.loopStart) return 0u;
+    const auto count = static_cast<std::uint64_t>(zone.loopEnd) -
+                       static_cast<std::uint64_t>(zone.loopStart) + 1u;
+    return count > static_cast<std::uint64_t>(std::numeric_limits<std::uint32_t>::max())
+               ? std::numeric_limits<std::uint32_t>::max()
+               : static_cast<std::uint32_t>(count);
+}
 
 struct Voice {
     bool active = false;

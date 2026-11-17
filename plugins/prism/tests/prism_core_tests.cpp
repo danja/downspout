@@ -149,7 +149,11 @@ void testParameterTable()
 {
     std::printf("parameters\n");
     const auto& specs = parameterSpecs();
-    check(kParameterCount == 58 && kInputParameterCount == 56, "8 global + 8 bands x 6 + 2 outputs");
+    check(kParameterCount == 61 && kInputParameterCount == 59,
+          "8 global + 8 bands x 6 + 3 appended LFO controls + 2 outputs");
+    check(kBandParameterEnd == 56 && kLfoRate == 56 && kLfoDelayDepth == 57 && kLfoFeedbackDepth == 58,
+          "old band IDs are unchanged and the LFO controls are appended");
+    check(kOutLatency == 59 && kOutTempo == 60, "read-only outputs follow the appended controls");
     const Parameters defaults;
     for (std::size_t i = 0; i < kInputParameterCount; ++i)
     {
@@ -165,6 +169,10 @@ void testParameterTable()
     check(std::string(specs[bandParam(2, kDelayR)].symbol) == "b3_delay_r", "band symbols are 1-based");
     check(std::string(specs[bandParam(7, kDivR)].symbol) == "b8_div_r" && std::string(specs[kSyncL].symbol) == "sync_l",
           "sync symbols");
+    check(std::string(specs[kLfoRate].symbol) == "lfo_rate" &&
+              std::string(specs[kLfoDelayDepth].symbol) == "lfo_delay_depth" &&
+              std::string(specs[kLfoFeedbackDepth].symbol) == "lfo_feedback_depth",
+          "LFO symbols");
     checkNear(divisionMs(6, 120.0), 250.0, 1e-3, "1/8 at 120 BPM is 250 ms");
     checkNear(divisionMs(9, 90.0), 666.667, 1e-2, "1/4 at 90 BPM");
     checkNear(divisionMs(5, 120.0), 166.667, 1e-2, "1/8T at 120 BPM");
@@ -182,9 +190,13 @@ void testParameterTable()
     wild[bandParam(0, kDelayL)] = -5.0f;
     wild[bandParam(7, kFeedback)] = 500.0f;
     wild[kSize] = 2.4f;
+    wild[kLfoRate] = 99.0f;
+    wild[kLfoDelayDepth] = 200.0f;
+    wild[kLfoFeedbackDepth] = std::nanf("");
     const Parameters c = clampParameters(wild);
     check(c[kBands] == 8.0f && c[kMix] == 0.5f && c.band(0, kDelayL) == 0.0f && c.band(7, kFeedback) == 95.0f &&
-              c[kSize] == 2.0f,
+              c[kSize] == 2.0f && c[kLfoRate] == 10.0f && c[kLfoDelayDepth] == 100.0f &&
+              c[kLfoFeedbackDepth] == specs[kLfoFeedbackDepth].defaultValue,
           "clampParameters bounds, rounds integers and replaces NaN with the default");
 }
 
@@ -465,6 +477,96 @@ void testTempoSync()
     check(late > 0.3, "after a tempo change the delay is the new quarter note");
 }
 
+void testLfoDelayModulation()
+{
+    std::printf("LFO delay modulation\n");
+    // A slow LFO keeps the delay almost still while each echo passes through, so the
+    // impulse peak measures the instantaneous delay rather than a smeared average.
+    Rig swept(8000.0), plain(8000.0);
+    for (Rig* r : {&swept, &plain}) {
+        r->p[kSize] = 0.0f;
+        r->setAll(100.0f, 100.0f, 0.0f);  // 800 samples at 8 kHz
+        r->p[kLfoRate] = 0.1f;            // 10 s period: extrema 5 s apart
+    }
+    swept.p[kLfoDelayDepth] = 50.0f;
+
+    auto in = silence(96000);
+    const std::size_t firstAt = 20000, secondAt = 60000;  // 2.5 s (+1), 7.5 s (-1)
+    in.l[firstAt] = in.r[firstAt] = 1.0f;
+    in.l[secondAt] = in.r[secondAt] = 1.0f;
+    const auto a = swept.run(in);
+    const auto b = plain.run(in);
+
+    // FFT size 512, so the wet path is delayed by 512 samples before the band delay.
+    const auto echoLag = [](const std::vector<float>& x, const std::size_t at, const std::size_t maxLag) {
+        const std::size_t start = at + 512;
+        const std::size_t from = start + 50;
+        const std::size_t to = std::min(x.size(), start + maxLag);
+        std::size_t best = from;
+        double mag = 0.0;
+        for (std::size_t i = from; i < to; ++i)
+            if (std::fabs(x[i]) > mag) {
+                mag = std::fabs(x[i]);
+                best = i;
+            }
+        return static_cast<double>(best - start);
+    };
+    const double sweptFirst = echoLag(a.l, firstAt, 2000);
+    const double sweptSecond = echoLag(a.l, secondAt, 2000);
+    const double plainFirst = echoLag(b.l, firstAt, 2000);
+    const double plainSecond = echoLag(b.l, secondAt, 2000);
+    checkNear(plainFirst, 800.0, 4.0, "with no depth an echo keeps the band delay");
+    checkNear(plainSecond, 800.0, 4.0, "with no depth the second echo keeps the same delay");
+    checkNear(sweptFirst, 1200.0, 100.0, "at the LFO maximum 100 ms rises to about 150 ms");
+    checkNear(sweptSecond, 400.0, 100.0, "at the LFO minimum 100 ms falls to about 50 ms");
+    check(std::fabs(sweptSecond - sweptFirst) > 600.0,
+          "Delay Depth changes the echo spacing, not just its level");
+
+    Rig defaultRate, fastRate;
+    defaultRate.setAll(100.0f, 100.0f, 50.0f);
+    fastRate.setAll(100.0f, 100.0f, 50.0f);
+    fastRate.p[kLfoRate] = 10.0f;
+    const auto x = defaultRate.run(in);
+    const auto y = fastRate.run(in);
+    check(x.l == y.l && x.r == y.r, "the new Rate control is inert while both depths are at their defaults");
+}
+
+void testLfoFeedbackModulation()
+{
+    std::printf("LFO feedback modulation\n");
+    Rig plain, swept;
+    for (Rig* r : {&plain, &swept}) {
+        r->p[kSize] = 0.0f;
+        r->setAll(70.0f, 70.0f, 60.0f);
+        r->p[kLfoRate] = 6.0f;
+    }
+    swept.p[kLfoFeedbackDepth] = 80.0f;
+
+    auto in = silence(48000);
+    in.l[2000] = in.r[2000] = 1.0f;
+    const auto a = plain.run(in);
+    const auto b = swept.run(in);
+    bool finite = true;
+    double peak = 0.0;
+    for (const float v : b.l) {
+        finite = finite && std::isfinite(v);
+        peak = std::max(peak, static_cast<double>(std::fabs(v)));
+    }
+    check(finite && peak < 2.0, "modulated feedback stays finite and bounded");
+
+    const auto tailEnergy = [](const std::vector<float>& x) {
+        double e = 0.0;
+        for (std::size_t i = 9600; i < 43200 && i < x.size(); ++i)
+            e += static_cast<double>(x[i]) * x[i];
+        return e;
+    };
+    const double plainTail = tailEnergy(a.l), sweptTail = tailEnergy(b.l);
+    check(plainTail > 0.0 && sweptTail > 0.0, "both feedback tails are audible");
+    check(std::fabs(sweptTail - plainTail) > 0.02 * plainTail,
+          "Feedback Depth changes the decay of the repeats");
+    check(a.l != b.l || a.r != b.r, "the LFO feedback depth has an observable effect");
+}
+
 void testFeedbackRepeats()
 {
     std::printf("feedback\n");
@@ -696,6 +798,18 @@ void testResetClearsAudioOnly()
     const auto out = rig.run(silence(20000));
     check(energy(out.l) == 0.0 && energy(out.r) == 0.0, "reset silences the tail");
     check(rig.p.v == before.v, "and leaves the patch alone");
+
+    // The LFO phase is runtime state, so a restart must begin it at zero too.
+    Rig lfo;
+    lfo.p[kSize] = 0.0f;
+    lfo.setAll(90.0f, 90.0f, 50.0f);
+    lfo.p[kLfoRate] = 4.0f;
+    lfo.p[kLfoDelayDepth] = 40.0f;
+    lfo.p[kLfoFeedbackDepth] = 60.0f;
+    const auto once = lfo.run(noisy);
+    reset(lfo.engine);
+    const auto twice = lfo.run(noisy);
+    check(once.l == twice.l && once.r == twice.r, "reset restarts the LFO at the same phase");
 }
 
 void testResolutionSwitch()
@@ -731,10 +845,17 @@ void testEveryControlHasAnEffect()
         ref.p[kMix] = 0.5f;
         rig.setAll(60.0f, 90.0f, 40.0f);
         rig.p[kMix] = 0.5f;
+        // Give the LFO depth controls something to act on, so Rate can be heard too.
+        rig.p[kLfoDelayDepth] = 50.0f;
+        rig.p[kLfoFeedbackDepth] = 50.0f;
+        ref.p[kLfoDelayDepth] = 50.0f;
+        ref.p[kLfoFeedbackDepth] = 50.0f;
         const ParamSpec& spec = specs[i];
-        // Divisions only mean something once their side is synced.
-        const bool divisionParam = i >= kGlobalCount && ((i - kGlobalCount) % kFieldsPerBand == kDivL ||
-                                                          (i - kGlobalCount) % kFieldsPerBand == kDivR);
+        // Divisions only mean something once their side is synced. The LFO controls are
+        // appended after the band block, so they are not band fields.
+        const bool divisionParam = i >= kGlobalCount && i < kBandParameterEnd &&
+                                   ((i - kGlobalCount) % kFieldsPerBand == kDivL ||
+                                    (i - kGlobalCount) % kFieldsPerBand == kDivR);
         if (divisionParam)
         {
             const bool leftSide = (i - kGlobalCount) % kFieldsPerBand == kDivL;
@@ -787,6 +908,8 @@ int main()
     testBandsDelayIndependently();
     testLeftAndRightAreIndependent();
     testTempoSync();
+    testLfoDelayModulation();
+    testLfoFeedbackModulation();
     testFeedbackRepeats();
     testFeedbackLevelAcrossDelays();
     testFeedbackStaysStable();
