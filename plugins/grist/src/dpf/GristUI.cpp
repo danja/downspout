@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -23,6 +24,19 @@ constexpr const char* kTimingNames[2] = {"Free (ms)", "Tempo sync"};
 constexpr const char* kOnOffNames[2] = {"Off", "On"};
 constexpr const char* kFilterModes[3] = {"Lowpass", "Highpass", "Bandpass"};
 constexpr const char* kDirections[3] = {"Up", "Down", "Up & down"};
+
+// A fresh seed for the Reroll button, kept away from the current value.
+float rerollSeed(const float lo, const float hi, const float current) noexcept
+{
+    using Clock = std::chrono::high_resolution_clock;
+    const auto ticks = static_cast<std::uint64_t>(Clock::now().time_since_epoch().count());
+    std::uint32_t s = static_cast<std::uint32_t>(ticks ^ (ticks >> 17) ^ (ticks >> 33));
+    if (s == 0u) s = 0x9E3779B9u;
+    const std::uint32_t span = static_cast<std::uint32_t>(hi - lo) + 1u;
+    float next = lo + static_cast<float>(s % span);
+    if (next == current && span > 1u) next = lo + static_cast<float>((s + 1u) % span);
+    return next;
+}
 
 struct Tables {
     std::array<kit::Range, core::kParameterCount> ranges {};
@@ -59,7 +73,13 @@ public:
     GristUI() : MagnetoUI(tables().ranges.data(), core::kParameterCount, tables().defaults.data()) {}
 
 protected:
-    void onAction(int) override {}
+    void onAction(const int id) override
+    {
+        if (id == 777) {
+            const auto& r = tables().ranges[core::kSeed];
+            commit(core::kSeed, rerollSeed(r.minimum, r.maximum, value(core::kSeed)));
+        }
+    }
 
     // Window and Feedback delay run from 1 ms to 1 s, so their sliders are logarithmic; the kit's
     // own sliders are linear. They are drawn and dragged here.
@@ -206,7 +226,8 @@ private:
         std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::lround(value(core::kSpread) * 100.0f)));
         slider(core::kSpread, "Spread (stereo)", buf, x, y0 + 84.0f, w, kTextureAccent);
         std::snprintf(buf, sizeof(buf), "%d", intValue(core::kSeed));
-        slider(core::kSeed, "Seed", buf, x, y0 + 126.0f, w, kTextureAccent);
+        slider(core::kSeed, "Seed", buf, x, y0 + 126.0f, w - 84.0f, kTextureAccent);
+        drawButton(777, "Reroll", {x + w - 78.0f, y0 + 126.0f, 78.0f, 34.0f}, kTextureAccent);
     }
 
     void drawCloudPanel(const Rect b)

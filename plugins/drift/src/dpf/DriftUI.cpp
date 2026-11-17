@@ -2,6 +2,7 @@
 #include "downspout/look_and_feel.hpp"
 #include "drift_core.hpp"
 
+#include <chrono>
 #include <cmath>
 
 START_NAMESPACE_DISTRHO
@@ -28,7 +29,8 @@ private:
         beginPanel();
 
         drawSection(24, 98, 1032, 46, "GLOBAL");
-        drawSlider(kSeed, 602, 101, 210, "Seed", "", "Deterministic modulation identity.", 0);
+        drawSlider(kSeed, 602, 101, 124, "Seed", "", "Deterministic modulation identity.", 0);
+        drawAction(777, 732, 101, 80, 48, "Reroll", "Pick a new modulation seed.");
         drawSlider(kRateLimit, 820, 101, 222, "Event budget", " / sec",
                    "Maximum MIDI events generated per second.", 0);
         char status[48] {};
@@ -45,6 +47,18 @@ private:
             drawLane(lane, x, y, 509.0f, 276.0f);
         }
         endPanel();
+    }
+
+    void actionTriggered(const int action) override
+    {
+        if (action != 777) return;
+        using Clock = std::chrono::high_resolution_clock;
+        const auto ticks = static_cast<std::uint64_t>(Clock::now().time_since_epoch().count());
+        const auto s = static_cast<std::uint32_t>(ticks ^ (ticks >> 17) ^ (ticks >> 33));
+        const float current = value(downspout::drift::kSeed);
+        float next = 1.0f + static_cast<float>(s % 65535u);
+        if (next == current) next = 1.0f + static_cast<float>((s + 1u) % 65535u);
+        commitParameter(downspout::drift::kSeed, next);
     }
 
     void drawLane(const int lane, const float x, const float y, const float w, const float h)

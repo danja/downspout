@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -26,6 +27,19 @@ constexpr kit::Accent kMidiAccent {120, 126, 170};    // slate violet
 constexpr const char* kPitchSourceNames[3] = {"Scale", "Held", "Latched"};
 
 constexpr const char* kPresetNames[core::kPresetCount] = {"Plant", "Koch", "Dragon", "Sierpinski", "Cantor", "Levy", "Tree", "Custom"};
+
+// A fresh seed for the Reroll button, kept away from the current value.
+float rerollSeed(const float lo, const float hi, const float current) noexcept
+{
+    using Clock = std::chrono::high_resolution_clock;
+    const auto ticks = static_cast<std::uint64_t>(Clock::now().time_since_epoch().count());
+    std::uint32_t s = static_cast<std::uint32_t>(ticks ^ (ticks >> 17) ^ (ticks >> 33));
+    if (s == 0u) s = 0x9E3779B9u;
+    const std::uint32_t span = static_cast<std::uint32_t>(hi - lo) + 1u;
+    float next = lo + static_cast<float>(s % span);
+    if (next == current && span > 1u) next = lo + static_cast<float>((s + 1u) % span);
+    return next;
+}
 
 struct Tables {
     std::array<kit::Range, core::kParameterCount> ranges {};
@@ -65,7 +79,13 @@ public:
     }
 
 protected:
-    void onAction(int) override {}
+    void onAction(const int id) override
+    {
+        if (id == 777) {
+            const auto& r = tables().ranges[core::kSeed];
+            commit(core::kSeed, rerollSeed(r.minimum, r.maximum, value(core::kSeed)));
+        }
+    }
 
     // The plugin's saved grammar arrives here (on opening the editor, or when a project loads).
     void stateChanged(const char* key, const char* value) override
@@ -416,7 +436,9 @@ private:
             std::snprintf(buf, sizeof(buf), "+1 every %d bars", grow);
         slider(core::kGrowBars, "Grow", buf, b, 1, kGrammarAccent);
         std::snprintf(buf, sizeof(buf), "%d", intValue(core::kSeed));
-        slider(core::kSeed, "Seed (probability choices)", buf, b, 2, kGrammarAccent);
+        const Rect seedRow {b.x + 14.0f, b.y + 130.0f, b.w - 28.0f, 34.0f};
+        drawSlider(core::kSeed, "Seed (probability choices)", buf, {seedRow.x, seedRow.y, seedRow.w - 84.0f, seedRow.h}, kGrammarAccent);
+        drawButton(777, "Reroll", {seedRow.x + seedRow.w - 78.0f, seedRow.y, 78.0f, seedRow.h}, kGrammarAccent);
         std::snprintf(buf, sizeof(buf), "Ch %d", intValue(core::kChannel));
         slider(core::kChannel, "MIDI channel", buf, b, 3, kGrammarAccent);
     }

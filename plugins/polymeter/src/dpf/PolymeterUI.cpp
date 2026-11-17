@@ -2,6 +2,7 @@
 #include "downspout/look_and_feel.hpp"
 #include "polymeter_core.hpp"
 
+#include <chrono>
 #include <cmath>
 
 START_NAMESPACE_DISTRHO
@@ -29,7 +30,8 @@ private:
 
         drawSection(24, 98, 1032, 46, "CLOCK");
         drawBeatSlider(kGrid, 602, 101, 210, "Step grid", "Quarter-note duration of one step.");
-        drawSlider(kSeed, 820, 101, 222, "Seed", "", "Deterministic probability and drift identity.", 0);
+        drawSlider(kSeed, 820, 101, 136, "Seed", "", "Deterministic probability and drift identity.", 0);
+        drawAction(777, 962, 101, 80, 48, "Reroll", "Pick a new seed for the probability and drift.");
         char status[80] {};
         std::snprintf(status, sizeof(status), "Step %d · %d events this block",
                       static_cast<int>(std::lround(value(kStatusStep))),
@@ -53,6 +55,18 @@ private:
             drawLane(lane, x, y, 509.0f, 334.0f);
         }
         endPanel();
+    }
+
+    void actionTriggered(const int action) override
+    {
+        if (action != 777) return;
+        using Clock = std::chrono::high_resolution_clock;
+        const auto ticks = static_cast<std::uint64_t>(Clock::now().time_since_epoch().count());
+        const auto s = static_cast<std::uint32_t>(ticks ^ (ticks >> 17) ^ (ticks >> 33));
+        const float current = value(downspout::polymeter::kSeed);
+        float next = 1.0f + static_cast<float>(s % 65535u);
+        if (next == current) next = 1.0f + static_cast<float>((s + 1u) % 65535u);
+        commitParameter(downspout::polymeter::kSeed, next);
     }
 
     void drawLane(const int lane, const float x, const float y, const float w, const float h)

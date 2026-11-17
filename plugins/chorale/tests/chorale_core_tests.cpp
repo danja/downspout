@@ -197,15 +197,18 @@ static void testJunoMatchesReference()
 
 static void testDryAndMix()
 {
-    // Before any wet signal can arrive (the shortest delay is 1.5 ms = 72 samples) the output is the dry input times sqrt(1 - mix).
+    // Before any delayed wet signal can arrive the output is the dry input times sqrt(1 - mix).
+    // The phaser is an allpass cascade with no delay, so its wet starts at sample zero.
     for (int mode = 0; mode < kModeCount; ++mode) {
-        for (const float mix : {0.0f, 0.36f, 1.0f}) {
-            Parameters p = custom(); p.mode = static_cast<float>(mode); p.mix = mix;
-            const Run run = render(p, 64, tone(440, 0.5f), tone(660, 0.5f));
-            double worst = 0.0;
-            for (std::size_t n = 8; n < 40; ++n)
-                worst = std::max({worst, std::abs(run.l[n] - run.inL[n] * std::sqrt(1.0 - mix)), std::abs(run.r[n] - run.inR[n] * std::sqrt(1.0 - mix))});
-            check("dry path is the input at sqrt(1 - mix)", worst < 1e-5);
+        if (mode != 5) {
+            for (const float mix : {0.0f, 0.36f, 1.0f}) {
+                Parameters p = custom(); p.mode = static_cast<float>(mode); p.mix = mix;
+                const Run run = render(p, 64, tone(440, 0.5f), tone(660, 0.5f));
+                double worst = 0.0;
+                for (std::size_t n = 8; n < 40; ++n)
+                    worst = std::max({worst, std::abs(run.l[n] - run.inL[n] * std::sqrt(1.0 - mix)), std::abs(run.r[n] - run.inR[n] * std::sqrt(1.0 - mix))});
+                check("dry path is the input at sqrt(1 - mix)", worst < 1e-5);
+            }
         }
         Parameters p = custom(); p.mode = static_cast<float>(mode); p.mix = 0.0f;
         const Run run = render(p, 20000, noise(3, 0.4f), noise(4, 0.4f));
@@ -295,8 +298,9 @@ static void testVoices()
 
 static void testStereoInput()
 {
-    // A centred signal is the same either way, bit for bit.
-    for (int mode = 0; mode < kModeCount; ++mode) {
+    // A centred signal is the same either way, bit for bit, in the source-derived modes.
+    // Flanger and Phaser deliberately synthesise their stereo from the sweep phase.
+    for (int mode = 0; mode < 4; ++mode) {
         Parameters a = custom(); a.mode = static_cast<float>(mode); a.mix = 0.6f; a.depth = 3.0f; a.input = 0.0f;
         Parameters b = a; b.input = 1.0f;
         const Run ra = render(a, 30000, noise(40, 0.3f), noise(40, 0.3f));
@@ -373,12 +377,13 @@ static void testModes()
     for (int m = 0; m < 3; ++m) {
         Parameters a; a.mode = static_cast<float>(m);
         Parameters b = a; b.rate = 5.0f; b.depth = 9.0f; b.delay = 25.0f; b.voices = 4.0f;
-        check("rate, depth, delay and voices are inert in the Juno modes",
+        b.feedback = 0.9f; b.stages = 12.0f;
+        check("rate, depth, delay, voices, feedback and stages are inert in the Juno modes",
               identical(render(a, 20000, noise(17, 0.3f), noise(18, 0.3f)).l, render(b, 20000, noise(17, 0.3f), noise(18, 0.3f)).l));
     }
 
     // Switching mode mid-signal glides: no step in a 200 Hz tone.
-    for (const int to : {1, 2, 3}) {
+    for (const int to : {1, 2, 3, 4, 5}) {
         Parameters p; p.mode = 0.0f; p.mix = 1.0f;
         Run run;
         run.go(p, 48000, tone(200, 0.3f), tone(200, 0.3f));
@@ -408,6 +413,93 @@ static void testControlsAudible()
     p = base(); p.voices = 4; differs("Voices changes the sound", p);
     p = base(); p.width = 0.1f; differs("Width changes the sound", p);
     p = base(); p.input = 0.0f; differs("Input changes the sound", p);
+}
+
+static void testFlanger()
+{
+    const Signal impulse = [](std::size_t n) { return n == 0 ? 1.0f : 0.0f; };
+    const auto fixture = [] {
+        Parameters p = custom();
+        p.mode = 4.0f; p.delay = 5.0f; p.depth = 0.2f; p.rate = 0.05f;
+        return p;
+    };
+    {
+        Parameters p = fixture(); p.feedback = 0.7f;
+        const Run run = render(p, 6000, impulse, impulse);
+        std::vector<std::size_t> peaks;
+        for (std::size_t n = 1; n + 1 < run.l.size(); ++n) {
+            if (std::fabs(run.l[n]) > 0.005f && std::fabs(run.l[n]) > std::fabs(run.l[n - 1]) && std::fabs(run.l[n]) >= std::fabs(run.l[n + 1])
+                && (peaks.empty() || n - peaks.back() > 100))   // reject the small ripples next to an echo
+                peaks.push_back(n);
+        }
+        check("flanger has a decaying echo train", peaks.size() >= 6);
+        if (peaks.size() >= 6) {
+            check("the first echo is at the tap delay", std::abs(static_cast<long>(peaks[0]) - 240) <= 16);
+            for (std::size_t i = 1; i < 6; ++i) {
+                const long gap = static_cast<long>(peaks[i]) - static_cast<long>(peaks[i - 1]);
+                check("echoes are spaced by the centre delay", gap > 190 && gap < 290);
+            }
+            check("the echoes decay", std::fabs(run.l[peaks[5]]) < std::fabs(run.l[peaks[0]]));
+        }
+    }
+    const auto tailEnergy = [&](const float feedback) {
+        Parameters p = fixture(); p.feedback = feedback;
+        const Run run = render(p, 6000, impulse, impulse);
+        double e = 0.0;
+        for (std::size_t n = 1200; n < run.l.size(); ++n) e += static_cast<double>(run.l[n]) * run.l[n];
+        return e;
+    };
+    check("feedback lengthens the tail", tailEnergy(0.8f) > 3.0 * tailEnergy(0.0f));
+    {
+        Parameters p = fixture(); p.feedback = 0.0f;
+        const Run plain = render(p, 48000, noise(31, 0.2f), noise(32, 0.2f));
+        p.feedback = 0.85f;
+        const Run fed = render(p, 48000, noise(31, 0.2f), noise(32, 0.2f));
+        check("feedback changes the sound", maxDiff(plain.l, fed.l) > 0.01);
+        bool ok = true;
+        for (float v : fed.l) ok = ok && std::isfinite(v) && std::fabs(v) < 2.0f;
+        check("flanger stays finite and bounded at high feedback", ok);
+        p.rate = 2.5f;
+        check("rate changes the flanger", maxDiff(fed.l, render(p, 48000, noise(31, 0.2f), noise(32, 0.2f)).l) > 0.01);
+    }
+}
+
+static void testPhaser()
+{
+    const auto fixture = [] {
+        Parameters p = custom();
+        p.mode = 5.0f; p.depth = 4.0f; p.delay = 8.0f; p.rate = 0.5f; p.stages = 4.0f;
+        return p;
+    };
+    const auto renderNoise = [&](const Parameters& p) { return render(p, 48000, noise(33, 0.2f), noise(34, 0.2f)); };
+    const Run base = renderNoise(fixture());
+    bool ok = true;
+    for (float v : base.l) ok = ok && std::isfinite(v) && std::fabs(v) < 2.0f;
+    check("phaser stays finite and bounded", ok);
+    {
+        Parameters p = fixture(); p.stages = 12.0f;
+        check("stages changes the sound", maxDiff(base.l, renderNoise(p).l) > 0.01);
+    }
+    {
+        Parameters p = fixture(); p.rate = 2.5f;
+        check("rate moves the notches", maxDiff(base.l, renderNoise(p).l) > 0.01);
+    }
+    {
+        Parameters p = fixture(); p.depth = 0.0f;
+        check("depth changes the sound", maxDiff(base.l, renderNoise(p).l) > 0.01);
+    }
+    {
+        Parameters p = custom(); p.mode = 4.0f; p.depth = 4.0f; p.delay = 8.0f; p.rate = 0.5f; p.feedback = 0.6f;
+        check("phaser differs from flanger", maxDiff(base.l, renderNoise(p).l) > 0.01);
+    }
+    {
+        const Signal impulse = [](std::size_t n) { return n == 0 ? 1.0f : 0.0f; };
+        const Run ir = render(fixture(), 12000, impulse, impulse);
+        double first = 0.0, late = 0.0;
+        for (std::size_t n = 0; n < 200; ++n) first = std::max(first, std::fabs(static_cast<double>(ir.l[n])));
+        for (std::size_t n = 200; n < 6000; ++n) late = std::max(late, std::fabs(static_cast<double>(ir.l[n])));
+        check("phaser has no feedback echo train", late < 0.2 * first);
+    }
 }
 
 static void testControllers()
@@ -589,18 +681,21 @@ static void testMetersAndReset()
 
 static void testParameters()
 {
-    check("parameter count is 19", kParameterCount == 19 && kControlCount == 11);
+    check("parameter count is 21", kParameterCount == 21 && kControlCount == 11 && kTotalControlCount == 13);
     check("ids are pinned", kMode == 0 && kTone == 1 && kMix == 2 && kRate == 3 && kDepth == 4 && kDelay == 5 && kVoices == 6 && kWidth == 7
-          && kInput == 8 && kSync == 9 && kCcChannel == 10 && kStatusTap1 == 11 && kStatusMix == 18);
-    check("outputs are flagged", !isOutput(kCcChannel) && isOutput(kStatusTap1) && isOutput(kStatusMix) && !isOutput(kParameterCount));
+          && kInput == 8 && kSync == 9 && kCcChannel == 10 && kStatusTap1 == 11 && kStatusMix == 18
+          && kFeedback == 19 && kStages == 20);
+    check("outputs are flagged", !isOutput(kCcChannel) && isOutput(kStatusTap1) && isOutput(kStatusMix)
+          && !isOutput(kFeedback) && !isOutput(kStages) && !isOutput(kParameterCount));
     const Parameters d;
-    for (std::uint32_t i = 0; i < kControlCount; ++i) {
+    for (std::uint32_t i = 0; i < kParameterCount; ++i) {
         const auto& s = specs()[i];
-        check("spec default matches the core default", std::abs(field(d, i) - s.defaultValue) < 1e-6f);
-        check("default is inside the range", s.defaultValue >= s.minimum && s.defaultValue <= s.maximum);
-        check("controls are not outputs", !s.output);
+        check("statuses are outputs, controls are not", s.output == isOutput(i));
+        if (!s.output) {
+            check("spec default matches the core default", std::abs(field(d, i) - s.defaultValue) < 1e-6f);
+            check("default is inside the range", s.defaultValue >= s.minimum && s.defaultValue <= s.maximum);
+        }
     }
-    for (std::uint32_t i = kControlCount; i < kParameterCount; ++i) check("status parameters are outputs", specs()[i].output);
     check("symbols are unique", [] {
         for (std::uint32_t a = 0; a < kParameterCount; ++a)
             for (std::uint32_t b = a + 1; b < kParameterCount; ++b)
@@ -609,8 +704,10 @@ static void testParameters()
     }());
     check("controller targets map to their controls", ccTargetOf(kRate) == kCcRate && ccTargetOf(kDepth) == kCcDepth && ccTargetOf(kWidth) == kCcWidth
           && ccTargetOf(kMix) == kCcMix && ccTargetOf(kTone) == -1 && ccTargetOf(kMode) == -1);
-    Parameters c = clampParameters([] { Parameters p; p.mode = 2.6f; p.voices = 2.4f; p.rate = 100.0f; p.depth = -2.0f; p.delay = 0.0f; return p; }());
-    check("clamp rounds the integers and limits the ranges", c.mode == 3.0f && c.voices == 2.0f && c.rate == kRateMax && c.depth == 0.0f && c.delay == kDelayMin);
+    Parameters c = clampParameters([] { Parameters p; p.mode = 2.6f; p.voices = 2.4f; p.rate = 100.0f; p.depth = -2.0f; p.delay = 0.0f;
+                                          p.feedback = 2.0f; p.stages = 99.0f; return p; }());
+    check("clamp rounds the integers and limits the ranges", c.mode == 3.0f && c.voices == 2.0f && c.rate == kRateMax && c.depth == 0.0f && c.delay == kDelayMin
+          && c.feedback == kFeedbackMax && c.stages == kMaxStages && c.mode <= kModeCount - 1);
 }
 
 int main()
@@ -623,6 +720,8 @@ int main()
     testStereoInput();
     testWidthAndTone();
     testModes();
+    testFlanger();
+    testPhaser();
     testControlsAudible();
     testControllers();
     testDeterminismAndBlocks();

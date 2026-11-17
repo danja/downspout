@@ -25,4 +25,5 @@ that range only dropped notes above 72 by an octave.
 
 Its four movement families are tonal, modal, chromatic-mediant, and
 neo-Riemannian-inspired. Seeded choices are derived from absolute harmonic
-position, so playback, loop restart, and offline rendering are repeatable.
+position, so playback, loop restart, and offline rendering are repeatable. The panel's
+**Reroll** button beside **Seed** commits a fresh seed in 1-65535.

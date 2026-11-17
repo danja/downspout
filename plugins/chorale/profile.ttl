@@ -7,7 +7,7 @@
 
 dsp:chorale a trn:PluginProfile ;
     rdfs:label "Chorale" ;
-    rdfs:comment "A stereo chorus. Each side (or, in Mono input, the L+R sum) is read through short swept delays, opposite on left and right. Modes I, I+II and II are the Juno-style voicings (after junologue-chorus, MIT); Custom is one to four sine-swept voices with Rate, Depth and Delay. Tone, Width and Mix apply to all. CC 1-4 take over Rate, Depth, Width and Mix." ;
+    rdfs:comment "A stereo modulation effect: chorus, flanger and phaser. Each side (or, in Mono input, the L+R sum) is read through short swept delays, opposite on left and right. Modes I, I+II and II are the Juno-style voicings (after junologue-chorus, MIT); Custom is one to four sine-swept voices, Flanger uses a fed-back short tap with Feedback control, and Phaser uses modulated allpass sections with a Stages control. Tone, Width and Mix apply to all. CC 1-4 take over Rate, Depth, Width and Mix." ;
     trn:bundleName "chorale.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/chorale/> ;
@@ -17,8 +17,8 @@ dsp:chorale a trn:PluginProfile ;
 
 dsp:chorale trn:hasParameter [
     trn:symbol "mode" ; trn:label "Mode" ;
-    trn:minimum 0.0 ; trn:maximum 3 ; trn:default 1 ;
-    rdfs:comment "0 Juno I, 1 Juno I+II, 2 Juno II, 3 Custom"
+    trn:minimum 0.0 ; trn:maximum 5 ; trn:default 1 ;
+    rdfs:comment "0 Juno I, 1 Juno I+II, 2 Juno II, 3 Custom, 4 Flanger, 5 Phaser"
 ], [
     trn:symbol "tone" ; trn:label "Tone" ;
     trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.5 ;
@@ -30,19 +30,27 @@ dsp:chorale trn:hasParameter [
 ], [
     trn:symbol "rate" ; trn:label "Rate" ;
     trn:minimum 0.05 ; trn:maximum 8 ; trn:default 0.8 ;
-    rdfs:comment "Custom: LFO rate. CC 1 (logarithmic)"
+    rdfs:comment "Custom, Flanger, Phaser: LFO rate. CC 1 (logarithmic)"
 ], [
     trn:symbol "depth" ; trn:label "Depth" ;
     trn:minimum 0 ; trn:maximum 10 ; trn:default 3 ;
-    rdfs:comment "Custom: sweep either side of Delay, held below Delay. CC 2"
+    rdfs:comment "Custom, Flanger, Phaser: sweep either side of Delay, held below Delay. CC 2"
 ], [
     trn:symbol "delay" ; trn:label "Delay" ;
     trn:minimum 1 ; trn:maximum 30 ; trn:default 8 ;
-    rdfs:comment "Custom: centre delay"
+    rdfs:comment "Custom: centre delay. Flanger: comb centre, capped at 12 ms. Phaser: sweep centre"
 ], [
     trn:symbol "voices" ; trn:label "Voices" ;
     trn:minimum 1.0 ; trn:maximum 4 ; trn:default 2 ;
     rdfs:comment "Custom: number of voices, 1 to 4"
+], [
+    trn:symbol "feedback" ; trn:label "Feedback" ;
+    trn:minimum 0.0 ; trn:maximum 0.92 ; trn:default 0.45 ;
+    rdfs:comment "Flanger: loop gain of the damped tap written back into the delay line. 0 = no feedback"
+], [
+    trn:symbol "stages" ; trn:label "Stages" ;
+    trn:minimum 2.0 ; trn:maximum 12 ; trn:default 4 ;
+    rdfs:comment "Phaser: number of cascaded modulated allpass sections per side"
 ], [
     trn:symbol "width" ; trn:label "Width" ;
     trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 1 ;

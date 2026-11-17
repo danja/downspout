@@ -11,4 +11,5 @@ Pulses / Length (seeded), and the automaton advances one generation per cycle of
 lane, returning to the starting row after 64 generations. Rotation, probability,
 ratchets and phase drift still apply. The idea comes from Subsequence's cellular-automaton
 building block (see `docs/subsequent.md`). The rule parameters are appended after the
-original ones, so saved projects and automation keep their meaning.
+original ones, so saved projects and automation keep their meaning. The panel's **Reroll**
+button beside **Seed** commits a fresh seed in 1-65535.

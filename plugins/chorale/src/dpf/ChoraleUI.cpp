@@ -62,19 +62,22 @@ protected:
         MagnetoUI::parameterChanged(index, v);
     }
 
-    void onAction(const int /*id*/) override {}
+    void onAction(const int id) override
+    {
+        if (id >= 100 && id < 100 + core::kModeCount) commit(core::kMode, static_cast<float>(id - 100));
+    }
 
     void onNanoDisplay() override
     {
         beginFrame();
-        drawHeader("CHORALE", "stereo chorus",
-                   "Short delays that sweep up and down, opposite on left and right, so each side drifts against the other. Pick a Juno voicing or build your own.");
+        drawHeader("CHORALE", "stereo chorus / flanger / phaser",
+                   "Short delays that sweep up and down, opposite on left and right. Pick a Juno voicing, build your own chorus, or switch to a fed-back flanger or a moving-notch phaser.");
         const float full = static_cast<float>(getWidth()) - 48.0f;
-        drawVoices({24.0f, 108.0f, full, 196.0f});
-        const float gap = 12.0f, y = 316.0f, h = 224.0f;
+        drawVoices({24.0f, 104.0f, full, 176.0f});
+        const float gap = 12.0f, y = 292.0f, h = 248.0f;
         const float wMode = 276.0f, wCustom = 306.0f, wSound = full - wMode - wCustom - 2.0f * gap;
         drawMode({24.0f, y, wMode, h});
-        drawCustom({24.0f + wMode + gap, y, wCustom, h});
+        drawModulation({24.0f + wMode + gap, y, wCustom, h});
         drawSound({24.0f + wMode + wCustom + 2.0f * gap, y, wSound, h});
     }
 
@@ -85,23 +88,25 @@ private:
     {
         const int m = mode();
         const int voices = std::clamp(intValue(core::kVoices), 1, core::kMaxVoices);
-        char caption[64];
-        if (m < 3) std::snprintf(caption, sizeof(caption), "sweeps at 0.513 Hz and 0.863 Hz, 1.5 to 5.4 ms");
-        else       std::snprintf(caption, sizeof(caption), "%.2f Hz, %.1f ms around %.1f ms", static_cast<double>(value(core::kStatusRate)),
-                                 static_cast<double>(value(core::kStatusDepth)), static_cast<double>(value(core::kDelay)));
+        char caption[80];
+        if (m < 3)      std::snprintf(caption, sizeof(caption), "Juno sweeps at 0.513 Hz and 0.863 Hz, 1.5 to 5.4 ms");
+        else if (m == 4) std::snprintf(caption, sizeof(caption), "flanger: with feedback, the tap repeats decay into combs");
+        else if (m == 5) std::snprintf(caption, sizeof(caption), "phaser: cascaded allpasses with moving notches");
+        else            std::snprintf(caption, sizeof(caption), "%.2f Hz, %.1f ms around %.1f ms", static_cast<double>(value(core::kStatusRate)),
+                                      static_cast<double>(value(core::kStatusDepth)), static_cast<double>(value(core::kDelay)));
         drawPanel(b, "DELAY SWEEPS", kVoiceAccent, caption);
 
         const auto& t = theme();
         const float trackX = b.x + 124.0f, trackW = b.w - 124.0f - 28.0f;
         const char* juno[2] = {"Voice I", "Voice II"};
         const char* own[core::kMaxVoices] = {"Voice 1", "Voice 2", "Voice 3", "Voice 4"};
-        const int lanes = m < 3 ? 2 : voices;
-        const float spacing = std::min(44.0f, (b.h - 76.0f) / static_cast<float>(lanes));
+        const int lanes = m < 3 ? 2 : (m == 4 || m == 5 ? 1 : voices);
+        const float spacing = std::min(38.0f, (b.h - 68.0f) / static_cast<float>(lanes));
         for (int v = 0; v < lanes; ++v) {
-            const float cy = b.y + 56.0f + spacing * (static_cast<float>(v) + 0.5f);
+            const float cy = b.y + 50.0f + spacing * (static_cast<float>(v) + 0.5f);
             // In the Juno modes a lane is lit only when its voice is part of the mode.
-            const bool active = m == 3 || m == 1 || (m == 0 && v == 0) || (m == 2 && v == 1);
-            label(b.x + 16.0f, cy, m < 3 ? juno[v] : own[v], !active, 12.0f, ALIGN_LEFT | ALIGN_MIDDLE);
+            const bool active = m >= 3 || m == 1 || (m == 0 && v == 0) || (m == 2 && v == 1);
+            label(b.x + 16.0f, cy, m < 3 ? juno[v] : (m == 4 ? "Flange" : (m == 5 ? "Phase" : own[v])), !active, 12.0f, ALIGN_LEFT | ALIGN_MIDDLE);
             beginPath();
             sc(t.border);
             strokeWidth(2.0f);
@@ -121,20 +126,28 @@ private:
     void drawMode(const Rect b)
     {
         const int m = mode();
-        drawPanel(b, "VOICING", kModeAccent, m < 3 ? "fixed Juno sweeps" : "your own");
+        drawPanel(b, "ALGORITHM", kModeAccent, m < 4 ? "chorus" : (m == 4 ? "flanger" : "phaser"));
         const float pad = 14.0f, w = b.w - 2.0f * pad;
-        static constexpr const char* kModes[4] = {"I", "I+II", "II", "Custom"};
-        drawSegments(core::kMode, kModes, 4, {b.x + pad, b.y + 44.0f, w, 28.0f}, kModeAccent);
-        static constexpr const char* kLines[4][3] = {
+        static constexpr const char* kModes[core::kModeCount] = {"I", "I+II", "II", "Custom", "Flanger", "Phaser"};
+        const float gap = 6.0f, bw = (w - 2.0f * gap) / 3.0f, bh = 24.0f;
+        for (int i = 0; i < core::kModeCount; ++i) {
+            const Rect box {b.x + pad + static_cast<float>(i % 3) * (bw + gap),
+                            b.y + 44.0f + static_cast<float>(i / 3) * (bh + gap), bw, bh};
+            drawButton(100 + i, kModes[i], box, kModeAccent, i == m);
+        }
+        static constexpr const char* kLines[core::kModeCount][3] = {
             {"I: the slow sweep alone.", "A gentle, single-voice shimmer.", "Delay 1.5 - 5.4 ms."},
             {"I+II: both sweeps together.", "The wide, lush ensemble sound,", "two voices drifting against each other."},
             {"II: the faster sweep alone.", "A quicker, more watery wobble.", "Delay 1.5 - 5.4 ms."},
-            {"Custom: 1 to 4 voices at the", "Rate, Depth and Delay you set,", "spread round the cycle."}};
-        for (int i = 0; i < 3; ++i) label(b.x + pad, b.y + 96.0f + static_cast<float>(i) * 18.0f, kLines[m][i], i > 0, 12.0f, ALIGN_LEFT | ALIGN_MIDDLE);
+            {"Custom: 1 to 4 voices at the", "Rate, Depth and Delay you set,", "spread round the cycle."},
+            {"Flanger: one short swept tap", "fed back into the delay line.", "Feedback sets the comb depth."},
+            {"Phaser: modulated allpass", "sections move the notches.", "Stages sets their count."}};
+        for (int i = 0; i < 3; ++i)
+            label(b.x + pad, b.y + 110.0f + static_cast<float>(i) * 18.0f, kLines[m][i], i > 0, 12.0f, ALIGN_LEFT | ALIGN_MIDDLE);
         setDim(m != 3);
         char buf[24];
         std::snprintf(buf, sizeof(buf), "%d voice%s", std::clamp(intValue(core::kVoices), 1, core::kMaxVoices), intValue(core::kVoices) == 1 ? "" : "s");
-        drawStepper(core::kVoices, "Voices (Custom)", buf, {b.x + pad, b.y + 168.0f, w, 22.0f});
+        drawStepper(core::kVoices, "Voices (Custom)", buf, {b.x + pad, b.y + 190.0f, w, 22.0f});
         setDim(false);
     }
 
@@ -149,21 +162,26 @@ private:
         return s;
     }
 
-    void drawCustom(const Rect b)
+    void drawModulation(const Rect b)
     {
-        const bool on = mode() == 3;
-        drawPanel(b, "CUSTOM", kCustomAccent, on ? "Rate, Depth and Delay" : "only in Custom mode");
-        setDim(!on);
+        const int m = mode();
+        drawPanel(b, "MODULATION", kCustomAccent, m < 3 ? "fixed in Juno modes" : "Rate Depth Delay Shape");
+        setDim(m < 3);
         const float pad = 14.0f, w = b.w - 2.0f * pad;
+        const float rowH = 26.0f;
         std::string s = shownValue(core::kRate, core::kStatusRate, "%.2f Hz");
-        drawSlider(core::kRate, "Rate", s.c_str(), {b.x + pad, b.y + 44.0f, w, 28.0f}, kCustomAccent);
+        drawSlider(core::kRate, "Rate", s.c_str(), {b.x + pad, b.y + 40.0f, w, rowH}, kCustomAccent);
         s = shownValue(core::kDepth, core::kStatusDepth, "%.1f ms");
-        drawSlider(core::kDepth, "Depth (sweep either side)", s.c_str(), {b.x + pad, b.y + 92.0f, w, 28.0f}, kCustomAccent);
+        drawSlider(core::kDepth, "Depth (sweep either side)", s.c_str(), {b.x + pad, b.y + 72.0f, w, rowH}, kCustomAccent);
         char buf[32];
         std::snprintf(buf, sizeof(buf), "%.1f ms", static_cast<double>(value(core::kDelay)));
-        drawSlider(core::kDelay, "Delay (centre)", buf, {b.x + pad, b.y + 140.0f, w, 28.0f}, kCustomAccent);
+        drawSlider(core::kDelay, "Delay (centre)", buf, {b.x + pad, b.y + 104.0f, w, rowH}, kCustomAccent);
+        std::snprintf(buf, sizeof(buf), "%.0f %%", static_cast<double>(value(core::kFeedback) / core::kFeedbackMax * 100.0f));
+        drawSlider(core::kFeedback, "Feedback (flanger)", buf, {b.x + pad, b.y + 136.0f, w, rowH}, kCustomAccent);
+        std::snprintf(buf, sizeof(buf), "%d", intValue(core::kStages));
+        drawSlider(core::kStages, "Stages (phaser)", buf, {b.x + pad, b.y + 168.0f, w, rowH}, kCustomAccent);
         setDim(false);
-        label(b.x + pad, b.y + b.h - 22.0f, "Depth is held below Delay.", true, 11.0f, ALIGN_LEFT | ALIGN_MIDDLE);
+        label(b.x + pad, b.y + b.h - 20.0f, "Rate/Depth/Delay drive all three; Feedback and Stages are mode-specific.", true, 11.0f, ALIGN_LEFT | ALIGN_MIDDLE);
     }
 
     void drawSound(const Rect b)

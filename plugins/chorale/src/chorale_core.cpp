@@ -43,6 +43,10 @@ void setTone(EngineState& s, const double fr, const double sampleRate) noexcept
     s.postR.fb1 = s.postL.fb1;
     s.preR.ff0 = s.pre.ff0;
     s.preR.fb1 = s.pre.fb1;
+    // Damping inside the flanger loop: keeps the fed-back repeats from getting brittle.
+    setOnePole(s.fbDampL, 1500.0 + f2 * 16000.0, sampleRate);
+    s.fbDampR.ff0 = s.fbDampL.ff0;
+    s.fbDampR.fb1 = s.fbDampL.fb1;
 }
 
 // The delay line is read as the source reads it: position 1 is the sample just written (no delay), so a delay of d samples is position d + 1.
@@ -73,6 +77,8 @@ Parameters clampParameters(const Parameters& p) noexcept
     c.input = std::round(clampf(p.input, 0.0f, 1.0f, 1.0f));
     c.sync = std::round(clampf(p.sync, 0.0f, 1.0f, 0.0f));
     c.ccChannel = std::round(clampf(p.ccChannel, 0.0f, 16.0f, 1.0f));
+    c.feedback = clampf(p.feedback, 0.0f, kFeedbackMax, 0.45f);
+    c.stages = std::round(clampf(p.stages, kStageMin, static_cast<float>(kMaxStages), 4.0f));
     return c;
 }
 
@@ -112,12 +118,23 @@ void processBlock(EngineState& s, const Parameters& params, const float sampleRa
     const bool stereo = p.input >= 0.5f;
     const double rateScale = sync ? std::max(0.000001, transport->bpm / 120.0) : 1.0;
 
-    double tga = 0.0, tgb = 0.0, tgc = 0.0;
+    double tga = 0.0, tgb = 0.0, tgc = 0.0, tgd = 0.0, tge = 0.0;
     switch (mode) {
     case 0: tga = 1.0; break;
     case 1: tga = tgb = std::sqrt(0.5); break;
     case 2: tgb = 1.0; break;
-    default: tgc = 1.0; break;
+    case 3: tgc = 1.0; break;
+    case 4: tgd = 1.0; break;
+    default: tge = 1.0; break;
+    }
+    const int stages = static_cast<int>(p.stages);
+    // Fixed per-stage phase offsets, resolved once per block so each stage costs multiplies, not a sin() call.
+    double sinOffL[kMaxStages], cosOffL[kMaxStages], sinOffR[kMaxStages], cosOffR[kMaxStages];
+    for (int i = 0; i < stages; ++i) {
+        const double aL = kPi * static_cast<double>(i) / static_cast<double>(stages);
+        const double aR = aL + 0.5 * kPi;
+        sinOffL[i] = std::sin(aL); cosOffL[i] = std::cos(aL);
+        sinOffR[i] = std::sin(aR); cosOffR[i] = std::cos(aR);
     }
     const double tfr = p.tone;
 
@@ -140,10 +157,11 @@ void processBlock(EngineState& s, const Parameters& params, const float sampleRa
 
     if (!s.started) {
         s.started = true;
-        s.ga = tga; s.gb = tgb; s.gc = tgc;
+        s.ga = tga; s.gb = tgb; s.gc = tgc; s.gf = tgd; s.gp = tge;
         s.dry = tDry; s.wet = tWet;
         s.fr = tfr;
         s.delayMs = p.delay; s.depthMs = tDepth; s.widthNow = tWidth; s.rateNow = tRate;
+        s.feedbackNow = p.feedback;
         setTone(s, s.fr, sr);
     }
     // Smoothed values settle exactly on their target (per sample, so the output does not depend on the block size).
@@ -176,22 +194,31 @@ void processBlock(EngineState& s, const Parameters& params, const float sampleRa
                 setTone(s, s.fr, sr);
             }
         }
-        glide(s.ga, tga); glide(s.gb, tgb); glide(s.gc, tgc); glide(s.dry, tDry); glide(s.wet, tWet);
+        glide(s.ga, tga); glide(s.gb, tgb); glide(s.gc, tgc); glide(s.gf, tgd); glide(s.gp, tge);
+        glide(s.dry, tDry); glide(s.wet, tWet);
         s.delayMs += (p.delay - s.delayMs) * smooth;
         s.depthMs += (tDepth - s.depthMs) * smooth;
         s.widthNow += (tWidth - s.widthNow) * smooth;
         s.rateNow += (tRate - s.rateNow) * smooth;
+        s.feedbackNow += (p.feedback - s.feedbackNow) * smooth;
 
         const double inL = inLeft[n], inR = inRight[n];
         // Mono: one line holding L + R. Stereo: a line per side, each at twice its input, so a centred signal is the same in both.
         double w = runOnePole(s.pre, stereo ? softLimit(2.0 * inL) : softLimit(inL + inR));
         if (std::abs(w) < 1e-20) w = 0.0;
-        s.ring[static_cast<std::size_t>(s.widx)] = static_cast<float>(w);
+        double wR = w;
         if (stereo) {
-            double wR = runOnePole(s.preR, softLimit(2.0 * inR));
+            wR = runOnePole(s.preR, softLimit(2.0 * inR));
             if (std::abs(wR) < 1e-20) wR = 0.0;
-            s.ringR[static_cast<std::size_t>(s.widx)] = static_cast<float>(wR);
         }
+        // The flanger writes its damped previous tap back into the shared ring. At zero
+        // flanger gain this is an exact no-op, so the Juno and Custom taps stay bit-exact.
+        if (s.gf > 0.0) {
+            w += s.gf * s.feedbackNow * runOnePole(s.fbDampL, s.flLastL);
+            if (stereo) wR += s.gf * s.feedbackNow * runOnePole(s.fbDampR, s.flLastR);
+        }
+        s.ring[static_cast<std::size_t>(s.widx)] = static_cast<float>(w);
+        if (stereo) s.ringR[static_cast<std::size_t>(s.widx)] = static_cast<float>(wR);
         const std::array<float, kRing>& lineR = stereo ? s.ringR : s.ring;
         s.widx = (s.widx - 1) & kRingMask;
 
@@ -201,6 +228,12 @@ void processBlock(EngineState& s, const Parameters& params, const float sampleRa
         if (s.lfo2 >= 1.0) s.lfo2 -= 2.0;
         s.phase += s.rateNow / sr;
         if (s.phase >= 1.0) s.phase -= 1.0;
+        double sinPh = 0.0, cosPh = 0.0;
+        if (s.gf > 0.0 || s.gp > 0.0) {
+            const double ph = 2.0 * kPi * s.phase;
+            sinPh = std::sin(ph);
+            cosPh = std::cos(ph);
+        }
 
         double wl = 0.0, wr = 0.0;
         if (s.ga > 0.0 || s.gb > 0.0) {
@@ -221,6 +254,43 @@ void processBlock(EngineState& s, const Parameters& params, const float sampleRa
             wl += s.gc * cl / voices;
             wr += s.gc * cr / voices;
         }
+        if (s.gf > 0.0) {
+            // Flanger: one short swept tap with the damped return folded back into the
+            // ring above, so the impulse response is a decaying comb at ~1/centre Hz.
+            const double centre = std::clamp(s.delayMs, 0.5, 12.0);
+            const double depth = std::min(s.depthMs, std::max(0.0, centre - 0.05));
+            s.flLastL = readLine(s, s.ring, clampPos((centre + depth * sinPh) * 0.001 * sr + 1.0));
+            s.flLastR = readLine(s, lineR, clampPos((centre - depth * cosPh) * 0.001 * sr + 1.0));
+            wl += s.gf * s.flLastL;
+            wr += s.gf * s.flLastR;
+        }
+        if (s.gp > 0.0) {
+            // Phaser: modulated first-order allpass sections. Half the input is mixed
+            // back in so the moving notches are audible even with Mix at 100 %.
+            const double base = 0.25 + (std::clamp(s.delayMs, static_cast<double>(kDelayMin), static_cast<double>(kDelayMax))
+                                        - static_cast<double>(kDelayMin)) / static_cast<double>(kDelayMax - kDelayMin) * 0.45;
+            const double sweep = std::min(s.depthMs / kDepthMax, 1.0) * 0.22;
+            double al = w, ar = wR;
+            for (int i = 0; i < stages; ++i) {
+                const double xL = std::clamp(base + sweep * (sinPh * cosOffL[i] + cosPh * sinOffL[i]), 0.02, 0.98);
+                const double gL = (1.0 - xL) / (1.0 + xL);
+                const double dL = s.apL[static_cast<std::size_t>(i)];
+                const double yL = gL * al + dL;          // transposed first-order allpass, |g| < 1 => unit magnitude
+                const double zL = al - gL * yL;
+                s.apL[static_cast<std::size_t>(i)] = static_cast<float>(std::abs(zL) < 1e-20 ? 0.0 : zL);
+                al = yL;
+
+                const double xR = std::clamp(base + sweep * (sinPh * cosOffR[i] + cosPh * sinOffR[i]), 0.02, 0.98);
+                const double gR = (1.0 - xR) / (1.0 + xR);
+                const double dR = s.apR[static_cast<std::size_t>(i)];
+                const double yR = gR * ar + dR;
+                const double zR = ar - gR * yR;
+                s.apR[static_cast<std::size_t>(i)] = static_cast<float>(std::abs(zR) < 1e-20 ? 0.0 : zR);
+                ar = yR;
+            }
+            wl += s.gp * 0.5 * (w + al);
+            wr += s.gp * 0.5 * (wR + ar);
+        }
 
         const double mid = 0.5 * (wl + wr);
         wl = mid + s.widthNow * (wl - mid);
@@ -233,10 +303,12 @@ void processBlock(EngineState& s, const Parameters& params, const float sampleRa
     if (mode < 3) {
         s.meters.tap[0] = static_cast<float>(std::abs(s.lfo1));
         s.meters.tap[1] = static_cast<float>(std::abs(s.lfo2));
-    } else {
+    } else if (mode == 3) {
         for (int v = 0; v < voices; ++v)
             s.meters.tap[static_cast<std::size_t>(v)] =
                 static_cast<float>(0.5 + 0.5 * std::sin(2.0 * kPi * (s.phase + static_cast<double>(v) / (2.0 * voices))));
+    } else {
+        s.meters.tap[0] = static_cast<float>(0.5 + 0.5 * std::sin(2.0 * kPi * s.phase));
     }
     s.meters.rate = static_cast<float>(tRate);
     s.meters.depth = static_cast<float>(tDepth);

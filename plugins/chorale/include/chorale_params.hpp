@@ -8,15 +8,16 @@
 namespace downspout::chorale {
 
 // Parameter indices are stable: never reorder, only append.
-// 0-9 controls, then eight output (status) parameters the panel reads.
+// 0-10 controls, then eight output (status) parameters the panel reads. Flanger and Phaser
+// appended Feedback and Stages at 19-20; indices are never reordered, so isOutput uses the flag.
 enum ParameterId : std::uint32_t {
     kMode = 0, kTone, kMix, kRate, kDepth, kDelay, kVoices, kWidth, kInput, kSync, kCcChannel,
     kStatusTap1, kStatusTap2, kStatusTap3, kStatusTap4, kStatusRate, kStatusDepth, kStatusWidth, kStatusMix,
+    kFeedback, kStages,
     kParameterCount
 };
-inline constexpr std::uint32_t kControlCount = kStatusTap1;
-
-[[nodiscard]] constexpr bool isOutput(const std::uint32_t index) noexcept { return index >= kStatusTap1 && index < kParameterCount; }
+inline constexpr std::uint32_t kControlCount = kStatusTap1;  // original contiguous control block
+inline constexpr std::uint32_t kTotalControlCount = kStatusTap1 + 2;
 
 struct ParameterSpec {
     const char* symbol;
@@ -50,8 +51,15 @@ struct ParameterSpec {
         {"status_depth", "Depth Now", "ms", kDepthMin, kDepthMax, d.depth, false, true},
         {"status_width", "Width Now", "", 0.0f, 1.0f, d.width, false, true},
         {"status_mix", "Mix Now", "", 0.0f, 1.0f, d.mix, false, true},
+        {"feedback", "Feedback", "", 0.0f, kFeedbackMax, d.feedback, false, false},
+        {"stages", "Stages", "", kStageMin, static_cast<float>(kMaxStages), d.stages, true, false},
     }};
     return s;
+}
+
+[[nodiscard]] inline bool isOutput(const std::uint32_t index) noexcept
+{
+    return index < kParameterCount && specs()[index].output;
 }
 
 inline float& field(Parameters& p, const std::uint32_t index) noexcept
@@ -69,6 +77,8 @@ inline float& field(Parameters& p, const std::uint32_t index) noexcept
     case kInput:     return p.input;
     case kSync:      return p.sync;
     case kCcChannel: return p.ccChannel;
+    case kFeedback:  return p.feedback;
+    case kStages:    return p.stages;
     default:         return unused;
     }
 }

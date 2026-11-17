@@ -15,4 +15,5 @@ applied at block resolution to slices already sounding.
 
 The note only sets the pitch when **Pitch range** is 0. At any other setting each
 slice gets a random transpose within that range and the note is ignored (the default
-is 7), so set Pitch range to 0 to hear bend.
+is 7), so set Pitch range to 0 to hear bend. The panel's **Reroll** button beside
+**Variation seed** commits a fresh seed in 1-65535.

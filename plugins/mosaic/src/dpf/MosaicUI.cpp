@@ -3,6 +3,7 @@
 #include "mosaic_core.hpp"
 
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstring>
 #include <string>
@@ -56,7 +57,8 @@ private:
         const bool autonomous = static_cast<int>(std::lround(value(kMode))) != 0;
         drawPercentSlider(kDensity, 38, 362, 194, "Autonomous density",
                           "Density of transport-synchronised autonomous triggers.", autonomous);
-        drawSlider(kSeed, 240, 362, 200, "Variation seed", "", "Deterministic sample and slice choices.", 0);
+        drawSlider(kSeed, 240, 362, 114, "Variation seed", "", "Deterministic sample and slice choices.", 0);
+        drawAction(777, 360, 362, 80, 48, "Reroll", "Pick a new variation seed.");
         drawPercentSlider(kReverseChance, 38, 418, 194, "Reverse chance",
                           "Chance that a triggered region plays backward.");
         drawSlider(kPitchRange, 240, 418, 200, "Pitch range", " semitones",
@@ -161,6 +163,16 @@ private:
 
     void actionTriggered(const int action) override
     {
+        if (action == 777) {
+            using Clock = std::chrono::high_resolution_clock;
+            const auto ticks = static_cast<std::uint64_t>(Clock::now().time_since_epoch().count());
+            const auto s = static_cast<std::uint32_t>(ticks ^ (ticks >> 17) ^ (ticks >> 33));
+            const float current = value(downspout::mosaic::kSeed);
+            float next = 1.0f + static_cast<float>(s % 65535u);
+            if (next == current) next = 1.0f + static_cast<float>((s + 1u) % 65535u);
+            commitParameter(downspout::mosaic::kSeed, next);
+            return;
+        }
         if (action >= 0 && action < 4) {
             requestStateFile(kStateKeys[static_cast<std::size_t>(action)]);
             return;

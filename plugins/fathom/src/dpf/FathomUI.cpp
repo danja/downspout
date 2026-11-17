@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -19,6 +20,24 @@ constexpr kit::Accent kGeneratorAccent {198, 132, 58};  // amber (magneto DRIVE)
 constexpr kit::Accent kFilterAccent {92, 140, 156};     // cold steel (magneto EXHAUST)
 constexpr kit::Accent kProcessorAccent {176, 88, 62};   // hot metal (magneto ENGINE)
 constexpr kit::Accent kOutputAccent {124, 148, 104};    // olive (magneto LISTEN)
+
+// A fresh seed for the Reroll button, kept away from the current value.
+float rerollSeed(const kit::Range& r, const float current) noexcept
+{
+    using Clock = std::chrono::high_resolution_clock;
+    const auto ticks = static_cast<std::uint64_t>(Clock::now().time_since_epoch().count());
+    const auto s = static_cast<std::uint32_t>(ticks ^ (ticks >> 17) ^ (ticks >> 33));
+    float next;
+    if (r.integer) {
+        const auto span = static_cast<std::uint32_t>(r.maximum - r.minimum) + 1u;
+        next = r.minimum + static_cast<float>(s % span);
+        if (next == current && span > 1u) next = r.minimum + static_cast<float>((s + 1u) % span);
+    } else {
+        next = r.minimum + static_cast<float>(s) / 4294967296.0f * (r.maximum - r.minimum);
+        if (std::fabs(next - current) < 1e-4f) next = r.maximum - (next - r.minimum);
+    }
+    return next;
+}
 
 struct Tables {
     std::array<kit::Range, core::kParameterCount> ranges {};
@@ -130,7 +149,11 @@ public:
     FathomUI() : MagnetoUI(tables().ranges.data(), core::kParameterCount, tables().defaults.data()) {}
 
 protected:
-    void onAction(int) override {}
+    void onAction(const int id) override
+    {
+        if (id == 777)
+            commit(idx(core::ParamId::seed), rerollSeed(tables().ranges[idx(core::ParamId::seed)], value(idx(core::ParamId::seed))));
+    }
 
     void onNanoDisplay() override
     {
@@ -181,7 +204,11 @@ private:
         slider(core::ParamId::warp, named("Warp", meaning[0], 1), {colA, top, colW, rowH}, kGeneratorAccent);
         slider(core::ParamId::span, named("Span", meaning[1], 2), {colA, top + rowH, colW, rowH}, kGeneratorAccent);
         slider(core::ParamId::morph, named("Morph", meaning[2], 3), {colA, top + 2.0f * rowH, colW, rowH}, kGeneratorAccent);
-        slider(core::ParamId::seed, named("Seed", meaning[3], 4), {colB, top, colW, rowH}, kGeneratorAccent);
+        const Rect seedRect {colB, top, colW, rowH};
+        drawSlider(idx(core::ParamId::seed), named("Seed", meaning[3], 4).c_str(),
+                   formatValue(core::ParamId::seed, value(idx(core::ParamId::seed))).c_str(),
+                   {seedRect.x, seedRect.y, seedRect.w - 84.0f, seedRect.h}, kGeneratorAccent);
+        drawButton(777, "Reroll", {seedRect.x + seedRect.w - 78.0f, seedRect.y, 78.0f, seedRect.h}, kGeneratorAccent);
         slider(core::ParamId::fuse, named("Fuse", meaning[4], 5), {colB, top + rowH, colW, rowH}, kGeneratorAccent);
 
         drawScope({colB, top + 2.0f * rowH + 4.0f, colW, rowH - 8.0f});

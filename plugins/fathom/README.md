@@ -83,4 +83,5 @@ ctest --test-dir build -R fathom --output-on-failure
 ```
 
 The core (`include/`, `src/*.cpp`) has no DPF dependency; the VST3 wrapper and the panel
-are in `src/dpf/`. Host validation in REAPER has not been done.
+are in `src/dpf/`. The panel's **Reroll** button beside **Seed** commits a fresh seed in 1-65535.
+Host validation in REAPER has not been done.

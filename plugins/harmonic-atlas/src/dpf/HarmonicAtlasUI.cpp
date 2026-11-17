@@ -3,6 +3,7 @@
 #include "harmonic_atlas_core.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 
 START_NAMESPACE_DISTRHO
@@ -169,8 +170,9 @@ private:
                    "Use the most recent incoming note as the harmonic root.");
         drawPitchClassSlider(kRoot, 628, 187, 294, "Fallback root",
                              "Root used when input following is disabled or no note has arrived.");
-        drawChannelSlider(kChannel, 628, 243, 142, "Output", "MIDI output channel.");
-        drawSlider(kSeed, 778, 243, 144, "Seed", "", "Right-click to restore the default seed.", 0);
+        drawChannelSlider(kChannel, 628, 243, 126, "Output", "MIDI output channel.");
+        drawSlider(kSeed, 762, 243, 96, "Seed", "", "Right-click to restore the default seed.", 0);
+        drawAction(777, 864, 243, 58, 48, "Reroll", "Pick a new seed.");
         {
             static constexpr const char* kCondChNames[] = {
                 "Off", "1", "2", "3", "4", "5", "6", "7", "8",
@@ -201,6 +203,18 @@ private:
 
         if (scaleOpen_)
             drawScaleDropdownMenu();
+    }
+
+    void actionTriggered(const int action) override
+    {
+        if (action != 777) return;
+        using Clock = std::chrono::high_resolution_clock;
+        const auto ticks = static_cast<std::uint64_t>(Clock::now().time_since_epoch().count());
+        const auto s = static_cast<std::uint32_t>(ticks ^ (ticks >> 17) ^ (ticks >> 33));
+        const float current = value(downspout::harmonic_atlas::kSeed);
+        float next = 1.0f + static_cast<float>(s % 65535u);
+        if (next == current) next = 1.0f + static_cast<float>((s + 1u) % 65535u);
+        commitParameter(downspout::harmonic_atlas::kSeed, next);
     }
 
     bool onMouse(const MouseEvent& ev) override

@@ -103,4 +103,5 @@ Core DSP, deterministic tests, the VST3 target and the catalogue screenshot are
 complete. Host validation in REAPER is pending; the panel has been reviewed
 against the repository's UI screenshot criteria and revised twice (a clipped
 Drive row, a firing diagram that never rendered, and two captions running off
-their panels).
+their panels). The panel's **Reroll** button beside **Seed (backfire, turbulence)** commits a fresh
+seed in 1-9999.

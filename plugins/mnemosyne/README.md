@@ -3,4 +3,5 @@
 Mnemosyne captures up to eight fixed-capacity MIDI phrases and recalls them in
 listen, accompany, or autonomous modes. Recall can transpose, invert, rotate,
 stretch-register, and recombine stored material. An internal motif provides
-useful autonomous output before anything has been captured.
+useful autonomous output before anything has been captured. The panel's **Reroll** button
+beside **Seed** commits a fresh recall seed in 1-65535.

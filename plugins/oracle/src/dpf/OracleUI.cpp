@@ -2,6 +2,7 @@
 #include "downspout/look_and_feel.hpp"
 #include "oracle_core.hpp"
 
+#include <chrono>
 #include <cmath>
 
 START_NAMESPACE_DISTRHO
@@ -46,7 +47,8 @@ private:
         drawNoteSlider(kMinNote, 38, 430, 194, "Lowest note", "Lower response-note boundary.");
         drawNoteSlider(kMaxNote, 240, 430, 196, "Highest note", "Upper response-note boundary.");
         drawChannelSlider(kChannel, 38, 486, 194, "Response output", "Generated response channel.");
-        drawSlider(kSeed, 240, 486, 196, "Seed", "", "Deterministic response identity.", 0);
+        drawSlider(kSeed, 240, 486, 110, "Seed", "", "Deterministic response identity.", 0);
+        drawAction(777, 356, 486, 80, 48, "Reroll", "Pick a new response seed.");
         drawCcSlider(kLevelCc, 38, 542, 194, "Level destination", "CC receiving measured level.");
         drawCcSlider(kBrightnessCc, 240, 542, 196, "Brightness destination", "CC receiving measured brightness.");
         drawCcSlider(kDensityCc, 38, 598, 194, "Density destination", "CC receiving measured density.");
@@ -66,6 +68,18 @@ private:
         drawPitchWheel(482, 529, 436, 78, pitch);
 
         endPanel();
+    }
+
+    void actionTriggered(const int action) override
+    {
+        if (action != 777) return;
+        using Clock = std::chrono::high_resolution_clock;
+        const auto ticks = static_cast<std::uint64_t>(Clock::now().time_since_epoch().count());
+        const auto s = static_cast<std::uint32_t>(ticks ^ (ticks >> 17) ^ (ticks >> 33));
+        const float current = value(downspout::oracle::kSeed);
+        float next = 1.0f + static_cast<float>(s % 65535u);
+        if (next == current) next = 1.0f + static_cast<float>((s + 1u) % 65535u);
+        commitParameter(downspout::oracle::kSeed, next);
     }
 
     void drawAnalysis(const float x, const float y, const float w, const float h)

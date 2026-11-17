@@ -7,6 +7,18 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 (No open entries from before October 2026: the screenshot script now always captures on a private Xvfb.)
 
+## Chorale: a phaser allpass written as a low-pass, and a peak detector fooled by ripples (2026-11-17)
+- **What happened:** Adding Phaser mode, a click test failed with a 0.18 sample-to-sample jump at the end of the
+  switch, and a boundedness check failed. The allpass section state had been updated as
+  `d += g*(x - g*d)`, `y = d`, which is a one-pole low-pass with DC gain 1/g (up to ~5x) rather than an allpass:
+  the cascade rang up over the block and finally flipped sign. Separately, the flanger's echo-train test reported
+  gaps of 2-3 samples because tiny ripples beside each echo were being counted as peaks.
+- **Root cause:** The two-recursion transposed allpass form was misremembered; the write-back and output paths were
+  collapsed into one state update. The test's naive local-maximum detector had no refractory period.
+- **Prevention:** A first-order allpass must keep two distinct recursions (`y = g*x + z`, `z = x - g*y`), valid only
+  for |g| < 1; check the impulse response for unit magnitude and no build-up before trusting the DSP. When counting
+  echoes in a fed-back comb, enforce a minimum spacing between accepted peaks so adjacent ripples are rejected.
+
 ## Sam: Carla's VST3 wrapper kept keyboard focus off the plugin view (2026-11-10)
 - **What happened:** In the JACK standalone, typing into Sam's text box reached the engine. Under Carla
   loaded as an in-process VST3, buttons and Clear worked but typed characters arrived partially or not at

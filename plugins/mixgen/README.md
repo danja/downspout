@@ -19,4 +19,6 @@ moving channels releases it cleanly.
 Mixgen passes stereo audio through unchanged, allowing it to sit on an existing
 utility track as well as a dedicated MIDI-control track.
 
+The panel's **Reroll** button beside **Seed** commits a fresh arrangement seed in 1-65535.
+
 See [the Producer Control Bus specification](../../docs/producer-control-bus.md).

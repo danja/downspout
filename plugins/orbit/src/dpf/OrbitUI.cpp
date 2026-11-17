@@ -2,6 +2,7 @@
 #include "downspout/look_and_feel.hpp"
 #include "orbit_core.hpp"
 
+#include <chrono>
 #include <cmath>
 
 START_NAMESPACE_DISTRHO
@@ -36,8 +37,9 @@ private:
         drawSlider(kWidth, 38, 252, 194, "Mid / side width", "x", "Stereo width multiplier.", 2);
         drawPercentSlider(kDistance, 240, 252, 200, "Distance", "Distance filtering and attenuation.");
         drawPercentSlider(kDoppler, 38, 308, 194, "Doppler", "Conservative short-delay pitch motion.");
-        drawSlider(kSeed, 240, 308, 200, "Path seed", "", "Deterministic random-walk identity.", 0,
+        drawSlider(kSeed, 240, 308, 114, "Path seed", "", "Deterministic random-walk identity.", 0,
                    static_cast<int>(std::lround(value(kTrajectory))) == 2);
+        drawAction(777, 360, 308, 80, 48, "Reroll", "Pick a new path seed.");
 
         drawSection(24, 382, 430, 249, "OUTPUT", "blend and live position");
         drawPercentSlider(kMix, 38, 415, 402, "Wet / dry", "Blend spatially processed and original audio.");
@@ -56,6 +58,18 @@ private:
         drawTrajectory(492, 138, 420, 455);
 
         endPanel();
+    }
+
+    void actionTriggered(const int action) override
+    {
+        if (action != 777) return;
+        using Clock = std::chrono::high_resolution_clock;
+        const auto ticks = static_cast<std::uint64_t>(Clock::now().time_since_epoch().count());
+        const auto s = static_cast<std::uint32_t>(ticks ^ (ticks >> 17) ^ (ticks >> 33));
+        const float current = value(downspout::orbit::kSeed);
+        float next = 1.0f + static_cast<float>(s % 65535u);
+        if (next == current) next = 1.0f + static_cast<float>((s + 1u) % 65535u);
+        commitParameter(downspout::orbit::kSeed, next);
     }
 
     void drawTrajectory(const float x, const float y, const float w, const float h)

@@ -2,6 +2,7 @@
 #include "downspout/look_and_feel.hpp"
 #include "conductor_core.hpp"
 
+#include <chrono>
 #include <cmath>
 
 START_NAMESPACE_DISTRHO
@@ -111,9 +112,22 @@ private:
         drawCcSlider(kEnergyCc, 626, 372, 143, "Energy", "CC carrying the section energy.");
         drawCcSlider(kMutationCc, 777, 372, 145, "Mutation", "CC requesting generative mutation.");
         drawCcSlider(kResetCc, 626, 428, 296, "Reset", "CC requesting downstream reset.");
-        drawSlider(kSeed, 626, 484, 296, "Form seed", "", "Deterministic form identity.", 0);
+        drawSlider(kSeed, 626, 484, 210, "Form seed", "", "Deterministic form identity.", 0);
+        drawAction(777, 842, 484, 80, 48, "Reroll", "Pick a new form seed.");
 
         endPanel();
+    }
+
+    void actionTriggered(const int action) override
+    {
+        if (action != 777) return;
+        using Clock = std::chrono::high_resolution_clock;
+        const auto ticks = static_cast<std::uint64_t>(Clock::now().time_since_epoch().count());
+        const auto s = static_cast<std::uint32_t>(ticks ^ (ticks >> 17) ^ (ticks >> 33));
+        const float current = value(downspout::conductor::kSeed);
+        float next = 1.0f + static_cast<float>(s % 65535u);
+        if (next == current) next = 1.0f + static_cast<float>((s + 1u) % 65535u);
+        commitParameter(downspout::conductor::kSeed, next);
     }
 
     void drawWeight(const std::uint32_t parameter,

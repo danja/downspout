@@ -1,18 +1,18 @@
 # Chorale
 
-A stereo chorus. The signal is delayed by a few milliseconds that sweep up and down, read in opposite directions
-for the left and right outputs. By default each side has its own delay line, so a stereo source keeps its image. Three fixed Juno-style voicings (I, I+II, II) and a Custom chorus of one to four voices. Design and
-assumptions are in [docs/design.md](docs/design.md).
+A stereo modulation effect: chorus, flanger and phaser. The chorus delays the signal by a few milliseconds that sweep up and down, read in opposite directions for the left and right outputs; by default each side has its own delay line, so a stereo source keeps its image. There are three fixed Juno-style voicings (I, I+II, II), a Custom chorus of one to four voices, a fed-back Flanger and a moving-notch Phaser. Design and assumptions are in [docs/design.md](docs/design.md).
 
 | Control | Range | Default | Notes |
 |---|---|---|---|
-| Mode | I, I+II, II, Custom | I+II | The Juno voicings are fixed (sweeps of 0.513 and 0.863 Hz, 1.5-5.4 ms) |
+| Mode | I, I+II, II, Custom, Flanger, Phaser | I+II | The Juno voicings are fixed (sweeps of 0.513 and 0.863 Hz, 1.5-5.4 ms) |
 | Tone | 0-100 % | 50 % | Opens both filters (pre 2-23.5 kHz, post 6-23.5 kHz, squared law) |
 | Mix | 0-100 % | 50 % | Equal power. CC 4 |
-| Rate | 0.05-8 Hz | 0.8 Hz | Custom. CC 1 (logarithmic) |
-| Depth | 0-10 ms | 3 ms | Custom: sweep either side of Delay, held below Delay. CC 2 |
-| Delay | 1-30 ms | 8 ms | Custom: centre delay |
+| Rate | 0.05-8 Hz | 0.8 Hz | Custom / Flanger / Phaser. CC 1 (logarithmic) |
+| Depth | 0-10 ms | 3 ms | Custom / Flanger / Phaser: sweep either side of Delay, held below Delay. CC 2 |
+| Delay | 1-30 ms | 8 ms | Custom: centre delay; Flanger: comb centre (capped at 12 ms); Phaser: sweep centre |
 | Voices | 1-4 | 2 | Custom: spread round the cycle |
+| Feedback | 0-92 % | 45 % | Flanger only: loop gain of the fed-back tap |
+| Stages | 2-12 | 4 | Phaser only: number of cascaded allpass sections |
 | Width | 0-100 % | 100 % | 0 is a mono wet signal. CC 3 |
 | Input | Mono sum, Stereo | Stereo | Stereo: a delay line per side. Mono sum: L + R into one line, as in the Juno source |
 | CC Channel | 0 (off), 1-16 | 1 | CC 1-4 take over Rate, Depth, Width, Mix until the control is moved again |

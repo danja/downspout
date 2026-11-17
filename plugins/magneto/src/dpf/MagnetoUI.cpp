@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -190,6 +191,12 @@ protected:
             return true;
         }
 
+        if (rerollRect_.contains(mx, my))
+        {
+            rerollSeed();
+            return true;
+        }
+
         for (std::size_t i = 0; i < positionCount_; ++i)
         {
             if (positionRects_[i].bounds.contains(mx, my))
@@ -269,6 +276,17 @@ private:
         values_[parameter] = v;
         setParameterValue(parameter, v);
         repaint();
+    }
+
+    void rerollSeed()
+    {
+        using Clock = std::chrono::high_resolution_clock;
+        const auto ticks = static_cast<std::uint64_t>(Clock::now().time_since_epoch().count());
+        const auto s = static_cast<std::uint32_t>(ticks ^ (ticks >> 17) ^ (ticks >> 33));
+        const float current = value(ParamId::seed);
+        float next = 1.0f + static_cast<float>(s % 9999u);
+        if (next == current) next = 1.0f + static_cast<float>((s + 1u) % 9999u);
+        commit(idx(ParamId::seed), next);
     }
 
     void step(const std::uint32_t parameter, const int direction)
@@ -490,7 +508,18 @@ private:
 
         drawStepper(ParamId::midiCh, "MIDI in channel", {colC, top, columnW, rowH},
                     kMidiChannelNames.data());
-        drawSlider(ParamId::seed, "Seed (backfire, turbulence)", {colC, top + rowH, columnW, rowH}, kDriveAccent);
+        drawSlider(ParamId::seed, "Seed (backfire, turbulence)", {colC, top + rowH, 130.0f, rowH}, kDriveAccent);
+        rerollRect_ = {colC + 138.0f, top + rowH + 7.0f, 80.0f, 25.0f};
+        {
+            beginPath();
+            fillColor(kDriveAccent.r, kDriveAccent.g, kDriveAccent.b, 255);
+            roundedRect(rerollRect_.x, rerollRect_.y, rerollRect_.w, rerollRect_.h, 4.0f);
+            fill();
+            fillColor(250, 248, 242, 255);
+            fontSize(11.0f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            text(rerollRect_.x + rerollRect_.w * 0.5f, rerollRect_.y + rerollRect_.h * 0.5f, "Reroll", nullptr);
+        }
 
         const auto& t = theme();
         fc(t.textDim);
@@ -796,6 +825,7 @@ private:
     std::size_t stepperCount_ = 0;
     std::size_t positionCount_ = 0;
     Rect themeRect_ {};
+    Rect rerollRect_ {};
     int activeSlider_ = -1;
     bool darkTheme_ = false;
 

@@ -3,6 +3,7 @@
 #include "mixgen_core.hpp"
 
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 
@@ -33,12 +34,13 @@ private:
         static constexpr const char* modes[] {"Random", "Quasi", "Euclidean"};
         drawChoice(kMode, 38, 137, 472, "Producer logic", modes, 3,
                    "Random repeats a seeded pattern; Quasi reduces clumps; Euclidean distributes activity evenly.");
-        drawBeatSlider(kRate, 38, 197, 220, "Step rate",
+        drawBeatSlider(kRate, 38, 197, 176, "Step rate",
                        "Time between producer decisions, in quarter-note beats.");
-        drawSlider(kSteps, 270, 197, 112, "Length", " steps",
+        drawSlider(kSteps, 224, 197, 96, "Steps", " steps",
                    "Number of decisions before the pattern repeats.", 0);
-        drawSlider(kSeed, 394, 197, 116, "Seed", "",
+        drawSlider(kSeed, 330, 197, 100, "Seed", "",
                    "Change this to generate a different repeatable arrangement.", 0);
+        drawAction(777, 436, 197, 74, 48, "Reroll", "Pick a new arrangement seed.");
 
         drawSection(540, 102, 516, 160, "MIX SHAPE", "how strongly should it produce?");
         drawPercentSlider(kDensity, 554, 137, 238, "Active density",
@@ -87,6 +89,18 @@ private:
         drawReadout(226, 634, 410, 38, "LIVE MACRO", live);
         drawReadout(648, 634, 394, 38, "DEFAULT FULL BUS", "CC 30 delay · 31 feedback · 32 mix · 33 space");
         endPanel();
+    }
+
+    void actionTriggered(const int action) override
+    {
+        if (action != 777) return;
+        using Clock = std::chrono::high_resolution_clock;
+        const auto ticks = static_cast<std::uint64_t>(Clock::now().time_since_epoch().count());
+        const auto s = static_cast<std::uint32_t>(ticks ^ (ticks >> 17) ^ (ticks >> 33));
+        const float current = value(downspout::mixgen::kSeed);
+        float next = 1.0f + static_cast<float>(s % 65535u);
+        if (next == current) next = 1.0f + static_cast<float>((s + 1u) % 65535u);
+        commitParameter(downspout::mixgen::kSeed, next);
     }
 
     void drawBoard(const float x, const float y, const float w, const float h)

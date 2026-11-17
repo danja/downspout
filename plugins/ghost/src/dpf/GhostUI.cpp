@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -314,6 +315,10 @@ protected:
             }
         }
 
+        if (rerollBox().contains(mx, my)) {
+            rerollSeed();
+            return true;
+        }
         for (int s = 0; s < static_cast<int>(kMainSliders.size()); ++s) {
             if (mainTrack(s).contains(mx, my)) {
                 dragSlider_ = s;
@@ -433,8 +438,14 @@ private:
 
     [[nodiscard]] Rect mainTrack(int s) const noexcept
     {
-        const float trackW = kDivX - kMainX - kPad;
+        const float trackW = s == 4 ? 260.0f : kDivX - kMainX - kPad;  // seed shares its row with Reroll
         return { kMainX, mainRowY(mainSliderRow(s)) + 22.0f, trackW, 14.0f };
+    }
+
+    [[nodiscard]] Rect rerollBox() const noexcept
+    {
+        const Rect tr = mainTrack(4);
+        return { tr.x + tr.w + 10.0f, tr.y - 6.0f, 92.0f, 26.0f };
     }
 
     [[nodiscard]] Rect segBox() const noexcept
@@ -502,6 +513,17 @@ private:
         float v              = def.min + t * (def.max - def.min);
         if (def.integer) v   = std::round(v);
         commitParam(def.index, def.stateKey, v);
+    }
+
+    void rerollSeed()
+    {
+        using Clock = std::chrono::high_resolution_clock;
+        const auto ticks = static_cast<std::uint64_t>(Clock::now().time_since_epoch().count());
+        const auto s = static_cast<std::uint32_t>(ticks ^ (ticks >> 17) ^ (ticks >> 33));
+        const float current = values_[kParamSeed];
+        float next = 1.0f + static_cast<float>(s % 65535u);
+        if (next == current) next = 1.0f + static_cast<float>((s + 1u) % 65535u);
+        commitParam(kParamSeed, "seed", next);
     }
 
     void openDrop(const DropDef* def)
@@ -725,10 +747,23 @@ private:
         for (int s = 0; s < static_cast<int>(kMainSliders.size()); ++s) {
             const SliderDef& def = kMainSliders[static_cast<std::size_t>(s)];
             const Rect tr        = mainTrack(s);
-            drawLabelValue(kMainX, tr.y - 18.0f, trackW, def.label,
+            drawLabelValue(kMainX, tr.y - 18.0f, tr.w, def.label,
                            formatSlider(def, values_[def.index]).c_str());
             const float norm = clampf((values_[def.index] - def.min) / (def.max - def.min), 0.0f, 1.0f);
             drawTrack(tr, norm, false);
+        }
+
+        {
+            const Rect box = rerollBox();
+            beginPath();
+            fillColor(kMainAccent.r, kMainAccent.g, kMainAccent.b, 255);
+            roundedRect(box.x, box.y, box.w, box.h, 4.0f);
+            fill();
+            closePath();
+            fontSize(11.0f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            fillColor(kCreamR, kCreamG, kCreamB, 255);
+            text(box.x + box.w * 0.5f, box.y + box.h * 0.5f, "Reroll", nullptr);
         }
 
         // Mode: segmented two-way switch.

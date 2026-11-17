@@ -58,14 +58,27 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
       Samai) via `scripts/generate-drumgen-patterns.py`; all 52 now carry at least five hits and 34 have
       soft strokes. Added a core test that loads all 52 files, checks unique names and minimum density.
       Still needs an ear check of the filled figures.
-- [ ] **chorale**: extend it to also be a flanger and a phaser, as well as a chorus.
+- [x] **chorale**: added Flanger (modes 4) and Phaser (mode 5) alongside the four chorus modes. Rate/Depth/Delay drive all three;
+      Feedback (0-92 %) is the flanger's damped loop gain, Stages (2-12) the phaser's allpass cascade. Core tests cover the flanger's decaying echo
+      train and the phaser's moving notches (270 checks total); profile.ttl, README, design notes and Pages docs updated; VST3 builds; fresh screenshot
+      captured and checked programmatically. Visual acceptance is pending: this model cannot view images, so the screenshot was verified by pixel/colour
+      analysis only. Both new modes still need a host listen.
 - [x] **bassops**: the fully-wet path used to sum the ducked input to mono, discarding the stereo image.
       It now delays mid and difference separately and reconstructs the ducked stereo pair, with side
       shaping and Bass 90 added on top. Core tests cover stereo pass-through at defaults, anti-phase
       stereo not collapsing to silence, and stereo-linked ducking; profile.ttl and all docs updated.
       Still needs a host listen.
 - [x] **loopdelay**: ping-pong was a symmetric cross-mix of the returns, a no-op for centred material. It now steers a mono-ised drive into one line and swaps returns, giving alternating L/R repeats; core tests cover the alternation, the p=0 stereo case and the default's effect. Still needs a host listen.
-- [ ] **randomise buttons**: add one to every plugin that does not already have one, where it makes sense.
+- [x] **randomise buttons**: all 24 seed-bearing plugins now have a one-click new-seed control. Added **Reroll**
+      beside the Seed slider in `grist`, `sprout`, `fathom`, `orbit`, `oracle`, `polymeter`, `drift`, `mosaic`,
+      `conductor`, `harmonic-atlas`, `mixgen`, `mnemosyne`, `ghost` and `magneto` (action id 777 for the shared
+      panel UIs; custom hit-testing for Ghost and Magneto). Each commits a fresh seed inside that plugin's own
+      range (1-65535, or 1-9999 in Magneto) and never repeats the current value. The other ten seeded plugins
+      (`bassgen`, `drumgen`, `ground`, `lifeform`, `treatment`, `voxmod`, `worms`, `p-mix`, `markov`, `melgen`)
+      already had New / Mutate / Randomise / Random controls. Every changed VST3 target builds, all 14 catalogue
+      screenshots were recaptured and checked programmatically (correct button region, visible label), and the
+      plugin READMEs mention the control. Visual acceptance and host/listening checks remain pending: this model
+      cannot view images and no host session was run.
 
 ## Spectrogram painter (built 2026-11-03 as `fresco`; heard by nobody yet)
 

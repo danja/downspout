@@ -56,5 +56,6 @@ state round trip.
 ## Status
 
 Core DSP, deterministic tests, the VST3 target, the panel and the catalogue
-screenshot are complete. Host validation in REAPER remains. Live onset/level
-metering in the panel (output status parameters) is explicitly future work.
+screenshot are complete. The panel's **Reroll** button beside **Seed** commits a fresh seed in
+1-65535. Host validation in REAPER remains. Live onset/level metering in the panel (output status
+parameters) is explicitly future work.

@@ -38,4 +38,7 @@ cmake --build build --target grist-vst3
 ctest --test-dir build -R grist
 ```
 
+The panel's **Reroll** button beside **Seed** commits a fresh seed in 1-65535, so the grain
+randomness changes without dragging the slider.
+
 Run `env -u DISPLAY scripts/capture-plugin-screenshots.sh grist` for the catalogue image.

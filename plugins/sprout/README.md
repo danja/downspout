@@ -39,4 +39,7 @@ cmake --build build --target sprout-vst3
 ctest --test-dir build -R sprout
 ```
 
+The panel's **Reroll** button beside **Seed (probability choices)** commits a fresh seed in
+1-65535, so a new growth pattern can be drawn without dragging the slider.
+
 Run `env -u DISPLAY scripts/capture-plugin-screenshots.sh sprout` for the catalogue image.

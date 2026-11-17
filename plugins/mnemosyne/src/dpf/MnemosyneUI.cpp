@@ -2,6 +2,7 @@
 #include "downspout/look_and_feel.hpp"
 #include "mnemosyne_core.hpp"
 
+#include <chrono>
 #include <cmath>
 #include <cstring>
 #include <string>
@@ -74,8 +75,9 @@ private:
         drawChoice(kTransform, 628, 296, 294, "Transform", transforms, 6,
                    "Primary transformation used during recall.");
         drawNoteSlider(kRegister, 628, 355, 294, "Target register", "Centre note for transformed material.");
-        drawChannelSlider(kChannel, 628, 411, 143, "Output", "Generated MIDI channel.");
-        drawSlider(kSeed, 779, 411, 143, "Seed", "", "Deterministic recall identity.", 0);
+        drawChannelSlider(kChannel, 628, 411, 126, "Output", "Generated MIDI channel.");
+        drawSlider(kSeed, 762, 411, 96, "Seed", "", "Deterministic recall identity.", 0);
+        drawAction(777, 864, 411, 58, 48, "Reroll", "Pick a new recall seed.");
         drawReadout(628, 467, 294, 58, "Capture activity",
                     captured > 0 ? "Listening · notes received" : "Waiting for MIDI");
 
@@ -84,7 +86,15 @@ private:
 
     void actionTriggered(const int action) override
     {
-        if (action == 1)
+        if (action == 777) {
+            using Clock = std::chrono::high_resolution_clock;
+            const auto ticks = static_cast<std::uint64_t>(Clock::now().time_since_epoch().count());
+            const auto s = static_cast<std::uint32_t>(ticks ^ (ticks >> 17) ^ (ticks >> 33));
+            const float current = value(downspout::mnemosyne::kSeed);
+            float next = 1.0f + static_cast<float>(s % 65535u);
+            if (next == current) next = 1.0f + static_cast<float>((s + 1u) % 65535u);
+            commitParameter(downspout::mnemosyne::kSeed, next);
+        } else if (action == 1)
             setState("reservoir", "version=1\ncount=0\n");
     }
 };
