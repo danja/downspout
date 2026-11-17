@@ -26,7 +26,8 @@ Each control was tied to a signal-path decision before the UI was drawn:
 - Bell controls the feedback low-pass cutoff; Breath adds filtered noise.
 - Reed Instability adds turbulent-flow noise and slow lip flutter.
 - Register Capture feeds more AC reed flow into the bore; high pressure and
-  tighter embouchure can let a nonlinear upper mode catch.
+  tighter embouchure can let a nonlinear upper mode catch, including occasional
+  short squawks onto the wrong register.
 - Attack and Release shape a per-note envelope; Velocity controls sensitivity.
 - Level and MIDI In are ordinary host parameters.
 
@@ -50,8 +51,17 @@ and slow aperture/frequency flutter. A damped reed-opening pole softens valve
 closure; a DC blocker removes mean airflow before the acoustic component enters
 the delay line, initialized on the first flow sample to avoid a note-on impulse.
 Register Capture scales that AC flow by mouth pressure and Embouchure, so upper
-modes can catch without directly transposing the MIDI note. Bell maps to a
-low-pass cutoff from 900 Hz to the lesser of 15 kHz and 42% of sample rate.
+modes can catch without directly transposing the MIDI note. When that product is
+non-zero, a per-voice random draw can trigger a short excursion: the bore delay and
+the lip oscillator briefly move to the second or third mode (a clarinet overblows
+at the twelfth), with more AC flow injected during the excursion, then both glide
+back. The draw is skipped entirely when capture is gated off, so the zero-capture
+render stays bit-identical. Bell maps to a low-pass cutoff from 900 Hz to the
+lesser of 15 kHz and 42% of sample rate.
+
+The summed voices pass through a fixed make-up gain and a tanh soft limiter before
+the Level control, because the reed/bore loop alone leaves a single default note
+near -30 dBFS. The limiter keeps dense eight-voice chords below full scale.
 These are sound-design approximations, not measured brass acoustics; describe
 that distinction anywhere the UI or docs explain the model.
 
@@ -69,9 +79,12 @@ The core suite checks:
   independent direct DFT;
 - note velocity, envelope release, controller mapping, channel filtering and
   all-sound-off behavior;
+- a usable default single-note level and a bounded dense chord;
 - audible effects of Reed Instability and Register Capture, including increased
   second-harmonic energy at high pressure/tighter Embouchure and no capture when
   mouth pressure is below the onset threshold or Embouchure is at its loose limit;
+- occasional upper-mode-dominant windows under high capture, compared against a
+  no-capture render, with the played register dominant most of the time;
 - that the tone controls change rendered audio, not just stored parameter
   values;
 - finite, bounded output with eight voices at a high sample rate and maximum

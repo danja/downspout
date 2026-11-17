@@ -275,6 +275,103 @@ void testLoopEndSnappedToZeroCrossing()
     assert(std::fabs(lastSample) < 0.2f);  // within ~sin(~1-sample step at 50 Hz / 1 kHz)
 }
 
+void testPingPongAlternatesMonoRepeats()
+{
+    State state;
+    prepare(state, 1000.0);
+    Parameters parameters;
+    parameters.values[kTimeMode] = 0.0f;
+    parameters.values[kFreeTimeMs] = 20.0f;
+    parameters.values[kFeedback] = 0.8f;
+    parameters.values[kMix] = 1.0f;
+    parameters.values[kTone] = 1.0f;
+    parameters.values[kPingPong] = 1.0f;
+    std::array<float, 100> leftIn {};
+    std::array<float, 100> rightIn {};
+    std::array<float, 100> leftOut {};
+    std::array<float, 100> rightOut {};
+    leftIn[0] = 0.5f;
+    rightIn[0] = 0.5f;  // mono/centred input: the case that used to be a no-op
+    const AudioBlock audio {leftIn.data(), rightIn.data(), leftOut.data(), rightOut.data()};
+    (void)process(state, parameters, transportAt(), leftOut.size(), audio);
+
+    // Repeats at 20, 40, 60 and 80 frames must alternate ears and decay.
+    for (int repeat = 1; repeat <= 4; ++repeat) {
+        const std::size_t frame = static_cast<std::size_t>(20 * repeat);
+        const float left = std::fabs(leftOut[frame]);
+        const float right = std::fabs(rightOut[frame]);
+        const bool expectLeft = (repeat % 2) == 1;
+        assert(std::max(left, right) > 0.05f);
+        assert(expectLeft ? left > right * 4.0f : right > left * 4.0f);
+    }
+    assert(std::fabs(leftOut[20]) > std::fabs(leftOut[60]));
+    assert(std::fabs(rightOut[40]) > std::fabs(rightOut[80]));
+}
+
+void testPingPongZeroKeepsStereoSeparate()
+{
+    State state;
+    prepare(state, 1000.0);
+    Parameters parameters;
+    parameters.values[kTimeMode] = 0.0f;
+    parameters.values[kFreeTimeMs] = 20.0f;
+    parameters.values[kFeedback] = 0.8f;
+    parameters.values[kMix] = 1.0f;
+    parameters.values[kTone] = 1.0f;
+    parameters.values[kPingPong] = 0.0f;
+    std::array<float, 60> leftIn {};
+    std::array<float, 60> rightIn {};
+    std::array<float, 60> leftOut {};
+    std::array<float, 60> rightOut {};
+    leftIn[0] = 0.5f;
+    rightIn[0] = -0.25f;
+    const AudioBlock audio {leftIn.data(), rightIn.data(), leftOut.data(), rightOut.data()};
+    (void)process(state, parameters, transportAt(), leftOut.size(), audio);
+    assert(leftOut[20] > 0.1f);
+    assert(rightOut[20] < -0.05f);
+    assert(std::fabs(leftOut[20]) > std::fabs(rightOut[20]) * 1.8f);
+    for (std::size_t i = 0; i < leftOut.size(); ++i) {
+        assert(std::isfinite(leftOut[i]));
+        assert(std::isfinite(rightOut[i]));
+    }
+}
+
+void testPingPongDefaultChangesMonoOutput()
+{
+    auto render = [](const float pingPong) {
+        State state;
+        prepare(state, 1000.0);
+        Parameters parameters;
+        parameters.values[kTimeMode] = 0.0f;
+        parameters.values[kFreeTimeMs] = 20.0f;
+        parameters.values[kFeedback] = 0.8f;
+        parameters.values[kMix] = 1.0f;
+        parameters.values[kTone] = 1.0f;
+        parameters.values[kPingPong] = pingPong;
+        std::array<float, 100> input {};
+        std::array<float, 100> leftOut {};
+        std::array<float, 100> rightOut {};
+        input[0] = 0.5f;
+        const AudioBlock audio {input.data(), input.data(), leftOut.data(), rightOut.data()};
+        (void)process(state, parameters, transportAt(), input.size(), audio);
+        std::array<float, 100> result {};
+        for (std::size_t i = 0; i < result.size(); ++i)
+            result[i] = leftOut[i] - rightOut[i];
+        return result;
+    };
+    const auto off = render(0.0f);
+    const auto def = render(kParameterSpecs[kPingPong].defaultValue);
+    const auto full = render(1.0f);
+    float differenceFromDefault = 0.0f;
+    float sidewaysAtFull = 0.0f;
+    for (std::size_t i = 0; i < off.size(); ++i) {
+        differenceFromDefault += std::fabs(off[i] - def[i]);
+        sidewaysAtFull += std::fabs(full[i]);
+    }
+    assert(differenceFromDefault > 0.1f);
+    assert(sidewaysAtFull > 0.5f);
+}
+
 void testDenseFeedbackRemainsFiniteAndBounded()
 {
     State state;
@@ -310,6 +407,9 @@ int main()
     testDryPathIsTransparent();
     testLoopCapturesAndPlays();
     testLoopEndSnappedToZeroCrossing();
+    testPingPongAlternatesMonoRepeats();
+    testPingPongZeroKeepsStereoSeparate();
+    testPingPongDefaultChangesMonoOutput();
     testDenseFeedbackRemainsFiniteAndBounded();
     return 0;
 }

@@ -440,7 +440,9 @@ feedback delay; Pressure controls drive and loop sustain, Embouchure detunes the
 Bell changes feedback damping, and Breath adds filtered noise. Reed Instability adds
 turbulent-flow noise and lip flutter; Register Capture couples nonlinear airflow
 more strongly into the waveguide. Upper-mode capture depends on Pressure and
-Embouchure and does not directly transpose the played note. CC 1-6 map in that
+Embouchure and can briefly squawk onto the wrong register before falling back;
+it does not directly transpose the played note. Output is made up to a usable
+level and softly limited. CC 1-6 map in that
 order and CC 7 is Level. A compact, nonlinear waveguide model, not a calibrated
 brass simulation. No transport or audio input.
 
@@ -705,9 +707,10 @@ override Cutoff and Scream.
 ### bassops
 Sidechain ducker plus mid/side bass management. Inputs 1-2 are the main signal, 3-4 a
 control signal (typically a dry kick send) driving an envelope follower whose inverse ducks
-the main signal. After ducking the signal is summed to mono (a one-sided mono feed is
-treated as dual mono); a waveshaper's added harmonics, high-passed at the cutoff, form the
-side, so bass stays clean mono and highs gain width. An optional **Bass 90** (Off/Left/Right,
+the main signal. After ducking the signal is split into mid and difference, both delayed
+by the FIR latency, so the source stereo image is carried through the wet path (a
+one-sided mono feed is treated as dual mono); a waveshaper's added harmonics, high-passed
+at the cutoff, form an extra side signal, so highs gain width. An optional **Bass 90** (Off/Left/Right,
 default off and idle) shifts the bass below the cutoff 90 degrees between the channels for
 low-end width. With **Attack and Release both at 0** the follower is bypassed and the main
 signal is multiplied by the signed sidechain (ring mod, blended by Duck Depth). **Delay

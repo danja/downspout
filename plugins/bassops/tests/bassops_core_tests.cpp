@@ -205,6 +205,93 @@ void testDefaultsKeepBass()
     }
 }
 
+void testStereoImageSurvivesTheWetPath()
+{
+    constexpr std::uint32_t kN = 48000;
+    std::vector<float> l(kN), r(kN), zero(kN, 0.0f), oL(kN), oR(kN);
+    for (std::uint32_t i = 0; i < kN; ++i) {
+        l[i] = 0.4f * static_cast<float>(std::sin(2.0 * 3.14159265358979 * 1000.0 * i / 48000.0));
+        r[i] = 0.4f * static_cast<float>(std::sin(2.0 * 3.14159265358979 * 1500.0 * i / 48000.0));
+    }
+    EngineState state;
+    activate(state);
+    AudioBlock audio;
+    audio.mainL = l.data();
+    audio.mainR = r.data();
+    audio.controlL = zero.data();
+    audio.controlR = zero.data();
+    audio.outL = oL.data();
+    audio.outR = oR.data();
+    processBlock(state, Parameters{}, BusParameters{}, kN, 48000.0, audio);
+
+    // At the defaults (Wet=100, Side Shape=0, Bass 90 off) the ducked stereo pair
+    // must come back unchanged apart from the reported FIR latency.
+    double worstLeft = 0.0, worstRight = 0.0;
+    for (std::uint32_t i = kN / 2; i < kN; ++i) {
+        worstLeft = std::max(worstLeft, std::fabs(static_cast<double>(oL[i]) - l[i - kFirDelay]));
+        worstRight = std::max(worstRight, std::fabs(static_cast<double>(oR[i]) - r[i - kFirDelay]));
+    }
+    assert(worstLeft < 1.0e-3 && worstRight < 1.0e-3);
+}
+
+void testAntiPhaseStereoIsNotSilent()
+{
+    constexpr std::uint32_t kN = 48000;
+    std::vector<float> l(kN), r(kN), zero(kN, 0.0f), oL(kN), oR(kN);
+    for (std::uint32_t i = 0; i < kN; ++i) {
+        l[i] = 0.4f * static_cast<float>(std::sin(2.0 * 3.14159265358979 * 440.0 * i / 48000.0));
+        r[i] = -l[i];
+    }
+    EngineState state;
+    activate(state);
+    AudioBlock audio;
+    audio.mainL = l.data(); audio.mainR = r.data();
+    audio.controlL = zero.data(); audio.controlR = zero.data();
+    audio.outL = oL.data(); audio.outR = oR.data();
+    processBlock(state, Parameters{}, BusParameters{}, kN, 48000.0, audio);
+
+    double energy = 0.0, difference = 0.0;
+    for (std::uint32_t i = kN / 2; i < kN; ++i) {
+        energy += static_cast<double>(oL[i]) * oL[i] + static_cast<double>(oR[i]) * oR[i];
+        difference += std::fabs(static_cast<double>(oL[i] + oR[i]));
+    }
+    assert(energy > 100.0);
+    assert(difference / (kN / 2) < 1.0e-3);
+}
+
+void testDuckingIsStereoLinked()
+{
+    constexpr std::uint32_t kN = 48000;
+    std::vector<float> l(kN), r(kN), sc(kN, 0.4f), oL(kN), oR(kN), uL(kN), uR(kN);
+    std::vector<float> zero(kN, 0.0f);
+    for (std::uint32_t i = 0; i < kN; ++i) {
+        l[i] = 0.4f * static_cast<float>(std::sin(2.0 * 3.14159265358979 * 700.0 * i / 48000.0));
+        r[i] = 0.4f * static_cast<float>(std::sin(2.0 * 3.14159265358979 * 1100.0 * i / 48000.0));
+    }
+    const auto render = [&](std::vector<float>& outL, std::vector<float>& outR,
+                            const float* controlL) {
+        EngineState state;
+        activate(state);
+        AudioBlock audio;
+        audio.mainL = l.data(); audio.mainR = r.data();
+        audio.controlL = controlL; audio.controlR = zero.data();
+        audio.outL = outL.data(); audio.outR = outR.data();
+        processBlock(state, Parameters{}, BusParameters{}, kN, 48000.0, audio);
+    };
+    render(uL, uR, zero.data());
+    render(oL, oR, sc.data());
+
+    double duckedLeft = 0.0, duckedRight = 0.0, dryLeft = 0.0, dryRight = 0.0;
+    for (std::uint32_t i = kN / 2; i < kN; ++i) {
+        duckedLeft += oL[i] * oL[i]; duckedRight += oR[i] * oR[i];
+        dryLeft += uL[i] * uL[i]; dryRight += uR[i] * uR[i];
+    }
+    const float leftRatio = static_cast<float>(std::sqrt(duckedLeft / dryLeft));
+    const float rightRatio = static_cast<float>(std::sqrt(duckedRight / dryRight));
+    assert(leftRatio > 0.5f && leftRatio < 0.7f);
+    assert(std::fabs(leftRatio - rightRatio) < 0.02f);
+}
+
 // With the waveshaper on, the bass is still clean mono in both channels (the added
 // harmonics live in the side), and distorted material above the cutoff goes to the side.
 void testShapeKeepsBassMonoAndWidensHighs()
@@ -691,6 +778,9 @@ int main()
     testNoDuckingWithNoSidechain();
     testDuckingReducesLevel();
     testDefaultsKeepBass();
+    testStereoImageSurvivesTheWetPath();
+    testAntiPhaseStereoIsNotSilent();
+    testDuckingIsStereoLinked();
     testShapeKeepsBassMonoAndWidensHighs();
     testBassPhaseDefaultsOffAndIdle();
     testBassPhaseQuadrature();

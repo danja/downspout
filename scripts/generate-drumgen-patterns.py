@@ -89,38 +89,41 @@ write_template(OUT_DIR, "maqsum.dg-pattern", "Maqsum", SRC, TAGS, "4/4",
     HAT:  {2: STRONG, 6: STRONG, 12: STRONG, 14: STRONG},
 })
 
-# BALADI: D D T  D T K
-# D at 0,2,8 | T at 4,10 | K at 12
+# BALADI: D D TK T D TK T TK  (filled variant)
+# D at 0,2,8 | T at 4,10 | K at 12; soft Ka fills the TK pairs
 write_template(OUT_DIR, "baladi.dg-pattern", "Baladi", SRC, TAGS, "4/4",
-               "Egyptian 4/4 with double Doum on beat 1",
+               "Egyptian 4/4 with double Doum on beat 1 and filled TK pairs",
                1, 4, 4, 4, 16, 16, {
     KICK: {0: STRONG, 2: STRONG, 8: STRONG},
-    HAT:  {4: STRONG, 10: STRONG},
-    CLAP: {12: STRONG},
+    HAT:  {4: STRONG, 6: SOFT, 10: STRONG, 14: SOFT},
+    CLAP: {5: SOFT, 11: SOFT, 12: STRONG, 15: SOFT},
 })
 
-# SAIDI: D T  D D T
-# D at 0,8,10 | T at 4,12
+# SAIDI: D T TK D D TK T TK  (filled variant)
+# D at 0,8,10 | T at 4,12 | TK pairs filled in with soft Ka/Tek
 write_template(OUT_DIR, "saidi.dg-pattern", "Saidi", SRC, TAGS, "4/4",
-               "Upper-Egyptian 4/4; strong first Doum with triple-Doum mid-pattern",
+               "Upper-Egyptian 4/4; triple-Doum with filled TK pairs",
                1, 4, 4, 4, 16, 16, {
     KICK: {0: STRONG, 8: STRONG, 10: STRONG},
-    HAT:  {4: STRONG, 12: STRONG},
+    HAT:  {4: STRONG, 12: STRONG, 14: SOFT},
+    CLAP: {5: SOFT, 11: SOFT, 15: SOFT},
 })
 
-# NAWARI: T D T  D T   (Gypsy variant starting on Tek)
+# NAWARI: T D kk T D kk T kk  (filled Gypsy variant starting on Tek)
 write_template(OUT_DIR, "nawari.dg-pattern", "Nawari", SRC, TAGS, "4/4",
-               "Gypsy/Roma 4/4 variant beginning on Tek",
+               "Gypsy/Roma 4/4 variant beginning on Tek, with filled soft Ka strokes",
                1, 4, 4, 4, 16, 16, {
     HAT:  {0: STRONG, 8: STRONG, 12: STRONG},
     KICK: {4: STRONG, 10: STRONG},
+    CLAP: {5: SOFT, 6: SOFT, 11: SOFT, 14: SOFT, 15: SOFT},
 })
 
-# BOLERO: D T T D
+# BOLERO: D -K T K T K D  (filled variant)
 write_template(OUT_DIR, "bolero.dg-pattern", "Bolero", SRC, TAGS, "4/4",
-               "Sparse dramatic 4/4 with two Doums and two Teks",
+               "Dramatic 4/4 with two Doums and filled Ka strokes between the Teks",
                1, 4, 4, 4, 16, 16, {
     KICK: {0: STRONG, 12: STRONG},
+    CLAP: {2: SOFT, 6: SOFT, 10: SOFT},
     HAT:  {4: STRONG, 8: STRONG},
 })
 
@@ -168,35 +171,37 @@ write_template(OUT_DIR, "zaffa.dg-pattern", "Zaffa", SRC, TAGS, "4/4",
 
 # MALFUF: D -T T   ("spinning" groove)
 write_template(OUT_DIR, "malfuf.dg-pattern", "Malfuf", SRC, TAGS, "2/4",
-               "Fast-spinning 2/4; common in Egyptian weddings",
+               "Fast-spinning 2/4; common in Egyptian weddings; filled ka/tek strokes",
                1, 2, 4, 4, 8, 8, {
     KICK: {0: STRONG},
-    HAT:  {6: STRONG},
+    CLAP: {1: SOFT, 2: SOFT, 4: SOFT, 5: SOFT, 7: SOFT},  # Dk kT kk Tk
+    HAT:  {3: SOFT, 6: STRONG},
 })
 
 # KHALIGI: D -D T  (Malfuf with 2 Doums; Gulf region)
 write_template(OUT_DIR, "khaligi.dg-pattern", "Khaligi", SRC, TAGS, "2/4",
-               "Gulf region 2/4; Malfuf with double Doum",
+               "Gulf region 2/4; Malfuf with double Doum and filled ka/tek strokes",
                1, 2, 4, 4, 8, 8, {
     KICK: {0: STRONG, 4: STRONG},
-    HAT:  {6: STRONG},
+    CLAP: {1: SOFT, 2: SOFT, 5: SOFT, 7: SOFT},  # Dk kD kk Tk
+    HAT:  {3: SOFT, 6: STRONG},
 })
 
-# AYUB: D -k D T
+# AYUB: D kk D T  (two-ka variant)
 write_template(OUT_DIR, "ayub.dg-pattern", "Ayub", SRC, TAGS, "2/4",
-               "Sufi/Zar ceremony 2/4 with soft Ka pickup",
+               "Sufi/Zar ceremony 2/4 with soft Ka pickup (two-ka variant)",
                1, 2, 4, 4, 8, 8, {
     KICK: {0: STRONG, 4: STRONG},
-    CLAP: {2: SOFT},
+    CLAP: {2: SOFT, 3: SOFT},
     HAT:  {6: STRONG},
 })
 
-# KARACHI: T -k T D  (inverted Ayub)
+# KARACHI: T kk T D  (inverted Ayub, two-ka variant)
 write_template(OUT_DIR, "karachi.dg-pattern", "Karachi", SRC, TAGS, "2/4",
-               "Inverted Ayub; starts on Tek",
+               "Inverted Ayub; starts on Tek (two-ka variant)",
                1, 2, 4, 4, 8, 8, {
     HAT:  {0: STRONG, 4: STRONG},
-    CLAP: {2: SOFT},
+    CLAP: {2: SOFT, 3: SOFT},
     KICK: {6: STRONG},
 })
 
@@ -204,11 +209,12 @@ write_template(OUT_DIR, "karachi.dg-pattern", "Karachi", SRC, TAGS, "2/4",
 # 3/4  (bars=1, meter=3/4, spb=4, spbar=12, total=12)
 # =========================================================================
 
-# VALS: D T T  (Turkish waltz)
+# VALS: D -K T K T K  (filled Turkish waltz)
 write_template(OUT_DIR, "vals.dg-pattern", "Vals", SRC, TAGS, "3/4",
-               "Turkish waltz (Vals=Waltz); simple three-beat feel",
+               "Turkish waltz (Vals=Waltz); filled Ka strokes between the Teks",
                1, 3, 4, 4, 12, 12, {
     KICK: {0: STRONG},
+    CLAP: {2: SOFT, 6: SOFT, 10: SOFT},
     HAT:  {4: STRONG, 8: STRONG},
 })
 
@@ -240,12 +246,13 @@ write_template(OUT_DIR, "shoush.dg-pattern", "Shoush", SRC, TAGS, "5/8",
 # 6/4  (bars=1, meter=6/4, spb=4, spbar=24, total=24)
 # =========================================================================
 
-# SUDASI: D D D D D T
+# SUDASI: D TK T D D TK T D D K T K  (filled variant)
 write_template(OUT_DIR, "sudasi.dg-pattern", "Sudasi", SRC, TAGS, "6/4",
-               "Six-beat Sudanese rhythm with five Doums and one Tek",
+               "Six-beat Sudanese rhythm with five Doums and filled TK pairs",
                1, 6, 4, 4, 24, 24, {
     KICK: {0: STRONG, 4: STRONG, 8: STRONG, 12: STRONG, 16: STRONG},
-    HAT:  {20: STRONG},
+    CLAP: {2: SOFT, 3: SOFT, 14: SOFT, 15: SOFT, 22: STRONG},
+    HAT:  {2: SOFT, 6: STRONG, 10: STRONG, 11: SOFT, 14: SOFT, 18: STRONG, 20: STRONG},
 })
 
 # =========================================================================
@@ -320,12 +327,13 @@ write_template(OUT_DIR, "masmoudi.dg-pattern", "Masmoudi", SRC, TAGS, "8/4",
 # 9/8  (bars=1, meter=9/8, spb=2, spbar=18, total=18)
 # =========================================================================
 
-# KARSILAMA: D T D T T  (12 12 12 123)
+# KARSILAMA: D tk T tk D tk T T tk  (filled variant, 12 12 12 123)
 write_template(OUT_DIR, "karsilama.dg-pattern", "Karsilama", SRC, TAGS, "9/8",
-               "Turkish 9/8 in 2+2+2+3 grouping",
+               "Turkish 9/8 in 2+2+2+3 grouping with filled tk subdivisions",
                1, 9, 8, 2, 18, 18, {
     KICK: {0: STRONG, 8: STRONG},
-    HAT:  {4: STRONG, 12: STRONG, 16: STRONG},
+    HAT:  {2: SOFT, 4: STRONG, 12: STRONG, 16: STRONG},
+    CLAP: {3: SOFT, 5: SOFT, 9: SOFT, 17: SOFT},
 })
 
 # GYPSY 9: D D tk T tk T T tk
@@ -352,21 +360,23 @@ write_template(OUT_DIR, "syncopated9.dg-pattern", "Syncopated 9", SRC, TAGS, "9/
 # 10/8  (bars=1, meter=10/8, spb=2, spbar=20, total=20)
 # =========================================================================
 
-# CURCUNA: D T D T  (123 12 12 123)
-# Accent positions at 0, 6, 10, 14
+# CURCUNA: D k k T k D k T k k  (filled variant, 123 12 12 123)
+# Accent positions at 0, 6, 10, 14; soft Ka strokes fill the subdivisions
 write_template(OUT_DIR, "curcuna.dg-pattern", "Curcuna", SRC, TAGS, "10/8",
-               "10/8 in 3+2+2+3 grouping (also known as Jorjuna)",
+               "10/8 in 3+2+2+3 grouping with filled Ka strokes (also known as Jorjuna)",
                1, 10, 8, 2, 20, 20, {
     KICK: {0: STRONG, 10: STRONG},
+    CLAP: {2: SOFT, 4: SOFT, 8: SOFT, 12: SOFT, 16: SOFT, 18: SOFT},
     HAT:  {6: STRONG, 14: STRONG},
 })
 
-# SAMAI: D T D D T  (12 12 12 123)
+# SAMAI: D tk tk T tk D D T tk tk  (filled variant)
 write_template(OUT_DIR, "samai.dg-pattern", "Samai", SRC, TAGS, "10/8",
-               "10/8 Samai with strong opening Doum",
+               "10/8 Samai with strong opening Doum and filled tk subdivisions",
                1, 10, 8, 2, 20, 20, {
     KICK: {0: STRONG, 8: STRONG, 12: STRONG},
-    HAT:  {4: STRONG, 16: STRONG},
+    HAT:  {2: SOFT, 4: SOFT, 6: STRONG, 8: SOFT, 14: STRONG, 16: SOFT, 18: SOFT},
+    CLAP: {3: SOFT, 5: SOFT, 9: SOFT, 17: SOFT, 19: SOFT},
 })
 
 # =========================================================================

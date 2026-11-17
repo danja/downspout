@@ -314,10 +314,18 @@ OutputStatus process(State& state,
             state.lowpassRight += (wetRight - state.lowpassRight) * filterCoefficient;
             wetLeft = state.lowpassLeft;
             wetRight = state.lowpassRight;
+            // Ping-pong steers the mono-ised drive into the left line and swaps the
+            // feedback returns, so repeats alternate L, R, L, R. At zero this is the
+            // original independent-stereo behaviour. The wet taps are read before the
+            // write, so the swap takes effect on the following delay period.
+            const float monoInput = (inputLeft + inputRight) * 0.5f;
+            const float driveLeft = inputLeft * (1.0f - pingPong) + monoInput * pingPong;
+            const float driveRight = inputRight * (1.0f - pingPong);
             const float returnLeft = wetLeft * (1.0f - pingPong) + wetRight * pingPong;
             const float returnRight = wetRight * (1.0f - pingPong) + wetLeft * pingPong;
-            state.leftBuffer[state.writeHead] = sanitize(inputLeft + returnLeft * std::min(0.985f, state.smoothedFeedback));
-            state.rightBuffer[state.writeHead] = sanitize(inputRight + returnRight * std::min(0.985f, state.smoothedFeedback));
+            const float feedbackGain = std::min(0.985f, state.smoothedFeedback);
+            state.leftBuffer[state.writeHead] = sanitize(driveLeft + returnLeft * feedbackGain);
+            state.rightBuffer[state.writeHead] = sanitize(driveRight + returnRight * feedbackGain);
             state.writeHead = (state.writeHead + 1u) % state.bufferFrames;
             status.state = 0;
         } else {

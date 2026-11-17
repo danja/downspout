@@ -11,6 +11,13 @@ derived from the BBT denominator and a bar from the complete host meter; 120
 BPM and the available meter are used while valid BBT is unavailable. Actual
 storage is capped at 16 seconds.
 
+In Delay mode, Ping-pong (0–1, default 0.28) crossfades between two independent
+stereo delay lines and a conventional ping-pong. At 0 each input feeds only its
+own line and its return stays on that side. At 1 a mono-ised copy of the input
+enters the left line and the two feedback returns swap sides, so a centred source
+repeats L, R, L, R at successive delay periods with the normal feedback decay.
+Loop mode ignores Ping-pong.
+
 CC 30 controls time and CC 31 controls feedback on every MIDI channel. In Free
 mode the time mapping is exponential; in Sync mode it selects one of the seven
 musical lengths. MIDI takeover is transient and deliberately excluded from

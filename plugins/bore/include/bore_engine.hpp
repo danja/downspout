@@ -48,6 +48,10 @@ private:
         std::uint32_t samplesWritten = 0;
         std::uint32_t random = 1;
         std::uint64_t age = 0;
+        float registerMultiplier = 1.0f;
+        float squawkMode = 3.0f;
+        std::uint32_t squawkFrames = 0;
+        std::uint32_t squawkCooldown = 0;
     };
 
     void handleMidi(const MidiMessage& message) noexcept;

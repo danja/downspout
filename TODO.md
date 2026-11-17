@@ -25,6 +25,48 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 - [ ] **Survey `https://github.com/Ka1-S/LYNX`** (Farelo task t20259e38295b) for potential plugins;
       report candidates and whether any overlap existing Downspout plugins.
 
+## From INBOX (2026-11-17)
+
+### New plugins
+
+- [ ] **Stereo enhancer** (new plugin, from INBOX): design and build a stereo widener/enhancer.
+      Consider the overlap with Chorale's stereo chorus and any existing widening controls.
+      Follow the new-plugin checklist.
+- [ ] **PadSeq** (new plugin, from INBOX): a paged 8x8 grid sequencer based around a Launchpad.
+      Grid-based sequence editor like a standard MIDI editor, but supporting alternate scales, including
+      mapping to General MIDI drums. Note number on the x axis, time on the y axis. Based around a paged
+      8x8 grid, with sequence length 1 to 32 steps, default 16. Use `xoxolo` (written "Xololo" in INBOX)
+      and `luma` as references, and the common scales list in `docs/scales.md`. The plugin can be used
+      without a Launchpad, but its UI has controls corresponding to those of the Launchpad. Follow the
+      new-plugin checklist.
+      - Top controls, left to right: pattern view down a step; pattern view up a step; previous page;
+        next page; previous scale; next scale; randomise (modify the current pattern if there is one,
+        otherwise generate a new one); clear pattern & reset (panic).
+      - The controls along the right column correspond to notes in the grid. While running, pressing a
+        key sends the corresponding note-on message, with note-off timed to the grid step.
+- [ ] **Launchpad support for `xoxolo`** (from INBOX, written there as "xololo"): add Launchpad support,
+      reusing the PadSeq control scheme where it makes sense.
+
+### Existing plugin fixes
+
+- [x] **bore**: added fixed make-up gain plus a tanh limiter (default single note now peaks ~0.19 rather
+      than ~0.03) and stochastic, capture-gated upper-mode excursions that briefly move the bore and lip
+      to the 2nd/3rd mode before falling back. Core tests cover usable level, dense-chord bound and
+      occasional upper-mode-dominant windows against a no-capture control. Host listen still open.
+- [x] **drumgen**: enriched the thinnest world templates from the cheat sheet's named filled variants
+      (Malfuf, Khaligi, Ayub, Karachi, Vals, Baladi, Saidi, Nawari, Bolero, Karsilama, Sudasi, Curcuna,
+      Samai) via `scripts/generate-drumgen-patterns.py`; all 52 now carry at least five hits and 34 have
+      soft strokes. Added a core test that loads all 52 files, checks unique names and minimum density.
+      Still needs an ear check of the filled figures.
+- [ ] **chorale**: extend it to also be a flanger and a phaser, as well as a chorus.
+- [x] **bassops**: the fully-wet path used to sum the ducked input to mono, discarding the stereo image.
+      It now delays mid and difference separately and reconstructs the ducked stereo pair, with side
+      shaping and Bass 90 added on top. Core tests cover stereo pass-through at defaults, anti-phase
+      stereo not collapsing to silence, and stereo-linked ducking; profile.ttl and all docs updated.
+      Still needs a host listen.
+- [x] **loopdelay**: ping-pong was a symmetric cross-mix of the returns, a no-op for centred material. It now steers a mono-ised drive into one line and swaps returns, giving alternating L/R repeats; core tests cover the alternation, the p=0 stereo case and the default's effect. Still needs a host listen.
+- [ ] **randomise buttons**: add one to every plugin that does not already have one, where it makes sense.
+
 ## Spectrogram painter (built 2026-11-03 as `fresco`; heard by nobody yet)
 
 Built: `plugins/fresco` (2048-point STFT, magnitudes replaced by the picture column under a playhead; Input-phase or Tone source; free or host-timeline playhead; log or

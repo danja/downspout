@@ -80,6 +80,7 @@ struct FirBank {
     std::array<float, kFirTaps>    hp {};
     std::array<float, kFirTaps>    bufMid {};      // convolution buffer for LP path (also read for bass)
     std::array<float, kFirTaps>    bufSide {};     // convolution buffer for HP path
+    std::array<float, kFirTaps>    bufDiff {};     // (ducked L - ducked R)/2, aligned with midF
     std::array<float, kMidDelayLen> dryDelayL {};  // delay dry L to match FIR latency
     std::array<float, kMidDelayLen> dryDelayR {};  // delay dry R to match FIR latency
     std::uint32_t pos      = 0;

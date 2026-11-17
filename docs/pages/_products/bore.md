@@ -18,9 +18,10 @@ changes reed drive and loop sustain, Embouchure moves the reed resonance relativ
 to the bore, Bell changes feedback damping, and Breath adds filtered noise. Reed
 Instability adds turbulent-flow noise and slow lip flutter. Register Capture
 couples more of the nonlinear reed airflow into the bore; high pressure and
-tighter embouchure can let an upper mode catch without directly transposing the
-played note. It is a compact physical sound-design model, not a calibrated
-trumpet simulation. There are eight MIDI voices, an Attack/Release envelope,
+tighter embouchure can let an upper mode catch, including occasional
+clarinet-like squawks that fall back to the played note. The summed voices are
+made up to a usable level and softly limited. It is a compact physical
+sound-design model, not a calibrated trumpet simulation. There are eight MIDI voices, an Attack/Release envelope,
 velocity sensitivity and a channel filter.
 
 CC 1-6 control Pressure, Embouchure, Bell, Breath, Reed Instability and Register

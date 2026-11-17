@@ -158,6 +158,7 @@ void activate(EngineState& state)
     state.env = {};
     state.fir.bufMid.fill(0.0f);
     state.fir.bufSide.fill(0.0f);
+    state.fir.bufDiff.fill(0.0f);
     state.fir.dryDelayL.fill(0.0f);
     state.fir.dryDelayR.fill(0.0f);
     state.fir.pos          = 0;
@@ -342,14 +343,16 @@ void processBlock(EngineState& state,
         const float dL = inL * gain;
         const float dR = inR * gain;
 
-        // Routing: the mono sum, delayed by the FIR latency, is the mid. The side is only
-        // what the waveshaper adds above the cutoff: HP(shaped - mono). Decoded as
-        // L = mid + side, R = mid - side, so the full-range mono signal (bass included)
-        // is identical in both channels, and at shape=0 the side is exactly zero.
+        // Routing: mid = (L+R)/2 and diff = (L-R)/2, both delayed by the FIR latency,
+        // reconstruct the ducked stereo pair. The shaping side is only what the
+        // waveshaper adds above the cutoff: HP(shaped - mono), zero at shape=0.
         const float mono = (dL + dR) * 0.5f;
+        const float difference = (dL - dR) * 0.5f;
 
         state.fir.bufMid[state.fir.pos] = mono;
+        state.fir.bufDiff[state.fir.pos] = difference;
         const float midF = state.fir.bufMid[(state.fir.pos + kFirTaps - kMidDelayLen) % kFirTaps];
+        const float diffF = state.fir.bufDiff[(state.fir.pos + kFirTaps - kMidDelayLen) % kFirTaps];
 
         float sideF = 0.0f;
         if (sideShapeNorm > 0.0f) {
@@ -381,8 +384,10 @@ void processBlock(EngineState& state,
         state.fir.dryDelayR[state.fir.delayPos] = inR;
         state.fir.delayPos = (state.fir.delayPos + 1) % kMidDelayLen;
 
-        const float outL = wetScale * (midF + sideF + bassDeltaL) + dryScale * delayedInL;
-        const float outR = wetScale * (midF - sideF + bassDeltaR) + dryScale * delayedInR;
+        // mid +/- diff reconstructs the ducked stereo pair exactly, so the source
+        // image survives the wet path; side shaping and Bass 90 add to it.
+        const float outL = wetScale * (midF + diffF + sideF + bassDeltaL) + dryScale * delayedInL;
+        const float outR = wetScale * (midF - diffF - sideF + bassDeltaR) + dryScale * delayedInR;
         if (audio.outL) { audio.outL[frame] = outL; }
         if (audio.outR) { audio.outR[frame] = outR; }
 

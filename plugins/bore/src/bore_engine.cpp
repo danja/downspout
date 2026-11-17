@@ -9,6 +9,9 @@ namespace {
 
 constexpr double kPi = 3.14159265358979323846;
 constexpr float kVoiceGain = 0.22f;
+// The reed/bore loop is intrinsically lossy; this make-up gain brings a single
+// default note to a usable level. The tanh after it bounds dense chords.
+constexpr float kMasterGain = 6.0f;
 constexpr float kQuiet = 1.0e-5f;
 constexpr double kAttackTimeScale = 5.0;
 constexpr double kReleaseTimeScale = 7.0;
@@ -121,6 +124,10 @@ void Engine::noteOn(const int note, const int velocity, const std::uint8_t chann
     voice.lipPhase = 0.0;
     voice.writeIndex = 0;
     voice.samplesWritten = 0;
+    voice.registerMultiplier = 1.0f;
+    voice.squawkMode = 3.0f;
+    voice.squawkFrames = 0;
+    voice.squawkCooldown = 0;
     voice.age = ++age_;
     if (voice.random == 0)
         voice.random = static_cast<std::uint32_t>(0xA341316Cu + voiceIndex);
@@ -157,6 +164,9 @@ void Engine::allSoundOff(const std::uint8_t channel) noexcept
         voice.flowInitialized = false;
         voice.writeIndex = 0;
         voice.samplesWritten = 0;
+        voice.registerMultiplier = 1.0f;
+        voice.squawkFrames = 0;
+        voice.squawkCooldown = 0;
     }
 }
 
@@ -247,6 +257,7 @@ void Engine::renderSegment(float* const left, float* const right, const std::uin
         const float flutterNormalization = std::sqrt(3.0f * (2.0f - flutterCoefficient) / flutterCoefficient);
         const float reedOpeningCoefficient = onePoleCoefficient(static_cast<float>(std::min(1800.0, sr * 0.35)), sr);
         const float flowBlockerCoefficient = 1.0f - onePoleCoefficient(static_cast<float>(std::min(5.0, sr * 0.1)), sr);
+        const float registerSmoothing = onePoleCoefficient(40.0f, sr);
         float sample = 0.0f;
 
         for (Voice& voice : voices_) {
@@ -265,7 +276,37 @@ void Engine::renderSegment(float* const left, float* const right, const std::uin
 
             const double maxFrequency = std::max(20.0, std::min(12000.0, sr * 0.4));
             const double frequency = std::clamp(noteToHertz(voice.note), 20.0, maxFrequency);
-            const double delay = std::clamp(sr / frequency, 2.0, static_cast<double>(kMaxDelaySamples - 2));
+            const float mouthPressure = pressure_ * voice.velocity;
+            const float pressureDrive = std::clamp((mouthPressure - 0.18f) / 0.55f, 0.0f, 1.0f);
+            const float embouchureDrive = std::clamp((embouchure_ - 0.8f) / 0.4f, 0.0f, 1.0f);
+            const float captureDrive = registerCapture_ * pressureDrive * embouchureDrive;
+
+            // A real clarinet occasionally cracks into the next register: the reed
+            // keeps vibrating at the played note while the bore briefly favours a
+            // higher mode. The excursion is stochastic but gated by captureDrive,
+            // so with capture off the render stays bit-identical to before.
+            if (captureDrive > 0.02f) {
+                if (voice.squawkCooldown > 0u)
+                    --voice.squawkCooldown;
+                if (voice.squawkFrames == 0u && voice.squawkCooldown == 0u) {
+                    const float trigger = 1.2e-4f * captureDrive * captureDrive;
+                    if (noise(voice.random) * 0.5f + 0.5f < trigger) {
+                        voice.squawkMode = noise(voice.random) > 0.25f ? 3.0f : 2.0f;
+                        voice.squawkFrames = static_cast<std::uint32_t>(
+                            sr * (0.05 + 0.08 * captureDrive * (noise(voice.random) * 0.5f + 0.5f)));
+                    }
+                }
+            }
+            float targetMultiplier = 1.0f;
+            if (voice.squawkFrames > 0u) {
+                --voice.squawkFrames;
+                if (voice.squawkFrames == 0u)
+                    voice.squawkCooldown = static_cast<std::uint32_t>(sr * 0.25);
+                targetMultiplier = voice.squawkMode;
+            }
+            voice.registerMultiplier += registerSmoothing * (targetMultiplier - voice.registerMultiplier);
+            const double modeFrequency = frequency * static_cast<double>(voice.registerMultiplier);
+            const double delay = std::clamp(sr / modeFrequency, 2.0, static_cast<double>(kMaxDelaySamples - 2));
             float delayed = 0.0f;
             if (voice.samplesWritten >= static_cast<std::uint32_t>(std::ceil(delay))) {
                 double read = static_cast<double>(voice.writeIndex) - delay;
@@ -283,7 +324,7 @@ void Engine::renderSegment(float* const left, float* const right, const std::uin
             voice.flutterFilter += flutterCoefficient * (airNoise - voice.flutterFilter);
             const float slowFlutter = voice.flutterFilter * flutterNormalization;
             const float flutter = reedInstability_ * (0.035f * slowFlutter + 0.012f * voice.breathFilter);
-            const double lipFrequency = std::min(frequency * static_cast<double>(embouchure_) *
+            const double lipFrequency = std::min(modeFrequency * static_cast<double>(embouchure_) *
                                                      (1.0 + static_cast<double>(flutter)),
                                                  sr * 0.45);
             const float lip = static_cast<float>(std::sin(voice.lipPhase));
@@ -291,11 +332,7 @@ void Engine::renderSegment(float* const left, float* const right, const std::uin
             if (voice.lipPhase >= 2.0 * kPi)
                 voice.lipPhase -= 2.0 * kPi;
             const float drive = 1.0f + pressure_ * 5.0f;
-            const float mouthPressure = pressure_ * voice.velocity;
             const float borePressure = std::clamp(voice.boreFilter * 2.0f, 0.0f, mouthPressure);
-            const float pressureDrive = std::clamp((mouthPressure - 0.18f) / 0.55f, 0.0f, 1.0f);
-            const float embouchureDrive = std::clamp((embouchure_ - 0.8f) / 0.4f, 0.0f, 1.0f);
-            const float captureDrive = registerCapture_ * pressureDrive * embouchureDrive;
             const float reedRestOpening = 0.48f - 0.18f * captureDrive;
             const float reedOpeningDepth = 0.36f + 0.52f * captureDrive;
             const float targetOpening = std::clamp(reedRestOpening + reedOpeningDepth * lip +
@@ -320,14 +357,15 @@ void Engine::renderSegment(float* const left, float* const right, const std::uin
             const float reed = std::tanh(drive * lip + 2.5f * acousticLoad +
                                          breath_ * voice.breathFilter * 0.35f + turbulence);
             const float feedback = 0.82f + pressure_ * 0.15f;
+            const float squawkAmount = (voice.registerMultiplier - 1.0f) * 0.5f;
             const float excitation = pressure_ * (0.035f + 0.01f * breath_) * reed +
-                                     captureDrive * 0.08f * acousticFlow;
+                                     captureDrive * (0.08f + 0.22f * squawkAmount) * acousticFlow;
             voice.bore[voice.writeIndex] = excitation + feedback * voice.boreFilter;
             voice.writeIndex = (voice.writeIndex + 1) % static_cast<std::uint32_t>(kMaxDelaySamples);
             voice.samplesWritten = std::min(voice.samplesWritten + 1, static_cast<std::uint32_t>(kMaxDelaySamples));
             sample += voice.boreFilter * voice.envelope * voice.velocity * kVoiceGain;
         }
-        sample *= level_;
+        sample = std::tanh(sample * kMasterGain) * level_;
         left[frame] = sample;
         right[frame] = sample;
     }

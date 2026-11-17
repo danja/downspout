@@ -986,6 +986,58 @@ void testNewGenreTemplatesCarryTheClave() {
     }
 }
 
+void testBundledTemplatesAreComplete() {
+    // Scan the whole bundled library, not just patterns/world: every shipped
+    // template must load, round-trip and carry a usable figure (the originals
+    // had as few as two hits, which is not a musically complete pattern).
+    const std::string worldDir = patternLibraryDir();
+    const std::string rootDir = worldDir.substr(0, worldDir.size() - std::string("/world").size());
+    TemplateLibrary lib;
+    lib.scan(rootDir);
+    assert(lib.count() == 52);
+
+    std::set<std::string> names;
+    int withSoftStrokes = 0;
+    for (int i = 0; i < lib.count(); ++i) {
+        const PatternTemplate* tmpl = lib.get(i);
+        assert(tmpl != nullptr);
+        if (tmpl == nullptr) {
+            continue;
+        }
+        assert(!tmpl->name.empty());
+        assert(!tmpl->source.empty());
+        assert(!tmpl->timeSig.empty());
+        assert(names.insert(tmpl->name).second && "duplicate template name");
+
+        int hits = 0;
+        int soft = 0;
+        for (const auto& lane : tmpl->pattern.lanes) {
+            for (const auto& step : lane.steps) {
+                if (step.velocity == 0) {
+                    continue;
+                }
+                assert(step.velocity >= 1 && step.velocity <= 127);
+                ++hits;
+                if (step.velocity < 80) {
+                    ++soft;
+                }
+            }
+        }
+        assert(hits >= 5 && "template is too thin");
+        if (soft > 0) {
+            ++withSoftStrokes;
+        }
+
+        const auto reparsed = deserializePatternState(serializePatternState(tmpl->pattern));
+        assert(reparsed.has_value());
+        if (reparsed.has_value()) {
+            assert(equalStep(tmpl->pattern.lanes[0].steps[0], reparsed->lanes[0].steps[0]));
+            assert(reparsed->totalSteps == tmpl->pattern.totalSteps);
+        }
+    }
+    assert(withSoftStrokes >= 30);
+}
+
 // ---- Cellular-automaton layer ----------------------------------------------------------------
 
 PatternState makeAutomatonPattern() {
@@ -1258,6 +1310,7 @@ int main() {
     testClaveGenresSurviveEighthResolution();
     testRefreshBarKeepsClaveFigure();
     testNewGenreTemplatesCarryTheClave();
+    testBundledTemplatesAreComplete();
     testCrashCymbalsStaySparseByDefault();
     testRefreshBarKeepsOtherBars();
     testRefreshFillBarTargetsChosenBar();

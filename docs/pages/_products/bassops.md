@@ -7,7 +7,7 @@ category: processor
 group: dynamics
 role: Sidechain ducker / stereo synthesiser
 screenshot: /assets/plugins/bassops.png
-summary: Four-input sidechain ducker with optional harmonic stereo synthesis, bass phase widening and a ring-mod mode. A control signal (typically a kick-drum send) ducks the main stereo signal; the ducked result is summed to mono and the harmonics added by a waveshaper, high-passed at the cutoff, are decoded as a side signal that generates stereo width above it. The bass stays clean mono.
+summary: Four-input sidechain ducker with optional harmonic stereo synthesis, bass phase widening and a ring-mod mode. A control signal (typically a kick-drum send) ducks the main stereo signal; the ducked result is split into mid and difference so its stereo image is preserved, and the harmonics added by a waveshaper, high-passed at the cutoff, are decoded as an extra side signal that generates width above it.
 ---
 
 ## Opinion
@@ -23,25 +23,24 @@ whose output controls a VCA over the main signal on inputs 1 and 2. Attack and
 release shape how fast the duck opens and closes. Duck Depth sets the maximum
 gain reduction at full sidechain amplitude.
 
-**Mono split and stereo synthesis** — after ducking, the stereo signal is summed
-to mono (a mono track that only feeds one main input is treated as dual mono, so it
-is not 6 dB down). The delayed full-range mono is the centre of both output channels.
+**M/S delay and stereo synthesis** — after ducking, the stereo signal is split into
+mid = (L+R)/2 and difference = (L−R)/2 (a mono track that only feeds one main input is
+treated as dual mono, so it is not 6 dB down). Both are delayed by the FIR latency, so
+mid ± difference reconstructs the ducked stereo pair and the source image is carried
+through the wet path.
 
-- An optional waveshaper distorts the mono signal. The harmonics it adds, high-passed
-  by a linear-phase FIR at the M/S Cutoff, become the stereo-difference component
-  after M/S decoding, creating stereo width above the cutoff.
+- An optional waveshaper distorts the mid signal. The harmonics it adds, high-passed
+  by a linear-phase FIR at the M/S Cutoff, become an extra stereo-difference component,
+  creating width above the cutoff.
 
-At Side Shape 0 % there is no side component, so both output channels are identical
-copies of the mono signal at unity gain. Increasing Side Shape progressively drives
-the shaper into saturation and hard-clipping, producing increasing stereo width above
-the cutoff. The bass is always the clean mono signal. The cutoff is soft at low
-settings (129 taps), so it sets where the added harmonics start rather than a sharp
-crossover.
+At Side Shape 0 % there is no added side component, so the ducked stereo input is
+reproduced unchanged (apart from the reported FIR latency). Increasing Side Shape
+progressively drives the shaper into saturation and hard-clipping, producing extra
+stereo width above the cutoff. The cutoff is soft at low settings (129 taps), so it
+sets where the added harmonics start rather than a sharp crossover.
 
 A Wet control blends the processed signal against the latency-compensated dry
-stereo input. This is the only route to preserve the original stereo content of
-the source; the wet path uses a mono sum and does not retain the input's
-stereo difference.
+stereo input. The source stereo image is preserved at any wet/dry setting.
 
 **Bass 90°** — an optional selector (Off / Left / Right, click the button in the
 Controls header). The bass below the M/S Cutoff is shifted 90° between the two
@@ -75,7 +74,7 @@ Output — making the ducking action immediately visible.
 | Attack        | 0–500 ms           | 10 ms   | Envelope follower rise time; 0 = instant (ring mod with Release 0)   |
 | Release       | 0–2000 ms          | 100 ms  | Envelope follower fall time; 0 = instant (ring mod with Attack 0)    |
 | M/S Cutoff    | 50–5000 Hz         | 200 Hz  | LP/HP crossover; typical 80–300 Hz                                   |
-| Side Shape    | 0–100 %            | 0 %     | Distortion on the HP path; 0 = mono output, 100 = hard clip ×8 drive |
+| Side Shape    | 0–100 %            | 0 %     | Extra distortion on the HP path; 0 = ducked stereo unchanged, 100 = hard clip ×8 drive |
 | Wet           | 0–100 %            | 100 %   | Wet/dry blend; dry is latency-compensated original stereo            |
 | Bass 90°      | Off/Left/Right     | Off     | 90° bass phase shift between channels; idle when Off                 |
 | Delay (beats) | Off, 1/64 … 1 beat | Off     | Main-input delay locked to the host tempo; adds to Delay (ms)        |

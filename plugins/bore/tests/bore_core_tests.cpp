@@ -149,6 +149,69 @@ void testPitchedVoiceAndVelocity()
     assert(rms(soft.left, 2048, 6144) < rms(audio.left, 2048, 6144));
 }
 
+void testDefaultLevelIsUsable()
+{
+    Engine engine;
+    engine.activate(kSampleRate);
+    const Audio audio = render(engine, 112, {noteOn(60)});
+    const float sustainedPeak = peak(audio.left, 2048, 6144);
+    assert(sustainedPeak > 0.1f);
+    assert(sustainedPeak < 1.0f);
+    assert(rms(audio.left, 2048, 6144) > 0.02);
+    assert(audio.left == audio.right);
+}
+
+void testDenseChordStaysBounded()
+{
+    Engine engine;
+    engine.setParameter(id(ParamId::pressure), 1.0f);
+    engine.setParameter(id(ParamId::bell), 1.0f);
+    engine.setParameter(id(ParamId::breath), 1.0f);
+    engine.setParameter(id(ParamId::velocity), 0.0f);
+    engine.setParameter(id(ParamId::level), 1.0f);
+    engine.setParameter(id(ParamId::reedInstability), 1.0f);
+    engine.setParameter(id(ParamId::registerCapture), 1.0f);
+    engine.activate(kSampleRate);
+    std::vector<MidiMessage> notes;
+    for (std::uint8_t note = 36; note < 108; note = static_cast<std::uint8_t>(note + 10))
+        notes.push_back(noteOn(note, 127));
+    const Audio audio = render(engine, 96, notes);
+    for (const float sample : audio.left) {
+        assert(std::isfinite(sample));
+        assert(std::fabs(sample) <= 1.0f);
+    }
+}
+
+void testRegisterCaptureSquawksOccasionally()
+{
+    const auto upperDominantWindows = [](const float capture) {
+        Engine engine;
+        engine.setParameter(id(ParamId::pressure), 1.0f);
+        engine.setParameter(id(ParamId::embouchure), 1.2f);
+        engine.setParameter(id(ParamId::registerCapture), capture);
+        engine.activate(kSampleRate);
+        const Audio audio = render(engine, 3000, {noteOn(60)});
+        int upper = 0;
+        int total = 0;
+        // Skip the first quarter second: the attack transient has extra HF.
+        for (std::size_t window = 12000; window + 2048 <= audio.left.size(); window += 1024) {
+            ++total;
+            if (amplitudeAt(audio.left, window, 2048, 784.876695) >
+                amplitudeAt(audio.left, window, 2048, 261.625565))
+                ++upper;
+        }
+        for (const float sample : audio.left)
+            assert(std::isfinite(sample));
+        return std::pair<int, int> {upper, total};
+    };
+    const auto plain = upperDominantWindows(0.0f);
+    const auto captured = upperDominantWindows(1.0f);
+    // With capture off the played register nearly always dominates; with capture
+    // fully up the bore occasionally cracks to a higher mode, but not permanently.
+    assert(captured.first > plain.first + 5);
+    assert(captured.first < captured.second / 2);
+}
+
 void testRegisterCaptureRequiresPressureAndEmbouchure()
 {
     Engine captureBaseline;
@@ -360,6 +423,9 @@ int main()
 {
     testParameterContract();
     testPitchedVoiceAndVelocity();
+    testDefaultLevelIsUsable();
+    testDenseChordStaysBounded();
+    testRegisterCaptureSquawksOccasionally();
     testRegisterCaptureRequiresPressureAndEmbouchure();
     testMIDIChannelAndSampleAccurateOnset();
     testReleaseAndAllSoundOff();

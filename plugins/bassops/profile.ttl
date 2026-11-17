@@ -9,13 +9,13 @@ dsp:bassops a trn:PluginProfile ;
     rdfs:label "Bassops" ;
     rdfs:comment """Sidechain ducker with harmonic stereo synthesis. A kick-drum or other
 control signal on inputs 3-4 (audio sidechain) drives an envelope follower whose inverted
-output attenuates the main stereo signal on inputs 1-2. After ducking, the stereo signal
-is summed to mono and split by a complementary Hann-windowed sinc LP/HP FIR pair (order
-128, latency 64 samples). The LP path produces the clean bass centre component; optionally
-distorted mono fed to the HP path becomes the stereo-difference component after M/S
-decoding, generating stereo width above the crossover from the added harmonics. At Side
-Shape 0 the wet output is phase-coherent mono. A Wet control blends the processed signal
-against the latency-compensated dry stereo input. Introduces 64-sample FIR latency
+output attenuates the main stereo signal on inputs 1-2. After ducking, the signal is split
+into mid and difference and delayed by a complementary Hann-windowed sinc FIR pair (order
+128, latency 64 samples); mid +/- diff reconstructs the ducked stereo pair, so the source
+image is carried through the wet path. Optionally distorted mono fed to the HP path adds a
+difference component above the crossover, generating extra width from the added harmonics.
+At Side Shape 0 no harmonics are added and the ducked stereo input is reproduced exactly.
+A Wet control blends the processed signal against the latency-compensated dry stereo input. Introduces 64-sample FIR latency
 reported to the host. Two delay controls (tempo-locked beats and free ms) can hold the main
 input back so a bass note starts just after the kick; this shift is musical, not latency, and
 is not reported. Reads the host tempo.""" ;
@@ -78,7 +78,7 @@ is not reported. Reads the host tempo.""" ;
         rdfs:label "M/S Cutoff" ;
         trn:symbol "cutoff_hz" ;
         trn:unit "Hz" ;
-        rdfs:comment "LP/HP crossover frequency. Below this, only the clean mono sum passes through (locked centre). Above it, the distorted HP path forms the stereo-difference component after M/S decoding." ;
+        rdfs:comment "Crossover for the added distortion: the waveshaper's harmonics above this frequency form an extra stereo-difference component. The ducked input's own stereo image is preserved at all frequencies." ;
         trn:default "200.0"^^xsd:float ;
         trn:min "50.0"^^xsd:float ;
         trn:max "5000.0"^^xsd:float
@@ -87,7 +87,7 @@ is not reported. Reads the host tempo.""" ;
         rdfs:label "Side Shape" ;
         trn:symbol "side_shape" ;
         trn:unit "%" ;
-        rdfs:comment "Distortion amount on the HP path. 0 = no distortion, wet output is mono. 100 = drive x8 with hard clipping, maximum stereo width above cutoff. Gain-normalised to unity for small signals." ;
+        rdfs:comment "Distortion amount on the HP path. 0 = no distortion, ducked stereo input reproduced unchanged. 100 = drive x8 with hard clipping, maximum extra width above cutoff. Gain-normalised to unity for small signals." ;
         trn:default "0.0"^^xsd:float ;
         trn:min "0.0"^^xsd:float ;
         trn:max "100.0"^^xsd:float
@@ -96,7 +96,7 @@ is not reported. Reads the host tempo.""" ;
         rdfs:label "Wet" ;
         trn:symbol "wet" ;
         trn:unit "%" ;
-        rdfs:comment "Wet/dry blend. 0 = dry original stereo (latency-compensated); 100 = fully processed. Dry is the only path that preserves the input's original stereo difference." ;
+        rdfs:comment "Wet/dry blend. 0 = dry original stereo (latency-compensated); 100 = fully processed, stereo image preserved." ;
         trn:default "100.0"^^xsd:float ;
         trn:min "0.0"^^xsd:float ;
         trn:max "100.0"^^xsd:float

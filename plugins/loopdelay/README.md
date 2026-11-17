@@ -3,7 +3,7 @@
 Loopdelay is a stereo delay and capture looper designed to sit directly after
 `t_mix.vst3`. Time can be set freely from 20–4000 ms or synchronized to the
 host BBT clock from a quarter beat through four bars. Delay mode provides
-filtered feedback and ping-pong crossfeed; Loop mode captures one selected
+filtered feedback and stereo or alternating ping-pong repeats; Loop mode captures one selected
 length and then applies feedback-controlled memory plus live overdubbing.
 
 For automatic production, route MIDI from a controller generator to the
