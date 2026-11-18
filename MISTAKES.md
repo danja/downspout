@@ -7,6 +7,17 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 (No open entries from before October 2026: the screenshot script now always captures on a private Xvfb.)
 
+## PadSeq: install rule used an undefined destination variable (2026-11-18)
+- **What happened:** `cmake --install` failed with `file INSTALL given no DESTINATION` because
+  `plugins/padseq/CMakeLists.txt` used `${DOWNSPOUT_PLUGIN_INSTALL_DIR}`, which this project never defines.
+  The generated `cmake_install.cmake` contained `DESTINATION ""`.
+- **Root cause:** The install block was written from memory instead of copied from an adjacent plugin. Every other
+  plugin installs its bundle with `DESTINATION "."`, so the install prefix supplied on the command line is the only
+  destination. Static bundle-list checks compare names but do not evaluate install commands.
+- **Prevention:** Copy the install block from a neighbouring plugin verbatim when adding a plugin, and verify with
+  `cmake --install <build> --prefix <temporary-dir>` after configuration. A successful build says nothing about the
+  install script.
+
 ## PadSeq: visible page mistaken for the whole pattern (2026-11-18)
 - **What happened:** The first parameter layout had one boolean per visible 8x8 page (64 cells). A 32-step pattern
   needs 256 cells, and the 64 read-only status cells mirror only the current page, so hidden steps would not have

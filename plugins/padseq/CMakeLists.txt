@@ -45,7 +45,7 @@ downspout_add_core_test(downspout_padseq_core_tests
 
 if(DOWNSPOUT_ENABLE_DPF AND DOWNSPOUT_DPF_DIR)
     install(DIRECTORY "${PROJECT_BINARY_DIR}/bin/padseq.vst3"
-        DESTINATION "${DOWNSPOUT_PLUGIN_INSTALL_DIR}"
+        DESTINATION "."
         OPTIONAL
     )
 endif()
