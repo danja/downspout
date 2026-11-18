@@ -7,6 +7,32 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 (No open entries from before October 2026: the screenshot script now always captures on a private Xvfb.)
 
+## PadSeq: transposed grid, LED artifact and late note-offs (2026-11-18)
+- **What happened:** The first PadSeq layout put notes on X and time on Y, so the playhead scanned upwards.
+  It also emitted Launchpad LED colours as channel-1 note-ons by default, which an all-channel instrument heard as
+  held notes, and scheduled block boundaries before consuming input, so a side CC near a boundary released one block late.
+- **Root cause:** The Launchpad's row/column note encoding was copied straight into the UI/pattern mapping without
+  separating the visual axes (X = step, Y = note) from the step-major storage. LED feedback was treated as harmless
+  because it is correct for hardware, ignoring that the VST3 has one MIDI output. Note-offs were queued after the
+  scheduler had already flushed that block's boundary.
+- **Prevention:** Keep `cell(step, note)` for storage but `status(note, stepColumn)` for the visible page, and assert
+  both mappings plus a horizontal-scan test. Default LED feedback off and document that enabling it requires routing
+  only to a Launchpad. Consume MIDI input before scheduling boundaries and add late-block CC tests for both free and
+  host clocks that assert the release frame inside the same block.
+
+## PadSeq: headless REAPER validation traps (2026-11-18)
+- **What happened:** A validation script used `TrackFX_AddByName(..., -1)` to inspect a project that was already open.
+  It silently added a second PadSeq instance, so the script edited and read an FX the project did not contain. Later
+  scripts tried to test CCs by starting the transport or stuffing virtual-keyboard MIDI; REAPER reported audio running
+  but the play position stayed at zero and no CC reached the plugin.
+- **Root cause:** `-1` means "add if not found", not "find". The headless JACK/Xvfb session had no advancing transport,
+  and VKB messages were not routed into the track's FX chain. Treat these as harness limitations, not plugin failures.
+- **Prevention:** Use `TrackFX_GetByName`/`TrackFX_GetFXName` or a known FX index when inspecting a loaded project, and
+  log the FX count before editing. For host CC tests, require a reachable transport and verify the play position moves;
+  otherwise leave realtime CC/LED validation pending rather than inferring it from a stopped host. A downstream
+  instrument also hears Launchpad LED notes if it listens on all channels, so use a channel filter or disable LED
+  feedback when using PadSeq as a pure generator in a render.
+
 ## PadSeq: install rule used an undefined destination variable (2026-11-18)
 - **What happened:** `cmake --install` failed with `file INSTALL given no DESTINATION` because
   `plugins/padseq/CMakeLists.txt` used `${DOWNSPOUT_PLUGIN_INSTALL_DIR}`, which this project never defines.

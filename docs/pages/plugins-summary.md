@@ -679,15 +679,17 @@ not applicable. Persistent state; host validation pending.
 
 ### padseq
 Paged 8x8 MIDI step sequencer for a Launchpad, also usable from the UI. Columns
-are notes and rows are time; a pattern is 1-32 sixteenth-note steps (default 16)
-over up to four pages. The 33 canonical `docs/scales.md` ordinals include generic
-pentatonic; **Note Map** switches the columns to GM drums, while **Root** and
-**Note View** move pitched columns. Top CCs 91-98 move the note view, page and
-scale, randomise, or clear/panic; side CCs 19,29,39,49,59,69,79,89 and the matching
-UI trigger buttons play their column notes with step-timed note-offs. Clock is Auto
-(host BBT when present, otherwise free), Host (absolute steps with restart/jump/rewind
-handling) or Free (tempo accumulator). MIDI output defaults to channel 4 to avoid
-Launchpad LED channels. All 256 cells and eight UI triggers are ordinary parameters,
+are successive sixteenth-note steps scanning left to right and rows are notes;
+a pattern is 1-32 steps (default 16) over up to four pages. The 33 canonical
+`docs/scales.md` ordinals include generic pentatonic; **Note Map** switches the
+rows to GM drums, while **Root** and **Note View** move pitched rows. Top CCs
+91-98 move the note view, page and scale, randomise, or clear/panic; side CCs
+19,29,39,49,59,69,79,89 and the matching UI trigger buttons play their note rows
+with note-offs timed to the next step, even for presses late in a block. Clock is
+Auto (host BBT when present, otherwise free), Host (absolute steps with
+restart/jump/rewind handling) or Free (tempo accumulator). MIDI output defaults
+to channel 4; LED feedback is off by default because Launchpad colours are
+channel-1 note-ons. All 256 cells and eight UI triggers are ordinary parameters,
 so no plugin state is used.
 
 ## Audio effects

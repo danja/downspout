@@ -7,31 +7,31 @@ category: launchpad
 group: rhythm
 role: Paged step sequencer
 screenshot: /assets/plugins/padseq.png
-summary: Paged 8x8 MIDI step sequencer for a Launchpad, with note columns, time rows, 1-32 steps, canonical scales and GM drum mapping.
+summary: Paged 8x8 MIDI step sequencer for a Launchpad, with time columns scanning left to right, note rows, 1-32 steps, canonical scales and GM drum mapping.
 ---
 
 ## Opinion
 
-A Launchpad is a natural step sequencer: eight columns of notes and eight rows of
-time fit the hardware exactly. PadSeq keeps that mapping literal rather than
-pretending the pads are a piano roll, and pages it so a 16-step pattern needs one
-button press instead of a scrolling editor.
+A Launchpad is a natural step sequencer: eight columns of time and eight rows of
+notes fit the hardware exactly. PadSeq scans left to right across each page, so a
+16-step pattern needs one button press instead of a scrolling editor.
 
 ## Functionality
 
-PadSeq edits a 1-32 step pattern (default 16) on an 8x8 grid. Columns are notes
-and rows are time. The current scale comes from the canonical 33-row
-`docs/scales.md` table, and **Note Map** can replace scale degrees with General
-MIDI drums. **Root** and **Note View** shift the pitched columns; **Randomise**
-edits an existing pattern or seeds a new one, and **Clear / Panic** empties it
-and silences all notes.
+PadSeq edits a 1-32 step pattern (default 16) on an 8x8 grid. Columns are
+successive sixteenth-note steps and rows are notes, with row 0 at the bottom.
+The current scale comes from the canonical 33-row `docs/scales.md` table, and
+**Note Map** can replace scale degrees with General MIDI drums. **Root** and
+**Note View** shift the pitched rows; **Randomise** edits an existing pattern or
+seeds a new one, and **Clear / Panic** empties it and silences all notes.
 
 The top Launchpad buttons mirror the UI strip: note view, page, scale,
 randomise and clear. The eight side buttons and their UI equivalents trigger
-column notes with note-offs timed to the next step. LED feedback shows the pattern,
-the playhead,
-the control colours and any notes present in a column. Generated MIDI uses
-channel 4 by default so it does not fight the Launchpad's LED channels.
+note rows with note-offs timed to the next step, including presses that arrive
+just before a step boundary. LED feedback is off by default: Launchpad colours
+are channel-1 note-ons, which a synth would hear as held notes. Enable it only
+when the output is routed to the controller. Generated MIDI uses channel 4 by
+default so it does not fight the Launchpad's LED channels.
 
 Clock mode is Auto, Host or Free. Host mode counts absolute sixteenth steps and
 restarts cleanly on start, jump and rewind; free mode follows the internal

@@ -189,7 +189,7 @@ protected:
         {
             const uint32_t cell = index - cellBase;
             parameter.name = String("Step ") + String(static_cast<int>(cell / kGridWidth) + 1) +
-                             String(" Col ") + String(static_cast<int>(cell % kGridWidth) + 1);
+                             String(" Note ") + String(static_cast<int>(cell % kGridWidth) + 1);
             parameter.symbol = String("cell_") + String(static_cast<int>(cell));
             return;
         }
@@ -197,9 +197,10 @@ protected:
         const auto triggerBase = static_cast<uint32_t>(ParamId::triggerStart);
         if (index >= triggerBase && index < triggerBase + static_cast<uint32_t>(kGridWidth))
         {
-            const uint32_t column = index - triggerBase;
-            parameter.name = String("Trigger Column ") + String(static_cast<int>(column + 1));
-            parameter.symbol = String("trigger_column_") + String(static_cast<int>(column + 1));
+            const uint32_t note = index - triggerBase;
+            parameter.name = String("Trigger Note ") + String(static_cast<int>(note + 1));
+            // Keep the saved symbol stable; only the human-readable name changed.
+            parameter.symbol = String("trigger_column_") + String(static_cast<int>(note + 1));
             return;
         }
 
@@ -207,8 +208,8 @@ protected:
         if (index >= statusBase && index < statusBase + static_cast<uint32_t>(kGridCellCount))
         {
             const uint32_t cell = index - statusBase;
-            parameter.name = String("Status ") + String(static_cast<int>(cell / kGridWidth) + 1) +
-                             String(" ") + String(static_cast<int>(cell % kGridWidth) + 1);
+            parameter.name = String("Status Note ") + String(static_cast<int>(cell / kGridWidth) + 1) +
+                             String(" Step ") + String(static_cast<int>(cell % kGridWidth) + 1);
             parameter.symbol = String("status_cell_") + String(static_cast<int>(cell));
             return;
         }

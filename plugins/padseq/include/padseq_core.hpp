@@ -41,9 +41,9 @@ public:
     void setParameter(std::uint32_t index, float value);
     [[nodiscard]] float getParameter(std::uint32_t index) const noexcept;
 
-    [[nodiscard]] bool cellActive(std::size_t step, std::size_t column) const noexcept;
-    [[nodiscard]] std::uint8_t noteForColumn(std::size_t column) const noexcept;
-    [[nodiscard]] int patternStepFor(std::size_t page, std::size_t row) const noexcept;
+    [[nodiscard]] bool cellActive(std::size_t step, std::size_t note) const noexcept;
+    [[nodiscard]] std::uint8_t noteForRow(std::size_t note) const noexcept;
+    [[nodiscard]] int patternStepFor(std::size_t page, std::size_t stepColumn) const noexcept;
 
     ProcessResult processBlock(std::uint32_t frameCount,
                                const TransportSnapshot& transport,
@@ -68,21 +68,34 @@ private:
 
     bool handleMidi(const MidiMessage& event,
                     ProcessResult& result,
-                    std::int64_t manualOffStep,
+                    std::int64_t offStep,
                     bool& forceLeds);
     bool handleGridPress(std::uint8_t note);
     void handleTopButton(std::uint32_t button);
-    void handleSideButton(std::size_t column,
+    void handleSideButton(std::size_t note,
                           ProcessResult& result,
                           std::uint32_t frame,
                           std::int64_t offStep);
 
-    void scheduleHostSteps(ProcessResult& result,
-                           std::uint32_t frameCount,
-                           const TransportSnapshot& transport);
-    void scheduleFreeSteps(ProcessResult& result,
-                           std::uint32_t frameCount,
-                           double stepSamples);
+    void prepareHostBlock(ProcessResult& result,
+                          double absStepsStart,
+                          int steps,
+                          bool playing);
+    void scheduleHostBoundaries(ProcessResult& result,
+                                std::uint32_t frameCount,
+                                double absStepsStart,
+                                double absStepsEnd);
+    void prepareFreeBlock(ProcessResult& result, double stepSamples);
+    void scheduleFreeBoundaries(ProcessResult& result,
+                                std::uint32_t frameCount,
+                                double stepSamples);
+    void scheduleIdleBoundaries(ProcessResult& result,
+                                std::uint32_t frameCount,
+                                double stepSamples);
+    [[nodiscard]] std::int64_t offStepForFrame(double absStepsStart,
+                                               double absStepsSpan,
+                                               std::uint32_t frameCount,
+                                               std::uint32_t frame) const noexcept;
     void flushPendingTriggers(ProcessResult& result,
                               std::uint32_t frame,
                               std::int64_t offStep);
@@ -108,9 +121,9 @@ private:
     static void sortEvents(ProcessResult& result);
 
     [[nodiscard]] std::uint32_t random();
-    [[nodiscard]] std::uint8_t statusColor(std::size_t step, std::size_t column) const noexcept;
+    [[nodiscard]] std::uint8_t statusColor(std::size_t step, std::size_t note) const noexcept;
     [[nodiscard]] std::uint8_t topColor(std::uint32_t button) const noexcept;
-    [[nodiscard]] std::uint8_t sideColor(std::size_t column) const noexcept;
+    [[nodiscard]] std::uint8_t sideColor(std::size_t note) const noexcept;
 
     double sampleRate_ = 48000.0;
     std::array<float, kParameterCount> parameters_ {};

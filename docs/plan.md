@@ -231,11 +231,11 @@ Progress as of 2026-05-27:
   dynamic parameter smoothing, tape delay, shimmer reverb and mid/side width,
   played as one string per Launchpad grid column, with LED feedback,
   deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
-- `padseq` now exists as a paged 8x8 Launchpad step sequencer: note columns,
-  time rows, 1-32 sixteenth-note steps across four pages, the canonical 33-row
-  scale table, GM drum mapping, deterministic free/host clocks with restart and
-  rewind handling, Launchpad LED feedback, UI side triggers, and 256 cell parameters that the host
-  saves without plugin state;
+- `padseq` now exists as a paged 8x8 Launchpad step sequencer: time columns
+  scanning left to right, note rows, 1-32 sixteenth-note steps across four pages,
+  the canonical 33-row scale table, GM drum mapping, deterministic free/host clocks
+  with restart and rewind handling, opt-in Launchpad LED feedback, UI side triggers,
+  step-timed note-offs, and 256 cell parameters that the host saves without plugin state;
 - `xoxolo` now exists as an original simple MIDI drum pattern editor with a
   fixed 11-lane drumkit map, 32-step maximum, text state serialization,
   deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;

@@ -38,7 +38,7 @@ review `docs/lynx-survey.md`
       Follow the new-plugin checklist.
 - [x] **PadSeq** (built 2026-11-18 as `padseq`, from INBOX): a paged 8x8 grid sequencer based around a Launchpad.
       Grid-based sequence editor like a standard MIDI editor, but supporting alternate scales, including
-      mapping to General MIDI drums. Note number on the x axis, time on the y axis. Based around a paged
+      mapping to General MIDI drums. Time on the x axis (left to right), note number on the y axis. Based around a paged
       8x8 grid, with sequence length 1 to 32 steps, default 16. Use `xoxolo` (written "Xololo" in INBOX)
       and `luma` as references, and the common scales list in `docs/scales.md`. The plugin can be used
       without a Launchpad, but its UI has controls corresponding to those of the Launchpad. Follow the
@@ -48,13 +48,28 @@ review `docs/lynx-survey.md`
         otherwise generate a new one); clear pattern & reset (panic).
       - The controls along the right column correspond to notes in the grid. While running, pressing a
         key sends the corresponding note-on message, with note-off timed to the grid step.
-      Built: `plugins/padseq` with 361 passing core checks and a VST3 bundle. Host listening/save-reopen
-      validation and full-resolution visual acceptance of `padseq.png` remain pending.
+      Built: `plugins/padseq` with 374 passing core checks, a clean `padseq-vst3` build and a VST3 bundle.
+      Host load and save/reopen were validated in an isolated REAPER profile: all 16 programmed cells,
+      Note Map and LED Feedback survived the round trip. A follow-up fixed the reported axis bug (time
+      now scans left to right and note rows run vertically), the constant artifact (LED feedback is
+      now opt-in because Launchpad colours are channel-1 note-ons), and late-block note-off timing
+      (input is consumed before boundary scheduling). Realtime transport and CC/Launchpad-LED validation
+      remain blocked in the headless session (the transport does not advance even with audio running).
+      The updated UI was recaptured to `/tmp/opencode/padseq-screenshot/padseq.png` and dimension-checked
+      at 980x720, but this model cannot view PNG pixels, so visual acceptance and copying into
+      `docs/pages/assets/plugins/padseq.png` remain pending.
 - [ ] **Launchpad support for `xoxolo`** (from INBOX, written there as "xololo"): add Launchpad support,
       reusing the PadSeq control scheme where it makes sense.
 
+## From INBOX (2026-11-18)
 
-
+- [ ] **Level-independent transient designer** (from INBOX): add a `spliff` mode based on LYNX's
+      *Strike Shaper* / SPL Transient Designer. Attack ±15 dB and Sustain ±24 dB from two envelopes
+      with no threshold; keep the level-independent behaviour, which is the point.
+- [ ] **Editable Conductor form** (from INBOX): allow up to 8 blocks of types Null, Intro, Theme,
+      Develop, Break, Reprise and Coda (review whether more types are useful). Receivers already
+      default to the maximum control from note messages and CC 20-24 (Scene, Density, Energy,
+      Mutation, Reset); check that the editor and the receiving plugins stay in sync.
 
 
 ## Spectrogram painter (built 2026-11-03 as `fresco`; heard by nobody yet)

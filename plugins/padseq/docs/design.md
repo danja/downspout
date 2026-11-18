@@ -2,9 +2,11 @@
 
 ## Layout and storage
 
-PadSeq is a paged 8x8 editor. X is the note column, Y is time. Each page shows
-eight steps; a pattern has 1-32 steps (default 16), so up to four pages are used.
-Cells are stored step-major: `cell(step, column) = step * 8 + column`.
+PadSeq is a paged 8x8 editor. X is time, scanning left to right, and Y is note,
+with note row 0 at the bottom hardware row. Each page shows eight steps; a pattern
+has 1-32 steps (default 16), so up to four pages are used. Cells are stored
+step-major: `cell(step, note) = step * 8 + note`. The 64 read-only status cells use
+the visible layout instead: `status(note, stepColumn) = note * 8 + stepColumn`.
 
 All 256 cells are ordinary boolean host parameters. Eight trigger parameters give
 the UI the same note-preview action as the Launchpad side CCs, and the visible page
@@ -19,8 +21,8 @@ LED caches. They never reset the pattern.
 
 Scale ordinals follow `docs/scales.md` exactly: 0-32, including the generic
 pentatonic at row 16. The table is append-only because hosts save the integer
-ordinal. Column notes are `foldMidi(root + scaleStepAt(scale, column + noteView))`.
-With **Note Map = GM Drums**, the columns are kick, snare, closed hat, open hat,
+ordinal. Row notes are `foldMidi(root + scaleStepAt(scale, note + noteView))`.
+With **Note Map = GM Drums**, rows 0-7 are kick, snare, closed hat, open hat,
 low tom, mid tom, high tom and crash.
 
 ## Clocks
@@ -33,6 +35,12 @@ Steps are sixteenth notes: four steps per beat.
   absolute-step space, so they survive a block boundary and are flushed on stop.
 - **Free** accumulates samples from the tempo control. A tempo change clamps the
   accumulator so old samples cannot produce a burst of steps at frame 0.
+
+Note-offs are queued in step space and flushed at the next boundary *after*
+input has been consumed. A side CC or UI trigger just before a boundary therefore
+releases at that boundary in the same block instead of one block late. With a
+stopped host transport, manual triggers use a free-tempo accumulator for their
+release only, so they cannot sustain indefinitely.
 
 ## Launchpad contract
 
@@ -51,9 +59,14 @@ CCs `19,29,39,49,59,69,79,89`. Top buttons are CCs `91..99`:
 
 LED colours follow `docs/launchpad.md`. Active cells are green, the active cell
 on the current step is white, inactive cells on the current step are dim, top
-buttons are colour-coded by function and side buttons light when their column
+buttons are colour-coded by function and side buttons light when their note row
 contains notes on the visible page. The UI's side triggers use the eight trigger
 parameters, so a click has the same audible effect as a hardware side CC.
+
+**LED Feedback is off by default.** Launchpad colours are channel-1 note-ons; if
+they are sent to a synth instead of a Launchpad, the synth hears them as held
+notes. Enable LED feedback only when PadSeq's MIDI output is routed to the
+controller (or through a channel filter).
 
 **Clear / Panic** emits all-notes-off on the chosen channel, the programmer-mode
 SysEx, a bulk LED clear SysEx and explicit LED-off messages in the same block.
@@ -70,7 +83,9 @@ sequence.
 ## Testing
 
 `plugins/padseq/tests/padseq_core_tests.cpp` checks the canonical scale table,
-grid mapping, note folding, all controls, free and host timing, jumps/rewind,
-hardware and UI manual triggers, Launchpad messages, randomisation, panic, and lifecycle state
-retention. The DPF wrapper and host save/reopen path still need listening and
-host-side validation.
+grid mapping, horizontal scan and status layout, note folding, all controls, free
+and host timing, jumps/rewind, late-block note-offs, hardware and UI manual
+triggers, Launchpad messages, opt-in LED feedback, randomisation, panic, and
+lifecycle state retention. Host save/reopen was validated in REAPER; realtime
+transport and Launchpad LED messages still need a reachable host transport and
+hardware.

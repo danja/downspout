@@ -66,12 +66,15 @@ bool hasNote(const ProcessResult& result,
     });
 }
 
-int countStatus(const ProcessResult& result, const std::uint8_t status)
+int countNoteOnsOnChannel(const ProcessResult& result, const std::uint8_t channel)
 {
     int count = 0;
     for (std::uint32_t i = 0; i < result.eventCount; ++i)
-        if (result.events[i].size == 3 && result.events[i].data[0] == status)
+    {
+        const MidiMessage& e = result.events[i];
+        if (e.size == 3 && e.data[0] == static_cast<std::uint8_t>(0x90u | channel) && e.data[2] > 0u)
             ++count;
+    }
     return count;
 }
 
@@ -97,6 +100,13 @@ MidiMessage midi(const std::uint32_t frame, const std::uint8_t status,
     message.data[1] = data1;
     message.data[2] = data2;
     return message;
+}
+
+// Status cells are displayed as note rows / step columns, unlike the saved
+// step-major cell parameters.
+std::uint32_t statusIndex(const std::size_t note, const std::size_t stepColumn)
+{
+    return static_cast<std::uint32_t>(note * kGridWidth + stepColumn);
 }
 
 std::uint64_t patternHash(const Processor& processor)
@@ -136,7 +146,8 @@ void testDefaultsAndOrdinals()
     checkNear(processor.getParameter(p(ParamId::tempo)), 120.0, 1e-6, "default tempo");
     checkNear(processor.getParameter(p(ParamId::velocity)), 100.0, 1e-6, "default velocity");
     checkNear(processor.getParameter(p(ParamId::seed)), 12345.0, 1e-6, "default seed");
-    checkNear(processor.getParameter(p(ParamId::ledFeedback)), 1.0, 1e-6, "default LED feedback");
+    checkNear(processor.getParameter(p(ParamId::ledFeedback)), 0.0, 1e-6,
+              "LED feedback defaults off so channel-1 LED notes cannot feed an instrument");
     checkNear(processor.getParameter(p(ParamId::passInput)), 0.0, 1e-6, "default pass-through");
     checkNear(processor.getParameter(p(ParamId::statusStep)), -1.0, 1e-6, "default step status");
 }
@@ -199,6 +210,9 @@ void testScalePitchSets()
 
 void testLayoutHelpers()
 {
+    Processor layout;
+    layout.init(48000.0);
+
     for (std::size_t row = 0; row < kGridHeight; ++row)
     {
         for (std::size_t col = 0; col < kGridWidth; ++col)
@@ -217,6 +231,11 @@ void testLayoutHelpers()
     check(!noteToGrid(89, row, col), "note 89 is not a grid pad");
     check(!noteToGrid(19, row, col), "note 19 is not a grid pad");
     checkEq(static_cast<int>(cellIndex(3, 5)), 29, "step-major cell index");
+    checkEq(layout.patternStepFor(0, 0), 0, "page 0 column 0 scans step 0");
+    checkEq(layout.patternStepFor(0, 7), 7, "page 0 column 7 scans step 7");
+    checkEq(layout.patternStepFor(1, 0), 8, "page 1 column 0 scans step 8");
+    checkEq(static_cast<int>(statusIndex(5, 2)), 42,
+            "status cells are note rows with step columns");
     checkEq(pageCount(1), 1, "one step is one page");
     checkEq(pageCount(8), 1, "eight steps is one page");
     checkEq(pageCount(9), 2, "nine steps is two pages");
@@ -227,23 +246,23 @@ void testNoteMapping()
 {
     Processor processor;
     processor.init(48000.0);
-    checkEq(processor.noteForColumn(0), 60, "major root note");
-    checkEq(processor.noteForColumn(1), 62, "major second degree");
-    checkEq(processor.noteForColumn(6), 71, "major seventh degree");
-    checkEq(processor.noteForColumn(7), 72, "major octave degree");
+    checkEq(processor.noteForRow(0), 60, "major root note");
+    checkEq(processor.noteForRow(1), 62, "major second degree");
+    checkEq(processor.noteForRow(6), 71, "major seventh degree");
+    checkEq(processor.noteForRow(7), 72, "major octave degree");
 
     processor.setParameter(p(ParamId::scale), static_cast<float>(ScaleId::minor));
-    checkEq(processor.noteForColumn(2), 63, "minor third degree");
+    checkEq(processor.noteForRow(2), 63, "minor third degree");
     processor.setParameter(p(ParamId::root), 48.0f);
-    checkEq(processor.noteForColumn(0), 48, "root parameter changes notes");
+    checkEq(processor.noteForRow(0), 48, "root parameter changes notes");
     processor.setParameter(p(ParamId::noteView), 1.0f);
-    checkEq(processor.noteForColumn(0), 50, "view up one scale step");
+    checkEq(processor.noteForRow(0), 50, "view up one scale step");
     processor.setParameter(p(ParamId::noteView), -1.0f);
-    checkEq(processor.noteForColumn(0), 46, "view down one scale step");
+    checkEq(processor.noteForRow(0), 46, "view down one scale step");
 
     processor.setParameter(p(ParamId::noteMap), static_cast<float>(NoteMap::gmDrums));
-    for (std::size_t col = 0; col < kGridWidth; ++col)
-        checkEq(processor.noteForColumn(col), kDrumNotes[col], "GM drum column note");
+    for (std::size_t note = 0; note < kGridHeight; ++note)
+        checkEq(processor.noteForRow(note), kDrumNotes[note], "GM drum row note");
 }
 
 void testCellsAndGridInput()
@@ -253,23 +272,32 @@ void testCellsAndGridInput()
     const std::size_t index = cellIndex(2, 3);
     processor.setParameter(p(ParamId::cellStart) + static_cast<std::uint32_t>(index), 1.0f);
     check(processor.cellActive(2, 3), "cell parameter activates grid cell");
-    checkNear(processor.getParameter(p(ParamId::statusCellStart) + static_cast<std::uint32_t>(index)),
-              1.0, 1e-6, "status mirrors cell");
+    checkNear(processor.getParameter(p(ParamId::statusCellStart) + statusIndex(3, 2)),
+              1.0, 1e-6, "status mirrors cell with note rows and step columns");
 
     TransportSnapshot transport {};
+    // Row 5 selects the note and column 6 selects the step on the visible page.
     const MidiMessage press = midi(0, 0x90u, gridToNote(5, 6), 127u);
     const MidiMessage release = midi(0, 0x80u, gridToNote(5, 6), 0u);
     const MidiMessage events[] = {press, release};
-    const ProcessResult result = processor.processBlock(100, transport, events, 2);
-    check(processor.cellActive(5, 6), "Launchpad note-on toggles the cell on");
+    const ProcessResult consumed = processor.processBlock(100, transport, events, 2);
+    check(processor.cellActive(6, 5), "Launchpad row is the note and column is the step");
     check(processor.cellActive(2, 3), "existing cells survive grid input");
-    check(result.eventCount > 0, "grid input produces LED feedback");
+    checkEq(countNoteOnsOnChannel(consumed, 0), 0,
+            "LED feedback is off by default, so no channel-1 note artifact is emitted");
+
+    processor.setParameter(p(ParamId::ledFeedback), 1.0f);
+    const ProcessResult lit = processor.processBlock(100, transport, nullptr, 0);
+    check(hasNote(lit, 0, 0x90u, gridToNote(5, 6), kLedGreen),
+          "LED feedback maps note rows to hardware rows and steps to columns");
+    processor.setParameter(p(ParamId::ledFeedback), 0.0f);
 
     processor.processBlock(100, transport, &press, 1);
-    check(!processor.cellActive(5, 6), "second press toggles the cell off");
+    check(!processor.cellActive(6, 5), "second press toggles the cell off");
 
     processor.setParameter(p(ParamId::page), 1.0f);
-    check(!processor.cellActive(5, 6), "page switch changes the visible cells");
+    checkNear(processor.getParameter(p(ParamId::statusCellStart) + statusIndex(3, 2)),
+              0.0, 1e-6, "page switch hides cells outside the visible steps");
     check(processor.cellActive(2, 3), "page switch keeps the whole pattern");
 
     processor.setParameter(p(ParamId::cellStart) + static_cast<std::uint32_t>(cellIndex(6, 0)), 1.0f);
@@ -357,7 +385,7 @@ void testManualNoteTrigger()
     TransportSnapshot transport {};
     const MidiMessage side = midi(10, 0xb0u, kSideButtonCCs[0], 127u);
     const ProcessResult pressed = processor.processBlock(100, transport, &side, 1);
-    check(hasNote(pressed, 10, 0x93u, 60, 100), "right-column button plays the column note");
+    check(hasNote(pressed, 10, 0x93u, 60, 100), "side CC 19 plays note row 0");
     check(!anyEvent(pressed, [&](const MidiMessage& e) {
               return e.size == 3 && e.data[0] == 0xb0u && e.data[1] == kSideButtonCCs[0] &&
                      e.data[2] == 127u;
@@ -383,15 +411,62 @@ void testManualNoteTrigger()
     const ProcessResult uiTriggers = uiProcessor.processBlock(100, transport, nullptr, 0);
     for (std::size_t col = 0; col < kGridWidth; ++col)
     {
-        check(hasNote(uiTriggers, 0, 0x93u, uiProcessor.noteForColumn(col), 100),
-              "UI trigger parameter plays column " + std::to_string(col + 1));
+        check(hasNote(uiTriggers, 0, 0x93u, uiProcessor.noteForRow(col), 100),
+              "UI trigger parameter plays note row " + std::to_string(col + 1));
     }
     const ProcessResult uiOffs = uiProcessor.processBlock(6000, transport, nullptr, 0);
     for (std::size_t col = 0; col < kGridWidth; ++col)
     {
-        check(hasNote(uiOffs, 5900, 0x83u, uiProcessor.noteForColumn(col), 0),
-              "UI trigger note-off is timed to column " + std::to_string(col + 1));
+        check(hasNote(uiOffs, 5900, 0x83u, uiProcessor.noteForRow(col), 0),
+              "UI trigger note-off is timed to note row " + std::to_string(col + 1));
     }
+}
+
+void testLateBlockSideNoteOff()
+{
+    // A side button pressed near the end of a block must release at the boundary
+    // inside that same block, not one block late.
+    Processor freeClock;
+    freeClock.init(48000.0);
+    freeClock.activate();
+    freeClock.setParameter(p(ParamId::clockMode), static_cast<float>(ClockMode::free));
+    TransportSnapshot transport {};
+    freeClock.processBlock(100, transport, nullptr, 0);
+    const MidiMessage late = midi(5800, 0xb0u, kSideButtonCCs[0], 127u);
+    const ProcessResult freeBlock = freeClock.processBlock(6000, transport, &late, 1);
+    check(hasNote(freeBlock, 5800, 0x93u, 60, 100), "late free-block side CC sounds at its frame");
+    check(hasNote(freeBlock, 5900, 0x83u, 60, 0),
+          "late free-block note-off lands on the boundary in the same block");
+
+    Processor hostClock;
+    hostClock.init(48000.0);
+    hostClock.activate();
+    hostClock.setParameter(p(ParamId::clockMode), static_cast<float>(ClockMode::host));
+    transport.valid = true;
+    transport.playing = true;
+    transport.bpm = 120.0;
+    transport.beatsPerBar = 4.0;
+    transport.bar = 0.0;
+    transport.barBeat = 0.0;
+    const ProcessResult hostBlock = hostClock.processBlock(12000, transport, &late, 1);
+    check(hasNote(hostBlock, 5800, 0x93u, 60, 100), "late host-block side CC sounds at its frame");
+    check(hasNote(hostBlock, 6000, 0x83u, 60, 0),
+          "late host-block note-off lands on the boundary in the same block");
+
+    Processor stopped;
+    stopped.init(48000.0);
+    stopped.activate();
+    stopped.setParameter(p(ParamId::clockMode), static_cast<float>(ClockMode::host));
+    transport.valid = true;
+    transport.playing = false;
+    transport.bar = 0.0;
+    transport.barBeat = 0.0;
+    const MidiMessage early = midi(100, 0xb0u, kSideButtonCCs[0], 127u);
+    const ProcessResult pressed = stopped.processBlock(100, transport, &early, 1);
+    check(hasNote(pressed, 100, 0x93u, 60, 100), "side CC sounds while the host transport is stopped");
+    const ProcessResult released = stopped.processBlock(6000, transport, nullptr, 0);
+    check(hasNote(released, 5900, 0x83u, 60, 0),
+          "stopped-host manual note releases on a free-tempo step instead of sustaining");
 }
 
 void testTopButtonsAndStatus()
@@ -516,12 +591,17 @@ void testPassInputAndLedFeedback()
     Processor lit;
     lit.init(48000.0);
     lit.activate();
+    lit.setParameter(p(ParamId::ledFeedback), 1.0f);
     lit.setParameter(p(ParamId::cellStart), 1.0f);
     const ProcessResult withLeds = lit.processBlock(100, transport, nullptr, 0);
     check(anyEvent(withLeds, [](const MidiMessage& e) {
               return e.size == 3 && e.data[0] == 0x90u && e.data[1] == gridToNote(0, 0) &&
                      e.data[2] == kLedGreen;
           }), "active cells light green on the Launchpad");
+    check(anyEvent(withLeds, [](const MidiMessage& e) {
+              return e.size == 3 && e.data[0] == 0x90u && e.data[1] == gridToNote(0, 7) &&
+                     e.data[2] == kLedOff;
+          }), "step 8 on the bottom note row stays dark on page 0");
     check(anyEvent(withLeds, [](const MidiMessage& e) {
               return e.size == 3 && e.data[0] == 0xb0u && e.data[1] == kTopButtonCCs[0] &&
                      e.data[2] == kLedBlue;
@@ -587,7 +667,16 @@ void testEveryControlHasAnEffect()
     steps.setParameter(p(ParamId::steps), 8.0f);
     check(!steps.cellActive(31, 0), "shortening length removes later steps");
 
-    check(countStatus(base, 0x90u) > 0, "LED feedback is present");
+    checkEq(countNoteOnsOnChannel(base, 0), 0, "LED feedback is inert by default");
+
+    Processor led;
+    led.init(48000.0);
+    led.activate();
+    led.setParameter(p(ParamId::clockMode), static_cast<float>(ClockMode::free));
+    led.setParameter(p(ParamId::ledFeedback), 1.0f);
+    led.setParameter(p(ParamId::cellStart), 1.0f);
+    const ProcessResult lit = led.processBlock(6000, transport, nullptr, 0);
+    check(countNoteOnsOnChannel(lit, 0) > 0, "LED feedback control has a visible effect when enabled");
 }
 
 } // namespace
@@ -602,6 +691,7 @@ int main()
     testFreeClock();
     testHostClockRewindAndStop();
     testManualNoteTrigger();
+    testLateBlockSideNoteOff();
     testTopButtonsAndStatus();
     testRandomiseAndClear();
     testPassInputAndLedFeedback();

@@ -8,11 +8,11 @@ namespace downspout::padseq {
 
 // ── Layout ──────────────────────────────────────────────────────────────────
 //
-// PadSeq is a paged 8x8 step editor. X is a note column and Y is time, so a
-// page shows eight consecutive steps. A pattern is 1-32 steps (default 16),
-// stored as step-major cells: cell(step, column) = step * 8 + column.
+// PadSeq is a paged 8x8 step editor. X is time and Y is note, so a page shows
+// eight consecutive steps scanning left to right. A pattern is 1-32 steps
+// (default 16), stored as step-major cells: cell(step, note) = step * 8 + note.
 //
-// Row 0 is the bottom hardware row, matching docs/launchpad.md.
+// Note row 0 is the bottom hardware row, matching docs/launchpad.md.
 
 inline constexpr std::size_t kGridWidth = 8;
 inline constexpr std::size_t kGridHeight = 8;
@@ -273,7 +273,9 @@ struct ParamRange {
     case ParamId::seed:         return {1.0f, 65535.0f, 12345.0f, true, false, false, false};
     case ParamId::randomise:    return {0.0f, 1.0f, 0.0f, true, true, true, false};
     case ParamId::clear:        return {0.0f, 1.0f, 0.0f, true, true, true, false};
-    case ParamId::ledFeedback:  return {0.0f, 1.0f, 1.0f, true, true, false, false};
+    // LED colours are channel-1 note-ons. They are only safe when the MIDI output
+    // goes to a Launchpad, so hardware feedback is opt-in rather than a default.
+    case ParamId::ledFeedback:  return {0.0f, 1.0f, 0.0f, true, true, false, false};
     case ParamId::passInput:    return {0.0f, 1.0f, 0.0f, true, true, false, false};
     case ParamId::cellStart:    return {0.0f, 1.0f, 0.0f, true, true, false, false};
     case ParamId::statusStep:   return {-1.0f, kMaxSteps - 1.0f, -1.0f, true, false, false, true};
@@ -346,9 +348,9 @@ inline constexpr std::uint8_t kLedPink = 57;
     return true;
 }
 
-[[nodiscard]] constexpr std::size_t cellIndex(const std::size_t step, const std::size_t column) noexcept
+[[nodiscard]] constexpr std::size_t cellIndex(const std::size_t step, const std::size_t note) noexcept
 {
-    return step * kGridWidth + column;
+    return step * kGridWidth + note;
 }
 
 [[nodiscard]] constexpr int pageCount(const int steps) noexcept

@@ -43,11 +43,11 @@ std::array<float, 64> makeDefaults()
     return defaults;
 }
 
-int columnNote(const int scale, const int root, const int view, const int map, const std::size_t column)
+int rowNote(const int scale, const int root, const int view, const int map, const std::size_t note)
 {
     if (map == static_cast<int>(NoteMap::gmDrums))
-        return kDrumNotes[column];
-    return foldMidi(root + scaleStepAt(static_cast<std::size_t>(scale), static_cast<int>(column) + view));
+        return kDrumNotes[note];
+    return foldMidi(root + scaleStepAt(static_cast<std::size_t>(scale), static_cast<int>(note) + view));
 }
 
 void noteLabel(char* buffer, const std::size_t size, const int note)
@@ -106,7 +106,7 @@ protected:
         {
             if (triggerHits_[i].bounds.contains(mx, my))
             {
-                pressedColumn_ = static_cast<int>(i);
+                pressedNote_ = static_cast<int>(i);
                 sendTrigger(static_cast<ParamId>(static_cast<std::uint32_t>(ParamId::triggerStart) +
                                                  static_cast<std::uint32_t>(i)));
                 repaint();
@@ -120,7 +120,7 @@ protected:
                 const uint32_t parameter = static_cast<uint32_t>(ParamId::cellStart) +
                                            static_cast<uint32_t>(cellIndex(
                                                static_cast<std::size_t>(gridHits_[i].step),
-                                               static_cast<std::size_t>(gridHits_[i].column)));
+                                               static_cast<std::size_t>(gridHits_[i].note)));
                 const float next = allValues_[parameter] >= 0.5f ? 0.0f : 1.0f;
                 allValues_[parameter] = next;
                 sendValue(parameter, next);
@@ -133,7 +133,7 @@ protected:
     void onNanoDisplay() override
     {
         beginFrame();
-        drawHeader("PadSeq", "8x8 step sequencer", "X = note column / Y = time. Click cells to toggle; side buttons trigger notes; top strip mirrors Launchpad.");
+        drawHeader("PadSeq", "8x8 step sequencer", "X = time, left to right / Y = note, row 0 at the bottom. Click cells to toggle; side buttons trigger note rows.");
 
         drawTopStrip();
         drawGridPanel();
@@ -144,7 +144,7 @@ private:
     struct GridHit {
         Rect bounds {};
         int step = 0;
-        int column = 0;
+        int note = 0;
     };
     struct IndexedHit {
         Rect bounds {};
@@ -270,32 +270,36 @@ private:
 
         for (std::size_t col = 0; col < kGridWidth; ++col)
         {
-            char columnText[16];
-            if (map == static_cast<int>(NoteMap::gmDrums))
-                std::snprintf(columnText, sizeof(columnText), "%s", kDrumNames[col]);
+            const int step = page * kStepsPerPage + static_cast<int>(col);
+            char stepText[16];
+            if (step < steps)
+                std::snprintf(stepText, sizeof(stepText), "%d", step + 1);
             else
-                noteLabel(columnText, sizeof(columnText), columnNote(scale, root, view, map, col));
+                stepText[0] = '\0';
             label(gridX + static_cast<float>(col) * (cellW + gap) + cellW * 0.5f,
-                  232.0f, columnText, false, 10.0f, ALIGN_CENTER | ALIGN_BOTTOM);
+                  232.0f, stepText, false, 10.0f, ALIGN_CENTER | ALIGN_BOTTOM);
         }
 
         gridCount_ = 0;
         for (std::size_t displayRow = 0; displayRow < kGridHeight; ++displayRow)
         {
-            const int hardwareRow = static_cast<int>(kGridHeight - 1 - displayRow);
-            const int step = page * kStepsPerPage + hardwareRow;
+            const std::size_t note = kGridHeight - 1 - displayRow;
             const float y = gridY + static_cast<float>(displayRow) * (cellH + gap);
-            char stepLabel[16];
-            std::snprintf(stepLabel, sizeof(stepLabel), "%d", step + 1);
-            label(36.0f, y + cellH * 0.5f, stepLabel, true, 10.0f, ALIGN_RIGHT | ALIGN_MIDDLE);
+            char noteText[16];
+            if (map == static_cast<int>(NoteMap::gmDrums))
+                std::snprintf(noteText, sizeof(noteText), "%s", kDrumNames[note]);
+            else
+                noteLabel(noteText, sizeof(noteText), rowNote(scale, root, view, map, note));
+            label(36.0f, y + cellH * 0.5f, noteText, true, 10.0f, ALIGN_RIGHT | ALIGN_MIDDLE);
 
             for (std::size_t col = 0; col < kGridWidth; ++col)
             {
+                const int step = page * kStepsPerPage + static_cast<int>(col);
                 const Rect box {gridX + static_cast<float>(col) * (cellW + gap), y, cellW, cellH};
                 const bool valid = step < steps;
                 const std::uint32_t cellParameter = static_cast<std::uint32_t>(ParamId::cellStart) +
-                                                    static_cast<std::uint32_t>(step) * kGridWidth +
-                                                    static_cast<std::uint32_t>(col);
+                                                    static_cast<std::uint32_t>(cellIndex(
+                                                        static_cast<std::size_t>(step), note));
                 const bool active = valid && allValues_[cellParameter] >= 0.5f;
                 const bool playing = valid && step == current;
 
@@ -325,12 +329,12 @@ private:
                     fill();
                 }
                 if (valid)
-                    gridHits_[gridCount_++] = {box, step, static_cast<int>(col)};
+                    gridHits_[gridCount_++] = {box, step, static_cast<int>(note)};
             }
         }
 
-        label(36.0f, 668.0f, "Step", true, 10.0f);
-        label(gridX, 668.0f, "Note columns ->", true, 10.0f);
+        label(36.0f, 668.0f, "Note", true, 10.0f);
+        label(gridX, 668.0f, "Time / steps ->", true, 10.0f);
     }
 
     void drawControlPanel()
@@ -339,7 +343,7 @@ private:
         drawPanel(panel, "PATTERN & NOTES", kControlAccent, "CC19-CC89");
 
         const Rect triggerPanel {672.0f, 226.0f, 272.0f, 128.0f};
-        drawPanel(triggerPanel, "SIDE TRIGGERS", kTriggerAccent, "one per column");
+        drawPanel(triggerPanel, "SIDE TRIGGERS", kTriggerAccent, "one per note row");
         const float buttonW = 62.0f;
         const float buttonH = 30.0f;
         const float gap = 6.0f;
@@ -361,14 +365,14 @@ private:
             else
             {
                 char noteText[8];
-                noteLabel(noteText, sizeof(noteText), columnNote(scale, root, view, map, i));
+                noteLabel(noteText, sizeof(noteText), rowNote(scale, root, view, map, i));
                 std::snprintf(title, sizeof(title), "%d %s", kSideButtonCCs[i], noteText);
             }
             drawButtonLike(static_cast<int>(i), title, box, kTriggerAccent,
-                           pressedColumn_ == static_cast<int>(i), 9.0f);
+                           pressedNote_ == static_cast<int>(i), 9.0f);
             triggerHits_[triggerCount_++] = {box, i};
         }
-        label(684.0f, 340.0f, "UI buttons and side CCs trigger the column note.", true, 10.0f);
+        label(684.0f, 340.0f, "UI buttons and side CCs trigger that note row.", true, 10.0f);
 
         const char* const clockNames[] = {"Auto", "Host", "Free"};
         const char* const mapNames[] = {"Scale", "GM Drums"};
@@ -425,7 +429,7 @@ private:
     std::size_t gridCount_ = 0;
     std::size_t topCount_ = 0;
     std::size_t triggerCount_ = 0;
-    int pressedColumn_ = -1;
+    int pressedNote_ = -1;
     char bufSteps_[16] {};
     char bufPage_[32] {};
     char bufTempo_[24] {};

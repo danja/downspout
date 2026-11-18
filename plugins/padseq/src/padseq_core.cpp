@@ -174,16 +174,17 @@ void Processor::updateStatus()
         (usingHost_ && wasHostPlaying_) || (!usingHost_ && freeStarted_) ? 1.0f : 0.0f;
     parameters_[p(ParamId::statusNoteView)] = parameters_[p(ParamId::noteView)];
 
-    // Status cells mirror the visible 8x8 page, not the whole 32-step pattern.
+    // Status cells mirror the visible 8x8 page: rows are notes, columns are steps.
     const int stepCount = static_cast<int>(std::lround(parameters_[p(ParamId::steps)]));
     const int page = static_cast<int>(std::lround(parameters_[p(ParamId::page)]));
-    for (std::size_t row = 0; row < kGridHeight; ++row)
+    for (std::size_t note = 0; note < kGridHeight; ++note)
     {
-        const int step = page * kStepsPerPage + static_cast<int>(row);
-        for (std::size_t col = 0; col < kGridWidth; ++col)
+        for (std::size_t stepColumn = 0; stepColumn < kGridWidth; ++stepColumn)
         {
-            const bool on = step >= 0 && step < stepCount && cells_[cellIndex(static_cast<std::size_t>(step), col)];
-            parameters_[p(ParamId::statusCellStart) + row * kGridWidth + col] = on ? 1.0f : 0.0f;
+            const int step = page * kStepsPerPage + static_cast<int>(stepColumn);
+            const bool on = step >= 0 && step < stepCount &&
+                            cells_[cellIndex(static_cast<std::size_t>(step), note)];
+            parameters_[p(ParamId::statusCellStart) + note * kGridWidth + stepColumn] = on ? 1.0f : 0.0f;
         }
     }
 }
@@ -213,11 +214,11 @@ void Processor::setParameter(const std::uint32_t index, const float value)
     const auto triggerBase = static_cast<std::uint32_t>(ParamId::triggerStart);
     if (index >= triggerBase && index < triggerBase + static_cast<std::uint32_t>(kGridWidth))
     {
-        const std::size_t column = index - triggerBase;
-        const bool edge = applied >= 0.5f && previousTriggers_[column] < 0.5f;
-        previousTriggers_[column] = applied;
+        const std::size_t note = index - triggerBase;
+        const bool edge = applied >= 0.5f && previousTriggers_[note] < 0.5f;
+        previousTriggers_[note] = applied;
         if (edge)
-            pendingTriggerMask_ |= static_cast<std::uint8_t>(1u << column);
+            pendingTriggerMask_ |= static_cast<std::uint8_t>(1u << note);
         parameters_[index] = 0.0f;
         return;
     }
@@ -279,30 +280,30 @@ float Processor::getParameter(const std::uint32_t index) const noexcept
         const std::uint32_t visible = index - statusBase;
         const int steps = static_cast<int>(std::lround(parameters_[static_cast<std::size_t>(ParamId::steps)]));
         const int page = static_cast<int>(std::lround(parameters_[static_cast<std::size_t>(ParamId::page)]));
-        const int step = page * kStepsPerPage + static_cast<int>(visible / kGridWidth);
-        const std::size_t col = visible % kGridWidth;
-        return step >= 0 && step < steps && cells_[cellIndex(static_cast<std::size_t>(step), col)]
+        const std::size_t note = visible / kGridWidth;
+        const int step = page * kStepsPerPage + static_cast<int>(visible % kGridWidth);
+        return step >= 0 && step < steps && cells_[cellIndex(static_cast<std::size_t>(step), note)]
             ? 1.0f : 0.0f;
     }
     return parameters_[index];
 }
 
-bool Processor::cellActive(const std::size_t step, const std::size_t column) const noexcept
+bool Processor::cellActive(const std::size_t step, const std::size_t note) const noexcept
 {
-    if (step >= kMaxSteps || column >= kGridWidth)
+    if (step >= kMaxSteps || note >= kGridHeight)
         return false;
-    return cells_[cellIndex(step, column)];
+    return cells_[cellIndex(step, note)];
 }
 
-std::uint8_t Processor::noteForColumn(const std::size_t column) const noexcept
+std::uint8_t Processor::noteForRow(const std::size_t note) const noexcept
 {
-    if (column >= kGridWidth)
+    if (note >= kGridHeight)
         return 0u;
 
     const auto p = [](const ParamId id) { return static_cast<std::size_t>(id); };
     if (static_cast<int>(std::lround(parameters_[p(ParamId::noteMap)])) ==
         static_cast<int>(NoteMap::gmDrums))
-        return kDrumNotes[column];
+        return kDrumNotes[note];
 
     const int scale = clampValue(
         static_cast<int>(std::lround(parameters_[p(ParamId::scale)])),
@@ -311,14 +312,14 @@ std::uint8_t Processor::noteForColumn(const std::size_t column) const noexcept
     const int root = clampValue(static_cast<int>(std::lround(parameters_[p(ParamId::root)])), 0, 127);
     const int view = clampValue(static_cast<int>(std::lround(parameters_[p(ParamId::noteView)])), -32, 32);
     return static_cast<std::uint8_t>(foldMidi(root + scaleStepAt(static_cast<std::size_t>(scale),
-                                                                  static_cast<int>(column) + view)));
+                                                                  static_cast<int>(note) + view)));
 }
 
-int Processor::patternStepFor(const std::size_t page, const std::size_t row) const noexcept
+int Processor::patternStepFor(const std::size_t page, const std::size_t stepColumn) const noexcept
 {
-    if (page >= static_cast<std::size_t>(kMaxPages) || row >= kGridHeight)
+    if (page >= static_cast<std::size_t>(kMaxPages) || stepColumn >= kGridWidth)
         return -1;
-    const int step = static_cast<int>(page) * kStepsPerPage + static_cast<int>(row);
+    const int step = static_cast<int>(page) * kStepsPerPage + static_cast<int>(stepColumn);
     const int steps = static_cast<int>(std::lround(parameters_[static_cast<std::size_t>(ParamId::steps)]));
     return step < clampValue(steps, kMinSteps, kMaxSteps) ? step : -1;
 }
@@ -351,9 +352,9 @@ void Processor::randomisePattern()
         // ones rather than throwing the pattern away.
         for (int step = 0; step < steps; ++step)
         {
-            for (std::size_t col = 0; col < kGridWidth; ++col)
+            for (std::size_t note = 0; note < kGridHeight; ++note)
             {
-                const std::size_t index = cellIndex(static_cast<std::size_t>(step), col);
+                const std::size_t index = cellIndex(static_cast<std::size_t>(step), note);
                 const std::uint32_t draw = random() % 100u;
                 if (cells_[index])
                     cells_[index] = draw >= 40u;
@@ -397,7 +398,7 @@ void Processor::clearPattern(const bool emitPanic)
 
 bool Processor::handleMidi(const MidiMessage& event,
                            ProcessResult& result,
-                           const std::int64_t manualOffStep,
+                           const std::int64_t offStep,
                            bool& forceLeds)
 {
     if (event.size < 3)
@@ -427,7 +428,7 @@ bool Processor::handleMidi(const MidiMessage& event,
             if (top >= 0)
                 handleTopButton(static_cast<std::uint32_t>(top));
             else
-                handleSideButton(static_cast<std::size_t>(side), result, event.frame, manualOffStep);
+                handleSideButton(static_cast<std::size_t>(side), result, event.frame, offStep);
         }
         forceLeds = true;
         return true;
@@ -447,10 +448,11 @@ bool Processor::handleGridPress(const std::uint8_t note)
 
     const std::size_t page = static_cast<std::size_t>(std::lround(
         parameters_[static_cast<std::size_t>(ParamId::page)]));
-    const int step = patternStepFor(page, row);
+    // Hardware row selects the note, hardware column selects the step on this page.
+    const int step = patternStepFor(page, col);
     if (step < 0)
         return false;
-    const std::size_t index = cellIndex(static_cast<std::size_t>(step), col);
+    const std::size_t index = cellIndex(static_cast<std::size_t>(step), row);
     setCell(index, !cells_[index]);
     return true;
 }
@@ -500,21 +502,21 @@ void Processor::handleTopButton(const std::uint32_t button)
     }
 }
 
-void Processor::handleSideButton(const std::size_t column,
+void Processor::handleSideButton(const std::size_t note,
                                  ProcessResult& result,
                                  const std::uint32_t frame,
                                  const std::int64_t offStep)
 {
-    if (column >= kGridWidth)
+    if (note >= kGridHeight)
         return;
     const auto p = [](const ParamId id) { return static_cast<std::size_t>(id); };
     const std::uint8_t channel = static_cast<std::uint8_t>(
         clampValue(static_cast<int>(std::lround(parameters_[p(ParamId::channel)])), 1, 16) - 1);
     const std::uint8_t velocity = static_cast<std::uint8_t>(
         clampValue(static_cast<int>(std::lround(parameters_[p(ParamId::velocity)])), 1, 127));
-    const std::uint8_t note = noteForColumn(column);
-    appendMidi(result, frame, static_cast<std::uint8_t>(0x90u | channel), note, velocity);
-    enqueueNoteOff(offStep, static_cast<std::uint8_t>(0x80u | channel), note);
+    const std::uint8_t playedNote = noteForRow(note);
+    appendMidi(result, frame, static_cast<std::uint8_t>(0x90u | channel), playedNote, velocity);
+    enqueueNoteOff(offStep, static_cast<std::uint8_t>(0x80u | channel), playedNote);
 }
 
 // ── Clocks and note scheduling ───────────────────────────────────────────────
@@ -555,28 +557,50 @@ ProcessResult Processor::processBlock(const std::uint32_t frameCount,
                                         sampleRate_ * 60.0 /
                                             (std::max(1.0, static_cast<double>(
                                                 parameters_[p(ParamId::tempo)])) * kStepsPerBeat));
-    const double absStepNow = useHost
-        ? (transport.bar * std::max(1.0, transport.beatsPerBar) + transport.barBeat) * kStepsPerBeat
-        : static_cast<double>(freeStep_) + freeStepAccum_ / stepSamples;
+    const int steps = static_cast<int>(std::lround(parameters_[p(ParamId::steps)]));
+    double absStepsStart = 0.0;
+    double absStepsEnd = 0.0;
+    bool hostPlaying = false;
 
-    const std::int64_t manualOffStep = stepPosition(absStepNow) + 1;
-
-    // Advance the clock before consuming hardware or UI triggers. A free clock's
-    // first block flushes stale note-offs; doing that after a side-button press
-    // would silence the button's own note before its grid boundary.
     if (useHost)
-        scheduleHostSteps(result, frameCount, transport);
+    {
+        const double beatsPerBar = std::max(1.0, transport.beatsPerBar);
+        const double absBeatsStart = transport.bar * beatsPerBar + transport.barBeat;
+        const double blockBeats = static_cast<double>(frameCount) * transport.bpm / (60.0 * sampleRate_);
+        absStepsStart = absBeatsStart * kStepsPerBeat;
+        absStepsEnd = (absBeatsStart + blockBeats) * kStepsPerBeat;
+        hostPlaying = transport.playing && transport.bpm > 0.0 && transport.beatsPerBar > 0.0;
+        prepareHostBlock(result, absStepsStart, steps, hostPlaying);
+        if (!hostPlaying)
+        {
+            // A stopped host has no pattern steps, but manual triggers still need
+            // a grid-timed release. Use the free accumulator for off events only.
+            absStepsStart = static_cast<double>(freeStep_) + freeStepAccum_ / stepSamples;
+            absStepsEnd = absStepsStart + static_cast<double>(frameCount) / stepSamples;
+        }
+    }
     else
-        scheduleFreeSteps(result, frameCount, stepSamples);
+    {
+        // A free clock's first block flushes stale note-offs before any trigger
+        // is consumed, so a side-button note is not silenced by its own start.
+        prepareFreeBlock(result, stepSamples);
+        absStepsStart = static_cast<double>(freeStep_) + freeStepAccum_ / stepSamples;
+        absStepsEnd = absStepsStart + static_cast<double>(frameCount) / stepSamples;
+    }
 
-    flushPendingTriggers(result, 0, manualOffStep);
+    const double absStepsSpan = absStepsEnd - absStepsStart;
+    const auto offStepFor = [&](const std::uint32_t frame) {
+        return offStepForFrame(absStepsStart, absStepsSpan, frameCount, frame);
+    };
+
+    flushPendingTriggers(result, 0, offStepFor(0));
 
     bool forceLeds = false;
     for (std::uint32_t i = 0; i < inputEventCount; ++i)
     {
         if (inputEvents == nullptr)
             break;
-        if (handleMidi(inputEvents[i], result, manualOffStep, forceLeds))
+        if (handleMidi(inputEvents[i], result, offStepFor(inputEvents[i].frame), forceLeds))
             forceLeds = true;
     }
 
@@ -588,6 +612,20 @@ ProcessResult Processor::processBlock(const std::uint32_t frameCount,
         emitPanic(result);
     }
 
+    // Boundaries are scheduled after input so a side button pressed before a
+    // boundary gets its note-off at that boundary, not one block later.
+    if (useHost)
+    {
+        if (hostPlaying)
+            scheduleHostBoundaries(result, frameCount, absStepsStart, absStepsEnd);
+        else
+            scheduleIdleBoundaries(result, frameCount, stepSamples);
+    }
+    else
+    {
+        scheduleFreeBoundaries(result, frameCount, stepSamples);
+    }
+
     const bool periodicRefresh = ledRefreshSamples_ >= static_cast<std::uint32_t>(sampleRate_ * 0.75);
     emitLedFeedback(result, forceLeds || periodicRefresh || !ledInitialized_);
     ledRefreshSamples_ = periodicRefresh ? 0u : ledRefreshSamples_ + frameCount;
@@ -597,11 +635,11 @@ ProcessResult Processor::processBlock(const std::uint32_t frameCount,
     return result;
 }
 
-void Processor::scheduleHostSteps(ProcessResult& result,
-                                  const std::uint32_t frameCount,
-                                  const TransportSnapshot& transport)
+void Processor::prepareHostBlock(ProcessResult& result,
+                                 const double absStepsStart,
+                                 const int steps,
+                                 const bool playing)
 {
-    const bool playing = transport.playing && transport.bpm > 0.0 && transport.beatsPerBar > 0.0;
     if (!playing)
     {
         if (wasHostPlaying_)
@@ -612,15 +650,7 @@ void Processor::scheduleHostSteps(ProcessResult& result,
         return;
     }
 
-    const double beatsPerBar = std::max(1.0, transport.beatsPerBar);
-    const double absBeatsStart = transport.bar * beatsPerBar + transport.barBeat;
-    const double blockBeats = static_cast<double>(frameCount) * transport.bpm / (60.0 * sampleRate_);
-    const double absStepsStart = absBeatsStart * kStepsPerBeat;
-    const double absStepsEnd = (absBeatsStart + blockBeats) * kStepsPerBeat;
     const std::int64_t startFloor = static_cast<std::int64_t>(stepPosition(absStepsStart));
-    const std::int64_t endFloor = static_cast<std::int64_t>(stepPosition(absStepsEnd));
-    const int steps = static_cast<int>(std::lround(parameters_[static_cast<std::size_t>(ParamId::steps)]));
-
     const bool restarted = !wasHostPlaying_ ||
                            (lastHostStep_ >= 0 &&
                             (startFloor < lastHostStep_ || startFloor > lastHostStep_ + 1));
@@ -645,6 +675,15 @@ void Processor::scheduleHostSteps(ProcessResult& result,
     currentHostStep_ = absStepsStart;
     currentPatternStep_ = positiveMod(
         static_cast<std::int64_t>(std::floor(absStepsStart - static_cast<double>(patternBaseStep_))), steps);
+}
+
+void Processor::scheduleHostBoundaries(ProcessResult& result,
+                                       const std::uint32_t frameCount,
+                                       const double absStepsStart,
+                                       const double absStepsEnd)
+{
+    const std::int64_t startFloor = static_cast<std::int64_t>(stepPosition(absStepsStart));
+    const std::int64_t endFloor = static_cast<std::int64_t>(stepPosition(absStepsEnd));
 
     for (std::int64_t boundary = startFloor + 1; boundary <= endFloor; ++boundary)
     {
@@ -654,11 +693,9 @@ void Processor::scheduleHostSteps(ProcessResult& result,
     }
 }
 
-void Processor::scheduleFreeSteps(ProcessResult& result,
-                                  const std::uint32_t frameCount,
-                                  const double stepSamples)
+void Processor::prepareFreeBlock(ProcessResult& result, const double stepSamples)
 {
-    const int steps = static_cast<int>(std::lround(parameters_[static_cast<std::size_t>(ParamId::steps)]));
+    static_cast<void>(stepSamples);
     if (!freeStarted_)
     {
         flushAllNoteOffs(result, 0);
@@ -668,7 +705,13 @@ void Processor::scheduleFreeSteps(ProcessResult& result,
         currentPatternStep_ = 0;
         emitStep(result, 0, 0, 0);
     }
+}
 
+void Processor::scheduleFreeBoundaries(ProcessResult& result,
+                                       const std::uint32_t frameCount,
+                                       const double stepSamples)
+{
+    const int steps = static_cast<int>(std::lround(parameters_[static_cast<std::size_t>(ParamId::steps)]));
     double untilNext = stepSamples - freeStepAccum_;
     while (untilNext < static_cast<double>(frameCount))
     {
@@ -688,16 +731,50 @@ void Processor::scheduleFreeSteps(ProcessResult& result,
     currentPatternStep_ = positiveMod(static_cast<std::int64_t>(freeStep_), steps);
 }
 
+void Processor::scheduleIdleBoundaries(ProcessResult& result,
+                                       const std::uint32_t frameCount,
+                                       const double stepSamples)
+{
+    // Same accumulator as the free clock, but no pattern step is emitted. This
+    // only gives stopped-host manual notes their scheduled release frame.
+    double untilNext = stepSamples - freeStepAccum_;
+    while (untilNext < static_cast<double>(frameCount))
+    {
+        const std::uint32_t frame = static_cast<std::uint32_t>(clampValue(
+            static_cast<int>(std::floor(untilNext)), 0, static_cast<int>(frameCount) - 1));
+        ++freeStep_;
+        flushNoteOffsAt(result, freeStep_, frame);
+        untilNext += stepSamples;
+    }
+
+    freeStepAccum_ += static_cast<double>(frameCount);
+    while (freeStepAccum_ > stepSamples)
+        freeStepAccum_ -= stepSamples;
+}
+
+std::int64_t Processor::offStepForFrame(const double absStepsStart,
+                                        const double absStepsSpan,
+                                        const std::uint32_t frameCount,
+                                        const std::uint32_t frame) const noexcept
+{
+    if (frameCount == 0)
+        return stepPosition(absStepsStart) + 1;
+    const double fraction = clampValue(static_cast<double>(frame) / static_cast<double>(frameCount),
+                                       0.0,
+                                       1.0);
+    return stepPosition(absStepsStart + std::max(0.0, absStepsSpan) * fraction) + 1;
+}
+
 void Processor::flushPendingTriggers(ProcessResult& result,
                                      const std::uint32_t frame,
                                      const std::int64_t offStep)
 {
     const std::uint8_t mask = pendingTriggerMask_;
     pendingTriggerMask_ = 0;
-    for (std::size_t column = 0; column < kGridWidth; ++column)
+    for (std::size_t note = 0; note < kGridHeight; ++note)
     {
-        if ((mask & (1u << column)) != 0u)
-            handleSideButton(column, result, frame, offStep);
+        if ((mask & (1u << note)) != 0u)
+            handleSideButton(note, result, frame, offStep);
     }
 }
 
@@ -714,13 +791,13 @@ void Processor::emitStep(ProcessResult& result,
     const std::uint8_t velocity = static_cast<std::uint8_t>(
         clampValue(static_cast<int>(std::lround(parameters_[p(ParamId::velocity)])), 1, 127));
 
-    for (std::size_t col = 0; col < kGridWidth; ++col)
+    for (std::size_t note = 0; note < kGridHeight; ++note)
     {
-        if (!cellActive(static_cast<std::size_t>(step), col))
+        if (!cellActive(static_cast<std::size_t>(step), note))
             continue;
-        const std::uint8_t note = noteForColumn(col);
-        appendMidi(result, frame, static_cast<std::uint8_t>(0x90u | channel), note, velocity);
-        enqueueNoteOff(absoluteStep + 1, static_cast<std::uint8_t>(0x80u | channel), note);
+        const std::uint8_t playedNote = noteForRow(note);
+        appendMidi(result, frame, static_cast<std::uint8_t>(0x90u | channel), playedNote, velocity);
+        enqueueNoteOff(absoluteStep + 1, static_cast<std::uint8_t>(0x80u | channel), playedNote);
     }
 }
 
@@ -764,9 +841,9 @@ void Processor::flushAllNoteOffs(ProcessResult& result, const std::uint32_t fram
 
 // ── Launchpad feedback ───────────────────────────────────────────────────────
 
-std::uint8_t Processor::statusColor(const std::size_t step, const std::size_t column) const noexcept
+std::uint8_t Processor::statusColor(const std::size_t step, const std::size_t note) const noexcept
 {
-    const bool on = cellActive(step, column);
+    const bool on = cellActive(step, note);
     const int current = static_cast<int>(std::lround(parameters_[static_cast<std::size_t>(ParamId::statusStep)]));
     if (on && static_cast<int>(step) == current)
         return kLedWhite;
@@ -799,15 +876,15 @@ std::uint8_t Processor::topColor(const std::uint32_t button) const noexcept
     return kLedOff;
 }
 
-std::uint8_t Processor::sideColor(const std::size_t column) const noexcept
+std::uint8_t Processor::sideColor(const std::size_t note) const noexcept
 {
     const std::size_t page = static_cast<std::size_t>(std::lround(
         parameters_[static_cast<std::size_t>(ParamId::page)]));
     const int steps = static_cast<int>(std::lround(parameters_[static_cast<std::size_t>(ParamId::steps)]));
-    for (int row = 0; row < kStepsPerPage; ++row)
+    for (std::size_t stepColumn = 0; stepColumn < kGridWidth; ++stepColumn)
     {
-        const int step = static_cast<int>(page) * kStepsPerPage + row;
-        if (step < steps && cellActive(static_cast<std::size_t>(step), column))
+        const int step = static_cast<int>(page) * kStepsPerPage + static_cast<int>(stepColumn);
+        if (step < steps && cellActive(static_cast<std::size_t>(step), note))
             return kLedPink;
     }
     return kLedDim;
@@ -823,18 +900,18 @@ void Processor::emitLedFeedback(ProcessResult& result, const bool force)
 
     const std::size_t page = static_cast<std::size_t>(std::lround(
         parameters_[static_cast<std::size_t>(ParamId::page)]));
-    for (std::size_t row = 0; row < kGridHeight; ++row)
+    for (std::size_t note = 0; note < kGridHeight; ++note)
     {
-        const int step = patternStepFor(page, row);
-        for (std::size_t col = 0; col < kGridWidth; ++col)
+        for (std::size_t stepColumn = 0; stepColumn < kGridWidth; ++stepColumn)
         {
+            const int step = patternStepFor(page, stepColumn);
             const std::uint8_t color = step >= 0
-                ? statusColor(static_cast<std::size_t>(step), col)
+                ? statusColor(static_cast<std::size_t>(step), note)
                 : kLedOff;
-            if (force || color != lastCellLeds_[row * kGridWidth + col])
+            if (force || color != lastCellLeds_[note * kGridWidth + stepColumn])
             {
-                appendMidi(result, 0, 0x90u, gridToNote(row, col), color);
-                lastCellLeds_[row * kGridWidth + col] = color;
+                appendMidi(result, 0, 0x90u, gridToNote(note, stepColumn), color);
+                lastCellLeds_[note * kGridWidth + stepColumn] = color;
             }
         }
     }
@@ -849,13 +926,13 @@ void Processor::emitLedFeedback(ProcessResult& result, const bool force)
         }
     }
 
-    for (std::size_t col = 0; col < kGridWidth; ++col)
+    for (std::size_t note = 0; note < kGridHeight; ++note)
     {
-        const std::uint8_t color = sideColor(col);
-        if (force || color != lastSideLeds_[col])
+        const std::uint8_t color = sideColor(note);
+        if (force || color != lastSideLeds_[note])
         {
-            appendMidi(result, 0, 0xb0u, kSideButtonCCs[col], color);
-            lastSideLeds_[col] = color;
+            appendMidi(result, 0, 0xb0u, kSideButtonCCs[note], color);
+            lastSideLeds_[note] = color;
         }
     }
 
