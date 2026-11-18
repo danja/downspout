@@ -66,18 +66,6 @@ bool hasNote(const ProcessResult& result,
     });
 }
 
-int countNoteOnsOnChannel(const ProcessResult& result, const std::uint8_t channel)
-{
-    int count = 0;
-    for (std::uint32_t i = 0; i < result.eventCount; ++i)
-    {
-        const MidiMessage& e = result.events[i];
-        if (e.size == 3 && e.data[0] == static_cast<std::uint8_t>(0x90u | channel) && e.data[2] > 0u)
-            ++count;
-    }
-    return count;
-}
-
 int countNoteOffsOnChannel(const ProcessResult& result, const std::uint8_t channel)
 {
     int count = 0;
@@ -85,6 +73,48 @@ int countNoteOffsOnChannel(const ProcessResult& result, const std::uint8_t chann
     {
         const MidiMessage& e = result.events[i];
         if (e.size == 3 && e.data[0] == static_cast<std::uint8_t>(0x80u | channel) && e.data[2] == 0u)
+            ++count;
+    }
+    return count;
+}
+
+bool isLedSysex(const MidiMessage& e)
+{
+    return e.size >= 8u && e.data[0] == 0xf0u && e.data[1] == 0x00u &&
+           e.data[2] == 0x20u && e.data[3] == 0x29u && e.data[4] == 0x02u &&
+           e.data[5] == 0x0du && e.data[6] == 0x03u && e.data[e.size - 1u] == 0xf7u;
+}
+
+bool sysexLedHasColor(const ProcessResult& result,
+                      const std::uint8_t id,
+                      const std::uint8_t color)
+{
+    for (std::uint32_t i = 0; i < result.eventCount; ++i)
+    {
+        const MidiMessage& e = result.events[i];
+        if (!isLedSysex(e))
+            continue;
+        for (std::size_t j = 7u; j + 2u < static_cast<std::size_t>(e.size) - 1u; j += 3u)
+        {
+            if (e.data[j] == 0x00u && e.data[j + 1u] == id && e.data[j + 2u] == color)
+                return true;
+        }
+    }
+    return false;
+}
+
+int countLedNoteOrCc(const ProcessResult& result)
+{
+    int count = 0;
+    for (std::uint32_t i = 0; i < result.eventCount; ++i)
+    {
+        const MidiMessage& e = result.events[i];
+        if (e.size != 3u)
+            continue;
+        const std::uint8_t status = e.data[0];
+        if ((status & 0xf0u) == 0x90u && (status & 0x0fu) <= 2u)
+            ++count;
+        if ((status & 0xf0u) == 0xb0u)
             ++count;
     }
     return count;
@@ -147,7 +177,7 @@ void testDefaultsAndOrdinals()
     checkNear(processor.getParameter(p(ParamId::velocity)), 100.0, 1e-6, "default velocity");
     checkNear(processor.getParameter(p(ParamId::seed)), 12345.0, 1e-6, "default seed");
     checkNear(processor.getParameter(p(ParamId::ledFeedback)), 0.0, 1e-6,
-              "LED feedback defaults off so channel-1 LED notes cannot feed an instrument");
+              "LED feedback defaults off so the controller sees no unnecessary traffic");
     checkNear(processor.getParameter(p(ParamId::passInput)), 0.0, 1e-6, "default pass-through");
     checkNear(processor.getParameter(p(ParamId::statusStep)), -1.0, 1e-6, "default step status");
 }
@@ -283,13 +313,15 @@ void testCellsAndGridInput()
     const ProcessResult consumed = processor.processBlock(100, transport, events, 2);
     check(processor.cellActive(6, 5), "Launchpad row is the note and column is the step");
     check(processor.cellActive(2, 3), "existing cells survive grid input");
-    checkEq(countNoteOnsOnChannel(consumed, 0), 0,
-            "LED feedback is off by default, so no channel-1 note artifact is emitted");
+    checkEq(countLedNoteOrCc(consumed), 0,
+            "LED feedback is off by default, so no controller note/CC artifacts are emitted");
 
     processor.setParameter(p(ParamId::ledFeedback), 1.0f);
     const ProcessResult lit = processor.processBlock(100, transport, nullptr, 0);
-    check(hasNote(lit, 0, 0x90u, gridToNote(5, 6), kLedGreen),
+    check(sysexLedHasColor(lit, gridToNote(5, 6), kLedGreen),
           "LED feedback maps note rows to hardware rows and steps to columns");
+    checkEq(countLedNoteOrCc(lit), 0,
+            "LED feedback uses SysEx only, not channel-1 notes or CCs");
     processor.setParameter(p(ParamId::ledFeedback), 0.0f);
 
     processor.processBlock(100, transport, &press, 1);
@@ -507,12 +539,29 @@ void testTopButtonsAndStatus()
     press(static_cast<std::size_t>(TopButton::randomise));
     check(patternHash(processor) != 0u, "randomise button creates a pattern");
 
+    // Paint the LEDs, then clear: the hard reset must not be undone by the next
+    // periodic feedback block.
+    processor.setParameter(p(ParamId::ledFeedback), 1.0f);
+    processor.processBlock(100, transport, nullptr, 0);
     const ProcessResult cleared = press(static_cast<std::size_t>(TopButton::clear));
     check(patternHash(processor) == patternHash(Processor{}), "clear button empties the pattern");
     check(countNoteOffsOnChannel(cleared, 3) == 128, "clear button emits all-notes-off panic");
     check(anyEvent(cleared, [](const MidiMessage& e) {
               return e.size > 3 && e.data[0] == 0xf0u && e.data[e.size - 1u] == 0xf7u;
           }), "clear button emits Launchpad SysEx");
+    check(sysexLedHasColor(cleared, gridToNote(0, 0), kLedOff),
+          "clear button emits a hard all-LED-off SysEx");
+    checkEq(countLedNoteOrCc(cleared), 0,
+            "clear does not use note or CC messages for LED reset");
+
+    const ProcessResult held = processor.processBlock(100, transport, nullptr, 0);
+    checkEq(held.eventCount, 0u, "clear holds every LED dark until the next intentional action");
+
+    // Page 1 is still selected from the page-button checks above.
+    processor.setParameter(p(ParamId::cellStart) + static_cast<std::uint32_t>(cellIndex(8, 0)), 1.0f);
+    const ProcessResult edited = processor.processBlock(100, transport, nullptr, 0);
+    check(sysexLedHasColor(edited, gridToNote(0, 0), kLedGreen),
+          "an intentional edit restores LED feedback after clear");
 }
 
 void testRandomiseAndClear()
@@ -557,9 +606,18 @@ void testRandomiseAndClear()
     check(patternHash(seeded) != seedA, "seed parameter changes randomisation");
 
     TransportSnapshot transport {};
+    seeded.setParameter(p(ParamId::ledFeedback), 1.0f);
+    seeded.processBlock(100, transport, nullptr, 0);
     seeded.setParameter(p(ParamId::clear), 1.0f);
     const ProcessResult panicResult = seeded.processBlock(100, transport, nullptr, 0);
     check(countNoteOffsOnChannel(panicResult, 3) == 128, "clear parameter emits all-notes-off panic");
+    checkEq(countLedNoteOrCc(panicResult), 0,
+            "clear parameter never encodes LED colours as notes or CCs");
+    check(sysexLedHasColor(panicResult, gridToNote(7, 7), kLedOff),
+          "clear parameter switches off the whole 8x8 grid");
+
+    const ProcessResult held = seeded.processBlock(100, transport, nullptr, 0);
+    checkEq(held.eventCount, 0u, "clear parameter suppresses feedback until a new edit or run");
 }
 
 void testPassInputAndLedFeedback()
@@ -594,18 +652,17 @@ void testPassInputAndLedFeedback()
     lit.setParameter(p(ParamId::ledFeedback), 1.0f);
     lit.setParameter(p(ParamId::cellStart), 1.0f);
     const ProcessResult withLeds = lit.processBlock(100, transport, nullptr, 0);
+    check(sysexLedHasColor(withLeds, gridToNote(0, 0), kLedGreen),
+          "active cells light green on the Launchpad");
+    check(sysexLedHasColor(withLeds, gridToNote(0, 7), kLedOff),
+          "step 8 on the bottom note row stays dark on page 0");
+    check(sysexLedHasColor(withLeds, kTopButtonCCs[0], kLedBlue),
+          "top buttons mirror the control scheme");
+    checkEq(countLedNoteOrCc(withLeds), 0,
+            "LED feedback is SysEx only, so an instrument cannot hear the scan");
     check(anyEvent(withLeds, [](const MidiMessage& e) {
-              return e.size == 3 && e.data[0] == 0x90u && e.data[1] == gridToNote(0, 0) &&
-                     e.data[2] == kLedGreen;
-          }), "active cells light green on the Launchpad");
-    check(anyEvent(withLeds, [](const MidiMessage& e) {
-              return e.size == 3 && e.data[0] == 0x90u && e.data[1] == gridToNote(0, 7) &&
-                     e.data[2] == kLedOff;
-          }), "step 8 on the bottom note row stays dark on page 0");
-    check(anyEvent(withLeds, [](const MidiMessage& e) {
-              return e.size == 3 && e.data[0] == 0xb0u && e.data[1] == kTopButtonCCs[0] &&
-                     e.data[2] == kLedBlue;
-          }), "top buttons mirror the control scheme");
+              return isLedSysex(e) && static_cast<std::size_t>(e.size) == 7u + 3u * 81u + 1u;
+          }), "one bulk SysEx paints all 64 grid, 8 side and 9 top LEDs");
 }
 
 void testLifecycleRetainsPatch()
@@ -667,7 +724,7 @@ void testEveryControlHasAnEffect()
     steps.setParameter(p(ParamId::steps), 8.0f);
     check(!steps.cellActive(31, 0), "shortening length removes later steps");
 
-    checkEq(countNoteOnsOnChannel(base, 0), 0, "LED feedback is inert by default");
+    checkEq(countLedNoteOrCc(base), 0, "LED feedback is inert by default");
 
     Processor led;
     led.init(48000.0);
@@ -676,7 +733,8 @@ void testEveryControlHasAnEffect()
     led.setParameter(p(ParamId::ledFeedback), 1.0f);
     led.setParameter(p(ParamId::cellStart), 1.0f);
     const ProcessResult lit = led.processBlock(6000, transport, nullptr, 0);
-    check(countNoteOnsOnChannel(lit, 0) > 0, "LED feedback control has a visible effect when enabled");
+    check(anyEvent(lit, [](const MidiMessage& e) { return isLedSysex(e); }),
+          "LED feedback control has a visible SysEx effect when enabled");
 }
 
 } // namespace

@@ -48,13 +48,14 @@ review `docs/lynx-survey.md`
         otherwise generate a new one); clear pattern & reset (panic).
       - The controls along the right column correspond to notes in the grid. While running, pressing a
         key sends the corresponding note-on message, with note-off timed to the grid step.
-      Built: `plugins/padseq` with 374 passing core checks, a clean `padseq-vst3` build and a VST3 bundle.
+      Built: `plugins/padseq` with 384 passing core checks, a clean `padseq-vst3` build and a VST3 bundle.
       Host load and save/reopen were validated in an isolated REAPER profile: all 16 programmed cells,
-      Note Map and LED Feedback survived the round trip. A follow-up fixed the reported axis bug (time
-      now scans left to right and note rows run vertically), the constant artifact (LED feedback is
-      now opt-in because Launchpad colours are channel-1 note-ons), and late-block note-off timing
-      (input is consumed before boundary scheduling). Realtime transport and CC/Launchpad-LED validation
-      remain blocked in the headless session (the transport does not advance even with audio running).
+      Note Map and LED Feedback survived the round trip. Follow-ups fixed the reported axis bug (time
+      now scans left to right and note rows run vertically), late-block note-off timing (input is
+      consumed before boundary scheduling), and the LED artifact: feedback is now SysEx-only (no
+      channel-1 note-ons/CCs) and Clear blacks out all LEDs and holds them dark until the next edit
+      or run. Realtime transport and CC/Launchpad-LED validation remain blocked in the headless
+      session (the transport does not advance even with audio running).
       The updated UI was recaptured to `/tmp/opencode/padseq-screenshot/padseq.png` and dimension-checked
       at 980x720, but this model cannot view PNG pixels, so visual acceptance and copying into
       `docs/pages/assets/plugins/padseq.png` remain pending.

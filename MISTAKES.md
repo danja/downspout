@@ -7,6 +7,17 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 (No open entries from before October 2026: the screenshot script now always captures on a private Xvfb.)
 
+## PadSeq: LED scan heard as notes and Clear left lights on (2026-11-18)
+- **What happened:** A second user report found that the scan/playhead LED messages were reaching an instrument as
+  channel-1 notes, and Clear left sporadic Launchpad lights on.
+- **Root cause:** LED colours were still emitted as `0x90` note-ons and `0xb0` CCs. Clear sent explicit LED-off
+  note/CC messages (more audible artifacts) and then the next periodic `emitLedFeedback()` re-painted the top, side
+  and dimmed playhead LEDs in the same block.
+- **Prevention:** Send the complete LED state as one Novation lighting SysEx and assert that feedback emits no note
+  or CC events. On Clear, emit all-notes-off plus a hard all-LED-off SysEx, reset caches and suppress feedback until
+  an intentional edit, trigger, transport start or LED-feedback re-enable. Test that Clear leaves zero events in the
+  following block and that an edit restores feedback.
+
 ## PadSeq: transposed grid, LED artifact and late note-offs (2026-11-18)
 - **What happened:** The first PadSeq layout put notes on X and time on Y, so the playhead scanned upwards.
   It also emitted Launchpad LED colours as channel-1 note-ons by default, which an all-channel instrument heard as
@@ -16,9 +27,9 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
   because it is correct for hardware, ignoring that the VST3 has one MIDI output. Note-offs were queued after the
   scheduler had already flushed that block's boundary.
 - **Prevention:** Keep `cell(step, note)` for storage but `status(note, stepColumn)` for the visible page, and assert
-  both mappings plus a horizontal-scan test. Default LED feedback off and document that enabling it requires routing
-  only to a Launchpad. Consume MIDI input before scheduling boundaries and add late-block CC tests for both free and
-  host clocks that assert the release frame inside the same block.
+  both mappings plus a horizontal-scan test. Default LED feedback off; the SysEx-only follow-up above removes the
+  note/CC hazard even when enabled. Consume MIDI input before scheduling boundaries and add late-block CC tests for
+  both free and host clocks that assert the release frame inside the same block.
 
 ## PadSeq: headless REAPER validation traps (2026-11-18)
 - **What happened:** A validation script used `TrackFX_AddByName(..., -1)` to inspect a project that was already open.

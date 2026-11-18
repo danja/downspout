@@ -28,10 +28,10 @@ seeds a new one, and **Clear / Panic** empties it and silences all notes.
 The top Launchpad buttons mirror the UI strip: note view, page, scale,
 randomise and clear. The eight side buttons and their UI equivalents trigger
 note rows with note-offs timed to the next step, including presses that arrive
-just before a step boundary. LED feedback is off by default: Launchpad colours
-are channel-1 note-ons, which a synth would hear as held notes. Enable it only
-when the output is routed to the controller. Generated MIDI uses channel 4 by
-default so it does not fight the Launchpad's LED channels.
+just before a step boundary. LED feedback is off by default; when enabled it
+uses Launchpad lighting SysEx only, so a synth sharing the output cannot hear
+the scan as notes. **Clear / Panic** blacks out all LEDs and keeps them dark
+until the next edit or run. Generated MIDI uses channel 4 by default.
 
 Clock mode is Auto, Host or Free. Host mode counts absolute sixteenth steps and
 restarts cleanly on start, jump and rewind; free mode follows the internal

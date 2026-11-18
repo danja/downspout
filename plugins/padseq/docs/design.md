@@ -63,13 +63,16 @@ buttons are colour-coded by function and side buttons light when their note row
 contains notes on the visible page. The UI's side triggers use the eight trigger
 parameters, so a click has the same audible effect as a hardware side CC.
 
-**LED Feedback is off by default.** Launchpad colours are channel-1 note-ons; if
-they are sent to a synth instead of a Launchpad, the synth hears them as held
-notes. Enable LED feedback only when PadSeq's MIDI output is routed to the
-controller (or through a channel filter).
+**LED Feedback is off by default**, but when enabled it is SysEx-only. The core
+builds the complete grid/side/top colour state and emits one Novation lighting
+message (`F0 00 20 29 02 0D 03 ... F7`); it never encodes colours as channel-1
+note-ons or CCs. A synth sharing the MIDI output therefore cannot hear the scan
+as held notes. Feedback stays opt-in to avoid unnecessary controller traffic.
 
-**Clear / Panic** emits all-notes-off on the chosen channel, the programmer-mode
-SysEx, a bulk LED clear SysEx and explicit LED-off messages in the same block.
+**Clear / Panic** emits all-notes-off on the chosen channel, re-enters
+programmer mode and sends a bulk SysEx that sets all 81 LEDs to colour 0. It then
+holds every LED dark until an intentional edit, note trigger, transport start or
+LED-feedback re-enable, so a periodic refresh cannot re-light stale buttons.
 
 ## Randomisation
 
@@ -85,7 +88,7 @@ sequence.
 `plugins/padseq/tests/padseq_core_tests.cpp` checks the canonical scale table,
 grid mapping, horizontal scan and status layout, note folding, all controls, free
 and host timing, jumps/rewind, late-block note-offs, hardware and UI manual
-triggers, Launchpad messages, opt-in LED feedback, randomisation, panic, and
-lifecycle state retention. Host save/reopen was validated in REAPER; realtime
+triggers, Launchpad lighting SysEx, no note/CC LED artifacts, hard-clear reset,
+randomisation, panic and lifecycle state retention. Host save/reopen was validated in REAPER; realtime
 transport and Launchpad LED messages still need a reachable host transport and
 hardware.

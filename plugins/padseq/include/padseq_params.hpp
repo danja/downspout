@@ -273,8 +273,9 @@ struct ParamRange {
     case ParamId::seed:         return {1.0f, 65535.0f, 12345.0f, true, false, false, false};
     case ParamId::randomise:    return {0.0f, 1.0f, 0.0f, true, true, true, false};
     case ParamId::clear:        return {0.0f, 1.0f, 0.0f, true, true, true, false};
-    // LED colours are channel-1 note-ons. They are only safe when the MIDI output
-    // goes to a Launchpad, so hardware feedback is opt-in rather than a default.
+    // LED colours are sent as Novation lighting SysEx, so they are inaudible to
+    // instruments on a shared output. Feedback remains opt-in to keep the patch
+    // quiet by default and avoid unnecessary controller traffic.
     case ParamId::ledFeedback:  return {0.0f, 1.0f, 0.0f, true, true, false, false};
     case ParamId::passInput:    return {0.0f, 1.0f, 0.0f, true, true, false, false};
     case ParamId::cellStart:    return {0.0f, 1.0f, 0.0f, true, true, false, false};

@@ -113,6 +113,7 @@ void Processor::resetRuntime()
     currentHostStep_ = 0.0;
     ledRefreshSamples_ = 0;
     ledInitialized_ = false;
+    ledResetHold_ = false;
     panicPending_ = false;
     clockResetPending_ = false;
     previousRandomise_ = 0.0f;
@@ -218,7 +219,10 @@ void Processor::setParameter(const std::uint32_t index, const float value)
         const bool edge = applied >= 0.5f && previousTriggers_[note] < 0.5f;
         previousTriggers_[note] = applied;
         if (edge)
+        {
             pendingTriggerMask_ |= static_cast<std::uint8_t>(1u << note);
+            releaseLedReset();
+        }
         parameters_[index] = 0.0f;
         return;
     }
@@ -262,6 +266,18 @@ void Processor::setParameter(const std::uint32_t index, const float value)
                                                   (std::max(1.0, static_cast<double>(applied)) * kStepsPerBeat));
         while (freeStepAccum_ > stepSamples)
             freeStepAccum_ -= stepSamples;
+    }
+
+    if (applied != parameters_[index] && id != ParamId::clear)
+        releaseLedReset();
+    if (id == ParamId::ledFeedback && applied != parameters_[index])
+    {
+        // Re-enabling must paint the full state even if the cached colours
+        // happen to match what the Launchpad had before it was switched off.
+        lastCellLeds_.fill(255u);
+        lastTopLeds_.fill(255u);
+        lastSideLeds_.fill(255u);
+        ledInitialized_ = false;
     }
 
     parameters_[index] = applied;
@@ -326,10 +342,11 @@ int Processor::patternStepFor(const std::size_t page, const std::size_t stepColu
 
 void Processor::setCell(const std::size_t index, const bool active)
 {
-    if (index >= kCellCount)
+    if (index >= kCellCount || cells_[index] == active)
         return;
     cells_[index] = active;
     parameters_[static_cast<std::size_t>(ParamId::cellStart) + index] = active ? 1.0f : 0.0f;
+    releaseLedReset();
     updateStatus();
 }
 
@@ -381,6 +398,7 @@ void Processor::randomisePattern()
 
     for (std::size_t i = 0; i < kCellCount; ++i)
         parameters_[static_cast<std::size_t>(ParamId::cellStart) + i] = cells_[i] ? 1.0f : 0.0f;
+    releaseLedReset();
     updateStatus();
 }
 
@@ -392,6 +410,11 @@ void Processor::clearPattern(const bool emitPanic)
     if (emitPanic)
         panicPending_ = true;
     updateStatus();
+}
+
+void Processor::releaseLedReset()
+{
+    ledResetHold_ = false;
 }
 
 // ── MIDI input ───────────────────────────────────────────────────────────────
@@ -459,9 +482,11 @@ bool Processor::handleGridPress(const std::uint8_t note)
 
 void Processor::handleTopButton(const std::uint32_t button)
 {
-    if (button >= static_cast<std::uint32_t>(TopButton::count))
+    if (button >= static_cast<std::uint32_t>(TopButton::count) ||
+        button == static_cast<std::uint32_t>(TopButton::logo))
         return;
 
+    releaseLedReset();
     const auto p = [](const ParamId id) { return static_cast<std::uint32_t>(id); };
     const auto set = [this, p](const ParamId id, const float value) {
         setParameter(p(id), value);
@@ -509,6 +534,7 @@ void Processor::handleSideButton(const std::size_t note,
 {
     if (note >= kGridHeight)
         return;
+    releaseLedReset();
     const auto p = [](const ParamId id) { return static_cast<std::size_t>(id); };
     const std::uint8_t channel = static_cast<std::uint8_t>(
         clampValue(static_cast<int>(std::lround(parameters_[p(ParamId::channel)])), 1, 16) - 1);
@@ -627,7 +653,8 @@ ProcessResult Processor::processBlock(const std::uint32_t frameCount,
     }
 
     const bool periodicRefresh = ledRefreshSamples_ >= static_cast<std::uint32_t>(sampleRate_ * 0.75);
-    emitLedFeedback(result, forceLeds || periodicRefresh || !ledInitialized_);
+    if (!ledResetHold_)
+        emitLedFeedback(result, forceLeds || periodicRefresh || !ledInitialized_);
     ledRefreshSamples_ = periodicRefresh ? 0u : ledRefreshSamples_ + frameCount;
 
     updateStatus();
@@ -654,6 +681,9 @@ void Processor::prepareHostBlock(ProcessResult& result,
     const bool restarted = !wasHostPlaying_ ||
                            (lastHostStep_ >= 0 &&
                             (startFloor < lastHostStep_ || startFloor > lastHostStep_ + 1));
+
+    if (!wasHostPlaying_)
+        releaseLedReset();
 
     if (restarted)
     {
@@ -698,6 +728,7 @@ void Processor::prepareFreeBlock(ProcessResult& result, const double stepSamples
     static_cast<void>(stepSamples);
     if (!freeStarted_)
     {
+        releaseLedReset();
         flushAllNoteOffs(result, 0);
         freeStarted_ = true;
         freeStep_ = 0;
@@ -895,8 +926,12 @@ void Processor::emitLedFeedback(ProcessResult& result, const bool force)
     if (parameters_[static_cast<std::size_t>(ParamId::ledFeedback)] < 0.5f)
         return;
 
-    if (!ledInitialized_)
-        appendSysex(result, kProgrammerModeSysex.data(), kProgrammerModeSysex.size());
+    // Launchpad colours must never be channel-1 notes or CCs: on a shared MIDI
+    // output an instrument would hear the scan as held notes. Build the complete
+    // LED state and send it as one Novation lighting SysEx instead.
+    std::array<std::uint8_t, kGridCellCount> grid {};
+    std::array<std::uint8_t, kTopButtonCCs.size()> top {};
+    std::array<std::uint8_t, kGridWidth> side {};
 
     const std::size_t page = static_cast<std::size_t>(std::lround(
         parameters_[static_cast<std::size_t>(ParamId::page)]));
@@ -905,37 +940,33 @@ void Processor::emitLedFeedback(ProcessResult& result, const bool force)
         for (std::size_t stepColumn = 0; stepColumn < kGridWidth; ++stepColumn)
         {
             const int step = patternStepFor(page, stepColumn);
-            const std::uint8_t color = step >= 0
+            grid[note * kGridWidth + stepColumn] = step >= 0
                 ? statusColor(static_cast<std::size_t>(step), note)
                 : kLedOff;
-            if (force || color != lastCellLeds_[note * kGridWidth + stepColumn])
-            {
-                appendMidi(result, 0, 0x90u, gridToNote(note, stepColumn), color);
-                lastCellLeds_[note * kGridWidth + stepColumn] = color;
-            }
         }
     }
+    for (std::size_t i = 0; i < top.size(); ++i)
+        top[i] = topColor(static_cast<std::uint32_t>(i));
+    for (std::size_t note = 0; note < side.size(); ++note)
+        side[note] = sideColor(note);
 
-    for (std::size_t i = 0; i < kTopButtonCCs.size(); ++i)
-    {
-        const std::uint8_t color = topColor(static_cast<std::uint32_t>(i));
-        if (force || color != lastTopLeds_[i])
-        {
-            appendMidi(result, 0, 0xb0u, kTopButtonCCs[i], color);
-            lastTopLeds_[i] = color;
-        }
-    }
+    bool changed = force || !ledInitialized_;
+    for (std::size_t i = 0; i < grid.size() && !changed; ++i)
+        changed = grid[i] != lastCellLeds_[i];
+    for (std::size_t i = 0; i < top.size() && !changed; ++i)
+        changed = top[i] != lastTopLeds_[i];
+    for (std::size_t i = 0; i < side.size() && !changed; ++i)
+        changed = side[i] != lastSideLeds_[i];
+    if (!changed)
+        return;
 
-    for (std::size_t note = 0; note < kGridHeight; ++note)
-    {
-        const std::uint8_t color = sideColor(note);
-        if (force || color != lastSideLeds_[note])
-        {
-            appendMidi(result, 0, 0xb0u, kSideButtonCCs[note], color);
-            lastSideLeds_[note] = color;
-        }
-    }
+    if (!ledInitialized_)
+        appendSysex(result, kProgrammerModeSysex.data(), kProgrammerModeSysex.size());
+    appendLedBulkSysex(result, grid, side, top);
 
+    lastCellLeds_ = grid;
+    lastTopLeds_ = top;
+    lastSideLeds_ = side;
     ledInitialized_ = true;
 }
 
@@ -951,13 +982,13 @@ void Processor::emitPanic(ProcessResult& result)
 
     appendSysex(result, kProgrammerModeSysex.data(), kProgrammerModeSysex.size());
     appendClearAllSysex(result);
-    appendClearAllMidi(result);
 
     pendingNoteOffs_.fill({});
     lastCellLeds_.fill(255u);
     lastTopLeds_.fill(255u);
     lastSideLeds_.fill(255u);
     ledInitialized_ = true;
+    ledResetHold_ = true;
 }
 
 void Processor::appendMidi(ProcessResult& result,
@@ -988,40 +1019,45 @@ void Processor::appendSysex(ProcessResult& result, const std::uint8_t* data, con
 
 void Processor::appendClearAllSysex(ProcessResult& result)
 {
+    std::array<std::uint8_t, kGridCellCount> grid {};
+    std::array<std::uint8_t, kTopButtonCCs.size()> top {};
+    std::array<std::uint8_t, kGridWidth> side {};
+    grid.fill(kLedOff);
+    top.fill(kLedOff);
+    side.fill(kLedOff);
+    appendLedBulkSysex(result, grid, side, top);
+}
+
+void Processor::appendLedBulkSysex(
+    ProcessResult& result,
+    const std::array<std::uint8_t, kGridCellCount>& grid,
+    const std::array<std::uint8_t, kGridWidth>& side,
+    const std::array<std::uint8_t, kTopButtonCCs.size()>& top)
+{
     std::array<std::uint8_t, 256> data {};
     std::size_t size = 0;
     const auto append = [&data, &size](const std::uint8_t byte) {
         if (size < data.size())
             data[size++] = byte;
     };
-    const auto appendLight = [&append](const std::uint8_t id) {
-        append(0x00u);
+    const auto appendLight = [&append](const std::uint8_t id, const std::uint8_t color) {
+        append(0x00u); // static colour
         append(id);
-        append(kLedOff);
+        append(color);
     };
 
+    // Novation Mini MK3 programmer-mode lighting message.
     for (const std::uint8_t byte : {0xf0u, 0x00u, 0x20u, 0x29u, 0x02u, 0x0du, 0x03u})
         append(byte);
-    for (std::size_t row = 0; row < kGridHeight; ++row)
-        for (std::size_t col = 0; col < kGridWidth; ++col)
-            appendLight(gridToNote(row, col));
-    for (const std::uint8_t cc : kSideButtonCCs)
-        appendLight(cc);
-    for (const std::uint8_t cc : kTopButtonCCs)
-        appendLight(cc);
+    for (std::size_t note = 0; note < kGridHeight; ++note)
+        for (std::size_t stepColumn = 0; stepColumn < kGridWidth; ++stepColumn)
+            appendLight(gridToNote(note, stepColumn), grid[note * kGridWidth + stepColumn]);
+    for (std::size_t i = 0; i < side.size(); ++i)
+        appendLight(kSideButtonCCs[i], side[i]);
+    for (std::size_t i = 0; i < top.size(); ++i)
+        appendLight(kTopButtonCCs[i], top[i]);
     append(0xf7u);
     appendSysex(result, data.data(), size);
-}
-
-void Processor::appendClearAllMidi(ProcessResult& result)
-{
-    for (std::size_t row = 0; row < kGridHeight; ++row)
-        for (std::size_t col = 0; col < kGridWidth; ++col)
-            appendMidi(result, 0, 0x90u, gridToNote(row, col), kLedOff);
-    for (const std::uint8_t cc : kSideButtonCCs)
-        appendMidi(result, 0, 0xb0u, cc, kLedOff);
-    for (const std::uint8_t cc : kTopButtonCCs)
-        appendMidi(result, 0, 0xb0u, cc, kLedOff);
 }
 
 void Processor::sortEvents(ProcessResult& result)

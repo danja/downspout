@@ -14,7 +14,7 @@ dsp:padseq a trn:PluginProfile ;
     trn:role trn:MidiGenerator, trn:Controller ;
     trn:accepts trn:Midi ;
     trn:produces trn:Midi, trn:MelodyMidi ;
-    trn:caution "Free clock needs no transport; host clock reads BBT. LED feedback is off by default and must be enabled only when the MIDI output reaches a Launchpad: its colours are channel-1 note-ons that a synth would sustain. The UI edits the same grid and triggers the same notes without hardware." ;
+    trn:caution "Free clock needs no transport; host clock reads BBT. LED feedback is opt-in and uses Launchpad lighting SysEx only, so a synth sharing the MIDI output cannot hear the scan as notes. Clear blacks out all LEDs and holds them dark until an edit, trigger or transport start. The UI edits the same grid and triggers the same notes without hardware." ;
     trn:parameter [ rdfs:label "Steps" ; trn:symbol "steps" ; trn:range "1-32 (default 16)" ;
                     rdfs:comment "Sixteenth-note steps; four steps per beat, four pages of eight." ] ;
     trn:parameter [ rdfs:label "Scale" ; trn:symbol "scale" ; trn:range "0-32 (default 1, Major)" ;
@@ -24,7 +24,7 @@ dsp:padseq a trn:PluginProfile ;
                     rdfs:comment "Slides the eight note rows up or down in scale steps." ] ;
     trn:parameter [ rdfs:label "Page" ; trn:symbol "page" ; trn:range "0-3 (default 0)" ] ;
     trn:parameter [ rdfs:label "MIDI Channel" ; trn:symbol "midi_channel" ; trn:range "1-16 (default 4)" ;
-                    rdfs:comment "Channel 4 avoids the Launchpad LED channels 1-3." ] ;
+                    rdfs:comment "Channel for generated notes; LED feedback is SysEx, not note/CC." ] ;
     trn:parameter [ rdfs:label "Note Map" ; trn:symbol "note_map" ; trn:range "Scale, GM Drums" ] ;
     trn:parameter [ rdfs:label "Clock" ; trn:symbol "clock" ; trn:range "Auto, Host, Free" ] ;
     trn:parameter [ rdfs:label "Free Tempo" ; trn:symbol "free_tempo" ; trn:range "40-240 BPM (default 120)" ] ;
@@ -42,7 +42,7 @@ dsp:padseq a trn:PluginProfile ;
     trn:parameter [ rdfs:label "Trigger Note 7" ; trn:symbol "trigger_column_7" ; trn:range "trigger" ] ;
     trn:parameter [ rdfs:label "Trigger Note 8" ; trn:symbol "trigger_column_8" ; trn:range "trigger" ] ;
     trn:parameter [ rdfs:label "LED Feedback" ; trn:symbol "led_feedback" ; trn:range "Off, On (default Off)" ;
-                    rdfs:comment "Channel-1 note-on LED colours; enable only for a Launchpad destination." ] ;
+                    rdfs:comment "Bulk Novation lighting SysEx; no note or CC LED messages are emitted." ] ;
     trn:parameter [ rdfs:label "Pass Input" ; trn:symbol "pass_input" ; trn:range "Off, On (default Off)" ] ;
 
     ## Top row: note view, page, scale, randomise and clear.
@@ -56,7 +56,7 @@ dsp:padseq a trn:PluginProfile ;
     trn:ccMapping [ trn:ccNumber 97 ; trn:ccRole "Randomise" ; trn:targetParameter "randomise" ;
                     rdfs:comment "Modifies an existing pattern or seeds a new one." ] ;
     trn:ccMapping [ trn:ccNumber 98 ; trn:ccRole "Clear and panic" ; trn:targetParameter "clear_panic" ;
-                    rdfs:comment "Clears the pattern and emits all-notes-off plus LED reset." ] ;
+                    rdfs:comment "Clears the pattern, emits all-notes-off, blacks out all LEDs and holds them dark until the next edit or run." ] ;
     trn:ccMapping [ trn:ccNumber 99 ; trn:ccRole "Logo (unused)" ;
                     rdfs:comment "Reserved on Mini MK3 style mappings." ] ;
 

@@ -65,6 +65,7 @@ private:
     void setCell(std::size_t index, bool active);
     void randomisePattern();
     void clearPattern(bool emitPanic);
+    void releaseLedReset();
 
     bool handleMidi(const MidiMessage& event,
                     ProcessResult& result,
@@ -110,7 +111,10 @@ private:
     void emitLedFeedback(ProcessResult& result, bool force);
     void emitPanic(ProcessResult& result);
     void appendClearAllSysex(ProcessResult& result);
-    void appendClearAllMidi(ProcessResult& result);
+    void appendLedBulkSysex(ProcessResult& result,
+                            const std::array<std::uint8_t, kGridCellCount>& grid,
+                            const std::array<std::uint8_t, kGridWidth>& side,
+                            const std::array<std::uint8_t, kTopButtonCCs.size()>& top);
 
     void appendMidi(ProcessResult& result,
                     std::uint32_t frame,
@@ -149,6 +153,10 @@ private:
     bool panicPending_ = false;
     bool clockResetPending_ = false;
     bool ledInitialized_ = false;
+    // Clear/Panic leaves every LED dark until the user edits, triggers or runs
+    // the pattern again. This stops a periodic refresh from re-lighting stale
+    // top/side buttons immediately after a reset.
+    bool ledResetHold_ = false;
     std::array<std::uint8_t, kGridCellCount> lastCellLeds_ {};
     std::array<std::uint8_t, kTopButtonCCs.size()> lastTopLeds_ {};
     std::array<std::uint8_t, kGridWidth> lastSideLeds_ {};
