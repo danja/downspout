@@ -59,6 +59,10 @@ review `docs/lynx-survey.md`
       The updated UI was recaptured to `/tmp/opencode/padseq-screenshot/padseq.png` and dimension-checked
       at 980x720, but this model cannot view PNG pixels, so visual acceptance and copying into
       `docs/pages/assets/plugins/padseq.png` remain pending.
+- [ ] Visual acceptance of Conductor's fresh capture is pending: the eight-block editor was recaptured
+      to `/tmp/opencode/conductor-screenshot/conductor.png` and dimension-checked at 960x820, but this
+      model cannot view PNG pixels, so copying it into `docs/pages/assets/plugins/conductor.png`
+      remains pending.
 - [ ] **Launchpad support for `xoxolo`** (from INBOX, written there as "xololo"): add Launchpad support,
       reusing the PadSeq control scheme where it makes sense.
 
@@ -67,10 +71,11 @@ review `docs/lynx-survey.md`
 - [ ] **Level-independent transient designer** (from INBOX): add a `spliff` mode based on LYNX's
       *Strike Shaper* / SPL Transient Designer. Attack ±15 dB and Sustain ±24 dB from two envelopes
       with no threshold; keep the level-independent behaviour, which is the point.
-- [ ] **Editable Conductor form** (from INBOX): allow up to 8 blocks of types Null, Intro, Theme,
-      Develop, Break, Reprise and Coda (review whether more types are useful). Receivers already
-      default to the maximum control from note messages and CC 20-24 (Scene, Density, Energy,
-      Mutation, Reset); check that the editor and the receiving plugins stay in sync.
+- [x] **Editable Conductor form** (from INBOX, done 2026-11-18): up to 8 blocks of types Null,
+      Intro, Theme, Develop, Break, Reprise and Coda. No extra types were added: Null covers
+      rests and the other six cover the requested musical roles. `block_count`, per-block type
+      parameters and next-bar jumps are host-automatable; receivers that decode CC 20 share
+      `include/downspout/conductor_protocol.hpp` with the editor.
 
 
 ## Spectrogram painter (built 2026-11-03 as `fresco`; heard by nobody yet)

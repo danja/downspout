@@ -1,5 +1,6 @@
 #include "DistrhoPlugin.hpp"
 
+#include "downspout/conductor_protocol.hpp"
 #include "melgen_engine.hpp"
 #include "melgen_pattern.hpp"
 #include "melgen_serialization.hpp"
@@ -352,7 +353,8 @@ protected:
                     const auto val = ev.data[2];
                     switch (cc) {
                     case 20:
-                        controls_.contour = static_cast<downspout::melgen::ContourId>(std::clamp(val / 22, 0, 5));
+                        controls_.contour = static_cast<downspout::melgen::ContourId>(
+                            downspout::conductor_protocol::melgenContourFromSceneCc(val));
                         break;
                     case 21:
                         controls_.scale = static_cast<downspout::melgen::ScaleId>(std::clamp(val * 23 / 128, 0, 22));

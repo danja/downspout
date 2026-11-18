@@ -7,6 +7,30 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 (No open entries from before October 2026: the screenshot script now always captures on a private Xvfb.)
 
+## Conductor: queued jump waited for a section boundary (2026-11-18)
+- **What happened:** The block editor said a jump would happen at the next bar, but the core only applied
+  `pendingSection` when the current section ended, which can be many bars later.
+- **Root cause:** The pending state held only a block index, so there was no absolute bar at which to override
+  the schedule; the old five-section UI had the same wording but no matching behaviour.
+- **Prevention:** Store an explicit zero-based `pendingBar`, set it from the DPF time position when the jump is
+  queued, and test that a jump at bar 1 takes effect before a four-bar section would have ended.
+
+## Conductor: new scene table briefly renumbered the legacy blocks (2026-11-18)
+- **What happened:** The first shared protocol draft assigned Intro=16 and Null=0, so existing receivers that
+  still used the old scene values would have interpreted an Intro as Null and vice versa.
+- **Root cause:** New enum order was mistaken for the on-wire value order; the five legacy values were not
+  held in an independent expected table.
+- **Prevention:** Keep the original 0/32/64/96/127 scene values for Intro/Develop/Break/Reprise/Coda, insert
+  Null=1 and Theme=16, and assert the whole independent table plus receiver mappings in the core tests.
+
+## Conductor: UI enum reference survived core-only tests (2026-11-18)
+- **What happened:** `ConductorUI.cpp` referenced `kBlockCount` without a namespace qualifier. Core tests built,
+  but `conductor-vst3` failed until the reference was qualified.
+- **Root cause:** UI code is not compiled by `downspout_conductor_core_tests`; the compact helper method sat
+  outside the `using namespace downspout::conductor` block used by the drawing methods.
+- **Prevention:** Always build `<plugin>-vst3` after UI changes, and qualify plugin enum references in helpers
+  that precede a local `using namespace`.
+
 ## PadSeq: LED scan heard as notes and Clear left lights on (2026-11-18)
 - **What happened:** A second user report found that the scan/playhead LED messages were reaching an instrument as
   channel-1 notes, and Clear left sporadic Launchpad lights on.

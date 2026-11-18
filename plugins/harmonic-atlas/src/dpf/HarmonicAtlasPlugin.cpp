@@ -1,4 +1,5 @@
 #include "DistrhoPlugin.hpp"
+#include "downspout/conductor_protocol.hpp"
 #include "harmonic_atlas_core.hpp"
 
 #include <algorithm>
@@ -78,8 +79,9 @@ protected:
                     const auto cc  = ev.data[1];
                     const auto val = ev.data[2];
                     switch (cc) {
-                    case 20: // Scene → movement style (0=Tonal,1=Modal,2=Chromatic,3=Neo-Riemannian)
-                        parameters_[kStyle] = std::clamp(static_cast<float>(val / 32), 0.0f, 3.0f);
+                    case 20: // Scene → shared Conductor movement style
+                        parameters_[kStyle] = static_cast<float>(
+                            downspout::conductor_protocol::harmonicAtlasStyleFromSceneCc(val));
                         break;
                     case 22: // Energy → tension (0–1)
                         parameters_[kTension] = val / 127.0f;

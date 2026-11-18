@@ -39,10 +39,12 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
   Upward limit), octet (one band's Frequency, Gain and Q, chosen by CC Band, and
   Output) and mouth (Vowel X, Vowel Y, Shift, Resonance) use a **CC Channel**
   parameter (default 1, 0 = off). Conductor emits CC 20-24 on channel 16
-  (Scene, Density, Energy, Mutation, Reset); bassgen, drumgen, ground, melgen, worms, bubbles,
-  floozy, harmonic-atlas, sprout, lifeform, luma, polymeter, xoxolo, markov, counterpointer
-  cadence, arpgen, m-mix and beards listen through a **Conductor Ch**
-  parameter (0 = off). Mixgen drives T-Mix with CC
+  (Scene, Density, Energy, Mutation, Reset) from up to eight editable blocks
+  (Null, Intro, Theme, Develop, Break, Reprise, Coda); the scene values and per-block
+  control table live in `include/downspout/conductor_protocol.hpp`. bassgen, drumgen,
+  ground, melgen, worms, bubbles, floozy, harmonic-atlas, sprout, lifeform, luma,
+  polymeter, xoxolo, markov, counterpointer, cadence, arpgen, m-mix and beards
+  listen through a **Conductor Ch** parameter (0 = off). Mixgen drives T-Mix with CC
   20-27 (strips 1-8), Loopdelay with CC 30/31, Lightverb with CC 32/33; CC 19 claims or
   releases the producer bus. Details: `docs/midi-mapping.md`,
   `docs/producer-control-bus.md`.
@@ -321,12 +323,15 @@ played as seeded free-time phrasing through a small polyphonic internal synth, w
 also emitting ordinary MIDI. Text and tuning data are persistent state.
 
 ### conductor
-Arrangement controller. Emits bar-aligned section notes plus scene, density, energy,
-mutation and reset CC values on a configurable channel (default 16) at each section
-boundary, from a fixed musical form (Intro, Develop, Break, Reprise, Coda) or seeded
-weighted section selection with bounded durations. CC 20 Scene (0/32/64/96/127), 21
-Density, 22 Energy, 23 Mutation, 24 Reset (127 at Intro and Coda). MIDI out only; it never
-alters the host graph. Targets: bassgen, drumgen, ground, worms, bubbles.
+Arrangement controller. Edits up to eight repeating blocks from Null, Intro, Theme,
+Develop, Break, Reprise and Coda, then emits bar-aligned block notes plus scene,
+density, energy, mutation and reset CC values on a configurable channel (default 16).
+Fixed mode follows the edited order; weighted mode picks from the active block types
+with bounded durations. CC 20 Scene (Null 1, Intro 0, Theme 16, Develop 32, Break 64,
+Reprise 96, Coda 127), 21 Density, 22 Energy, 23 Mutation, 24 Reset (127 at Intro and
+Coda). The panel shows current/queued blocks and supports a jump at the next bar. MIDI
+out only; it never alters the host graph. Targets: bassgen, drumgen, ground, melgen,
+worms, bubbles, floozy, harmonic-atlas and other Conductor Ch receivers.
 
 ## MIDI processors and utilities
 

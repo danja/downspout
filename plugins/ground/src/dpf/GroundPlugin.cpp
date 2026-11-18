@@ -1,5 +1,6 @@
 #include "DistrhoPlugin.hpp"
 
+#include "downspout/conductor_protocol.hpp"
 #include "ground_engine.hpp"
 #include "ground_params.hpp"
 #include "ground_pattern.hpp"
@@ -696,12 +697,8 @@ protected:
                         controls_.tension = val / 127.0f;
                         const int phraseIndex = std::max(0, statusPhrase_ - 1);
                         if (phraseIndex < static_cast<int>(kParamPhraseRoleCount)) {
-                            int roleOverride;
-                            if (val <= 16)       roleOverride = 1;
-                            else if (val <= 48)  roleOverride = 3;
-                            else if (val <= 80)  roleOverride = 5;
-                            else if (val <= 112) roleOverride = 2;
-                            else                 roleOverride = 6;
+                            const int roleOverride =
+                                downspout::conductor_protocol::groundPhraseRoleOverrideFromSceneCc(val);
                             controls_.phraseRoleOverrides[static_cast<std::size_t>(phraseIndex)] = roleOverride;
                         }
                         break;

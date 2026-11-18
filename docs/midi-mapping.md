@@ -2,25 +2,30 @@
 
 ## Overview
 
-Conductor emits MIDI CCs on each section transition to communicate song structure.
-BassGen, DrumGen, and Ground can listen on a configurable channel and apply those CCs
-to live controls, so generator behaviour changes automatically as the arrangement
-progresses.
+Conductor emits MIDI CCs on each block boundary to communicate song structure.
+Generators with a **Conductor Ch** parameter can listen on a configurable channel
+and apply those CCs to live controls, so generator behaviour changes automatically
+as the arrangement progresses.
 
 ## Conductor output protocol
 
 All messages are sent on Conductor's configurable output channel (default: **ch 16**).
 
-| CC (default) | Name    | Section values (Intro / Devel / Break / Reprise / Coda) |
-|:---:|---------|----------------------------------------------------------|
-| 20 | Scene   | 0 / 32 / 64 / 96 / 127                                  |
-| 21 | Density | 30 / 74 / 18 / 62 / 20                                  |
-| 22 | Energy  | 28 / 68 / 20 / 58 / 42                                  |
-| 23 | Mutation| 12 / 54 / 38 / 32 / 8                                   |
-| 24 | Reset   | 127 / 0 / 0 / 0 / 127                                   |
+| CC (default) | Name    | Block values (Null / Intro / Theme / Develop / Break / Reprise / Coda) |
+|:---:|---------|------------------------------------------------------------------------|
+| 20 | Scene   | 1 / 0 / 16 / 32 / 64 / 96 / 127                                       |
+| 21 | Density | 0 / 30 / 48 / 74 / 18 / 62 / 20                                       |
+| 22 | Energy  | 0 / 28 / 44 / 68 / 20 / 58 / 42                                       |
+| 23 | Mutation| 0 / 12 / 24 / 54 / 38 / 32 / 8                                        |
+| 24 | Reset   | 0 / 127 / 0 / 0 / 0 / 0 / 127                                         |
 
-CCs are sent once per bar boundary when a new section starts.  Reset=127 marks
-section boundaries where a new pattern should be generated (Intro and Coda).
+CCs are sent once per bar boundary when a new block starts, including a queued
+jump. The five legacy scene values are retained; Theme (16) and Null (1) were
+inserted around them. `include/downspout/conductor_protocol.hpp` is the shared
+source of truth for this table: Conductor's editor emits it and the receivers
+that decode Scene read it. CC 21–24 are absolute 0–127 control values; 127 is
+both the maximum and the Reset trigger. Reset=127 marks block boundaries where
+a new pattern should be generated (Intro and Coda).
 
 ## BassGen mapping
 
@@ -81,13 +86,18 @@ CC→control mapping:
 
 ### CC 20 scene → phrase role mapping (Tier 3)
 
-| CC 20 value | Conductor section | Ground phrase role |
-|:-----------:|-------------------|-------------------|
-| 0–16 | Intro | Statement |
-| 17–48 | Develop | Climb |
-| 49–80 | Break | Breakdown |
-| 81–112 | Reprise | Answer |
-| 113–127 | Coda | Cadence |
+| CC 20 value | Conductor block | Ground phrase role |
+|:-----------:|-----------------|-------------------|
+| 1 | Null | no override |
+| 0 | Intro | Statement |
+| 16 | Theme | Pedal |
+| 32 | Develop | Climb |
+| 64 | Break | Breakdown |
+| 96 | Reprise | Answer |
+| 127 | Coda | Cadence |
+
+Other CC 20 values snap to the nearest block value. The mapping is defined in
+the shared protocol header and covered by Ground's core tests.
 
 The role is written as an override for the phrase currently playing.  Only the active
 phrase is overridden; earlier phrases retain their assigned roles.
@@ -103,9 +113,10 @@ RT-safe and requires no changes to the portable cores.
 
 ## CC number assumptions
 
-This implementation hardcodes Conductor's default CC numbers (20–24).  If the user
-changes Conductor's CC assignments, the generators will not follow.  Future work could
-expose CC number parameters on the generator side.
+Receivers hardcode Conductor's default CC numbers (20–24). If the user changes
+Conductor's CC assignments, the generators will not follow. The *values* for each
+block are no longer duplicated by hand: receivers that decode Scene use the same
+`conductor_protocol.hpp` table as the editor.
 
 ## Bubbles mapping
 
@@ -251,6 +262,30 @@ Markov has one parameter for Conductor reception, **Conductor ch** (`conductor_c
 | 24 | Reset | re-roll (trigger) | Fires when CC value = 127; at the next bar line the phrase count starts again with a new random draw |
 
 CC 20 (Scene) is not mapped. A pending re-roll is dropped when the transport stops or jumps.
+
+## Floozy mapping
+
+Floozy accepts Conductor on **Conductor Ch** (`conductor_ch`, 0-16, default 0 = off).
+CC 20 is decoded through the shared block table into Body Type: Null and Intro → 0,
+Theme → 1, Develop → 3, Break → 4, Reprise → 5, Coda → 6. CC 21–24 set Source
+Level, Master Gain, Interface Intensity and reset respectively; Floozy resets at
+any value of 64 or more, so Conductor's Intro and Coda Reset=127 both fire.
+
+## Harmonic Atlas mapping
+
+Harmonic Atlas accepts Conductor on **Conductor Ch** (`conductor_ch`, 0-16, default 0 = off).
+CC 20 selects movement from the shared block table: Null/Intro → Tonal, Theme/Develop →
+Modal, Break → Chromatic, Reprise/Coda → Neo-Riemannian. CC 22 sets Tension and
+CC 23 sets Inversion Range; CC 24 at 127 discards the current harmonic position.
+CC 21 is not mapped.
+
+## Melgen mapping
+
+Melgen accepts Conductor on **Conductor Ch** (`conductor_ch`, 0-16, default 0 = off).
+CC 20 selects Contour from the shared block table: Null/Intro → Wandering, Theme →
+Flat, Develop → Rising, Break → Falling, Reprise → Arch, Coda → Inverted Arch.
+CC 21 selects Scale, CC 22 Density, CC 23 Variation and CC 24 at 127 requests a
+new phrase.
 
 ## Magneto mapping
 

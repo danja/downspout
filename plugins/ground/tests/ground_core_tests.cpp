@@ -1,3 +1,4 @@
+#include "downspout/conductor_protocol.hpp"
 #include "ground_ai_state.hpp"
 #include "ground_engine.hpp"
 #include "ground_pattern.hpp"
@@ -904,6 +905,20 @@ void testEveryScaleHasItsOwnAiName()
     assert(std::string(scaleName(ScaleId::ionian)) == "ionian");
 }
 
+void testConductorSceneValuesMapToDistinctPhraseRoles()
+{
+    namespace protocol = downspout::conductor_protocol;
+    constexpr std::array<int, protocol::kBlockTypeCount> expected {{0, 1, 4, 3, 5, 2, 6}};
+    for (int i = 0; i < protocol::kBlockTypeCount; ++i) {
+        const auto type = protocol::fromInt(i);
+        const int scene = protocol::sceneCc(type);
+        assert(protocol::groundPhraseRoleOverrideFromSceneCc(scene) ==
+               expected[static_cast<std::size_t>(i)]);
+    }
+    assert(protocol::groundPhraseRoleOverrideFromSceneCc(32) == 3);
+    assert(protocol::groundPhraseRoleOverrideFromSceneCc(0) == 1);
+}
+
 }  // namespace
 
 int main()
@@ -928,5 +943,6 @@ int main()
     testEngineRestartPhraseStatusAndStop();
     testEngineActionCountersTriggerUpdates();
     testSerializationRoundTrip();
+    testConductorSceneValuesMapToDistinctPhraseRoles();
     return 0;
 }

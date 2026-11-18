@@ -21,7 +21,9 @@ dsp:floozy a trn:PluginProfile ;
         trn:ccNumber 20 ;
         trn:ccRole "Scene" ;
         trn:targetParameter "body_type" ;
-        rdfs:comment "0–127 → body type index (0–6, Delays/Beam/Marimba/Drumhead/Membrane/Plate/String)."
+        rdfs:comment """CC20 is decoded with the shared Conductor seven-block scene table (other values snap to the nearest block):
+  Null=1 and Intro=0 → Delays (0), Theme=16 → Beam (1), Develop=32 → Drumhead (3),
+  Break=64 → Membrane (4), Reprise=96 → Plate (5), Coda=127 → String (6)."""
     ] ;
     trn:ccMapping [
         trn:ccNumber 21 ;

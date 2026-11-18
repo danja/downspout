@@ -23,7 +23,9 @@ dsp:harmonic-atlas a trn:PluginProfile ;
         trn:ccNumber 20 ;
         trn:ccRole "Scene" ;
         trn:targetParameter "style" ;
-        rdfs:comment "Maps scene value to movement language: 0→Tonal, 32→Modal, 64→Chromatic, 96→Neo-Riemannian."
+        rdfs:comment """CC20 is decoded with the shared Conductor seven-block scene table (other values snap to the nearest block):
+  Null=1 and Intro=0 → Tonal, Theme=16 and Develop=32 → Modal, Break=64 → Chromatic,
+  Reprise=96 and Coda=127 → Neo-Riemannian."""
     ] ;
     trn:ccMapping [
         trn:ccNumber 22 ;

@@ -154,3 +154,17 @@ DOWNSPOUT_SCREENSHOT_OUTPUT_DIR=docs/site/assets/plugins scripts/capture-plugin-
 The GitHub Pages source lives under `docs/pages/`. Plugin pages are Markdown
 files in `docs/pages/_products/`, and each page references one of the generated
 screenshots in `docs/pages/assets/plugins/`.
+
+## Visual acceptance pending
+
+Captured, dimension-checked images awaiting first-time-user inspection before the
+catalog PNG is replaced:
+
+- `conductor` — `/tmp/opencode/conductor-screenshot/conductor.png` (960x820, after the
+  eight-block editor and taller panel).
+- `padseq` — `/tmp/opencode/padseq-screenshot/padseq.png` (980x720, after the SysEx-only
+  LED feedback change).
+
+The capturing agent could not inspect PNG pixels, so neither screenshot has visual
+acceptance yet. Keep the repository PNGs unchanged until an agent that can open the
+image has reviewed them.

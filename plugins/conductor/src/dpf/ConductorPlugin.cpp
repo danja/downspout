@@ -2,6 +2,7 @@
 #include "conductor_core.hpp"
 #include <algorithm>
 #include <array>
+#include <cmath>
 START_NAMESPACE_DISTRHO
 namespace {
 using namespace downspout::conductor;
@@ -19,13 +20,16 @@ const char* getLicense()const override{return "MIT";} std::uint32_t getVersion()
 std::int64_t getUniqueId()const override{return d_cconst('C','n','d','c');}
 void initParameter(std::uint32_t i,Parameter& q)override{const auto&s=kParameterSpecs[i];q.name=s.name;q.symbol=s.symbol;
 q.hints=s.output?kParameterIsOutput:kParameterIsAutomatable;if(s.integer)q.hints|=kParameterIsInteger;q.ranges={s.defaultValue,s.minimum,s.maximum};}
-float getParameterValue(std::uint32_t i)const override{if(i==kStatusSection)return static_cast<float>(std::max(0,state_.section));
+float getParameterValue(std::uint32_t i)const override{
+if(i==kStatusSection)return static_cast<float>(state_.section);
+if(i==kStatusBlock)return static_cast<float>(state_.blockIndex);
 if(i==kStatusBarsLeft)return static_cast<float>(std::max(0,state_.nextSectionBar-state_.currentBar));
 return p_[i];}
 void setParameterValue(std::uint32_t i,float v)override{if(i<kParameterCount&&!kParameterSpecs[i].output)p_[i]=downspout::generative::clampParam(v,kParameterSpecs[i]);}
 void activate()override{reset(state_);}
 void run(const float**,float** out,std::uint32_t frames)override{std::fill_n(out[0],frames,0.0f);std::fill_n(out[1],frames,0.0f);
-if(p_[kPendingSection]>=0.5f){state_.pendingSection=static_cast<int>(std::lround(p_[kPendingSection]))-1;p_[kPendingSection]=0.0f;}
+if(p_[kPendingSection]>=0.5f){const auto pos=getTimePosition();state_.pendingSection=static_cast<int>(std::lround(p_[kPendingSection]))-1;
+state_.pendingBar=pos.bbt.valid?static_cast<int>(std::floor(pos.bbt.bar)):-1;p_[kPendingSection]=0.0f;}
 auto block=process(state_,p_,coreTransport(getTimePosition()),frames,getSampleRate());for(std::uint32_t i=0;i<block.count;++i){MidiEvent e{};
 e.frame=block.events[i].frame;e.size=3;e.data[0]=block.events[i].data[0];e.data[1]=block.events[i].data[1];e.data[2]=block.events[i].data[2];writeMidiEvent(e);}}
 private:std::array<float,kParameterCount>p_{};downspout::conductor::State state_{};DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ConductorPlugin)};

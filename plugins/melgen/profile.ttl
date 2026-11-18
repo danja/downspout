@@ -20,7 +20,9 @@ dsp:melgen a trn:PluginProfile ;
         trn:ccNumber 20 ;
         trn:ccRole "Scene" ;
         trn:targetParameter "contour" ;
-        rdfs:comment "Maps scene (0-127) to melodic contour shape (0-5: Wander/Flat/Rise/Fall/Arch/InvArch)."
+        rdfs:comment """CC20 is decoded with the shared Conductor seven-block scene table (other values snap to the nearest block):
+  Null=1 and Intro=0 → Wandering (0), Theme=16 → Flat (1), Develop=32 → Rising (2),
+  Break=64 → Falling (3), Reprise=96 → Arch (4), Coda=127 → Inverted Arch (5)."""
     ] ;
     trn:ccMapping [
         trn:ccNumber 21 ;

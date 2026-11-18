@@ -1,5 +1,6 @@
 #include "DistrhoPlugin.hpp"
 
+#include "downspout/conductor_protocol.hpp"
 #include "floozy_engine.hpp"
 #include "floozy_params.hpp"
 
@@ -204,7 +205,9 @@ protected:
                     using PI = downspout::floozy::ParamId;
                     switch (cc) {
                     case 20: engine_.setParameter(PI::bodyType,
-                                 static_cast<float>((val * 7) / 128)); break;
+                                 static_cast<float>(
+                                     downspout::conductor_protocol::floozyBodyTypeFromSceneCc(val)));
+                             break;
                     case 21: engine_.setParameter(PI::sourceLevel,  val / 127.0f); break;
                     case 22: engine_.setParameter(PI::masterGain,   val / 127.0f); break;
                     case 23: engine_.setParameter(PI::interfaceIntensity, val / 127.0f); break;

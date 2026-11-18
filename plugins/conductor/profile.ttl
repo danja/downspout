@@ -7,9 +7,10 @@
 
 dsp:conductor a trn:PluginProfile ;
     rdfs:label "Conductor" ;
-    rdfs:comment """Bar-aligned intro/development/break/reprise/coda section generator.
-On each section boundary it emits one batch of MIDI CCs (scene, density, energy,
-mutation, reset) plus an optional section note.  Route its MIDI output to BassGen,
+    rdfs:comment """Bar-aligned generator with up to eight editable blocks drawn from Null,
+Intro, Theme, Develop, Break, Reprise and Coda. Block count and block types are ordinary
+parameters. On each block boundary it emits one batch of MIDI CCs (scene, density, energy,
+mutation, reset) plus a note for non-Null blocks. Route its MIDI output to BassGen,
 DrumGen, Ground, or Harmonic Atlas and set their Conductor Ch parameter to match.""" ;
     trn:bundleName "conductor.vst3" ;
     trn:vendor "danja" ;
@@ -23,7 +24,7 @@ DrumGen, Ground, or Harmonic Atlas and set their Conductor Ch parameter to match
     trn:ccMapping [
         trn:ccNumber 20 ;
         trn:ccRole "Scene" ;
-        rdfs:comment "Arrangement position: Intro=0, Develop=32, Break=64, Reprise=96, Coda=127."
+        rdfs:comment "Shared block table: Null=1, Intro=0, Theme=16, Develop=32, Break=64, Reprise=96, Coda=127; decoded from the same header by scene-aware receivers."
     ] ;
     trn:ccMapping [
         trn:ccNumber 21 ;

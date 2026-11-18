@@ -7,7 +7,7 @@ target_link_libraries(conductor-dsp PUBLIC downspout_conductor_core)
 target_link_libraries(conductor-ui PUBLIC downspout_conductor_core)
 target_include_directories(conductor PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/plugins/generative-common/include" "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf"
     "${PROJECT_SOURCE_DIR}/include")
-target_include_directories(conductor-ui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/plugins/generative-common/include" "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf")
+target_include_directories(conductor-ui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/plugins/generative-common/include" "${CMAKE_CURRENT_SOURCE_DIR}/src/dpf" "${PROJECT_SOURCE_DIR}/include")
 install(DIRECTORY "${PROJECT_BINARY_DIR}/bin/conductor.vst3" DESTINATION "." OPTIONAL)
 endif()
 if(BUILD_TESTING)
