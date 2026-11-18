@@ -481,14 +481,16 @@ further. Sensitivity, Depth, Resonance and Mix read Drift CC 1-4 by default.
 
 ### Spliff (`spliff.vst3`)
 
-Adaptive transient processor in the Spiff manner. A 3-band detector finds
-transient energy and applies dynamic cuts or boosts only there, leaving the
-rest of the spectrum intact. Cut tames clicks, mouth noise and harsh sticks
-(last in the chain); Boost lifts drums and piano attacks (early, before
-compression). Depth, Sensitivity, Decay and Mix read Drift CC 1-4 by default;
-Sharpness, Decay LF/HF tilt, band splits, Trim, Delta monitoring and Bypass
-complete the Spiff workflow. The detector is mono, so transients never shift
-the stereo image.
+Adaptive transient processor. **Cut** and **Boost** use a 3-band Spiff-style
+detector to find transient energy and apply dynamic gain only there; Cut tames
+clicks, mouth noise and harsh sticks (last in the chain), Boost lifts drums and
+piano attacks (early, before compression). Depth, Sensitivity, Decay and Mix
+read Drift CC 1-4 by default; Sharpness, Decay LF/HF tilt, band splits, Trim,
+Delta monitoring and Bypass complete that workflow. A third **Designer** mode
+uses a threshold-free ratio of fast and slow envelopes for level-independent
+Attack (±15 dB) and Sustain (±24 dB); both default to 0 dB. Mix, Trim, Delta
+and Bypass apply in every mode, and the shared mono detector never shifts the
+stereo image.
 
 ### Treatment (`treatment.vst3`)
 

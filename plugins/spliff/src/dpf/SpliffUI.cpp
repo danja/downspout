@@ -34,6 +34,8 @@ enum ParameterIndex : uint32_t {
     kParamCCDecay,
     kParamCCMix,
     kParamCCChannel,
+    kParamAttackDb,
+    kParamSustainDb,
     kParameterCount
 };
 
@@ -64,6 +66,13 @@ constexpr std::array<SliderDef, 9> kMainSliders = {{
     { kParamTrim,        "Trim",         -12.0f,  12.0f,  false, "trim"        },
 }};
 
+// Designer mode replaces the Spiff-specific rows with the two level-independent
+// controls; its state is appended so Cut/Boost projects keep their layout.
+constexpr std::array<SliderDef, 2> kDesignerSliders = {{
+    { kParamAttackDb,  "Attack",  -15.0f, 15.0f, false, "attack_db"  },
+    { kParamSustainDb, "Sustain", -24.0f, 24.0f, false, "sustain_db" },
+}};
+
 enum class DropKind : std::uint8_t {
     Channel,   // 1-16
     CcNumber,  // off + 1-127 with common names
@@ -84,7 +93,7 @@ constexpr std::array<DropDef, 5> kCCDropDefs = {{
     { kParamCCChannel,     "CC Channel", "cc_channel",   DropKind::Channel  },
 }};
 
-constexpr const char* kModeChoices[2] = { "Cut", "Boost" };
+constexpr const char* kModeChoices[3] = { "Cut", "Boost", "Designer" };
 
 [[nodiscard]] float clampf(float v, float lo, float hi) noexcept
 {
@@ -129,6 +138,8 @@ constexpr const char* kModeChoices[2] = { "Cut", "Boost" };
         std::snprintf(buf, sizeof(buf), "%.0f%%", v);
         break;
     case kParamTrim:
+    case kParamAttackDb:
+    case kParamSustainDb:
         std::snprintf(buf, sizeof(buf), "%+.1f dB", v);
         break;
     default:
@@ -237,6 +248,8 @@ public:
         values_[kParamCCDecay] = 3.0f;
         values_[kParamCCMix] = 4.0f;
         values_[kParamCCChannel] = 1.0f;
+        values_[kParamAttackDb] = 0.0f;
+        values_[kParamSustainDb] = 0.0f;
 
        #ifdef DGL_NO_SHARED_RESOURCES
         createFontFromFile("sans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
@@ -269,6 +282,8 @@ protected:
         else if (std::strcmp(key, "cc_decay")       == 0) { values_[kParamCCDecay] = fv; }
         else if (std::strcmp(key, "cc_mix")         == 0) { values_[kParamCCMix] = fv; }
         else if (std::strcmp(key, "cc_channel")     == 0) { values_[kParamCCChannel] = fv; }
+        else if (std::strcmp(key, "attack_db")      == 0) { values_[kParamAttackDb] = fv; }
+        else if (std::strcmp(key, "sustain_db")     == 0) { values_[kParamSustainDb] = fv; }
         repaint();
     }
 
@@ -315,7 +330,7 @@ protected:
             }
             closePopup();
             if (dropHeaderAt(mx, my) < 0 && segAt(mx, my) < 0 && switchAt(mx, my) < 0) {
-                for (int s = 0; s < static_cast<int>(kMainSliders.size()); ++s) {
+                for (int s = 0; s < visibleSliderCount(); ++s) {
                     if (mainTrack(s).contains(mx, my))
                         return true;  // swallow: no drag on the closing click
                 }
@@ -323,7 +338,7 @@ protected:
             }
         }
 
-        for (int s = 0; s < static_cast<int>(kMainSliders.size()); ++s) {
+        for (int s = 0; s < visibleSliderCount(); ++s) {
             if (mainTrack(s).contains(mx, my)) {
                 dragSlider_ = s;
                 updateSlider(s, mx);
@@ -333,7 +348,11 @@ protected:
         if (segAt(mx, my) >= 0) {
             const Rect box = segBox();
             const float t = clampf((mx - box.x) / box.w, 0.0f, 0.9999f);
-            commitParam(kParamMode, "mode", t < 0.5f ? 0.0f : 1.0f);
+            constexpr int kModeCount = static_cast<int>(sizeof(kModeChoices) / sizeof(kModeChoices[0]));
+            const int mode = std::min(kModeCount - 1,
+                                      static_cast<int>(std::floor(t * static_cast<float>(kModeCount))));
+            dragSlider_ = -1;  // the row under the cursor changes with the mode
+            commitParam(kParamMode, "mode", static_cast<float>(mode));
             return true;
         }
         if (switchAt(mx, my) == 0) {
@@ -409,13 +428,31 @@ private:
 
     [[nodiscard]] DropKind openKind() const noexcept { return openDef().kind; }
 
-    // Left column rows: Mode segment, 9 sliders, Bypass switch, Delta switch.
+    [[nodiscard]] bool designerMode() const noexcept
+    {
+        return values_[kParamMode] >= 1.5f;
+    }
+
+    [[nodiscard]] int visibleSliderCount() const noexcept
+    {
+        return designerMode() ? static_cast<int>(kDesignerSliders.size())
+                              : static_cast<int>(kMainSliders.size());
+    }
+
+    [[nodiscard]] const SliderDef& visibleSlider(const int s) const noexcept
+    {
+        return designerMode() ? kDesignerSliders[static_cast<std::size_t>(s)]
+                              : kMainSliders[static_cast<std::size_t>(s)];
+    }
+
+    // Left column rows: Mode segment, mode-specific sliders, Bypass, Delta.
     [[nodiscard]] float mainRowY(int row) const noexcept
     {
+        const int sliderRows = visibleSliderCount();
         float y = kSlidersY;
         for (int r = 0; r < row; ++r) {
             if (r == 0) y += kSegH;
-            else if (r <= 9) y += kSliderH;
+            else if (r <= sliderRows) y += kSliderH;
             else y += kSwitchH;
         }
         return y;
@@ -441,7 +478,7 @@ private:
     [[nodiscard]] Rect switchBox(int which) const noexcept
     {
         const float trackW = kDivX - kMainX - kPad;
-        return { kMainX, mainRowY(10 + which), trackW, kSwitchH };
+        return { kMainX, mainRowY(1 + visibleSliderCount() + which), trackW, kSwitchH };
     }
 
     [[nodiscard]] int switchAt(float mx, float my) const noexcept
@@ -477,7 +514,7 @@ private:
 
     void updateSlider(int s, float mx)
     {
-        const SliderDef& def = kMainSliders[static_cast<std::size_t>(s)];
+        const SliderDef& def = visibleSlider(s);
         const Rect tr        = mainTrack(s);
         const float t        = clampf((mx - tr.x) / tr.w, 0.0f, 1.0f);
         float v              = def.min + t * (def.max - def.min);
@@ -590,7 +627,7 @@ private:
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         fc(t.textDim);
         text(kPad + 110.0f, 27.0f,
-             "adaptive transient processor \xc2\xb7 cut / boost \xc2\xb7 3-band \xc2\xb7 Drift CC", nullptr);
+             "adaptive transient processor \xc2\xb7 cut / boost / designer \xc2\xb7 Drift CC", nullptr);
 
         beginPath();
         sc(t.controlTrack);
@@ -679,14 +716,15 @@ private:
         const auto& t = theme();
         const float trackW = kDivX - kMainX - kPad;
 
-        // Mode: segmented two-way switch.
+        // Mode: three-way segment; Designer swaps the rows below it.
         {
             const Rect box = segBox();
-            drawLabelValue(kMainX, box.y - 17.0f, trackW, "Mode",
-                           values_[kParamMode] < 0.5f ? "Cut" : "Boost");
-            const int selected = values_[kParamMode] < 0.5f ? 0 : 1;
-            for (int i = 0; i < 2; ++i) {
-                const float segW = box.w / 2.0f;
+            const int selected = std::clamp(static_cast<int>(std::lround(values_[kParamMode])),
+                                            0, 2);
+            drawLabelValue(kMainX, box.y - 17.0f, trackW, "Mode", kModeChoices[selected]);
+            constexpr int kModeCount = static_cast<int>(sizeof(kModeChoices) / sizeof(kModeChoices[0]));
+            for (int i = 0; i < kModeCount; ++i) {
+                const float segW = box.w / static_cast<float>(kModeCount);
                 const float sx = box.x + i * segW;
                 beginPath();
                 roundedRect(sx + 1.0f, box.y, segW - 2.0f, box.h, 4.0f);
@@ -696,7 +734,7 @@ private:
                     fc(t.buttonFace);
                 fill();
                 closePath();
-                fontSize(11.0f);
+                fontSize(i == 2 ? 10.0f : 11.0f);
                 textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
                 if (i == selected)
                     fillColor(kCreamR, kCreamG, kCreamB, 255);
@@ -706,8 +744,8 @@ private:
             }
         }
 
-        for (int s = 0; s < static_cast<int>(kMainSliders.size()); ++s) {
-            const SliderDef& def = kMainSliders[static_cast<std::size_t>(s)];
+        for (int s = 0; s < visibleSliderCount(); ++s) {
+            const SliderDef& def = visibleSlider(s);
             const Rect tr        = mainTrack(s);
             drawLabelValue(kMainX, tr.y - 17.0f, trackW, def.label,
                            formatSlider(def, values_[def.index]).c_str());
@@ -810,8 +848,8 @@ private:
         fc(t.textDisabled);
         text(kCCX, hintY, "Route Drift MIDI out \xe2\x86\x92 Spliff MIDI in.", nullptr);
         text(kCCX, hintY + 14.0f, "off disables the override for that control.", nullptr);
-        text(kCCX, hintY + 38.0f, "Workflow: Delta on, raise Depth, tune Sens+Decay,", nullptr);
-        text(kCCX, hintY + 52.0f, "then Delta off and set Mix. Bypass compares.", nullptr);
+        text(kCCX, hintY + 38.0f, "CC 1-3 shape Cut/Boost; Mix applies in all modes.", nullptr);
+        text(kCCX, hintY + 52.0f, "Designer uses its own Attack/Sustain rows.", nullptr);
     }
 
     void drawFooterNote()
@@ -820,8 +858,14 @@ private:
         fontSize(9.5f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fc(t.textDisabled);
-        text(kMainX, mainRowY(12) + 10.0f,
-             "Cut last in the chain \xc2\xb7 Boost early, before compression.", nullptr);
+        const float noteY = mainRowY(3 + visibleSliderCount()) + 10.0f;
+        text(kMainX, noteY,
+             designerMode()
+                 ? "Attack + lifts onsets \xc2\xb7 Sustain + lifts body \xc2\xb7 two envelopes, no threshold."
+                 : "Cut last in the chain \xc2\xb7 Boost early, before compression.", nullptr);
+        if (designerMode())
+            text(kMainX, noteY + 16.0f,
+                 "Gain follows the fast/slow ratio, so input level does not matter.", nullptr);
     }
 
     [[nodiscard]] const Accent& popupAccent() const noexcept

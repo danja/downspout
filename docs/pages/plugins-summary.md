@@ -150,7 +150,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | sam | sam.vst3 | instrument (speech synthesiser) | 0/2 | yes/no | yes |
 | sidecar | sidecar.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | skream | skream.vst3 | audio effect (filter) | 2/2 | yes/no | no |
-| spliff | spliff.vst3 | audio effect (transients) | 2/2 | yes/no | no |
+| spliff | spliff.vst3 | audio effect (transients / designer) | 2/2 | yes/no | no |
 | markov | markov.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | sprout | sprout.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | syrinx | syrinx.vst3 | instrument + audio-driven voice (birdsong) | 2/2 | yes/no | no |
@@ -1062,11 +1062,12 @@ Automatic wah: resonant low-pass (Q 0.5-12) whose cutoff follows the input envel
 Blend takes whichever opens further. Sensitivity, Depth, Resonance, Mix read Drift CC 1-4.
 
 ### spliff
-Adaptive transient processor in the Spiff manner: 3-band transient detector applies
-dynamic cuts or boosts only at transients. **Cut** mode tames clicks and harsh sticks
-(late in a chain); **Boost** lifts drum and piano attacks (before compression). Depth,
-Sensitivity, Decay and Mix read Drift CC 1-4; Sharpness, Decay LF/HF tilt, band splits,
-Trim, Delta monitoring and Bypass. Detector is mono, so the stereo image is preserved.
+Adaptive transient processor. **Cut** tames clicks and harsh sticks (late in a chain),
+**Boost** lifts drum and piano attacks (before compression), using a 3-band detector
+and Drift CC 1-4 for Depth/Sensitivity/Decay/Mix. **Designer** replaces that with a
+threshold-free, level-independent fast/slow envelope ratio: Attack ±15 dB for onsets,
+Sustain ±24 dB for body/tails, both inert at 0 dB. Mix, Trim, Delta and Bypass apply
+in all modes; the mono detector keeps the stereo image intact.
 
 ### treatment
 Physically modelled acoustic treatment panel: facing sheet (mass), porous fill (flow

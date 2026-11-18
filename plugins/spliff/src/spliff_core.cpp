@@ -56,12 +56,86 @@ float timeCoeff(double seconds, double sampleRate) noexcept
     return std::exp(static_cast<float>(-1.0 / (seconds * sampleRate)));
 }
 
+// Mode 2: the two envelopes are deliberately level-independent. Their ratio
+// is compared in dB; the full ±15/±24 dB control range maps through tanh so
+// every non-zero ratio has an effect (no threshold/deadzone) and the output
+// cannot exceed the knob's stated range.
+constexpr float kDesignerFloor = 1e-30f;   // only flushes denormals
+constexpr float kDesignerEpsilonRel = 1e-12f;  // relative to envelope scale
+constexpr float kDesignerDriveDb = 9.0f;
+constexpr double kDesignerFastAttackS = 0.0002;
+constexpr double kDesignerFastReleaseS = 0.030;
+constexpr double kDesignerSlowAttackS = 0.020;
+constexpr double kDesignerSlowReleaseS = 0.250;
+constexpr double kDesignerGainSmoothS = 0.0005;
+
+void processDesigner(EngineState&          state,
+                     const Parameters&     cp,
+                     std::uint32_t         frames,
+                     double                sampleRate,
+                     const float* const*   inputs,
+                     float* const*         outputs,
+                     float                 mixFrac) noexcept
+{
+    const float fastAtt = 1.0f - timeCoeff(kDesignerFastAttackS, sampleRate);
+    const float fastRel = 1.0f - timeCoeff(kDesignerFastReleaseS, sampleRate);
+    const float slowAtt = 1.0f - timeCoeff(kDesignerSlowAttackS, sampleRate);
+    const float slowRel = 1.0f - timeCoeff(kDesignerSlowReleaseS, sampleRate);
+    const float gainCoeff = 1.0f - timeCoeff(kDesignerGainSmoothS, sampleRate);
+    const float trimGain = std::pow(10.0f, cp.trim / 20.0f);
+    const bool bypassed = cp.bypass > 0.5f;
+    const bool delta = cp.delta > 0.5f;
+    DesignerState& d = state.designer;
+
+    for (std::uint32_t f = 0; f < frames; ++f) {
+        float in[2] = { 0.0f, 0.0f };
+        for (int c = 0; c < 2; ++c) {
+            const float v = (inputs && inputs[c]) ? inputs[c][f] : 0.0f;
+            in[c] = std::isfinite(v) ? v : 0.0f;
+        }
+        const float mag = std::fabs(0.5f * (in[0] + in[1]));
+
+        d.fast += (mag - d.fast) * (mag > d.fast ? fastAtt : fastRel);
+        d.slow += (mag - d.slow) * (mag > d.slow ? slowAtt : slowRel);
+        if (d.fast < kDesignerFloor) d.fast = 0.0f;
+        if (d.slow < kDesignerFloor) d.slow = 0.0f;
+
+        // Ratio, not absolute level: scaling the input scales both envelopes
+        // and leaves this dB difference unchanged. The guard is relative so it
+        // stays scale-invariant right down to the numerical floor.
+        const float envScale = std::max(d.fast, d.slow);
+        const float eps = std::max(envScale * kDesignerEpsilonRel, kDesignerFloor);
+        const float ratioDb = 20.0f * std::log10((d.fast + eps) / (d.slow + eps));
+        const float drive = std::tanh(std::fabs(ratioDb) / kDesignerDriveDb);
+        const float targetDb = ratioDb >= 0.0f
+            ? cp.attackDb * drive
+            : cp.sustainDb * drive;
+        const float target = std::pow(10.0f, targetDb / 20.0f);
+        d.gain += (target - d.gain) * gainCoeff;
+        if (std::fabs(d.gain - 1.0f) < 1e-7f) d.gain = 1.0f;
+
+        for (int c = 0; c < 2; ++c) {
+            const float wet = in[c] * d.gain * trimGain;
+            float y;
+            if (bypassed) {
+                y = in[c];
+            } else if (delta) {
+                y = (wet - in[c]) * mixFrac;
+            } else {
+                y = in[c] * (1.0f - mixFrac) + wet * mixFrac;
+            }
+            if (outputs && outputs[c])
+                outputs[c][f] = std::isfinite(y) ? y : 0.0f;
+        }
+    }
+}
+
 }  // namespace
 
 Parameters clampParameters(const Parameters& p) noexcept
 {
     Parameters out = p;
-    out.mode        = std::round(safe(out.mode, 0.0f, 1.0f, 0.0f));
+    out.mode        = std::round(safe(out.mode, 0.0f, 2.0f, 0.0f));
     out.depth       = safe(out.depth, 0.0f, 1.0f, 0.5f);
     out.sensitivity = safe(out.sensitivity, 0.0f, 1.0f, 0.5f);
     out.sharpness   = safe(out.sharpness, 0.0f, 1.0f, 0.3f);
@@ -75,6 +149,8 @@ Parameters clampParameters(const Parameters& p) noexcept
     out.trim        = safe(out.trim, -12.0f, 12.0f, 0.0f);
     out.bypass      = std::round(safe(out.bypass, 0.0f, 1.0f, 0.0f));
     out.delta       = std::round(safe(out.delta, 0.0f, 1.0f, 0.0f));
+    out.attackDb    = safe(out.attackDb, -15.0f, 15.0f, 0.0f);
+    out.sustainDb   = safe(out.sustainDb, -24.0f, 24.0f, 0.0f);
     out.ccDepth       = std::round(safe(out.ccDepth, 0.0f, 127.0f, kDefaultCCDepth));
     out.ccSensitivity = std::round(safe(out.ccSensitivity, 0.0f, 127.0f, kDefaultCCSensitivity));
     out.ccDecay       = std::round(safe(out.ccDecay, 0.0f, 127.0f, kDefaultCCDecay));
@@ -103,6 +179,11 @@ void processBlock(EngineState&        state,
     const bool bypassed = cp.bypass > 0.5f;
     const bool delta = cp.delta > 0.5f;
     const double sr = (sampleRate > 0.0) ? sampleRate : 48000.0;
+
+    if (cp.mode >= 1.5f) {
+        processDesigner(state, cp, frames, sr, inputs, outputs, mixFrac);
+        return;
+    }
 
     const float aLow = lowpassCoeff(cp.splitLow, sr);
     const float aHigh = lowpassCoeff(cp.splitHigh, sr);
@@ -218,6 +299,8 @@ std::string serializeParameters(const Parameters& p)
            "trim=" + std::to_string(cp.trim) + "\n"
            "bypass=" + std::to_string(cp.bypass) + "\n"
            "delta=" + std::to_string(cp.delta) + "\n"
+           "attack_db=" + std::to_string(cp.attackDb) + "\n"
+           "sustain_db=" + std::to_string(cp.sustainDb) + "\n"
            "cc_depth=" + std::to_string(cp.ccDepth) + "\n"
            "cc_sensitivity=" + std::to_string(cp.ccSensitivity) + "\n"
            "cc_decay=" + std::to_string(cp.ccDecay) + "\n"
@@ -248,6 +331,8 @@ std::optional<Parameters> deserializeParameters(const std::string& text)
         else if (key == "trim"            && parseFloat(value, v)) { p.trim = v; }
         else if (key == "bypass"          && parseFloat(value, v)) { p.bypass = v; }
         else if (key == "delta"           && parseFloat(value, v)) { p.delta = v; }
+        else if (key == "attack_db"       && parseFloat(value, v)) { p.attackDb = v; }
+        else if (key == "sustain_db"      && parseFloat(value, v)) { p.sustainDb = v; }
         else if (key == "cc_depth"        && parseFloat(value, v)) { p.ccDepth = v; }
         else if (key == "cc_sensitivity"  && parseFloat(value, v)) { p.ccSensitivity = v; }
         else if (key == "cc_decay"        && parseFloat(value, v)) { p.ccDecay = v; }

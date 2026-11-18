@@ -14,6 +14,11 @@ namespace downspout::spliff {
 // would need M/S plumbing; instead both channels share the mono-averaged
 // detector, which is the same musical outcome for the common case).
 //
+// Mode 2 adds a level-independent attack/sustain designer: two envelope time
+// constants (fast and slow) are compared as a ratio, so their dB difference
+// drives gain with no absolute-level threshold. It is deliberately separate
+// from the 3-band Cut/Boost detector so existing projects are unchanged.
+//
 // The four most-playable controls map 1:1 to Drift's default lane CCs so that
 // routing Drift MIDI out -> Spliff MIDI in just works (chipper convention).
 inline constexpr float kDefaultCCDepth       = 1.0f;
@@ -22,7 +27,7 @@ inline constexpr float kDefaultCCDecay       = 3.0f;
 inline constexpr float kDefaultCCMix         = 4.0f;
 
 struct Parameters {
-    float mode        = 0.0f;    // 0 = Cut transients, 1 = Boost transients
+    float mode        = 0.0f;    // 0 = Cut transients, 1 = Boost, 2 = level-independent designer
     float depth       = 0.5f;    // 0-1 amount of cut/boost
     float sensitivity = 0.5f;    // 0-1 detection threshold (higher = more caught)
     float sharpness   = 0.3f;    // 0-1 per-band independence (low = natural)
@@ -34,6 +39,8 @@ struct Parameters {
     float trim        = 0.0f;    // -12..+12 dB makeup gain, wet only
     float bypass      = 0.0f;    // 0 = active, 1 = bypassed (DSP still runs)
     float delta       = 0.0f;    // 0 = normal, 1 = monitor wet-dry
+    float attackDb    = 0.0f;    // -15..15 dB, designer transient gain (+ boosts)
+    float sustainDb   = 0.0f;    // -24..24 dB, designer body/tail gain (+ boosts)
     float ccDepth       = kDefaultCCDepth;       // 0-127 CC# (0 = off)
     float ccSensitivity = kDefaultCCSensitivity;
     float ccDecay       = kDefaultCCDecay;
@@ -47,6 +54,12 @@ struct ChannelState {
     std::array<float, 3> gain { 1.0f, 1.0f, 1.0f };  // smoothed per-band gain
 };
 
+struct DesignerState {
+    float fast = 0.0f;   // 0.2 ms attack / 30 ms release envelope
+    float slow = 0.0f;   // 20 ms attack / 250 ms release envelope
+    float gain = 1.0f;   // smoothed linear gain from their dB ratio
+};
+
 struct EngineState {
     std::array<ChannelState, 2> channels {};
     // Shared mono detector (fixed 100% link): its own crossover memories and
@@ -55,6 +68,7 @@ struct EngineState {
     float detHighMem = 0.0f;
     std::array<float, 3> detFast {};
     std::array<float, 3> detSlow {};
+    DesignerState designer {};
 };
 
 [[nodiscard]] Parameters clampParameters(const Parameters& p) noexcept;

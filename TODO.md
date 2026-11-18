@@ -68,9 +68,19 @@ review `docs/lynx-survey.md`
 
 ## From INBOX (2026-11-18)
 
-- [ ] **Level-independent transient designer** (from INBOX): add a `spliff` mode based on LYNX's
-      *Strike Shaper* / SPL Transient Designer. Attack ±15 dB and Sustain ±24 dB from two envelopes
-      with no threshold; keep the level-independent behaviour, which is the point.
+- [x] **Level-independent transient designer** (done 2026-11-18): added **Designer** as `spliff`
+      mode 2 after LYNX's *Strike Shaper* / SPL Transient Designer. Two shared envelopes
+      (0.2/30 ms fast, 20/250 ms slow) form a relative-epsilon dB ratio with no threshold;
+      Attack ±15 dB acts when fast > slow, Sustain ±24 dB when slow > fast, both defaulting to
+      0 dB. Appended host/state parameters 17/18 (`attack_db`, `sustain_db`) and widened Mode to
+      0–2 without moving existing indices. CC 1–3 remain Cut/Boost-only; Mix, Trim, Bypass and
+      Delta apply in Designer. Core tests cover default inertness, both directions and bounds,
+      200 dB level independence, a small-ratio response (no deadzone), block-split determinism,
+      clamping and old-state compatibility.
+- [ ] Visual acceptance of Spliff's fresh captures is pending: Cut default at
+      `/tmp/opencode/spliff-ui-screenshot/spliff.png` and Designer (third mode segment selected)
+      at `/tmp/opencode/spliff-ui-screenshot/spliff-designer.png`, both 720x680. This model cannot
+      view PNG pixels, so copying either over `docs/pages/assets/plugins/spliff.png` remains pending.
 - [x] **Editable Conductor form** (from INBOX, done 2026-11-18): up to 8 blocks of types Null,
       Intro, Theme, Develop, Break, Reprise and Coda. No extra types were added: Null covers
       rests and the other six cover the requested musical roles. `block_count`, per-block type

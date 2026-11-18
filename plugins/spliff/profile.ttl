@@ -7,12 +7,12 @@
 
 dsp:spliff a trn:PluginProfile ;
     rdfs:label "Spliff" ;
-    rdfs:comment "Adaptive transient processor in the Spiff manner: detects transients per frequency band and applies dynamic cuts or boosts only where transient energy exists, leaving the rest of the spectrum intact." ;
+    rdfs:comment "Adaptive transient processor with 3-band Spiff-style Cut/Boost and a third level-independent Designer mode: two envelopes form a threshold-free dB ratio driving Attack +/-15 dB and Sustain +/-24 dB." ;
     trn:bundleName "spliff.vst3" ;
     trn:vendor "danja" ;
     trn:role trn:AudioEffect ;
     trn:accepts trn:Audio, trn:ControlMidi ;
     trn:produces trn:Audio ;
-    trn:caution "Boost mode before compressors or limiters can produce hot peaks; Delta monitoring is loudness-neutral but the wet path is not." ;
+    trn:caution "Boost mode before compressors or limiters can produce hot peaks; Designer Attack/Sustain are level-independent but their wet path can still peak; Delta monitoring is loudness-neutral but the wet path is not." ;
     trn:recommendedAfter dsp:drift ;
     pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

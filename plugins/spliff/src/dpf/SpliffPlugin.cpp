@@ -29,6 +29,8 @@ enum ParameterIndex : uint32_t {
     kParamCCDecay,
     kParamCCMix,
     kParamCCChannel,
+    kParamAttackDb,
+    kParamSustainDb,
     kParameterCount
 };
 
@@ -49,8 +51,10 @@ constexpr const char* kStateCCSensitivity = "cc_sensitivity";
 constexpr const char* kStateCCDecay       = "cc_decay";
 constexpr const char* kStateCCMix         = "cc_mix";
 constexpr const char* kStateCCChannel     = "cc_channel";
+constexpr const char* kStateAttackDb      = "attack_db";
+constexpr const char* kStateSustainDb     = "sustain_db";
 
-constexpr uint32_t kStateCount = 17;
+constexpr uint32_t kStateCount = 19;
 
 float ccToUnit(uint8_t v) noexcept
 {
@@ -75,7 +79,7 @@ public:
 
 protected:
     const char* getLabel()       const override { return "Spliff"; }
-    const char* getDescription() const override { return "Adaptive transient processor in the Spiff manner: cuts or boosts only where transient energy lives, via a 3-band detector. Modulated by Drift via CC."; }
+    const char* getDescription() const override { return "Adaptive transient processor: 3-band Spiff-style Cut/Boost plus a threshold-free level-independent Attack/Sustain designer. Modulated by Drift via CC."; }
     const char* getMaker()       const override { return "danja"; }
     const char* getHomePage()    const override { return "https://danja.github.io/downspout/"; }
     const char* getLicense()     const override { return "MIT"; }
@@ -101,7 +105,7 @@ protected:
     {
         parameter.hints = 0;
         switch (index) {
-        case kParamMode:        parameter.name = "Mode";        parameter.symbol = "mode";        parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 1.0f, 0.0f }; break;
+        case kParamMode:        parameter.name = "Mode";        parameter.symbol = "mode";        parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 2.0f, 0.0f }; break;
         case kParamDepth:       parameter.name = "Depth";       parameter.symbol = "depth";       parameter.ranges = { 0.0f, 1.0f, 0.5f }; break;
         case kParamSensitivity: parameter.name = "Sensitivity"; parameter.symbol = "sensitivity"; parameter.ranges = { 0.0f, 1.0f, 0.5f }; break;
         case kParamSharpness:   parameter.name = "Sharpness";   parameter.symbol = "sharpness";   parameter.ranges = { 0.0f, 1.0f, 0.3f }; break;
@@ -118,6 +122,8 @@ protected:
         case kParamCCDecay:       parameter.name = "CC Decay";  parameter.symbol = "cc_decay";    parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 127.0f, downspout::spliff::kDefaultCCDecay }; break;
         case kParamCCMix:         parameter.name = "CC Mix";    parameter.symbol = "cc_mix";      parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 127.0f, downspout::spliff::kDefaultCCMix }; break;
         case kParamCCChannel:     parameter.name = "CC Channel"; parameter.symbol = "cc_channel"; parameter.hints = kParameterIsInteger; parameter.ranges = { 1.0f, 16.0f, 1.0f }; break;
+        case kParamAttackDb:      parameter.name = "Attack";     parameter.symbol = "attack_db";  parameter.ranges = { -15.0f, 15.0f, 0.0f }; break;
+        case kParamSustainDb:     parameter.name = "Sustain";    parameter.symbol = "sustain_db"; parameter.ranges = { -24.0f, 24.0f, 0.0f }; break;
         }
     }
 
@@ -142,6 +148,8 @@ protected:
             { kStateCCDecay,       "CC Decay",       "3"    },
             { kStateCCMix,         "CC Mix",         "4"    },
             { kStateCCChannel,     "CC Channel",     "1"    },
+            { kStateAttackDb,      "Attack",         "0"    },
+            { kStateSustainDb,     "Sustain",        "0"    },
         };
         if (index < kStateCount) {
             state.key          = kInfo[index].key;
@@ -171,6 +179,8 @@ protected:
         case kParamCCDecay:       return params_.ccDecay;
         case kParamCCMix:         return params_.ccMix;
         case kParamCCChannel:     return params_.ccChannel;
+        case kParamAttackDb:      return params_.attackDb;
+        case kParamSustainDb:     return params_.sustainDb;
         default: return 0.0f;
         }
     }
@@ -204,6 +214,8 @@ protected:
         else if (std::strcmp(key, kStateCCDecay)       == 0) return text(params_.ccDecay);
         else if (std::strcmp(key, kStateCCMix)         == 0) return text(params_.ccMix);
         else if (std::strcmp(key, kStateCCChannel)     == 0) return text(params_.ccChannel);
+        else if (std::strcmp(key, kStateAttackDb)      == 0) return text(params_.attackDb);
+        else if (std::strcmp(key, kStateSustainDb)     == 0) return text(params_.sustainDb);
         return String();
     }
 
@@ -228,7 +240,14 @@ protected:
         else if (std::strcmp(key, kStateCCDecay)       == 0) { params_.ccDecay = f(); }
         else if (std::strcmp(key, kStateCCMix)         == 0) { params_.ccMix = f(); }
         else if (std::strcmp(key, kStateCCChannel)     == 0) { params_.ccChannel = f(); }
+        else if (std::strcmp(key, kStateAttackDb)      == 0) { params_.attackDb = f(); }
+        else if (std::strcmp(key, kStateSustainDb)     == 0) { params_.sustainDb = f(); }
         params_ = downspout::spliff::clampParameters(params_);
+    }
+
+    void sampleRateChanged(double) override
+    {
+        engine_ = downspout::spliff::EngineState{};  // runtime only; patch untouched
     }
 
     void activate() override

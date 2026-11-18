@@ -7,6 +7,11 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 (No open entries from before October 2026: the screenshot script now always captures on a private Xvfb.)
 
+## Spliff: placeholder test, fixed epsilon and footer row (2026-11-18)
+- **What happened:** The first Designer test draft called `run(*(new EngineState), ...)`, which leaked state and asserted nothing; the first DSP draft used a fixed absolute epsilon in the envelope ratio, making level independence fail at extremely low amplitudes; the first dynamic UI layout put the footer on the Delta row (count+2 instead of count+3).
+- **Root cause:** The test function was scaffolded before its assertions were written, the divide-by-zero guard was copied as a constant instead of being expressed relative to the envelope scale, and the footer index was converted from a magic number without re-deriving the row sequence.
+- **Prevention:** Never leave a compileable placeholder in a test; build and run immediately after writing each new test. Express divide guards relative to signal scale and assert level independence over a very wide range (Spliff now tests 1.0 vs 1e-10, 200 dB apart). Derive dynamic footer positions from the mode/slider/switch row counts, not by decrementing the old magic number.
+
 ## DrumGen: Conductor chooser opened below the panel (2026-11-18)
 - **What happened:** The 17-value `Conductor Ch` selector sat near y=689, so its two-column menu opened at
   about y=752 and ran past the 940 px UI; most channels were unreachable by mouse.
