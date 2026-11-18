@@ -128,6 +128,7 @@ The CMake install declarations currently cover 100 VST3 bundles; the authoritati
 - `orbit.vst3` with UI
 - `orchid.vst3` with UI
 - `p_mix.vst3` with UI
+- `padseq.vst3` with UI
 - `paunchlad.vst3` with UI
 - `plank.vst3` with UI
 - `polymeter.vst3` with UI
@@ -209,6 +210,7 @@ The script has been smoke-tested with a temporary install root under `/tmp`:
 - confirmed `paunchlad.vst3` bundle output and install
 - confirmed `lifeform.vst3` bundle output and install
 - `plank.vst3` builds locally and awaits host-side install validation
+- `padseq.vst3` builds locally and awaits host-side install validation
 - `pratt.vst3` builds locally (VST3 and JACK standalone) and awaits host-side install validation
 - `retune.vst3` builds locally (VST3 and JACK standalone) and awaits host-side install validation
 - `sprout.vst3` builds locally (VST3 and JACK standalone) and awaits host-side install validation

@@ -286,6 +286,7 @@ The release script currently expects these bundles:
 - `paunchlad.vst3`
 - `lifeform.vst3`
 - `plank.vst3`
+- `padseq.vst3`
 - `pratt.vst3`
 - `retune.vst3`
 - `sprout.vst3`

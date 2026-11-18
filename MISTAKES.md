@@ -7,6 +7,26 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 (No open entries from before October 2026: the screenshot script now always captures on a private Xvfb.)
 
+## PadSeq: visible page mistaken for the whole pattern (2026-11-18)
+- **What happened:** The first parameter layout had one boolean per visible 8x8 page (64 cells). A 32-step pattern
+  needs 256 cells, and the 64 read-only status cells mirror only the current page, so hidden steps would not have
+  been saved by the host. The UI side buttons also only highlighted a column instead of triggering a note.
+- **Root cause:** The hardware's 64 pads were conflated with the full sequencer pattern, and a UI control was drawn
+  without an action path from the UI process to the DSP process.
+- **Prevention:** Derive stored cells from `kMaxSteps * kGridWidth`, keep `kGridCellCount` only for the visible status
+  mirror, and assert the total parameter count plus a page-switch test that hidden cells survive. Give UI side buttons
+  real trigger parameters and test every column's note-on and step-timed note-off, not just the hardware CC path.
+
+## Screenshot capture: JACK readiness false positive (2026-11-18)
+- **What happened:** The capture script skipped its dummy JACK startup because `jack_wait -c -t 1` printed
+  "not running" but exited 0. The standalone PadSeq UI then exited before a window appeared. During diagnosis a
+  command also piped JACK output through `head` even though repository rules require the Read tool for file contents.
+- **Root cause:** A command's printed status was treated as authoritative instead of its exit code; the capture helper
+  has no independent server check. Diagnosis used shell text viewing out of habit.
+- **Prevention:** Start a dummy JACK explicitly and wait with `jack_wait -w` before capture when the helper's `-c`
+  probe is unreliable. Verify with `jack_lsp`, and use the Read tool for files. This model cannot open PNGs, so a
+  generated screenshot may be dimension-checked but visual acceptance must remain explicitly pending.
+
 ## Campione: inclusive WAV loop end treated as an exclusive cursor bound (2026-11-17)
 - **What happened:** The WAV `smpl` loader and all saved zone representations store `loopEnd` as the last played
   frame, but `processBlock()` wrapped the cursor when `position >= loopEnd`. The final loop frame was therefore never

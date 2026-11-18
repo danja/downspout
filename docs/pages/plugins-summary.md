@@ -26,7 +26,8 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
   the host). A few plugins also keep non-parameter data in DPF text state: sample paths
   (mosaic, rift), zone data (campione), patterns (lifeform, luma, plank, bassgen and other
   pattern holders), a text/tuning blob (tuney-vst), the export path (midiscribe), a Scala
-  path (retune).
+  path (retune). PadSeq is the exception among pattern editors: its 256 cells are
+  ordinary parameters, so no plugin state is needed.
   `scripts/check-plugin-state.sh` audits this.
 - **Determinism.** Generators derive random choices from a seed plus absolute musical
   position (not wall clock), so loops, restarts and offline renders reproduce.
@@ -127,6 +128,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | orchid | orchid.vst3 | audio effect (freeze) | 2/2 | yes/no | yes |
 | paunchlad | paunchlad.vst3 | effect/instrument (Launchpad) | 2/2 | yes/yes | no |
 | plank | plank.vst3 | instrument (Launchpad) | 0/2 | yes/yes | yes |
+| padseq | padseq.vst3 | MIDI generator (Launchpad step sequencer) | 0/2 | yes/yes | yes |
 | p-mix | p_mix.vst3 | audio effect (gate) | 4/2 | no/no | yes |
 | polymeter | polymeter.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | pratt | pratt.vst3 | instrument + filter | 2/2 | yes/no | no |
@@ -674,6 +676,19 @@ original 24 plus eight appended Plinky scales (Hirajoshi, Insen, Iwato, Minyo, m
 triads, fifths and Romanian), with ordering governed by `docs/scales.md`. Input notes
 are grid presses, not pitches, so pitch bend is
 not applicable. Persistent state; host validation pending.
+
+### padseq
+Paged 8x8 MIDI step sequencer for a Launchpad, also usable from the UI. Columns
+are notes and rows are time; a pattern is 1-32 sixteenth-note steps (default 16)
+over up to four pages. The 33 canonical `docs/scales.md` ordinals include generic
+pentatonic; **Note Map** switches the columns to GM drums, while **Root** and
+**Note View** move pitched columns. Top CCs 91-98 move the note view, page and
+scale, randomise, or clear/panic; side CCs 19,29,39,49,59,69,79,89 and the matching
+UI trigger buttons play their column notes with step-timed note-offs. Clock is Auto
+(host BBT when present, otherwise free), Host (absolute steps with restart/jump/rewind
+handling) or Free (tempo accumulator). MIDI output defaults to channel 4 to avoid
+Launchpad LED channels. All 256 cells and eight UI triggers are ordinary parameters,
+so no plugin state is used.
 
 ## Audio effects
 

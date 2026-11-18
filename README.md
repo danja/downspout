@@ -131,6 +131,7 @@ The [plugin reference](docs/pages/plugins-summary.md) has the ports, MIDI roles 
 | [markov](plugins/markov/README.md) | `markov.vst3` | MIDI generator | Markov-chain melody generator: a random walk through a visible 12x12 transition matrix that you draw, fill from one of eight styles, or learn from a line you play; scale-masked, optional second order, repeatable from any position. |
 | [sprout](plugins/sprout/README.md) | `sprout.vst3` | MIDI generator | L-system melody generator: seven grammars (Plant, Koch, Dragon, Sierpinski, Cantor, Levy, Tree), or your own typed into the Custom editor, rewritten per generation and played as a scale-quantised line, optionally growing one generation every N bars. |
 | [xoxolo](plugins/xoxolo/README.md) | `xoxolo.vst3` | MIDI generator | Simple x0x-style drum pattern editor with 11 drumkit lanes and a 32-step maximum. |
+| [PadSeq](plugins/padseq/README.md) | `padseq.vst3` | MIDI generator | Paged 8x8 Launchpad step sequencer with note/time grid, 1-32 steps, canonical scales and GM drum mapping. |
 | [Harmonic Atlas](plugins/harmonic-atlas/README.md) | `harmonic_atlas.vst3` | MIDI generator | Autonomous tonal, modal, chromatic-mediant, and neo-Riemannian-inspired harmony. |
 | [Conductor](plugins/conductor/README.md) | `conductor.vst3` | MIDI generator | Long-form section and scene-command generator. |
 | [Drift](plugins/drift/README.md) | `drift.vst3` | MIDI modulator | Four seeded CC lanes with LFO, sample-and-hold, walk, chaos, and follower modes. |

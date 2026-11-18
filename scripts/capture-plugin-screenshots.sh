@@ -60,6 +60,7 @@ plugins=(
   "paunchlad:paunchlad"
   "lifeform:lifeform"
   "plank:plank"
+  "padseq:padseq"
   "pratt:pratt"
   "retune:retune"
   "sprout:sprout"

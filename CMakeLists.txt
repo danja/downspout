@@ -90,6 +90,7 @@ option(DOWNSPOUT_BUILD_PRIMEFOLD "Configure the primefold prime-harmonic shifter
 option(DOWNSPOUT_BUILD_QUEFRENCY "Configure the quefrency cepstral shifter target" ON)
 option(DOWNSPOUT_BUILD_KEYFRAME "Configure the keyframe extrema time-stretch target" ON)
 option(DOWNSPOUT_BUILD_PLANK "Configure the Plank string synth instrument target" ON)
+option(DOWNSPOUT_BUILD_PADSEQ "Configure the PadSeq paged Launchpad step sequencer target" ON)
 option(DOWNSPOUT_BUILD_PRATT "Configure the Pratt number-theoretic synth and filter target" ON)
 option(DOWNSPOUT_BUILD_RETUNE "Configure the Retune Scala microtuning MIDI effect target" ON)
 option(DOWNSPOUT_BUILD_SPROUT "Configure the Sprout L-system MIDI generator target" ON)
@@ -600,4 +601,8 @@ endif()
 
 if(DOWNSPOUT_BUILD_BORE)
     add_subdirectory(plugins/bore)
+endif()
+
+if(DOWNSPOUT_BUILD_PADSEQ)
+    add_subdirectory(plugins/padseq)
 endif()

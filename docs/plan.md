@@ -231,6 +231,11 @@ Progress as of 2026-05-27:
   dynamic parameter smoothing, tape delay, shimmer reverb and mid/side width,
   played as one string per Launchpad grid column, with LED feedback,
   deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
+- `padseq` now exists as a paged 8x8 Launchpad step sequencer: note columns,
+  time rows, 1-32 sixteenth-note steps across four pages, the canonical 33-row
+  scale table, GM drum mapping, deterministic free/host clocks with restart and
+  rewind handling, Launchpad LED feedback, UI side triggers, and 256 cell parameters that the host
+  saves without plugin state;
 - `xoxolo` now exists as an original simple MIDI drum pattern editor with a
   fixed 11-lane drumkit map, 32-step maximum, text state serialization,
   deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
@@ -460,7 +465,7 @@ Current main gap:
   `cadence.vst3`, `arpgen.vst3`, `counterpointer.vst3`, `sidecar.vst3`, `gremlin.vst3`,
   `gremlin_driver.vst3`, `ground.vst3`, `floozy.vst3`, `basilico.vst3`,
   `canticle.vst3`, `moka.vst3`, `luma.vst3`, `paunchlad.vst3`, `lifeform.vst3`,
-  `plank.vst3`, `pratt.vst3`, `retune.vst3`, `sprout.vst3`, `markov.vst3`, and
+  `plank.vst3`, `padseq.vst3`, `pratt.vst3`, `retune.vst3`, `sprout.vst3`, `markov.vst3`, and
   `xoxolo.vst3`, `syrinx.vst3`, `tuney_vst.vst3`, `harmonic_atlas.vst3`,
   `conductor.vst3`, `drift.vst3`, `mnemosyne.vst3`, `polymeter.vst3`,
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,

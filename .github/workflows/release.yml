@@ -241,6 +241,7 @@ jobs:
             echo "- midiscribe.vst3"
             echo "- sidecar.vst3"
             echo "- plank.vst3"
+            echo "- padseq.vst3"
             echo "- pratt.vst3"
             echo "- retune.vst3"
             echo "- sprout.vst3"

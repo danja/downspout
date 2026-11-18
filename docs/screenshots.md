@@ -125,6 +125,7 @@ Current output filenames:
 - `paunchlad.png`
 - `lifeform.png`
 - `plank.png`
+- `padseq.png`
 - `pratt.png`
 - `retune.png`
 - `sprout.png`
