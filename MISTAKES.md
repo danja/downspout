@@ -7,6 +7,16 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 (No open entries from before October 2026: the screenshot script now always captures on a private Xvfb.)
 
+## DrumGen: Conductor chooser opened below the panel (2026-11-18)
+- **What happened:** The 17-value `Conductor Ch` selector sat near y=689, so its two-column menu opened at
+  about y=752 and ran past the 940 px UI; most channels were unreachable by mouse.
+- **Root cause:** The left panel stacked all selectors before Actions, and every selector menu was anchored
+  below its selector with no check against the window height.
+- **Prevention:** Move the three automaton selectors into the right-hand panel so Conductor sits near y=500,
+  and add `selectorMenuRect()` to flip a menu above its selector when it would not fit below. Keep the placement
+  logic in `drumgen_ui_layout.hpp` and assert the Conductor and automaton menu bounds in
+  `downspout_drumgen_ui_layout_tests`; re-check absolute selector bounds whenever the list or panel height changes.
+
 ## Conductor: queued jump waited for a section boundary (2026-11-18)
 - **What happened:** The block editor said a jump would happen at the next bar, but the core only applied
   `pendingSection` when the current section ended, which can be many bars later.

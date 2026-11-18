@@ -3,6 +3,7 @@
 
 #include "drumgen_serialization.hpp"
 #include "drumgen_template.hpp"
+#include "drumgen_ui_layout.hpp"
 
 #include <algorithm>
 #include <array>
@@ -47,17 +48,9 @@ enum ParameterIndex : uint32_t {
 
 constexpr const char* kStateKeyTemplateLoad = "template_load";
 
-struct Rect {
-    float x = 0.0f;
-    float y = 0.0f;
-    float w = 0.0f;
-    float h = 0.0f;
-
-    [[nodiscard]] bool contains(float px, float py) const noexcept
-    {
-        return px >= x && px <= (x + w) && py >= y && py <= (y + h);
-    }
-};
+namespace ui_layout = downspout::drumgen::ui_layout;
+using Rect = ui_layout::Rect;
+constexpr float kSelectorItemHeight = ui_layout::kSelectorItemHeight;
 
 struct SliderDef {
     uint32_t index;
@@ -160,6 +153,7 @@ constexpr std::array<SelectorDef, 11> kSelectors = {{
 }};
 
 constexpr std::size_t kAutomatonRuleSelector = 6;
+constexpr std::size_t kAutomatonEverySelector = 8;
 constexpr std::size_t kConductorChannelSelector = 9;
 
 constexpr std::array<ButtonDef, 3> kButtons = {{
@@ -530,13 +524,8 @@ private:
 
         float cy = y + 48.0f;
         for (std::size_t i = 0; i < kSelectors.size(); ++i) {
-            if (i == kAutomatonRuleSelector) {
-                cy += 4.0f;
-                fontSize(11.0f);
-                textAlign(ALIGN_LEFT | ALIGN_TOP);
-                fillColor(150, 190, 160, 200);
-                text(x + 20.0f, cy, "Automaton \xc2\xb7 steps one generation every N loops", nullptr);
-                cy += 14.0f;
+            if (i >= kAutomatonRuleSelector && i <= kAutomatonEverySelector) {
+                continue;  // Drawn in the right-hand Automaton section.
             }
             if (i == kConductorChannelSelector) {
                 cy += 4.0f;
@@ -656,11 +645,39 @@ private:
             drawSlider(kSliders[i], rect, values_[kSliders[i].index], draggingSlider_ == static_cast<int>(i));
         }
 
+        // Seed slider bottom: innerY + 5*(rowH+rowGap) + 22
+        const float templateY = innerY + 5.0f * (rowH + rowGap) + 22.0f + 22.0f;
         if (templateLibrary_.count() > 0) {
-            // Template section below sliders
-            // Seed slider bottom: innerY + 5*(rowH+rowGap) + 22
-            const float tmplY = innerY + 5.0f * (rowH + rowGap) + 22.0f + 22.0f;
-            drawTemplateSection(x, tmplY, w);
+            drawTemplateSection(x, templateY, w);
+        }
+        drawAutomatonSection(x, templateY + 150.0f, w);
+    }
+
+    void drawAutomatonSection(const float x, float y, const float w)
+    {
+        beginPath();
+        sc(t_.border.withAlpha(180));
+        strokeWidth(1.0f);
+        moveTo(x + 20.0f, y);
+        lineTo(x + w - 20.0f, y);
+        stroke();
+        closePath();
+        y += 14.0f;
+
+        fontSize(15.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        fc(t_.textPrimary);
+        text(x + 20.0f, y, "Automaton", nullptr);
+
+        fontSize(11.0f);
+        fc(t_.textDim);
+        text(x + 116.0f, y + 1.0f, "CA rewrites selected lanes every N loops", nullptr);
+
+        y += 30.0f;
+        for (std::size_t i = kAutomatonRuleSelector; i <= kAutomatonEverySelector; ++i) {
+            selectorRects_[i] = {x + 20.0f, y, w - 40.0f, 46.0f};
+            drawSelector(static_cast<int>(i), kSelectors[i], selectorRects_[i]);
+            y += 57.0f;
         }
     }
 
@@ -692,16 +709,10 @@ private:
 
     void drawOpenSelectorMenu(const int selectorIndex)
     {
-        const Rect base = selectorRects_[selectorIndex];
         const SelectorDef& def = kSelectors[selectorIndex];
         const int columns = selectorMenuColumnCount(def);
         const int rows = selectorMenuRowCount(def);
-        const Rect menuRect = {
-            base.x,
-            base.y + base.h + 6.0f,
-            base.w,
-            static_cast<float>(rows) * kSelectorItemHeight
-        };
+        const Rect menuRect = selectorMenuRect(selectorIndex);
         const float columnW = menuRect.w / static_cast<float>(columns);
 
         beginPath();
@@ -744,7 +755,7 @@ private:
         const SelectorDef& def = kSelectors[openSelector_];
         const int columns = selectorMenuColumnCount(def);
         const int rows = selectorMenuRowCount(def);
-        const Rect menuRect = {base.x, base.y + base.h + 6.0f, base.w, static_cast<float>(rows) * kSelectorItemHeight};
+        const Rect menuRect = selectorMenuRect(openSelector_);
         if (!menuRect.contains(x, y)) {
             return false;
         }
@@ -764,13 +775,19 @@ private:
 
     [[nodiscard]] int selectorMenuColumnCount(const SelectorDef& def) const
     {
-        return def.count > 6 ? 2 : 1;
+        return ui_layout::selectorColumnCount(def.count);
     }
 
     [[nodiscard]] int selectorMenuRowCount(const SelectorDef& def) const
     {
-        const int columns = selectorMenuColumnCount(def);
-        return (def.count + columns - 1) / columns;
+        return ui_layout::selectorRowCount(def.count);
+    }
+
+    [[nodiscard]] Rect selectorMenuRect(const int selectorIndex) const
+    {
+        return ui_layout::selectorMenuRect(selectorRects_[selectorIndex],
+                                           kSelectors[selectorIndex].count,
+                                           static_cast<float>(getHeight()));
     }
 
     void updateSliderFromPosition(const int sliderIndex, const float mouseX)

@@ -49,4 +49,7 @@ if(BUILD_TESTING)
     downspout_add_core_test(downspout_drumgen_core_tests
         SOURCES tests/drumgen_core_tests.cpp
         LIBS downspout_drumgen_core)
+    downspout_add_core_test(downspout_drumgen_ui_layout_tests
+        SOURCES tests/drumgen_ui_layout_tests.cpp
+        INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include")
 endif()

@@ -82,12 +82,15 @@ review `docs/lynx-survey.md`
       all other values using the shared seven-block decoder. Plugin-local response helpers and
       core tests cover the independent mapping tables, default inertness and audible pattern
       changes; profiles, MIDI docs, product pages and plugin summary were updated in the same change.
-      Both VST3 targets and the full 108-test suite pass. Host CC/transport validation is still
-      outstanding because the headless session has no advancing transport.
-- [ ] Visual acceptance of the updated BassGen and DrumGen captures is pending: the UIs were
-      recaptured to `/tmp/opencode/bassgen-drumgen-screenshot/{bassgen,drumgen}.png` and
-      dimension-checked at 920x700 and 1024x940, but this model cannot view PNG pixels, so
-      copying them into `docs/pages/assets/plugins` remains pending.
+      Both VST3 targets and the full test suite pass (109 tests after the DrumGen UI-layout tests
+      were added). Host CC/transport validation is still outstanding because the headless session
+      has no advancing transport.
+- [ ] Visual acceptance of the updated BassGen and DrumGen captures is pending: BassGen was recaptured
+      to `/tmp/opencode/bassgen-drumgen-screenshot/bassgen.png` at 920x700. DrumGen's rearranged panel
+      (automaton selectors in the right-hand Automaton section, Conductor selectors higher in the left
+      panel, and selector menus that flip upward near the bottom edge) was recaptured to
+      `/tmp/opencode/drumgen-ui-screenshot/drumgen.png` at 1024x940. This model cannot view PNG pixels,
+      so copying both into `docs/pages/assets/plugins` remains pending.
 
 
 ## Spectrogram painter (built 2026-11-03 as `fresco`; heard by nobody yet)

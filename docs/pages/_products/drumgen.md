@@ -37,9 +37,10 @@ See [MIDI Mapping](../../midi-mapping.md).
 ### Automaton layer
 
 An optional cellular-automaton layer evolves chosen lanes so a pattern keeps changing without
-being regenerated. Pick an **Automaton rule** (Off, or Wolfram rule 30, 90, 110, 150, 18, 54, 60,
-22, 105 or 126) and what it **plays on**: Hats, Percussion (bash, cowbell, clave), Toms, all three
-together, or every lane.
+being regenerated. Its three selectors sit in the right-hand **Automaton** section, leaving the
+Conductor chooser near the top of the Pattern panel. Pick an **Automaton rule** (Off, or Wolfram rule
+30, 90, 110, 150, 18, 54, 60, 22, 105 or 126) and what it **plays on**: Hats, Percussion (bash,
+cowbell, clave), Toms, all three together, or every lane.
 
 The pattern as generated is generation 0 and plays on the first pass. On each later pass a targeted
 lane plays the next row of a one-dimensional automaton (wrapping at the pattern length) seeded from
