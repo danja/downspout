@@ -347,6 +347,18 @@ gives the stepped, hard-tuned sound; a longer glide and a lower **Amount** nudge
 and formant control; the host is told the latency, so it compensates. One pitch at a time:
 not for chords or full mixes.
 
+### Polyscribe (`polyscribe.vst3`)
+
+Polyphonic audio-to-MIDI generator. Put it on a soloed vocal, bass, guitar or drum bus and route
+its MIDI output to a synth on another track; audio output is silent unless **Audio Thru** is on.
+**Input Type** matters most: **Melody** writes the strongest pitch, **Bass** the lowest, **Chords**
+up to **Max Notes** simultaneous notes, and **Drums** writes GM kick 36, snare 38 and hat 42 from
+three frequency bands (conventionally on channel 10). **Low Note** / **High Note** narrow the
+search; **Sensitivity**, **Gate**, **Release**, **Velocity** and **Dynamics** shape the messages.
+Detection needs a full analysis window (about 93 ms at 44.1 kHz) and audio is not delayed, so note
+timing follows detection rather than the exact attack. No MIDI input or CC map; no plugin state;
+transport is ignored.
+
 ### Prism (`prism.vst3`)
 
 Banded spectral delay. The sound is split into 1-8 bands, spaced evenly in log frequency from

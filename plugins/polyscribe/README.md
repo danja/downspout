@@ -115,7 +115,7 @@ instead. Five output parameters expose `out_count`, `out_last_note`,
 
 The portable core has deterministic tests for all four input types, sensitivity,
 note-range filtering, max-notes, gate, release, velocity, dynamics, transpose,
-MIDI channel, MIDI Out, Audio Thru and channel changes. The VST3 target builds.
-A screenshot was captured at the declared 920x720 size, but this environment
-could not inspect the PNG pixels, so visual acceptance is pending. The plugin
-has not been auditioned in a host on real instruments or voices.
+MIDI channel, MIDI Out, Audio Thru and channel changes. The VST3 target builds
+without warnings. The 920x720 panel was reviewed at full resolution and published
+as `docs/pages/assets/plugins/polyscribe.png`. Host listening and MIDI-routing
+checks on real voices, bass, chords and a drum bus are in progress.

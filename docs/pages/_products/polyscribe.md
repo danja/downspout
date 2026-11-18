@@ -2,9 +2,9 @@
 title: Polyscribe
 order: 245
 bundle: polyscribe.vst3
-kind: Audio/MIDI effect
-category: generator
-group: analysis
+kind: Audio/MIDI generator
+category: generative
+group: generators
 role: Polyphonic audio-to-MIDI generator
 screenshot: /assets/plugins/polyscribe.png
 capabilities: [audio input, audio output, MIDI note output, live status parameters]
@@ -77,8 +77,7 @@ are host parameters, and five output parameters expose live status.
 
 ## Status
 
-Core tests, the VST3 build and bundle-list wiring are complete. A screenshot was
-captured at the declared 920x720 size, but this environment could not inspect
-the PNG pixels, so visual acceptance is pending. Host listening and MIDI-routing
-validation in REAPER remain. See `plugins/polyscribe/docs/design.md` for the
-algorithms and the full test/validation gap.
+Core tests, the VST3 build, bundle-list wiring and the reviewed 920x720
+screenshot are complete. Host listening and MIDI-routing validation in REAPER
+is in progress. See `plugins/polyscribe/docs/design.md` for the algorithms and
+the full test/validation gap.

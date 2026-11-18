@@ -92,9 +92,8 @@ a host cannot backdate MIDI that has not been analysed yet.
 `PolyscribeUI` derives from `MagnetoUI`. The four panels follow the musical
 workflow: choose what to listen for, shape the emitted notes, choose the MIDI
 destination, then read the live result. Enum parameters use DPF enumeration
-values so hosts show names. The screenshot script captured the declared
-920x720 panel, but this environment could not inspect the PNG pixels, so visual
-acceptance remains pending.
+values so hosts show names. The captured 920x720 panel was reviewed at full
+resolution and published as `docs/pages/assets/plugins/polyscribe.png`.
 
 ## Tests and untested areas
 
@@ -104,6 +103,7 @@ timing, velocity/dynamics, Transpose, MIDI channel, MIDI Out, Audio Thru and
 channel changes. It runs under `-UNDEBUG` through
 `downspout_add_core_test()`.
 
-Not covered: real instruments and voices, polyphonic chord recognition with
-inharmonic overlap, host automation of output parameters, VST3 MIDI routing in a
-host, and listening/visual acceptance in REAPER.
+Not covered by automated tests: real instruments and voices, polyphonic chord
+recognition with inharmonic overlap, and host automation of output parameters.
+Host validation in REAPER (MIDI routing, note-off balance, channel 10 drums,
+output-parameter status and save/reopen) is being checked by the user.

@@ -91,6 +91,7 @@ Current output filenames:
 - `bore.png`
 - `fathom.png`
 - `qune.png`
+- `polyscribe.png`
 - `prism.png`
 - `mouth.png`
 - `grist.png`

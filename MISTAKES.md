@@ -7,6 +7,11 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 (No open entries from before October 2026: the screenshot script now always captures on a private Xvfb.)
 
+## Polyscribe: invalid Pages front matter (2026-11-18)
+- **What happened:** The new product page used `category: generator` and `group: analysis`. Neither is an allowed value, so Polyscribe would have been omitted from the generated site index even though its screenshot and product page existed.
+- **Root cause:** The front matter was written from the plugin's own vocabulary ("generator", "analysis") instead of checking `docs/pages/_data/groups.yml` and the allowed category list in `docs/pages/README.md`.
+- **Prevention:** For every new product page, validate all front matter against the current group ids, allowed categories and referenced screenshot path (a short script over `docs/pages/_products/*.md` does this) before calling the catalog done.
+
 ## Polyscribe: analysis probes, drum triggers and test scaffolding (2026-11-18)
 - **What happened:** An early engine draft used a file-scope `pTranspose_` while building the desired-note table; a test draft named locals `short` and `long`; another test built an insert range from `zeros(0.4).begin()` and a second temporary `zeros(0.4).end()`, throwing `vector::_M_range_insert`; a throwaway probe advanced a full 512 frames into a shorter final buffer and read out of bounds; the first drum detector re-triggered sustained tones and then mapped the GM output notes 36/38/42 back as analysis pitches; short-window drum analysis exposed the need for per-band arming, peak and cooldown state.
 - **Root cause:** A transient global was used to avoid threading an existing parameter through one helper; test identifiers were chosen from musical vocabulary without checking reserved words; two temporaries were treated as one container; the probe loop used a fixed hop instead of `min(block, remaining)`; the long pitched window smeared percussive attacks across hops; the output-note table and analysis-frequency table were conflated because the kick note happened to be a useful low probe.

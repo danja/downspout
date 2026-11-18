@@ -269,8 +269,8 @@ Progress as of 2026-05-27:
   uses a 1024-sample window and three band onsets mapped to GM kick, snare and hat.
   Note range, Max Notes, gate, release, velocity, dynamics, transpose and MIDI channel
   are host parameters; five output parameters carry live status. No plugin state and no
-  transport. See `plugins/polyscribe/docs/design.md`. Host validation and visual acceptance
-  remain.
+  transport. See `plugins/polyscribe/docs/design.md`. Visual acceptance passed; the user is
+  checking host validation in REAPER.
 - `prism` is a banded spectral delay in the Magneto look: an STFT (sqrt-Hann, 8x overlap) in
   which each bin is read back from the spectrum stored some whole number of frames ago, the
   sub-hop remainder applied as a phase rotation, with per-band left/right delay (to 2 s, or note divisions of the host BBT tempo) and

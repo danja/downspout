@@ -23,8 +23,8 @@ review `docs/lynx-survey.md`
 - [x] **Audio-to-MIDI generator** (built 2026-11-18 as `polyscribe`, from INBOX): polyphonic MIDI output
       from audio input with Melody, Bass, Chords and Drums input types. Qune was left untouched; Polyscribe
       uses its own plugin-local Hann/Goertzel analyser. Built the portable core, deterministic tests, VST3
-      wrapper, Magneto-look UI, profile, product page and release/bundle wiring. Core tests and
-      `polyscribe-vst3` pass; host validation remains.
+      wrapper, Magneto-look UI, profile, product page and release/bundle wiring. Core tests,
+      `polyscribe-vst3` and visual acceptance pass; the user is checking host validation in REAPER.
 - [x] **Survey `https://github.com/Ka1-S/LYNX`** (Farelo task t20259e38295b): reported candidates and overlap in
       `docs/lynx-survey.md`. Best small gaps are a level-independent transient designer, a stereo matrix/enhancer
       and a cheap fixed-band denoiser; the largest true gap is a sample/SF2 player. Most LYNX mixing engines overlap
@@ -102,11 +102,9 @@ review `docs/lynx-survey.md`
       panel, and selector menus that flip upward near the bottom edge) was recaptured to
       `/tmp/opencode/drumgen-ui-screenshot/drumgen.png` at 1024x940. This model cannot view PNG pixels,
       so copying both into `docs/pages/assets/plugins` remains pending.
-- [ ] Visual acceptance of Polyscribe's fresh capture is pending: `/tmp/opencode/polyscribe-ui-screenshot/polyscribe.png`
-      was dimension-checked at 920x720, but this model cannot view PNG pixels, so copying it into
-      `docs/pages/assets/plugins/polyscribe.png` remains pending.
-- [ ] Validate Polyscribe in a host with real voices, a bass, a played chord and a drum bus: check MIDI routing
-      to a synth on another track, note-off balance, channel 10 drums, output-parameter status and save/reopen.
+- [ ] Polyscribe host validation is being checked in REAPER by the user with real voices, a bass, a
+      played chord and a drum bus: MIDI routing to a synth on another track, note-off balance,
+      channel 10 drums, output-parameter status and save/reopen.
 
 
 ## Spectrogram painter (built 2026-11-03 as `fresco`; heard by nobody yet)
