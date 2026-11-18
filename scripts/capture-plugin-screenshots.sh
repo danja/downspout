@@ -115,6 +115,7 @@ plugins=(
   "treatment:treatment"
   "keyframe:keyframe"
   "qune:qune"
+  "polyscribe:polyscribe"
   "prism:prism"
   "mouth:mouth"
   "sieve:sieve"

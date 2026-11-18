@@ -135,6 +135,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | padseq | padseq.vst3 | MIDI generator (Launchpad step sequencer) | 0/2 | yes/yes | yes |
 | p-mix | p_mix.vst3 | audio effect (gate) | 4/2 | no/no | yes |
 | polymeter | polymeter.vst3 | MIDI generator | 0/2 | yes/yes | yes |
+| polyscribe | polyscribe.vst3 | audio-to-MIDI generator | 2/2 | no/yes | no |
 | pratt | pratt.vst3 | instrument + filter | 2/2 | yes/no | no |
 | primefold | primefold.vst3 | audio effect (pitch) | 2/2 | yes/no | no |
 | quefrency | quefrency.vst3 | audio effect (formant) | 2/2 | yes/no | no |
@@ -286,6 +287,9 @@ transport. **Conductor ch** (0 = off; MIDI input is used only for this) maps CC 
 **Density** (multiplies every lane's probability), 22 to a master **Energy** (scales velocity), 23
 to the seed, and CC 24 = 127 restarts every lane at the next bar line. Both masters default to 1
 (no change).
+
+### polyscribe
+Polyphonic audio-to-MIDI generator. Stereo input is summed to mono for a 4096-sample Hann/Goertzel analysis every 512 samples; **Input Type** selects Melody (strongest pitch, C3-C6), Bass (lowest, C2-C4), Chords (up to **Max Notes**, C2-C7) or Drums. **Drums** instead uses the latest 1024 samples and three probes at 65/294/4200 Hz, with per-band arming and a 60 ms cooldown, to emit GM kick 36, snare 38 and hat 42. **Low Note** and **High Note** narrow the pitched band; **Sensitivity** sets the floor. **Gate** (0-100 ms), **Release** (0-500 ms), **Velocity** (1-127), **Dynamics** (0-100 %), **Transpose** (-24 to +24 st) and **MIDI Channel** (1-16, drums conventionally 10) shape the output; **MIDI Out** and **Audio Thru** are switches. Output-only MIDI; there is no MIDI input or CC map, so automate the parameters. Five read-only output parameters expose note count, last note, input level, last velocity and a detection flash. No plugin state; transport ignored. Audio is not delayed and latency is not reported, but the first pitched result needs a full analysis window.
 
 ### xoxolo
 x0x-style drum step sequencer with 11 drumkit-oriented lanes and patterns up to 32 steps;

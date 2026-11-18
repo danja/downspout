@@ -254,6 +254,7 @@ jobs:
             echo "- drift.vst3"
             echo "- mnemosyne.vst3"
             echo "- polymeter.vst3"
+            echo "- polyscribe.vst3"
             echo "- oracle.vst3"
             echo "- mosaic.vst3"
             echo "- resonance_garden.vst3"

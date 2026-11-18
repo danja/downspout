@@ -264,6 +264,13 @@ Progress as of 2026-05-27:
   canonical 24-scale ordering. No plugin state: every setting is a parameter. See
   `plugins/qune/docs/design.md`. Host validation in REAPER and listening tests on real
   voices remain.
+- `polyscribe` is a polyphonic audio-to-MIDI generator in the Magneto look: Melody,
+  Bass and Chords pick notes from a 4096-sample Hann/Goertzel analysis, while Drums
+  uses a 1024-sample window and three band onsets mapped to GM kick, snare and hat.
+  Note range, Max Notes, gate, release, velocity, dynamics, transpose and MIDI channel
+  are host parameters; five output parameters carry live status. No plugin state and no
+  transport. See `plugins/polyscribe/docs/design.md`. Host validation and visual acceptance
+  remain.
 - `prism` is a banded spectral delay in the Magneto look: an STFT (sqrt-Hann, 8x overlap) in
   which each bin is read back from the spectrum stored some whole number of frames ago, the
   sub-hop remainder applied as a phase rotation, with per-band left/right delay (to 2 s, or note divisions of the host BBT tempo) and
@@ -471,7 +478,7 @@ Current main gap:
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
   `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`,
-  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `prism.vst3`, `mouth.vst3`, `grist.vst3`, `sam.vst3`, `ladder.vst3`, `glue.vst3`, `octet.vst3`, `trio.vst3`, `infra.vst3`, `spindown.vst3`, `wheelhouse.vst3`, `whirligig.vst3`, `chorale.vst3`, `silken.vst3`, `fresco.vst3`, `strata.vst3`, `quartet.vst3`, `monochord.vst3`, `nam.vst3`, `sieve.vst3`, `zmorph.vst3`, and `scope.vst3` bundles.
+  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `polyscribe.vst3`, `prism.vst3`, `mouth.vst3`, `grist.vst3`, `sam.vst3`, `ladder.vst3`, `glue.vst3`, `octet.vst3`, `trio.vst3`, `infra.vst3`, `spindown.vst3`, `wheelhouse.vst3`, `whirligig.vst3`, `chorale.vst3`, `silken.vst3`, `fresco.vst3`, `strata.vst3`, `quartet.vst3`, `monochord.vst3`, `nam.vst3`, `sieve.vst3`, `zmorph.vst3`, and `scope.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of

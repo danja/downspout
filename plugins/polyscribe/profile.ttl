@@ -1,0 +1,54 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:polyscribe a trn:PluginProfile ;
+    rdfs:label "Polyscribe" ;
+    rdfs:comment "Polyphonic audio-to-MIDI generator. Listens to stereo audio as melody, bass, chords or drums and emits note-on/note-off messages with sensitivity, note range, polyphony, gate, release, velocity, dynamics and routing controls." ;
+    trn:bundleName "polyscribe.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/polyscribe/> ;
+    trn:role trn:MidiEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio, trn:Midi ;
+    trn:caution "Audio output is silent unless Audio Thru is on. There is no MIDI input and no CC mapping. Detection needs a full 4096-sample window before the first pitched result, about 93 ms at 44.1 kHz; audio pass-through is not delayed and the plugin declares no latency because MIDI cannot be backdated. Melody and Bass are monophonic regardless of Max Notes. Drums maps 65/294/4200 Hz onsets to GM notes 36/38/42 and uses channel 10 by convention, though the channel is editable. No plugin state: all settings are parameters. Transport is ignored." ;
+    trn:parameter [ rdfs:label "Input Type" ; trn:symbol "input_type" ; trn:range "Melody, Bass, Chords, Drums" ;
+                    rdfs:comment "Note-selection strategy and preferred search range." ] ;
+    trn:parameter [ rdfs:label "Sensitivity" ; trn:symbol "sensitivity" ; trn:range "0-100 percent" ;
+                    rdfs:comment "Raises or lowers the detection floor." ] ;
+    trn:parameter [ rdfs:label "Low Note" ; trn:symbol "min_note" ; trn:range "24-96" ;
+                    rdfs:comment "Lower note bound, intersected with the input type's preferred range." ] ;
+    trn:parameter [ rdfs:label "High Note" ; trn:symbol "max_note" ; trn:range "36-120" ;
+                    rdfs:comment "Upper note bound, intersected with the input type's preferred range." ] ;
+    trn:parameter [ rdfs:label "Max Notes" ; trn:symbol "max_notes" ; trn:range "1-8" ;
+                    rdfs:comment "Polyphony limit in Chords mode; Melody and Bass stay monophonic." ] ;
+    trn:parameter [ rdfs:label "Gate" ; trn:symbol "gate" ; trn:range "0-100 ms" ;
+                    rdfs:comment "Minimum time a detected note stays on." ] ;
+    trn:parameter [ rdfs:label "Release" ; trn:symbol "release" ; trn:range "0-500 ms" ;
+                    rdfs:comment "Extra hold after a note stops being detected." ] ;
+    trn:parameter [ rdfs:label "Velocity" ; trn:symbol "velocity" ; trn:range "1-127" ;
+                    rdfs:comment "Base note-on velocity." ] ;
+    trn:parameter [ rdfs:label "Dynamics" ; trn:symbol "dynamics" ; trn:range "0-100 percent" ;
+                    rdfs:comment "How much detected level varies velocity around the base value." ] ;
+    trn:parameter [ rdfs:label "Transpose" ; trn:symbol "transpose" ; trn:range "-24 to +24 st" ;
+                    rdfs:comment "Whole semitones added to output notes." ] ;
+    trn:parameter [ rdfs:label "MIDI Channel" ; trn:symbol "channel" ; trn:range "1-16" ;
+                    rdfs:comment "Channel of generated note messages. Drums default by convention is 10." ] ;
+    trn:parameter [ rdfs:label "MIDI Out" ; trn:symbol "midi_out" ; trn:range "Off, On" ;
+                    rdfs:comment "Enables or suppresses generated MIDI." ] ;
+    trn:parameter [ rdfs:label "Audio Thru" ; trn:symbol "audio_thru" ; trn:range "Off, On" ;
+                    rdfs:comment "Copies sanitised input audio to the outputs." ] ;
+    trn:parameter [ rdfs:label "Notes" ; trn:symbol "out_count" ; trn:range "0-8" ;
+                    rdfs:comment "Read-only count of active notes." ] ;
+    trn:parameter [ rdfs:label "Last Note" ; trn:symbol "out_last_note" ; trn:range "0-127" ;
+                    rdfs:comment "Read-only most recent note-on, 0 before the first note." ] ;
+    trn:parameter [ rdfs:label "Input Level" ; trn:symbol "out_level" ; trn:range "0-1" ;
+                    rdfs:comment "Read-only smoothed input RMS for the panel meter." ] ;
+    trn:parameter [ rdfs:label "Last Velocity" ; trn:symbol "out_velocity" ; trn:range "0-127" ;
+                    rdfs:comment "Read-only most recent note-on velocity." ] ;
+    trn:parameter [ rdfs:label "Detection Flash" ; trn:symbol "out_flash" ; trn:range "0-1" ;
+                    rdfs:comment "Read-only decaying flag set by a note-on." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .
