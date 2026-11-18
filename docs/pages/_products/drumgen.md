@@ -28,6 +28,10 @@ DrumGen accepts MIDI input for Conductor CC control. Set **Conductor Ch**
 (0 = off, 1–16) to the channel Conductor uses for its output (default 16).
 Conductor CC 21 drives density, CC 22 drives variation, CC 23 drives mutation
 rate, and CC 24 (value 127) triggers a new pattern on each section boundary.
+**Conductor Scene** is an appended on/off parameter (default Off). When On,
+CC 20 maps Conductor's editable blocks to Fill: Intro 0.10, Theme 0.30,
+Develop 0.65, Break 1.0, Reprise 0.50 and Coda 0.20; Null leaves Fill
+unchanged. It is ignored by default so existing projects behave exactly as before.
 See [MIDI Mapping](../../midi-mapping.md).
 
 ### Automaton layer

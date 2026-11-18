@@ -1,5 +1,6 @@
 #include "DistrhoPlugin.hpp"
 
+#include "bassgen_conductor_scene.hpp"
 #include "bassgen_engine.hpp"
 #include "bassgen_pattern.hpp"
 #include "bassgen_serialization.hpp"
@@ -38,6 +39,7 @@ enum ParameterIndex : uint32_t {
     kParamInputSensitivity,
     kParamConductorChannel,
     kParamOffset,
+    kParamConductorScene,  // appended: indices above are saved in projects
     kParameterCount
 };
 
@@ -339,6 +341,14 @@ protected:
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = 0.0f;
             break;
+        case kParamConductorScene:
+            parameter.name = "Conductor Scene";
+            parameter.symbol = "conductor_scene";
+            parameter.hints |= kParameterIsBoolean | kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = downspout::bassgen::conductor_scene::kDefaultEnabled ? 1.0f : 0.0f;
+            break;
         case kParamActionNew:
             parameter.name = "New";
             parameter.symbol = "new";
@@ -410,6 +420,7 @@ protected:
         case kParamInputMatchMode: return static_cast<float>(static_cast<int>(controls_.inputMatchMode));
         case kParamInputSensitivity: return controls_.inputSensitivity * 100.0f;
         case kParamConductorChannel: return static_cast<float>(conductorChannel_);
+        case kParamConductorScene: return static_cast<float>(conductorScene_);
         case kParamOffset: return controls_.offset;
         case kParamActionNew: return static_cast<float>(controls_.actionNew);
         case kParamActionNotes: return static_cast<float>(controls_.actionNotes);
@@ -442,6 +453,7 @@ protected:
         case kParamInputMatchMode: controls_.inputMatchMode = static_cast<downspout::bassgen::InputMatchModeId>(static_cast<int>(value)); break;
         case kParamInputSensitivity: controls_.inputSensitivity = value / 100.0f; break;
         case kParamConductorChannel: conductorChannel_ = static_cast<int>(value); break;
+        case kParamConductorScene: conductorScene_ = value >= 0.5f ? 1 : 0; break;
         case kParamOffset: controls_.offset = value; break;
         case kParamActionNew: controls_.actionNew = static_cast<int>(value); break;
         case kParamActionNotes: controls_.actionNotes = static_cast<int>(value); break;
@@ -520,6 +532,14 @@ protected:
                     const uint8_t cc  = ev.data[1];
                     const uint8_t val = ev.data[2];
                     switch (cc) {
+                    case 20:
+                        if (conductorScene_ != 0) {
+                            const auto response =
+                                downspout::bassgen::conductor_scene::forSceneCc(val);
+                            if (response.apply)
+                                controls_.color = response.color;
+                        }
+                        break;
                     case 21: controls_.density = val / 127.0f; break;
                     case 22: controls_.accent  = val / 127.0f; break;
                     case 23: controls_.vary    = val / 127.0f; break;
@@ -559,6 +579,7 @@ private:
     CoreControls controls_ {};
     CoreEngineState engine_ {};
     int conductorChannel_ = 0;
+    int conductorScene_ = downspout::bassgen::conductor_scene::kDefaultEnabled ? 1 : 0;
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BassgenPlugin)
 };

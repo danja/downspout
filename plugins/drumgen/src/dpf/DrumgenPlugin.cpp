@@ -1,5 +1,6 @@
 #include "DistrhoPlugin.hpp"
 
+#include "drumgen_conductor_scene.hpp"
 #include "drumgen_engine.hpp"
 #include "drumgen_pattern.hpp"
 #include "drumgen_serialization.hpp"
@@ -36,6 +37,7 @@ enum ParameterIndex : uint32_t {
     kParamCaRule,    // appended: indices above are saved in projects
     kParamCaTarget,
     kParamCaEvery,
+    kParamConductorScene,  // appended: indices above are saved in projects
     kParameterCount
 };
 
@@ -339,6 +341,14 @@ protected:
             parameter.ranges.max = 8.0f;  // loops per automaton generation
             parameter.ranges.def = 1.0f;
             break;
+        case kParamConductorScene:
+            parameter.name = "Conductor Scene";
+            parameter.symbol = "conductor_scene";
+            parameter.hints |= kParameterIsBoolean | kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = downspout::drumgen::conductor_scene::kDefaultEnabled ? 1.0f : 0.0f;
+            break;
         }
     }
 
@@ -392,6 +402,7 @@ protected:
         case kParamMetalAmount: return controls_.metalAmt;
         case kParamVary: return controls_.vary * 100.0f;
         case kParamConductorChannel: return static_cast<float>(conductorChannel_);
+        case kParamConductorScene: return static_cast<float>(conductorScene_);
         case kParamCaRule: return static_cast<float>(controls_.caRule);
         case kParamCaTarget: return static_cast<float>(controls_.caTarget);
         case kParamCaEvery: return static_cast<float>(controls_.caEvery);
@@ -426,6 +437,7 @@ protected:
         case kParamMetalAmount: controls_.metalAmt = value; break;
         case kParamVary: controls_.vary = value / 100.0f; break;
         case kParamConductorChannel: conductorChannel_ = static_cast<int>(value); break;
+        case kParamConductorScene: conductorScene_ = value >= 0.5f ? 1 : 0; break;
         case kParamCaRule: controls_.caRule = static_cast<int>(value); break;
         case kParamCaTarget: controls_.caTarget = static_cast<int>(value); break;
         case kParamCaEvery: controls_.caEvery = static_cast<int>(value); break;
@@ -522,6 +534,14 @@ protected:
                     const uint8_t cc  = ev.data[1];
                     const uint8_t val = ev.data[2];
                     switch (cc) {
+                    case 20:
+                        if (conductorScene_ != 0) {
+                            const auto response =
+                                downspout::drumgen::conductor_scene::forSceneCc(val);
+                            if (response.apply)
+                                controls_.fill = response.fill;
+                        }
+                        break;
                     case 21: controls_.density   = val / 127.0f; break;
                     case 22: controls_.variation = val / 127.0f; break;
                     case 23: controls_.vary      = val / 127.0f; break;
@@ -551,6 +571,7 @@ private:
     CoreControls controls_ {};
     CoreEngineState engine_ {};
     int conductorChannel_ = 0;
+    int conductorScene_ = downspout::drumgen::conductor_scene::kDefaultEnabled ? 1 : 0;
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumgenPlugin)
 };

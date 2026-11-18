@@ -29,42 +29,71 @@ a new pattern should be generated (Intro and Coda).
 
 ## BassGen mapping
 
-BassGen adds one new parameter:
+BassGen adds two new parameters:
 
 | Parameter | Symbol | Range | Default | Purpose |
 |-----------|--------|-------|---------|---------|
 | Conductor Ch | `conductor_ch` | 0–16 | 0 (off) | MIDI channel to receive Conductor CCs; 0 = disabled |
+| Conductor Scene | `conductor_scene` | 0–1 | 0 (off) | When on, CC 20 maps Conductor blocks to `color` |
 
 CC→control mapping (all values scaled linearly from 0–127 → 0.0–1.0):
 
 | CC | Conductor name | BassGen control | Notes |
 |----|---------------|-----------------|-------|
+| 20 | Scene | `color` | Opt-in via `conductor_scene = 1`; see table below |
 | 21 | Density | `density` | Direct note-density override |
 | 22 | Energy | `accent` | Higher energy → stronger accents |
 | 23 | Mutation | `vary` | Higher mutation → more auto-variation |
 | 24 | Reset | `actionNew` (trigger) | Fires when CC value = 127; generates a fresh pattern |
 
-CC 20 (Scene) is not mapped — BassGen's genre/scale are considered arrangement-level
-decisions that the composer sets by hand.
+CC 20 is ignored while `conductor_scene = 0` (the default), so existing projects are unchanged.
+When enabled, the shared seven-block scene table is decoded and mapped to `color`:
+
+| Conductor block | CC 20 value | `color` |
+|-----------------|-------------|---------|
+| Null | 1 | unchanged (no override) |
+| Intro | 0 | 0.25 |
+| Theme | 16 | 0.45 |
+| Develop | 32 | 0.85 |
+| Break | 64 | 1.00 |
+| Reprise | 96 | 0.65 |
+| Coda | 127 | 0.30 |
+
+Genre and scale remain arrangement-level decisions that the composer sets by hand.
 
 ## DrumGen mapping
 
-DrumGen gains a MIDI input port and one new parameter:
+DrumGen gains a MIDI input port and two new parameters:
 
 | Parameter | Symbol | Range | Default | Purpose |
 |-----------|--------|-------|---------|---------|
 | Conductor Ch | `conductor_ch` | 0–16 | 0 (off) | MIDI channel to receive Conductor CCs; 0 = disabled |
+| Conductor Scene | `conductor_scene` | 0–1 | 0 (off) | When on, CC 20 maps Conductor blocks to `fill` |
 
 CC→control mapping:
 
 | CC | Conductor name | DrumGen control | Notes |
 |----|---------------|-----------------|-------|
+| 20 | Scene | `fill` | Opt-in via `conductor_scene = 1`; see table below |
 | 21 | Density | `density` | Overall hit density |
 | 22 | Energy | `variation` | Higher energy → busier, more varied patterns |
 | 23 | Mutation | `vary` | Auto-mutation rate |
 | 24 | Reset | `actionNew` (trigger) | Fires when CC value = 127; generates a fresh pattern |
 
-CC 20 (Scene) is not mapped — genre selection remains a manual choice.
+CC 20 is ignored while `conductor_scene = 0` (the default), so existing projects are unchanged.
+When enabled, the shared seven-block scene table is decoded and mapped to `fill`:
+
+| Conductor block | CC 20 value | `fill` |
+|-----------------|-------------|--------|
+| Null | 1 | unchanged (no override) |
+| Intro | 0 | 0.10 |
+| Theme | 16 | 0.30 |
+| Develop | 32 | 0.65 |
+| Break | 64 | 1.00 |
+| Reprise | 96 | 0.50 |
+| Coda | 127 | 0.20 |
+
+Genre selection remains a manual choice.
 
 ## Ground mapping
 

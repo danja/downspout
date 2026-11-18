@@ -1,4 +1,5 @@
 #include "drumgen_automaton.hpp"
+#include "drumgen_conductor_scene.hpp"
 #include "drumgen_engine.hpp"
 #include "drumgen_pattern.hpp"
 #include "drumgen_serialization.hpp"
@@ -1284,6 +1285,67 @@ void testAutomatonControlsStateAndClamp() {
     assert(clamped.caTarget == 0);
 }
 
+void testConductorSceneMapIsOptInAndAudible() {
+    static_assert(!conductor_scene::kDefaultEnabled, "Conductor scene must stay off by default");
+
+    // Independent copy of the protocol values and this plugin's response table.
+    struct Expected {
+        int cc;
+        bool apply;
+        float fill;
+    };
+    constexpr Expected kExpected[] = {
+        {1, false, 0.3f},    // Null: no override
+        {0, true, 0.10f},    // Intro
+        {16, true, 0.30f},   // Theme
+        {32, true, 0.65f},   // Develop
+        {64, true, 1.0f},    // Break
+        {96, true, 0.50f},   // Reprise
+        {127, true, 0.20f},  // Coda
+    };
+    for (const Expected& expected : kExpected) {
+        const auto response = conductor_scene::forSceneCc(expected.cc);
+        assert(response.apply == expected.apply);
+        assert(std::fabs(response.fill - expected.fill) < 0.0001f);
+    }
+
+    Controls controls;
+    controls.seed = 2718u;
+    controls.genre = GenreId::electro;
+    controls.bars = 4;
+    controls.resolution = ResolutionId::sixteenth;
+    controls.density = 0.65f;
+    controls.variation = 0.45f;
+    controls.metalAmt = 0.8f;
+    controls.auxAmt = 0.8f;
+    controls.tomAmt = 0.8f;
+
+    const auto nullResponse = conductor_scene::forSceneCc(1);
+    Controls untouched = controls;
+    untouched.fill = 0.42f;
+    if (nullResponse.apply) {
+        untouched.fill = nullResponse.fill;
+    }
+    assert(std::fabs(untouched.fill - 0.42f) < 0.0001f);
+
+    const auto intro = conductor_scene::forSceneCc(0);
+    const auto breakScene = conductor_scene::forSceneCc(64);
+    assert(intro.apply);
+    assert(breakScene.apply);
+
+    Controls introControls = controls;
+    introControls.fill = intro.fill;
+    Controls breakControls = controls;
+    breakControls.fill = breakScene.fill;
+    assert(structuralControlsChanged(introControls, breakControls));
+
+    PatternState introPattern;
+    PatternState breakPattern;
+    regeneratePattern(introPattern, introControls, ::downspout::Meter {}, false);
+    regeneratePattern(breakPattern, breakControls, ::downspout::Meter {}, false);
+    assert(patternsDiffer(introPattern, breakPattern));
+}
+
 }  // namespace
 
 int main() {
@@ -1300,6 +1362,7 @@ int main() {
     testRockGenrePinsHardBackbeat();
     testQuarterResolutionUsesOneStepPerBeat();
     testLowestDensityIsSparse();
+    testConductorSceneMapIsOptInAndAudible();
     testExplicitStyleModesChangePatternShape();
     testDiddleyStylePinsShaveAndHaircutPattern();
     testAmenGenrePinsBreakSignature();

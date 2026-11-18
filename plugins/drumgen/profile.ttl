@@ -25,6 +25,15 @@ or another drum instrument.""" ;
     trn:caution "The stereo audio output is intentionally silent; connect MIDI output to an instrument." ;
 
     ## Conductor CC input — enable by setting conductor_ch (1–16) to match Conductor's output channel
+    trn:conductorSceneParam "conductor_scene" ;
+    trn:ccMapping [
+        trn:ccNumber 20 ;
+        trn:ccRole "Scene" ;
+        trn:targetParameter "fill" ;
+        rdfs:comment """CC 20 is ignored unless conductor_scene=1 (default 0). When enabled, the shared Conductor seven-block table maps scenes to Fill:
+  Null=1 leaves Fill unchanged, Intro=0 → 0.10, Theme=16 → 0.30, Develop=32 → 0.65,
+  Break=64 → 1.0, Reprise=96 → 0.50, Coda=127 → 0.20. Other values snap to the nearest block."""
+    ] ;
     trn:ccMapping [
         trn:ccNumber 21 ;
         trn:ccRole "Density" ;

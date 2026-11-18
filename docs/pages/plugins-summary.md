@@ -44,7 +44,9 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
   control table live in `include/downspout/conductor_protocol.hpp`. bassgen, drumgen,
   ground, melgen, worms, bubbles, floozy, harmonic-atlas, sprout, lifeform, luma,
   polymeter, xoxolo, markov, counterpointer, cadence, arpgen, m-mix and beards
-  listen through a **Conductor Ch** parameter (0 = off). Mixgen drives T-Mix with CC
+  listen through a **Conductor Ch** parameter (0 = off). bassgen and drumgen also
+  have an appended **Conductor Scene** on/off parameter (default Off) that opts CC 20
+  into block-to-color/fill mapping. Mixgen drives T-Mix with CC
   20-27 (strips 1-8), Loopdelay with CC 30/31, Lightverb with CC 32/33; CC 19 claims or
   releases the producer bus. Details: `docs/midi-mapping.md`,
   `docs/producer-control-bus.md`.
@@ -176,7 +178,9 @@ variation and style set Auto, Straight, Reel, Waltz, Jig, Slip Jig. Emits bass-r
 MIDI (default channel 1) and consumes incoming MIDI as context: configurable Follow or
 Dodge, channel/note matching and sensitivity let existing parts guide or suppress
 generated notes. **Conductor Ch** (0 = off) maps CC 21 to density, 22 to accent, 23 to
-auto-variation rate and CC 24 = 127 to a fresh pattern; CC 20 is ignored. The **Descending** genre plays one line down the scale
+auto-variation rate and CC 24 = 127 to a fresh pattern. **Conductor Scene** (appended,
+default Off) opts CC 20 into block-to-Color mapping: Intro 0.25, Theme 0.45, Develop
+0.85, Break 1.0, Reprise 0.65, Coda 0.30, Null unchanged. The **Descending** genre plays one line down the scale
 across the pattern (top of the line at the start, the root at the end), with **Color** as the amount of
 wander (0 = strict staircase); **Descend/bar** restarts it in every bar. Pair with
 basilico or any bass instrument. Requires host transport.
@@ -186,7 +190,9 @@ Meter-aware MIDI drum generator with pattern variation and fills; genre vocabula
 includes Breakbeat, Amen, Jungle and Hip Hop. Emits drum MIDI (default channel 10)
 aimed at drumkit's note map; MIDI input exists only for control (Conductor CCs).
 **Conductor Ch** maps CC 21 to density, 22 to variation, 23 to mutation rate and CC 24 =
-127 to a new pattern. Persistent patterns. Requires transport. **Automaton layer** (off by default;
+127 to a new pattern. **Conductor Scene** (appended, default Off) opts CC 20 into
+block-to-Fill mapping: Intro 0.10, Theme 0.30, Develop 0.65, Break 1.0, Reprise 0.50,
+Coda 0.20, Null unchanged. Persistent patterns. Requires transport. **Automaton layer** (off by default;
 appended parameters `ca_rule` 0-10, `ca_target` 0-4, `ca_every` 1-8 loops per generation): the generated
 pattern is generation 0, then on each generation the targeted lanes (hats, percussion, toms, all three, or every lane) play the next row of a
 1-D cellular automaton (rules 30, 90, 110, 150, 18, 54, 60, 22, 105, 126; wrapping edges) seeded from the

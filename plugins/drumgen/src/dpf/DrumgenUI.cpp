@@ -41,6 +41,7 @@ enum ParameterIndex : uint32_t {
     kParamCaRule,
     kParamCaTarget,
     kParamCaEvery,
+    kParamConductorScene,
     kParameterCount
 };
 
@@ -142,7 +143,9 @@ constexpr const char* kCaEveryNames[] = {
     "1 loop", "2 loops", "3 loops", "4 loops", "5 loops", "6 loops", "7 loops", "8 loops"
 };
 
-constexpr std::array<SelectorDef, 10> kSelectors = {{
+constexpr const char* kOffOnNames[] = {"Off", "On"};
+
+constexpr std::array<SelectorDef, 11> kSelectors = {{
     {kParamGenre, "Genre", kGenreNames, 17, 0},
     {kParamStyleMode, "Style", kStyleNames, 7, 0},
     {kParamKitMap, "Kit Map", kKitMapNames, 2, 0},
@@ -153,7 +156,11 @@ constexpr std::array<SelectorDef, 10> kSelectors = {{
     {kParamCaTarget, "Automaton plays on", kCaTargetNames, 5, 0},
     {kParamCaEvery, "Generation every", kCaEveryNames, 8, 1},
     {kParamConductorChannel, "Conductor Ch", kConductorChNames, 17, 0},
+    {kParamConductorScene, "Scene map (fill)", kOffOnNames, 2, 0},
 }};
+
+constexpr std::size_t kAutomatonRuleSelector = 6;
+constexpr std::size_t kConductorChannelSelector = 9;
 
 constexpr std::array<ButtonDef, 3> kButtons = {{
     {kParamActionNew, "New", 62, 148, 112},
@@ -240,6 +247,7 @@ public:
         values_[kParamBars] = 2.0f;
         values_[kParamResolution] = 1.0f;
         values_[kParamCaEvery] = 1.0f;
+        values_[kParamConductorScene] = 0.0f;
         values_[kParamDensity] = 0.58f;
         values_[kParamVariation] = 0.35f;
         values_[kParamFillAmount] = 0.30f;
@@ -522,7 +530,7 @@ private:
 
         float cy = y + 48.0f;
         for (std::size_t i = 0; i < kSelectors.size(); ++i) {
-            if (i == kSelectors.size() - 4) {
+            if (i == kAutomatonRuleSelector) {
                 cy += 4.0f;
                 fontSize(11.0f);
                 textAlign(ALIGN_LEFT | ALIGN_TOP);
@@ -530,12 +538,12 @@ private:
                 text(x + 20.0f, cy, "Automaton \xc2\xb7 steps one generation every N loops", nullptr);
                 cy += 14.0f;
             }
-            if (i == kSelectors.size() - 1) {
+            if (i == kConductorChannelSelector) {
                 cy += 4.0f;
                 fontSize(11.0f);
                 textAlign(ALIGN_LEFT | ALIGN_TOP);
                 fillColor(180, 150, 220, 200);
-                text(x + 20.0f, cy, "Conductor \xc2\xb7 CC 21\xe2\x80\x93" "24 from Mixgen", nullptr);
+                text(x + 20.0f, cy, "Conductor \xc2\xb7 CC 20\xe2\x80\x93" "24", nullptr);
                 cy += 14.0f;
             }
             selectorRects_[i] = {x + 20.0f, cy, w - 40.0f, 46.0f};

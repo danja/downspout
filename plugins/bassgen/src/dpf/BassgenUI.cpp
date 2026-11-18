@@ -38,6 +38,7 @@ enum ParameterIndex : uint32_t {
     kParamInputSensitivity,
     kParamConductorChannel,
     kParamOffset,
+    kParamConductorScene,
     kParameterCount
 };
 
@@ -126,6 +127,8 @@ constexpr const char* kConductorChNames[] = {
     "9", "10", "11", "12", "13", "14", "15", "16"
 };
 
+constexpr const char* kOffOnNames[] = {"Off", "On"};
+
 constexpr SelectorDef kSelectors[] = {
     {kParamScale, "Scale", kScaleNames, 23},
     {kParamGenre, "Genre", kGenreNames, 16},
@@ -134,6 +137,7 @@ constexpr SelectorDef kSelectors[] = {
     {kParamChannel, "Channel", kChannelNames, 16},
     {kParamInputMatchMode, "Follow Mode", kInputMatchNames, 3},
     {kParamConductorChannel, "Conductor Ch", kConductorChNames, 17},
+    {kParamConductorScene, "Scene map (CC 20)", kOffOnNames, 2},
 };
 
 constexpr ButtonDef kButtons[] = {
@@ -230,6 +234,7 @@ public:
         values_[kParamInputSensitivity] = 100.0f;
         values_[kParamListenChannel] = 10.0f;
         values_[kParamListenNote] = 36.0f;
+        values_[kParamConductorScene] = 0.0f;
         values_[kParamActionNew] = 0.0f;
         values_[kParamActionNotes] = 0.0f;
         values_[kParamActionRhythm] = 0.0f;
@@ -419,6 +424,8 @@ private:
         cy += 4.0f + 14.0f;  // Conductor header
         selectorRects_[6] = {sx, cy, sw, selectorH};
         cy += step;
+        selectorRects_[7] = {sx, cy, sw, selectorH};
+        cy += step;
         cy += 4.0f + 14.0f;  // Actions header
 
         const float buttonGap = 8.0f;
@@ -563,10 +570,13 @@ private:
 
         // Conductor group
         cy += 4.0f;
-        drawSectionLabel(sx, cy, "Conductor · CC 20–24 from Mixgen");
+        drawSectionLabel(sx, cy, "Conductor · CC 20–24");
         cy += 14.0f;
         selectorRects_[6] = {sx, cy, sw, selectorH};
         drawSelector(kSelectors[6], selectorRects_[6], static_cast<int>(std::lround(values_[kSelectors[6].index])));
+        cy += step;
+        selectorRects_[7] = {sx, cy, sw, selectorH};
+        drawSelector(kSelectors[7], selectorRects_[7], static_cast<int>(std::lround(values_[kSelectors[7].index])));
         cy += step;
 
         // Actions group

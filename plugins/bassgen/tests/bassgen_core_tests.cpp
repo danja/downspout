@@ -1,3 +1,4 @@
+#include "bassgen_conductor_scene.hpp"
 #include "bassgen_engine.hpp"
 #include "bassgen_pattern.hpp"
 #include "bassgen_serialization.hpp"
@@ -1462,6 +1463,61 @@ void testEngineActionCountersRegenerateAndResync() {
     assert(engine.pattern.generationSerial > notesSerial);
 }
 
+void testConductorSceneMapIsOptInAndAudible() {
+    static_assert(!conductor_scene::kDefaultEnabled, "Conductor scene must stay off by default");
+
+    // Independent copy of the protocol values and this plugin's response table.
+    struct Expected {
+        int cc;
+        bool apply;
+        float color;
+    };
+    constexpr Expected kExpected[] = {
+        {1, false, 0.5f},    // Null: no override
+        {0, true, 0.25f},    // Intro
+        {16, true, 0.45f},   // Theme
+        {32, true, 0.85f},   // Develop
+        {64, true, 1.0f},    // Break
+        {96, true, 0.65f},   // Reprise
+        {127, true, 0.30f},  // Coda
+    };
+    for (const Expected& expected : kExpected) {
+        const auto response = conductor_scene::forSceneCc(expected.cc);
+        assert(response.apply == expected.apply);
+        assert(std::fabs(response.color - expected.color) < 0.0001f);
+    }
+
+    const auto nullResponse = conductor_scene::forSceneCc(1);
+    assert(!nullResponse.apply);
+
+    Controls controls;
+    controls.seed = 77u;
+    controls.genre = GenreId::funk;
+    controls.scale = ScaleId::blues;
+    controls.rootNote = 36;
+    controls.lengthBeats = 16;
+    controls.subdivision = SubdivisionId::sixteenth;
+    controls.density = 0.80f;
+    controls.hold = 0.25f;
+
+    const auto intro = conductor_scene::forSceneCc(0);
+    const auto breakScene = conductor_scene::forSceneCc(64);
+    assert(intro.apply);
+    assert(breakScene.apply);
+
+    Controls introControls = controls;
+    introControls.color = intro.color;
+    Controls breakControls = controls;
+    breakControls.color = breakScene.color;
+    assert(structuralControlsChanged(introControls, breakControls));
+
+    PatternState introPattern;
+    PatternState breakPattern;
+    regeneratePattern(introPattern, introControls, ::downspout::Meter {}, true, true);
+    regeneratePattern(breakPattern, breakControls, ::downspout::Meter {}, true, true);
+    assert(patternsDiffer(introPattern, breakPattern));
+}
+
 }  // namespace
 
 int main() {
@@ -1476,6 +1532,7 @@ int main() {
     testJazzDominantBarCanUseAlteredColor();
     testColorControlsJazzDominantIntensity();
     testColorInfluencesNonJazzGenres();
+    testConductorSceneMapIsOptInAndAudible();
     testJazzStrongBeatsTargetChordTones();
     testJazzApproachAndEnclosureNotesTargetChordTones();
     testScaleIdsAreAppendOnly();

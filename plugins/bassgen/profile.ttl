@@ -24,6 +24,15 @@ Descending mode walks one line down the scale to the root across the pattern; Co
 
     ## Conductor CC input — enable by setting conductor_ch (1–16) to match Conductor's output channel
     trn:conductorChannelParam "conductor_ch" ;
+    trn:conductorSceneParam "conductor_scene" ;
+    trn:ccMapping [
+        trn:ccNumber 20 ;
+        trn:ccRole "Scene" ;
+        trn:targetParameter "color" ;
+        rdfs:comment """CC 20 is ignored unless conductor_scene=1 (default 0). When enabled, the shared Conductor seven-block table maps scenes to Color:
+  Null=1 leaves Color unchanged, Intro=0 → 0.25, Theme=16 → 0.45, Develop=32 → 0.85,
+  Break=64 → 1.0, Reprise=96 → 0.65, Coda=127 → 0.30. Other values snap to the nearest block."""
+    ] ;
     trn:ccMapping [
         trn:ccNumber 21 ;
         trn:ccRole "Density" ;

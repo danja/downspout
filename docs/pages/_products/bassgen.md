@@ -35,6 +35,10 @@ from a strict staircase. Descend/bar restarts that line in every bar.
 Set **Conductor Ch** (0 = off, 1–16) to receive Conductor's section CCs on
 the matching channel. Conductor CC 21 drives density, CC 22 drives accent,
 CC 23 drives variation rate, and CC 24 (value 127) triggers a new pattern.
+**Conductor Scene** is an appended on/off parameter (default Off). When On,
+CC 20 maps Conductor's editable blocks to Color: Intro 0.25, Theme 0.45,
+Develop 0.85, Break 1.0, Reprise 0.65 and Coda 0.30; Null leaves Color
+unchanged. It is ignored by default so existing projects behave exactly as before.
 Route Conductor's MIDI output to the BassGen track and match the channel
 (Conductor default output channel is 16). See [MIDI Mapping](../../midi-mapping.md).
 

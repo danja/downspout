@@ -76,6 +76,18 @@ review `docs/lynx-survey.md`
       rests and the other six cover the requested musical roles. `block_count`, per-block type
       parameters and next-bar jumps are host-automatable; receivers that decode CC 20 share
       `include/downspout/conductor_protocol.hpp` with the editor.
+- [x] **Conductor Scene mapping for bassgen/drumgen** (done 2026-11-18): appended host parameter
+      `conductor_scene` (index 24 in both wrappers, default Off) opts CC 20 into block mapping —
+      BassGen drives `color`, DrumGen drives `fill`, with Null leaving the control unchanged and
+      all other values using the shared seven-block decoder. Plugin-local response helpers and
+      core tests cover the independent mapping tables, default inertness and audible pattern
+      changes; profiles, MIDI docs, product pages and plugin summary were updated in the same change.
+      Both VST3 targets and the full 108-test suite pass. Host CC/transport validation is still
+      outstanding because the headless session has no advancing transport.
+- [ ] Visual acceptance of the updated BassGen and DrumGen captures is pending: the UIs were
+      recaptured to `/tmp/opencode/bassgen-drumgen-screenshot/{bassgen,drumgen}.png` and
+      dimension-checked at 920x700 and 1024x940, but this model cannot view PNG pixels, so
+      copying them into `docs/pages/assets/plugins` remains pending.
 
 
 ## Spectrogram painter (built 2026-11-03 as `fresco`; heard by nobody yet)
