@@ -1,0 +1,58 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:tilt a trn:PluginProfile ;
+    rdfs:label "Tilt" ;
+    rdfs:comment "Linked stereo master-bus tone control. Angle leans a straight-line dB response against log frequency around Pivot Freq, at a selectable 6, 12 or 24 dB per octave, clamped to +-24 dB at the extremes. Mode switches between a minimum-phase IIR ladder with zero latency and a linear-phase 4096-point STFT that reports 4096 samples of latency; a smoothed, latency-aligned crossfade joins them. A 64-band analyser draws the input or output behind the response curve, with read-only latency, peak and spectrum outputs. No MIDI, transport or plugin state." ;
+    trn:bundleName "tilt.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/tilt/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio .
+
+dsp:tilt trn:hasParameter [
+    trn:symbol "pivot" ; trn:label "Pivot Freq" ;
+    trn:minimum 20.0 ; trn:maximum 20000.0 ; trn:default 1000.0 ;
+    rdfs:comment "Frequency in Hz where the tilt crosses 0 dB (logarithmic)"
+], [
+    trn:symbol "angle" ; trn:label "Angle" ;
+    trn:minimum -1.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "-1 to +1; effective slope is Angle x Slope dB/oct, clamped to +-24 dB"
+], [
+    trn:symbol "slope" ; trn:label "Slope" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 0 ;
+    rdfs:comment "0=6 dB/oct 1=12 dB/oct 2=24 dB/oct"
+], [
+    trn:symbol "mode" ; trn:label "Mode" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "0=minimum-phase IIR (zero latency) 1=linear-phase FFT (4096 samples latency)"
+], [
+    trn:symbol "output" ; trn:label "Output" ;
+    trn:minimum -12.0 ; trn:maximum 12.0 ; trn:default 0.0 ;
+    rdfs:comment "Output gain in dB, applied after the tilt"
+], [
+    trn:symbol "bypass" ; trn:label "Bypass" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "0=processed 1=untouched input; crossfaded with the processed signal"
+], [
+    trn:symbol "spectrum_source" ; trn:label "Spectrum" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 2 ;
+    rdfs:comment "Spectrum analyser behind the response curve: 0=off 1=pre (the input) 2=post (the output)"
+], [
+    trn:symbol "out_latency" ; trn:label "Latency" ;
+    trn:minimum 0.0 ; trn:maximum 200.0 ; trn:default 0.0 ;
+    rdfs:comment "Read-only output. Reported latency in milliseconds: 0 in IIR mode, 4096 samples in FFT mode"
+], [
+    trn:symbol "out_peak_l" ; trn:label "Peak L" ;
+    trn:minimum -60.0 ; trn:maximum 6.0 ; trn:default -60.0 ;
+    rdfs:comment "Read-only output. Peak level of the left output channel in dB, instant attack, 30 dB/s fall. out_peak_r is the same for the right channel"
+], [
+    trn:symbol "spectrum_01" ; trn:label "Spectrum Band 01" ;
+    trn:minimum -90.0 ; trn:maximum 6.0 ; trn:default -90.0 ;
+    rdfs:comment "Read-only output. spectrum_01 to spectrum_64: level in dB of 64 log-spaced bands from 20 Hz to 20 kHz from a 4096-point Hann FFT of the mono sum about 30 times a second; a full-scale sine peaks at 0 dB, with instant attack and 40 dB/s fall. Only the first is listed here"
+] .

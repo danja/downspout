@@ -134,6 +134,7 @@ The CMake install declarations currently cover 103 VST3 bundles; the authoritati
 - `polymeter.vst3` with UI
 - `polyscribe.vst3` with UI
 - `splay.vst3` with UI
+- `tilt.vst3` with UI
 - `pratt.vst3` with UI
 - `primefold.vst3` with UI
 - `prism.vst3` with UI

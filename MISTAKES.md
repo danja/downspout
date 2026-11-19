@@ -5,6 +5,11 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 ## Open
 
+## Tilt: first IIR draft and wrapper omissions (2026-11-19)
+- **What happened:** The first Tilt draft used the exponent directly as dB, so a nominal 6 dB/oct setting measured about 1 dB/oct. After fixing that, coefficient-interpolated fractional shelves gave a roughly -26 dB offset at the pivot. The first wrapper also omitted `DISTRHO_PLUGIN_WANT_LATENCY`, `createUI()` and `onAction()`, so `tilt-vst3` failed to compile/link even though the core tests passed.
+- **Root cause:** The `f^p` exponent was conflated with a dB slope (`20 log10(2) = 6.02 dB`, not 1 dB), a fractional order was modelled by blending two stable shelves rather than by placing a ladder of pole/zero pairs, and the DPF shell was copied from a plugin with no latency and no custom UI.
+- **Prevention:** Derive the dB law from the power explicitly and assert it at multiple frequencies before wiring DSP. Use an Oustaloup ladder for fractional slopes and test the measured magnitude at every slope. Always build `<plugin>-vst3` after a new wrapper/UI, and check the latency, `createUI()` and `onAction()` requirements against a plugin such as `prism`.
+
 ## Splay: private MagnetoKit value array (2026-11-19)
 - **What happened:** The first CC UI draft tried to write `values_[pid(id)]` from `SplayUI` so a mapped slider would follow the live CC value. The core tests built, but `splay-vst3` failed because `MagnetoUI::values_` is private, not protected.
 - **Root cause:** Shared toolkit internals were assumed to be accessible to derived UIs, and a core-only test run cannot catch UI compile errors.

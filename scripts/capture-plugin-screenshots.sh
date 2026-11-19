@@ -117,6 +117,7 @@ plugins=(
   "qune:qune"
   "polyscribe:polyscribe"
   "splay:splay"
+  "tilt:tilt"
   "prism:prism"
   "mouth:mouth"
   "sieve:sieve"

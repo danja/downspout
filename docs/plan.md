@@ -284,6 +284,17 @@ Progress as of 2026-05-27:
   Core tests, the clean VST3 build and the reviewed CC-labelled 920x700 screenshot
   pass; the five image enhancements also passed an initial REAPER listening check.
   CC motion still needs a host listening pass.
+- `tilt` is a linked stereo master-bus tone control in the Magneto look: Pivot Freq and
+  Angle set a straight-line dB response against log frequency, with the slope selectable
+  at 6, 12 or 24 dB/oct and the line clamped to +-24 dB at the extremes. The default
+  angle is inert, so a fresh instance is bit-for-bit transparent. **Mode** switches
+  between a minimum-phase IIR ladder (zero latency) and a linear-phase 4096-point STFT
+  (4096 samples of reported latency), with smoothed control changes and a short
+  latency-aligned crossfade between them. A 64-band analyser can tap the input or output
+  behind the response plot. No MIDI, transport or plugin state; seven writable settings
+  and 67 output-only parameters (latency, two peak meters, 64 spectrum bins). See
+  `plugins/tilt/docs/design.md`. Core tests, the VST3 build and the reviewed 920x700
+  screenshot pass; host listening remains.
 - `prism` is a banded spectral delay in the Magneto look: an STFT (sqrt-Hann, 8x overlap) in
   which each bin is read back from the spectrum stored some whole number of frames ago, the
   sub-hop remainder applied as a phase rotation, with per-band left/right delay (to 2 s, or note divisions of the host BBT tempo) and
@@ -491,7 +502,7 @@ Current main gap:
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
   `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
   `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`,
-  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `polyscribe.vst3`, `splay.vst3`, `prism.vst3`, `mouth.vst3`, `grist.vst3`, `sam.vst3`, `ladder.vst3`, `glue.vst3`, `octet.vst3`, `trio.vst3`, `infra.vst3`, `spindown.vst3`, `wheelhouse.vst3`, `whirligig.vst3`, `chorale.vst3`, `silken.vst3`, `fresco.vst3`, `strata.vst3`, `quartet.vst3`, `monochord.vst3`, `nam.vst3`, `sieve.vst3`, `zmorph.vst3`, and `scope.vst3` bundles.
+  `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `polyscribe.vst3`, `splay.vst3`, `tilt.vst3`, `prism.vst3`, `mouth.vst3`, `grist.vst3`, `sam.vst3`, `ladder.vst3`, `glue.vst3`, `octet.vst3`, `trio.vst3`, `infra.vst3`, `spindown.vst3`, `wheelhouse.vst3`, `whirligig.vst3`, `chorale.vst3`, `silken.vst3`, `fresco.vst3`, `strata.vst3`, `quartet.vst3`, `monochord.vst3`, `nam.vst3`, `sieve.vst3`, `zmorph.vst3`, and `scope.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.
 - the main remaining gaps are host validation across the full plugin set,
   validating the expanded release payload, and deeper interaction testing of

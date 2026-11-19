@@ -59,6 +59,7 @@ option(DOWNSPOUT_BUILD_GUARDIAN "Configure the Guardian safety effect target" ON
 option(DOWNSPOUT_BUILD_MIDISCRIBE "Configure the Midiscribe MIDI capture target" ON)
 option(DOWNSPOUT_BUILD_POLYSCRIBE "Configure the Polyscribe polyphonic audio-to-MIDI target" ON)
 option(DOWNSPOUT_BUILD_SPLAY "Configure the Splay stereo matrix target" ON)
+option(DOWNSPOUT_BUILD_TILT "Configure the Tilt master-bus tone control target" ON)
 option(DOWNSPOUT_BUILD_CAMPIONE "Configure the Campione sampler target" ON)
 option(DOWNSPOUT_BUILD_BASSOPS "Configure the Bassops ducker/MS-EQ effect target" ON)
 option(DOWNSPOUT_BUILD_DAMIANO "Configure the Damiano stereo distortion target" ON)
@@ -394,6 +395,10 @@ endif()
 
 if(DOWNSPOUT_BUILD_SPLAY)
     add_subdirectory(plugins/splay)
+endif()
+
+if(DOWNSPOUT_BUILD_TILT)
+    add_subdirectory(plugins/tilt)
 endif()
 
 option(DOWNSPOUT_BUILD_FLUES_SYNTH_DRIVER "Configure the flues-synth-driver MIDI controller target" ON)
