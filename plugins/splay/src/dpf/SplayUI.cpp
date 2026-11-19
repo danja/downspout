@@ -78,7 +78,7 @@ protected:
     {
         beginFrame();
         drawHeader("SPLAY", "Stereo matrix & image shaper",
-                   "Matrix, image, spectral width and final output.");
+                   "CC 1-4 animate rotation, width, mid and delay.");
 
         drawMatrixPanel({24.0f, 108.0f, 872.0f, 170.0f});
         drawImagePanel({24.0f, 290.0f, 872.0f, 130.0f});
@@ -96,9 +96,8 @@ private:
         drawSlider(pid(core::ParamId::matrixLR), "L to R",
                    format(core::ParamId::matrixLR).c_str(), {b.x + 256.0f, b.y + 40.0f, 224.0f, 34.0f},
                    kMatrixAccent);
-        drawSlider(pid(core::ParamId::rotation), "Rotation",
-                   format(core::ParamId::rotation).c_str(), {b.x + 496.0f, b.y + 40.0f, 224.0f, 34.0f},
-                   kMatrixAccent);
+        drawCcSlider(core::ParamId::rotation, core::ParamId::outCcRotation, "Rotation (CC1)",
+                     {b.x + 496.0f, b.y + 40.0f, 224.0f, 34.0f}, kMatrixAccent);
         drawButton(0, "Swap L/R", {b.x + 740.0f, b.y + 44.0f, 116.0f, 30.0f}, kMatrixAccent, false);
 
         drawSlider(pid(core::ParamId::matrixRL), "R to L",
@@ -116,13 +115,12 @@ private:
     void drawImagePanel(const Rect b)
     {
         drawPanel(b, "IMAGE", kImageAccent, "width + mid/side");
-        drawSlider(pid(core::ParamId::width), "Width", format(core::ParamId::width).c_str(),
-                   {b.x + 16.0f, b.y + 40.0f, 224.0f, 34.0f}, kImageAccent);
-        drawSlider(pid(core::ParamId::midGain), "Mid", format(core::ParamId::midGain).c_str(),
-                   {b.x + 256.0f, b.y + 40.0f, 224.0f, 34.0f}, kImageAccent);
-        drawSlider(pid(core::ParamId::imageDelay), "Image Delay",
-                   format(core::ParamId::imageDelay).c_str(), {b.x + 496.0f, b.y + 40.0f, 224.0f, 34.0f},
-                   kImageAccent);
+        drawCcSlider(core::ParamId::width, core::ParamId::outCcWidth, "Width (CC2)",
+                     {b.x + 16.0f, b.y + 40.0f, 224.0f, 34.0f}, kImageAccent);
+        drawCcSlider(core::ParamId::midGain, core::ParamId::outCcMid, "Mid (CC3)",
+                     {b.x + 256.0f, b.y + 40.0f, 224.0f, 34.0f}, kImageAccent);
+        drawCcSlider(core::ParamId::imageDelay, core::ParamId::outCcDelay, "Image Delay (CC4)",
+                     {b.x + 496.0f, b.y + 40.0f, 224.0f, 34.0f}, kImageAccent);
         label(b.x + 740.0f, b.y + 40.0f, "Invert R", false, 12.0f);
         drawSegments(pid(core::ParamId::invertR), core::kOffOnNames.data(), 2,
                      {b.x + 740.0f, b.y + 58.0f, 116.0f, 26.0f}, kImageAccent);
@@ -130,6 +128,9 @@ private:
         label(b.x + 16.0f, b.y + 88.0f, "M/S Solo", false, 12.0f);
         drawSegments(pid(core::ParamId::msSolo), core::kSoloNames.data(), 3,
                      {b.x + 16.0f, b.y + 106.0f, 280.0f, 24.0f}, kImageAccent);
+        drawStepper(pid(core::ParamId::ccChannel), "CC Ch",
+                    core::kMidiChannelNames[core::clampInt(value(pid(core::ParamId::ccChannel)), 0, 16)],
+                    {b.x + 740.0f, b.y + 88.0f, 116.0f, 24.0f});
     }
 
     void drawSpectralPanel(const Rect b)
@@ -207,10 +208,31 @@ private:
         }
     }
 
+    // The slider stays editable at its saved value; the numeric readout and a
+    // thin marker show the effective value published by the audio thread.
+    void drawCcSlider(const core::ParamId id, const core::ParamId mirror, const char* name,
+                      const Rect b, const Accent accent)
+    {
+        const float live = value(pid(mirror));
+        drawSlider(pid(id), name, format(id, live).c_str(), b, accent);
+
+        const auto& t = theme();
+        const float normalized = kit::toNormalized(tables().ranges[pid(id)], live);
+        const float markerX = b.x + b.w * normalized;
+        beginPath();
+        fc(t.textPrimary);
+        roundedRect(markerX - 1.5f, b.y + 14.0f, 3.0f, 16.0f, 1.5f);
+        fill();
+    }
+
     [[nodiscard]] std::string format(const core::ParamId id) const
     {
+        return format(id, value(pid(id)));
+    }
+
+    [[nodiscard]] std::string format(const core::ParamId id, const float v) const
+    {
         char buffer[40];
-        const float v = value(pid(id));
         switch (id) {
         case core::ParamId::matrixLL:
         case core::ParamId::matrixLR:
@@ -221,12 +243,16 @@ private:
         case core::ParamId::lowWidth:
         case core::ParamId::highWidth:
         case core::ParamId::level:
+        case core::ParamId::outCcWidth:
+        case core::ParamId::outCcMid:
             std::snprintf(buffer, sizeof(buffer), "%.0f%%", v * 100.0f);
             break;
         case core::ParamId::imageDelay:
+        case core::ParamId::outCcDelay:
             std::snprintf(buffer, sizeof(buffer), "%.1f ms", v);
             break;
         case core::ParamId::rotation:
+        case core::ParamId::outCcRotation:
             std::snprintf(buffer, sizeof(buffer), "%+.0f deg", v);
             break;
         case core::ParamId::crossover:
@@ -240,6 +266,8 @@ private:
             return core::kPanLawNames[core::clampInt(v, 0, 1)];
         case core::ParamId::msSolo:
             return core::kSoloNames[core::clampInt(v, 0, 2)];
+        case core::ParamId::ccChannel:
+            return core::kMidiChannelNames[core::clampInt(v, 0, 16)];
         case core::ParamId::outCorrelation:
             std::snprintf(buffer, sizeof(buffer), "%+.2f", v);
             break;

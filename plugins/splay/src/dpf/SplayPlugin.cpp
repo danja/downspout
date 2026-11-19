@@ -4,6 +4,7 @@
 #include "splay_params.hpp"
 
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 
@@ -32,6 +33,7 @@ constexpr EnumTable enumFor(const core::ParamId id)
     case core::ParamId::spectralWidth: return table(core::kOffOnNames);
     case core::ParamId::panLaw: return table(core::kPanLawNames);
     case core::ParamId::msSolo: return table(core::kSoloNames);
+    case core::ParamId::ccChannel: return table(core::kMidiChannelNames);
     default: return {nullptr, 0};
     }
 }
@@ -44,6 +46,7 @@ public:
         : Plugin(static_cast<std::uint32_t>(core::kParameterCount), 0, 0)
     {
         core::prepare(engine_, getSampleRate());
+        publishLive(parameters_);
     }
 
 protected:
@@ -52,7 +55,8 @@ protected:
     const char* getDescription() const override
     {
         return "Stereo matrix and image shaper with rotation, pan-law compensation, independent mid/side "
-               "trims and solo, frequency-dependent width, and correlation and mono-fit output meters.";
+               "trims and solo, frequency-dependent width, correlation and mono-fit meters, and CC 1-4 "
+               "control of rotation, width, mid and image delay.";
     }
 
     const char* getMaker() const override { return "danja"; }
@@ -114,6 +118,10 @@ protected:
         switch (static_cast<core::ParamId>(index)) {
         case core::ParamId::outCorrelation: return core::correlation(engine_);
         case core::ParamId::outMonoCompat: return core::monoCompatibility(engine_);
+        case core::ParamId::outCcRotation: return livePublished_[0].load();
+        case core::ParamId::outCcWidth: return livePublished_[1].load();
+        case core::ParamId::outCcMid: return livePublished_[2].load();
+        case core::ParamId::outCcDelay: return livePublished_[3].load();
         default: return 0.0f;
         }
     }
@@ -124,24 +132,52 @@ protected:
             return;  // output parameters are read-only
         parameters_.*core::kParameterFields[index] = value;
         parameters_ = core::clampParameters(parameters_);
+        // The panel or host has taken a CC-controlled destination back.
+        if (const int slot = core::liveSlot(index); slot >= 0)
+            live_.active[static_cast<std::size_t>(slot)] = false;
+        publishLive(parameters_);
     }
 
-    // activate() clears the delay line only: the patch lives in parameters_.
-    void activate() override { core::reset(engine_); }
+    // activate() clears the delay line and CC overrides; the patch lives in parameters_.
+    void activate() override
+    {
+        core::reset(engine_);
+        live_ = core::LiveControl {};
+        publishLive(parameters_);
+    }
 
     void sampleRateChanged(const double newSampleRate) override
     {
         core::prepare(engine_, newSampleRate);
     }
 
-    void run(const float** inputs, float** outputs, const uint32_t frames) override
+    void run(const float** inputs, float** outputs, const uint32_t frames,
+             const MidiEvent* midiEvents, const uint32_t midiEventCount) override
     {
-        core::processBlock(engine_, parameters_, frames, inputs, outputs);
+        // CC 1-4 on the set channel override Rotation, Width, Mid and Image Delay.
+        for (uint32_t i = 0; i < midiEventCount; ++i) {
+            const MidiEvent& event = midiEvents[i];
+            if (event.size >= 3 && core::ccChannelMatches(event.data[0], parameters_.ccChannel))
+                core::handleController(live_, event.data[1], event.data[2]);
+        }
+        const core::Parameters effective = core::withLive(parameters_, live_);
+        core::processBlock(engine_, effective, frames, inputs, outputs);
+        publishLive(effective);
     }
 
 private:
+    void publishLive(const core::Parameters& p) noexcept
+    {
+        livePublished_[0].store(p.rotation);
+        livePublished_[1].store(p.width);
+        livePublished_[2].store(p.midGain);
+        livePublished_[3].store(p.imageDelay);
+    }
+
     core::Parameters parameters_;
+    core::LiveControl live_ {};
     core::EngineState engine_;
+    std::array<std::atomic<float>, core::kCcSlots> livePublished_ {};
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SplayPlugin)
 };

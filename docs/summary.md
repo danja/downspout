@@ -370,10 +370,13 @@ and **M/S Solo** isolates one of them. **Spectral Width** can split the image at
 off by default. **Image Delay** adds up to 20 ms of fractional delay to the right
 channel only, for a Haas-style image shift; it is an audible effect, not reported
 latency. **Invert R** flips that channel after the delay, **Output** sets the final
-level and **Bypass** crossfades to the untouched input over 5 ms. Read-only
-**Correlation** and **Mono Fit** meters describe the final outputs. Stereo in and
-out, no MIDI input or CC map, no transport and no plugin state; seventeen writable
-settings are ordinary parameters and two are output-only meters.
+level and **Bypass** crossfades to the untouched input over 5 ms. On the selected
+MIDI channel (default 1, Off disables it), **CC 1** moves Rotation, **CC 2** Width,
+**CC 3** Mid and **CC 4** Image Delay until the panel or host moves that control
+again; read-only mirrors show the effective values. **Correlation** and **Mono
+Fit** are read-only meters of the final outputs. Stereo in and out, one MIDI
+input, no transport and no plugin state; eighteen writable settings are ordinary
+parameters and six are output-only.
 
 ### Prism (`prism.vst3`)
 

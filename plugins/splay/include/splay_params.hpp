@@ -9,7 +9,8 @@
 namespace downspout::splay {
 
 // The original nine controls keep their indices so existing host automation
-// still maps correctly. The new controls and two read-only meters are appended.
+// still maps correctly. The new controls, CC Channel and six read-only outputs
+// are appended.
 enum class ParamId : std::uint32_t {
     matrixLL = 0,
     matrixLR,
@@ -30,17 +31,31 @@ enum class ParamId : std::uint32_t {
     lowWidth,
     highWidth,
 
+    ccChannel,
+
     outCorrelation,
     outMonoCompat,
+    outCcRotation,
+    outCcWidth,
+    outCcMid,
+    outCcDelay,
     count
 };
 
+// The audio controls stay ahead of CC Channel and the read-only outputs.
+// Existing writable indices are unchanged; CC Channel and the output mirrors
+// were appended after them.
+inline constexpr std::size_t kDspParameterCount = static_cast<std::size_t>(ParamId::ccChannel);
 inline constexpr std::size_t kInputParameterCount = static_cast<std::size_t>(ParamId::outCorrelation);
 inline constexpr std::size_t kParameterCount = static_cast<std::size_t>(ParamId::count);
 
 inline constexpr std::array<const char*, 2> kOffOnNames = {{"Off", "On"}};
 inline constexpr std::array<const char*, 2> kPanLawNames = {{"Linear", "-3 dB"}};
 inline constexpr std::array<const char*, 3> kSoloNames = {{"Off", "Mid", "Side"}};
+inline constexpr std::array<const char*, 17> kMidiChannelNames = {{
+    "Off", "1", "2", "3", "4", "5", "6", "7", "8",
+    "9", "10", "11", "12", "13", "14", "15", "16",
+}};
 
 struct ParamSpec {
     const char* name;
@@ -73,8 +88,15 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs {{
     {"Low Width", "low_width", "x", 0.0f, 2.0f, 1.0f, false, false},
     {"High Width", "high_width", "x", 0.0f, 2.0f, 1.0f, false, false},
 
+    {"CC Channel", "cc_channel", "", 0.0f, 16.0f, 1.0f, true, false},
+
     {"Correlation", "out_correlation", "", -1.0f, 1.0f, 0.0f, false, true},
     {"Mono Fit", "out_mono", "", 0.0f, 1.0f, 0.0f, false, true},
+    // Read-only mirrors of the effective values after MIDI CC override.
+    {"Rotation (CC1)", "out_cc_rotation", "deg", -90.0f, 90.0f, 0.0f, false, true},
+    {"Width (CC2)", "out_cc_width", "x", 0.0f, 2.0f, 1.0f, false, true},
+    {"Mid (CC3)", "out_cc_mid", "x", 0.0f, 2.0f, 1.0f, false, true},
+    {"Image Delay (CC4)", "out_cc_delay", "ms", 0.0f, 20.0f, 0.0f, false, true},
 }};
 
 struct Parameters {
@@ -96,6 +118,8 @@ struct Parameters {
     float crossover = 500.0f;
     float lowWidth = 1.0f;
     float highWidth = 1.0f;
+
+    float ccChannel = 1.0f;  // 0 ignores MIDI; 1-16 selects a channel
 };
 
 inline constexpr std::array<float Parameters::*, kInputParameterCount> kParameterFields {{
@@ -103,7 +127,7 @@ inline constexpr std::array<float Parameters::*, kInputParameterCount> kParamete
     &Parameters::width, &Parameters::imageDelay, &Parameters::invertR, &Parameters::level,
     &Parameters::bypass, &Parameters::rotation, &Parameters::panLaw, &Parameters::midGain,
     &Parameters::msSolo, &Parameters::spectralWidth, &Parameters::crossover, &Parameters::lowWidth,
-    &Parameters::highWidth,
+    &Parameters::highWidth, &Parameters::ccChannel,
 }};
 
 [[nodiscard]] inline int clampInt(const float value, const int low, const int high) noexcept
@@ -124,6 +148,17 @@ inline constexpr std::array<float Parameters::*, kInputParameterCount> kParamete
                                                  static_cast<int>(spec.maximum)));
     }
     return p;
+}
+
+// The CC-controlled destination for a host/panel parameter, or -1. Moving one
+// of these controls releases the matching controller override.
+[[nodiscard]] constexpr int liveSlot(const std::uint32_t index) noexcept
+{
+    return index == static_cast<std::uint32_t>(ParamId::rotation) ? 0
+         : index == static_cast<std::uint32_t>(ParamId::width) ? 1
+         : index == static_cast<std::uint32_t>(ParamId::midGain) ? 2
+         : index == static_cast<std::uint32_t>(ParamId::imageDelay) ? 3
+         : -1;
 }
 
 }  // namespace downspout::splay

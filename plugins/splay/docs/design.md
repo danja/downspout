@@ -39,7 +39,8 @@ and the remainder linearly interpolates with the previous sample.
 
 1. **The original nine parameters keep their indices.** Rotation, Pan Law, Mid,
    M/S Solo, Spectral Width, Crossover, Low Width and High Width were appended,
-   as were the two read-only outputs. Existing host automation keeps its mapping.
+   followed by CC Channel and six read-only outputs. Existing host automation
+   keeps its mapping.
 2. **Matrix before rotation and width.** The four gains stay legible as "where
    does each input go", and every later stage acts on the routed pair. At the
    defaults the matrix is unity and rotation is zero, so the whole chain is
@@ -79,8 +80,15 @@ and the remainder linearly interpolates with the previous sample.
 11. **Bad samples are isolated.** Each input sample is checked before routing;
     NaN or infinity becomes zero and increments an internal fault counter.
     Outputs below `1e-20` are flushed to zero to stop recursive denormal costs.
-12. **No state, MIDI or transport.** Seventeen ordinary writable parameters and
-    two read-only meters carry everything; the host saves the writable ones.
+12. **No state or transport.** Eighteen ordinary writable parameters and six
+    read-only outputs carry everything; the host saves the writable ones.
+13. **CC 1-4 follow the Drift convention.** CC Channel (0 = off, 1-16) selects
+    the incoming channel. CC 1 maps to Rotation (-90 to +90 deg), CC 2 to Width
+    (0-2), CC 3 to Mid (0-2) and CC 4 to Image Delay (0-20 ms). An event
+    overrides only its destination, and the override lasts until the panel or
+    host moves that destination or the plugin is reactivated. `withLive()`
+    applies the overrides in the portable core; the DPF wrapper only parses
+    MIDI. Four read-only mirrors publish the effective values for the panel.
 
 ## Parameters and state
 
@@ -103,8 +111,13 @@ and the remainder linearly interpolates with the previous sample.
 | `invertR` | Invert R | 0/1 | 0 | Phase invert on the right channel |
 | `level` | Output | 0-2 | 1 | Final output gain |
 | `bypass` | Bypass | 0/1 | 0 | Crossfade to untouched input |
+| `ccChannel` | CC Channel | 0-16 | 1 | MIDI channel for CC 1-4; 0 ignores MIDI |
 | `outCorrelation` | Correlation | -1 to 1 | 0 | Read-only final-output correlation |
 | `outMono` | Mono Fit | 0-1 | 0 | Read-only final-output mono fit |
+| `outCcRotation` | Rotation (CC1) | -90 to 90 deg | 0 | Read-only effective rotation |
+| `outCcWidth` | Width (CC2) | 0-2 | 1 | Read-only effective width |
+| `outCcMid` | Mid (CC3) | 0-2 | 1 | Read-only effective mid gain |
+| `outCcDelay` | Image Delay (CC4) | 0-20 ms | 0 | Read-only effective image delay |
 
 `clampParameters()` is shared by the wrapper and the core: non-finite values
 fall back to the spec default, ranges are clamped and integer switches are
@@ -135,11 +148,19 @@ offered to the host. Output parameters are read-only in `setParameterValue()`.
 - Correlation reads +1 for identical channels and -1 for antiphasal channels;
   Mono Fit reads 1 and 0 respectively, bypass reports the untouched input, and
   both reset to zero with the runtime state.
-- Every writable control changes the rendered output from a non-default
+- Every writable audio control changes the rendered output from a non-default
   reference patch.
+- CC 0 and 127 reach both ends of all four mappings, each mapping rises
+  monotonically, and only Control Change events on the selected channel match.
+- Without a controller the effective parameters equal the patch; CC 1-4
+  override Rotation, Width, Mid and Image Delay independently, and clearing one
+  slot returns only that destination to the patch value.
+- Rendering with each CC override at its extreme changes the output from an
+  unmodulated reference patch.
 
 ## Not done
 
 The expanded panel passed user visual review at 920x700 and is in
-`docs/pages/assets/plugins/splay.png`. Host listening after the five additions
-is pending.
+`docs/pages/assets/plugins/splay.png`, as is the CC-labelled 920x700 recapture.
+Host listening after the five additions passed in REAPER; CC motion still needs
+a host listening pass.

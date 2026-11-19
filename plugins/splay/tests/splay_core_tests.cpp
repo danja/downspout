@@ -480,6 +480,101 @@ void testResetClearsMetersAndCrossoverMemory()
     near(monoCompatibility(second.state), 0.0f, 0.02f);
 }
 
+void testCcMappingAndChannel()
+{
+    near(ccToValue(0, 0), -90.0f);
+    near(ccToValue(0, 127), 90.0f);
+    near(ccToValue(1, 0), 0.0f);
+    near(ccToValue(1, 127), 2.0f);
+    near(ccToValue(2, 0), 0.0f);
+    near(ccToValue(2, 127), 2.0f);
+    near(ccToValue(3, 0), 0.0f);
+    near(ccToValue(3, 127), 20.0f);
+
+    bool monotonic = true;
+    for (int slot = 0; slot < kCcSlots; ++slot)
+        for (int cc = 1; cc <= 127; ++cc)
+            if (ccToValue(slot, cc) < ccToValue(slot, cc - 1))
+                monotonic = false;
+    assert(monotonic);
+
+    assert(ccChannelMatches(0xB0, 1.0f));
+    assert(ccChannelMatches(0xB4, 5.0f));
+    assert(ccChannelMatches(0xBF, 16.0f));
+    assert(!ccChannelMatches(0xB1, 1.0f));
+    assert(!ccChannelMatches(0x90, 1.0f));
+    assert(!ccChannelMatches(0xB0, 0.0f));
+
+    const Parameters defaults {};
+    for (std::size_t id = 0; id < kInputParameterCount; ++id)
+        near(defaults.*kParameterFields[id], kParameterSpecs[id].defaultValue, 0.0f);
+}
+
+void testCcOverrideAndRelease()
+{
+    Parameters base {};
+    base.rotation = 20.0f;
+    base.width = 0.7f;
+    base.midGain = 1.4f;
+    base.imageDelay = 2.0f;
+
+    LiveControl live;
+    const Parameters before = withLive(base, live);
+    near(before.rotation, base.rotation);
+    near(before.width, base.width);
+    near(before.midGain, base.midGain);
+    near(before.imageDelay, base.imageDelay);
+
+    handleController(live, 1, 127);
+    handleController(live, 2, 0);
+    handleController(live, 3, 127);
+    handleController(live, 4, 127);
+    handleController(live, 5, 64);  // outside CC 1-4
+    const Parameters after = withLive(base, live);
+    near(after.rotation, 90.0f);
+    near(after.width, 0.0f);
+    near(after.midGain, 2.0f);
+    near(after.imageDelay, 20.0f);
+
+    live.active[0] = false;  // the panel or host took Rotation back
+    near(withLive(base, live).rotation, base.rotation);
+    near(withLive(base, live).imageDelay, 20.0f);
+
+    assert(liveSlot(static_cast<std::uint32_t>(ParamId::rotation)) == 0);
+    assert(liveSlot(static_cast<std::uint32_t>(ParamId::width)) == 1);
+    assert(liveSlot(static_cast<std::uint32_t>(ParamId::midGain)) == 2);
+    assert(liveSlot(static_cast<std::uint32_t>(ParamId::imageDelay)) == 3);
+    assert(liveSlot(static_cast<std::uint32_t>(ParamId::ccChannel)) == -1);
+}
+
+void testEveryCcOverrideIsAudible()
+{
+    const std::vector<float> inL = tone(1024, 0.6f);
+    const std::vector<float> inR = tone(1024, 0.4f);
+
+    Parameters base {};
+    base.matrixLL = 0.8f;
+    base.matrixLR = 0.4f;
+    base.matrixRR = 0.7f;
+    base.rotation = 10.0f;
+    base.width = 1.2f;
+    base.midGain = 1.0f;
+    base.imageDelay = 0.0f;
+    const Render reference = render(base, inL, inR, 128);
+
+    for (int controller = 1; controller <= kCcSlots; ++controller) {
+        LiveControl live;
+        handleController(live, controller, controller == 2 ? 0 : 127);
+        const Render moved = render(withLive(base, live), inL, inR, 128);
+        float biggest = 0.0f;
+        for (std::size_t i = 0; i < inL.size(); ++i) {
+            biggest = std::max(biggest, std::fabs(moved.left[i] - reference.left[i]));
+            biggest = std::max(biggest, std::fabs(moved.right[i] - reference.right[i]));
+        }
+        assert(biggest > 1.0e-3f);
+    }
+}
+
 void testEveryControlHasAnAudibleEffect()
 {
     const std::vector<float> inL = tone(512, 0.7f);
@@ -505,7 +600,7 @@ void testEveryControlHasAnAudibleEffect()
     base.bypass = 0.0f;
     const Render reference = render(base, inL, inR, 128);
 
-    for (std::size_t id = 0; id < kInputParameterCount; ++id) {
+    for (std::size_t id = 0; id < kDspParameterCount; ++id) {
         Parameters changed = base;
         const float current = changed.*kParameterFields[id];
         float next = current;
@@ -527,8 +622,13 @@ void testEveryControlHasAnAudibleEffect()
         case ParamId::crossover: next = 2000.0f; break;
         case ParamId::lowWidth: next = 1.2f; break;
         case ParamId::highWidth: next = 0.8f; break;
+        case ParamId::ccChannel:
         case ParamId::outCorrelation:
         case ParamId::outMonoCompat:
+        case ParamId::outCcRotation:
+        case ParamId::outCcWidth:
+        case ParamId::outCcMid:
+        case ParamId::outCcDelay:
         case ParamId::count: break;
         }
         changed.*kParameterFields[id] = next;
@@ -564,6 +664,9 @@ int main()
     testSpectralWidthSeparatesBands();
     testMetersTrackCorrelationAndMono();
     testResetClearsMetersAndCrossoverMemory();
+    testCcMappingAndChannel();
+    testCcOverrideAndRelease();
+    testEveryCcOverrideIsAudible();
     testEveryControlHasAnAudibleEffect();
     return 0;
 }

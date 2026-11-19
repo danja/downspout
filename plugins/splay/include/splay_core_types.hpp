@@ -67,6 +67,20 @@ struct EngineState {
     return state.mono;
 }
 
+// Drift-style CC 1-4 control: a controller overrides one destination until the
+// panel or host moves that parameter again. The mapping lives here so it is
+// deterministic and testable; the DPF wrapper only parses MIDI events.
+inline constexpr int kCcSlots = 4;  // CC 1 Rotation, CC 2 Width, CC 3 Mid, CC 4 Image Delay
+struct LiveControl {
+    std::array<float, kCcSlots> value {};
+    std::array<bool, kCcSlots> active {false, false, false, false};
+};
+
+[[nodiscard]] float ccToValue(int slot, int cc) noexcept;
+[[nodiscard]] bool ccChannelMatches(unsigned char status, float ccChannel) noexcept;
+void handleController(LiveControl& live, int controller, int value) noexcept;
+[[nodiscard]] Parameters withLive(const Parameters& p, const LiveControl& live) noexcept;
+
 void prepare(EngineState& state, double sampleRate) noexcept;
 void reset(EngineState& state) noexcept;
 void processBlock(EngineState& state, const Parameters& parameters, std::uint32_t frames,

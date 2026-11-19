@@ -77,6 +77,43 @@ struct Stereo {
 
 }  // namespace
 
+float ccToValue(const int slot, const int cc) noexcept
+{
+    const float u = static_cast<float>(std::clamp(cc, 0, 127)) / 127.0f;
+    switch (slot) {
+    case 0: return -90.0f + 180.0f * u;  // Rotation
+    case 1: return 2.0f * u;              // Width
+    case 2: return 2.0f * u;              // Mid
+    case 3: return 20.0f * u;             // Image Delay
+    default: return 0.0f;
+    }
+}
+
+bool ccChannelMatches(const unsigned char status, const float ccChannel) noexcept
+{
+    return (status & 0xF0) == 0xB0 && ccChannel >= 0.5f &&
+           static_cast<int>(status & 0x0F) + 1 == static_cast<int>(std::lround(ccChannel));
+}
+
+void handleController(LiveControl& live, const int controller, const int value) noexcept
+{
+    if (controller >= 1 && controller <= kCcSlots) {
+        const std::size_t slot = static_cast<std::size_t>(controller - 1);
+        live.value[slot] = ccToValue(slot, value);
+        live.active[slot] = true;
+    }
+}
+
+Parameters withLive(const Parameters& p, const LiveControl& live) noexcept
+{
+    Parameters effective = p;
+    if (live.active[0]) effective.rotation = live.value[0];
+    if (live.active[1]) effective.width = live.value[1];
+    if (live.active[2]) effective.midGain = live.value[2];
+    if (live.active[3]) effective.imageDelay = live.value[3];
+    return effective;
+}
+
 void prepare(EngineState& state, const double sampleRate) noexcept
 {
     state.sampleRate = sampleRate > 0.0 ? sampleRate : 44100.0;

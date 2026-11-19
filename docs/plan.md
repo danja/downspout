@@ -274,13 +274,16 @@ Progress as of 2026-05-27:
 - `splay` is a stereo matrix and image shaper in the Magneto look: four input-to-output
   gains feed a Rotation and conditional Pan Law stage, then Mid and Width trims with
   M/S Solo, optional frequency-dependent Low/High Width, a fractional right-channel
-  Image Delay, Invert R, Output level and a 5 ms bypass crossfade. Defaults are a
-  bit-exact pass-through. Correlation and Mono Fit are read-only output meters of the
-  final signal. Image Delay is an intentional inter-channel offset and is not reported
-  as host latency; the crossover is a tone-shaping filter. No MIDI, transport or plugin
-  state; seventeen settings are writable parameters and two are output-only. See
-  `plugins/splay/docs/design.md`. Core tests, the clean VST3 build and the reviewed
-  920x700 screenshot pass; a REAPER listening pass with the new features is pending.
+  Image Delay, Invert R, Output level and a 5 ms bypass crossfade. CC 1-4 on the
+  selected channel temporarily override Rotation, Width, Mid and Image Delay, with
+  read-only mirrors of the effective values. Defaults are a bit-exact pass-through.
+  Correlation and Mono Fit are read-only output meters of the final signal. Image Delay
+  is an intentional inter-channel offset and is not reported as host latency; the
+  crossover is a tone-shaping filter. No transport or plugin state; eighteen settings
+  are writable parameters and six are output-only. See `plugins/splay/docs/design.md`.
+  Core tests, the clean VST3 build and the reviewed CC-labelled 920x700 screenshot
+  pass; the five image enhancements also passed an initial REAPER listening check.
+  CC motion still needs a host listening pass.
 - `prism` is a banded spectral delay in the Magneto look: an STFT (sqrt-Hann, 8x overlap) in
   which each bin is read back from the spectrum stored some whole number of frames ago, the
   sub-hop remainder applied as a phase rotation, with per-band left/right delay (to 2 s, or note divisions of the host BBT tempo) and

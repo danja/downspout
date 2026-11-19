@@ -7,12 +7,12 @@
 
 dsp:splay a trn:PluginProfile ;
     rdfs:label "Splay" ;
-    rdfs:comment "Stereo matrix and image shaper: four input-to-output gains, stereo rotation, pan-law compensation, mid/side trims and solo, optional two-band width, fractional right-channel image delay, right-channel phase invert, output level, click-free bypass, and read-only correlation and mono-fit meters. No MIDI, transport or plugin state." ;
+    rdfs:comment "Stereo matrix and image shaper: four input-to-output gains, stereo rotation, pan-law compensation, mid/side trims and solo, optional two-band width, fractional right-channel image delay, right-channel phase invert, output level, click-free bypass, and read-only correlation and mono-fit meters. CC 1-4 on the selected channel temporarily override rotation, width, mid and image delay until the panel or host moves that control; read-only outputs report the effective values. No transport or plugin state." ;
     trn:bundleName "splay.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/splay/> ;
     trn:role trn:AudioEffect ;
-    trn:accepts trn:Audio ;
+    trn:accepts trn:Audio, trn:MidiCC ;
     trn:produces trn:Audio .
 
 dsp:splay trn:hasParameter [
@@ -101,6 +101,11 @@ dsp:splay trn:hasParameter [
     trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 1.0 ;
     rdfs:comment "Side-gain factor for the band above Crossover"
 ], [
+    trn:symbol "cc_channel" ;
+    trn:label "CC Channel" ;
+    trn:minimum 0 ; trn:maximum 16 ; trn:default 1 ;
+    rdfs:comment "MIDI channel whose CC 1-4 drive Rotation, Width, Mid and Image Delay; 0 ignores MIDI"
+], [
     trn:symbol "out_correlation" ;
     trn:label "Correlation" ;
     trn:minimum -1.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
@@ -110,4 +115,24 @@ dsp:splay trn:hasParameter [
     trn:label "Mono Fit" ;
     trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
     rdfs:comment "Read-only: smoothed mono compatibility of the final outputs"
+], [
+    trn:symbol "out_cc_rotation" ;
+    trn:label "Rotation (CC1)" ;
+    trn:minimum -90.0 ; trn:maximum 90.0 ; trn:default 0.0 ;
+    rdfs:comment "Read-only: effective rotation in degrees after CC override"
+], [
+    trn:symbol "out_cc_width" ;
+    trn:label "Width (CC2)" ;
+    trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 1.0 ;
+    rdfs:comment "Read-only: effective width after CC override"
+], [
+    trn:symbol "out_cc_mid" ;
+    trn:label "Mid (CC3)" ;
+    trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 1.0 ;
+    rdfs:comment "Read-only: effective mid gain after CC override"
+], [
+    trn:symbol "out_cc_delay" ;
+    trn:label "Image Delay (CC4)" ;
+    trn:minimum 0.0 ; trn:maximum 20.0 ; trn:default 0.0 ;
+    rdfs:comment "Read-only: effective right-channel image delay in ms after CC override"
 ] .

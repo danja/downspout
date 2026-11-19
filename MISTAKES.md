@@ -5,6 +5,11 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 ## Open
 
+## Splay: private MagnetoKit value array (2026-11-19)
+- **What happened:** The first CC UI draft tried to write `values_[pid(id)]` from `SplayUI` so a mapped slider would follow the live CC value. The core tests built, but `splay-vst3` failed because `MagnetoUI::values_` is private, not protected.
+- **Root cause:** Shared toolkit internals were assumed to be accessible to derived UIs, and a core-only test run cannot catch UI compile errors.
+- **Prevention:** Keep the base slider value at its saved setting and draw the effective value as a separate readout plus marker using public/protected APIs (`value()`, `format()`, NanoVG primitives). Always build the plugin's `-vst3` target after UI changes, not just the core tests.
+
 (No open entries from before October 2026: the screenshot script now always captures on a private Xvfb.)
 
 ## Splay: expansion test setup (2026-11-19)

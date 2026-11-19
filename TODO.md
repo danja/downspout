@@ -46,7 +46,13 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
       matrix actions. Core tests and `splay-vst3` pass.
 - [x] Visual acceptance of Splay's fresh expanded-panel capture: the user accepted the
       920x700 panel; it was copied into `docs/pages/assets/plugins/splay.png`.
-- [ ] REAPER listening for Splay's five new enhancements is pending.
+- [x] REAPER listening for Splay's five new enhancements passed its initial check.
+- [x] Splay MIDI CC 1-4 control (2026-11-19): appended CC Channel and four read-only
+      effective-value outputs; CC 1-4 map to Rotation, Width, Mid and Image Delay with
+      Drift-style temporary override. Core tests and `splay-vst3` pass.
+- [x] Capture and visually review Splay's CC-labelled 920x700 panel before publishing; the
+      user accepted it and it is now `docs/pages/assets/plugins/splay.png`.
+- [ ] REAPER listening for Splay's CC motion is pending.
 - [x] **PadSeq** (built 2026-11-18 as `padseq`, from INBOX): a paged 8x8 grid sequencer based around a Launchpad.
       Grid-based sequence editor like a standard MIDI editor, but supporting alternate scales, including
       mapping to General MIDI drums. Time on the x axis (left to right), note number on the y axis. Based around a paged

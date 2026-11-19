@@ -7,8 +7,8 @@ category: processor
 group: space
 role: Stereo matrix and image shaper
 screenshot: /assets/plugins/splay.png
-capabilities: [audio input, audio output]
-summary: Route each input into either output, then shape rotation, pan law, mid/side width, frequency-dependent width and inter-channel delay; two read-only meters report correlation and mono fit.
+capabilities: [audio input, audio output, MIDI CC input]
+summary: Route each input into either output, then shape rotation, pan law, mid/side width, frequency-dependent width and inter-channel delay; CC 1-4 animate rotation, width, mid and delay, and read-only meters report correlation and mono fit.
 ---
 
 ## Opinion
@@ -21,9 +21,11 @@ hiding it behind a "pan" control, and the defaults are a true pass-through, so
 it can be inserted without changing the sound until a control is moved.
 
 Rotation, Pan Law, Mid, M/S Solo and the two-band Spectral Width turn the
-original matrix/width tool into a focused stereo enhancer without adding MIDI,
-transport or state. The correlation and mono-fit meters read the final outputs,
-so the panel shows the result of bypass and inversion as well as the patch.
+original matrix/width tool into a focused stereo enhancer without transport or
+state. CC 1-4 on the selected channel move Rotation, Width, Mid and Image Delay,
+so a controller can animate the image while the other controls stay put. The
+correlation and mono-fit meters read the final outputs, so the panel shows the
+result of bypass and inversion as well as the patch.
 
 ## Functionality
 
@@ -63,8 +65,13 @@ state; they never reset the patch.
 | Invert R | Off, On | Off | Phase invert after the delay |
 | Output | 0-200 % | 100 % | Final level on both channels |
 | Bypass | Off, On | Off | Crossfade to the untouched input |
+| CC Channel | Off, 1-16 | 1 | MIDI channel that accepts CC 1-4; Off ignores MIDI |
 | Correlation | -1 to +1 | 0 | Read-only, 20 ms smoothed final-output meter |
 | Mono Fit | 0-100 % | 0 | Read-only, 20 ms smoothed final-output meter |
+| Rotation (CC1) | -90 to +90 deg | 0 | Read-only effective value after CC override |
+| Width (CC2) | 0-200 % | 100 % | Read-only effective value after CC override |
+| Mid (CC3) | 0-200 % | 100 % | Read-only effective value after CC override |
+| Image Delay (CC4) | 0-20 ms | 0 ms | Read-only effective value after CC override |
 
 The original nine parameters keep their indices; the new controls and meters
 were appended to preserve existing host automation.
@@ -73,18 +80,22 @@ were appended to preserve existing host automation.
 
 - **Audio:** 2 in, 2 out. Non-finite samples are replaced with zero; very
   small values are flushed to prevent denormals.
-- **MIDI:** none. There is no MIDI input, output or CC map; automate the
-  parameters in the host.
+- **MIDI:** one input; no output. **CC Channel** (0 = off, default 1) selects
+  the channel. CC 1 drives Rotation (-90 to +90 deg), CC 2 Width (0-200 %),
+  CC 3 Mid (0-200 %) and CC 4 Image Delay (0-20 ms). A controller overrides its
+  destination until the panel or host moves that parameter again; the four
+  `outCc*` outputs report the effective values.
 - **Transport:** ignored. Splay is a stateless audio effect.
 - **Latency:** not reported. Image Delay is an intentional inter-channel
   offset and would be cancelled by host latency compensation. The crossover is
   a tone-shaping filter, and the 5 ms smoothing applies to controls, not to
   audio alignment.
-- **State:** none. All seventeen writable settings are ordinary host
-  parameters; the two meters are output-only parameters.
+- **State:** none. All eighteen writable settings are ordinary host
+  parameters; the two meters and four live CC mirrors are output-only.
 
 ## Status
 
-Core tests, the clean VST3 build and the reviewed 920x700 screenshot pass. A
-REAPER listening pass with the five new enhancements is pending. See
-`plugins/splay/docs/design.md` for the signal-path decisions and test coverage.
+Core tests, the clean VST3 build and the reviewed CC-labelled 920x700 screenshot
+pass; the five image enhancements also passed an initial REAPER listening check.
+CC motion still needs a host listening pass. See `plugins/splay/docs/design.md`
+for the signal-path decisions and test coverage.
