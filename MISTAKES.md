@@ -5,6 +5,11 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 ## Open
 
+## Tilt: IIR ceiling, plot/audio split and knee-sampling tests (2026-11-19)
+- **What happened:** A revised IIR design used prewarped shelves spanning fixed 20 Hz-20 kHz corners. It overshot the advertised +-24 dB law badly, especially near Nyquist and at extreme pivots, while `responseDb()` still returned the clamped ideal line. A slope test then sampled 250 Hz / 4 kHz, which sit in the deliberately rounded knee at 24 dB/oct, so stricter slopes looked wrong even though the linear region was correct.
+- **Root cause:** Prewarping inflates the analogue shelf ratio as a corner approaches Nyquist; fixed corners do not plateau at the clamp frequencies; keeping a separate ideal-line display let the plot disagree with the audio; and the test measured the knee instead of the slope.
+- **Prevention:** Place shelf corners at the frequencies where the ideal line reaches +-24 dB, apply the bilinear transform with raw corner frequencies, normalise at the pivot and sweep the full response for peak gain. Make `responseDb()` report the actual IIR cascade (cache the design for the UI) and keep the ideal line only as the faint target. Test the ceiling across pivot/angle/slope, verify rendered Goertzel magnitudes against `responseDb()`, and sample slope audibility inside the linear region. Document the rounded knee and safe deep-cut limitation instead of hiding them.
+
 ## Tilt: first IIR draft and wrapper omissions (2026-11-19)
 - **What happened:** The first Tilt draft used the exponent directly as dB, so a nominal 6 dB/oct setting measured about 1 dB/oct. After fixing that, coefficient-interpolated fractional shelves gave a roughly -26 dB offset at the pivot. The first wrapper also omitted `DISTRHO_PLUGIN_WANT_LATENCY`, `createUI()` and `onAction()`, so `tilt-vst3` failed to compile/link even though the core tests passed.
 - **Root cause:** The `f^p` exponent was conflated with a dB slope (`20 log10(2) = 6.02 dB`, not 1 dB), a fractional order was modelled by blending two stable shelves rather than by placing a ladder of pole/zero pairs, and the DPF shell was copied from a plugin with no latency and no custom UI.

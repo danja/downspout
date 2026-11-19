@@ -288,13 +288,16 @@ Progress as of 2026-05-27:
   Angle set a straight-line dB response against log frequency, with the slope selectable
   at 6, 12 or 24 dB/oct and the line clamped to +-24 dB at the extremes. The default
   angle is inert, so a fresh instance is bit-for-bit transparent. **Mode** switches
-  between a minimum-phase IIR ladder (zero latency) and a linear-phase 4096-point STFT
+  between a minimum-phase shelf/ladder cascade (zero latency, with clamp-band corners,
+  pivot normalisation and a peak-gain sweep) and a linear-phase 4096-point STFT
   (4096 samples of reported latency), with smoothed control changes and a short
-  latency-aligned crossfade between them. A 64-band analyser can tap the input or output
-  behind the response plot. No MIDI, transport or plugin state; seven writable settings
-  and 67 output-only parameters (latency, two peak meters, 64 spectrum bins). See
-  `plugins/tilt/docs/design.md`. Core tests, the VST3 build and the reviewed 920x700
-  screenshot pass; host listening remains.
+  latency-aligned crossfade between them. The IIR plot shows the actual cascade,
+  including its rounded clamp knee; the ceiling is enforced in rendered audio. A
+  64-band analyser can tap the input or output behind the response plot. No MIDI,
+  transport or plugin state; seven writable settings and 67 output-only parameters
+  (latency, two peak meters, 64 spectrum bins). See `plugins/tilt/docs/design.md`.
+  Core tests (112,737 checks), the VST3 build and the reviewed 920x700 screenshot
+  pass; host listening remains.
 - `prism` is a banded spectral delay in the Magneto look: an STFT (sqrt-Hann, 8x overlap) in
   which each bin is read back from the spectrum stored some whole number of frames ago, the
   sub-hop remainder applied as a phase rotation, with per-band left/right delay (to 2 s, or note divisions of the host BBT tempo) and

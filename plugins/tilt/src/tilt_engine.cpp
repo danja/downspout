@@ -13,6 +13,7 @@ constexpr double kLn2 = 0.69314718055994530942;
 constexpr double kLowCornerHz = 20.0;
 constexpr double kHighCornerHz = 20000.0;
 constexpr double kTiny = 1.0e-20;
+constexpr double kMaxLinearGain = 15.848931924611134;  // 10^(24/20)
 
 struct Design {
     std::array<FirstOrder, kMaxSections> sections {};
@@ -28,20 +29,20 @@ struct Design {
     return std::clamp(raw, -static_cast<double>(kMaxTiltDb), static_cast<double>(kMaxTiltDb));
 }
 
-// A first-order shelf, prewarped by the bilinear transform. The caller orders the zero
-// and pole for boost or cut; the weight interpolates smoothly from unity (0) to the full
-// section (1), and the denominator stays stable for every intermediate value.
-[[nodiscard]] FirstOrder section(const double fz, const double fp, const double sr,
-                                 const double weight) noexcept
+// A first-order shelf with the bilinear transform applied to the analogue prototype
+// (1 + s/wz)/(1 + s/wp). Using the raw analogue frequencies rather than prewarped ones
+// keeps the plateau ratio wp/wz exactly equal to the requested frequency ratio. Prewarping
+// would inflate the ratio without bound as a corner approaches Nyquist, making the slope
+// far steeper than the ideal line and pushing the cascade well past +-24 dB.
+[[nodiscard]] FirstOrder section(const double fz, const double fp, const double sr) noexcept
 {
-    const double nyquist = sr * 0.49;
-    const double z = std::tan(kPi * std::clamp(fz, 1.0, nyquist) / sr);
-    const double p = std::tan(kPi * std::clamp(fp, 1.0, nyquist) / sr);
-    const double den = 1.0 + p;
+    const double kz = sr / (kPi * std::max(fz, 0.01));
+    const double kp = sr / (kPi * std::max(fp, 0.01));
+    const double den = 1.0 + kp;
     FirstOrder s;
-    s.b0 = 1.0 + weight * ((1.0 + z) / den - 1.0);
-    s.b1 = weight * (z - 1.0) / den;
-    s.a1 = weight * (p - 1.0) / den;
+    s.b0 = (1.0 + kz) / den;
+    s.b1 = (1.0 - kz) / den;
+    s.a1 = (1.0 - kp) / den;
     return s;
 }
 
@@ -53,19 +54,36 @@ struct Design {
     return std::abs(num / den);
 }
 
+// Peak magnitude of a design at one digital frequency.
+[[nodiscard]] double designMagnitude(const Design& d, const double w) noexcept
+{
+    double mag = d.normalizer;
+    for (int i = 0; i < d.count; ++i)
+        mag *= magnitude(d.sections[static_cast<std::size_t>(i)], w);
+    return mag;
+}
+
 [[nodiscard]] Design design(const double logPivot, const double exp, const double sr) noexcept
 {
     Design d;
-    const double mag = std::fabs(exp);
-    if (!(mag > 1.0e-9) || !(sr > 0.0))
+    const double magnitudeExp = std::fabs(exp);
+    if (!(magnitudeExp > 1.0e-9) || !(sr > 0.0))
         return d;
-    const double fHigh = std::min(kHighCornerHz, sr * 0.49);
-    const double fLow = std::min(kLowCornerHz, fHigh * 0.01);
-    // Integer orders are one shelf each. The fractional remainder uses an Oustaloup
-    // ladder: log-spaced pole/zero pairs approximate f^alpha between the corners with
-    // far less ripple than interpolating coefficients of a single shelf would.
-    const int full = std::min(static_cast<int>(std::floor(mag + 1.0e-9)), 4);
-    double rest = mag - static_cast<double>(full);
+
+    // Frequencies where the ideal straight line reaches -24 and +24 dB. These are the
+    // shelf corners: outside them the cascade is flat, so the response cannot exceed the
+    // law. The bilinear transform maps these analogue frequencies to the digital axis
+    // without the tan() blow-up near Nyquist that prewarping would cause.
+    const double pivotHz = std::exp(logPivot);
+    const double octaves = 4.0 / magnitudeExp;
+    const double fLow = std::max(pivotHz / std::pow(2.0, octaves), 0.5);
+    const double fHigh = std::min(pivotHz * std::pow(2.0, octaves), sr * 0.95);
+    const double effectiveHigh = fHigh > fLow * 1.01 ? fHigh : fLow * 1.01;
+
+    // Integer orders are one whole shelf each; the fractional remainder uses an
+    // Oustaloup ladder of log-spaced pole/zero pairs to approximate f^alpha.
+    const int full = std::min(static_cast<int>(std::floor(magnitudeExp + 1.0e-9)), 4);
+    double rest = magnitudeExp - static_cast<double>(full);
     if (rest < 1.0e-6)
         rest = 0.0;
     const bool boost = exp > 0.0;
@@ -73,12 +91,12 @@ struct Design {
         if (d.count >= kMaxSections)
             return;
         d.sections[static_cast<std::size_t>(d.count++)] =
-            section(boost ? fz : fp, boost ? fp : fz, sr, 1.0);
+            section(boost ? fz : fp, boost ? fp : fz, sr);
     };
     for (int i = 0; i < full; ++i)
-        add(fLow, fHigh);
+        add(fLow, effectiveHigh);
     if (rest > 0.0) {
-        const double decade = std::log10(fHigh / fLow);
+        const double decade = std::log10(effectiveHigh / fLow);
         const double denominator = 2.0 * kOustaloupSections + 1.0 - rest;
         for (int k = 1; k <= kOustaloupSections; ++k) {
             const double zExp = (2.0 * k - 1.0 - rest) / denominator;
@@ -87,13 +105,42 @@ struct Design {
                 std::pow(10.0, std::log10(fLow) + pExp * decade));
         }
     }
-    const double pivotHz = std::exp(logPivot);
-    const double w = 2.0 * kPi * std::clamp(pivotHz, 1.0, sr * 0.499) / sr;
+
+    // Normalise at the pivot, then trim any residual overshoot so the audio path really
+    // stays inside the +-24 dB law that responseDb() and the FFT mode advertise.
+    const double pivotClamped = std::clamp(pivotHz, 1.0, sr * 0.499);
+    const double wPivot = 2.0 * kPi * pivotClamped / sr;
     double product = 1.0;
     for (int i = 0; i < d.count; ++i)
-        product *= magnitude(d.sections[static_cast<std::size_t>(i)], w);
+        product *= magnitude(d.sections[static_cast<std::size_t>(i)], wPivot);
     d.normalizer = product > 1.0e-12 ? 1.0 / product : 1.0e12;
+
+    const double topHz = std::min(kHighCornerHz, sr * 0.499);
+    for (int k = 0; k <= 48; ++k) {
+        const double hz = kLowCornerHz * std::pow(topHz / kLowCornerHz, static_cast<double>(k) / 48.0);
+        const double w = 2.0 * kPi * hz / sr;
+        const double mag = designMagnitude(d, w);
+        if (mag > kMaxLinearGain)
+            d.normalizer *= (kMaxLinearGain * 0.99) / mag;  // 0.09 dB of headroom between sweep points
+    }
     return d;
+}
+
+// The UI samples the curve once per plot pixel, all with the same settings. Cache the
+// last design so the gain-ceiling sweep runs once per change instead of once per pixel.
+[[nodiscard]] Design designCached(const double logPivot, const double exp, const double sr) noexcept
+{
+    static thread_local double lastLogPivot = -1.0e300;
+    static thread_local double lastExp = -1.0e300;
+    static thread_local double lastSr = -1.0;
+    static thread_local Design last {};
+    if (logPivot == lastLogPivot && exp == lastExp && sr == lastSr)
+        return last;
+    last = design(logPivot, exp, sr);
+    lastLogPivot = logPivot;
+    lastExp = exp;
+    lastSr = sr;
+    return last;
 }
 
 inline double runSection(IirChannel& ch, const FirstOrder& s, const int index, const double x) noexcept
@@ -220,13 +267,9 @@ double responseDb(const Engine& e, const Parameters& p, const double hz) noexcep
     if (dspMode(p) == DspMode::Fft || !(hz > 0.0))
         return idealDb(p, hz);
     const double sr = e.sampleRate > 0.0 ? e.sampleRate : 48000.0;
-    const Design d = design(std::log(std::clamp(p.pivot, kMinPivotHz, kMaxPivotHz)), exponent(p), sr);
+    const Design d = designCached(std::log(std::clamp(p.pivot, kMinPivotHz, kMaxPivotHz)), exponent(p), sr);
     const double w = 2.0 * kPi * std::clamp(hz, 1.0, sr * 0.499) / sr;
-    double mag = d.normalizer;
-    for (int i = 0; i < d.count; ++i)
-        mag *= magnitude(d.sections[static_cast<std::size_t>(i)], w);
-    return std::clamp(20.0 * std::log10(std::max(mag, 1e-12)),
-                      -static_cast<double>(kMaxTiltDb), static_cast<double>(kMaxTiltDb));
+    return 20.0 * std::log10(std::max(designMagnitude(d, w), 1e-12));
 }
 
 void processBlock(Engine& e, const Parameters& params, const std::uint32_t frames,

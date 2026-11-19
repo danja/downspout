@@ -17,9 +17,11 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
       boost/cut slope. Slope is selectable 6/12/24 dB/oct (default 6), the response is clamped to
       +-24 dB, both minimum-phase IIR (zero latency) and linear-phase FFT (4096 samples reported)
       modes are switchable with a smoothed aligned crossfade, and the two channels are linked.
-      Built the portable core and 112,497-check test suite, VST3 wrapper and Magneto panel with a
+      Built the portable core and 112,737-check test suite, VST3 wrapper and Magneto panel with a
       live 64-band spectrum, profile, product page and release/bundle wiring. Core tests, the
-      `tilt-vst3` build and the 920x700 screenshot capture pass.
+      `tilt-vst3` build and the 920x700 screenshot capture pass. The IIR shelves use raw-bilinear
+      clamp-band corners, pivot normalisation and a peak-gain sweep; rendered Goertzel tests confirm
+      the audio matches `responseDb()` and stays under +24 dB at the extremes.
       - [x] Visual acceptance of Tilt's 920x700 panel passed; the capture was copied into
             `docs/pages/assets/plugins/tilt.png`.
       - [ ] Host load/save/reopen and listening validation for Tilt in REAPER are pending.

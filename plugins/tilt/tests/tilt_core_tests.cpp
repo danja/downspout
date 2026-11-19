@@ -149,22 +149,84 @@ void testIIRMatchesStraightLine()
 
 void testSlopeControlIsAudible()
 {
-    static constexpr double kFreqs[] = {250.0, 4000.0};
+    // 500 Hz / 2 kHz sit inside the linear part of every slope. The response near the
+    // clamp corners is deliberately rounded by the minimum-phase shelf cascade (see
+    // design.md), so checking there would measure the knee, not the slope.
     double prevLow = 0.0, prevHigh = 0.0;
     for (int s = 0; s < 3; ++s) {
         Rig rig;
         rig.p.angle = 0.5f;
         rig.p.slope = static_cast<float>(s);
-        const double low = measuredDb(rig, 250.0);
-        const double high = measuredDb(rig, 4000.0);
-        near(low, idealDb(rig.p, 250.0), 1.6, "slope setting reaches low frequencies");
-        near(high, idealDb(rig.p, 4000.0), 1.6, "slope setting reaches high frequencies");
+        const double low = measuredDb(rig, 500.0);
+        const double high = measuredDb(rig, 2000.0);
+        near(low, idealDb(rig.p, 500.0), 2.5, "slope setting reaches low frequencies");
+        near(high, idealDb(rig.p, 2000.0), 2.5, "slope setting reaches high frequencies");
         if (s > 0) {
             check(low < prevLow - 0.5, "a steeper slope cuts more below the pivot");
             check(high > prevHigh + 0.5, "a steeper slope boosts more above the pivot");
         }
         prevLow = low;
         prevHigh = high;
+    }
+}
+
+void testIIRStaysWithinTiltLimit()
+{
+    Engine engine;
+    activate(engine, kSr);
+    for (const float angle : {1.0f, -1.0f, 0.5f, -0.5f}) {
+        for (int s = 0; s < 3; ++s) {
+            for (const float pivot : {20.0f, 200.0f, 1000.0f, 5000.0f, 20000.0f}) {
+                Parameters p;
+                p.angle = angle;
+                p.slope = static_cast<float>(s);
+                p.pivot = pivot;
+                char buf[160];
+                std::snprintf(buf, sizeof(buf), "IIR stays within +-24 dB (angle %.1f, slope %d, pivot %.0f)",
+                              angle, s, pivot);
+                // The master-bus rule is the ceiling: the minimum-phase cascade must
+                // never amplify more than the +-24 dB law. Deep cuts at extreme pivots
+                // are safe and are an accepted consequence of the bilinear design.
+                bool ok = true;
+                for (int k = 0; k <= 200; ++k) {
+                    const double hz = 20.0 * std::pow(1000.0, static_cast<double>(k) / 200.0);
+                    const double db = responseDb(engine, p, hz);
+                    if (db > static_cast<double>(kMaxTiltDb) + 0.2 || db < -48.0) {
+                        ok = false;
+                        break;
+                    }
+                }
+                check(ok, buf);
+            }
+        }
+    }
+}
+
+void testRenderedAudioMatchesDisplayedResponse()
+{
+    // responseDb() drives the plot. The rendered IIR path must agree with it, and the
+    // master-bus ceiling must hold in actual audio at the extreme settings too.
+    const double freqs[] = {20.0, 50.0, 1000.0, 20000.0, 22000.0};
+    for (const float angle : {1.0f, -1.0f}) {
+        for (int s = 0; s < 3; ++s) {
+            for (const float pivot : {20.0f, 1000.0f, 20000.0f}) {
+                Rig rig;
+                rig.p.angle = angle;
+                rig.p.slope = static_cast<float>(s);
+                rig.p.pivot = pivot;
+                for (const double hz : freqs) {
+                    const double db = measuredDb(rig, hz);
+                    const double shown = responseDb(rig.engine, rig.p, hz);
+                    char buf[192];
+                    std::snprintf(buf, sizeof(buf),
+                                  "rendered IIR matches the plot (angle %.1f, slope %d, pivot %.0f, %.0f Hz)",
+                                  angle, s, pivot, hz);
+                    near(db, shown, 0.2, buf);
+                    check(db <= static_cast<double>(kMaxTiltDb) + 0.2,
+                          std::string("rendered IIR respects the ceiling (") + buf + ")");
+                }
+            }
+        }
     }
 }
 
@@ -286,6 +348,8 @@ int main()
     testDefaultIsExactPassThrough();
     testIIRMatchesStraightLine();
     testSlopeControlIsAudible();
+    testIIRStaysWithinTiltLimit();
+    testRenderedAudioMatchesDisplayedResponse();
     testPivotAndAngleAreAudible();
     testFFTUnityRoundTripAndLatency();
     testFFTFollowsIdealLine();

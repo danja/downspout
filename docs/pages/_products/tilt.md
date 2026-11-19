@@ -55,12 +55,17 @@ There are also 64 read-only `spectrum_NN` levels from 20 Hz to 20 kHz.
 
 IIR mode cascades up to four whole 6 dB/oct shelves for the integer part of the
 exponent, then a six-section Oustaloup ladder for the fractional remainder. The
-cascade is normalised at the pivot and runs in double precision; tiny filter
-states are flushed to prevent denormals. FFT mode uses a 4096-point sqrt-Hann
-STFT with a hop of 512, applying a real, smoothed gain to each bin and rebuilding
-the conjugate half before the inverse transform. DC and Nyquist are treated
-separately. An aligned delay ring lets the IIR and dry paths crossfade with the
-FFT path, and control changes settle over about 50 ms.
+shelves span the frequencies where the ideal line reaches -24 and +24 dB, so
+they plateau at the clamp instead of continuing to rise. A raw bilinear design
+avoids the near-Nyquist overshoot of prewarped corners; the cascade is
+normalised at the pivot, swept for peak gain, and runs in double precision with
+tiny states flushed to prevent denormals. The bright curve is this actual IIR
+response, so its rounded knee is audible as drawn; deep cuts at extreme pivots
+stay safe. FFT mode uses a 4096-point sqrt-Hann STFT with a hop of 512, applying
+a real, smoothed gain to each bin and rebuilding the conjugate half before the
+inverse transform. DC and Nyquist are treated separately. An aligned delay ring
+lets the IIR and dry paths crossfade with the FFT path, and control changes
+settle over about 50 ms.
 
 ### Wiring
 
@@ -74,8 +79,8 @@ FFT path, and control changes settle over about 50 ms.
 
 ## Status
 
-Core tests pass (112,497 checks, including exact FFT unity round trip, measured
-IIR and FFT slopes, linked stereo, bypass, output gain and block-size
-invariance), the VST3 target builds, and the reviewed 920x700 screenshot is
-published in the catalog. Not yet listened to or validated in a host. See
-`plugins/tilt/docs/design.md`.
+Core tests pass (112,737 checks, including exact FFT unity round trip, measured
+IIR and FFT slopes, the +24 dB ceiling in both the response plot and rendered
+audio, linked stereo, bypass, output gain and block-size invariance), the VST3
+target builds, and the reviewed 920x700 screenshot is published in the catalog.
+Not yet listened to or validated in a host. See `plugins/tilt/docs/design.md`.

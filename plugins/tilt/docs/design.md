@@ -22,22 +22,49 @@ extremes a wide-range tilt otherwise asks for more than 100 dB of gain.
 
 ## Minimum-phase path
 
-`design()` builds a cascade of prewarped first-order shelf sections between 20 Hz
-and `min(20 kHz, 0.49 sr)`:
+`design()` builds a cascade of first-order shelf sections whose corners are the
+frequencies where the ideal line reaches -24 and +24 dB:
+
+    octaves = 4 / |p|
+    fLow    = max(Pivot / 2^octaves, 0.5)
+    fHigh   = min(Pivot * 2^octaves, 0.95 sr)
+
+For `p = 1` these are two octaves either side of the pivot, so the shelf spans
+exactly the 48 dB range the law allows. Outside the corners the cascade plateaus
+instead of continuing to rise.
 
 - The integer part of `|p|` is up to four whole shelves, one per 6 dB/oct. A
   boost puts the zero low and the pole high; a cut swaps them.
 - The fractional part is a six-section Oustaloup ladder. Its pole/zero pairs are
-  log-spaced between the corners so that their product approximates `f^alpha`
-  with much less ripple than interpolating the coefficients of one shelf.
-- The product is normalised at the pivot, so the cascade crosses 0 dB exactly
-  there. Coefficients and state are double precision; tiny state values are
+  log-spaced between the same corners so that their product approximates
+  `f^alpha` with much less ripple than interpolating the coefficients of one
+  shelf.
+- The bilinear transform is applied to the analogue prototype with raw corner
+  frequencies, not prewarped ones. Prewarping would inflate the plateau ratio as
+  a corner approached Nyquist, making the slope far steeper than the ideal line
+  and pushing the cascade well past +-24 dB.
+- The product is normalised at the pivot, then swept over 20 Hz to
+  `min(20 kHz, 0.499 sr)`; any magnitude above the 24 dB linear ceiling scales
+  the whole cascade down, with 1% (about 0.09 dB) of headroom between sweep
+  points. Coefficients and state are double precision; tiny state values are
   flushed per sample to avoid denormals.
+
+`responseDb()` reports this actual cascade in IIR mode, so the bright curve in
+the panel is what the audio path does. FFT mode reports the exact ideal line.
+`designCached()` avoids repeating the ceiling sweep for every plot pixel.
+
+The rounded knees are an accepted minimum-phase compromise: near a clamp corner
+the shelf cascade bends before the straight law does, and at extreme pivots the
+Nyquist-side corner clip can push the attenuation leg below -24 dB (about -42 dB
+for a full 24 dB/oct cut pivoted at 20 kHz). That is safe on a master bus. The
+enforced rule is the ceiling, never the depth of a cut; Goertzel tests verify
+that rendered audio matches `responseDb()` and stays at or below +24 dB.
 
 Interpolating shelf coefficients was tried first and rejected: it changed the
 shelf's transition but not its asymptote, leaving a roughly -26 dB offset at the
-pivot for a half-order tilt. The tests sweep the whole slope range and check the
-measured magnitude at several frequencies, not just the displayed curve.
+pivot for a half-order tilt. A design with corners fixed at 20 Hz and 20 kHz,
+or with prewarped corners, also overshot the clamp badly; measuring the full
+response across the pivot range exposed both before they shipped.
 
 ## Linear-phase path
 
@@ -92,12 +119,13 @@ analyser. Peak meters read the finished output and fall at 30 dB/s.
 
 ## Tests
 
-`downspout_tilt_core_tests` (112,497 checks, 0 failures) covers the parameter
+`downspout_tilt_core_tests` (112,737 checks, 0 failures) covers the parameter
 law and clamps, exact default pass-through, IIR magnitudes against the ideal
-line at 100 Hz-10 kHz at all three slopes, pivot and angle audibility, FFT unity
-round trip with the reported latency, exact FFT line following, linked stereo,
-bypass, output gain, patch persistence across `reset()` and block-size
-invariance.
+line in the linear region at all three slopes, a full pivot/angle/slope sweep
+that keeps the IIR ceiling at +24 dB, rendered Goertzel magnitudes that match
+`responseDb()` at the extremes, pivot and angle audibility, FFT unity round trip
+with the reported latency, exact FFT line following, linked stereo, bypass,
+output gain, patch persistence across `reset()` and block-size invariance.
 
 ## Not done
 

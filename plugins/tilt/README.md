@@ -9,8 +9,10 @@ The panel draws the target line faintly and the actual response brightly over a
 64-band live spectrum. Drag across the plot for Pivot Freq, up and down for
 Angle, or scroll over it for fine angle. **Mode** switches between:
 
-- **IIR** — minimum-phase, zero latency. Double-precision shelf/ladder cascade,
-  normalised at the pivot.
+- **IIR** — minimum-phase, zero latency. Double-precision shelf/ladder cascade
+  with corners at the +-24 dB intersections, normalised at the pivot and swept
+  to keep peak gain under the ceiling. The plot shows its actual response; the
+  clamp knee is rounded and deep cuts at extreme pivots are safe.
 - **FFT** — linear phase, 4096 samples of reported latency. A 4096-point
   sqrt-Hann STFT with hop 512 applies the exact straight-line gain per bin.
 
@@ -34,7 +36,8 @@ is a separate 4096-point Hann FFT of the mono sum, refreshed about 30 times a
 second and folded into log-spaced bands; a full-scale sine reads 0 dB at its
 peak.
 
-Core tests (`downspout_tilt_core_tests`) cover the parameter law, exact default
-pass-through, measured IIR and FFT response, slope and pivot audibility, linked
+Core tests (`downspout_tilt_core_tests`, 112,737 checks) cover the parameter law,
+exact default pass-through, measured IIR and FFT response, the +24 dB ceiling in
+both the response helper and rendered audio, slope and pivot audibility, linked
 stereo, FFT unity round trip and latency, bypass, output gain and block-size
 invariance. See `docs/design.md` for the design decisions.

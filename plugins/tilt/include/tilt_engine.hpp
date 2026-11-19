@@ -12,9 +12,11 @@ namespace downspout::tilt {
 
 // Linked stereo tilt engine. The two paths run together:
 //
-//  * IIR: up to four smoothed first-order shelf sections (one per 6 dB/oct of slope),
-//    with a zero near 20 Hz and a pole near 20 kHz for a boost, swapped for a cut.
-//    The cascade is normalised at the pivot, so the curve crosses 0 dB there.
+//  * IIR: up to four first-order shelf sections (one per 6 dB/oct of slope) with their
+//    corners at the frequencies where the ideal line reaches +-24 dB, so the cascade
+//    plateaus there and cannot exceed the advertised limit. A fractional remainder is
+//    handled by a six-section Oustaloup ladder. The cascade is normalised at the pivot
+//    and trimmed by a peak-gain sweep, so the curve crosses about 0 dB there.
 //  * FFT: 4096-point sqrt-Hann STFT, hop 512, with a real gain per bin from the
 //    ideal straight-line response. Linear phase, reports 4096 samples of latency.
 //
