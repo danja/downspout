@@ -8,36 +8,39 @@ group: space
 role: Stereo matrix and image shaper
 screenshot: /assets/plugins/splay.png
 capabilities: [audio input, audio output]
-summary: Route each input into either output, then set mid/side width, add a fractional right-channel image delay and invert the right channel. Defaults pass audio through untouched.
+summary: Route each input into either output, then shape rotation, pan law, mid/side width, frequency-dependent width and inter-channel delay; two read-only meters report correlation and mono fit.
 ---
 
 ## Opinion
 
 Splay is for the small stereo jobs that do not need a chorus or a reverb. It
-answers three questions in order: where should each input go, how wide should
-the result be, and should one channel arrive a little later? The four matrix
-gains make routing explicit instead of hiding it behind a "pan" control, and
-the defaults are a true pass-through, so it can be inserted without changing
-the sound until a control is moved.
+answers four questions in order: where should each input go, how should the
+stereo image be turned, how wide should the result be, and should one channel
+arrive a little later? The four matrix gains make routing explicit instead of
+hiding it behind a "pan" control, and the defaults are a true pass-through, so
+it can be inserted without changing the sound until a control is moved.
 
-The width control is a plain mid/side gain, and Image Delay is a short,
-fractional offset on the right channel only. Together they cover mono folding,
-mono-to-stereo widening and Haas-style image shifts. Invert R is kept as a
-separate switch because flipping a channel's phase is a different decision
-from delaying it.
+Rotation, Pan Law, Mid, M/S Solo and the two-band Spectral Width turn the
+original matrix/width tool into a focused stereo enhancer without adding MIDI,
+transport or state. The correlation and mono-fit meters read the final outputs,
+so the panel shows the result of bypass and inversion as well as the patch.
 
 ## Functionality
 
 The matrix computes `L = inL x LL + inR x RL` and `R = inL x LR + inR x RR`.
-Mid/side width then forms `M = (L + R) / 2` and `S = (L - R) / 2 x width`,
-returning `L = M + S` and `R = M - S`. At 100 % width this stage is exactly
-transparent. A fractional delay of up to 20 ms follows on the right channel,
-then the optional invert, the output level and the bypass crossfade.
+Pan Law optionally normalises only matrix columns and rows with more than one
+active path. Rotation then mixes the routed pair; 0 degrees is exactly
+transparent. Mid/side width forms `M = (L + R) / 2` and `S = (L - R) / 2`, with
+independent Mid and Width gains, and M/S Solo isolates one component. With
+Spectral Width on, a one-pole crossover applies separate low and high side
+factors and blends that result over the plain stage. A fractional delay of up
+to 20 ms follows on the right channel, then the optional invert, output level
+and bypass crossfade.
 
 All continuous controls use 5 ms smoothing, including the bypass mix, so
 changes and bypass toggles do not click. The first block uses the current
-settings immediately. `activate()` and sample-rate changes clear only the
-delay line; they never reset the patch.
+settings immediately. `activate()` and sample-rate changes clear only runtime
+state; they never reset the patch.
 
 ### Parameters
 
@@ -47,11 +50,24 @@ delay line; they never reset the patch.
 | L to R | 0-200 % | 0 % | Left input into right output |
 | R to L | 0-200 % | 0 % | Right input into left output |
 | R to R | 0-200 % | 100 % | Right input into right output |
+| Rotation | -90 to +90 deg | 0 deg | Post-matrix stereo rotation |
+| Pan Law | Linear, -3 dB | Linear | Conditional constant-power matrix compensation |
 | Width | 0-200 % | 100 % | 0 % mono, 100 % unchanged, 200 % double side |
+| Mid | 0-200 % | 100 % | Independent mid gain |
+| M/S Solo | Off, Mid, Side | Off | Isolate one mid/side component |
+| Spectral Width | Off, On | Off | Enable the two-band side gains |
+| Crossover | 100-2000 Hz | 500 Hz | One-pole low/high split |
+| Low Width | 0-200 % | 100 % | Low-band side factor |
+| High Width | 0-200 % | 100 % | High-band side factor |
 | Image Delay | 0-20 ms | 0 ms | Right channel only; fractional interpolation |
 | Invert R | Off, On | Off | Phase invert after the delay |
 | Output | 0-200 % | 100 % | Final level on both channels |
 | Bypass | Off, On | Off | Crossfade to the untouched input |
+| Correlation | -1 to +1 | 0 | Read-only, 20 ms smoothed final-output meter |
+| Mono Fit | 0-100 % | 0 | Read-only, 20 ms smoothed final-output meter |
+
+The original nine parameters keep their indices; the new controls and meters
+were appended to preserve existing host automation.
 
 ### Wiring
 
@@ -61,12 +77,14 @@ delay line; they never reset the patch.
   parameters in the host.
 - **Transport:** ignored. Splay is a stateless audio effect.
 - **Latency:** not reported. Image Delay is an intentional inter-channel
-  offset and would be cancelled by host latency compensation. The 5 ms
-  smoothing is applied to controls, not to the audio path.
-- **State:** none. All nine settings are ordinary host parameters.
+  offset and would be cancelled by host latency compensation. The crossover is
+  a tone-shaping filter, and the 5 ms smoothing applies to controls, not to
+  audio alignment.
+- **State:** none. All seventeen writable settings are ordinary host
+  parameters; the two meters are output-only parameters.
 
 ## Status
 
-Core tests, the VST3 build, bundle wiring, the state audit and the reviewed
-920x700 screenshot pass. Host listening in REAPER remains; see
+Core tests, the clean VST3 build and the reviewed 920x700 screenshot pass. A
+REAPER listening pass with the five new enhancements is pending. See
 `plugins/splay/docs/design.md` for the signal-path decisions and test coverage.

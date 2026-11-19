@@ -7,7 +7,7 @@
 
 dsp:splay a trn:PluginProfile ;
     rdfs:label "Splay" ;
-    rdfs:comment "Stereo matrix and image shaper: four input-to-output gains, mid/side width, fractional right-channel image delay, right-channel phase invert, output level and a click-free bypass crossfade. No MIDI, transport or plugin state." ;
+    rdfs:comment "Stereo matrix and image shaper: four input-to-output gains, stereo rotation, pan-law compensation, mid/side trims and solo, optional two-band width, fractional right-channel image delay, right-channel phase invert, output level, click-free bypass, and read-only correlation and mono-fit meters. No MIDI, transport or plugin state." ;
     trn:bundleName "splay.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/splay/> ;
@@ -60,4 +60,54 @@ dsp:splay trn:hasParameter [
     trn:label "Bypass" ;
     trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
     rdfs:comment "1 crossfades to the untouched stereo input"
+], [
+    trn:symbol "rotation" ;
+    trn:label "Rotation" ;
+    trn:minimum -90.0 ; trn:maximum 90.0 ; trn:default 0.0 ;
+    rdfs:comment "Stereo rotation in degrees after the matrix; 0 is transparent"
+], [
+    trn:symbol "pan_law" ;
+    trn:label "Pan Law" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "0 leaves matrix gains alone, 1 applies constant-power compensation where a row or column has more than one active path"
+], [
+    trn:symbol "mid_gain" ;
+    trn:label "Mid" ;
+    trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 1.0 ;
+    rdfs:comment "Independent mid gain in the mid/side stage"
+], [
+    trn:symbol "ms_solo" ;
+    trn:label "M/S Solo" ;
+    trn:minimum 0 ; trn:maximum 2 ; trn:default 0 ;
+    rdfs:comment "0 off, 1 mid only, 2 side only"
+], [
+    trn:symbol "spectral_width" ;
+    trn:label "Spectral Width" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "1 enables frequency-dependent side gains below and above Crossover"
+], [
+    trn:symbol "crossover" ;
+    trn:label "Crossover" ;
+    trn:minimum 100.0 ; trn:maximum 2000.0 ; trn:default 500.0 ;
+    rdfs:comment "One-pole low/high split in Hz for Spectral Width"
+], [
+    trn:symbol "low_width" ;
+    trn:label "Low Width" ;
+    trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 1.0 ;
+    rdfs:comment "Side-gain factor for the band below Crossover"
+], [
+    trn:symbol "high_width" ;
+    trn:label "High Width" ;
+    trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 1.0 ;
+    rdfs:comment "Side-gain factor for the band above Crossover"
+], [
+    trn:symbol "out_correlation" ;
+    trn:label "Correlation" ;
+    trn:minimum -1.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "Read-only: smoothed correlation of the final left and right outputs"
+], [
+    trn:symbol "out_mono" ;
+    trn:label "Mono Fit" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "Read-only: smoothed mono compatibility of the final outputs"
 ] .

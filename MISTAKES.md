@@ -7,6 +7,11 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 (No open entries from before October 2026: the screenshot script now always captures on a private Xvfb.)
 
+## Splay: expansion test setup (2026-11-19)
+- **What happened:** The first Pan Law test left `matrixRR` at its default 1 while asserting that a folded-right signal would be silent on the right output, and the meter-reset test used a 256-sample tone (about 6 ms) for a 20 ms smoothing time constant. The tests failed at 0.707 and 0.25 rather than the expected 0 and 1.
+- **Root cause:** A "left-only" fixture only zeroed some matrix paths, so the default pass-through path remained active; the meter probe was shorter than the smoothing window it was meant to settle.
+- **Prevention:** In matrix tests, explicitly set every unused row/column to zero (or start from an all-zero matrix) instead of relying on defaults that are deliberately non-zero. Size meter probes to at least five smoothing time constants; assert a reset-to-zero with a silent block of the same length.
+
 ## Polyscribe: invalid Pages front matter (2026-11-18)
 - **What happened:** The new product page used `category: generator` and `group: analysis`. Neither is an allowed value, so Polyscribe would have been omitted from the generated site index even though its screenshot and product page existed.
 - **Root cause:** The front matter was written from the plugin's own vocabulary ("generator", "analysis") instead of checking `docs/pages/_data/groups.yml` and the allowed category list in `docs/pages/README.md`.

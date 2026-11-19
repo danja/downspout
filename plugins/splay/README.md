@@ -1,13 +1,14 @@
 # Splay
 
 Splay is a stereo matrix and image shaper. Each input can feed either output
-through its own gain; the routed pair then passes through mid/side width, an
-optional fractional delay on the right channel, a right-channel phase invert,
-output level and a click-free bypass crossfade. The defaults are a bit-exact
+through its own gain; the routed pair can be rotated, compensated for pan law,
+trimmed in mid/side, widened differently in two frequency bands, delayed on the
+right channel, inverted, levelled and bypassed. The defaults are a bit-exact
 stereo pass-through.
 
 ```
-in L/R -> 4-way matrix -> mid/side width -> delay R -> invert R -> level -> out L/R
+in L/R -> matrix (+ pan law) -> rotation -> mid/side trims + width
+       -> optional two-band width -> delay R -> invert R -> level -> out L/R
 ```
 
 | Control | Range | Default | Notes |
@@ -16,24 +17,38 @@ in L/R -> 4-way matrix -> mid/side width -> delay R -> invert R -> level -> out 
 | L to R | 0-200 % | 0 % | Left input into right output |
 | R to L | 0-200 % | 0 % | Right input into left output |
 | R to R | 0-200 % | 100 % | Right input into right output |
-| Width | 0-200 % | 100 % | 0 % is mono, 100 % unchanged, 200 % doubles the side |
+| Rotation | -90 to +90 deg | 0 deg | Stereo rotation after the matrix; 0 is exactly transparent |
+| Pan Law | Linear / -3 dB | Linear | Compensates only rows or columns with multiple active matrix paths |
+| Width | 0-200 % | 100 % | Master mid/side side gain: 0 % mono, 100 % unchanged, 200 % double |
+| Mid | 0-200 % | 100 % | Independent mid gain |
+| M/S Solo | Off / Mid / Side | Off | Listen to one mid/side component |
+| Spectral Width | Off / On | Off | Enables frequency-dependent side gains |
+| Crossover | 100-2000 Hz | 500 Hz | One-pole low/high split for Spectral Width |
+| Low Width | 0-200 % | 100 % | Side-gain factor below the crossover |
+| High Width | 0-200 % | 100 % | Side-gain factor above the crossover |
 | Image Delay | 0-20 ms | 0 ms | Fractional delay applied only to the right channel |
 | Invert R | Off / On | Off | Flips the right channel's phase after the delay |
 | Output | 0-200 % | 100 % | Final level on both channels |
 | Bypass | Off / On | Off | Crossfades to the untouched input |
 
-The matrix runs before the width stage, so routing decisions change what the
-width control acts on. Width uses `M = (L + R) / 2` and `S = (L - R) / 2`, then
-returns `L = M + S x width` and `R = M - S x width`. Image Delay is an audible
-inter-channel offset (a Haas-style image control), not processing latency, so
-it is not reported to the host. All continuous controls use 5 ms smoothing;
-the first block snaps to the current settings, and the delay line is cleared
-only by `activate()` or a sample-rate change, never by a parameter edit.
+The **Correlation** and **Mono Fit** outputs are read-only meters. Both read the
+final outputs, including inversion and bypass, and are smoothed over 20 ms so
+the panel can show them.
 
-Stereo in and out, no MIDI, no transport and no plugin state. Every control is
-an ordinary automatable parameter saved by the host. Non-finite input samples
-are replaced with zero and tiny values are flushed to avoid denormals.
+The original nine controls keep their parameter indices; the eight new controls
+and two meters were appended so existing host automation still maps correctly.
+Width uses `M = (L + R) / 2` and `S = (L - R) / 2`, then returns `L = M + S x
+width` and `R = M - S x width`. With Spectral Width on, the same operation is
+applied separately to a one-pole low band and its complementary high band:
+Low Width and High Width multiply the master Width only in their own band. No
+latency is reported because the split is a tone-shaping filter, not an alignment
+tool.
 
-Status: portable core tests, the VST3 build, bundle wiring, the state audit and
-the reviewed 920x700 screenshot pass. Host listening remains; see
-`docs/design.md` for the signal-path decisions and the remaining validation gap.
+Continuous controls use 5 ms smoothing. The first block snaps to the current
+settings, the defaults stay bit-exact, and `activate()` or a sample-rate change
+clears runtime state without resetting the patch. Stereo in and out, no MIDI, no
+transport and no plugin state; every writable setting is an ordinary
+automatable parameter saved by the host. Non-finite input samples are replaced
+with zero and tiny values are flushed to avoid denormals.
+
+See `docs/design.md` for the signal-path decisions and test coverage.

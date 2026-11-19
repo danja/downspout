@@ -28,7 +28,10 @@ constexpr EnumTable enumFor(const core::ParamId id)
 {
     switch (id) {
     case core::ParamId::invertR:
-    case core::ParamId::bypass: return table(core::kOffOnNames);
+    case core::ParamId::bypass:
+    case core::ParamId::spectralWidth: return table(core::kOffOnNames);
+    case core::ParamId::panLaw: return table(core::kPanLawNames);
+    case core::ParamId::msSolo: return table(core::kSoloNames);
     default: return {nullptr, 0};
     }
 }
@@ -48,8 +51,8 @@ protected:
 
     const char* getDescription() const override
     {
-        return "Stereo matrix and image shaper. Route each input into either output, set mono-to-wide "
-               "width, add an inter-channel delay and invert the right channel.";
+        return "Stereo matrix and image shaper with rotation, pan-law compensation, independent mid/side "
+               "trims and solo, frequency-dependent width, and correlation and mono-fit output meters.";
     }
 
     const char* getMaker() const override { return "danja"; }
@@ -78,7 +81,7 @@ protected:
             return;
 
         const core::ParamSpec& spec = core::kParameterSpecs[index];
-        parameter.hints = kParameterIsAutomatable;
+        parameter.hints = spec.output ? kParameterIsOutput : kParameterIsAutomatable;
         if (spec.integer)
             parameter.hints |= kParameterIsInteger;
         parameter.name = spec.name;
@@ -105,13 +108,20 @@ protected:
 
     float getParameterValue(const uint32_t index) const override
     {
-        return index < core::kParameterCount ? parameters_.*core::kParameterFields[index] : 0.0f;
+        if (index < core::kInputParameterCount)
+            return parameters_.*core::kParameterFields[index];
+
+        switch (static_cast<core::ParamId>(index)) {
+        case core::ParamId::outCorrelation: return core::correlation(engine_);
+        case core::ParamId::outMonoCompat: return core::monoCompatibility(engine_);
+        default: return 0.0f;
+        }
     }
 
     void setParameterValue(const uint32_t index, const float value) override
     {
-        if (index >= core::kParameterCount)
-            return;
+        if (index >= core::kInputParameterCount)
+            return;  // output parameters are read-only
         parameters_.*core::kParameterFields[index] = value;
         parameters_ = core::clampParameters(parameters_);
     }

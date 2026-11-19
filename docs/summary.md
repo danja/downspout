@@ -363,13 +363,17 @@ transport is ignored.
 
 Stereo matrix and image shaper. Use the four **L/R to L/R** gains to route each input
 into either output at 0-200 %; the defaults pass each input straight to its own
-channel. **Width** is a mid/side side gain: 0 % folds to mono, 100 % is unchanged
-and 200 % doubles the side. **Image Delay** adds up to 20 ms of fractional delay to
-the right channel only, for a Haas-style image shift; it is an audible effect, not
-reported latency. **Invert R** flips that channel after the delay, **Output** sets the
-final level and **Bypass** crossfades to the untouched input over 5 ms. Stereo in and
-out, no MIDI input or CC map, no transport and no plugin state; all nine controls are
-ordinary parameters.
+channel. **Rotation** turns the routed pair, **Pan Law** applies conditional
+constant-power compensation, **Mid** and **Width** trim the mid/side components,
+and **M/S Solo** isolates one of them. **Spectral Width** can split the image at
+**Crossover** and apply separate **Low Width** and **High Width** factors; it is
+off by default. **Image Delay** adds up to 20 ms of fractional delay to the right
+channel only, for a Haas-style image shift; it is an audible effect, not reported
+latency. **Invert R** flips that channel after the delay, **Output** sets the final
+level and **Bypass** crossfades to the untouched input over 5 ms. Read-only
+**Correlation** and **Mono Fit** meters describe the final outputs. Stereo in and
+out, no MIDI input or CC map, no transport and no plugin state; seventeen writable
+settings are ordinary parameters and two are output-only meters.
 
 ### Prism (`prism.vst3`)
 

@@ -253,7 +253,7 @@ void testNonFiniteInputAndClamping()
     wild.level = -1.0f;
     wild.bypass = 2.0f;
     const Parameters clamped = clampParameters(wild);
-    for (std::size_t i = 0; i < kParameterCount; ++i) {
+    for (std::size_t i = 0; i < kInputParameterCount; ++i) {
         const ParamSpec& spec = kParameterSpecs[i];
         assert(clamped.*kParameterFields[i] >= spec.minimum);
         assert(clamped.*kParameterFields[i] <= spec.maximum);
@@ -312,31 +312,223 @@ void testTinyValuesAreFlushed()
         near(value, 0.0f, 0.0f);
 }
 
+float meanFrom(const std::vector<float>& v, const std::size_t from)
+{
+    double sum = 0.0;
+    for (std::size_t i = from; i < v.size(); ++i)
+        sum += v[i];
+    return static_cast<float>(sum / static_cast<double>(v.size() - from));
+}
+
+// Amplitude of an alternating (+/-) component, which is the high band in the
+// two-tone test below. Multiplying by the same sign recovers the amplitude.
+float alternatingFrom(const std::vector<float>& v, const std::size_t from)
+{
+    double sum = 0.0;
+    for (std::size_t i = from; i < v.size(); ++i)
+        sum += v[i] * ((i % 2 == 0) ? 1.0 : -1.0);
+    return static_cast<float>(sum / static_cast<double>(v.size() - from));
+}
+
+void testRotationAndPanLaw()
+{
+    const std::vector<float> oneTwo(256, 1.0f);
+    std::vector<float> two(256, 2.0f);
+
+    Parameters plus90 {};
+    plus90.rotation = 90.0f;
+    const Render forward = render(plus90, oneTwo, two, 64);
+    near(forward.left[200], -2.0f);
+    near(forward.right[200], 1.0f);
+
+    Parameters minus90 {};
+    minus90.rotation = -90.0f;
+    const Render back = render(minus90, oneTwo, two, 64);
+    near(back.left[200], 2.0f);
+    near(back.right[200], -1.0f);
+
+    const std::vector<float> leftOnly(256, 1.0f);
+    const std::vector<float> silent(256, 0.0f);
+
+    Parameters centre {};
+    centre.matrixLR = 1.0f;
+    centre.panLaw = 1.0f;
+    const Render centred = render(centre, leftOnly, silent, 64);
+    const float kRootHalf = 0.70710678f;
+    near(centred.left[200], kRootHalf);
+    near(centred.right[200], kRootHalf);
+
+    Parameters bothToLeft {};
+    bothToLeft.matrixRR = 0.0f;
+    bothToLeft.matrixRL = 1.0f;
+    bothToLeft.panLaw = 1.0f;
+    const Render folded = render(bothToLeft, leftOnly, leftOnly, 64);
+    near(folded.left[200], 2.0f * kRootHalf);
+    near(folded.right[200], 0.0f);
+
+    // A single boosted path is deliberate gain, not a duplicate route.
+    Parameters boost {};
+    boost.matrixLL = 2.0f;
+    boost.panLaw = 1.0f;
+    const Render loud = render(boost, leftOnly, silent, 64);
+    near(loud.left[200], 2.0f);
+    near(loud.right[200], 0.0f);
+}
+
+void testMidSideTrimsAndSolo()
+{
+    const std::vector<float> stereo(256, 1.0f);
+    const std::vector<float> leftOnly(256, 1.0f);
+    const std::vector<float> silent(256, 0.0f);
+
+    Parameters trimmed {};
+    trimmed.midGain = 0.5f;
+    const Render quiet = render(trimmed, stereo, stereo, 64);
+    near(quiet.left[200], 0.5f);
+    near(quiet.right[200], 0.5f);
+
+    Parameters soloMid {};
+    soloMid.msSolo = 1.0f;
+    const Render mid = render(soloMid, leftOnly, silent, 64);
+    near(mid.left[200], 0.5f);
+    near(mid.right[200], 0.5f);
+
+    Parameters soloSide {};
+    soloSide.msSolo = 2.0f;
+    const Render side = render(soloSide, leftOnly, silent, 64);
+    near(side.left[200], 0.5f);
+    near(side.right[200], -0.5f);
+
+    Parameters boostedMid {};
+    boostedMid.midGain = 2.0f;
+    boostedMid.msSolo = 1.0f;
+    const Render loud = render(boostedMid, leftOnly, silent, 64);
+    near(loud.left[200], 1.0f);
+    near(loud.right[200], 1.0f);
+}
+
+void testSpectralWidthSeparatesBands()
+{
+    std::vector<float> inL(1024);
+    std::vector<float> inR(1024);
+    for (std::size_t i = 0; i < inL.size(); ++i) {
+        const float alternating = (i % 2 == 0) ? 1.0f : -1.0f;
+        inL[i] = 0.5f + 0.5f * alternating;  // DC mid + alternating side
+        inR[i] = 0.5f - 0.5f * alternating;
+    }
+
+    const Render plain = render(Parameters {}, inL, inR, 128);
+    Parameters wide {};
+    wide.spectralWidth = 1.0f;
+    wide.crossover = 100.0f;
+    wide.lowWidth = 0.0f;
+    wide.highWidth = 2.0f;
+    const Render shaped = render(wide, inL, inR, 128);
+
+    constexpr std::size_t kFrom = 768;
+    near(meanFrom(plain.left, kFrom), 0.5f, 1.0e-3f);
+    near(meanFrom(shaped.left, kFrom), 0.5f, 1.0e-3f);
+    near(alternatingFrom(plain.left, kFrom), 0.5f, 0.02f);
+    near(alternatingFrom(plain.right, kFrom), -0.5f, 0.02f);
+    assert(alternatingFrom(shaped.left, kFrom) > 1.7f * alternatingFrom(plain.left, kFrom));
+    assert(alternatingFrom(shaped.right, kFrom) < 1.7f * alternatingFrom(plain.right, kFrom));
+}
+
+void testMetersTrackCorrelationAndMono()
+{
+    const std::vector<float> signal(8192, 0.5f);
+    std::vector<float> inverted = signal;
+    for (float& v : inverted)
+        v = -v;
+
+    const Render same = render(Parameters {}, signal, signal, 128);
+    near(correlation(same.state), 1.0f, 0.02f);
+    near(monoCompatibility(same.state), 1.0f, 0.02f);
+
+    const Render anti = render(Parameters {}, signal, inverted, 128);
+    near(correlation(anti.state), -1.0f, 0.02f);
+    near(monoCompatibility(anti.state), 0.0f, 0.02f);
+
+    // With Bypass on, the meters describe the untouched input, not the patch.
+    Parameters bypassed {};
+    bypassed.invertR = 1.0f;
+    bypassed.bypass = 1.0f;
+    const Render passthrough = render(bypassed, signal, signal, 128);
+    near(correlation(passthrough.state), 1.0f, 0.02f);
+    assert(faultCount(same.state) == 0);
+}
+
+void testResetClearsMetersAndCrossoverMemory()
+{
+    // Long enough for the 20 ms meters to settle before reset.
+    const std::vector<float> signal(8192, 0.5f);
+    Parameters p {};
+    p.spectralWidth = 1.0f;
+    p.lowWidth = 2.0f;
+    const Render first = render(p, signal, signal, 64);
+    assert(correlation(first.state) > 0.5f);
+    assert(monoCompatibility(first.state) > 0.5f);
+
+    EngineState carried = first.state;
+    reset(carried);
+    near(correlation(carried), 0.0f, 0.0f);
+    near(monoCompatibility(carried), 0.0f, 0.0f);
+
+    const std::vector<float> silent(8192, 0.0f);
+    const Render second = render(p, silent, silent, 64, kSr, carried);
+    near(correlation(second.state), 0.0f, 0.02f);
+    near(monoCompatibility(second.state), 0.0f, 0.02f);
+}
+
 void testEveryControlHasAnAudibleEffect()
 {
     const std::vector<float> inL = tone(512, 0.7f);
     const std::vector<float> inR = tone(512, 0.3f);
 
     Parameters base {};
-    base.level = 0.5f;
+    base.matrixLL = 1.0f;
+    base.matrixLR = 0.6f;
+    base.matrixRL = 0.0f;
     base.matrixRR = 0.5f;
+    base.rotation = 10.0f;
+    base.panLaw = 0.0f;
+    base.midGain = 1.0f;
     base.width = 1.2f;
+    base.msSolo = 0.0f;
+    base.spectralWidth = 1.0f;
+    base.crossover = 500.0f;
+    base.lowWidth = 0.6f;
+    base.highWidth = 1.4f;
+    base.imageDelay = 0.0f;
+    base.invertR = 0.0f;
+    base.level = 0.8f;
+    base.bypass = 0.0f;
     const Render reference = render(base, inL, inR, 128);
 
-    for (std::size_t id = 0; id < kParameterCount; ++id) {
+    for (std::size_t id = 0; id < kInputParameterCount; ++id) {
         Parameters changed = base;
         const float current = changed.*kParameterFields[id];
         float next = current;
         switch (static_cast<ParamId>(id)) {
         case ParamId::matrixLL: next = 0.2f; break;
-        case ParamId::matrixLR: next = 0.4f; break;
+        case ParamId::matrixLR: next = 0.2f; break;
         case ParamId::matrixRL: next = 0.3f; break;
         case ParamId::matrixRR: next = 1.0f; break;
         case ParamId::width: next = 0.0f; break;
         case ParamId::imageDelay: next = 4.0f; break;
         case ParamId::invertR: next = 1.0f; break;
-        case ParamId::level: next = 1.0f; break;
+        case ParamId::level: next = 1.2f; break;
         case ParamId::bypass: next = 1.0f; break;
+        case ParamId::rotation: next = 40.0f; break;
+        case ParamId::panLaw: next = 1.0f; break;
+        case ParamId::midGain: next = 0.4f; break;
+        case ParamId::msSolo: next = 1.0f; break;
+        case ParamId::spectralWidth: next = 0.0f; break;
+        case ParamId::crossover: next = 2000.0f; break;
+        case ParamId::lowWidth: next = 1.2f; break;
+        case ParamId::highWidth: next = 0.8f; break;
+        case ParamId::outCorrelation:
+        case ParamId::outMonoCompat:
         case ParamId::count: break;
         }
         changed.*kParameterFields[id] = next;
@@ -367,6 +559,11 @@ int main()
     testNonFiniteInputAndClamping();
     testResetClearsRuntimeButKeepsThePatch();
     testTinyValuesAreFlushed();
+    testRotationAndPanLaw();
+    testMidSideTrimsAndSolo();
+    testSpectralWidthSeparatesBands();
+    testMetersTrackCorrelationAndMono();
+    testResetClearsMetersAndCrossoverMemory();
     testEveryControlHasAnAudibleEffect();
     return 0;
 }

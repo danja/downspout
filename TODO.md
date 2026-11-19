@@ -37,8 +37,16 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
       fractional right-channel Image Delay (0-20 ms), Invert R, Output and a 5 ms bypass
       crossfade; defaults are bit-exact pass-through. Clean-room implementation of the gap
       in `docs/lynx-survey.md`, distinct from Chorale's chorus. Core tests, the clean
-      `splay-vst3` build, bundle wiring, state audit and reviewed 920x700 screenshot are
-      complete; host listening remains.
+      `splay-vst3` build, bundle wiring, state audit, reviewed 920x700 screenshot and
+      REAPER listening are complete.
+- [x] **Splay stereo enhancements 1-5** (2026-11-19): appended Rotation, Pan Law, Mid,
+      M/S Solo, Spectral Width/Crossover/Low Width/High Width and two read-only meters
+      (Correlation, Mono Fit) without moving the original nine parameter indices. The
+      compact Magneto panel removes the explanatory text and adds Swap L/R and Reset
+      matrix actions. Core tests and `splay-vst3` pass.
+- [x] Visual acceptance of Splay's fresh expanded-panel capture: the user accepted the
+      920x700 panel; it was copied into `docs/pages/assets/plugins/splay.png`.
+- [ ] REAPER listening for Splay's five new enhancements is pending.
 - [x] **PadSeq** (built 2026-11-18 as `padseq`, from INBOX): a paged 8x8 grid sequencer based around a Launchpad.
       Grid-based sequence editor like a standard MIDI editor, but supporting alternate scales, including
       mapping to General MIDI drums. Time on the x axis (left to right), note number on the y axis. Based around a paged
