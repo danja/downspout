@@ -252,6 +252,7 @@ The release script currently expects these bundles:
 - `fathom.vst3`
 - `qune.vst3`
 - `polyscribe.vst3`
+- `splay.vst3`
 - `prism.vst3`
 - `mouth.vst3`
 - `grist.vst3`
@@ -301,6 +302,7 @@ The release script currently expects these bundles:
 - `mnemosyne.vst3`
 - `polymeter.vst3`
 - `polyscribe.vst3`
+- `splay.vst3`
 - `oracle.vst3`
 - `mosaic.vst3`
 - `resonance_garden.vst3`

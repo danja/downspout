@@ -1,0 +1,63 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:splay a trn:PluginProfile ;
+    rdfs:label "Splay" ;
+    rdfs:comment "Stereo matrix and image shaper: four input-to-output gains, mid/side width, fractional right-channel image delay, right-channel phase invert, output level and a click-free bypass crossfade. No MIDI, transport or plugin state." ;
+    trn:bundleName "splay.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/splay/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio .
+
+dsp:splay trn:hasParameter [
+    trn:symbol "matrixLL" ;
+    trn:label "L to L" ;
+    trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 1.0 ;
+    rdfs:comment "Left input gain into the left output; 1 is unity"
+], [
+    trn:symbol "matrixLR" ;
+    trn:label "L to R" ;
+    trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 0.0 ;
+    rdfs:comment "Left input gain into the right output"
+], [
+    trn:symbol "matrixRL" ;
+    trn:label "R to L" ;
+    trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 0.0 ;
+    rdfs:comment "Right input gain into the left output"
+], [
+    trn:symbol "matrixRR" ;
+    trn:label "R to R" ;
+    trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 1.0 ;
+    rdfs:comment "Right input gain into the right output; 1 is unity"
+], [
+    trn:symbol "width" ;
+    trn:label "Width" ;
+    trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 1.0 ;
+    rdfs:comment "Mid/side side gain: 0 is mono, 1 unchanged, 2 doubles the side"
+], [
+    trn:symbol "imageDelay" ;
+    trn:label "Image Delay" ;
+    trn:minimum 0.0 ; trn:maximum 20.0 ; trn:default 0.0 ;
+    rdfs:comment "Fractional delay in milliseconds, applied only to the right channel; not reported as host latency"
+], [
+    trn:symbol "invertR" ;
+    trn:label "Invert R" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "1 inverts the right channel's phase after the image delay"
+], [
+    trn:symbol "level" ;
+    trn:label "Output" ;
+    trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 1.0 ;
+    rdfs:comment "Final gain on both outputs"
+], [
+    trn:symbol "bypass" ;
+    trn:label "Bypass" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "1 crossfades to the untouched stereo input"
+] .

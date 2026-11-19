@@ -92,6 +92,7 @@ Current output filenames:
 - `fathom.png`
 - `qune.png`
 - `polyscribe.png`
+- `splay.png`
 - `prism.png`
 - `mouth.png`
 - `grist.png`

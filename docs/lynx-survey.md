@@ -21,8 +21,9 @@ audio processors, not a reason to clone its FL compatibility engines.
    Transient Designer). Attack ±15 dB and Sustain ±24 dB from two envelopes
    with no threshold. Downspout's `spliff` finds and cuts/boosts transients in
    three bands, and `helterskelter` is an envelope wah, but neither offers a
-   threshold-free attack/sustain pair. Best as a small new effect or a mode in
-   `spliff`; keep the level-independent behaviour, which is the point.
+   threshold-free attack/sustain pair. **Done 2026-11-18:** added as `spliff`
+   mode 2 (Designer), with the level-independent behaviour intact; see
+   `plugins/spliff/docs/design.md`.
 2. **One-knob multiband denoiser with Listen** (LYNX *Quell Denoiser*, after
    Waves NS1). Six phase-coherent bands, per-band downward expanders, fast
    open/slower close, linked stereo, and a difference output. This overlaps the
@@ -65,7 +66,7 @@ audio processors, not a reason to clone its FL compatibility engines.
 | Apex Limiter, Emphasis, L1-L4 | `guardian` | Covered. |
 | Crest Compressor, Fruity Compressor, SSL bus comp | `glue`, `trio`, `silken` | Covered. |
 | Prism Multiband, Fruity Multiband, Maximus | `trio`, `octet` partially | Covered; dynamic EQ per band is a possible `octet` feature, not a new plugin. |
-| Sentry Gate, Fruity Limiter's gate | `gater` and the `gate` TODO | Covered or already planned. |
+| Sentry Gate, Fruity Limiter's gate | the `gate` TODO | Not covered: `gater` is a MIDI-controlled stereo switcher, not a level-triggered noise gate. |
 | Facet EQ, Parametric EQ, 7-band EQ | `octet` | Covered; Facet's draggable analyser matches `octet`'s panel. |
 | Hush De-esser, Waves DeEsser | `silken` de-esser | Covered. |
 | Ember Saturator, Fast Dist, WaveShaper, Blood Overdrive | `damiano`, `skream`, `nam` | Covered. |

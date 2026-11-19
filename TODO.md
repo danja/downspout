@@ -2,8 +2,6 @@
 
 Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 
-review `docs/lynx-survey.md`
-
 ## New plugin proposals (from the DSP-Ports-JSFX survey, 2026-11-03)
 
 - [ ] **Vocal extras left out of `silken`** (to keep its panel readable; each could be a plugin or a later addition): breath reducer (a gate/expander keyed on unvoiced
@@ -34,9 +32,13 @@ review `docs/lynx-survey.md`
 
 ### New plugins
 
-- [ ] **Stereo enhancer** (new plugin, from INBOX): design and build a stereo widener/enhancer.
-      Consider the overlap with Chorale's stereo chorus and any existing widening controls.
-      Follow the new-plugin checklist.
+- [x] **Stereo enhancer** (built 2026-11-19 as `splay`, from INBOX): a stereo matrix/image
+      shaper in the Magneto look. Four input-to-output gains feed mid/side Width, then a
+      fractional right-channel Image Delay (0-20 ms), Invert R, Output and a 5 ms bypass
+      crossfade; defaults are bit-exact pass-through. Clean-room implementation of the gap
+      in `docs/lynx-survey.md`, distinct from Chorale's chorus. Core tests, the clean
+      `splay-vst3` build, bundle wiring, state audit and reviewed 920x700 screenshot are
+      complete; host listening remains.
 - [x] **PadSeq** (built 2026-11-18 as `padseq`, from INBOX): a paged 8x8 grid sequencer based around a Launchpad.
       Grid-based sequence editor like a standard MIDI editor, but supporting alternate scales, including
       mapping to General MIDI drums. Time on the x axis (left to right), note number on the y axis. Based around a paged
@@ -201,7 +203,9 @@ Standalone `g++ -std=c++20 -Wall -Wextra -fsyntax-only` over `plugins/*/src/*.cp
 and others will not compile). Re-run after any wrapper or state change: the wrapper callbacks
 are what the core tests never touch.
 
-- Last full sweep 2026-11-17: zero warnings in all 187 plugin core source files under `-Wall -Wextra`
+- Re-confirmed 2026-11-18: the full CMake build applies `-Wall -Wextra` to every plugin target
+  (`CMakeLists.txt:140`) and completed with zero warnings after the Polyscribe work.
+- Last standalone sweep 2026-11-17: zero warnings in all 187 plugin core source files under `-Wall -Wextra`
   (using each plugin's CMake include flags; nam no longer reports vendored-header warnings in this sweep).
   The changed UI wrapper targets also rebuilt cleanly with CMake's `-Wall -Wextra` during the Reroll work.
   Previous full sweep 2026-11-06 included the new shared `voice_leading.hpp` and the

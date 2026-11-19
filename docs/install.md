@@ -65,7 +65,7 @@ Public release packaging is handled separately by
 
 ## Current outputs
 
-The CMake install declarations currently cover 102 VST3 bundles; the authoritative synchronized bundle list is checked by `scripts/check-bundle-lists.sh`.
+The CMake install declarations currently cover 103 VST3 bundles; the authoritative synchronized bundle list is checked by `scripts/check-bundle-lists.sh`.
 
 - `ambo.vst3` with UI
 - `arpgen.vst3` with UI
@@ -133,6 +133,7 @@ The CMake install declarations currently cover 102 VST3 bundles; the authoritati
 - `plank.vst3` with UI
 - `polymeter.vst3` with UI
 - `polyscribe.vst3` with UI
+- `splay.vst3` with UI
 - `pratt.vst3` with UI
 - `primefold.vst3` with UI
 - `prism.vst3` with UI

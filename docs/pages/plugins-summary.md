@@ -136,6 +136,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | p-mix | p_mix.vst3 | audio effect (gate) | 4/2 | no/no | yes |
 | polymeter | polymeter.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | polyscribe | polyscribe.vst3 | audio-to-MIDI generator | 2/2 | no/yes | no |
+| splay | splay.vst3 | audio effect (stereo matrix / image) | 2/2 | no/no | no |
 | pratt | pratt.vst3 | instrument + filter | 2/2 | yes/no | no |
 | primefold | primefold.vst3 | audio effect (pitch) | 2/2 | yes/no | no |
 | quefrency | quefrency.vst3 | audio effect (formant) | 2/2 | yes/no | no |
@@ -290,6 +291,9 @@ to the seed, and CC 24 = 127 restarts every lane at the next bar line. Both mast
 
 ### polyscribe
 Polyphonic audio-to-MIDI generator. Stereo input is summed to mono for a 4096-sample Hann/Goertzel analysis every 512 samples; **Input Type** selects Melody (strongest pitch, C3-C6), Bass (lowest, C2-C4), Chords (up to **Max Notes**, C2-C7) or Drums. **Drums** instead uses the latest 1024 samples and three probes at 65/294/4200 Hz, with per-band arming and a 60 ms cooldown, to emit GM kick 36, snare 38 and hat 42. **Low Note** and **High Note** narrow the pitched band; **Sensitivity** sets the floor. **Gate** (0-100 ms), **Release** (0-500 ms), **Velocity** (1-127), **Dynamics** (0-100 %), **Transpose** (-24 to +24 st) and **MIDI Channel** (1-16, drums conventionally 10) shape the output; **MIDI Out** and **Audio Thru** are switches. Output-only MIDI; there is no MIDI input or CC map, so automate the parameters. Five read-only output parameters expose note count, last note, input level, last velocity and a detection flash. No plugin state; transport ignored. Audio is not delayed and latency is not reported, but the first pitched result needs a full analysis window.
+
+### splay
+Stereo matrix and image shaper. The four gains **L to L**, **L to R**, **R to L** and **R to R** (each 0-200 %) route either input into either output; the defaults pass each input to its own channel. **Width** (0-200 %) is a mid/side side gain: 0 % is mono, 100 % unchanged and 200 % doubles the side. **Image Delay** (0-20 ms) is a fractional delay on the right channel only, used as a Haas-style image control and not reported as host latency; **Invert R** flips that channel after the delay. **Output** (0-200 %) sets the final level and **Bypass** crossfades to the untouched input over 5 ms. All controls are smoothed over 5 ms and the first block snaps to the current patch. Audio: 2 in, 2 out. No MIDI in/out or CC map, no transport and no plugin state; all nine settings are ordinary host parameters. Non-finite input samples are silenced and tiny output values flushed to prevent denormals.
 
 ### xoxolo
 x0x-style drum step sequencer with 11 drumkit-oriented lanes and patterns up to 32 steps;
