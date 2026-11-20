@@ -2,6 +2,26 @@
 
 Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
 
+## Fontana (2026-11-20)
+
+- [x] **Fontana** (built 2026-11-20): SF2/SF3 SoundFont player and WAV/Ogg slice sampler
+      with bank/preset/instrument zone resolution, GM note/velocity mapping, vendored
+      `stb_vorbis` for SF3, a custom NanoVG browser with waveform preview and audition,
+      editable transient/equal slices, and persistent paths/settings/slice maps. Built
+      the portable core and deterministic tests, VST3 wrapper with 1280x800 panel,
+      profile, product page, screenshot and release/bundle wiring. Core tests and the
+      `fontana-vst3` build pass.
+      - [ ] Visual acceptance of Fontana's 1280x800 panel is pending: the capture is at
+            `docs/pages/assets/plugins/fontana.png`, but this model cannot inspect PNG
+            pixels, so it needs a human review.
+      - [ ] Host load/save/reopen and listening validation for Fontana in REAPER are
+            pending, including SF3 decoding and audition.
+
+## From INBOX (2026-11-20)
+
+- [ ] Review `https://gardenfx.uk/v4/` for extensions to existing plugins and ideas for
+      new ones.
+
 ## New plugin proposals (from the DSP-Ports-JSFX survey, 2026-11-03)
 
 - [ ] **Vocal extras left out of `silken`** (to keep its panel readable; each could be a plugin or a later addition): breath reducer (a gate/expander keyed on unvoiced
@@ -21,7 +41,7 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
       - [ ] Host load/save/reopen and listening validation for Gate in REAPER are pending.
 - [ ] **MIDI filter / router** (Spaghetti Junction, x42 midifilter, GPL): channel/note filter and remap.
 - [ ] Lower priority: ADT/doubler (ChronoDupe, MIT), Inflator, spectral compressor, dynamic tilt, channel strip,
-      pipe organ (Aeolus), subtractive polysynth (amsynth), GM/SoundFont synth.
+      pipe organ (Aeolus), subtractive polysynth (amsynth); GM/SoundFont synth is now covered by `fontana`.
 - [x] **Tilt** (built 2026-11-19 as `tilt`, from INBOX): a stereo master-bus tone control whose gain follows a
       straight line in dB against log frequency, pivoting at **Pivot Freq**; **Angle** sets the
       boost/cut slope. Slope is selectable 6/12/24 dB/oct (default 6), the response is clamped to

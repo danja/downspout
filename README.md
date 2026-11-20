@@ -119,6 +119,7 @@ The [plugin reference](docs/pages/plugins-summary.md) has the ports, MIDI roles 
 | [basilico](plugins/basilico/README.md) | `basilico.vst3` | Instrument | Monophonic bass synth with Dub/Acid wobble, tempo sync, squelch, and upright/electric/industrial models. |
 | [Bore](plugins/bore/README.md) | `bore.vst3` | Instrument | Eight-voice lip-reed waveguide with turbulent instability and upper-mode capture. |
 | [campione](plugins/campione/README.md) | `campione.vst3` | Instrument | Multi-zone sampler with WAV loading, REX2 slice import, wavetable auto-detection, recording, gap-fill pitch shift, and crossfade looping. |
+| [fontana](docs/pages/_products/fontana.md) | `fontana.vst3` | Instrument | SF2/SF3 SoundFont player with WAV/Ogg sample loading, editable slices, persistent file state, and an auditioning file browser. |
 | [canticle](plugins/canticle/README.md) | `canticle.vst3` | Instrument | 12-voice keys, reed, pad, pluck, and glass synth for melody, counterpoint, and chords. |
 | [moka](plugins/moka/README.md) | `moka.vst3` | Instrument | Modal hit-object synth (xylophone, glockenspiel, woodblock, glass, metal, tube) with 10 controls, 10 presets, and selectable 1–12 voice polyphony. |
 | [tuney-vst](plugins/tuney-vst/README.md) | `tuney_vst.vst3` | Instrument/MIDI generator | Turns focused typing or stored text into microtonal synthesized audio and ordinary MIDI notes. |

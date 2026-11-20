@@ -1,0 +1,24 @@
+#ifndef DOWNSPOUT_FONTANA_DISTRHO_PLUGIN_INFO_H_INCLUDED
+#define DOWNSPOUT_FONTANA_DISTRHO_PLUGIN_INFO_H_INCLUDED
+
+#define DISTRHO_PLUGIN_BRAND   "Downspout"
+#define DISTRHO_PLUGIN_NAME    "Fontana"
+#define DISTRHO_PLUGIN_URI     "https://danja.github.io/downspout/plugins/fontana"
+#define DISTRHO_PLUGIN_CLAP_ID "it.hyperdata.downspout.fontana"
+
+#define DISTRHO_PLUGIN_BRAND_ID DnSp
+#define DISTRHO_PLUGIN_UNIQUE_ID Fntn
+
+#define DISTRHO_PLUGIN_HAS_UI           1
+#define DISTRHO_PLUGIN_IS_RT_SAFE       1
+#define DISTRHO_PLUGIN_NUM_INPUTS       0
+#define DISTRHO_PLUGIN_NUM_OUTPUTS      2
+#define DISTRHO_PLUGIN_WANT_MIDI_INPUT  1
+#define DISTRHO_PLUGIN_WANT_STATE       1
+#define DISTRHO_PLUGIN_WANT_FULL_STATE  1
+#define DISTRHO_PLUGIN_VST3_CATEGORIES  "Instrument|Synth"
+#define DISTRHO_UI_DEFAULT_WIDTH        1280
+#define DISTRHO_UI_DEFAULT_HEIGHT       800
+#define DISTRHO_UI_USE_NANOVG           1
+
+#endif

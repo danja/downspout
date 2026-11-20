@@ -313,6 +313,7 @@ The release script currently expects these bundles:
 - `orbit.vst3`
 - `guardian.vst3`
 - `campione.vst3`
+- `fontana.vst3`
 - `ghost.vst3`
 - `spliff.vst3`
 - `helterskelter.vst3`

@@ -20,6 +20,7 @@ Each zip contains:
 ```text
 downspout-<version>-<platform>-vst3.zip
 ├── bassgen.vst3/
+├── fontana.vst3/
 ├── p_mix.vst3/
 ├── e_mix.vst3/
 ├── m_mix.vst3/

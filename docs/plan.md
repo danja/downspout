@@ -243,6 +243,7 @@ Progress as of 2026-05-27:
   instrument/MIDI generator with portable mapping, tuning, free-time
   scheduling, synthesis, versioned text state, deterministic tests, and a DPF UI;
 - `campione` now exists as an original multi-zone sampler instrument with per-note MIDI mapping, WAV file loading, REX2 slice import (via VelociLoops), Serum/clm wavetable auto-detection, audio recording with auto-pitch detection, pitch-shift gap fill, zero-crossing loop snap, crossfade looping, deterministic core, and a first VST3 wrapper target with UI via vendored DPF;
+- `fontana` now exists as an SF2/SF3 SoundFont player and WAV/Ogg slice sampler: it parses bank/preset/instrument zones and generators (SF3 Ogg via vendored `stb_vorbis`), resolves GM bank/preset and note/velocity ranges, provides a custom NanoVG browser with waveform preview and audition, supports editable transient/equal slices with persistent paths and slice maps, and has deterministic core tests plus a first VST3 wrapper target with UI via vendored DPF;
 - `beards` is a port of the Mutable Instruments Beads granular processor (grain engine,
   feedback, freeze, reverb, three storage qualities) with Drift CC 1-12 and Conductor CC
   21-24 control; the Beads delay mode and CV/gate inputs are not ported (see
@@ -503,7 +504,7 @@ Current main gap:
   `xoxolo.vst3`, `syrinx.vst3`, `tuney_vst.vst3`, `harmonic_atlas.vst3`,
   `conductor.vst3`, `drift.vst3`, `mnemosyne.vst3`, `polymeter.vst3`,
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,
-  `guardian.vst3`, `campione.vst3`, `skream.vst3`, `chipper.vst3`, and
+  `guardian.vst3`, `campione.vst3`, `fontana.vst3`, `skream.vst3`, `chipper.vst3`, and
   `magneto.vst3`, `ghost.vst3`, `spliff.vst3`, `helterskelter.vst3`,
   `treatment.vst3`, `voxmod.vst3`, `sinevox.vst3`, `keyframe.vst3`, `beards.vst3`, `trajectory.vst3`, `fathom.vst3`, `qune.vst3`, `polyscribe.vst3`, `splay.vst3`, `gate.vst3`, `tilt.vst3`, `prism.vst3`, `mouth.vst3`, `grist.vst3`, `sam.vst3`, `ladder.vst3`, `glue.vst3`, `octet.vst3`, `trio.vst3`, `infra.vst3`, `spindown.vst3`, `wheelhouse.vst3`, `whirligig.vst3`, `chorale.vst3`, `silken.vst3`, `fresco.vst3`, `strata.vst3`, `quartet.vst3`, `monochord.vst3`, `nam.vst3`, `sieve.vst3`, `zmorph.vst3`, and `scope.vst3` bundles.
 - `bassgen` now has a richer Jazz model with ii-V-I-turnaround roles, dominant color, chord-tone targeting, approaches/enclosures, and a general `Color` control.

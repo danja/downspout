@@ -5,6 +5,11 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 ## Open
 
+## Fontana: synthetic SoundFont/WAV fixtures and note-zone fallback (2026-11-20)
+- **What happened:** The first synthetic SF2 fixture had duplicate LIST type bytes, wrong `phdr`/`inst`/`shdr` record sizes, early terminal generators and missing EOP/EOI/EOS padding, so the parser rejected a bank that was meant to be valid. The WAV `smpl` fixture used the wrong header length, and a sine assertion checked one sample instead of any peak. `resolveNote()` also reported success after no instrument key/velocity zone matched.
+- **Root cause:** The fixtures were written from a prose description of RIFF chunks rather than from exact byte layouts, and the note resolver returned the last candidate without re-checking whether a zone had actually been selected.
+- **Prevention:** Build fixtures from explicit byte counts (36-byte `smpl` header plus 24-byte loop record; correctly sized SF2 records with EOP/EOI/EOS padding) and assert parser acceptance as a fixture invariant. For file tests, assert the observable decoded content (any sample peak), not one chosen position. Make `resolveNote()` return not-found when no key/velocity zone matches, and cover that path with a test.
+
 ## Gate: DPF signature, test timing and sidechain fixture (2026-11-19)
 - **What happened:** The first `gate-vst3` build failed because `GatePlugin::run()` used the five-argument MIDI signature even though the plugin declares no MIDI input; DPF requires the three-argument `run(inputs, outputs, frames)`. `GateUI.cpp` also used `std::string` without including `<string>` and called `sc(r, g, b, a)`, but `MagnetoUI::sc()` takes only a `Colour`. Two test drafts also failed: the release probe ended before a -11 dB detector had fallen 35 dB to the close point plus Hold, and the linked-stereo gating case played a loud main tone in Internal mode, so the gate correctly opened instead of attenuating.
 - **Root cause:** The wrapper was copied from a MIDI-capable plugin without checking which virtual `run()` the no-MIDI declaration selects; the UI's helper return type and stroke helper overload were assumed rather than checked; and the tests used a short tail and left the detector's own input loud while expecting a closed gate.

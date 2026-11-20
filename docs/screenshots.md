@@ -83,6 +83,7 @@ Current output filenames:
 - `ground.png`
 - `ambo.png`
 - `floozy.png`
+- `fontana.png`
 - `basilico.png`
 - `canticle.png`
 - `magneto.png`
@@ -161,14 +162,17 @@ screenshots in `docs/pages/assets/plugins/`.
 
 ## Visual acceptance pending
 
-Captured, dimension-checked images awaiting first-time-user inspection before the
-catalog PNG is replaced:
+Captured, dimension-checked images awaiting first-time-user inspection before
+they are treated as visually accepted:
 
 - `conductor` — `/tmp/opencode/conductor-screenshot/conductor.png` (960x820, after the
-  eight-block editor and taller panel).
+  eight-block editor and taller panel). The repository PNG is unchanged pending review.
 - `padseq` — `/tmp/opencode/padseq-screenshot/padseq.png` (980x720, after the SysEx-only
-  LED feedback change).
+  LED feedback change). The repository PNG is unchanged pending review.
+- `fontana` — `docs/pages/assets/plugins/fontana.png` (1280x800, first SoundFont and
+  slice-sampler panel). The capture is in the catalog so the page is not broken, but
+  visual acceptance is still pending.
 
-The capturing agent could not inspect PNG pixels, so neither screenshot has visual
-acceptance yet. Keep the repository PNGs unchanged until an agent that can open the
-image has reviewed them.
+The capturing agent could not inspect PNG pixels, so none of these screenshots has
+visual acceptance yet. Keep the pending repository PNGs unchanged until an agent that
+can open the image has reviewed them.

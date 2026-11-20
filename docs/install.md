@@ -65,7 +65,7 @@ Public release packaging is handled separately by
 
 ## Current outputs
 
-The CMake install declarations currently cover 103 VST3 bundles; the authoritative synchronized bundle list is checked by `scripts/check-bundle-lists.sh`.
+The CMake install declarations currently cover 106 VST3 bundles; the authoritative synchronized bundle list is checked by `scripts/check-bundle-lists.sh`.
 
 - `ambo.vst3` with UI
 - `arpgen.vst3` with UI
@@ -91,6 +91,7 @@ The CMake install declarations currently cover 103 VST3 bundles; the authoritati
 - `fathom.vst3` with UI
 - `floozy.vst3` with UI
 - `flues_synth_driver.vst3` with UI
+- `fontana.vst3` with UI
 - `fresco.vst3` with UI
 - `gater.vst3` with UI
 - `ghost.vst3` with UI

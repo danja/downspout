@@ -21,6 +21,7 @@ fi
 
 plugins=(
   "campione:campione"
+  "fontana:fontana"
   "bassgen:bassgen"
   "p-mix:p_mix"
   "e-mix:e_mix"

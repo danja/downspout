@@ -24,7 +24,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
   receiving instrument in the FX chain, or its MIDI must be routed to another track.
 - **Parameters and persistence.** Settings are host parameters (automatable, saved by
   the host). A few plugins also keep non-parameter data in DPF text state: sample paths
-  (mosaic, rift), zone data (campione), patterns (lifeform, luma, plank, bassgen and other
+  (fontana, mosaic, rift), slice maps (fontana), zone data (campione), patterns (lifeform, luma, plank, bassgen and other
   pattern holders), a text/tuning blob (tuney-vst), the export path (midiscribe), a Scala
   path (retune). PadSeq is the exception among pattern editors: its 256 cells are
   ordinary parameters, so no plugin state is needed.
@@ -82,6 +82,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | drumkit | drumkit.vst3 | instrument (drums) | 0/2 | yes/no | no |
 | e-mix | e_mix.vst3 | audio effect | 2/2 | no/no | yes |
 | floozy | floozy.vst3 | instrument | 2/2 | yes/no | no |
+| fontana | fontana.vst3 | instrument (SoundFont / slice sampler) | 0/2 | yes/no | no |
 | flues-synth-driver | flues_synth_driver.vst3 | MIDI controller | 0/2 | yes/yes | no |
 | gater | gater.vst3 | audio router | 2/4 | yes/no | declared |
 | ghost | ghost.vst3 | audio-to-MIDI | 2/2 | yes/yes | yes |
@@ -684,6 +685,28 @@ filter (0 = all). Voices keyed by note and channel; per-channel pitch bend with 
 Range control (0-24, default 2, no RPN). Eight voices, oldest stolen. A zone pinned to one channel will not sound for
 Retune's other channels. Zone data and sample paths are state. Loop points follow the WAV
 `smpl` convention: both are inclusive frame indices, and the last loop frame is played.
+
+### fontana
+SF2/SF3 SoundFont player and WAV/Ogg slice sampler, stereo out with one MIDI input and
+no audio input or transport use. **Source** selects SoundFont or slices. In SoundFont
+mode it parses RIFF `sfbk` containers (`INFO`, `sdta`, `pdta`), resolves preset and
+instrument zones by **Bank** and **Preset** with key/velocity ranges, root/key
+transposition, loops, pan, per-voice filters, envelopes, LFOs, pitch bend and common
+MIDI CC modulators; SF3 compressed samples are decoded from complete mono Ogg streams
+with the vendored `stb_vorbis`. In slices mode, WAV (8/16/24/32-bit PCM and 32/64-bit
+float) or Ogg files are split by equal or energy/transient detection, mapped to
+consecutive notes from **Slice Base Note**, and edited by dragging boundaries,
+muting, normalising, looping or clearing slices. The panel is a custom NanoVG browser
+with min/max waveform peaks and an isolated **Audition** preview. 32 voices with oldest
+stealing, sustain pedal CC 64, per-channel pitch bend over **Bend Range** (0-24,
+default 2, no RPN) and a global **MIDI Channel** filter (0 = all); there is no CC
+parameter map. Paths, settings and slice maps are versioned DPF text state (`settings`,
+`soundfont_path`, `sample_path`, `slice_map`, `preview_path`, `preview_trigger`);
+sample bytes are re-read from disk on session load. Key parameters: Master Volume,
+MIDI Channel, Bank, Preset, Transpose, Bend Range, Attack, Release, Source, Slice Base
+Note, Slice Loop, Filter Enable/Cutoff (stored but not applied as a separate post-voice
+filter), plus read-only Effective Bank, Effective Preset, Active Voices, Last Note and
+Load Status.
 
 ### mosaic
 Four-slot WAV sampler with MIDI and autonomous triggering (**Trigger source** MIDI,

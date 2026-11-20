@@ -1,0 +1,134 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:fontana a trn:PluginProfile ;
+    rdfs:label "Fontana" ;
+    rdfs:comment "SF2/SF3 SoundFont player with WAV/Ogg sample loading, editable slice maps and an auditioning file browser." ;
+    trn:bundleName "fontana.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/fontana/> ;
+    trn:role trn:Instrument ;
+    trn:accepts trn:MIDI ;
+    trn:produces trn:Audio ;
+    trn:parameter [
+        rdfs:label "Master Volume" ;
+        trn:symbol "master_volume" ;
+        trn:default "0.8"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "1.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "MIDI Channel" ;
+        trn:symbol "midi_channel" ;
+        trn:default "0.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "16.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "Bank" ;
+        trn:symbol "bank" ;
+        trn:default "0.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "127.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "Preset" ;
+        trn:symbol "program" ;
+        trn:default "0.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "127.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "Transpose" ;
+        trn:symbol "transpose" ;
+        trn:default "0.0"^^xsd:float ;
+        trn:min "-24.0"^^xsd:float ;
+        trn:max "24.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "Bend Range" ;
+        trn:symbol "bend_range" ;
+        trn:default "2.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "24.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "Attack" ;
+        trn:symbol "attack" ;
+        trn:default "4.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "2000.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "Release" ;
+        trn:symbol "release" ;
+        trn:default "120.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "5000.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "Source" ;
+        trn:symbol "source_mode" ;
+        trn:default "0.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "1.0"^^xsd:float ;
+        trn:comment "0 = SoundFont, 1 = slices"
+    ] ;
+    trn:parameter [
+        rdfs:label "Slice Base Note" ;
+        trn:symbol "slice_base_note" ;
+        trn:default "36.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "108.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "Slice Loop" ;
+        trn:symbol "slice_loop" ;
+        trn:default "0.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "1.0"^^xsd:float
+    ] ;
+    trn:parameter [
+        rdfs:label "Filter Enable" ;
+        trn:symbol "filter_enabled" ;
+        trn:default "0.0"^^xsd:float ;
+        trn:min "0.0"^^xsd:float ;
+        trn:max "1.0"^^xsd:float ;
+        trn:comment "Stored but not applied as a separate post-voice filter"
+    ] ;
+    trn:parameter [
+        rdfs:label "Filter Cutoff" ;
+        trn:symbol "filter_cutoff" ;
+        trn:default "20000.0"^^xsd:float ;
+        trn:min "100.0"^^xsd:float ;
+        trn:max "20000.0"^^xsd:float
+    ] ;
+    trn:state [
+        rdfs:label "Settings" ;
+        trn:key "settings"
+    ] ;
+    trn:state [
+        rdfs:label "SoundFont Path" ;
+        trn:key "soundfont_path"
+    ] ;
+    trn:state [
+        rdfs:label "Sample Path" ;
+        trn:key "sample_path"
+    ] ;
+    trn:state [
+        rdfs:label "Slice Map" ;
+        trn:key "slice_map"
+    ] ;
+    trn:state [
+        rdfs:label "Preview Path" ;
+        trn:key "preview_path"
+    ] ;
+    trn:state [
+        rdfs:label "Preview Trigger" ;
+        trn:key "preview_trigger"
+    ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .
