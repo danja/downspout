@@ -8,7 +8,17 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
       low-level HF between words); dynamic resonance suppressor (multi-band version of the harshness tamer); vocal doubler / ADT and stereo widener (Chorale is close
       for the chorus part); a formant-aware sibilance detector; look-ahead for the de-esser and plosive guard (needs latency reporting); oversampled drive and sparkle;
       mid/side de-essing; a dedicated vocal limiter / clipper at the end of the chain; auto-gain / vocal rider (slow level riding before the compressor).
-- [ ] **Gate** (ZamGateX2 reference, GPL, clean-room): standalone audio noise gate with sidechain.
+- [x] **Gate** (built 2026-11-19 as `gate`, from the DSP-Ports-JSFX survey, clean-room):
+      standalone linked stereo noise gate with an internal or external stereo sidechain,
+      sidechain high-pass, hysteresis, hold, attack/release shaping, range, output trim and
+      read-only detector/reduction/state outputs. Built the portable core and 42-check suite,
+      DPF wrapper with a 4-in/2-out sidechain bus, Magneto panel with live history, profile,
+      product page, algorithm note and release/bundle wiring. Core tests, `gate-vst3`,
+      bundle/state checks and the 920x700 screenshot capture pass.
+      - [ ] Visual acceptance of Gate's 920x700 panel is pending: this agent cannot inspect
+            images at full resolution in this session. The capture is at
+            `docs/pages/assets/plugins/gate.png`, but needs a human review.
+      - [ ] Host load/save/reopen and listening validation for Gate in REAPER are pending.
 - [ ] **MIDI filter / router** (Spaghetti Junction, x42 midifilter, GPL): channel/note filter and remap.
 - [ ] Lower priority: ADT/doubler (ChronoDupe, MIT), Inflator, spectral compressor, dynamic tilt, channel strip,
       pipe organ (Aeolus), subtractive polysynth (amsynth), GM/SoundFont synth.

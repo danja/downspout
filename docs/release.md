@@ -49,6 +49,7 @@ downspout-<version>-<platform>-vst3.zip
 ├── qune.vst3/
 ├── polyscribe.vst3/
 ├── splay.vst3/
+├── gate.vst3/
 ├── tilt.vst3/
 ├── prism.vst3/
 ├── mouth.vst3/

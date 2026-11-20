@@ -5,6 +5,11 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 ## Open
 
+## Gate: DPF signature, test timing and sidechain fixture (2026-11-19)
+- **What happened:** The first `gate-vst3` build failed because `GatePlugin::run()` used the five-argument MIDI signature even though the plugin declares no MIDI input; DPF requires the three-argument `run(inputs, outputs, frames)`. `GateUI.cpp` also used `std::string` without including `<string>` and called `sc(r, g, b, a)`, but `MagnetoUI::sc()` takes only a `Colour`. Two test drafts also failed: the release probe ended before a -11 dB detector had fallen 35 dB to the close point plus Hold, and the linked-stereo gating case played a loud main tone in Internal mode, so the gate correctly opened instead of attenuating.
+- **Root cause:** The wrapper was copied from a MIDI-capable plugin without checking which virtual `run()` the no-MIDI declaration selects; the UI's helper return type and stroke helper overload were assumed rather than checked; and the tests used a short tail and left the detector's own input loud while expecting a closed gate.
+- **Prevention:** Match `run()` to `DISTRHO_PLUGIN_WANT_MIDI_INPUT` and always build `<plugin>-vst3`, not just the core tests. Include headers for helper return types and use `strokeColor(r, g, b, a)` directly for NanoVG colors. For gate timing, budget detector fall (`40 ms` time constant), hysteresis gap and Hold before Release; for a silent-sidechain test either make the sidechain silent or explicitly select External.
+
 ## Tilt: IIR ceiling, plot/audio split and knee-sampling tests (2026-11-19)
 - **What happened:** A revised IIR design used prewarped shelves spanning fixed 20 Hz-20 kHz corners. It overshot the advertised +-24 dB law badly, especially near Nyquist and at extreme pivots, while `responseDb()` still returned the clamped ideal line. A slope test then sampled 250 Hz / 4 kHz, which sit in the deliberately rounded knee at 24 dB/oct, so stricter slopes looked wrong even though the linear region was correct.
 - **Root cause:** Prewarping inflates the analogue shelf ratio as a corner approaches Nyquist; fixed corners do not plateau at the clamp frequencies; keeping a separate ideal-line display let the plot disagree with the audio; and the test measured the knee instead of the slope.

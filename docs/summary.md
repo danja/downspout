@@ -297,6 +297,10 @@ Put it before Glue for corrective cuts, or after for tone. See `plugins/octet/do
 
 Linked stereo master-bus tone control: **Angle** leans a straight line of gain in dB against log frequency around **Pivot Freq**. The **Slope** selector sets the full-scale tilt to 6, 12 or 24 dB/oct (default 6), and the response is clamped to +-24 dB at the ends so extreme settings stay usable. Drag the plot across for Pivot Freq and up or down for Angle, or scroll over it for fine angle; the response curve and a live 64-band spectrum are drawn together. **Mode** chooses zero-latency minimum-phase IIR or linear-phase FFT with 4096 samples of reported latency, and switches between them with a short aligned crossfade. No MIDI, transport or plugin state; the fresh default is transparent. Put it at the end of a mix bus, before Glue if the change needs compressing. See `plugins/tilt/docs/design.md`.
 
+### Gate (`gate.vst3`)
+
+Linked stereo noise gate with no MIDI, transport, latency or state. Main L/R pass through one gain; **SC Source** selects whether the detector listens to the main pair or to inputs 3/4 (an unconnected external sidechain stays closed). The sidechain-only **SC HPF** removes rumble from the level decision. **Threshold** opens the gate, **Hysteresis** sets the lower close point, and **Hold** delays closing only once the level is below it; **Attack** and **Release** fade the shared gain over 0-100 ms and 10-2000 ms. **Range** is the maximum closed attenuation (60 dB by default), **Output** is a post-gate trim and **Bypass** crossfades over 5 ms. The panel shows the detector against the open and close points, a gate-state history strip and live reduction. See `plugins/gate/docs/design.md`.
+
 ### Glue (`glue.vst3`)
 
 Stereo-linked bus compressor with no latency, an optional sidechain input (inputs 3-4) and Drift CC 1-4 on a channel for Threshold, Ratio, Makeup and Mix. **Threshold**, **Ratio**, **Knee** (soft) and **Range** set the

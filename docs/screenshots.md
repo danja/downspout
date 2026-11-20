@@ -93,6 +93,7 @@ Current output filenames:
 - `qune.png`
 - `polyscribe.png`
 - `splay.png`
+- `gate.png`
 - `tilt.png`
 - `prism.png`
 - `mouth.png`

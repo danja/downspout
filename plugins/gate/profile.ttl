@@ -1,0 +1,83 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:gate a trn:PluginProfile ;
+    rdfs:label "Gate" ;
+    rdfs:comment "Linked stereo noise gate with an internal or external stereo sidechain, sidechain high-pass, hysteresis, hold, attack and release, range, output trim and bypass. A shared detector and gain envelope drive both main channels. Read-only outputs report detector level, applied reduction and the live gate state. No MIDI, transport, latency or plugin state." ;
+    trn:bundleName "gate.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/gate/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio .
+
+dsp:gate trn:hasParameter [
+    trn:symbol "threshold" ;
+    trn:label "Threshold" ;
+    trn:minimum -80.0 ; trn:maximum 0.0 ; trn:default -40.0 ;
+    rdfs:comment "Detector level in dB above which the gate opens"
+], [
+    trn:symbol "hysteresis" ;
+    trn:label "Hysteresis" ;
+    trn:minimum 0.0 ; trn:maximum 20.0 ; trn:default 6.0 ;
+    rdfs:comment "Gap below Threshold, in dB, that an open gate must fall below before it can close"
+], [
+    trn:symbol "range" ;
+    trn:label "Range" ;
+    trn:minimum 0.0 ; trn:maximum 80.0 ; trn:default 60.0 ;
+    rdfs:comment "Maximum attenuation in dB while the gate is closed; 0 is transparent"
+], [
+    trn:symbol "attack" ;
+    trn:label "Attack" ;
+    trn:minimum 0.0 ; trn:maximum 100.0 ; trn:default 5.0 ;
+    rdfs:comment "Time in milliseconds for the shared gain to open"
+], [
+    trn:symbol "hold" ;
+    trn:label "Hold" ;
+    trn:minimum 0.0 ; trn:maximum 500.0 ; trn:default 50.0 ;
+    rdfs:comment "Milliseconds below the close point before the gate starts to close"
+], [
+    trn:symbol "release" ;
+    trn:label "Release" ;
+    trn:minimum 10.0 ; trn:maximum 2000.0 ; trn:default 200.0 ;
+    rdfs:comment "Time in milliseconds for the shared gain to close"
+], [
+    trn:symbol "sc_source" ;
+    trn:label "SC Source" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "0 uses main L/R for the detector, 1 uses audio inputs 3-4; an unconnected external sidechain stays closed"
+], [
+    trn:symbol "sc_hpf" ;
+    trn:label "SC HPF" ;
+    trn:minimum 20.0 ; trn:maximum 500.0 ; trn:default 20.0 ;
+    rdfs:comment "One-pole high-pass in the detector only; 20 Hz is exactly off"
+], [
+    trn:symbol "output" ;
+    trn:label "Output" ;
+    trn:minimum -12.0 ; trn:maximum 12.0 ; trn:default 0.0 ;
+    rdfs:comment "Post-gate trim in dB"
+], [
+    trn:symbol "bypass" ;
+    trn:label "Bypass" ;
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "1 crossfades over 5 ms to the untouched main input"
+], [
+    trn:symbol "out_level" ;
+    trn:label "Detector" ;
+    trn:minimum -100.0 ; trn:maximum 6.0 ; trn:default -100.0 ;
+    rdfs:comment "Read-only: smoothed sidechain level in dB"
+], [
+    trn:symbol "out_reduction" ;
+    trn:label "Reduction" ;
+    trn:minimum -80.0 ; trn:maximum 0.0 ; trn:default 0.0 ;
+    rdfs:comment "Read-only: applied gate gain in dB, before the output trim"
+], [
+    trn:symbol "out_open" ;
+    trn:label "Gate" ;
+    trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+    rdfs:comment "Read-only: 1 while the gate state is open"
+] .

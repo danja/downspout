@@ -253,6 +253,7 @@ The release script currently expects these bundles:
 - `qune.vst3`
 - `polyscribe.vst3`
 - `splay.vst3`
+- `gate.vst3`
 - `tilt.vst3`
 - `prism.vst3`
 - `mouth.vst3`
@@ -304,6 +305,7 @@ The release script currently expects these bundles:
 - `polymeter.vst3`
 - `polyscribe.vst3`
 - `splay.vst3`
+- `gate.vst3`
 - `tilt.vst3`
 - `oracle.vst3`
 - `mosaic.vst3`

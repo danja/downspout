@@ -256,6 +256,7 @@ jobs:
             echo "- polymeter.vst3"
             echo "- polyscribe.vst3"
             echo "- splay.vst3"
+            echo "- gate.vst3"
             echo "- tilt.vst3"
             echo "- oracle.vst3"
             echo "- mosaic.vst3"
