@@ -17,6 +17,28 @@ Open items only. Finished work is recorded in the plugin docs and `MISTAKES.md`.
       - [ ] Host load/save/reopen and listening validation for Fontana in REAPER are
             pending, including SF3 decoding and audition.
 
+## Melevolve (2026-11-20)
+
+- [x] **Melevolve** (built 2026-11-20, from INBOX 2026-11-20): ported
+      `/home/danny/github/melogen` to a VST3 MIDI generator. The Melogen interaction
+      model and light four-tab UI are fitted into the 920x700 VST editor; `.mid` download
+      is replaced by live MIDI output, with internal tempo, incoming 24 PPQ MIDI Clock
+      and host BBT sync. Portable core, versioned text state, deterministic tests,
+      profile, product page, screenshot and release/bundle wiring are complete. Core
+      tests, the `melevolve-vst3` build, bundle-list audit, state audit and shell syntax
+      checks pass.
+      - [ ] Visual acceptance of Melevolve's 920x700 panel is pending: the capture is at
+            `docs/pages/assets/plugins/melevolve.png`, but this model cannot inspect PNG
+            pixels, so it needs a human review.
+      - [x] Headless host load/save/reopen in REAPER 7.85: `/tmp/opencode/melevolve-reaper-check.RPP`
+            round-tripped distinctive settings/parameters and a regenerated 24-entry
+            population from `action=new` (`/tmp/opencode/melevolve-reaper-reopen.log`,
+            `RESULT=PASS`); the action key was not saved.
+      - [ ] Listening/render validation, live output-status observation and timing-source
+            checks in REAPER remain pending (internal clock, incoming 24 PPQ MIDI Clock,
+            host BBT). Headless render/play attempts with ReaSynth downstream produced
+            silent output in this environment.
+
 ## From INBOX (2026-11-20)
 
 - [ ] Review `https://gardenfx.uk/v4/` for extensions to existing plugins and ideas for

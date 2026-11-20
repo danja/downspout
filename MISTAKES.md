@@ -5,6 +5,11 @@ in `CLAUDE.md` and removed from here. Format: what happened, root cause, prevent
 
 ## Open
 
+## Melevolve: NanoVG UI integration compile errors (2026-11-20)
+- **What happened:** The first `melevolve-vst3` build compiled the DSP but failed in `MelevolveUI.cpp`. Four drawing helpers were declared `static` while calling DPF/NanoVG instance methods, a `labelText()` parameter named `text` collided with NanoVG's `text()` call, `rememberAction()` wrote `actionCount` instead of `actionCount_`, the Reset button used a non-existent core parameter ID, `std::strcmp` was used without `<cstring>`, and clock MIDI events were initially given the wrong byte length.
+- **Root cause:** The UI was drafted as if the drawing helpers were pure functions, so their `static` declarations did not match the widget APIs they call. Local names and action IDs were copied from nearby plugin idioms without checking this file's declarations, and DPF `MidiEvent::size` must describe only the bytes actually emitted (one for 24 PPQ realtime clock bytes).
+- **Prevention:** Build `<plugin>-vst3` after every UI change; core tests do not compile the editor. Keep NanoVG helpers non-static when they draw, avoid parameter names that shadow drawing methods, use the file's declared `actionCount_` and a single UI action-ID table, include headers for every standard function used, and assert outgoing clock event sizes in the deterministic core suite.
+
 ## Fontana: synthetic SoundFont/WAV fixtures and note-zone fallback (2026-11-20)
 - **What happened:** The first synthetic SF2 fixture had duplicate LIST type bytes, wrong `phdr`/`inst`/`shdr` record sizes, early terminal generators and missing EOP/EOI/EOS padding, so the parser rejected a bank that was meant to be valid. The WAV `smpl` fixture used the wrong header length, and a sine assertion checked one sample instead of any peak. `resolveNote()` also reported success after no instrument key/velocity zone matched.
 - **Root cause:** The fixtures were written from a prose description of RIFF chunks rather than from exact byte layouts, and the note resolver returned the last candidate without re-checking whether a zone had actually been selected.

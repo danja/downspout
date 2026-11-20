@@ -217,6 +217,12 @@ Progress as of 2026-05-27:
   deterministic core suite (also run under ASan/UBSan) including locate and block-size independence,
   Conductor CC support, and a VST3 wrapper with a Magneto-look matrix editor; host validation is
   pending;
+- `melevolve` now ports Melogen's evolutionary melody generator as a live MIDI generator:
+  five voted rows, More/Evolve/New population, a deterministic genetic algorithm over Melogen's
+  twelve local scales, versioned text state (settings, population and RNG), and sample-accurate
+  scheduling from internal tempo, incoming 24 PPQ MIDI Clock or host BBT. The editor keeps
+  Melogen's light four-tab layout and replaces SMF export and remote instruments with a MIDI/Clock
+  status tab. Core tests and the VST3 target pass; host validation and visual acceptance are pending;
 - `sprout` now exists as an original L-system MIDI generator: seven grammars (Plant,
   Koch, Dragon, Sierpinski, Cantor, Levy, Tree) are rewritten per generation, read
   as a turtle (F/G note, f rest, +/- degree, brackets branch) and played as a
@@ -500,7 +506,7 @@ Current main gap:
   `cadence.vst3`, `arpgen.vst3`, `counterpointer.vst3`, `sidecar.vst3`, `gremlin.vst3`,
   `gremlin_driver.vst3`, `ground.vst3`, `floozy.vst3`, `basilico.vst3`,
   `canticle.vst3`, `moka.vst3`, `luma.vst3`, `paunchlad.vst3`, `lifeform.vst3`,
-  `plank.vst3`, `padseq.vst3`, `pratt.vst3`, `retune.vst3`, `sprout.vst3`, `markov.vst3`, and
+  `plank.vst3`, `padseq.vst3`, `pratt.vst3`, `retune.vst3`, `sprout.vst3`, `markov.vst3`, `melevolve.vst3`, and
   `xoxolo.vst3`, `syrinx.vst3`, `tuney_vst.vst3`, `harmonic_atlas.vst3`,
   `conductor.vst3`, `drift.vst3`, `mnemosyne.vst3`, `polymeter.vst3`,
   `oracle.vst3`, `mosaic.vst3`, `resonance_garden.vst3`, `orbit.vst3`,

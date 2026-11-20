@@ -247,6 +247,7 @@ jobs:
             echo "- retune.vst3"
             echo "- sprout.vst3"
             echo "- markov.vst3"
+            echo "- melevolve.vst3"
             echo "- xoxolo.vst3"
             echo "- syrinx.vst3"
             echo "- tuney_vst.vst3"

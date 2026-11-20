@@ -25,7 +25,8 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 - **Parameters and persistence.** Settings are host parameters (automatable, saved by
   the host). A few plugins also keep non-parameter data in DPF text state: sample paths
   (fontana, mosaic, rift), slice maps (fontana), zone data (campione), patterns (lifeform, luma, plank, bassgen and other
-  pattern holders), a text/tuning blob (tuney-vst), the export path (midiscribe), a Scala
+  pattern holders), a population with ratings and RNG state (melevolve), a text/tuning blob
+  (tuney-vst), the export path (midiscribe), a Scala
   path (retune). PadSeq is the exception among pattern editors: its 256 cells are
   ordinary parameters, so no plugin state is needed.
   `scripts/check-plugin-state.sh` audits this.
@@ -157,6 +158,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | skream | skream.vst3 | audio effect (filter) | 2/2 | yes/no | no |
 | spliff | spliff.vst3 | audio effect (transients / designer) | 2/2 | yes/no | no |
 | markov | markov.vst3 | MIDI generator | 0/2 | yes/yes | yes |
+| melevolve | melevolve.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | sprout | sprout.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | syrinx | syrinx.vst3 | instrument + audio-driven voice (birdsong) | 2/2 | yes/no | no |
 | t-mix | t_mix.vst3 | audio mixer | 8/2 | yes/yes | no |
@@ -254,6 +256,25 @@ pure function of its position: loops, locates, other block sizes and offline ren
 row by row where a row has data, **Clear learned** (a counter parameter) forgets them; matrix and
 counts are saved as the `model` state. **Conductor ch** (0 = off): CC 21 Density, 22 Velocity, 23 Chaos,
 CC 24 = 127 re-rolls the melody at the next bar line. Pair with retune for microtonal melodies.
+
+### melevolve
+Port of Melogen's evolutionary melody generator. **Interact** shows five rows: a round Play button,
+- / 0 / + votes, and a progress line; **More** shows the next round, **Evolve** breeds from the votes,
+and **New population** restarts. Genes are sixteenth-note rest/note/hold steps over scale degrees,
+decoded only at MIDI output, so mutations stay in the chosen **Key** and **Scale** (Melogen's local
+twelve-scale subset). **Line** selects melody or bass, **Octave** the lowest note, **Bars** and
+**Time signature** the phrase length, and **Crossover rate**, **Mutation rate** and **Population**
+steer the GA. Unrated entries can still be parents; disliked entries cannot. The population, ratings,
+archive and RNG state are versioned text state; settings are ordinary parameters.
+
+**Clock source** selects Internal (the **Tempo** parameter drives sample-accurate scheduling), MIDI
+(incoming 24 PPQ clock plus Start/Continue/Stop; Start resets, Continue resumes the last row, Stop
+panics), or Host (host BBT drives the grid, with a play edge starting the chosen row). **Send MIDI
+clock** emits 24 PPQ clock and Start/Stop when not MIDI-slaved. Notes and CC 123 panic go to **MIDI
+channel**; clock messages are system realtime. Output status parameters expose playing row,
+generation, round, resolved BPM, 24-PPQ tick, progress, clock running, last note and velocity, and
+the **MIDI / Clock** tab shows them. There is no CC control map, no SMF export, and no host audio
+out; route its MIDI to an instrument on another track.
 
 ### sprout
 L-system melody generator. MIDI input is optional and off by default (see below); output is
@@ -1137,7 +1158,7 @@ a note-on), so it does not follow other channels.
 
 ## Choosing between plugins
 
-- **Need MIDI from nothing:** harmonic-atlas (chords), melgen / worms / sprout / markov / sidecar
+- **Need MIDI from nothing:** harmonic-atlas (chords), melgen / worms / sprout / markov / melevolve / sidecar
   (melody), bassgen / ground (bass), drumgen / xoxolo / polymeter (rhythm), lifeform /
   luma (grid-driven), conductor (structure only), tuney-vst (text).
 - **Need MIDI from MIDI:** arpgen, cadence, counterpointer, mnemosyne, m-mix, retune (tuning).

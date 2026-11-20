@@ -1,0 +1,64 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:melevolve a trn:PluginProfile ;
+    rdfs:label "Melevolve" ;
+    rdfs:comment "Port of Melogen's evolutionary melody generator: five voted melodic lines bred by a genetic algorithm and emitted as live MIDI. Clock source can be internal, incoming 24 PPQ MIDI Clock with Start/Continue/Stop, or host BBT." ;
+    trn:bundleName "melevolve.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/melevolve/> ;
+    trn:role trn:MidiGenerator ;
+    trn:accepts trn:ControlMidi ;
+    trn:produces trn:Midi, trn:MelodyMidi ;
+    trn:caution "Silent audio output. Route MIDI to an instrument on another track. Clock source MIDI consumes Start/Continue/Stop and 24 PPQ ticks and ignores notes; Start resets, Continue resumes the last selected row, Stop panics with CC 123. Host BBT starts a row only on a transport start, restart after stop, or BBT jump. Session, ratings, archive and RNG are saved as text state; action keys are editor-to-DSP only. There is no SMF export and no CC parameter map." ;
+    trn:parameter [ rdfs:label "Line" ; trn:symbol "mode" ; trn:range "0-1" ;
+                    rdfs:comment "0 melody, 1 bass. Changes the default octave and shapes new random lines." ] ;
+    trn:parameter [ rdfs:label "Key" ; trn:symbol "root" ; trn:range "0-11" ;
+                    rdfs:comment "Root pitch class; C = 0." ] ;
+    trn:parameter [ rdfs:label "Scale" ; trn:symbol "scale" ; trn:range "0-11" ;
+                    rdfs:comment "Melogen's local twelve-scale subset: major, minor, dorian, phrygian, lydian, mixolydian, harmonic minor, major pentatonic, minor pentatonic, blues, whole tone, chromatic. Not the canonical docs/scales.md ordinals." ] ;
+    trn:parameter [ rdfs:label "Octave" ; trn:symbol "octave" ; trn:range "0-7" ;
+                    rdfs:comment "Lowest note octave; default 4 for melody and 2 for bass." ] ;
+    trn:parameter [ rdfs:label "Bars" ; trn:symbol "bars" ; trn:range "1-32" ;
+                    rdfs:comment "Length of a genome in bars; one step is a sixteenth note." ] ;
+    trn:parameter [ rdfs:label "Time signature" ; trn:symbol "time_signature" ; trn:range "0-4" ;
+                    rdfs:comment "Index into Melogen's five time signatures." ] ;
+    trn:parameter [ rdfs:label "Tempo" ; trn:symbol "tempo" ; trn:range "40-240 bpm" ;
+                    rdfs:comment "Internal clock tempo; also the displayed fallback before an incoming MIDI or host tempo is known." ] ;
+    trn:parameter [ rdfs:label "Crossover rate" ; trn:symbol "crossover_rate" ; trn:range "0-100 %" ;
+                    rdfs:comment "Chance a new genome takes material from two parents." ] ;
+    trn:parameter [ rdfs:label "Mutation rate" ; trn:symbol "mutation_rate" ; trn:range "0-100 %" ;
+                    rdfs:comment "Per-gene mutation probability for new genomes." ] ;
+    trn:parameter [ rdfs:label "Population" ; trn:symbol "population_size" ; trn:range "10-50" ;
+                    rdfs:comment "Number of genomes in a generation." ] ;
+    trn:parameter [ rdfs:label "Loop playback" ; trn:symbol "loop" ; trn:range "0-1" ;
+                    rdfs:comment "When on, a played row wraps to step 0 instead of stopping at the phrase end." ] ;
+    trn:parameter [ rdfs:label "Clock source" ; trn:symbol "clock_source" ; trn:range "0-2" ;
+                    rdfs:comment "0 internal, 1 incoming MIDI Clock, 2 host BBT." ] ;
+    trn:parameter [ rdfs:label "MIDI channel" ; trn:symbol "midi_channel" ; trn:range "1-16" ;
+                    rdfs:comment "Channel for notes and CC 123. Clock messages are system realtime." ] ;
+    trn:parameter [ rdfs:label "Send MIDI clock" ; trn:symbol "send_clock" ; trn:range "0-1" ;
+                    rdfs:comment "Emit 24 PPQ clock, Start and Stop when not MIDI-slaved." ] ;
+    trn:parameter [ rdfs:label "Playing row" ; trn:symbol "status_playing" ; trn:range "-1-4" ;
+                    rdfs:comment "Read-only: row currently sounding, or -1." ] ;
+    trn:parameter [ rdfs:label "Generation" ; trn:symbol "status_generation" ; trn:range "0-9999" ;
+                    rdfs:comment "Read-only: GA generation counter." ] ;
+    trn:parameter [ rdfs:label "Round" ; trn:symbol "status_round" ; trn:range "0-99" ;
+                    rdfs:comment "Read-only: five-candidate round counter." ] ;
+    trn:parameter [ rdfs:label "Clock BPM" ; trn:symbol "status_clock_bpm" ; trn:range "0-300" ;
+                    rdfs:comment "Read-only: resolved internal, incoming MIDI or host tempo." ] ;
+    trn:parameter [ rdfs:label "Clock tick" ; trn:symbol "status_clock_tick" ; trn:range "0-23" ;
+                    rdfs:comment "Read-only: current 24 PPQ tick within the quarter." ] ;
+    trn:parameter [ rdfs:label "Playback progress" ; trn:symbol "status_progress" ; trn:range "0-1" ;
+                    rdfs:comment "Read-only: fraction of the current row played." ] ;
+    trn:parameter [ rdfs:label "Clock running" ; trn:symbol "status_clock_running" ; trn:range "0-1" ;
+                    rdfs:comment "Read-only: whether a row is playing." ] ;
+    trn:parameter [ rdfs:label "Last note" ; trn:symbol "status_last_note" ; trn:range "-1-127" ;
+                    rdfs:comment "Read-only: most recent note-on pitch, or -1 before playback." ] ;
+    trn:parameter [ rdfs:label "Last velocity" ; trn:symbol "status_last_velocity" ; trn:range "0-127" ;
+                    rdfs:comment "Read-only: velocity of the most recent note-on." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

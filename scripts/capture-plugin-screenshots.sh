@@ -66,6 +66,7 @@ plugins=(
   "retune:retune"
   "sprout:sprout"
   "markov:markov"
+  "melevolve:melevolve"
   "grist:grist"
   "sam:sam"
   "ladder:ladder"

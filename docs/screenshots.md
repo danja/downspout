@@ -135,6 +135,7 @@ Current output filenames:
 - `retune.png`
 - `sprout.png`
 - `markov.png`
+- `melevolve.png`
 - `syrinx.png`
 - `tuney-vst.png`
 - `voxmod.png`
@@ -171,6 +172,9 @@ they are treated as visually accepted:
   LED feedback change). The repository PNG is unchanged pending review.
 - `fontana` — `docs/pages/assets/plugins/fontana.png` (1280x800, first SoundFont and
   slice-sampler panel). The capture is in the catalog so the page is not broken, but
+  visual acceptance is still pending.
+- `melevolve` — `docs/pages/assets/plugins/melevolve.png` (920x700, first four-tab
+  Melogen-style panel). The capture is in the catalog so the page is not broken, but
   visual acceptance is still pending.
 
 The capturing agent could not inspect PNG pixels, so none of these screenshots has

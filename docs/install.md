@@ -115,6 +115,7 @@ The CMake install declarations currently cover 106 VST3 bundles; the authoritati
 - `m_mix.vst3` with UI
 - `magneto.vst3` with UI
 - `markov.vst3` with UI
+- `melevolve.vst3` with UI
 - `melgen.vst3` with UI
 - `midiscribe.vst3` with UI
 - `mixgen.vst3` with UI
@@ -220,6 +221,7 @@ The script has been smoke-tested with a temporary install root under `/tmp`:
 - `retune.vst3` builds locally (VST3 and JACK standalone) and awaits host-side install validation
 - `sprout.vst3` builds locally (VST3 and JACK standalone) and awaits host-side install validation
 - `markov.vst3` builds locally (VST3 and JACK standalone) and awaits host-side install validation
+- `melevolve.vst3` builds locally (VST3 and JACK standalone) and awaits host-side install validation
 - confirmed `xoxolo.vst3` bundle output and install
 - confirmed `syrinx.vst3` bundle output and install
 - confirmed `tuney_vst.vst3` bundle output and install

@@ -126,6 +126,17 @@ or flattens the favourites, **Order** 2 uses the two previous notes where it has
 phrase restarts from the tonic so loops and renders repeat exactly. Output is plain MIDI; pair it with
 Retune for microtonal Markov melodies.
 
+### Melevolve (`melevolve.vst3`)
+
+Port of Melogen's evolutionary melody generator. It shows five melodies on a sixteenth-note grid;
+press the round Play button, vote − / 0 / +, then choose **More** for the next five, **Evolve** to
+breed a generation from the votes, or **New population** to start again. The scale, key, line
+(melody or bass), bars, time signature and GA rates are host parameters, and the population, ratings
+and RNG state are saved with the project. Output is live MIDI on the selected channel (no `.mid`
+export): the clock can be internal, incoming 24 PPQ MIDI Clock with Start/Continue/Stop, or host
+BBT. Route its MIDI to an instrument on another track. The editor keeps Melogen's light four-tab
+layout; its fourth tab reports MIDI and clock status.
+
 ### Retune (`retune.vst3`)
 
 MIDI effect that retunes a note stream to a Scala (`.scl`) scale. Each held note is sent
