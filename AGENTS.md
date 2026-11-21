@@ -36,6 +36,8 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - Measure before building: write the accuracy probe (pitch ratio, filter response across the whole parameter space) before wiring DSP. Use a Goertzel magnitude, not zero-crossings, on spliced signals. Read the reference function (e.g. `plinky.c` `stride()`) before describing it.
 - Measuring a tone's size: sum the Hann main-lobe energy (`A = sqrt(32/3 x sum|X|^2) / N`) and use the same window length as the render. A single peak bin loses up to 15 % to scalloping and silently skews ratios. Treat DC as harmonic 0 and exclude +-16 bins around each harmonic when measuring aliasing.
 - Before concluding the DSP is wrong, derive the reference from the formula for the stated order and check one point by hand (a 4-pole is -40 log10(1 + m^2), not half that). When a metric mixes two effects (resonant peak and passband loss), neutralise one before measuring the other.
+- When a binary parser rejects a real file, hex-inspect the failing record against the spec before loosening validation. Fontana's `inst` record is a 20-byte name followed by the bag index at offset 20.
+- A default generator set must leave absent fields unset: zero is meaningful for `OverridingRootKey`, `End` and similar fields. Assert `!has(...)` where absence changes behaviour, not just the numeric default.
 - A bound on output level is the wrong stability test for cascaded boosts (they legitimately exceed 100 dB): check that the impulse response decays.
 - Build output: filter with `grep -E "error:|Error [0-9]"` and check the exit status. After adding a test, confirm it actually ran (count/runtime changed) before saying it passes.
 - An STFT/overlap-add effect's first test is a unity-mask round trip: output equals the input delayed by the reported latency (level within 0.1 dB, correlation > 0.999, nearest best lag), plus a single-tap impulse response and block-size invariance. Allocation and finiteness are smoke checks, not core tests.
@@ -54,6 +56,7 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - Generate stepper label tables from the value and clamp the index; give an empty state no mark. Derive plot shapes numerically and compare with the image.
 - Loop fixed tables with range-for or `std::size`; hard-coded counts can read past the end (the Melevolve About-tab crash).
 - Give list scroll controls a dedicated gutter and handle list rows before generic action rectangles. Clamp scrolling by the visible row count, match glyph direction, support wheel scrolling, and only decode previews on explicit selection.
+- Probe list scrolling with more entries than fit in the list; a wheel/drag screenshot diff is meaningless when the sample directory has fewer rows than the visible area.
 - When the user explicitly accepts captured images, copy them into the catalog and remove acceptance-pending wording from docs.
 
 **Process**

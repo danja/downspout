@@ -294,6 +294,10 @@ protected:
 
     bool onMouse(const MouseEvent& ev) override
     {
+        if (!ev.press && draggingScrollbar_) {
+            draggingScrollbar_ = false;
+            return true;
+        }
         if (!ev.press && draggingBoundary_ >= 0) {
             draggingBoundary_ = -1;
             commitSlices();
@@ -303,6 +307,17 @@ protected:
         const float mx = static_cast<float>(ev.pos.getX());
         const float my = static_cast<float>(ev.pos.getY());
         if (ev.press && ev.button == 1) {
+            if (browserScrollThumbRect_.contains(mx, my)) {
+                draggingScrollbar_ = true;
+                scrollbarGrabOffset_ = my - browserScrollThumbRect_.y;
+                return true;
+            }
+            if (browserScrollTrackRect_.contains(mx, my)) {
+                draggingScrollbar_ = true;
+                scrollbarGrabOffset_ = browserScrollThumbRect_.h * 0.5f;
+                setBrowserScrollFromPointer(my);
+                return true;
+            }
             for (std::size_t i = 0; i < browserRowRects_.size(); ++i) {
                 if (!browserRowRects_[i].contains(mx, my))
                     continue;
@@ -347,14 +362,21 @@ protected:
     {
         const float mx = static_cast<float>(ev.pos.getX());
         const float my = static_cast<float>(ev.pos.getY());
-        if (!browserListRect_.contains(mx, my))
+        if (!browserListRect_.contains(mx, my) && !browserScrollTrackRect_.contains(mx, my))
             return false;
-        scrollBrowser(ev.delta.getY() > 0.0f ? -3 : 3);
+        const double delta = ev.delta.getY();
+        if (delta == 0.0)
+            return true;
+        scrollBrowser(delta > 0.0 ? -3 : 3);
         return true;
     }
 
     bool onMotion(const MotionEvent& ev) override
     {
+        if (draggingScrollbar_) {
+            setBrowserScrollFromPointer(static_cast<float>(ev.pos.getY()));
+            return true;
+        }
         if (MagnetoUI::onMotion(ev))
             return true;
         if (draggingBoundary_ <= 0 || slices_.empty())
@@ -394,10 +416,28 @@ private:
         return p;
     }
 
+    [[nodiscard]] int maxBrowserScroll() const noexcept
+    {
+        return std::max(0, static_cast<int>(browserEntries_.size()) - browserVisibleRows_);
+    }
+
     void scrollBrowser(const int delta)
     {
-        const int maxScroll = std::max(0, static_cast<int>(browserEntries_.size()) - browserVisibleRows_);
-        browserScroll_ = std::clamp(browserScroll_ + delta, 0, maxScroll);
+        browserScroll_ = std::clamp(browserScroll_ + delta, 0, maxBrowserScroll());
+        repaint();
+    }
+
+    void setBrowserScrollFromPointer(const float pointerY)
+    {
+        const float travel = browserScrollTrackRect_.h - browserScrollThumbRect_.h;
+        if (travel <= 0.0f) {
+            browserScroll_ = 0;
+            repaint();
+            return;
+        }
+        const float ratio = std::clamp(
+            (pointerY - scrollbarGrabOffset_ - browserScrollTrackRect_.y) / travel, 0.0f, 1.0f);
+        browserScroll_ = static_cast<int>(ratio * static_cast<float>(maxBrowserScroll()) + 0.5f);
         repaint();
     }
 
@@ -631,6 +671,32 @@ private:
         drawButton(kActionBrowserScrollUp, "^", {scrollX, list.y, 32.0f, 26.0f}, kAccentBrowser, false);
         drawButton(kActionBrowserScrollDown, "v", {scrollX, list.y + list.h - 26.0f, 32.0f, 26.0f}, kAccentBrowser, false);
 
+        const Rect track {scrollX + 4.0f, list.y + 30.0f, 24.0f,
+                          std::max(8.0f, list.h - 60.0f)};
+        browserScrollTrackRect_ = track;
+        const float thumbH = browserEntries_.empty()
+                                 ? track.h
+                                 : std::clamp(track.h * static_cast<float>(visible) /
+                                                  static_cast<float>(browserEntries_.size()),
+                                              20.0f, track.h);
+        const float travel = track.h - thumbH;
+        const int maxScroll = maxBrowserScroll();
+        const float thumbY = track.y + (maxScroll > 0
+                                            ? travel * static_cast<float>(browserScroll_) /
+                                                  static_cast<float>(maxScroll)
+                                            : 0.0f);
+        const Rect thumb {track.x, thumbY, track.w, thumbH};
+        browserScrollThumbRect_ = thumb;
+        beginPath();
+        fc(t.controlTrack);
+        roundedRect(track.x, track.y, track.w, track.h, 3.0f);
+        fill();
+        beginPath();
+        fillColor(kAccentBrowser.r, kAccentBrowser.g, kAccentBrowser.b,
+                  static_cast<unsigned char>(maxScroll > 0 ? 220 : 90));
+        roundedRect(thumb.x, thumb.y, thumb.w, thumb.h, 3.0f);
+        fill();
+
         const float infoY = y + h - 124.0f;
         label(x + 12.0f, infoY, "SELECTED");
         fc(t.textPrimary);
@@ -817,9 +883,13 @@ private:
     std::vector<BrowserEntry> browserEntries_ {};
     std::vector<Rect> browserRowRects_ {};
     Rect browserListRect_ {};
+    Rect browserScrollTrackRect_ {};
+    Rect browserScrollThumbRect_ {};
     int browserVisibleRows_ = 1;
     int selectedEntry_ = -1;
     int browserScroll_ = 0;
+    bool draggingScrollbar_ = false;
+    float scrollbarGrabOffset_ = 0.0f;
     std::string soundFontPath_ {};
     std::string samplePath_ {};
     std::string previewPath_ {};

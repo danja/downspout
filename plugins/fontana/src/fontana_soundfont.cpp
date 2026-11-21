@@ -25,6 +25,7 @@ constexpr std::size_t kBagSize = 4u;
 constexpr std::size_t kModSize = 10u;
 constexpr std::size_t kGenSize = 4u;
 constexpr std::size_t kInstSize = 22u;
+constexpr std::size_t kInstNameBytes = 20u;
 constexpr std::size_t kShdrSize = 46u;
 
 [[nodiscard]] std::uint16_t readU16(const unsigned char* p) noexcept
@@ -272,8 +273,9 @@ struct SampleHeader {
     for (std::size_t i = 0; i + 1u < count; ++i) {
         const unsigned char* p = inst.data + i * kInstSize;
         InstrumentHeader header;
-        header.name = fixedName(p, 16u);
-        header.bagIndex = readU16(p + 16u);
+        // SF2 2.04: sfInst is char[20] name followed by the bag index.
+        header.name = fixedName(p, kInstNameBytes);
+        header.bagIndex = readU16(p + kInstNameBytes);
         out.push_back(std::move(header));
     }
     return true;
@@ -434,9 +436,9 @@ void setSamplePoints(Sample& sample, const SampleHeader& header, const std::uint
 GenSet defaultGenerators() noexcept
 {
     GenSet generators;
-    for (std::size_t i = 0; i < generators.value.size(); ++i)
-        generators.value[i] = 0;
 
+    // Leave everything else unset: 0 is a meaningful value for generators such
+    // as OverridingRootKey and End, and must not be confused with "inherit".
     generators.set(Gen::InitialFilterFc, 13500);
     generators.set(Gen::InitialFilterQ, 0);
     generators.set(Gen::ScaleTuning, 100);
@@ -635,7 +637,8 @@ SoundFontLoadResult loadSoundFont(const std::string& path)
         return result;
     }
     const std::uint16_t presetBagEnd = readU16(phdr.data + (phdrCount - 1u) * kPhdrSize + 24u);
-    const std::uint16_t instBagEnd = readU16(inst.data + (instCount - 1u) * kInstSize + 16u);
+    const std::uint16_t instBagEnd =
+        readU16(inst.data + (instCount - 1u) * kInstSize + kInstNameBytes);
 
     std::vector<PresetHeader> presetHeaders;
     std::vector<InstrumentHeader> instrumentHeaders;

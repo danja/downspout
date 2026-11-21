@@ -162,12 +162,10 @@ std::vector<std::uint8_t> makeSoundFont()
     putU16(pgen, 0);
 
     std::vector<std::uint8_t> inst;
-    fixedField(inst, "Test Inst", 16);
+    fixedField(inst, "Test Inst", 20);
     putU16(inst, 0);  // bag index
-    putU32(inst, 0);  // library
-    fixedField(inst, "EOI", 16);
+    fixedField(inst, "EOI", 20);
     putU16(inst, 1);  // bag index
-    putU32(inst, 0);  // library
 
     std::vector<std::uint8_t> ibag;
     putU16(ibag, 0);
@@ -260,6 +258,8 @@ void testGeneratorsAndParameters()
     assert(defaults.get(Gen::InitialAttenuation) == 0);
     assert(defaults.get(Gen::AttackVolEnv) == -12000);
     assert(defaults.get(Gen::ScaleTuning) == 100);
+    assert(!defaults.has(Gen::OverridingRootKey));
+    assert(!defaults.has(Gen::End));
 
     GenSet override;
     override.set(Gen::Pan, -250);
@@ -384,6 +384,7 @@ void testSoundFontParsingAndResolution()
     assert(loaded.bank.versionMajor == 2);
     assert(loaded.bank.presets.size() == 1);
     assert(loaded.bank.instruments.size() == 1);
+    assert(loaded.bank.instruments[0].name == "Test Inst");
     assert(loaded.bank.samples.size() == 1);
     assert(loaded.bank.samples[0].valid);
     assert(loaded.bank.samples[0].data.size() == 64);
@@ -403,6 +404,32 @@ float peakAbsolute(const float* buffer, const std::size_t frames)
     for (std::size_t i = 0; i < frames; ++i)
         peak = std::max(peak, std::fabs(buffer[i]));
     return peak;
+}
+
+void testSoundFontPlayback()
+{
+    const auto path = scratchPath("playback.sf2");
+    writeBytes(path, makeSoundFont());
+    const auto loaded = loadSoundFont(path.string());
+    assert(loaded.error.empty());
+
+    Parameters parameters;
+    parameters.masterVolume = 1.0f;
+    EngineState state;
+    activate(state, 44100.0);
+    std::array<float, 256> left {};
+    std::array<float, 256> right {};
+    AudioBlock audio;
+    audio.outputs[0] = left.data();
+    audio.outputs[1] = right.data();
+    audio.channelCount = 2;
+
+    const MidiInputEvent on = noteEvent(0, 0x90, 60, 120);
+    processBlock(state, parameters, &loaded.bank, nullptr, nullptr, 0u, &on, 1,
+                 static_cast<std::uint32_t>(left.size()), 44100.0, audio);
+    assert(peakAbsolute(left.data(), left.size()) > 0.01f);
+    assert(parameters.statusVoices >= 1.0f);
+    assert(parameters.statusLastNote == 60.0f);
 }
 
 void testEnginePlayback()
@@ -452,6 +479,7 @@ int main()
     testSlicing();
     testStateRoundTrips();
     testSoundFontParsingAndResolution();
+    testSoundFontPlayback();
     testEnginePlayback();
     return 0;
 }
