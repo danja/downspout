@@ -20,6 +20,18 @@ mkdir -p ~/.vst3
 cp -r *.vst3 ~/.vst3/
 ```
 
+to build from source (**TODO** check dependencies), run `./install.sh`
+
+Sometimes it gets stuck on the debug build, check with:
+
+`grep '^CMAKE_BUILD_TYPE' "$HOME/github/downspout/build/CMakeCache.txt"`
+
+if in doubt, run :
+
+```bash
+DOWNSPOUT_BUILD_DIR="$PWD/build-release" DOWNSPOUT_RUN_TESTS=0 ./install.sh
+```
+
 **macOS** (`~/Library/Audio/Plug-Ins/VST3`, or `/Library/Audio/Plug-Ins/VST3` for all users):
 
 ```bash
