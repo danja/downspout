@@ -222,7 +222,8 @@ Progress as of 2026-05-27:
   twelve local scales, versioned text state (settings, population and RNG), and sample-accurate
   scheduling from internal tempo, incoming 24 PPQ MIDI Clock or host BBT. The editor keeps
   Melogen's light four-tab layout and replaces SMF export and remote instruments with a MIDI/Clock
-  status tab. Core tests and the VST3 target pass; host validation and visual acceptance are pending;
+  status tab. Core tests and the VST3 target pass; the screenshot is accepted and the About-tab
+  crash is fixed; remaining host timing/listening validation is tracked in `TODO.md`;
 - `sprout` now exists as an original L-system MIDI generator: seven grammars (Plant,
   Koch, Dragon, Sierpinski, Cantor, Levy, Tree) are rewritten per generation, read
   as a turtle (F/G note, f rest, +/- degree, brackets branch) and played as a

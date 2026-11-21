@@ -173,12 +173,10 @@ protected:
             refreshBrowser();
             break;
         case kActionBrowserScrollUp:
-            browserScroll_ = std::max(0, browserScroll_ - 4);
-            repaint();
+            scrollBrowser(-4);
             break;
         case kActionBrowserScrollDown:
-            browserScroll_ = std::min(std::max(0, static_cast<int>(browserEntries_.size()) - 1), browserScroll_ + 4);
-            repaint();
+            scrollBrowser(4);
             break;
         case kActionLoadFile:
             assignSelectedFile();
@@ -296,20 +294,15 @@ protected:
 
     bool onMouse(const MouseEvent& ev) override
     {
-        const bool consumedByKit = MagnetoUI::onMouse(ev);
         if (!ev.press && draggingBoundary_ >= 0) {
             draggingBoundary_ = -1;
             commitSlices();
             return true;
         }
-        if (consumedByKit)
-            return true;
-        if (ev.button != 1)
-            return false;
 
         const float mx = static_cast<float>(ev.pos.getX());
         const float my = static_cast<float>(ev.pos.getY());
-        if (ev.press) {
+        if (ev.press && ev.button == 1) {
             for (std::size_t i = 0; i < browserRowRects_.size(); ++i) {
                 if (!browserRowRects_[i].contains(mx, my))
                     continue;
@@ -325,7 +318,15 @@ protected:
                 }
                 return true;
             }
+        }
 
+        const bool consumedByKit = MagnetoUI::onMouse(ev);
+        if (consumedByKit)
+            return true;
+        if (ev.button != 1)
+            return false;
+
+        if (ev.press) {
             if (wavePlot_.contains(mx, my) && !slices_.empty()) {
                 const int boundary = boundaryAtPoint(mx);
                 if (boundary >= 0) {
@@ -340,6 +341,16 @@ protected:
 
         draggingBoundary_ = -1;
         return false;
+    }
+
+    bool onScroll(const ScrollEvent& ev) override
+    {
+        const float mx = static_cast<float>(ev.pos.getX());
+        const float my = static_cast<float>(ev.pos.getY());
+        if (!browserListRect_.contains(mx, my))
+            return false;
+        scrollBrowser(ev.delta.getY() > 0.0f ? -3 : 3);
+        return true;
     }
 
     bool onMotion(const MotionEvent& ev) override
@@ -383,6 +394,13 @@ private:
         return p;
     }
 
+    void scrollBrowser(const int delta)
+    {
+        const int maxScroll = std::max(0, static_cast<int>(browserEntries_.size()) - browserVisibleRows_);
+        browserScroll_ = std::clamp(browserScroll_ + delta, 0, maxScroll);
+        repaint();
+    }
+
     void refreshBrowser()
     {
         browserEntries_.clear();
@@ -409,10 +427,8 @@ private:
         });
         selectedEntry_ = browserEntries_.empty() ? -1 : 0;
         browserScroll_ = 0;
-        if (selectedEntry_ >= 0 && !browserEntries_[static_cast<std::size_t>(selectedEntry_)].directory)
-            loadPreviewForPath(browserEntries_[static_cast<std::size_t>(selectedEntry_)].path);
-        else
-            clearPreview();
+        clearPreview();
+        previewInfo_ = browserEntries_.empty() ? "No supported files in this folder" : "Select a file to preview";
         statusPulse_ = 30;
         repaint();
     }
@@ -579,11 +595,15 @@ private:
         drawButton(kActionBrowserUp, "UP", {x + w - 112.0f, y + 42.0f, 46.0f, 26.0f}, kAccentBrowser, false);
         drawButton(kActionBrowserHome, "HOME", {x + w - 60.0f, y + 42.0f, 46.0f, 26.0f}, kAccentBrowser, false);
 
-        const Rect list {x + 12.0f, y + 78.0f, w - 24.0f, h - 212.0f};
+        constexpr float kScrollGutter = 44.0f;
+        const Rect list {x + 12.0f, y + 78.0f, w - 24.0f - kScrollGutter, h - 212.0f};
+        browserListRect_ = list;
         drawPlotFrame(list);
         const float rowH = 23.0f;
         const int visible = std::max(1, static_cast<int>(list.h / rowH));
-        browserScroll_ = std::max(0, std::min(browserScroll_, std::max(0, static_cast<int>(browserEntries_.size()) - visible)));
+        browserVisibleRows_ = visible;
+        browserScroll_ = std::clamp(browserScroll_, 0,
+                                    std::max(0, static_cast<int>(browserEntries_.size()) - visible));
         browserRowRects_.clear();
 
         const auto& t = theme();
@@ -604,11 +624,12 @@ private:
             fontSize(12.0f);
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
             const std::string prefix = entry.directory ? ">  " : "   ";
-            text(row.x + 6.0f, row.y + row.h * 0.5f, (prefix + shortText(entry.name, 38)).c_str(), nullptr);
+            text(row.x + 6.0f, row.y + row.h * 0.5f, (prefix + shortText(entry.name, 32)).c_str(), nullptr);
         }
 
-        drawButton(kActionBrowserScrollUp, "+", {x + w - 48.0f, list.y, 34.0f, 26.0f}, kAccentBrowser, false);
-        drawButton(kActionBrowserScrollDown, "-", {x + w - 48.0f, list.y + list.h - 26.0f, 34.0f, 26.0f}, kAccentBrowser, false);
+        const float scrollX = list.x + list.w + 6.0f;
+        drawButton(kActionBrowserScrollUp, "^", {scrollX, list.y, 32.0f, 26.0f}, kAccentBrowser, false);
+        drawButton(kActionBrowserScrollDown, "v", {scrollX, list.y + list.h - 26.0f, 32.0f, 26.0f}, kAccentBrowser, false);
 
         const float infoY = y + h - 124.0f;
         label(x + 12.0f, infoY, "SELECTED");
@@ -795,6 +816,8 @@ private:
     std::string browserDir_ {};
     std::vector<BrowserEntry> browserEntries_ {};
     std::vector<Rect> browserRowRects_ {};
+    Rect browserListRect_ {};
+    int browserVisibleRows_ = 1;
     int selectedEntry_ = -1;
     int browserScroll_ = 0;
     std::string soundFontPath_ {};

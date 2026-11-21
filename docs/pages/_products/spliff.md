@@ -68,7 +68,6 @@ uses panel Attack/Sustain; only CC 4 Mix reaches that mode.
 ### Status
 
 Core DSP (including Designer), deterministic tests, the VST3 target and the
-panel are complete. The catalogue screenshot predates the three-way selector;
-fresh Cut and Designer captures were taken but visual acceptance is pending.
-Host validation in REAPER is pending. M/S operation, parametric sensitivity
-bands, and a live reduction display are deferred.
+panel are complete. The fresh Cut capture was copied into the catalogue and
+accepted. Host validation in REAPER is pending. M/S operation, parametric
+sensitivity bands, and a live reduction display are deferred.

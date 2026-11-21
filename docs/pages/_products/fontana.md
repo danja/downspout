@@ -45,7 +45,10 @@ leaving the editor.
 ### File browser and preview
 
 - A custom NanoVG browser lists directories, SoundFont files and audio files.
-  Selecting a file decodes it and draws min/max waveform peaks.
+  Selecting a file decodes it and draws min/max waveform peaks; entering a folder no
+  longer auto-decodes its first file.
+- The list has a dedicated scroll gutter with `^`/`v` buttons and mouse-wheel support,
+  so clicks on the right edge of a row navigate or select instead of scrolling.
 - **Audition** plays the selected file through an isolated preview engine.
 - **Load file** assigns an SF2/SF3 to the SoundFont slot or a WAV/Ogg to the
   sample slot and triggers the audition.
@@ -65,9 +68,7 @@ small and edits to the source file are picked up on reload.
 - Chorus and reverb sends are parsed into the data model but no effects unit is
   implemented.
 - Preview audition currently plays slice 0 of a sliced source.
-- Visual acceptance of the first screenshot is pending; the image was captured
-  at the declared 1280x800 size but could not be inspected at full resolution in
-  the generating environment.
+- The recaptured 1280x800 screenshot is in the catalogue and visually accepted.
 
 ### Parameters
 

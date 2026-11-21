@@ -161,22 +161,14 @@ The GitHub Pages source lives under `docs/pages/`. Plugin pages are Markdown
 files in `docs/pages/_products/`, and each page references one of the generated
 screenshots in `docs/pages/assets/plugins/`.
 
-## Visual acceptance pending
+## Visual acceptance
 
-Captured, dimension-checked images awaiting first-time-user inspection before
-they are treated as visually accepted:
+All current catalog captures are accepted. Screenshots recaptured after UI changes
+are copied into `docs/pages/assets/plugins/` at the dimensions declared in each
+plugin's `DistrhoPluginInfo.h`:
 
-- `conductor` — `/tmp/opencode/conductor-screenshot/conductor.png` (960x820, after the
-  eight-block editor and taller panel). The repository PNG is unchanged pending review.
-- `padseq` — `/tmp/opencode/padseq-screenshot/padseq.png` (980x720, after the SysEx-only
-  LED feedback change). The repository PNG is unchanged pending review.
-- `fontana` — `docs/pages/assets/plugins/fontana.png` (1280x800, first SoundFont and
-  slice-sampler panel). The capture is in the catalog so the page is not broken, but
-  visual acceptance is still pending.
-- `melevolve` — `docs/pages/assets/plugins/melevolve.png` (920x700, first four-tab
-  Melogen-style panel). The capture is in the catalog so the page is not broken, but
-  visual acceptance is still pending.
-
-The capturing agent could not inspect PNG pixels, so none of these screenshots has
-visual acceptance yet. Keep the pending repository PNGs unchanged until an agent that
-can open the image has reviewed them.
+- `conductor` — 960x820, eight-block editor.
+- `padseq` — 980x720, SysEx-only LED feedback.
+- `fontana` — 1280x800, browser scroll gutter and lazy preview.
+- `melevolve` — 920x700, four-tab Melogen-style panel.
+- `bassgen`, `drumgen` and `spliff` — accepted captures copied into the catalog.

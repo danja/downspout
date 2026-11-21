@@ -64,7 +64,6 @@ read-only outputs measured from the audio thread.
 
 Not yet auditioned in a host. Core tests cover pass-through, gating, the
 external sidechain, hysteresis, attack/hold/release, stereo linking, bypass,
-output gain, `reset()` and block-size invariance. The 920x700 screenshot was
-captured and checked for size and non-blank pixels, but visual acceptance is
-**pending**: this agent cannot inspect images at full resolution in this
-session. See `plugins/gate/docs/design.md` for the design and test notes.
+output gain, `reset()` and block-size invariance. The 920x700 screenshot is in
+the catalog and visually accepted. See `plugins/gate/docs/design.md` for the
+design and test notes.

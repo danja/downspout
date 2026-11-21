@@ -104,10 +104,9 @@ and transport when **Clock source** is MIDI.
 
 Core tests, the VST3 target and the four-tab editor are complete. Core tests cover RNG
 reproducibility, decoding, settings, state round-trips, votes and evolution, block-size
-independence, looping, outgoing clock, MIDI Start/Continue/Stop and host BBT edge cases. A
-920x700 screenshot was captured and dimension-checked, but the capturing model could not
-inspect PNG pixels and `tesseract` was unavailable, so visual acceptance is explicitly pending.
-Headless host load/save/reopen in REAPER 7.85 verified that distinctive settings, parameters
+independence, looping, outgoing clock, MIDI Start/Continue/Stop and host BBT edge cases. The
+920x700 screenshot was recaptured after the text cleanup and accepted; the About-tab
+out-of-bounds read is fixed. Headless host load/save/reopen in REAPER 7.85 verified that distinctive settings, parameters
 and a regenerated 24-entry population from `action=new` persist (action key not saved; see
 `/tmp/opencode/melevolve-reaper-check.RPP` and `/tmp/opencode/melevolve-reaper-reopen.log`).
 Listening/render validation, live output-status observation and timing-source checks

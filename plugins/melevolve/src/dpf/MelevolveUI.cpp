@@ -60,6 +60,10 @@ constexpr int kParamBase = 100;
 constexpr int kStepperBase = 200;
 constexpr int kSegmentBase = 300;
 
+constexpr float kHeaderHeight = 104.0f;
+constexpr float kContentTop = 106.0f;
+constexpr float kContentHeight = 570.0f;
+
 const char* originLabel(const char* origin)
 {
     if (origin == nullptr) return "";
@@ -138,7 +142,7 @@ protected:
         drawMasthead();
         drawTabs();
 
-        const Rect content {24.0f, 130.0f, 872.0f, 546.0f};
+        const Rect content {24.0f, kContentTop, 872.0f, kContentHeight};
         switch (activeTab_) {
         case 0: drawInteract(content); break;
         case 1: drawSettings(content); break;
@@ -462,12 +466,8 @@ private:
 
     void drawMasthead()
     {
-        fillRect({0.0f, 0.0f, static_cast<float>(getWidth()), 116.0f}, kSurface);
+        fillRect({0.0f, 0.0f, static_cast<float>(getWidth()), kHeaderHeight}, kSurface);
         labelText(24.0f, 28.0f, "Melevolve", kText, 27.0f);
-        labelText(156.0f, 31.0f, "evolutionary melodies, straight to MIDI", kMuted, 14.0f);
-        labelText(24.0f, 56.0f,
-                  "Play five melodies, vote - 0 +, then bring on more or breed the next generation.",
-                  kMuted, 12.5f);
         labelText(static_cast<float>(getWidth()) - 24.0f, 31.0f, "DOWNSPOUT", kMuted, 11.0f,
                   ALIGN_RIGHT | ALIGN_MIDDLE);
     }
@@ -477,9 +477,9 @@ private:
         static constexpr const char* names[kTabCount] = {"Interact", "Settings", "MIDI / Clock", "About"};
         const float gap = 4.0f;
         const float width = (872.0f - gap * static_cast<float>(kTabCount - 1)) / static_cast<float>(kTabCount);
-        fillRect({24.0f, 76.0f, 872.0f, 42.0f}, kSurface2, 12.0f);
+        fillRect({24.0f, kHeaderHeight - 50.0f, 872.0f, 42.0f}, kSurface2, 12.0f);
         for (int i = 0; i < kTabCount; ++i) {
-            const Rect tab {24.0f + static_cast<float>(i) * (width + gap), 80.0f, width, 34.0f};
+            const Rect tab {24.0f + static_cast<float>(i) * (width + gap), kHeaderHeight - 46.0f, width, 34.0f};
             const bool active = i == activeTab_;
             fillRect(tab, active ? kSurface : kSurface2, 9.0f);
             if (active)
@@ -599,14 +599,11 @@ private:
     void drawInteract(const Rect content)
     {
         labelText(content.x, content.y + 6.0f,
-                  "Play each melody and vote. More shows the next five; Evolve breeds from your votes.",
-                  kMuted, 12.0f);
-        labelText(content.x, content.y + 34.0f,
                   "Generation " + std::to_string(session_.population.generation + 1), kText, 18.0f);
         const int rated = session_.population.ratedCount();
         const int total = std::max(1, static_cast<int>(session_.population.entries.size()));
         const int round = std::max(1, session_.population.round + 1);
-        labelText(content.x, content.y + 58.0f,
+        labelText(content.x, content.y + 30.0f,
                   "Round " + std::to_string(round) + " of " + std::to_string((total + core::kRows - 1) / core::kRows)
                       + "   -   " + std::to_string(rated) + " of " + std::to_string(total) + " rated",
                   kMuted, 12.0f);
@@ -617,15 +614,15 @@ private:
         const std::string notice = clockRunning && playing >= 0
             ? "Playing row " + std::to_string(playing + 1) + "  -  MIDI out on channel "
                 + std::to_string(static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kMidiChannel)])))
-            : "Ready - press a round Play button to send MIDI";
-        fillRect({content.x, content.y + 76.0f, content.w, 30.0f}, kSurface2, 8.0f);
-        labelText(content.x + 12.0f, content.y + 91.0f, notice, kMuted, 12.0f);
+            : "Ready";
+        fillRect({content.x, content.y + 44.0f, content.w, 30.0f}, kSurface2, 8.0f);
+        labelText(content.x + 12.0f, content.y + 59.0f, notice, kMuted, 12.0f);
 
-        const float rowTop = content.y + 114.0f;
+        const float rowTop = content.y + 82.0f;
         for (int position = 0; position < core::kRows; ++position)
             drawRow(content.x, rowTop + static_cast<float>(position) * 76.0f, content.w, position, playing, progress);
 
-        const float actionY = content.y + 498.0f;
+        const float actionY = content.y + 466.0f;
         drawButton(kMore, "More", {content.x, actionY, 220.0f, 40.0f}, kSurface, kText, session_.population.canShowMore());
         drawButton(kEvolve, "Evolve", {content.x + 232.0f, actionY, 220.0f, 40.0f}, kAccent, kWhite,
                    session_.population.canEvolve());
@@ -721,9 +718,6 @@ private:
         }
         drawButton(kReset, "Reset everything",
                    {content.x, content.y + 500.0f, 240.0f, 38.0f}, kSurface2, kMuted);
-        labelText(content.x + 256.0f, content.y + 519.0f,
-                  "Changing the line or scale shapes new melodies; existing rows keep their notes.",
-                  kMuted, 11.5f);
     }
 
     void drawSetting(const core::Param parameter, const Rect field)
@@ -817,28 +811,23 @@ private:
         const int velocity = static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kStatusLastVelocity)]));
         const bool running = values_[static_cast<std::size_t>(core::kStatusClockRunning)] > 0.5f;
 
-        drawCard(a, "MIDI OUTPUT");
-        infoLine(a.x + 18.0f, a.y + 64.0f, a.w - 36.0f, "Output channel", "Ch " + std::to_string(channel));
+        drawCard(a, "MIDI");
+        infoLine(a.x + 18.0f, a.y + 64.0f, a.w - 36.0f, "Channel", std::to_string(channel));
         infoLine(a.x + 18.0f, a.y + 98.0f, a.w - 36.0f, "Last note", withNoteName(lastNote, velocity));
         infoLine(a.x + 18.0f, a.y + 132.0f, a.w - 36.0f, "Playing row",
                  running ? std::to_string(static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kStatusPlaying)])) + 1) : "-");
-        labelText(a.x + 18.0f, a.y + 176.0f, "Notes are sent on the chosen channel.", kMuted, 11.5f);
-        labelText(a.x + 18.0f, a.y + 196.0f, "Clock messages are system realtime.", kMuted, 11.5f);
 
         drawCard(b, "CLOCK");
         const int source = static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kClockSource)]));
         infoLine(b.x + 18.0f, b.y + 64.0f, b.w - 36.0f, "Source",
                  core::clockSourceName(static_cast<core::ClockSource>(source)));
-        infoLine(b.x + 18.0f, b.y + 98.0f, b.w - 36.0f, "Resolved tempo",
+        infoLine(b.x + 18.0f, b.y + 98.0f, b.w - 36.0f, "Tempo",
                  std::to_string(static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kStatusClockBpm)]))) + " bpm");
         infoLine(b.x + 18.0f, b.y + 132.0f, b.w - 36.0f, "Transport", running ? "Running" : "Stopped");
         infoLine(b.x + 18.0f, b.y + 166.0f, b.w - 36.0f, "24 PPQ tick",
                  std::to_string(static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kStatusClockTick)]))) + " / 24");
-        labelText(b.x + 18.0f, b.y + 208.0f,
-                  values_[static_cast<std::size_t>(core::kSendClock)] > 0.5f ? "Outgoing clock: on" : "Outgoing clock: off",
-                  kMuted, 11.5f);
 
-        drawCard(c, "RUN STATUS");
+        drawCard(c, "STATUS");
         infoLine(c.x + 18.0f, c.y + 64.0f, c.w - 36.0f, "Generation",
                  std::to_string(static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kStatusGeneration)])) + 1));
         infoLine(c.x + 18.0f, c.y + 98.0f, c.w - 36.0f, "Round",
@@ -847,49 +836,22 @@ private:
                  std::to_string(session_.population.ratedCount()) + " / " + std::to_string(session_.population.entries.size()));
         infoLine(c.x + 18.0f, c.y + 166.0f, c.w - 36.0f, "Phrase length",
                  std::to_string(core::genomeLength(session_.settings)) + " steps");
-        labelText(c.x + 18.0f, c.y + 208.0f,
-                  "Host BBT starts a row on Play; MIDI Start resets and Continue resumes it.",
-                  kMuted, 11.0f);
 
-        drawCard(d, "ROUTING");
-        static const char* lines[] = {
-            "This plugin outputs MIDI only; it produces no audio.",
-            "Route its MIDI output to an instrument on another track.",
-            "Internal tempo needs no host transport.",
-            "MIDI Clock listens for Start, Continue, Stop and 24 PPQ ticks.",
-            "Host BBT follows the host tempo and time signature.",
-            "Panic (CC 123) is sent whenever playback stops."
-        };
-        for (int i = 0; i < 6; ++i)
-            labelText(d.x + 18.0f, d.y + 66.0f + static_cast<float>(i) * 28.0f, lines[i], kMuted, 11.5f);
+        drawCard(d, "OUTPUT");
+        infoLine(d.x + 18.0f, d.y + 64.0f, d.w - 36.0f, "MIDI clock",
+                 values_[static_cast<std::size_t>(core::kSendClock)] > 0.5f ? "On" : "Off");
+        infoLine(d.x + 18.0f, d.y + 98.0f, d.w - 36.0f, "Loop",
+                 values_[static_cast<std::size_t>(core::kLoop)] > 0.5f ? "On" : "Off");
     }
 
     // ---- About ----------------------------------------------------------------------------------------------------
 
     void drawAbout(const Rect content)
     {
-        const Rect card {content.x, content.y + 4.0f, content.w, 442.0f};
-        drawCard(card, "About Melevolve");
-        static const char* lines[] = {
-            "Melevolve is a port of Melogen's evolutionary melody generator.",
-            "A genetic algorithm proposes melodies on a sixteenth-note grid. You listen and vote;",
-            "the next generation is bred from what you liked, with fresh immigrants for variety.",
-            "",
-            "What changed for the VST:",
-            "  -  Downloaded .mid files are replaced by live MIDI output.",
-            "  -  The Instrument tab is now MIDI / Clock, showing the effective output state.",
-            "  -  Browser audio, remote instruments and the web server are not part of the plugin.",
-            "",
-            "Clock sources:",
-            "  -  Internal: the tempo slider drives an absolute-time event queue.",
-            "  -  MIDI Clock: incoming 24 PPQ ticks drive the step grid; Start, Continue and Stop are obeyed.",
-            "  -  Host BBT: the host transport and tempo drive the grid; a Play edge starts the chosen row.",
-            "",
-            "The session, ratings, population and random-generator state are saved with the project."
-        };
-        for (int i = 0; i < 16; ++i)
-            labelText(card.x + 24.0f, card.y + 66.0f + static_cast<float>(i) * 22.0f, lines[i],
-                      i == 4 || i == 10 ? kText : kMuted, i == 4 || i == 10 ? 13.0f : 12.0f);
+        const Rect card {content.x, content.y + 4.0f, content.w, 160.0f};
+        drawCard(card, "About");
+        labelText(card.x + 24.0f, card.y + 66.0f, "Melevolve", kText, 16.0f);
+        labelText(card.x + 24.0f, card.y + 92.0f, "Melogen-based evolutionary MIDI generator", kMuted, 12.5f);
     }
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MelevolveUI)
