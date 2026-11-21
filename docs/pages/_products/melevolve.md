@@ -8,11 +8,11 @@ group: generators
 role: evolutionary melody generator
 screenshot: /assets/plugins/melevolve.png
 capabilities: [MIDI output, internal clock, MIDI Clock input, MIDI Clock output, host BBT sync, persistent population state]
-summary: Melogen's five-row genetic melody generator as a live MIDI plugin: play, vote −/0/+, and breed the next generation on internal, MIDI Clock, or host timing.
+summary: Melogen's five-row genetic melody generator as a live MIDI plugin: pick a Favourite, play, vote −/0/+, and breed the next generation on internal, MIDI Clock, or host timing.
 ---
 
 > **Ported from [Melogen](https://github.com/danja/melogen)**. The genetic algorithm, local scale
-> set and light four-tab layout come from the browser app. MIDI output, native controls and clock
+> set and light two-tab layout come from the browser app. MIDI output, native controls and clock
 > handling are original to this port.
 
 ## Opinion
@@ -24,18 +24,19 @@ takes than to editing notes.
 
 The plugin emits MIDI only and makes no sound. Put it before an instrument in a MIDI-capable host,
 or route its MIDI output to an instrument track. Its panel keeps Melogen's pale background, white
-row cards, round green Play buttons and − / 0 / + votes, so the five-row interaction is readable at
-a glance.
+row cards, round green Play buttons and − / 0 / + votes. A top Favourite bar and one-line status
+make the five-row interaction and live output readable at a glance.
 
 ## Functionality
 
 ### Interact
 
-The **Interact** tab shows a generation and round counter, then five rows. Each row has a round
-Play button, a three-way vote, an `OUT` badge while it is sounding, and a thin progress line.
-Play sends the row's decoded notes on the selected MIDI channel and starts the chosen clock. Votes
-are `−` (dislike), `0` (neutral) and `+` (like); unrated rows are still eligible as parents, while
-disliked rows are not.
+The **Interact** tab opens with a compact generation/round line and a **Favourite** bar. Each of
+the five short rows has a round Play button, a three-way vote, a **Fave** button and a thin progress
+line. **Fave** chooses which row the top bar follows; its green Play button starts that row, and a
+host transport start plays it automatically. The default Favourite is row 1. Votes are `−`
+(dislike), `0` (neutral) and `+` (like); unrated rows are still eligible as parents, while disliked
+rows are not.
 
 - **More** moves to the next five candidates and keeps existing ratings.
 - **Evolve** breeds a new generation from the current ratings, keeping some high-scoring lines and
@@ -74,22 +75,18 @@ absolute time, so a row sounds the same at any block size or in an offline rende
 sends CC 123 and clears active notes. This source ignores incoming notes and never sends its own
 clock, avoiding a feedback loop with the master.
 
-**Host** reads host tempo, play state and bar/beat/tick. A row starts on a transport start, a
-restart after a transport stop, or a BBT jump; continuous playback after a natural non-loop stop
-does not restart it. Bar/beat values are converted from DPF's 1-based values to the core's
-zero-based grid.
+**Host** reads host tempo, play state and bar/beat/tick. It plays the Favourite row: pressing play
+in the host emits MIDI without a prior button press in the plugin. A restart after a transport
+stop or a BBT jump starts that row again; continuous playback after a natural non-loop stop does
+not restart it. Bar/beat values are converted from DPF's 1-based values to the core's zero-based
+grid.
 
-### MIDI / Clock
+### Live status
 
-The fourth tab replaces Melogen's remote Instrument panel with live output diagnostics: output
-channel, last note and velocity, playing row, clock source, resolved BPM, transport state, 24 PPQ
-tick, generation, round, rating count, phrase length and routing notes. These values come from
-read-only output parameters updated by the processor, so they reflect what was actually sent.
-
-### About
-
-The final tab explains the port and its boundaries: no downloaded `.mid` files, no browser audio,
-no remote Jig instruments and no web server.
+The old MIDI / Clock and About tabs are gone. Interact now carries one compact status line: clock
+source, resolved BPM and MIDI channel at the top; sounding row, last pitch/velocity and 24 PPQ tick
+at the bottom. These values come from read-only output parameters updated by the processor, so
+they reflect what was actually sent.
 
 ## State and automation
 
@@ -102,13 +99,12 @@ and transport when **Clock source** is MIDI.
 
 ## Status
 
-Core tests, the VST3 target and the four-tab editor are complete. Core tests cover RNG
+Core tests, the VST3 target and the two-tab editor are complete. Core tests cover RNG
 reproducibility, decoding, settings, state round-trips, votes and evolution, block-size
-independence, looping, outgoing clock, MIDI Start/Continue/Stop and host BBT edge cases. The
-920x700 screenshot was recaptured after the text cleanup and accepted; the About-tab
-out-of-bounds read is fixed. Headless host load/save/reopen in REAPER 7.85 verified that distinctive settings, parameters
-and a regenerated 24-entry population from `action=new` persist (action key not saved; see
-`/tmp/opencode/melevolve-reaper-check.RPP` and `/tmp/opencode/melevolve-reaper-reopen.log`).
-Listening/render validation, live output-status observation and timing-source checks
-(internal clock, incoming 24 PPQ MIDI Clock, host BBT) remain pending; headless render/play
-attempts with a downstream ReaSynth produced silent output in this environment.
+independence, looping, outgoing clock, MIDI Start/Continue/Stop, favourite selection, host play
+without a button press, and host BBT rewind/tempo/loop edge cases. The 920x700 screenshot was
+recaptured after this UI change and accepted. Headless host load/save/reopen in REAPER 7.85
+verified that distinctive settings, parameters and a regenerated 24-entry population from
+`action=new` persist (action key not saved; see `/tmp/opencode/melevolve-reaper-check.RPP` and
+`/tmp/opencode/melevolve-reaper-reopen.log`). Live listening, render validation and timing-source
+observation in REAPER remain pending in this environment.

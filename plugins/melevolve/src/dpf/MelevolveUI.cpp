@@ -48,14 +48,16 @@ constexpr Color kPlay {23, 128, 61};
 constexpr Color kDown {179, 38, 30};
 constexpr Color kWhite {255, 255, 255};
 
-constexpr int kTabCount = 4;
+constexpr int kTabCount = 2;
 constexpr int kTabBase = 0;
 constexpr int kPlayBase = 10;
 constexpr int kVoteBase = 20;
 constexpr int kMore = 40;
 constexpr int kEvolve = 41;
 constexpr int kNewPopulation = 42;
+constexpr int kPlayFavourite = 43;
 constexpr int kReset = 50;
+constexpr int kFaveBase = 60;
 constexpr int kParamBase = 100;
 constexpr int kStepperBase = 200;
 constexpr int kSegmentBase = 300;
@@ -81,15 +83,6 @@ std::string noteName(const int midi)
         return "-";
     char buffer[24];
     std::snprintf(buffer, sizeof(buffer), "%s%d", core::rootName(midi % 12), midi / 12 - 1);
-    return buffer;
-}
-
-std::string withNoteName(const int midi, const int velocity)
-{
-    if (midi < 0)
-        return "waiting for a note";
-    char buffer[40];
-    std::snprintf(buffer, sizeof(buffer), "%s  (velocity %d)", noteName(midi).c_str(), velocity);
     return buffer;
 }
 
@@ -145,9 +138,7 @@ protected:
         const Rect content {24.0f, kContentTop, 872.0f, kContentHeight};
         switch (activeTab_) {
         case 0: drawInteract(content); break;
-        case 1: drawSettings(content); break;
-        case 2: drawOutput(content); break;
-        default: drawAbout(content); break;
+        default: drawSettings(content); break;
         }
         drawOpenDropdown();
     }
@@ -339,6 +330,20 @@ private:
             repaint();
             return;
         }
+        if (id >= kFaveBase && id < kFaveBase + core::kRows) {
+            const int position = id - kFaveBase;
+            sendAction(messages::favorite(position));
+            core::selectFavorite(session_, mirrorEngine_, position);
+            repaint();
+            return;
+        }
+        if (id == kPlayFavourite) {
+            const int position = mirrorEngine_.selectedRow >= 0 ? mirrorEngine_.selectedRow : 0;
+            sendAction(messages::play(position));
+            core::requestPlay(session_, mirrorEngine_, position);
+            repaint();
+            return;
+        }
         if (id == kMore || id == kEvolve || id == kNewPopulation) {
             const std::string text = id == kMore ? messages::more()
                 : id == kEvolve ? messages::evolve() : messages::newPopulation();
@@ -353,11 +358,11 @@ private:
             return;
         }
         if (id == kSegmentBase) {
-            commitParameter(core::kMode, values_[static_cast<std::size_t>(core::kMode)] > 0.5f ? 0.0f : 1.0f);
+            commitParameter(core::kMode, 0.0f);
             return;
         }
         if (id == kSegmentBase + 1) {
-            commitParameter(core::kMode, values_[static_cast<std::size_t>(core::kMode)] > 0.5f ? 1.0f : 0.0f);
+            commitParameter(core::kMode, 1.0f);
             return;
         }
         if (id >= kStepperBase) {
@@ -474,7 +479,7 @@ private:
 
     void drawTabs()
     {
-        static constexpr const char* names[kTabCount] = {"Interact", "Settings", "MIDI / Clock", "About"};
+        static constexpr const char* names[kTabCount] = {"Interact", "Settings"};
         const float gap = 4.0f;
         const float width = (872.0f - gap * static_cast<float>(kTabCount - 1)) / static_cast<float>(kTabCount);
         fillRect({24.0f, kHeaderHeight - 50.0f, 872.0f, 42.0f}, kSurface2, 12.0f);
@@ -598,108 +603,167 @@ private:
 
     void drawInteract(const Rect content)
     {
-        labelText(content.x, content.y + 6.0f,
-                  "Generation " + std::to_string(session_.population.generation + 1), kText, 18.0f);
-        const int rated = session_.population.ratedCount();
-        const int total = std::max(1, static_cast<int>(session_.population.entries.size()));
-        const int round = std::max(1, session_.population.round + 1);
-        labelText(content.x, content.y + 30.0f,
-                  "Round " + std::to_string(round) + " of " + std::to_string((total + core::kRows - 1) / core::kRows)
-                      + "   -   " + std::to_string(rated) + " of " + std::to_string(total) + " rated",
-                  kMuted, 12.0f);
-
         const int playing = static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kStatusPlaying)]));
         const float progress = values_[static_cast<std::size_t>(core::kStatusProgress)];
         const bool clockRunning = values_[static_cast<std::size_t>(core::kStatusClockRunning)] > 0.5f;
-        const std::string notice = clockRunning && playing >= 0
-            ? "Playing row " + std::to_string(playing + 1) + "  -  MIDI out on channel "
-                + std::to_string(static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kMidiChannel)])))
-            : "Ready";
-        fillRect({content.x, content.y + 44.0f, content.w, 30.0f}, kSurface2, 8.0f);
-        labelText(content.x + 12.0f, content.y + 59.0f, notice, kMuted, 12.0f);
+        const int favourite = std::clamp(mirrorEngine_.selectedRow, 0, core::kRows - 1);
+        const int rated = session_.population.ratedCount();
+        const int total = std::max(1, static_cast<int>(session_.population.entries.size()));
+        const int round = std::max(1, session_.population.round + 1);
+        const int rounds = (total + core::kRows - 1) / core::kRows;
 
-        const float rowTop = content.y + 82.0f;
+        char summary[96];
+        std::snprintf(summary, sizeof(summary), "Gen %d   R%d/%d   %d/%d rated",
+                      session_.population.generation + 1, round, rounds, rated, total);
+        labelText(content.x, content.y + 10.0f, summary, kText, 13.5f);
+
+        const int source = static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kClockSource)]));
+        const int channel = static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kMidiChannel)]));
+        char clock[96];
+        std::snprintf(clock, sizeof(clock), "%s   %.0f bpm   ch %d",
+                      core::clockSourceName(static_cast<core::ClockSource>(source)),
+                      static_cast<double>(values_[static_cast<std::size_t>(core::kStatusClockBpm)]), channel);
+        labelText(content.x + content.w, content.y + 10.0f, clock, kMuted, 11.5f,
+                  ALIGN_RIGHT | ALIGN_MIDDLE);
+
+        drawFavouriteRow({content.x, content.y + 26.0f, content.w, 56.0f}, favourite, playing, clockRunning);
+
+        const float rowTop = content.y + 92.0f;
         for (int position = 0; position < core::kRows; ++position)
-            drawRow(content.x, rowTop + static_cast<float>(position) * 76.0f, content.w, position, playing, progress);
+            drawRow(content.x, rowTop + static_cast<float>(position) * 56.0f, content.w,
+                    position, playing, progress, favourite);
 
-        const float actionY = content.y + 466.0f;
-        drawButton(kMore, "More", {content.x, actionY, 220.0f, 40.0f}, kSurface, kText, session_.population.canShowMore());
-        drawButton(kEvolve, "Evolve", {content.x + 232.0f, actionY, 220.0f, 40.0f}, kAccent, kWhite,
+        const float actionY = content.y + 386.0f;
+        drawButton(kMore, "More", {content.x, actionY, 220.0f, 38.0f}, kSurface, kText, session_.population.canShowMore());
+        drawButton(kEvolve, "Evolve", {content.x + 232.0f, actionY, 220.0f, 38.0f}, kAccent, kWhite,
                    session_.population.canEvolve());
-        drawButton(kNewPopulation, "New population", {content.x + 464.0f, actionY, 220.0f, 40.0f}, kSurface, kMuted);
+        drawButton(kNewPopulation, "New population", {content.x + 464.0f, actionY, 220.0f, 38.0f}, kSurface, kMuted);
         drawButton(kParamBase + core::kLoop,
                    values_[static_cast<std::size_t>(core::kLoop)] > 0.5f ? "Loop: on" : "Loop: off",
-                   {content.x + 696.0f, actionY, content.w - 696.0f, 40.0f}, kSurface2, kText);
+                   {content.x + 696.0f, actionY, content.w - 696.0f, 38.0f}, kSurface2, kText);
+
+        char live[128];
+        if (clockRunning && playing >= 0)
+            std::snprintf(live, sizeof(live), "OUT row %d   %s vel %d   tick %02d", playing + 1,
+                          noteName(static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kStatusLastNote)]))).c_str(),
+                          static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kStatusLastVelocity)])),
+                          static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kStatusClockTick)])));
+        else
+            std::snprintf(live, sizeof(live), "Ready - press Play or start the host transport");
+        fillRect({content.x, content.y + 444.0f, content.w, 34.0f}, kSurface2, 8.0f);
+        labelText(content.x + 12.0f, content.y + 461.0f, live, kMuted, 12.0f);
     }
 
-    void drawRow(const float x, const float y, const float width, const int position,
-                 const int playing, const float progress)
+    void drawPlayGlyph(const float cx, const float cy, const float radius, const bool playing)
     {
-        const Rect row {x, y, width, 68.0f};
-        const bool isPlaying = playing == position;
-        fillRect(row, kSurface, 12.0f);
-        strokeRect(row, isPlaying ? kPlay : kLine, isPlaying ? 2.0f : 1.0f, 12.0f);
-
-        const float cx = x + 38.0f;
-        const float cy = y + 34.0f;
         beginPath();
         fillColor(kPlay.r, kPlay.g, kPlay.b, kPlay.a);
-        circle(cx, cy, 24.0f);
+        circle(cx, cy, radius);
         fill();
-        if (isPlaying) {
-            fillRect({cx - 7.0f, cy - 7.0f, 14.0f, 14.0f}, kWhite, 2.0f);
+        if (playing) {
+            fillRect({cx - 6.0f, cy - 6.0f, 12.0f, 12.0f}, kWhite, 2.0f);
         } else {
             beginPath();
             fillColor(kWhite.r, kWhite.g, kWhite.b, kWhite.a);
-            moveTo(cx - 6.0f, cy - 9.0f);
-            lineTo(cx + 10.0f, cy);
-            lineTo(cx - 6.0f, cy + 9.0f);
+            moveTo(cx - 5.0f, cy - 8.0f);
+            lineTo(cx + 9.0f, cy);
+            lineTo(cx - 5.0f, cy + 8.0f);
             closePath();
             fill();
         }
-        rememberAction(kPlayBase + position, {cx - 26.0f, cy - 26.0f, 52.0f, 52.0f});
+    }
 
-        labelText(x + 78.0f, y + 23.0f, std::to_string(position + 1), kText, 17.0f);
-        int entryIndex = -1;
-        if (position < static_cast<int>(session_.population.rows.size()))
-            entryIndex = session_.population.rows[static_cast<std::size_t>(position)];
-        std::string origin = "empty";
+    void rowEntryInfo(const int position, std::string& origin, int& rating, bool& carried) const
+    {
+        origin = "empty";
+        rating = -2;
+        carried = false;
+        if (position < 0 || position >= static_cast<int>(session_.population.rows.size()))
+            return;
+        const int entryIndex = session_.population.rows[static_cast<std::size_t>(position)];
+        if (entryIndex < 0 || entryIndex >= static_cast<int>(session_.population.entries.size()))
+            return;
+        const core::Entry& entry = session_.population.entries[static_cast<std::size_t>(entryIndex)];
+        origin = entry.carried ? "carried" : originLabel(entry.genome.origin.c_str());
+        rating = static_cast<int>(entry.rating);
+        carried = entry.carried;
+    }
+
+    void drawFavouriteRow(const Rect row, const int favourite, const int playing, const bool clockRunning)
+    {
+        const bool isPlaying = clockRunning && playing == favourite;
+        fillRect(row, kSurface, 11.0f);
+        strokeRect(row, isPlaying ? kPlay : kLine, isPlaying ? 2.0f : 1.0f, 11.0f);
+
+        const float cx = row.x + 34.0f;
+        const float cy = row.y + row.h * 0.5f;
+        drawPlayGlyph(cx, cy, 19.0f, isPlaying);
+        rememberAction(kPlayFavourite, {cx - 22.0f, cy - 22.0f, 44.0f, 44.0f});
+
+        std::string origin;
         int rating = -2;
         bool carried = false;
-        if (entryIndex >= 0 && entryIndex < static_cast<int>(session_.population.entries.size())) {
-            const core::Entry& entry = session_.population.entries[static_cast<std::size_t>(entryIndex)];
-            origin = entry.carried ? "carried over" : originLabel(entry.genome.origin.c_str());
-            rating = static_cast<int>(entry.rating);
-            carried = entry.carried;
-        }
-        labelText(x + 102.0f, y + 23.0f, origin, kMuted, 12.0f);
+        rowEntryInfo(favourite, origin, rating, carried);
+        labelText(row.x + 66.0f, row.y + 17.0f, "FAVOURITE", kMuted, 10.5f);
+        labelText(row.x + 66.0f, row.y + 39.0f,
+                  "Row " + std::to_string(favourite + 1) + "   " + origin + (carried ? "  *" : ""),
+                  kText, 14.0f);
+        labelText(row.x + row.w - 14.0f, cy, isPlaying ? "PLAYING" : (clockRunning ? "SELECTED" : "READY"),
+                  isPlaying ? kPlay : kMuted, 11.5f, ALIGN_RIGHT | ALIGN_MIDDLE);
+    }
 
-        const float voteW = 54.0f;
-        const float voteGap = 6.0f;
-        const float votesX = x + 262.0f;
+    void drawRow(const float x, const float y, const float width, const int position,
+                 const int playing, const float progress, const int favourite)
+    {
+        const float height = 50.0f;
+        const Rect row {x, y, width, height};
+        const bool isPlaying = playing == position;
+        const bool isFavourite = favourite == position;
+        fillRect(row, kSurface, 10.0f);
+        strokeRect(row, isPlaying ? kPlay : (isFavourite ? kAccent : kLine),
+                   isPlaying ? 2.0f : 1.0f, 10.0f);
+
+        const float cx = x + 30.0f;
+        const float cy = y + height * 0.5f;
+        drawPlayGlyph(cx, cy, 17.0f, isPlaying);
+        rememberAction(kPlayBase + position, {cx - 20.0f, cy - 20.0f, 40.0f, 40.0f});
+
+        std::string origin;
+        int rating = -2;
+        bool carried = false;
+        rowEntryInfo(position, origin, rating, carried);
+        labelText(x + 58.0f, y + 16.0f, std::to_string(position + 1), kText, 15.0f);
+        labelText(x + 80.0f, y + 16.0f, origin + (carried ? "  *" : ""), kMuted, 11.5f);
+
+        const float voteW = 44.0f;
+        const float voteGap = 4.0f;
+        const float votesX = x + 230.0f;
         static constexpr int ratings[3] = {-1, 0, 1};
         static constexpr const char* voteText[3] = {"-", "0", "+"};
         for (int i = 0; i < 3; ++i) {
-            const Rect vote {votesX + static_cast<float>(i) * (voteW + voteGap), y + 16.0f, voteW, 36.0f};
+            const Rect vote {votesX + static_cast<float>(i) * (voteW + voteGap), y + 10.0f, voteW, 28.0f};
             const bool selected = rating == ratings[i];
             Color face = selected ? (i == 0 ? kDown : i == 1 ? kAccent : kPlay) : kSurface2;
             if (selected && carried)
                 face = kWhite;
-            fillRect(vote, face, 9.0f);
-            strokeRect(vote, selected ? face : kLine, 1.0f, 9.0f);
+            fillRect(vote, face, 8.0f);
+            strokeRect(vote, selected ? face : kLine, 1.0f, 8.0f);
             labelText(vote.x + vote.w * 0.5f, vote.y + vote.h * 0.5f, voteText[i],
-                      selected ? kWhite : kText, 17.0f, ALIGN_CENTER | ALIGN_MIDDLE);
+                      selected ? kWhite : kText, 15.0f, ALIGN_CENTER | ALIGN_MIDDLE);
             rememberAction(kVoteBase + position * 3 + i, vote);
         }
 
-        const Rect outBadge {x + width - 66.0f, y + 16.0f, 48.0f, 36.0f};
-        fillRect(outBadge, isPlaying ? kPlay : kSurface2, 9.0f);
-        labelText(outBadge.x + outBadge.w * 0.5f, outBadge.y + outBadge.h * 0.5f, "OUT",
-                  isPlaying ? kWhite : kMuted, 10.0f, ALIGN_CENTER | ALIGN_MIDDLE);
+        const Rect fave {x + width - 66.0f, y + 10.0f, 56.0f, 28.0f};
+        fillRect(fave, isFavourite ? kAccent : kSurface2, 8.0f);
+        strokeRect(fave, kLine, 1.0f, 8.0f);
+        labelText(fave.x + fave.w * 0.5f, fave.y + fave.h * 0.5f, "Fave",
+                  isFavourite ? kWhite : kText, 11.5f, ALIGN_CENTER | ALIGN_MIDDLE);
+        rememberAction(kFaveBase + position, fave);
 
-        fillRect({x + 78.0f, y + 56.0f, width - 156.0f, 3.0f}, kSurface2, 2.0f);
+        fillRect({x + 58.0f, y + 39.0f, width - 132.0f, 3.0f}, kSurface2, 2.0f);
         if (isPlaying)
-            fillRect({x + 78.0f, y + 56.0f, (width - 156.0f) * std::clamp(progress, 0.0f, 1.0f), 3.0f}, kPlay, 2.0f);
+            fillRect({x + 58.0f, y + 39.0f, (width - 132.0f) * std::clamp(progress, 0.0f, 1.0f), 3.0f},
+                     kPlay, 2.0f);
     }
 
     // ---- Settings ------------------------------------------------------------------------------------------------
@@ -776,82 +840,6 @@ private:
         case core::kSendClock: drawToggle(parameter, "Send MIDI clock", field); break;
         default: break;
         }
-    }
-
-    // ---- MIDI / clock ---------------------------------------------------------------------------------------------
-
-    void drawCard(const Rect r, const char* title)
-    {
-        fillRect(r, kSurface, 12.0f);
-        strokeRect(r, kLine, 1.0f, 12.0f);
-        fillRect({r.x, r.y, r.w, 38.0f}, kSurface2, 12.0f);
-        fillRect({r.x, r.y + 26.0f, r.w, 12.0f}, kSurface2);
-        labelText(r.x + 16.0f, r.y + 19.0f, title, kText, 14.0f);
-    }
-
-    void infoLine(const float x, const float y, const float width, const std::string& label, const std::string& value)
-    {
-        labelText(x, y, label, kMuted, 12.0f);
-        labelText(x + width, y, value, kText, 12.5f, ALIGN_RIGHT | ALIGN_MIDDLE);
-        strokeRect({x, y + 15.0f, width, 1.0f}, kLine);
-    }
-
-    void drawOutput(const Rect content)
-    {
-        const float gap = 16.0f;
-        const float cardW = (content.w - gap) * 0.5f;
-        const float cardH = 250.0f;
-        const Rect a {content.x, content.y + 4.0f, cardW, cardH};
-        const Rect b {content.x + cardW + gap, content.y + 4.0f, cardW, cardH};
-        const Rect c {content.x, content.y + 20.0f + cardH, cardW, cardH};
-        const Rect d {content.x + cardW + gap, content.y + 20.0f + cardH, cardW, cardH};
-
-        const int channel = static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kMidiChannel)]));
-        const int lastNote = static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kStatusLastNote)]));
-        const int velocity = static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kStatusLastVelocity)]));
-        const bool running = values_[static_cast<std::size_t>(core::kStatusClockRunning)] > 0.5f;
-
-        drawCard(a, "MIDI");
-        infoLine(a.x + 18.0f, a.y + 64.0f, a.w - 36.0f, "Channel", std::to_string(channel));
-        infoLine(a.x + 18.0f, a.y + 98.0f, a.w - 36.0f, "Last note", withNoteName(lastNote, velocity));
-        infoLine(a.x + 18.0f, a.y + 132.0f, a.w - 36.0f, "Playing row",
-                 running ? std::to_string(static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kStatusPlaying)])) + 1) : "-");
-
-        drawCard(b, "CLOCK");
-        const int source = static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kClockSource)]));
-        infoLine(b.x + 18.0f, b.y + 64.0f, b.w - 36.0f, "Source",
-                 core::clockSourceName(static_cast<core::ClockSource>(source)));
-        infoLine(b.x + 18.0f, b.y + 98.0f, b.w - 36.0f, "Tempo",
-                 std::to_string(static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kStatusClockBpm)]))) + " bpm");
-        infoLine(b.x + 18.0f, b.y + 132.0f, b.w - 36.0f, "Transport", running ? "Running" : "Stopped");
-        infoLine(b.x + 18.0f, b.y + 166.0f, b.w - 36.0f, "24 PPQ tick",
-                 std::to_string(static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kStatusClockTick)]))) + " / 24");
-
-        drawCard(c, "STATUS");
-        infoLine(c.x + 18.0f, c.y + 64.0f, c.w - 36.0f, "Generation",
-                 std::to_string(static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kStatusGeneration)])) + 1));
-        infoLine(c.x + 18.0f, c.y + 98.0f, c.w - 36.0f, "Round",
-                 std::to_string(static_cast<int>(std::lround(values_[static_cast<std::size_t>(core::kStatusRound)])) + 1));
-        infoLine(c.x + 18.0f, c.y + 132.0f, c.w - 36.0f, "Rated",
-                 std::to_string(session_.population.ratedCount()) + " / " + std::to_string(session_.population.entries.size()));
-        infoLine(c.x + 18.0f, c.y + 166.0f, c.w - 36.0f, "Phrase length",
-                 std::to_string(core::genomeLength(session_.settings)) + " steps");
-
-        drawCard(d, "OUTPUT");
-        infoLine(d.x + 18.0f, d.y + 64.0f, d.w - 36.0f, "MIDI clock",
-                 values_[static_cast<std::size_t>(core::kSendClock)] > 0.5f ? "On" : "Off");
-        infoLine(d.x + 18.0f, d.y + 98.0f, d.w - 36.0f, "Loop",
-                 values_[static_cast<std::size_t>(core::kLoop)] > 0.5f ? "On" : "Off");
-    }
-
-    // ---- About ----------------------------------------------------------------------------------------------------
-
-    void drawAbout(const Rect content)
-    {
-        const Rect card {content.x, content.y + 4.0f, content.w, 160.0f};
-        drawCard(card, "About");
-        labelText(card.x + 24.0f, card.y + 66.0f, "Melevolve", kText, 16.0f);
-        labelText(card.x + 24.0f, card.y + 92.0f, "Melogen-based evolutionary MIDI generator", kMuted, 12.5f);
     }
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MelevolveUI)

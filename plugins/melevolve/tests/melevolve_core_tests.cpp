@@ -1,4 +1,5 @@
 #include "melevolve_core.hpp"
+#include "melevolve_messages.hpp"
 
 #include "downspout/test_assert.h"
 
@@ -588,6 +589,75 @@ void testHostTransportMatchesInternalAndRestarts()
     assert(statusView(hostSession, hostEngine).clockRunning);
 }
 
+void testHostPlaysFavoriteWithoutExplicitPlay()
+{
+    Settings settings = smallSettings();
+    settings.bars = 1;
+    settings.loop = true;
+    settings.clockSource = ClockSource::host;
+    Session session = makeSession(4242, settings);
+    Engine engine;
+    assert(engine.selectedRow == 0);
+
+    const auto stopped = runBlocks(session, engine, 4800, 4800,
+                                   [](std::uint64_t pos, std::uint32_t) { return hostAt(pos, 120.0, false); },
+                                   [](std::uint64_t, std::uint32_t) { return std::vector<MidiEvent> {}; });
+    assert(noteOns(stopped).empty());
+
+    const auto playing = runBlocks(session, engine, 96000, 4800,
+                                   [](std::uint64_t pos, std::uint32_t) { return hostAt(pos); },
+                                   [](std::uint64_t, std::uint32_t) { return std::vector<MidiEvent> {}; });
+    assert(!noteOns(playing).empty());
+    const StatusView view = statusView(session, engine);
+    assert(view.playing == 0 && view.clockRunning);
+}
+
+void testHostFavoriteSelectionRewindTempoAndLoop()
+{
+    Settings settings = smallSettings();
+    settings.bars = 1;
+    settings.loop = true;
+    settings.clockSource = ClockSource::host;
+    Session session = makeSession(909, settings);
+    Engine engine;
+
+    const ParsedAction favorite = parseAction(messages::favorite(2));
+    assert(favorite.type == Action::favorite && favorite.position == 2);
+    applyAction(session, engine, favorite);
+    assert(engine.selectedRow == 2);
+
+    const auto firstBar = runBlocks(session, engine, 96000, 4800,
+                                    [](std::uint64_t pos, std::uint32_t) { return hostAt(pos); },
+                                    [](std::uint64_t, std::uint32_t) { return std::vector<MidiEvent> {}; });
+    assert(!noteOns(firstBar).empty());
+    assert(statusView(session, engine).playing == 2);
+
+    const auto rewound = runBlocks(session, engine, 4800, 4800,
+                                   [](std::uint64_t, std::uint32_t) { return hostAt(0); },
+                                   [](std::uint64_t, std::uint32_t) { return std::vector<MidiEvent> {}; });
+    assert(hasCc123(rewound));
+    const auto afterRewind = runBlocks(session, engine, 96000, 4800,
+                                       [](std::uint64_t pos, std::uint32_t) { return hostAt(pos); },
+                                       [](std::uint64_t, std::uint32_t) { return std::vector<MidiEvent> {}; });
+    assert(!noteOns(afterRewind).empty());
+
+    const auto tempoChanged = runBlocks(session, engine, 4800, 4800,
+                                        [](std::uint64_t, std::uint32_t) { return hostAt(48000, 150.0); },
+                                        [](std::uint64_t, std::uint32_t) { return std::vector<MidiEvent> {}; });
+    assert(hasCc123(tempoChanged));
+
+    const auto looped = runBlocks(session, engine, 192000, 4800,
+                                  [](std::uint64_t pos, std::uint32_t) { return hostAt(pos); },
+                                  [](std::uint64_t, std::uint32_t) { return std::vector<MidiEvent> {}; });
+    const auto notes = noteOns(looped);
+    assert(std::any_of(notes.begin(), notes.end(), [](const Event& note) { return note.frame >= 96000; }));
+
+    applyAction(session, engine, parseAction(messages::newPopulation()));
+    assert(engine.selectedRow == 0);
+    applyAction(session, engine, parseAction(messages::resetAll()));
+    assert(engine.selectedRow == 0);
+}
+
 }  // namespace
 
 int main()
@@ -603,5 +673,7 @@ int main()
     testOutgoingMidiClock();
     testIncomingMidiClockStartStopAndContinue();
     testHostTransportMatchesInternalAndRestarts();
+    testHostPlaysFavoriteWithoutExplicitPlay();
+    testHostFavoriteSelectionRewindTempoAndLoop();
     return 0;
 }

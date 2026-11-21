@@ -130,12 +130,13 @@ Retune for microtonal Markov melodies.
 
 Port of Melogen's evolutionary melody generator. It shows five melodies on a sixteenth-note grid;
 press the round Play button, vote − / 0 / +, then choose **More** for the next five, **Evolve** to
-breed a generation from the votes, or **New population** to start again. The scale, key, line
-(melody or bass), bars, time signature and GA rates are host parameters, and the population, ratings
-and RNG state are saved with the project. Output is live MIDI on the selected channel (no `.mid`
-export): the clock can be internal, incoming 24 PPQ MIDI Clock with Start/Continue/Stop, or host
-BBT. Route its MIDI to an instrument on another track. The editor keeps Melogen's light four-tab
-layout; its fourth tab reports MIDI and clock status.
+breed a generation from the votes, or **New population** to start again. A **Fave** button chooses
+which row the top Favourite bar follows and which row starts when the host transport plays. The
+scale, key, line (melody or bass), bars, time signature and GA rates are host parameters, and the
+population, ratings and RNG state are saved with the project. Output is live MIDI on the selected
+channel (no `.mid` export): the clock can be internal, incoming 24 PPQ MIDI Clock with
+Start/Continue/Stop, or host BBT. Route its MIDI to an instrument on another track. The editor keeps
+Melogen's light two-tab layout; Interact carries a compact one-line status.
 
 ### Retune (`retune.vst3`)
 

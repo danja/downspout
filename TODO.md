@@ -4,13 +4,16 @@ Open work only. Completed builds are recorded in plugin docs; resolved lessons g
 
 ## Validation queue
 
-- [ ] Host passes for recent work: Fontana (SF2/SF3, WAV/Ogg slices, browser, save/reopen), Melevolve (live MIDI, internal/MIDI-clock/host-BBT timing, status outputs), Gate, Tilt, Polyscribe, Splay CC, Bassops input delay, Plank, Treatment, Prism, Mouth and NAM. Melevolve save/reopen already passed.
+- [ ] Host passes for recent work: Fontana (SF2/SF3, WAV/Ogg slices, browser, save/reopen), Melevolve (live MIDI render/listening and timing-source observation; core host-BBT play edge now covered), Gate, Tilt, Polyscribe, Splay CC, Bassops input delay, Plank, Treatment, Prism, Mouth and NAM. Melevolve save/reopen already passed.
 - [ ] Save/reopen sweep for non-parameter state: chipper, damiano, ghost, helterskelter, skream, spliff, lifeform, luma, paunchlad. Check patch retention across activation and sample-rate changes for gremlin, gremlin-driver and flues-synth-driver.
 - [ ] Sam: decide whether the unlicensed vendored engine may ship; validate both modes with a real transport and save/reopen; listen to upper-keyboard tuning, aliasing and Keys-mode speaking.
 - [ ] Ear checks where only tests/builds exist: melgen and counterpointer Inertia, Silken, Skream Morph LP-HP, Damiano Linked/Split, voxmod, Sinevox, Beards, Pratt, Mouth, Bassops delay, Syrinx presets, NAM captures/IRs, Treatment bank/sweep.
 
 ## Plugin work
 
+- [x] Melevolve UI: shorten Interact bars and add a top Favourite bar; replace per-bar OUT buttons with Fave buttons that choose which bar plays; keep only Interact and Settings tabs, moving compact status onto Interact.
+- [x] Melevolve Settings: fix Line: Melody/Bass reversed UI and selection mapping so clicking a choice selects that line.
+- [x] Melevolve transport: emit MIDI when REAPER plays in BBT/host-clock mode; cover stopped transport, loop boundaries, rewind and tempo/bar changes.
 - [ ] Review `https://gardenfx.uk/v4/` for extensions and new-plugin ideas.
 - [ ] PadGen: choose scope (pad synth vs MIDI generator) and build if distinct from Basilico, Canticle, Moka, Quartet, Strata, Monochord.
 - [ ] MIDI filter/router (channel/note filter and remap); lower-priority ADT/doubler, Inflator, spectral compressor, dynamic tilt and channel strip.

@@ -1696,6 +1696,14 @@ void requestPlay(Session& session, Engine& engine, const int position)
     engine.pendingPlay = position;
 }
 
+void selectFavorite(Session& session, Engine& engine, const int position)
+{
+    (void)session;
+    if (position < 0 || position >= kRows)
+        return;
+    engine.selectedRow = position;
+}
+
 ParsedAction parseAction(const std::string_view text)
 {
     const auto parts = split(text, ':');
@@ -1704,6 +1712,9 @@ ParsedAction parseAction(const std::string_view text)
         return action;
     if (parts[0] == "play" && parts.size() >= 2) {
         action.type = Action::play;
+        parseNumber(parts[1], action.position);
+    } else if (parts[0] == "fave" && parts.size() >= 2) {
+        action.type = Action::favorite;
         parseNumber(parts[1], action.position);
     } else if (parts[0] == "stop") {
         action.type = Action::stop;
@@ -1728,6 +1739,9 @@ void applyAction(Session& session, Engine& engine, const ParsedAction& action)
     switch (action.type) {
     case Action::play:
         requestPlay(session, engine, action.position);
+        break;
+    case Action::favorite:
+        selectFavorite(session, engine, action.position);
         break;
     case Action::stop:
         stopPlayback(session, engine);
@@ -1757,14 +1771,14 @@ void applyAction(Session& session, Engine& engine, const ParsedAction& action)
         break;
     case Action::newPopulation: {
         stopPlayback(session, engine);
-        engine.selectedRow = -1;
+        engine.selectedRow = 0;
         Context ctx = makeContext(session.settings, session.rng);
         session.population = Population::create(ctx);
         break;
     }
     case Action::resetAll: {
         stopPlayback(session, engine);
-        engine.selectedRow = -1;
+        engine.selectedRow = 0;
         session.settings = defaultSettings();
         session.rng = Rng(1);
         Context ctx = makeContext(session.settings, session.rng);

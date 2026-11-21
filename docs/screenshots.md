@@ -170,5 +170,5 @@ plugin's `DistrhoPluginInfo.h`:
 - `conductor` — 960x820, eight-block editor.
 - `padseq` — 980x720, SysEx-only LED feedback.
 - `fontana` — 1280x800, browser scroll gutter and lazy preview.
-- `melevolve` — 920x700, four-tab Melogen-style panel.
+- `melevolve` — 920x700, two-tab Melogen-style panel with a Favourite row.
 - `bassgen`, `drumgen` and `spliff` — accepted captures copied into the catalog.

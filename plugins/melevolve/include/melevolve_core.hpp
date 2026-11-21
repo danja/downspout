@@ -309,7 +309,7 @@ struct Engine {
     bool pendingStop = false;
 
     int playingRow = -1;
-    int selectedRow = -1;  // survives Stop so MIDI Continue / host restart know what to play
+    int selectedRow = 0;   // the Favourite row; survives Stop for MIDI Continue / host restart
     bool running = false;
     ClockSource source = ClockSource::internal;
     bool settingsSendClock = false;
@@ -348,9 +348,10 @@ struct Engine {
 
 void stopPlayback(Session& session, Engine& engine);
 void requestPlay(Session& session, Engine& engine, int position);
+void selectFavorite(Session& session, Engine& engine, int position);
 
 // Actions sent from the editor through the "action" state key.
-enum class Action { vote, more, evolve, newPopulation, resetAll, play, stop, unknown };
+enum class Action { vote, more, evolve, newPopulation, resetAll, play, favorite, stop, unknown };
 struct ParsedAction {
     Action type = Action::unknown;
     int position = -1;

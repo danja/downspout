@@ -23,14 +23,15 @@ MIDI generator. The original app bred melodies in the browser and ultimately dow
 | --- | --- | --- |
 | SMF download | Live note-on/note-off MIDI on the chosen channel | The user goal is MIDI out, not a file. |
 | `LOOKAHEAD = 0.2s`, `TICK_MS = 40ms`, `START_DELAY = 0.05s` | Absolute-quarter event queue, sample-accurate block scheduling | Host blocks and offline renders must not depend on wall-clock timers. |
-| Instrument tab: remote Jig plugin loading and control | MIDI / Clock tab: channel, source, resolved BPM/BBT, last note/velocity, routing notes | Browser audio and remote plugin hosting do not belong in a VST3. |
-| Browser/PWA UI, WebAudio, server routes | Four-tab NanoVG editor | DPF owns the native window; the light palette and layout are preserved. |
+| Instrument tab: remote Jig plugin loading and control | Compact status strip on Interact: channel, source, BPM, last note/velocity and tick | Browser audio and remote plugin hosting do not belong in a VST3. |
+| Browser/PWA UI, WebAudio, server routes | Two-tab NanoVG editor | DPF owns the native window; the light palette and layout are preserved. |
 | Local storage for tab/settings | Host parameters plus DPF text state | Hosts save and recall parameters and state with the project. |
 
 The editor uses Melogen's light palette from `styles/main.css` (background `#f6f5f1`, white
-surfaces, blue accent, green play, red dislike) and keeps four tabs. The first three are
-Interact, Settings and MIDI / Clock; the fourth is About rather than a remote instrument
-browser.
+surfaces, blue accent, green play, red dislike) and keeps two tabs: Interact and Settings.
+Interact opens with a Favourite row; each candidate has a **Fave** button that chooses which row
+the top bar follows, so a host transport start or a press of the top Play button plays the chosen
+row. Live output status is a single compact line instead of a separate diagnostics tab.
 
 ## Host parameters
 
@@ -55,9 +56,9 @@ core order, and octave values are absolute MIDI octaves with mode-aware defaults
   CC 123 and clears active notes while preserving the selected row. Incoming tick intervals
   estimate the effective BPM for the status display.
 - **Host** converts DPF's 1-based `bar`/`beat` to the core's zero-based position and reads
-  `beatsPerBar`, `beatType`, `bpm` and fractional ticks. A row starts on a transport start, a
-  restart after a transport stop, or a BBT jump; it does not restart on every block or after a
-  natural non-loop stop.
+  `beatsPerBar`, `beatType`, `bpm` and fractional ticks. The Favourite row defaults to row 1, so a
+  transport start emits MIDI without a prior button press. It restarts after a transport stop or
+  a BBT jump; it does not restart on every block or after a natural non-loop stop.
 - `send_clock` emits 24 PPQ clock, Start and Stop only when the source is not MIDI, preventing
   a MIDI-slaved plugin from fighting its master.
 - CC 123 is emitted on every stop path. Note-offs are queued in absolute time, so held notes
@@ -70,7 +71,7 @@ line, `rng`, `gen`, `round`, `rows`, and one `e=` or `a=` line per entry/archive
 incomplete or out-of-range value is rejected as a whole rather than partially applied.
 
 `action` is a `kStateIsOnlyForDSP` key used editor-to-processor only. Values are `play:N`,
-`vote:N:R`, `more`, `evolve`, `new`, `reset` and `stop`. Actions are never written to a
+`fave:N`, `vote:N:R`, `more`, `evolve`, `new`, `reset` and `stop`. Actions are never written to a
 project. The DSP wrapper applies the same core `Session` mutation as the editor's local
 mirror so the panel updates without relying on a DSP-to-UI state callback; DPF's VST3
 controller has no usable `updateStateValue` path for arbitrary keys. Live processor state
@@ -83,9 +84,9 @@ reinitialise the patch or reset the GA.
 
 Deterministic core tests cover RNG reproducibility, scales/decoding, parameter validation,
 settings effects, state round-trips, votes/More/Evolve/New/Reset, block-size independence,
-looping, outgoing clock, incoming MIDI Start/Continue/Stop, and host BBT match/restart edge
-cases. Core tests are registered through `downspout_add_core_test`; the `melevolve-vst3`
-target builds the DSP and NanoVG UI.
+looping, outgoing clock, incoming MIDI Start/Continue/Stop, favourite selection, host play without
+an explicit button press, and host BBT match/restart/rewind/tempo/loop edge cases. Core tests are
+registered through `downspout_add_core_test`; the `melevolve-vst3` target builds the DSP and NanoVG UI.
 
-Host load/save/reopen and a listening check in REAPER remain pending, as does first-time-user
-visual acceptance of the captured panel.
+Headless REAPER load/save/reopen passed. The captured two-tab panel was accepted; live listening
+and timing-source observation in REAPER remain pending in this environment.

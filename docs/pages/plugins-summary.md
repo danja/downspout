@@ -258,23 +258,25 @@ counts are saved as the `model` state. **Conductor ch** (0 = off): CC 21 Density
 CC 24 = 127 re-rolls the melody at the next bar line. Pair with retune for microtonal melodies.
 
 ### melevolve
-Port of Melogen's evolutionary melody generator. **Interact** shows five rows: a round Play button,
-- / 0 / + votes, and a progress line; **More** shows the next round, **Evolve** breeds from the votes,
-and **New population** restarts. Genes are sixteenth-note rest/note/hold steps over scale degrees,
-decoded only at MIDI output, so mutations stay in the chosen **Key** and **Scale** (Melogen's local
-twelve-scale subset). **Line** selects melody or bass, **Octave** the lowest note, **Bars** and
-**Time signature** the phrase length, and **Crossover rate**, **Mutation rate** and **Population**
-steer the GA. Unrated entries can still be parents; disliked entries cannot. The population, ratings,
-archive and RNG state are versioned text state; settings are ordinary parameters.
+Port of Melogen's evolutionary melody generator. **Interact** opens with a **Favourite** bar and five
+short rows: a round Play button, - / 0 / + votes, a **Fave** button and a progress line. **Fave**
+chooses which row the host transport starts; the default is row 1. **More** shows the next round,
+**Evolve** breeds from the votes, and **New population** restarts. Genes are sixteenth-note
+rest/note/hold steps over scale degrees, decoded only at MIDI output, so mutations stay in the
+chosen **Key** and **Scale** (Melogen's local twelve-scale subset). **Line** selects melody or bass
+by clicking the wanted choice, **Octave** the lowest note, **Bars** and **Time signature** the phrase
+length, and **Crossover rate**, **Mutation rate** and **Population** steer the GA. Unrated entries can
+still be parents; disliked entries cannot. The population, ratings, archive and RNG state are
+versioned text state; settings are ordinary parameters.
 
 **Clock source** selects Internal (the **Tempo** parameter drives sample-accurate scheduling), MIDI
-(incoming 24 PPQ clock plus Start/Continue/Stop; Start resets, Continue resumes the last row, Stop
-panics), or Host (host BBT drives the grid, with a play edge starting the chosen row). **Send MIDI
-clock** emits 24 PPQ clock and Start/Stop when not MIDI-slaved. Notes and CC 123 panic go to **MIDI
-channel**; clock messages are system realtime. Output status parameters expose playing row,
-generation, round, resolved BPM, 24-PPQ tick, progress, clock running, last note and velocity, and
-the **MIDI / Clock** tab shows them. There is no CC control map, no SMF export, and no host audio
-out; route its MIDI to an instrument on another track.
+(incoming 24 PPQ clock plus Start/Continue/Stop; Start resets, Continue resumes the Favourite row,
+Stop panics), or Host (host BBT drives the grid and its play edge starts the Favourite row without a
+plugin button press). **Send MIDI clock** emits 24 PPQ clock and Start/Stop when not MIDI-slaved.
+Notes and CC 123 panic go to **MIDI channel**; clock messages are system realtime. Output status
+parameters expose playing row, generation, round, resolved BPM, 24-PPQ tick, progress, clock running,
+last note and velocity, shown as a compact line on **Interact**. There is no CC control map, no SMF
+export, and no host audio out; route its MIDI to an instrument on another track.
 
 ### sprout
 L-system melody generator. MIDI input is optional and off by default (see below); output is

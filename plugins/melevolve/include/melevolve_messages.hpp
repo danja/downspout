@@ -10,6 +10,7 @@ inline constexpr const char* kSession = "session";
 inline constexpr const char* kAction = "action";
 
 inline std::string play(int position) { return "play:" + std::to_string(position); }
+inline std::string favorite(int position) { return "fave:" + std::to_string(position); }
 inline std::string vote(int position, int rating)
 {
     return "vote:" + std::to_string(position) + ":" + std::to_string(rating);
