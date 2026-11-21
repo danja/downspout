@@ -688,13 +688,14 @@ void testParametersAreClampedAndGarbageIsSafe()
     q.minHz = 9000.0f; q.maxHz = 9100.0f;
     const Parameters r = clampParameters(q);
     CHECK(r.maxHz >= r.minHz * 1.5f);
-    // defaults sit inside their ranges and are audible: the default picture with default settings makes sound
+    // defaults sit inside their ranges and are audible: the default picture drones with no input
     const Parameters d;
+    CHECK(d.follow == 0.0f);
     CHECK(clampParameters(d).lengthS == d.lengthS && clampParameters(d).minHz == d.minHz && clampParameters(d).maxHz == d.maxHz);
     const Image pic = defaultPicture();
     const Render o = runSilent(d, &pic, 3.0);
-    // default follow is 1 so silence is silent; the default must therefore ask for input: check with noise
-    CHECK(rms(o.l, 0, o.l.size()) == 0.0);
+    CHECK(rms(o.l, 0, o.l.size()) > 0.001);
+    CHECK(rms(o.r, 0, o.r.size()) > 0.001);
     // NaN and infinity in the input never reach the output
     std::vector<float> bad(8192, 0.1f);
     bad[10] = NAN; bad[20] = INFINITY; bad[30] = -INFINITY;

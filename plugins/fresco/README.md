@@ -10,7 +10,7 @@ sweeps it left to right. Stereo in and out, **latency 2048 samples** (reported t
 | Playback | Length | 0.5-120 s | 10 s | Time for the playhead to cross the picture |
 | | Playhead | Free loop, Follow host | Free loop | Follow host: position = host time modulo Length (needs a valid tempo; otherwise free-running) |
 | | Source | Input, Tone | Tone | Input keeps the input's phase; Tone is a bank of bin-centred sinusoids |
-| | Follow input level | 0-100 % | 100 % | 100 %: silence in gives silence out. 0 %: the picture drones with no input |
+| | Follow input level | 0-100 % | 0 % | 0 %: the picture drones with no input (the default, so Fresco makes sound straight away). 100 %: silence in gives silence out |
 | Mapping | Bottom, Top | 20 Hz-10 kHz, 200 Hz-20 kHz | 100 Hz, 16 kHz | Edges of the picture (Top is held at least 1.5 times Bottom) |
 | | Axis | Linear, Log | Log | How rows map to frequency |
 | | Range | 20-100 dB | 60 dB | Level of a nearly black pixel; black itself is silence |

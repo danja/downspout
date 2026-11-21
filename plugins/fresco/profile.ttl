@@ -49,8 +49,8 @@ dsp:fresco trn:hasParameter [
     rdfs:comment "0 = Input (keeps the input's phase), 1 = Tone (bin-centred sinusoid bank)"
 ], [
     trn:symbol "follow" ; trn:label "Follow Input" ;
-    trn:minimum 0 ; trn:maximum 1 ; trn:default 1 ;
-    rdfs:comment "How much the input level scales the result; 1 = silence in is silence out"
+    trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;
+    rdfs:comment "How much the input level scales the result; 0 = the picture drones with no input, 1 = silence in is silence out"
 ], [
     trn:symbol "transport" ; trn:label "Follow Host" ;
     trn:minimum 0 ; trn:maximum 1 ; trn:default 0 ;

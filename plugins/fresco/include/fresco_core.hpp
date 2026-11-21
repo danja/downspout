@@ -32,7 +32,7 @@ struct Parameters {
     float logAxis = 1.0f;        // 1 = rows are log-spaced in frequency (a spectrogram's usual axis), 0 = linear
     float invert = 0.0f;         // 1 = dark pixels are loud
     float source = 1.0f;         // Source
-    float follow = 1.0f;         // 0..1: how much the input level shapes the output (1 = silence in, silence out)
+    float follow = 0.0f;         // 0..1: how much the input level shapes the output (0 = Tone drones, 1 = silence in, silence out)
     float transport = 0.0f;      // 1 = playhead follows the host timeline
     float mix = 1.0f;
     float outputDb = 0.0f;

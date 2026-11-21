@@ -18,7 +18,8 @@ is exactly black stays silent. Averaging magnitudes prevents a fine picture from
   bin is a steady tone at its own bin-centre frequency. A white pixel is `0.02` amplitude (`kBinAmplitude`); the overlap-add gain is `1/2` for the synthesis window alone.
 - **Input**: the bin keeps the input's phase (`X/|X|`), so the timing and pitch character of the input are kept; the overlap-add gain is `1/1.5` (analysis and synthesis
   windows). The result is a coloured version of the input, not a sum of steady tones; where the input has no energy in a bin (below 1e-6) the Tone phase is used.
-- **Follow input level**: the frame gain is `(1 - f) + f min(1, 8 rms)` with `rms` the frame's input RMS, so silence in is exact silence out at 1 and the picture can drone at 0.
+- **Follow input level**: the frame gain is `(1 - f) + f min(1, 8 rms)` with `rms` the frame's input RMS, so silence in is exact silence out at 1 and the picture can drone at 0. The default is 0 so the
+  default Tone source makes sound without an input.
 
 ## Playhead
 Free loop: `timeS` advances one hop per frame, `playhead = frac(timeS / Length)`. Follow host: `position = beatPosition * 60 / bpm + offsetInBlock / sr` at the
