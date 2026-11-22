@@ -16,9 +16,10 @@ image is carried through the wet path. Optionally distorted mono fed to the HP p
 difference component above the crossover, generating extra width from the added harmonics.
 At Side Shape 0 no harmonics are added and the ducked stereo input is reproduced exactly.
 A Wet control blends the processed signal against the latency-compensated dry stereo input. Introduces 64-sample FIR latency
-reported to the host. Two delay controls (tempo-locked beats and free ms) can hold the main
-input back so a bass note starts just after the kick; this shift is musical, not latency, and
-is not reported. Reads the host tempo.""" ;
+reported to the host. The control pair is declared as an aux audio-sidechain bus, not a
+second main input bus, so hosts can route it separately from the main signal. Two delay
+controls (tempo-locked beats and free ms) can hold the main input back so a bass note starts
+just after the kick; this shift is musical, not latency, and is not reported. Reads the host tempo.""" ;
     trn:bundleName "bassops.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/bassops/> ;

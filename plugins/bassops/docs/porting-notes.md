@@ -192,7 +192,9 @@ Serialized as `delayBeat` and `delayMs` (absent in older projects = off). DPF pa
 ## DPF mapping notes
 
 - **NUM_INPUTS = 4**: inputs 0–1 are main stereo, inputs 2–3 are sidechain. Sidechain
-  ports are placed in a custom port group (ID 100) named "Sidechain" via `initPortGroup`.
+  ports are placed in a custom port group (ID 100) named "Sidechain" via `initPortGroup`
+  and carry `kAudioPortIsSidechain`, so VST3/CLAP hosts expose them as an aux sidechain
+  bus rather than a second main input bus.
 - **NUM_OUTPUTS = 2**: standard stereo output in the built-in stereo port group.
 - **WANT_TIMEPOS = 1**: only for the tempo that locks Delay (beats); playing/stopped and position are not used.
 - **Latency**: 64 frames reported via `getLatencyInFrames()`; hosts should delay-compensate

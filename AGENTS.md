@@ -116,6 +116,7 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - For transport-aware plugins, write explicit tests for stopped transport, loop boundaries, rewind, and tempo/bar changes.
 - For stateful plugins, define a stable serialization contract before UI work.
 - When an LV2 plugin has separate note/control MIDI ports that do not map cleanly to VST3, prefer one primary MIDI input in the DPF wrapper and keep role-detection inside the portable processor.
+- For audio sidechains, a port group named “Sidechain” is not enough: also set `kAudioPortIsSidechain` so VST3/CLAP hosts expose an aux bus rather than a second main input bus. Compare Gate, Glue, Trio and Interleaver.
 - For controller-heavy ports, expose output status parameters for the UI so the panel can reflect the processor’s effective live state rather than only the last host automation value.
 
 ## Documentation expectations

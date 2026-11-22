@@ -799,9 +799,9 @@ sweep the shape; 0 leaves output bit-identical to the plain low-pass. Selectable
 override Cutoff and Scream.
 
 ### bassops
-Sidechain ducker plus mid/side bass management. Inputs 1-2 are the main signal, 3-4 a
-control signal (typically a dry kick send) driving an envelope follower whose inverse ducks
-the main signal. After ducking the signal is split into mid and difference, both delayed
+Sidechain ducker plus mid/side bass management. Inputs 1-2 are the main signal, 3-4 an aux
+sidechain bus carrying a control signal (typically a dry kick send) driving an envelope
+follower whose inverse ducks the main signal. After ducking the signal is split into mid and difference, both delayed
 by the FIR latency, so the source stereo image is carried through the wet path (a
 one-sided mono feed is treated as dual mono); a waveshaper's added harmonics, high-passed
 at the cutoff, form an extra side signal, so highs gain width. An optional **Bass 90** (Off/Left/Right,

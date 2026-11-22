@@ -147,7 +147,11 @@ protected:
             port.name   = index == 0 ? "Main L" : "Main R";
             port.symbol = index == 0 ? "main_l" : "main_r";
         } else {
+            // Mark inputs 3-4 as an aux/sidechain bus. Without this hint VST3 and CLAP hosts
+            // expose them as a second main input bus, so REAPER cannot offer a real sidechain
+            // route and the control/main pairs can be fed the wrong signals.
             port.groupId = 100;
+            port.hints  |= kAudioPortIsSidechain;
             port.name   = index == 2 ? "Sidechain L" : "Sidechain R";
             port.symbol = index == 2 ? "sc_l"        : "sc_r";
         }

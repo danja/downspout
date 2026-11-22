@@ -18,10 +18,10 @@ Is very dependent on the kind of input signal. The stereo FX aren't quite there 
 
 Bassops combines two processing stages into a single plugin:
 
-**Sidechain ducker** — the signal on inputs 3 and 4 feeds an envelope follower
-whose output controls a VCA over the main signal on inputs 1 and 2. Attack and
-release shape how fast the duck opens and closes. Duck Depth sets the maximum
-gain reduction at full sidechain amplitude.
+**Sidechain ducker** — inputs 3 and 4 are a dedicated aux sidechain bus; that signal
+feeds an envelope follower whose output controls a VCA over the main signal on inputs
+1 and 2. Attack and release shape how fast the duck opens and closes. Duck Depth sets
+the maximum gain reduction at full sidechain amplitude.
 
 **M/S delay and stereo synthesis** — after ducking, the stereo signal is split into
 mid = (L+R)/2 and difference = (L−R)/2 (a mono track that only feeds one main input is
