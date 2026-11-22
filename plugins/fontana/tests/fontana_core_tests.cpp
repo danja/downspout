@@ -230,13 +230,16 @@ template <typename T>
 void writeBytes(const std::filesystem::path& path, const std::vector<T>& bytes)
 {
     std::ofstream stream(path, std::ios::binary);
+    assert(stream);
     stream.write(reinterpret_cast<const char*>(bytes.data()),
                  static_cast<std::streamsize>(bytes.size() * sizeof(T)));
 }
 
 std::filesystem::path scratchPath(const std::string& name)
 {
-    return std::filesystem::path("/tmp/opencode") / ("fontana-test-" + name);
+    const std::filesystem::path dir = std::filesystem::temp_directory_path() / "downspout_fontana_tests";
+    std::filesystem::create_directories(dir);
+    return dir / ("fontana-test-" + name);
 }
 
 MidiInputEvent noteEvent(const std::uint32_t frame, const std::uint8_t status,
@@ -348,7 +351,7 @@ void testSlicing()
 void testStateRoundTrips()
 {
     SliceSet slices;
-    slices.sourcePath = "/tmp/opencode/sine.wav";
+    slices.sourcePath = scratchPath("sine.wav").string();
     slices.sampleRate = 44100;
     slices.frameCount = 1000;
     slices.slices = {{0, 249, 60, false}, {250, 999, 61, true}};
