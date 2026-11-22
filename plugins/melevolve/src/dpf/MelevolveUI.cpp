@@ -153,10 +153,11 @@ protected:
         }
 
         if (openDropdown_ >= 0) {
+            const int dropdownIndex = openDropdown_;
             const int chosen = dropdownChoiceAt(mx, my);
             openDropdown_ = -1;
             if (chosen >= 0)
-                chooseDropdown(chosen);
+                chooseDropdown(dropdownIndex, chosen);
             repaint();
             return true;
         }
@@ -459,11 +460,13 @@ private:
         return index < dropdown.count ? index : -1;
     }
 
-    void chooseDropdown(const int index)
+    // The caller passes the open dropdown explicitly: onMouse clears openDropdown_
+    // as part of the same click, so reading it here would discard the choice.
+    void chooseDropdown(const int dropdownIndex, const int index)
     {
-        if (openDropdown_ < 0 || openDropdown_ >= static_cast<int>(dropdownCount_))
+        if (dropdownIndex < 0 || dropdownIndex >= static_cast<int>(dropdownCount_))
             return;
-        const Dropdown dropdown = dropdowns_[static_cast<std::size_t>(openDropdown_)];
+        const Dropdown dropdown = dropdowns_[static_cast<std::size_t>(dropdownIndex)];
         commitParameter(dropdown.parameter, static_cast<float>(index + itemOffset(dropdown.parameter)));
     }
 
