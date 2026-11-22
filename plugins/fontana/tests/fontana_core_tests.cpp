@@ -15,6 +15,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 using namespace downspout::fontana;
@@ -114,7 +115,7 @@ void fixedField(std::vector<std::uint8_t>& out, const std::string& text, const s
     std::memcpy(out.data() + out.size() - size, text.data(), std::min(text.size(), size));
 }
 
-std::vector<std::uint8_t> makeSoundFont()
+std::vector<std::uint8_t> makeSoundFont(const int panCents = 0)
 {
     std::vector<std::uint8_t> ifil;
     putU16(ifil, 2);
@@ -170,10 +171,14 @@ std::vector<std::uint8_t> makeSoundFont()
     std::vector<std::uint8_t> ibag;
     putU16(ibag, 0);
     putU16(ibag, 0);
-    putU16(ibag, 2);
+    putU16(ibag, panCents != 0 ? 3 : 2);
     putU16(ibag, 0);
 
     std::vector<std::uint8_t> igen;
+    if (panCents != 0) {
+        putU16(igen, 17);  // pan, in centibels left/right of centre
+        putU16(igen, static_cast<std::uint16_t>(panCents));
+    }
     putU16(igen, 43);  // key range 60..60
     putU16(igen, 0x3c3c);
     putU16(igen, 53);  // sampleId
@@ -367,11 +372,20 @@ void testStateRoundTrips()
     parameters.bank = 12.0f;
     parameters.program = 34.0f;
     parameters.sliceBaseNote = 48.0f;
+    parameters.pan = -0.4f;
     const auto restoredParams = deserializeSettings(serializeSettings(parameters));
     assert(restoredParams.has_value());
     assert(restoredParams->bank == 12.0f);
     assert(restoredParams->program == 34.0f);
     assert(restoredParams->sliceBaseNote == 48.0f);
+    assert(restoredParams->pan == -0.4f);
+    // Older saved settings have no pan field; the default must stay inert.
+    const auto legacy = deserializeSettings("version=1\nmasterVolume=0.800000\n");
+    assert(legacy.has_value());
+    assert(legacy->pan == 0.0f);
+    assert(Parameters {}.pan == 0.0f);
+    parameters.pan = 9.0f;
+    assert(clampParameters(parameters).pan == 1.0f);
     assert(!deserializeSettings("garbage").has_value());
 }
 
@@ -435,6 +449,42 @@ void testSoundFontPlayback()
     assert(parameters.statusLastNote == 60.0f);
 }
 
+void testPanOffsetRebalancesSoundFont()
+{
+    const auto path = scratchPath("hard-left.sf2");
+    writeBytes(path, makeSoundFont(-500));  // bank pans this preset hard left
+    const auto loaded = loadSoundFont(path.string());
+    assert(loaded.error.empty());
+
+    const auto render = [&loaded](const float userPan) {
+        Parameters parameters;
+        parameters.masterVolume = 1.0f;
+        parameters.pan = userPan;
+        EngineState state;
+        activate(state, 44100.0);
+        std::array<float, 256> left {};
+        std::array<float, 256> right {};
+        AudioBlock audio;
+        audio.outputs[0] = left.data();
+        audio.outputs[1] = right.data();
+        audio.channelCount = 2;
+        const MidiInputEvent on = noteEvent(0, 0x90, 60, 120);
+        processBlock(state, parameters, &loaded.bank, nullptr, nullptr, 0u, &on, 1,
+                     static_cast<std::uint32_t>(left.size()), 44100.0, audio);
+        return std::pair<float, float> { peakAbsolute(left.data(), left.size()),
+                                         peakAbsolute(right.data(), right.size()) };
+    };
+
+    const auto untouched = render(0.0f);
+    assert(untouched.first > 0.01f);
+    assert(untouched.second < 0.001f);
+
+    const auto corrected = render(1.0f);
+    assert(corrected.first > 0.01f);
+    assert(corrected.second > 0.01f);
+    assert(std::fabs(corrected.first - corrected.second) < 0.05f * corrected.first);
+}
+
 void testEnginePlayback()
 {
     const auto path = scratchPath("engine.wav");
@@ -483,6 +533,7 @@ int main()
     testStateRoundTrips();
     testSoundFontParsingAndResolution();
     testSoundFontPlayback();
+    testPanOffsetRebalancesSoundFont();
     testEnginePlayback();
     return 0;
 }

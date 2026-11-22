@@ -723,13 +723,14 @@ muting, normalising, looping or clearing slices. The panel is a custom NanoVG br
 with min/max waveform peaks and an isolated **Audition** preview. 32 voices with oldest
 stealing, sustain pedal CC 64, per-channel pitch bend over **Bend Range** (0-24,
 default 2, no RPN) and a global **MIDI Channel** filter (0 = all); there is no CC
-parameter map. Paths, settings and slice maps are versioned DPF text state (`settings`,
-`soundfont_path`, `sample_path`, `slice_map`, `preview_path`, `preview_trigger`);
-sample bytes are re-read from disk on session load. Key parameters: Master Volume,
-MIDI Channel, Bank, Preset, Transpose, Bend Range, Attack, Release, Source, Slice Base
-Note, Slice Loop, Filter Enable/Cutoff (stored but not applied as a separate post-voice
-filter), plus read-only Effective Bank, Effective Preset, Active Voices, Last Note and
-Load Status.
+parameter map. Paths, the browser directory, settings and slice maps are versioned DPF text state
+(`settings`, `soundfont_path`, `sample_path`, `slice_map`, `preview_path`,
+`preview_trigger`, `browser_dir`); sample bytes are re-read from disk on session
+load. Key parameters: Master Volume, MIDI Channel, Bank, Preset, Transpose, Bend Range,
+Attack, Release, Source, Slice Base Note, Slice Loop, Filter Enable/Cutoff (stored but
+not applied as a separate post-voice filter), Pan (offset added to the preset's pan,
+default 0/centre), plus read-only Effective Bank, Effective Preset, Active Voices,
+Last Note and Load Status.
 
 ### mosaic
 Four-slot WAV sampler with MIDI and autonomous triggering (**Trigger source** MIDI,

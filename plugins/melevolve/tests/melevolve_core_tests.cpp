@@ -658,6 +658,35 @@ void testHostFavoriteSelectionRewindTempoAndLoop()
     assert(engine.selectedRow == 0);
 }
 
+void testHostFavoriteSwitchWhileRolling()
+{
+    Settings settings = smallSettings();
+    settings.bars = 1;
+    settings.loop = true;
+    settings.clockSource = ClockSource::host;
+    Session session = makeSession(1337, settings);
+    Engine engine;
+    std::uint64_t hostFrameOffset = 0;
+    const auto hostFn = [&hostFrameOffset](std::uint64_t pos, std::uint32_t) {
+        return hostAt(hostFrameOffset + pos);
+    };
+    const auto noInput = [](std::uint64_t, std::uint32_t) { return std::vector<MidiEvent> {}; };
+
+    const auto before = runBlocks(session, engine, 96000, 4800, hostFn, noInput);
+    assert(!noteOns(before).empty());
+    assert(statusView(session, engine).playing == 0);
+
+    applyAction(session, engine, parseAction(messages::favorite(3)));
+    hostFrameOffset = 96000;
+
+    const auto after = runBlocks(session, engine, 48000, 4800, hostFn, noInput);
+    const StatusView view = statusView(session, engine);
+    assert(view.clockRunning);
+    assert(view.playing == 3);
+    assert(engine.selectedRow == 3);
+    assert(!noteOns(after).empty());
+}
+
 }  // namespace
 
 int main()
@@ -675,5 +704,6 @@ int main()
     testHostTransportMatchesInternalAndRestarts();
     testHostPlaysFavoriteWithoutExplicitPlay();
     testHostFavoriteSelectionRewindTempoAndLoop();
+    testHostFavoriteSwitchWhileRolling();
     return 0;
 }

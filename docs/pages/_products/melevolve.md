@@ -34,7 +34,8 @@ make the five-row interaction and live output readable at a glance.
 The **Interact** tab opens with a compact generation/round line and a **Favourite** bar. Each of
 the five short rows has a round Play button, a three-way vote, a **Fave** button and a thin progress
 line. **Fave** chooses which row the top bar follows; its green Play button starts that row, and a
-host transport start plays it automatically. The default Favourite is row 1. Votes are `−`
+host transport start plays it automatically. Clicking Fave while playback is running switches to
+that row immediately. The default Favourite is row 1. Votes are `−`
 (dislike), `0` (neutral) and `+` (like); unrated rows are still eligible as parents, while disliked
 rows are not.
 

@@ -1702,6 +1702,12 @@ void selectFavorite(Session& session, Engine& engine, const int position)
     if (position < 0 || position >= kRows)
         return;
     engine.selectedRow = position;
+    // A Fave click while a clock is running must switch the audible row at the next
+    // block, not just set the row used by the next transport start. MIDI clock has
+    // no notion of "now" here: it waits for Start/Continue, so leave it alone.
+    if (engine.running && engine.playingRow != position
+        && engine.source != ClockSource::midi)
+        engine.pendingPlay = position;
 }
 
 ParsedAction parseAction(const std::string_view text)

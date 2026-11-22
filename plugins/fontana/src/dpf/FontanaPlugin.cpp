@@ -40,6 +40,7 @@ constexpr std::size_t kPreviewBufferFrames = 512;
     case kParamSliceLoop: return p.sliceLoop;
     case kParamFilterEnabled: return p.filterEnabled;
     case kParamFilterCutoff: return p.filterCutoff;
+    case kParamPan: return p.pan;
     case kParamStatusBank: return p.statusBank;
     case kParamStatusProgram: return p.statusProgram;
     case kParamStatusVoices: return p.statusVoices;
@@ -65,6 +66,7 @@ void setParamFromFloat(const std::uint32_t index, const float value, Parameters&
     case kParamSliceLoop: p.sliceLoop = value; break;
     case kParamFilterEnabled: p.filterEnabled = value; break;
     case kParamFilterCutoff: p.filterCutoff = value; break;
+    case kParamPan: p.pan = value; break;
     default: break;
     }
 }
@@ -223,6 +225,13 @@ protected:
             parameter.ranges.max = 20000.0f;
             parameter.ranges.def = 20000.0f;
             break;
+        case kParamPan:
+            parameter.name = "Pan";
+            parameter.symbol = "pan";
+            parameter.ranges.min = -1.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.0f;
+            break;
         case kParamStatusBank:
             parameter.name = "Effective Bank";
             parameter.symbol = "status_bank";
@@ -300,6 +309,11 @@ protected:
             state.hints = kStateIsOnlyForDSP;
             state.defaultValue = "0";
             break;
+        case kStateBrowserDir:
+            state.key = kStateKeyBrowserDir;
+            state.label = "Browser Directory";
+            state.defaultValue = "";
+            break;
         }
     }
 
@@ -333,6 +347,8 @@ protected:
             std::snprintf(buf, sizeof(buf), "%u", previewSerial_.load(std::memory_order_relaxed));
             return String(buf);
         }
+        if (std::strcmp(key, kStateKeyBrowserDir) == 0)
+            return String(browserDir_.c_str());
         return String();
     }
 
@@ -349,6 +365,7 @@ protected:
                 next.pitchBendRange = restored->pitchBendRange;
                 next.transpose = restored->transpose;
                 next.sliceBaseNote = restored->sliceBaseNote;
+                next.pan = restored->pan;
                 parameters_ = clampParameters(next);
             }
             return;
@@ -373,6 +390,10 @@ protected:
         if (std::strcmp(key, kStateKeyPreviewTrigger) == 0) {
             unsigned long serial = std::strtoul(text.c_str(), nullptr, 10);
             previewSerial_.store(static_cast<std::uint32_t>(serial), std::memory_order_release);
+            return;
+        }
+        if (std::strcmp(key, kStateKeyBrowserDir) == 0) {
+            browserDir_ = text;
             return;
         }
     }
@@ -545,6 +566,7 @@ private:
     EngineState previewEngine_ {};
     SourcePaths paths_ {};
     std::string previewPath_ {};
+    std::string browserDir_ {};
     std::string loadError_ {};
     std::shared_ptr<const SoundFont> fontBank_ {};
     std::shared_ptr<const SampleSource> sampleBank_ {};

@@ -121,7 +121,8 @@ std::string serializeSettings(const Parameters& parameters)
            "program=" + std::to_string(parameters.program) + "\n"
            "bendRange=" + std::to_string(parameters.pitchBendRange) + "\n"
            "transpose=" + std::to_string(parameters.transpose) + "\n"
-           "sliceBaseNote=" + std::to_string(parameters.sliceBaseNote) + "\n";
+           "sliceBaseNote=" + std::to_string(parameters.sliceBaseNote) + "\n"
+           "pan=" + std::to_string(parameters.pan) + "\n";
 }
 
 std::optional<Parameters> deserializeSettings(const std::string& text)
@@ -154,6 +155,9 @@ std::optional<Parameters> deserializeSettings(const std::string& text)
             sawAny = true;
         } else if (key == "sliceBaseNote") {
             result.sliceBaseNote = parsed;
+            sawAny = true;
+        } else if (key == "pan") {
+            result.pan = parsed;
             sawAny = true;
         }
     }

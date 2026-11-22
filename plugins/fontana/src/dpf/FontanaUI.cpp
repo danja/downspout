@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -62,6 +63,7 @@ constexpr std::array<kit::Range, kLocalUiCount> kRanges = {{
     {0.0f, 1.0f, true},         // slice loop
     {0.0f, 1.0f, true},         // filter enabled
     {100.0f, 20000.0f, false, true}, // filter cutoff
+    {-1.0f, 1.0f, false},       // pan
     {-1.0f, 127.0f, true},      // status bank
     {-1.0f, 127.0f, true},      // status program
     {0.0f, 32.0f, true},        // status voices
@@ -74,6 +76,7 @@ constexpr std::array<kit::Range, kLocalUiCount> kRanges = {{
 constexpr std::array<float, kLocalUiCount> kDefaults = {{
     0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 2.0f, 4.0f, 120.0f,
     0.0f, 36.0f, 0.0f, 0.0f, 20000.0f,
+    0.0f,
     -1.0f, -1.0f, 0.0f, -1.0f, 0.0f,
     8.0f, 0.5f,
 }};
@@ -117,6 +120,14 @@ struct BrowserEntry {
         return std::string(home);
     std::error_code ec;
     return std::filesystem::current_path(ec).string();
+}
+
+[[nodiscard]] std::string formatPan(const float value)
+{
+    if (std::fabs(value) < 0.02f)
+        return "Center";
+    const int amount = static_cast<int>(std::lround(std::fabs(value) * 100.0f));
+    return (value < 0.0f ? "L" : "R") + std::to_string(amount);
 }
 
 [[nodiscard]] std::string formatHz(const float value)
@@ -164,13 +175,13 @@ protected:
             std::error_code ec;
             const std::filesystem::path parent = std::filesystem::path(browserDir_).parent_path();
             if (!parent.empty())
-                browserDir_ = parent.string();
-            refreshBrowser();
+                navigateBrowser(parent.string());
+            else
+                refreshBrowser();
             break;
         }
         case kActionBrowserHome:
-            browserDir_ = initialDirectory();
-            refreshBrowser();
+            navigateBrowser(initialDirectory());
             break;
         case kActionBrowserScrollUp:
             scrollBrowser(-4);
@@ -236,6 +247,7 @@ protected:
                 setValue(kParamBendRange, restored->pitchBendRange);
                 setValue(kParamTranspose, restored->transpose);
                 setValue(kParamSliceBaseNote, restored->sliceBaseNote);
+                setValue(kParamPan, restored->pan);
             }
             return;
         }
@@ -261,6 +273,14 @@ protected:
         if (std::strcmp(key, kStateKeyPreviewPath) == 0) {
             previewPath_ = text;
             repaint();
+            return;
+        }
+        if (std::strcmp(key, kStateKeyBrowserDir) == 0) {
+            // An empty value is a fresh project: keep the directory chosen by the constructor.
+            if (text.empty())
+                return;
+            browserDir_ = text;
+            refreshBrowser();
         }
     }
 
@@ -326,8 +346,7 @@ protected:
                     return false;
                 selectedEntry_ = static_cast<int>(index);
                 if (browserEntries_[index].directory) {
-                    browserDir_ = browserEntries_[index].path;
-                    refreshBrowser();
+                    navigateBrowser(browserEntries_[index].path);
                 } else {
                     loadPreviewForPath(browserEntries_[index].path);
                 }
@@ -413,6 +432,7 @@ private:
         p.sliceLoop = value(kParamSliceLoop);
         p.filterEnabled = value(kParamFilterEnabled);
         p.filterCutoff = value(kParamFilterCutoff);
+        p.pan = value(kParamPan);
         return p;
     }
 
@@ -439,6 +459,15 @@ private:
             (pointerY - scrollbarGrabOffset_ - browserScrollTrackRect_.y) / travel, 0.0f, 1.0f);
         browserScroll_ = static_cast<int>(ratio * static_cast<float>(maxBrowserScroll()) + 0.5f);
         repaint();
+    }
+
+    void navigateBrowser(const std::string& dir)
+    {
+        browserDir_ = dir;
+        // Persist before repainting so the host saves the new folder even if the
+        // editor is closed immediately afterwards.
+        setState(kStateKeyBrowserDir, browserDir_.c_str());
+        refreshBrowser();
     }
 
     void refreshBrowser()
@@ -829,8 +858,11 @@ private:
         drawStepper(kParamBendRange, "Bend", (std::to_string(static_cast<int>(value(kParamBendRange))) + " st").c_str(),
                     {x + 22.0f + (w - 36.0f) / 2.0f, y + 142.0f, (w - 36.0f) / 2.0f, 40.0f});
 
+        const float mixerW = (w - 36.0f) / 2.0f;
         drawSlider(kParamMasterVolume, "Master", std::to_string(static_cast<int>(value(kParamMasterVolume) * 100.0f)).c_str(),
-                   {x + 14.0f, y + 200.0f, w - 28.0f, 38.0f}, kAccentPlayer);
+                   {x + 14.0f, y + 200.0f, mixerW, 38.0f}, kAccentPlayer);
+        drawSlider(kParamPan, "Pan", formatPan(value(kParamPan)).c_str(),
+                   {x + 22.0f + mixerW, y + 200.0f, mixerW, 38.0f}, kAccentPlayer);
         drawSlider(kParamAttack, "Attack", (std::to_string(static_cast<int>(value(kParamAttack))) + " ms").c_str(),
                    {x + 14.0f, y + 252.0f, w - 28.0f, 38.0f}, kAccentPlayer);
         drawSlider(kParamRelease, "Release", (std::to_string(static_cast<int>(value(kParamRelease))) + " ms").c_str(),

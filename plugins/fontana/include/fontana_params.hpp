@@ -18,6 +18,7 @@ enum ParameterIndex : std::uint32_t {
     kParamSliceLoop,
     kParamFilterEnabled,
     kParamFilterCutoff,
+    kParamPan,
     kParamStatusBank,
     kParamStatusProgram,
     kParamStatusVoices,
@@ -33,6 +34,7 @@ enum StateIndex : std::uint32_t {
     kStateSliceMap,
     kStatePreviewPath,
     kStatePreviewTrigger,
+    kStateBrowserDir,
     kStateCount
 };
 
@@ -42,6 +44,7 @@ inline constexpr const char* kStateKeySamplePath = "sample_path";
 inline constexpr const char* kStateKeySliceMap = "slice_map";
 inline constexpr const char* kStateKeyPreviewPath = "preview_path";
 inline constexpr const char* kStateKeyPreviewTrigger = "preview_trigger";
+inline constexpr const char* kStateKeyBrowserDir = "browser_dir";
 
 inline constexpr const char* kFileFilterAudio = "Audio & SoundFont files|*.wav;*.WAV;*.ogg;*.OGG;*.sf2;*.SF2;*.sf3;*.SF3";
 inline constexpr const char* kFileFilterSoundFont = "SoundFont files|*.sf2;*.SF2;*.sf3;*.SF3";

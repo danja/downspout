@@ -689,8 +689,10 @@ void renderVoice(EngineState& state, const Parameters& parameters, const SoundFo
     const float expression = state.cc[11] > 0 ? state.cc[11] / 127.0f : 1.0f;
     const float gain = voice.velocity / 127.0f * voice.volume * centibelsToGain(attenuationCents) *
                        parameters.masterVolume * controllerGain * expression;
-    const float angle = (std::clamp(voice.pan, -1.0f, 1.0f) + 1.0f) *
-                        static_cast<float>(kPi) * 0.25f;
+    // A SoundFont can bake a hard pan into its zones. The user offset lets a
+    // project rebalance that preset without editing the bank file.
+    const float effectivePan = std::clamp(voice.pan + parameters.pan, -1.0f, 1.0f);
+    const float angle = (effectivePan + 1.0f) * static_cast<float>(kPi) * 0.25f;
     const float panL = std::cos(angle);
     const float panR = std::sin(angle);
     if (audio.outputs[0] != nullptr)
@@ -725,6 +727,7 @@ Parameters clampParameters(const Parameters& parameters) noexcept
     out.sliceLoop        = std::clamp(out.sliceLoop, 0.0f, 1.0f);
     out.filterEnabled    = std::clamp(out.filterEnabled, 0.0f, 1.0f);
     out.filterCutoff     = std::clamp(out.filterCutoff, 100.0f, 20000.0f);
+    out.pan              = std::clamp(out.pan, -1.0f, 1.0f);
     return out;
 }
 

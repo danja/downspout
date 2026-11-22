@@ -107,6 +107,14 @@ dsp:fontana a trn:PluginProfile ;
         trn:min "100.0"^^xsd:float ;
         trn:max "20000.0"^^xsd:float
     ] ;
+    trn:parameter [
+        rdfs:label "Pan" ;
+        trn:symbol "pan" ;
+        trn:default "0.0"^^xsd:float ;
+        trn:min "-1.0"^^xsd:float ;
+        trn:max "1.0"^^xsd:float ;
+        trn:comment "Offset added to each voice's SoundFont pan - hard-left presets can be rebalanced"
+    ] ;
     trn:state [
         rdfs:label "Settings" ;
         trn:key "settings"
@@ -130,5 +138,9 @@ dsp:fontana a trn:PluginProfile ;
     trn:state [
         rdfs:label "Preview Trigger" ;
         trn:key "preview_trigger"
+    ] ;
+    trn:state [
+        rdfs:label "Browser Directory" ;
+        trn:key "browser_dir"
     ] ;
     pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

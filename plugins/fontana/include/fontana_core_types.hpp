@@ -253,6 +253,7 @@ struct Parameters {
     float sliceLoop = 0.0f;       // boolean: loop the selected slice
     float filterEnabled = 0.0f;   // boolean: extra post voice low-pass
     float filterCutoff = 20000.0f;
+    float pan = 0.0f;             // -1 left .. +1 right, added to the SoundFont pan
     // Output-only status values mirrored to the UI.
     float statusBank = -1.0f;
     float statusProgram = -1.0f;

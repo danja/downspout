@@ -57,8 +57,10 @@ core order, and octave values are absolute MIDI octaves with mode-aware defaults
   estimate the effective BPM for the status display.
 - **Host** converts DPF's 1-based `bar`/`beat` to the core's zero-based position and reads
   `beatsPerBar`, `beatType`, `bpm` and fractional ticks. The Favourite row defaults to row 1, so a
-  transport start emits MIDI without a prior button press. It restarts after a transport stop or
-  a BBT jump; it does not restart on every block or after a natural non-loop stop.
+  transport start emits MIDI without a prior button press. Changing Fave while the transport is
+  rolling switches the audible row on the next block; the new row restarts from step 0 at the
+  current host position. It also restarts after a transport stop or a BBT jump; it does not restart
+  on every block or after a natural non-loop stop.
 - `send_clock` emits 24 PPQ clock, Start and Stop only when the source is not MIDI, preventing
   a MIDI-slaved plugin from fighting its master.
 - CC 123 is emitted on every stop path. Note-offs are queued in absolute time, so held notes

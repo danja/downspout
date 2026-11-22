@@ -29,7 +29,9 @@ leaving the editor.
   from complete mono Ogg Vorbis streams using the vendored `stb_vorbis` decoder.
 - GM-style **Bank** and **Preset** parameters select a zone; note and velocity
   ranges, key/root transposition, loop markers, pan, filter, envelopes, LFOs,
-  pitch bend and common MIDI CC modulators are applied per voice.
+  pitch bend and common MIDI CC modulators are applied per voice. A global
+  **Pan** offset (-1 = left, 0 = centre, +1 = right) is added to the SoundFont
+  pan, so a hard-left preset can be rebalanced without editing the bank.
 - 32 voices with voice stealing, sustain pedal handling, per-channel pitch bend
   and a global MIDI-channel filter (0 = all).
 
@@ -53,12 +55,15 @@ leaving the editor.
 - **Audition** plays the selected file through an isolated preview engine.
 - **Load file** assigns an SF2/SF3 to the SoundFont slot or a WAV/Ogg to the
   sample slot and triggers the audition.
+- The current folder is saved as state, so closing and reopening the editor (or
+  the host window losing focus and recreating the view) keeps the same directory.
 
 ### State and persistence
 
-File paths, slice maps and settings are versioned text state. Sample data is
-re-read from the referenced files when a session is reopened, so sessions stay
-small and edits to the source file are picked up on reload.
+File paths, the browser directory, slice maps and settings (including the pan
+offset) are versioned text state. Sample data is re-read from the referenced
+files when a session is reopened, so sessions stay small and edits to the source
+file are picked up on reload.
 
 ### Known limitations
 
@@ -69,7 +74,9 @@ small and edits to the source file are picked up on reload.
 - Chorus and reverb sends are parsed into the data model but no effects unit is
   implemented.
 - Preview audition currently plays slice 0 of a sliced source.
-- The recaptured 1280x800 screenshot is in the catalogue and visually accepted.
+- The catalogue screenshot predates the Pan slider. A fresh 1280x800 capture was
+  taken after this change and differs only in the PLAYER mixer row; visual
+  acceptance is pending because the capture session could not inspect image content.
 
 ### Parameters
 
@@ -77,5 +84,6 @@ small and edits to the source file are picked up on reload.
   **Bend Range**, **Attack**, **Release**
 - **Source**, **Slice Base Note**, **Slice Loop**
 - **Filter Enable**, **Filter Cutoff** (stored; see limitations)
+- **Pan** (offset added to the preset's own pan; default centre)
 - Output status: **Effective Bank**, **Effective Preset**, **Active Voices**,
   **Last Note**, **Load Status**
