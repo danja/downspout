@@ -20,13 +20,25 @@ mkdir -p ~/.vst3
 cp -r *.vst3 ~/.vst3/
 ```
 
-to build from source (**TODO** check dependencies), run `./install.sh`
+### Dependencies
+
+The release zips are self-contained: using them needs only a VST3 host, no build
+tools or extra libraries. The one optional runtime helper is `zenity`, which
+gives Campione a multi-file WAV chooser; without it the button falls back to the
+DPF built-in single-file browser.
+
+See also : [docs/requirements.md](docs/requirements.md)
+
+To build from source, run `./install.sh`, and/or see below.
+
+Scripts where applicable assume the repo has been cloned into `$HOME/github/downspout`
+
 
 Sometimes it gets stuck on the debug build, check with:
 
 `grep '^CMAKE_BUILD_TYPE' "$HOME/github/downspout/build/CMakeCache.txt"`
 
-if in doubt, run :
+if in doubt, run `./rebuild.sh`, which contains :
 
 ```bash
 DOWNSPOUT_BUILD_DIR="$PWD/build-release" DOWNSPOUT_RUN_TESTS=0 ./install.sh
@@ -66,21 +78,36 @@ See also: [Transmission](https://danja.github.io/transmission/) (Generative Audi
 
 ### Prerequisites
 
-*at least - TODO check*
+**Toolchain:** CMake 3.20+, a C++20 compiler (GCC or Clang) and `pkg-config`.
+Ninja is optional. On Debian/Ubuntu:
 
-* `libsord-dev`
-* `libserd-dev`
-* `libdbus-1-dev`
-
-For dev :
-
+```bash
+sudo apt install -y cmake g++ pkg-config
 ```
+
+All third-party libraries are vendored under [`third_party/`](third_party/): DPF
+(the VST3 wrapper and NanoVG UI), stb_vorbis (Fontana's SF3 samples),
+NeuralAmpModelerCore and Eigen (NAM), and nlohmann/json with cpp-httplib (the Sam
+and Campione MCP servers). Nothing extra needs downloading to build.
+
+**Linux UI headers** (DPF's OpenGL/X11/DBus backend):
+
+```bash
 sudo apt install -y \
-  carla cmake ninja-build build-essential pkg-config \
-  libx11-dev libxcursor-dev libxext-dev libxrandr-dev libxfixes-dev \
-  libgl1-mesa-dev libjack-jackd2-dev \
-  xvfb xdotool x11-utils imagemagick \
-  jackd2 jq
+  libdbus-1-dev libgl1-mesa-dev \
+  libx11-dev libxcursor-dev libxext-dev libxrandr-dev libxrender-dev
+```
+
+**Optional:** `zenity` for Campione's multi-file WAV chooser (see above). A
+VelociLoops checkout at `~/github/VelociLoops`, or
+`-DDOWNSPOUT_VELOCILOOPS_DIR=<path>`, enables REX2 import in Campione.
+
+**Development extras** — tests, screenshot capture and host checks:
+
+```bash
+sudo apt install -y \
+  carla ninja-build libxfixes-dev libjack-jackd2-dev jackd2 \
+  xvfb xdotool x11-utils imagemagick jq
 ```
 
 To build and install locally:
@@ -232,7 +259,7 @@ The skills point at `CLAUDE.md` and `docs/` instead of copying them, so when a r
 - [docs/install.md](docs/install.md) and [docs/release.md](docs/release.md): local installs, release artifacts and the GitHub Actions workflow
 - [docs/screenshots.md](docs/screenshots.md): capturing UI screenshots for the Pages site
 - [docs/meter.md](docs/meter.md): the shared meter model and its musical limits
-- [docs/requirements.md](docs/requirements.md): build dependencies
+- [docs/requirements.md](docs/requirements.md): engineering requirements
 - [docs/plan.md](docs/plan.md): direction and remaining work
 
 ## Current Work
