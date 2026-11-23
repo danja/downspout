@@ -6,6 +6,21 @@ Format: what happened, root cause, prevention.
 
 ## Open
 
+## box: invalid test values measured clamping instead of physics (2026-11-23)
+- **What happened:** the initial "more stiffness/density raises the main resonance" cases used `stiffness=44` and `density=1800`, both outside the published ranges, so they compared clamped endpoints instead of a real parameter change.
+- **Root cause:** test fixtures were written from the formula without checking each parameter's declared min/max; the engine correctly clamped them.
+- **Prevention:** use `stiffness=40` and `density=1500` (inside range) and assert observable rendered differences. Derive every test value from `box_params.hpp`, not from the physical formula alone.
+
+## box: non-finite parameter tests expected endpoint clamping (2026-11-23)
+- **What happened:** a draft test asserted that NaN/Inf inputs clamp to each parameter's maximum, but the wrapper's contract is to fall back to the published default for non-finite values.
+- **Root cause:** the same helper handles ordinary out-of-range values and non-finite values, but only the former clamp; the two contracts were conflated.
+- **Prevention:** keep separate assertions: finite out-of-range values clamp to endpoints, non-finite values restore `defaults()`. Make this distinction explicit when adding parameter-validation tests.
+
+## box: screenshot was pixel-checked but not visually accepted (2026-11-23)
+- **What happened:** the standalone capture was generated and region statistics confirmed non-blank content, but this session's image reader could not display the PNG (`this model does not support image input`), so first-time-user visual acceptance remains open.
+- **Root cause:** visual review depended on a capability this session did not have; non-blank pixel statistics were mistaken for a complete UI review.
+- **Prevention:** when image inspection is unavailable, record the exact limitation and leave visual acceptance explicitly pending. Hand the captured PNG to an image-capable reviewer and check labels, hierarchy, contrast, clipping and the response plot before marking the UI ready.
+
 ## spliff: analyser source switch did not reach the DSP in REAPER (2026-11-23)
 - **What happened:** the user reported that Input, Output and Delta all drew the same spectrum. Direct component `setState()` in a custom VST3 host produced distinct spectra, so the DSP and analyser were correct; the UI click was not reaching the processor in the live host.
 - **Root cause:** `analyser_source` was a text-state-only key written by `UIVst3::setState()` as a `state-set` message. With a separate VST3 controller the message is not guaranteed to reach the component; the UI also used a fake parameter index that was not a host parameter, so no `perform_edit` path existed.

@@ -72,6 +72,7 @@ downspout-<version>-<platform>-vst3.zip
 ├── monochord.vst3/
 ├── nam.vst3/
 ├── bore.vst3/
+├── box.vst3/
 ├── thumper.vst3/
 ├── snatch.vst3/
 ├── tops.vst3/

@@ -559,6 +559,21 @@ series; a Ring mode boosts where Absorb cuts, and a Sweep LFO flexes each panel'
 facing mass (+/-1 octave), with stereo offset and optional lock to host tempo and
 song position. Good as a moving notch comb (Absorb) or a pitched phaser (Ring).
 
+### Box (`box.vst3`)
+
+Physical model of a wooden instrument structure, not its strings. A rectangular
+plate bank is derived from Body, Size, Thickness, Stiffness and Density using
+`f_mn = (pi/2) sqrt(D/(rho h)) (m^2/a^2 + n^2/b^2)`; Damping sets each mode's T60
+and Q. Guitar and Cabinet add a Helmholtz soundhole, an air volume and two cavity
+modes; Piano and Free Plate remove the air path. Excitation and Pickup XY pads
+weight each mode at the drive and read points, so moving either pad changes the
+timbre. Drive soft-clips the excitation, and Wood Nonlinearity stiffens the panel
+with level. Deliberately extreme ranges (0.05-4x size, 0.5-40 GPa stiffness,
+36 dB drive) cover both naturalisation and special effects. CC 1-4 drive Body
+Size, Damping, Soundhole and Drive on the selected CC channel. Read-only readouts
+show body mode, air mode, decay and mode Q; the panel plots the relative modal
+response. No extra host state.
+
 ## Practical combinations
 
 - Techno rhythm: Xoxolo or DrumGen -> DrumKit -> E-Mix/P-Mix -> Rift for fills.
@@ -567,6 +582,9 @@ song position. Good as a moving notch comb (Absorb) or a pitched phaser (Ring).
 - Glitch lead: GremlinDriver -> Gremlin, optionally followed by Rift or Ambo.
 - Breakdown atmosphere: Canticle/Floozy -> Orchid -> Ambo.
 - Live dub transitions: a drum or full-mix bus -> PaunchLad.
+- Wooden colouration: a bare synth, pluck or drum bus -> Box; set Body to Guitar
+  or Piano and keep Mix low for naturalisation, then raise Drive and Soundhole
+  for a resonant special effect. Drift -> Box drives size, damping, hole and drive.
 - Vehicle and machine texture: Magneto -> Lightverb or Ambo for exterior space,
   automating RPM and Throttle together; Guardian at the end of the chain.
 - Number-theoretic colour: any synth or loop -> Pratt in Filter mode; try Index A 3 or 5

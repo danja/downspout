@@ -474,3 +474,23 @@ Everything else, including Amount, Glide, Quality and Formant, is a host paramet
 CC. Notes are only used when **Target** is MIDI chord or MIDI note; in Scale mode they are
 ignored. **When no key is held** chooses between leaving the voice alone and falling back to
 the scale. Held notes are runtime state and are not saved with the project.
+
+## Box mapping
+
+Box is a stereo audio effect with one MIDI input. **CC Channel** selects which
+MIDI channel is listened to (1-16, default 1). Only the four fixed controllers
+below are decoded; all other CCs are ignored. Values span each parameter's full
+published range, using the same logarithmic track as the panel slider where the
+parameter is logarithmic.
+
+| CC | Parameter | Notes |
+|----|-----------|-------|
+| 1  | Body Size | 0.05–4x; plate frequency falls with size² |
+| 2  | Damping   | 0.02–8x; modal T60 scales inversely |
+| 3  | Soundhole | 0–300 mm; zero seals the box and removes the air mode |
+| 4  | Drive     | 0–36 dB into the wood model |
+
+These are Drift's default lanes, so Drift can drive Box with no reconfiguration.
+A received CC overwrites the corresponding host parameter, so the change is
+saved with the project and visible in the UI. There is no per-CC enable or
+remap; use CC Channel to isolate the source.

@@ -34,8 +34,8 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
   position (not wall clock), so loops, restarts and offline renders reproduce.
 - **Control-change conventions.** Drift lanes default to CC 1-4; chipper,
   damiano, skream, spliff, helterskelter, treatment, magneto, beards, ghost,
-  trajectory and bore read those by default, so Drift needs no configuration
-  (Bore's **MIDI In** selects accepted channels). Ladder (Cutoff, Resonance,
+  trajectory, bore and box read those by default, so Drift needs no configuration
+  (Bore's **MIDI In** and Box's **CC Channel** select accepted channels). Ladder (Cutoff, Resonance,
   Drive, Mix), glue (Threshold, Ratio, Makeup, Mix), trio (Amount, Time, Input,
   Upward limit), octet (one band's Frequency, Gain and Q, chosen by CC Band, and
   Output) and mouth (Vowel X, Vowel Y, Shift, Resonance) use a **CC Channel**
@@ -70,6 +70,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | bassops | bassops.vst3 | audio effect (sidechain) | 4/2 | yes/no | no |
 | beards | beards.vst3 | audio effect (granular) | 2/2 | yes/no | no |
 | bore | bore.vst3 | instrument (lip-reed waveguide) | 0/2 | yes/no | no |
+| box | box.vst3 | audio effect (wooden structure) | 2/2 | yes/no | no |
 | bubbles | bubbles.vst3 | instrument (water) | 0/2 | yes/no | yes |
 | cadence | cadence.vst3 | MIDI processor | 0/2 | yes/yes | yes |
 | campione | campione.vst3 | instrument (sampler) | 2/2 | yes/no | no |
@@ -498,6 +499,20 @@ it does not directly transpose the played note. Output is made up to a usable
 level and softly limited. CC 1-6 map in that
 order and CC 7 is Level. A compact, nonlinear waveguide model, not a calibrated
 brass simulation. No transport or audio input.
+
+### box
+Stereo physical model of a wooden instrument structure, not its strings.
+Twelve rectangular-plate modes follow `f_mn = (pi/2) sqrt(D/(rho h))
+(m²/a² + n²/b²)` from Body, Size, Thickness, Stiffness and Density; Damping sets
+modal T60 and Q. Guitar and Cabinet add a Helmholtz soundhole (CC 3), air volume
+and two cavity modes; Piano and Free Plate remove the air path. Excitation and
+Pickup XY pads weight each mode at the drive and read points. Drive (CC 4)
+soft-clips the excitation, Wood Nonlinearity stiffens the panel with level, and
+Stereo Width spreads/detunes the two pickup positions. Body Size (CC 1) and
+Damping (CC 2) complete the fixed CC 1-4 map on the selectable CC Channel. All
+settings are ordinary parameters with no extra state; read-only Body Mode, Air
+Mode, Decay and Mode Q report the derived structure. Ranges are intentionally
+extreme for naturalisation and special effects. No transport.
 
 ### canticle
 Twelve-voice instrument with keys, reed, pad, pluck and glass timbres for melody,

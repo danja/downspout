@@ -204,6 +204,12 @@ current Downspout plugins.
 - [`Treatment`]({{ '/plugins/treatment/' | relative_url }}): acoustic panel model: facing mass, porous fill and air gap form a
   mass-air-mass resonator, `w0 = c * sqrt(rho0 / (m D))`, with an impedance match at
   `r = rho0 c`.
+- [`Box`]({{ '/plugins/box/' | relative_url }}): wooden structure model. Twelve simply
+  supported plate modes use `f_mn = (pi/2) sqrt(D/(rho h)) (m^2/a^2 + n^2/b^2)` with
+  `D = E h^3 / (12(1-nu^2))`; XY excitation and pickup pads apply
+  `sin(m pi x) sin(n pi y)` weights at both ends. Damping derives T60 and Q, an open
+  soundhole adds a Helmholtz mode, and cavity modes follow the box dimensions. Drive
+  soft-clips the excitation and level-dependent stiffening moves the modes upward.
 - [`Gater`]({{ '/plugins/gater/' | relative_url }}): routes a stereo input to one of two output pairs by incoming note parity
   (even to Output 1, odd to Output 2).
 - [`Spindown`]({{ '/plugins/spindown/' | relative_url }}): tape stop and start. A ring buffer read by a head whose speed is `(1 - progress)^Curve`, with one `progress` state shared by stop and start so a part-way release restarts from the speed reached; the lag integrates `1 - speed`, the read is four-point Hermite, and the output fades below 4 % speed. Idle it is bit-identical to bypass.

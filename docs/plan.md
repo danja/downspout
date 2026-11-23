@@ -140,6 +140,15 @@ thin DPF wrapper and a UI that explains the excitation and resonator. Its
 development guide records the design, testing and packaging sequence for
 future plugin authors. Host listening remains pending.
 
+New physical-model direction (2026-11-23): `box` models the wooden structure of
+an instrument rather than its strings. A rectangular plate bank, Helmholtz
+soundhole and two cavity modes are derived from geometry and material controls;
+XY pads place the excitation and pickup on the plate modes. All settings are
+ordinary parameters (no extra host state), and the four Drift CC lanes map to
+size, damping, soundhole and drive. Its deliberately extreme ranges cover both
+naturalisation and special effects. Host listening and full visual acceptance
+of the captured screenshot remain pending.
+
 Progress as of 2026-05-27:
 
 - root planning and requirements documents exist;

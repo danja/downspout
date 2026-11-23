@@ -90,6 +90,7 @@ Current output filenames:
 - `beards.png`
 - `trajectory.png`
 - `bore.png`
+- `box.png`
 - `fathom.png`
 - `qune.png`
 - `polyscribe.png`

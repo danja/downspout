@@ -65,7 +65,7 @@ Public release packaging is handled separately by
 
 ## Current outputs
 
-The CMake install declarations currently cover 106 VST3 bundles; the authoritative synchronized bundle list is checked by `scripts/check-bundle-lists.sh`.
+The CMake install declarations currently cover 108 VST3 bundles; the authoritative synchronized bundle list is checked by `scripts/check-bundle-lists.sh`.
 
 - `ambo.vst3` with UI
 - `arpgen.vst3` with UI
@@ -74,6 +74,7 @@ The CMake install declarations currently cover 106 VST3 bundles; the authoritati
 - `bassops.vst3` with UI
 - `beards.vst3` with UI
 - `bore.vst3` with UI
+- `box.vst3` with UI
 - `bubbles.vst3` with UI
 - `cadence.vst3` with UI
 - `campione.vst3` with UI
@@ -226,5 +227,6 @@ The script has been smoke-tested with a temporary install root under `/tmp`:
 - confirmed `syrinx.vst3` bundle output and install
 - confirmed `tuney_vst.vst3` bundle output and install
 - `bore.vst3` builds locally; host-side install validation remains
+- `box.vst3` builds locally; host-side install validation remains
 - the ten generative-workstation bundles build locally and await broad
   host-side install validation

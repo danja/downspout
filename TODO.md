@@ -4,6 +4,7 @@ Open work only. Completed builds are recorded in plugin docs; resolved lessons g
 
 ## Validation queue
 
+- [ ] Box in REAPER: audition the wooden-body resonances and extreme parameter ranges; confirm CC 1-4 on the configured MIDI channel, save/reopen every parameter plus Mix/Output/Bypass, and verify patch retention across activate/sample-rate changes. Core tests, VST3 build and a generated screenshot exist; live host listening and visual acceptance remain.
 - [ ] Host passes for recent work: Fontana (SF2/SF3, WAV/Ogg slices, browser, save/reopen), Melevolve (live MIDI render/listening and timing-source observation; core host-BBT play edge now covered), Gate, Tilt, Polyscribe, Splay CC, Bassops input delay and new aux sidechain bus, Plank, Treatment, Prism, Mouth and NAM. Melevolve save/reopen and Fresco's silent-input default REAPER render already passed.
 - [ ] Spliff in REAPER: audition the new 70 % Depth/Sensitivity defaults, Split Low/High and full Cut/Boost, then change the analyser source, save and reopen to confirm `analyser_source` and the 64 spectrum outputs. Host plumbing is fixed (ranges `{def,min,max}`, automatable hints, real `setParameterValue`, UI sync, source as appended parameter at index 83); ReaScript and a custom VST3 host probe confirm defaults, writes, audio processing and source-dependent spectra, but live spectrum/audio still needs the user's ears/eyes because headless Xvfb REAPER does not paint the plugin view.
 - [ ] Audit `initParameter()` across plugins for `ParameterRanges` aggregate initialisation in the wrong `{def,min,max}` order (ghost, damiano, helterskelter, skream, chipper, etc.); fix and verify in REAPER before trusting their host automation.
@@ -13,6 +14,8 @@ Open work only. Completed builds are recorded in plugin docs; resolved lessons g
 
 ## Plugin work
 
+- [x] Box: portable wooden-structure physical model, stereo DPF/VST3 plugin, Magneto-style UI, CC 1-4 mapping, core tests, profile, catalog page and release/install wiring.
+- [ ] Box: visually accept `docs/pages/assets/plugins/box.png` (960x720) from a first-time-user perspective; this session could not display the PNG, so check labels, hierarchy, contrast, clipping and response plot in an image-capable viewer before marking it final.
 - [x] Melevolve UI: shorten Interact bars and add a top Favourite bar; replace per-bar OUT buttons with Fave buttons that choose which bar plays; keep only Interact and Settings tabs, moving compact status onto Interact.
 - [x] Melevolve Settings: fix Line: Melody/Bass reversed UI and selection mapping so clicking a choice selects that line.
 - [x] Melevolve transport: emit MIDI when REAPER plays in BBT/host-clock mode; cover stopped transport, loop boundaries, rewind and tempo/bar changes.

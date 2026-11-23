@@ -1,0 +1,32 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:box a trn:PluginProfile ;
+    rdfs:label "Box" ;
+    rdfs:comment "Physical model of a wooden instrument structure — acoustic guitar top, piano soundboard/rim, cabinet or free plate. The input excites rectangular plate modes derived from size, thickness, stiffness and density; a soundhole Helmholtz mode and two cavity modes add the enclosed air. Excitation and pickup XY pads set each mode's sin(m(pi)x)sin(n(pi)y) weight at both ends. Stereo audio in/out; CC 1 body size, 2 damping, 3 soundhole, 4 drive." ;
+    trn:bundleName "box.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/box/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio, trn:ControlMidi ;
+    trn:produces trn:Audio ;
+    trn:caution "Extreme geometry and drive ranges are intentional: a 0.05x body, 40 mm thickness, 40 GPa stiffness or 36 dB drive are special-effect settings, not realistic instruments. Piano and Free Plate have no soundhole or Helmholtz air mode. CC 1-4 are fixed on MIDI channel 1 by default and overwrite the four corresponding host parameters; CC Channel selects 1-16. All settings are ordinary parameters; the plugin has no extra host state." ;
+    trn:parameter [ rdfs:label "Body Type" ; trn:symbol "body" ; trn:range "0–3" ;
+                    rdfs:comment "Guitar (0), Piano (1), Cabinet (2), Free Plate (3)." ] ;
+    trn:parameter [ rdfs:label "Body Size" ; trn:symbol "size" ; trn:range "0.05–4x" ;
+                    rdfs:comment "CC 1. Plate frequency scales as 1/size²." ] ;
+    trn:parameter [ rdfs:label "Damping" ; trn:symbol "damping" ; trn:range "0.02–8x" ;
+                    rdfs:comment "CC 2. Scales modal T60 inversely." ] ;
+    trn:parameter [ rdfs:label "Soundhole" ; trn:symbol "hole" ; trn:range "0–300 mm" ;
+                    rdfs:comment "CC 3. Zero seals the box and removes the air mode." ] ;
+    trn:parameter [ rdfs:label "Drive" ; trn:symbol "drive" ; trn:range "0–36 dB" ;
+                    rdfs:comment "CC 4. Soft-clips the excitation; high values are an effect." ] ;
+    trn:parameter [ rdfs:label "Excitation X/Y" ; trn:symbol "exc_x, exc_y" ; trn:range "0–100%" ;
+                    rdfs:comment "Where the structure is driven." ] ;
+    trn:parameter [ rdfs:label "Mic X/Y" ; trn:symbol "mic_x, mic_y" ; trn:range "0–100%" ;
+                    rdfs:comment "Where the structure is heard." ] ;
+    pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .
