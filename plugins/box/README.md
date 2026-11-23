@@ -35,8 +35,10 @@ and **Air Volume** and **Body Depth** set the two axial cavity modes.
 
 **Drive** soft-clips the excitation and, with **Wood Nonlinearity**, stiffens the
 panel as level rises. Both are exaggerated effect controls, not calibrated
-material behaviour. Coefficients are recomputed every 32 samples and glide over
-5 ms, so automation and MIDI moves stay click-free at any host block size.
+material behaviour. Physical parameters glide over 12 ms and a fresh, stable
+biquad is designed every 32 samples; only gains are smoothed per sample. This
+keeps automation and MIDI moves click-free without interpolating filter
+coefficients between two designs, which could destabilise a Size sweep.
 
 ## Parameters
 
@@ -45,8 +47,8 @@ material behaviour. Coefficients are recomputed every 32 samples and glide over
 | Structure | Body, Body Size, Thickness, Stiffness, Density, Damping | Guitar / 1x / 3 mm / 11 GPa / 450 kg/m³ / 1x |
 | Air | Soundhole, Air Volume, Body Depth | 90 mm / 15 L / 100 mm |
 | Play | Drive, Wood Nonlinearity, Excitation X/Y, Pickup X/Y, Stereo Width | 6 dB / 15% / (50, 35)% / (50, 50)% / 30% |
-| Integration | Dry/Wood Mix, Output, Bypass, Seed, Randomise, CC Channel | 35% / 0 dB / off / 1 / trigger / Ch 1 |
-| Read-only | Body Mode, Air Mode, Decay, Mode Q | derived from the current structure |
+| Integration | Dry/Wood Mix, Output, Bypass, Seed, Randomise, CC Channel | 35% / 0 dB / off / 1 / button / Ch 1 |
+| Read-only | Randomise Count, Body Mode, Air Mode, Decay, Mode Q | derived from the current structure |
 
 Every property has a deliberately wide range. Size spans 0.05x–4x (frequency
 falls with the square of size), thickness 0.5–40 mm, stiffness 0.5–40 GPa,
@@ -74,6 +76,7 @@ CC at 64 means the same thing as a slider at 50%.
 All settings are ordinary automatable parameters. Box declares no extra host
 state, so DPF saves no default snapshot into every project. `activate()` and a
 sample-rate change clear only the filter histories and envelope; the patch is
-never reset. Randomise is a trigger parameter: it derives a new plausible body
-from Seed, advances the seed, and leaves Mix, Output, Bypass and CC Channel
-alone.
+never reset. Randomise is a UI action, not a host trigger: it derives a new
+plausible body from Seed, commits the result as ordinary parameter values,
+advances the seed, and leaves Mix, Output, Bypass and CC Channel alone. Its
+read-only count reports how many draws this panel has made.

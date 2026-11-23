@@ -21,7 +21,9 @@ namespace downspout::box {
 // and a 4x body in a stiff composite are both possible, and either can be driven
 // far past a realistic string force for effect.
 //
-// Parameters 0-21 are host-writable; 22-25 are read-only processor status.
+// Parameters 0-20 are host-writable; 21-25 are read-only processor status.
+// Randomise is a UI action that commits ordinary parameter values (as in
+// HeavyVerb); its slot is a read-only action count, not a host trigger.
 
 enum class ParamId : std::uint32_t {
     // Structure
@@ -57,7 +59,7 @@ enum class ParamId : std::uint32_t {
 };
 
 inline constexpr std::size_t kParameterCount = 26;
-inline constexpr std::size_t kWritableParameterCount = 22;
+inline constexpr std::size_t kWritableParameterCount = 21;
 
 struct ParamSpec {
     const char* symbol;
@@ -96,7 +98,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"bypass", "Bypass", "", 0.0f, 1.0f, 0.0f, true, false, false, false},
     {"cc_channel", "CC Channel", "", 1.0f, 16.0f, 1.0f, true, false, false, false},
     {"seed", "Seed", "", 1.0f, 9999.0f, 1.0f, true, false, false, false},
-    {"randomise", "Randomise", "", 0.0f, 1.0f, 0.0f, true, false, true, false},
+    {"randomise_count", "Randomise Count", "", 0.0f, 9999.0f, 0.0f, true, true, false, false},
 
     {"out_body_hz", "Body Mode", "Hz", 10.0f, 20000.0f, 0.0f, false, true, false, false},
     {"out_air_hz", "Air Mode", "Hz", 0.0f, 20000.0f, 0.0f, false, true, false, false},

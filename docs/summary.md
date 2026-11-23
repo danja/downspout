@@ -571,8 +571,9 @@ timbre. Drive soft-clips the excitation, and Wood Nonlinearity stiffens the pane
 with level. Deliberately extreme ranges (0.05-4x size, 0.5-40 GPa stiffness,
 36 dB drive) cover both naturalisation and special effects. CC 1-4 drive Body
 Size, Damping, Soundhole and Drive on the selected CC channel. Read-only readouts
-show body mode, air mode, decay and mode Q; the panel plots the relative modal
-response. No extra host state.
+show randomise count, body mode, air mode, decay and mode Q; the panel plots the
+relative modal response. Physical dimensions glide before each fresh filter
+design, so Size sweeps stay stable. No extra host state.
 
 ## Practical combinations
 

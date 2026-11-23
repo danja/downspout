@@ -510,9 +510,12 @@ Pickup XY pads weight each mode at the drive and read points. Drive (CC 4)
 soft-clips the excitation, Wood Nonlinearity stiffens the panel with level, and
 Stereo Width spreads/detunes the two pickup positions. Body Size (CC 1) and
 Damping (CC 2) complete the fixed CC 1-4 map on the selectable CC Channel. All
-settings are ordinary parameters with no extra state; read-only Body Mode, Air
-Mode, Decay and Mode Q report the derived structure. Ranges are intentionally
-extreme for naturalisation and special effects. No transport.
+settings are ordinary parameters with no extra state; read-only Randomise Count,
+Body Mode, Air Mode, Decay and Mode Q report the derived structure. Physical
+dimensions glide before each fresh, stable filter design, so extreme Size
+automation cannot destabilise the biquad bank; Randomise commits its new body as
+ordinary parameter values. Ranges are intentionally extreme for naturalisation
+and special effects. No transport.
 
 ### canticle
 Twelve-voice instrument with keys, reed, pad, pluck and glass timbres for melody,

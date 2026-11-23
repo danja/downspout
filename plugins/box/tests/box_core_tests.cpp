@@ -55,6 +55,37 @@ Render renderNoise(const box::Parameters& params, const int frames,
     return out;
 }
 
+// Turning a physical-dimension knob changes the filter design every control
+// grid. A sweep catches unstable coefficient interpolation that a static render
+// cannot: the old engine blew up to ~1e38 while Size moved 1x -> 4x.
+Render renderSizeSweep(const int frames, const int blockSize)
+{
+    Render out;
+    out.left = std::vector<float>(static_cast<std::size_t>(frames));
+    out.right = std::vector<float>(static_cast<std::size_t>(frames));
+    std::vector<float> input = std::vector<float>(static_cast<std::size_t>(frames));
+    std::uint32_t rng = 12345u;
+    for (int i = 0; i < frames; ++i) {
+        const float raw = static_cast<float>(nextRandom(rng) & 0x00ffffffu)
+                        / static_cast<float>(0x01000000u);
+        input[static_cast<std::size_t>(i)] = 0.25f * (2.0f * raw - 1.0f);
+    }
+
+    box::Parameters p;
+    p.mix = 100.0f;
+    box::EngineState state {};
+    for (int i = 0; i < frames; i += blockSize) {
+        const int count = std::min(blockSize, frames - i);
+        const float t = static_cast<float>(i) / static_cast<float>(frames);
+        p.size = t < 0.5f ? 1.0f + 6.0f * t
+                          : 4.0f - 7.9f * (t - 0.5f);
+        const float* inputs[2] = { input.data() + i, input.data() + i };
+        float* outputs[2] = { out.left.data() + i, out.right.data() + i };
+        box::processBlock(state, p, static_cast<std::uint32_t>(count), 48000.0, inputs, outputs);
+    }
+    return out;
+}
+
 Render renderImpulse(const box::Parameters& params, const int frames, const int blockSize)
 {
     Render out;
@@ -293,6 +324,33 @@ void testImpulseDecaysAndStaysFinite()
            && clamped.damping == box::kParameterSpecs[box::index(box::ParamId::damping)].defaultValue);
 }
 
+void testSizeSweepStable()
+{
+    const Render sweep = renderSizeSweep(96000, 256);
+    assert(allFinite(sweep));
+    assert(peak(sweep) < 4.0f);
+
+    // The sweep must actually visit the useful extremes, not just stay silent.
+    box::Parameters small;
+    small.size = 0.05f;
+    box::Parameters large;
+    large.size = 4.0f;
+    const float smallHz = box::analyseBody(small, 48000.0).bodyHz;
+    const float largeHz = box::analyseBody(large, 48000.0).bodyHz;
+    assert(smallHz > 10000.0f && largeHz < 10.0f);
+}
+
+void testRepeatedRandomiseChangesBody()
+{
+    const box::Parameters first = box::randomiseParameters(box::Parameters {});
+    const box::Parameters second = box::randomiseParameters(first);
+    assert(first.seed != 1.0f);
+    assert(second.seed != first.seed);
+    assert(std::fabs(first.body - second.body) > 0.5f
+           || std::fabs(first.size - second.size) > 0.05f
+           || std::fabs(first.thickness - second.thickness) > 0.5f);
+}
+
 void testBlockSizeInvariance()
 {
     const Render a = renderNoise(box::Parameters {}, 48000, 64);
@@ -336,6 +394,8 @@ int main()
     testEveryControlAudible();
     testControllerMap();
     testImpulseDecaysAndStaysFinite();
+    testSizeSweepStable();
+    testRepeatedRandomiseChangesBody();
     testBlockSizeInvariance();
     testStereoAndActivation();
     std::puts("box core tests passed");

@@ -332,10 +332,41 @@ private:
         repaint();
     }
 
+    void commitIfChanged(const ParamId id, const float next)
+    {
+        if (value(id) == next)
+            return;
+        commit(id, next);
+    }
+
     void triggerRandomise()
     {
-        setParameterValue(idx(ParamId::randomise), 1.0f);
-        values_[idx(ParamId::randomise)] = 0.0f;
+        // HeavyVerb pattern: the action is applied as ordinary parameter values,
+        // so the host, processor and panel all end up on the same new body.
+        // DPF's VST3 bridge deliberately suppresses kParameterIsTrigger writes,
+        // so a trigger parameter cannot do this from the UI.
+        const core::Parameters current = currentCore();
+        const core::Parameters next = core::randomiseParameters(current);
+
+        commitIfChanged(ParamId::body, next.body);
+        commitIfChanged(ParamId::size, next.size);
+        commitIfChanged(ParamId::thickness, next.thickness);
+        commitIfChanged(ParamId::stiffness, next.stiffness);
+        commitIfChanged(ParamId::density, next.density);
+        commitIfChanged(ParamId::damping, next.damping);
+        commitIfChanged(ParamId::hole, next.hole);
+        commitIfChanged(ParamId::volume, next.volume);
+        commitIfChanged(ParamId::depth, next.depth);
+        commitIfChanged(ParamId::drive, next.drive);
+        commitIfChanged(ParamId::nonlinear, next.nonlinear);
+        commitIfChanged(ParamId::excX, next.excX);
+        commitIfChanged(ParamId::excY, next.excY);
+        commitIfChanged(ParamId::micX, next.micX);
+        commitIfChanged(ParamId::micY, next.micY);
+        commitIfChanged(ParamId::width, next.width);
+        commitIfChanged(ParamId::seed, next.seed);
+
+        values_[idx(ParamId::randomise)] += 1.0f;
         repaint();
     }
 
@@ -684,7 +715,7 @@ private:
         drawStepper(ParamId::ccChannel, "CC Channel", { bounds.x + 164.0f, bounds.y + 146.0f, 132.0f, 40.0f },
                     formatValue(ParamId::ccChannel, value(ParamId::ccChannel)));
 
-        drawButton({ bounds.x + 320.0f, bounds.y + 32.0f, 276.0f, 40.0f }, "RANDOMISE BODY", kRouteAccent);
+        drawButton({ bounds.x + 320.0f, bounds.y + 32.0f, 180.0f, 30.0f }, "RANDOMISE BODY", kRouteAccent);
         drawCcMap({ bounds.x + 320.0f, bounds.y + 84.0f, 276.0f, 120.0f });
 
         drawSignalFlow({ bounds.x + 620.0f, bounds.y + 32.0f, 300.0f, 64.0f });

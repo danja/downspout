@@ -83,6 +83,8 @@ protected:
             parameter.hints = kParameterIsOutput;
         else
             parameter.hints = kParameterIsAutomatable;
+        if (spec.logarithmic)
+            parameter.hints |= kParameterIsLogarithmic;
         if (spec.integer)
             parameter.hints |= kParameterIsInteger;
         if (spec.trigger)
@@ -102,13 +104,6 @@ protected:
         const core::ParamSpec& spec = core::kParameterSpecs[index];
         if (spec.output)
             return;  // the processor owns the derived readouts
-
-        if (spec.trigger) {
-            if (value > 0.5f)
-                handleRandomise();
-            values_[index] = 0.0f;
-            return;
-        }
 
         float next = clampf(value, spec.minimum, spec.maximum);
         if (spec.integer)
@@ -222,15 +217,6 @@ private:
         values_[core::index(ParamId::bypass)] = p.bypass;
         values_[core::index(ParamId::ccChannel)] = p.ccChannel;
         values_[core::index(ParamId::seed)] = p.seed;
-    }
-
-    void handleRandomise() noexcept
-    {
-        writeCore(core::randomiseParameters(coreParameters()));
-        // The geometry jumped, so start the resonators from silence rather than
-        // ringing the old body through the transition.
-        core::activate(engine_);
-        publishStatus();
     }
 
     void publishStatus() noexcept

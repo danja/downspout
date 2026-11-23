@@ -18,9 +18,13 @@ behaviour. The portable core has no DPF, VST3 or UI dependencies.
   snapshot, so splitting a block for sub-block parameter changes would add
   cost without a audible benefit. Other CCs, notes, bend and aftertouch are
   ignored.
-- **State.** Every setting is a normal automatable parameter. Output parameters
-  (Body Mode, Air Mode, Decay, Mode Q) are read-only and are recomputed from the
-  patch; Randomise is a trigger. The DPF wrapper therefore declares no extra
+- **State.** Every editable setting is a normal automatable parameter. Output
+  parameters (Randomise Count, Body Mode, Air Mode, Decay, Mode Q) are read-only
+  and are recomputed from the patch. Randomise follows the HeavyVerb pattern:
+  the button computes a new body and commits each physical value through the
+  normal parameter path, so the processor, host and panel agree. DPF's VST3
+  bridge deliberately suppresses `kParameterIsTrigger` writes, so a trigger
+  parameter cannot do this from a UI. The wrapper therefore declares no extra
   state (`WANT_STATE` is absent), which avoids saving default snapshots into
   every project.
 - **Transport.** None. The model has no tempo, bar or song-position dependency.
@@ -38,6 +42,10 @@ behaviour. The portable core has no DPF, VST3 or UI dependencies.
 
 - Audibility is asserted from a rendered difference signal, not by inspecting
   intermediate coefficient values. The noise probe covers the whole modal bank.
+- A Size sweep from 1x to 4x and back is rendered explicitly: the old code
+  interpolated biquad coefficients and reached ~1e38 even though every static
+  Size value was finite. The fix glides physical values and installs each
+  freshly designed filter directly.
 - Physical-law tests use values inside the published ranges; earlier drafts
   used out-of-range values and measured clamping rather than the law.
 - Non-finite automation falls back to the published default, while finite

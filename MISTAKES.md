@@ -6,6 +6,21 @@ Format: what happened, root cause, prevention.
 
 ## Open
 
+## box: Size automation blew up while turning (2026-11-23)
+- **What happened:** a static Size value rendered normally, but a 1x→4x sweep produced ~1e38 samples and tripped REAPER's overload indicator.
+- **Root cause:** `glide()` linearly interpolated the five biquad coefficients between two designs every 32 samples; an intermediate coefficient set had poles outside the unit circle.
+- **Prevention:** glide the physical parameters, design a fresh stable biquad at each control-grid update, install its coefficients directly, and smooth only gains per sample. Added a rendering sweep test with a finite peak bound; static-only tests could not catch this.
+
+## box: Randomise trigger never reached the VST3 processor (2026-11-23)
+- **What happened:** clicking Randomise in REAPER did nothing; even when a trigger fired, the panel would not have reflected the processor's internally changed parameters.
+- **Root cause:** DPF's VST3 bridge deliberately suppresses `kParameterIsTrigger` writes in both UI messages and host parameter changes. Internal `values_[]` writes also do not notify the UI.
+- **Prevention:** follow the HeavyVerb pattern: the UI computes the random body and commits each physical property through ordinary `setParameterValue()` calls, so host, processor and panel agree. The old trigger slot is now a read-only Randomise Count output.
+
+## box: logarithmic parameter hint was missing (2026-11-23)
+- **What happened:** the UI mapped Size logarithmically, but the host-facing parameter advertised a linear range, so automation lanes and CC normalization disagreed with the panel.
+- **Root cause:** `initParameter()` copied min/max/default and automatable/integer/trigger hints but omitted `kParameterIsLogarithmic` from `ParamSpec::logarithmic`.
+- **Prevention:** propagate every `ParamSpec` flag to the DPF hint set; assert or review the mapping whenever a parameter uses `normalizedToValue()`.
+
 ## box: invalid test values measured clamping instead of physics (2026-11-23)
 - **What happened:** the initial "more stiffness/density raises the main resonance" cases used `stiffness=44` and `density=1800`, both outside the published ranges, so they compared clamped endpoints instead of a real parameter change.
 - **Root cause:** test fixtures were written from the formula without checking each parameter's declared min/max; the engine correctly clamped them.

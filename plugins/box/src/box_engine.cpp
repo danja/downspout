@@ -348,19 +348,20 @@ bool applyController(Parameters& p, const std::uint8_t controller, const std::ui
 
 namespace {
 
-void glide(BiquadState& state, const BiquadCoeffs& target, const float smooth) noexcept
+[[nodiscard]] float approach(const float current, const float target, const float k) noexcept
 {
-    if (!state.haveCoeffs) {
-        state.coeffs = target;
-        state.haveCoeffs = true;
-        return;
-    }
-    const float k = 1.0f - smooth;
-    state.coeffs.b0 += (target.b0 - state.coeffs.b0) * k;
-    state.coeffs.b1 += (target.b1 - state.coeffs.b1) * k;
-    state.coeffs.b2 += (target.b2 - state.coeffs.b2) * k;
-    state.coeffs.a1 += (target.a1 - state.coeffs.a1) * k;
-    state.coeffs.a2 += (target.a2 - state.coeffs.a2) * k;
+    return current + (target - current) * k;
+}
+
+// Install a freshly designed, stable biquad. Interpolating the five raw
+// coefficients between two designs can put poles outside the unit circle and
+// explode while a knob is turning; glide the physical parameters instead.
+void setFilter(BiquadState& state, const ModeResponse& response) noexcept
+{
+    if (!state.haveCoeffs)
+        state.gain = response.gain;
+    state.coeffs = response.filter;
+    state.haveCoeffs = true;
 }
 
 void runBiquad(BiquadState& state, const float input, float& output) noexcept
@@ -407,18 +408,20 @@ void processBlock(EngineState& state,
     const float driveGain = std::pow(10.0f, p.drive / 20.0f);
     const float outputGain = std::pow(10.0f, p.output / 20.0f);
     const float wetTarget = p.bypass > 0.5f ? 0.0f : p.mix / 100.0f;
-    const float coeffSmooth = smootherCoeff(0.005f, sr);
+    const float paramK = 1.0f - smootherCoeff(0.012f, sr);
+    const float gainK = 1.0f - smootherCoeff(0.008f, sr);
     const float envelopeCoeff = smootherCoeff(0.008f, sr);
     const float wetSmooth = smootherCoeff(0.005f, sr);
 
-    // Start at the current mix so the very first impulse excites the body
-    // immediately; only later changes crossfade over 5 ms.
+    // Start at the current mix and patch so the very first impulse excites the
+    // body immediately; only later changes glide over 12 ms.
     if (!state.initialised) {
+        state.smooth = p;
         state.wetMix = wetTarget;
         state.initialised = true;
     }
 
-    BodyState targets = analyseBody(p, sr, state.envelope);
+    BodyState targets = analyseBody(state.smooth, sr, state.envelope);
 
     for (std::uint32_t frame = 0; frame < frames; ++frame) {
         float driven[2] = {0.0f, 0.0f};
@@ -433,8 +436,33 @@ void processBlock(EngineState& state,
         }
         state.envelope += (envelopePeak - state.envelope) * (1.0f - envelopeCoeff);
 
-        if (state.controlCounter == 0)
-            targets = analyseBody(p, sr, state.envelope);
+        Parameters& s = state.smooth;
+        s.body = p.body;
+        s.size = approach(s.size, p.size, paramK);
+        s.thickness = approach(s.thickness, p.thickness, paramK);
+        s.stiffness = approach(s.stiffness, p.stiffness, paramK);
+        s.density = approach(s.density, p.density, paramK);
+        s.damping = approach(s.damping, p.damping, paramK);
+        s.hole = approach(s.hole, p.hole, paramK);
+        s.volume = approach(s.volume, p.volume, paramK);
+        s.depth = approach(s.depth, p.depth, paramK);
+        s.nonlinear = approach(s.nonlinear, p.nonlinear, paramK);
+        s.excX = approach(s.excX, p.excX, paramK);
+        s.excY = approach(s.excY, p.excY, paramK);
+        s.micX = approach(s.micX, p.micX, paramK);
+        s.micY = approach(s.micY, p.micY, paramK);
+        s.width = approach(s.width, p.width, paramK);
+
+        if (state.controlCounter == 0) {
+            targets = analyseBody(s, sr, state.envelope);
+            for (std::size_t ch = 0; ch < kAudioChannels; ++ch) {
+                for (std::size_t k = 0; k < kModeCount; ++k)
+                    setFilter(state.modes[ch][k], targets.modes[ch][k]);
+                setFilter(state.air[ch], targets.air[ch]);
+                setFilter(state.lowCavity[ch], targets.lowCavity[ch]);
+                setFilter(state.highCavity[ch], targets.highCavity[ch]);
+            }
+        }
         state.controlCounter = (state.controlCounter + 1) % kControlGrid;
 
         state.wetMix += (wetTarget - state.wetMix) * (1.0f - wetSmooth);
@@ -444,10 +472,10 @@ void processBlock(EngineState& state,
             for (std::size_t k = 0; k < kModeCount; ++k) {
                 BiquadState& filter = state.modes[ch][k];
                 const ModeResponse& response = targets.modes[ch][k];
-                glide(filter, response.filter, coeffSmooth);
                 float ring = 0.0f;
                 runBiquad(filter, driven[ch], ring);
-                wet[ch] += ring * response.gain;
+                filter.gain += (response.gain - filter.gain) * gainK;
+                wet[ch] += ring * filter.gain;
             }
             BiquadState* extra[3] = {
                 &state.air[ch], &state.lowCavity[ch], &state.highCavity[ch],
@@ -456,10 +484,11 @@ void processBlock(EngineState& state,
                 &targets.air[ch], &targets.lowCavity[ch], &targets.highCavity[ch],
             };
             for (int i = 0; i < 3; ++i) {
-                glide(*extra[i], responses[i]->filter, coeffSmooth);
+                BiquadState& filter = *extra[i];
                 float ring = 0.0f;
-                runBiquad(*extra[i], driven[ch], ring);
-                wet[ch] += ring * responses[i]->gain;
+                runBiquad(filter, driven[ch], ring);
+                filter.gain += (responses[i]->gain - filter.gain) * gainK;
+                wet[ch] += ring * filter.gain;
             }
             wet[ch] += driven[ch] * targets.directGain;
         }

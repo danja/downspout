@@ -65,8 +65,8 @@ any host block size.
 | | Pickup X/Y | 0–100 % / 50, 50 % | Where it is heard |
 | | Stereo Width | 0–100 % / 30 % | Pickup spread and detune |
 | Integration | Mix / Output / Bypass | 35 % / 0 dB / off | Five-millisecond crossfade |
-| | Seed / Randomise / CC Channel | 1 / trigger / Ch 1 | Reproducible new body |
-| Read-only | Body Mode / Air Mode / Decay / Mode Q | derived | Live on the panel |
+| | Seed / Randomise / CC Channel | 1 / button / Ch 1 | Reproducible new body |
+| Read-only | Randomise Count / Body Mode / Air Mode / Decay / Mode Q | derived | Live on the panel |
 
 ### Drift routing
 
@@ -86,12 +86,15 @@ same as a slider at 50 %.
 
 Every setting is an ordinary automatable parameter, so DPF saves no extra
 project snapshot. `activate()` and a sample-rate change clear only runtime filter
-state; a saved body never resets. Randomise derives a new plausible structure
-from Seed and leaves Mix, Output, Bypass and CC Channel alone.
+state; a saved body never resets. Randomise is a one-shot panel action: it
+draws a new plausible structure from Seed and commits it as ordinary parameter
+values, so the host, DSP and panel agree. It advances Seed and leaves Mix,
+Output, Bypass and CC Channel alone.
 
 ### Status
 
 Core DSP, deterministic tests, the VST3 target and the catalog screenshot are
-complete. Visual acceptance of the screenshot is pending because this session
-could not inspect the rendered image at full resolution; host listening in
-REAPER is also pending.
+complete. The screenshot was refreshed after the smaller Randomise button and
+coefficient-stability fix. Visual acceptance is still pending because this
+session could not inspect the rendered image at full resolution; host listening
+in REAPER is also pending.

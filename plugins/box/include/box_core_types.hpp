@@ -42,6 +42,7 @@ struct BiquadState {
     float x2 = 0.0f;
     float y1 = 0.0f;
     float y2 = 0.0f;
+    float gain = 0.0f;
     bool haveCoeffs = false;
 };
 
@@ -112,6 +113,9 @@ struct EngineState {
     std::array<BiquadState, kAudioChannels> air {};
     std::array<BiquadState, kAudioChannels> lowCavity {};
     std::array<BiquadState, kAudioChannels> highCavity {};
+    // Smoothed physical inputs. The filter coefficients are always designed
+    // from a complete, stable parameter set; only the parameters glide.
+    Parameters smooth {};
     double sampleRate = 0.0;
     std::uint32_t controlCounter = 0;
     float envelope = 0.0f;
@@ -130,8 +134,8 @@ struct EngineState {
 void activate(EngineState& state) noexcept;
 
 // Deterministic seeded variation of the physical properties. Mix, Output,
-// Bypass, CC Channel and Seed are left alone so a randomise is a body change,
-// not a volume jump.
+// Bypass and CC Channel are left alone so a randomise is a body change, not a
+// volume jump. Seed advances with each press so repeated clicks differ.
 [[nodiscard]] Parameters randomiseParameters(const Parameters& p) noexcept;
 
 // CC 1-4: Body Size, Damping, Soundhole, Drive. Returns false for other CCs.
