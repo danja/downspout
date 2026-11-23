@@ -163,9 +163,11 @@ screenshots in `docs/pages/assets/plugins/`.
 
 ## Visual acceptance
 
-All current catalog captures are accepted. Screenshots recaptured after UI changes
-are copied into `docs/pages/assets/plugins/` at the dimensions declared in each
-plugin's `DistrhoPluginInfo.h`:
+All current catalog captures are accepted except `melevolve.png`, which needs visual
+acceptance after the carried-vote fix (a fresh 920x700 capture is in the scratchpad;
+the green `+` on a carried row was pixel-checked). Screenshots recaptured after UI
+changes are copied into `docs/pages/assets/plugins/` at the dimensions declared in
+each plugin's `DistrhoPluginInfo.h`:
 
 - `conductor` — 960x820, eight-block editor.
 - `padseq` — 980x720, SysEx-only LED feedback.

@@ -6,6 +6,11 @@ Format: what happened, root cause, prevention.
 
 ## Open
 
+## melevolve: carried-over + vote was drawn white on white (2026-11-23)
+- **What happened:** the `+` looked missing on rows carried over from the previous generation, even though all three vote buttons were still registered and clickable.
+- **Root cause:** a carried entry arrives with rating `+1`; the UI gave its selected vote a white face to mimic Melogen's outlined style but kept the glyph white too, so the glyph had no contrast.
+- **Prevention:** when a selected control changes its fill, set the foreground from the same state (here: vote-colour glyph and 2px border on the hollow button). Verify state colours from captured pixels, not from code inspection alone; a fresh screenshot is pending visual acceptance.
+
 ## fontana: test used a harness-only scratch path (2026-11-22)
 - **What happened:** `downspout_fontana_core_tests` aborted at `testWavLoadingAndPeaks` (`assert(loaded.error.empty())`) on a machine where `/tmp/opencode` did not exist. `writeBytes` silently failed to create the WAV, so `loadSampleSource` returned "Could not open WAV file".
 - **Root cause:** `scratchPath()` in `fontana_core_tests.cpp` hardcoded `/tmp/opencode`, a path that only exists inside the OpenCode harness, and `writeBytes` did not check that the file opened.

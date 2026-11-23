@@ -54,6 +54,7 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - Run `scripts/capture-plugin-screenshots.sh <plugin>`; it always captures on a private Xvfb (it used to photograph the user's real desktop when `DISPLAY` was set, twice), so no `env -u DISPLAY` is needed. Capture into the scratchpad with `--output-dir`, open the image at full resolution, and only then copy it into the repo.
 - Capture by PID or window id, never `xdotool search --name` (substring match). `identify` the PNG against `DISTRHO_UI_DEFAULT_WIDTH/HEIGHT`. A blank grey capture means raise `DOWNSPOUT_SCREENSHOT_SETTLE_SECONDS`.
 - Generate stepper label tables from the value and clamp the index; give an empty state no mark. Derive plot shapes numerically and compare with the image.
+- When a selected state switches a control's fill, switch its label/border to match: a white glyph on a white face is invisible. Check the contrast of each state in the capture (pixel sampling works when image viewing is unavailable).
 - Loop fixed tables with range-for or `std::size`; hard-coded counts can read past the end (the Melevolve About-tab crash).
 - Give list scroll controls a dedicated gutter and handle list rows before generic action rectangles. Clamp scrolling by the visible row count, match glyph direction, support wheel scrolling, and only decode previews on explicit selection.
 - Probe list scrolling with more entries than fit in the list; a wheel/drag screenshot diff is meaningless when the sample directory has fewer rows than the visible area.

@@ -746,13 +746,17 @@ private:
         for (int i = 0; i < 3; ++i) {
             const Rect vote {votesX + static_cast<float>(i) * (voteW + voteGap), y + 10.0f, voteW, 28.0f};
             const bool selected = rating == ratings[i];
-            Color face = selected ? (i == 0 ? kDown : i == 1 ? kAccent : kPlay) : kSurface2;
-            if (selected && carried)
-                face = kWhite;
+            const bool carriedVote = selected && carried;
+            const Color voteColor = i == 0 ? kDown : i == 1 ? kAccent : kPlay;
+            // Melogen outlines a carried vote instead of filling it. Keep the glyph and
+            // border the vote colour so the + stays visible on previously selected rows.
+            const Color face = !selected ? kSurface2 : (carriedVote ? kWhite : voteColor);
             fillRect(vote, face, 8.0f);
-            strokeRect(vote, selected ? face : kLine, 1.0f, 8.0f);
+            strokeRect(vote, selected ? (carriedVote ? voteColor : face) : kLine,
+                       carriedVote ? 2.0f : 1.0f, 8.0f);
             labelText(vote.x + vote.w * 0.5f, vote.y + vote.h * 0.5f, voteText[i],
-                      selected ? kWhite : kText, 15.0f, ALIGN_CENTER | ALIGN_MIDDLE);
+                      selected ? (carriedVote ? voteColor : kWhite) : kText, 15.0f,
+                      ALIGN_CENTER | ALIGN_MIDDLE);
             rememberAction(kVoteBase + position * 3 + i, vote);
         }
 

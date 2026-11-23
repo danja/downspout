@@ -37,7 +37,8 @@ line. **Fave** chooses which row the top bar follows; its green Play button star
 host transport start plays it automatically. Clicking Fave while playback is running switches to
 that row immediately. The default Favourite is row 1. Votes are `−`
 (dislike), `0` (neutral) and `+` (like); unrated rows are still eligible as parents, while disliked
-rows are not.
+rows are not. Lines carried over from the previous generation keep their `+` as an outlined vote,
+so the option stays visible on every tune.
 
 - **More** moves to the next five candidates and keeps existing ratings.
 - **Evolve** breeds a new generation from the current ratings, keeping some high-scoring lines and
@@ -103,9 +104,9 @@ and transport when **Clock source** is MIDI.
 Core tests, the VST3 target and the two-tab editor are complete. Core tests cover RNG
 reproducibility, decoding, settings, state round-trips, votes and evolution, block-size
 independence, looping, outgoing clock, MIDI Start/Continue/Stop, favourite selection, host play
-without a button press, and host BBT rewind/tempo/loop edge cases. The 920x700 screenshot was
-recaptured after this UI change and accepted. Headless host load/save/reopen in REAPER 7.85
-verified that distinctive settings, parameters and a regenerated 24-entry population from
-`action=new` persist (action key not saved; see `/tmp/opencode/melevolve-reaper-check.RPP` and
-`/tmp/opencode/melevolve-reaper-reopen.log`). Live listening, render validation and timing-source
-observation in REAPER remain pending in this environment.
+without a button press, and host BBT rewind/tempo/loop edge cases. Headless host load/save/reopen
+in REAPER 7.85 verified that distinctive settings, parameters and a regenerated 24-entry
+population from `action=new` persist (the action key is not saved). The carried-over `+` fix was
+checked from a standalone capture, but the refreshed 920x700 catalog screenshot still needs
+visual acceptance in this environment. Live listening, render validation and timing-source
+observation in REAPER remain pending here.

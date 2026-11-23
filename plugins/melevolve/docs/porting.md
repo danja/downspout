@@ -13,7 +13,8 @@ MIDI generator. The original app bred melodies in the browser and ultimately dow
 - Melogen's twelve local scales (major through chromatic), root/octave/mode decoding,
   time signatures, step grid, velocity accents and gate gap.
 - User flow: play a row, vote − / 0 / +, **More**, **Evolve**, **New population**, with
-  votes shown on the same row buttons.
+  votes shown on the same row buttons. A carried-over vote is outlined rather than filled, as in
+  Melogen's `.row.carried .vote[aria-pressed="true"]`, so its `+` stays visible on every row.
 - Versioned text state covering settings, population, archive, row selection, RNG and GA
   generation/round. A session restores an ongoing run exactly.
 
@@ -90,5 +91,7 @@ looping, outgoing clock, incoming MIDI Start/Continue/Stop, favourite selection,
 an explicit button press, and host BBT match/restart/rewind/tempo/loop edge cases. Core tests are
 registered through `downspout_add_core_test`; the `melevolve-vst3` target builds the DSP and NanoVG UI.
 
-Headless REAPER load/save/reopen passed. The captured two-tab panel was accepted; live listening
-and timing-source observation in REAPER remain pending in this environment.
+Headless REAPER load/save/reopen passed. The captured two-tab panel was accepted. The carried-vote
+`+` was verified by pixel inspection of a standalone capture after voting and evolving; a fresh
+catalog screenshot still needs visual acceptance here. Live listening and timing-source observation
+in REAPER remain pending in this environment.

@@ -14,6 +14,8 @@ Open work only. Completed builds are recorded in plugin docs; resolved lessons g
 - [x] Melevolve UI: shorten Interact bars and add a top Favourite bar; replace per-bar OUT buttons with Fave buttons that choose which bar plays; keep only Interact and Settings tabs, moving compact status onto Interact.
 - [x] Melevolve Settings: fix Line: Melody/Bass reversed UI and selection mapping so clicking a choice selects that line.
 - [x] Melevolve transport: emit MIDI when REAPER plays in BBT/host-clock mode; cover stopped transport, loop boundaries, rewind and tempo/bar changes.
+- [x] Melevolve UI: keep the `+` vote visible on carried-over rows using Melogen's outlined style.
+- [ ] Melevolve: visually accept a fresh 920x700 screenshot after the carried-vote fix (capture in the scratchpad was pixel-checked; image inspection is unavailable here, so catalog copy is pending).
 - [x] Fontana: persist the file browser directory as DPF state so it survives editor/focus loss; add a global Pan offset so hard-left SoundFont presets can be rebalanced (core test covers the audible effect).
 - [ ] Refresh `docs/pages/assets/plugins/fontana.png` from the fresh 1280x800 capture and visually review the PLAYER mixer row (Pan label/value fit) before marking the screenshot accepted.
 - [ ] Review `https://gardenfx.uk/v4/` for extensions and new-plugin ideas.
