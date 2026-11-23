@@ -93,60 +93,60 @@ protected:
         case kParamInputGain:
             parameter.name   = "Input Gain";
             parameter.symbol = "input_gain";
-            parameter.ranges = { -24.0f, 24.0f, 0.0f };
+            parameter.ranges = { 0.0f, -24.0f, 24.0f };
             break;
         case kParamCutoff:
             parameter.name   = "Cutoff";
             parameter.symbol = "cutoff";
-            parameter.ranges = { 0.0f, 100.0f, 85.0f };
+            parameter.ranges = { 85.0f, 0.0f, 100.0f };
             break;
         case kParamScream:
             parameter.name   = "Scream";
             parameter.symbol = "scream";
-            parameter.ranges = { 0.0f, 100.0f, 46.5f };
+            parameter.ranges = { 46.5f, 0.0f, 100.0f };
             break;
         case kParamResonance:
             parameter.name   = "Resonance";
             parameter.symbol = "resonance";
-            parameter.ranges = { 0.0f, 100.0f, 100.0f };
+            parameter.ranges = { 100.0f, 0.0f, 100.0f };
             break;
         case kParamMix:
             parameter.name   = "Mix";
             parameter.symbol = "mix";
-            parameter.ranges = { 0.0f, 100.0f, 100.0f };
+            parameter.ranges = { 100.0f, 0.0f, 100.0f };
             break;
         case kParamOutputGain:
             parameter.name   = "Output Gain";
             parameter.symbol = "output_gain";
-            parameter.ranges = { -24.0f, 0.0f, -6.0f };
+            parameter.ranges = { -6.0f, -24.0f, 0.0f };
             break;
         case kParamTrack:
             parameter.name   = "Track";
             parameter.symbol = "track";
-            parameter.ranges = { 0.0f, 100.0f, 0.0f };
+            parameter.ranges = { 0.0f, 0.0f, 100.0f };
             break;
         case kParamCCCutoff:
             parameter.name   = "CC Cutoff";
             parameter.symbol = "cc_cutoff";
             parameter.hints  = kParameterIsInteger;
-            parameter.ranges = { 0.0f, 127.0f, 0.0f };
+            parameter.ranges = { 1.0f, 0.0f, 127.0f };
             break;
         case kParamCCScream:
             parameter.name   = "CC Scream";
             parameter.symbol = "cc_scream";
             parameter.hints  = kParameterIsInteger;
-            parameter.ranges = { 0.0f, 127.0f, 0.0f };
+            parameter.ranges = { 2.0f, 0.0f, 127.0f };
             break;
         case kParamCCChannel:
             parameter.name   = "CC Channel";
             parameter.symbol = "cc_channel";
             parameter.hints  = kParameterIsInteger;
-            parameter.ranges = { 1.0f, 16.0f, 1.0f };
+            parameter.ranges = { 1.0f, 1.0f, 16.0f };
             break;
         case kParamMorph:
             parameter.name   = "Morph";
             parameter.symbol = "morph";
-            parameter.ranges = { -100.0f, 100.0f, 0.0f };
+            parameter.ranges = { 0.0f, -100.0f, 100.0f };
             break;
         }
     }

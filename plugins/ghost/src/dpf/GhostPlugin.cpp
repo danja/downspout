@@ -108,21 +108,21 @@ protected:
     {
         parameter.hints = 0;
         switch (index) {
-        case kParamSensitivity:   parameter.name = "Sensitivity"; parameter.symbol = "sensitivity"; parameter.ranges = { 0.0f, 1.0f, 0.5f }; break;
-        case kParamDensity:       parameter.name = "Density";     parameter.symbol = "density";     parameter.ranges = { 0.0f, 1.0f, 0.35f }; break;
-        case kParamVelocity:      parameter.name = "Velocity";    parameter.symbol = "velocity";    parameter.hints = kParameterIsInteger; parameter.ranges = { 1.0f, 127.0f, 90.0f }; break;
-        case kParamDrag:          parameter.name = "Drag";        parameter.symbol = "drag";        parameter.ranges = { 0.0f, 1.0f, 0.15f }; break;
-        case kParamMode:          parameter.name = "Mode";        parameter.symbol = "mode";        parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 1.0f, 0.0f }; break;
-        case kParamChannel:       parameter.name = "Channel";     parameter.symbol = "channel";     parameter.hints = kParameterIsInteger; parameter.ranges = { 1.0f, 16.0f, 10.0f }; break;
-        case kParamBaseNote:      parameter.name = "Base Note";   parameter.symbol = "base_note";   parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 127.0f, 38.0f }; break;
-        case kParamPassInput:     parameter.name = "Pass Input";  parameter.symbol = "pass_input";  parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 1.0f, 1.0f }; break;
-        case kParamSeed:          parameter.name = "Seed";        parameter.symbol = "seed";        parameter.hints = kParameterIsInteger; parameter.ranges = { 1.0f, 65535.0f, 7.0f }; break;
-        case kParamCCSensitivity: parameter.name = "CC Sensitivity"; parameter.symbol = "cc_sensitivity"; parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 127.0f, downspout::ghost::kDefaultCCSensitivity }; break;
-        case kParamCCDensity:     parameter.name = "CC Density";  parameter.symbol = "cc_density";  parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 127.0f, downspout::ghost::kDefaultCCDensity }; break;
-        case kParamCCVelocity:    parameter.name = "CC Velocity"; parameter.symbol = "cc_velocity"; parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 127.0f, downspout::ghost::kDefaultCCVelocity }; break;
-        case kParamCCDrag:        parameter.name = "CC Drag";     parameter.symbol = "cc_drag";     parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 127.0f, downspout::ghost::kDefaultCCDrag }; break;
-        case kParamCCChannel:     parameter.name = "CC Channel";  parameter.symbol = "cc_channel";  parameter.hints = kParameterIsInteger; parameter.ranges = { 1.0f, 16.0f, 1.0f }; break;
-        case kParamAudioThru:     parameter.name = "Audio Thru";  parameter.symbol = "audio_thru";  parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 1.0f, 0.0f }; break;
+        case kParamSensitivity:   parameter.name = "Sensitivity"; parameter.symbol = "sensitivity"; parameter.ranges = { 0.5f, 0.0f, 1.0f }; break;
+        case kParamDensity:       parameter.name = "Density";     parameter.symbol = "density";     parameter.ranges = { 0.35f, 0.0f, 1.0f }; break;
+        case kParamVelocity:      parameter.name = "Velocity";    parameter.symbol = "velocity";    parameter.hints = kParameterIsInteger; parameter.ranges = { 90.0f, 1.0f, 127.0f }; break;
+        case kParamDrag:          parameter.name = "Drag";        parameter.symbol = "drag";        parameter.ranges = { 0.15f, 0.0f, 1.0f }; break;
+        case kParamMode:          parameter.name = "Mode";        parameter.symbol = "mode";        parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 0.0f, 1.0f }; break;
+        case kParamChannel:       parameter.name = "Channel";     parameter.symbol = "channel";     parameter.hints = kParameterIsInteger; parameter.ranges = { 10.0f, 1.0f, 16.0f }; break;
+        case kParamBaseNote:      parameter.name = "Base Note";   parameter.symbol = "base_note";   parameter.hints = kParameterIsInteger; parameter.ranges = { 38.0f, 0.0f, 127.0f }; break;
+        case kParamPassInput:     parameter.name = "Pass Input";  parameter.symbol = "pass_input";  parameter.hints = kParameterIsInteger; parameter.ranges = { 1.0f, 0.0f, 1.0f }; break;
+        case kParamSeed:          parameter.name = "Seed";        parameter.symbol = "seed";        parameter.hints = kParameterIsInteger; parameter.ranges = { 7.0f, 1.0f, 65535.0f }; break;
+        case kParamCCSensitivity: parameter.name = "CC Sensitivity"; parameter.symbol = "cc_sensitivity"; parameter.hints = kParameterIsInteger; parameter.ranges = { downspout::ghost::kDefaultCCSensitivity, 0.0f, 127.0f }; break;
+        case kParamCCDensity:     parameter.name = "CC Density";  parameter.symbol = "cc_density";  parameter.hints = kParameterIsInteger; parameter.ranges = { downspout::ghost::kDefaultCCDensity, 0.0f, 127.0f }; break;
+        case kParamCCVelocity:    parameter.name = "CC Velocity"; parameter.symbol = "cc_velocity"; parameter.hints = kParameterIsInteger; parameter.ranges = { downspout::ghost::kDefaultCCVelocity, 0.0f, 127.0f }; break;
+        case kParamCCDrag:        parameter.name = "CC Drag";     parameter.symbol = "cc_drag";     parameter.hints = kParameterIsInteger; parameter.ranges = { downspout::ghost::kDefaultCCDrag, 0.0f, 127.0f }; break;
+        case kParamCCChannel:     parameter.name = "CC Channel";  parameter.symbol = "cc_channel";  parameter.hints = kParameterIsInteger; parameter.ranges = { 1.0f, 1.0f, 16.0f }; break;
+        case kParamAudioThru:     parameter.name = "Audio Thru";  parameter.symbol = "audio_thru";  parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 0.0f, 1.0f }; break;
         }
     }
 

@@ -42,6 +42,10 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - Build output: filter with `grep -E "error:|Error [0-9]"` and check the exit status. After adding a test, confirm it actually ran (count/runtime changed) before saying it passes.
 - An STFT/overlap-add effect's first test is a unity-mask round trip: output equals the input delayed by the reported latency (level within 0.1 dB, correlation > 0.999, nearest best lag), plus a single-tap impulse response and block-size invariance. Allocation and finiteness are smoke checks, not core tests.
 - To allocate n elements write `std::vector<float> v(n)`, not `v{n}`: braces choose the initializer-list constructor and make a one-element vector. A new test that segfaults should go through `-fsanitize=address` before you suspect the DSP.
+- Sweep any parameter that changes filter/control design across its full range in a rendering test; static endpoints passed while Box's Size sweep reached ~1e38. Glide physical parameters and install freshly designed biquad coefficients rather than interpolating coefficients between designs.
+- Parameter fixtures must use published ranges and derive values from the parameter specs, not from the physical formula. Keep finite out-of-range clamping distinct from non-finite default fallback.
+- A case that asserts default positions needs a fresh `defaults()` fixture; do not reuse an array mutated by earlier cases.
+- Use `std::filesystem::temp_directory_path()` for test scratch files and assert the ofstream is good before writing; harness-only `/tmp/opencode` paths break elsewhere.
 
 **Host lifecycle and state**
 - `WANT_STATE` without `WANT_FULL_STATE` makes the host save defaults from `initState()` into every project. `Plugin`'s third constructor argument is *stateCount*. Run `scripts/check-plugin-state.sh`. DPF already saves ordinary parameters, so state is only for non-parameter data.
@@ -49,6 +53,12 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - Core tests never touch the DPF wrapper, so a green build proves nothing about state or lifecycle: change a setting, save, reopen in a host.
 - Embedded VST3 UIs under Carla: Carla focuses its own X11 wrapper, not DPF/pugl's deeper view, so a UI that needs typing must grab focus on click (`getWindow().focus()`). Verify by typing with XTEST and reading the engine text; `xdotool getwindowfocus` reports the wrapper even when typing works.
 - Recursive filters on idle voices decay into denormals (4x CPU): skip idle voices, zero their state, flush tiny values per block, and time new recursive DSP over a long decay.
+- `DPF::ParameterRanges` is `{def, min, max}`: assign `.def/.min/.max` explicitly and set `kParameterIsAutomatable`; implement `setParameterValue()` and sync both ways with the UI.
+- DPF's VST3 bridge suppresses `kParameterIsTrigger` writes; UI one-shots (Randomise, presets) must commit ordinary parameter values like HeavyVerb, with a read-only count if the panel needs feedback.
+- Propagate every `ParamSpec` flag (logarithmic, integer, trigger, output) into DPF parameter hints; UI normalisation must match host normalisation.
+- UI state that must survive editor recreation (browser directory, selected view) needs a DPF state key; persist in the navigation handler, not in refresh paths that run during construction.
+- Controls that affect DSP must be real automatable parameters appended after read-only outputs; text-state-only messages are unreliable with a separate VST3 controller.
+- When a transport is already rolling, retargets must be queued into the normal play path; test with a continuous simulated timeline.
 
 **Screenshots and UI**
 - Run `scripts/capture-plugin-screenshots.sh <plugin>`; it always captures on a private Xvfb (it used to photograph the user's real desktop when `DISPLAY` was set, twice), so no `env -u DISPLAY` is needed. Capture into the scratchpad with `--output-dir`, open the image at full resolution, and only then copy it into the repo.
@@ -59,6 +69,7 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - Give list scroll controls a dedicated gutter and handle list rows before generic action rectangles. Clamp scrolling by the visible row count, match glyph direction, support wheel scrolling, and only decode previews on explicit selection.
 - Probe list scrolling with more entries than fit in the list; a wheel/drag screenshot diff is meaningless when the sample directory has fewer rows than the visible area.
 - When the user explicitly accepts captured images, copy them into the catalog and remove acceptance-pending wording from docs.
+- For popup/dropdown clicks, pass the open index into the commit helper; clearing it before the handler silently discards the selection.
 
 **Process**
 - Never `pkill -f` / `pgrep -f` with a pattern that appears in your own command line; use `ps` or the bracket trick (`foo[.]bar`).
@@ -117,7 +128,7 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - For transport-aware plugins, write explicit tests for stopped transport, loop boundaries, rewind, and tempo/bar changes.
 - For stateful plugins, define a stable serialization contract before UI work.
 - When an LV2 plugin has separate note/control MIDI ports that do not map cleanly to VST3, prefer one primary MIDI input in the DPF wrapper and keep role-detection inside the portable processor.
-- For audio sidechains, a port group named “Sidechain” is not enough: also set `kAudioPortIsSidechain` so VST3/CLAP hosts expose an aux bus rather than a second main input bus. Compare Gate, Glue, Trio and Interleaver.
+- For audio sidechains, a port group named "Sidechain" is not enough: also set `kAudioPortIsSidechain` so VST3/CLAP hosts expose an aux bus rather than a second main input bus. DPF custom port-group ids must start at 0 and be sequential or `initPortGroup()` is skipped; p-mix is the corrected reference alongside Gate, Glue, Trio, Bassops and Interleaver.
 - For controller-heavy ports, expose output status parameters for the UI so the panel can reflect the processor’s effective live state rather than only the last host automation value.
 
 ## Documentation expectations

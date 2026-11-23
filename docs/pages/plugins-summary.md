@@ -837,8 +837,9 @@ Transport-aware Euclidean stereo gate: deterministic block rhythms applied to au
 
 ### p-mix
 Transport-aware probabilistic stereo gate/mixer producing evolving channel switching and
-rhythmic dropouts. **Oppose** uses a sidechain on inputs 3-4: loud sidechain tends to make
-it quieter and vice versa.
+rhythmic dropouts. **Oppose** uses a dedicated Sidechain aux bus on inputs 3-4 (named
+port group plus `kAudioPortIsSidechain`, so VST3/CLAP hosts do not expose them as a
+second main input): loud sidechain tends to make it quieter and vice versa.
 
 ### t-mix
 Eight-input mono-to-stereo mixer with level, pan, mute, solo, meters and master fader.

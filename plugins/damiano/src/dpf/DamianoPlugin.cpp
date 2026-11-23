@@ -121,7 +121,7 @@ protected:
         parameter.name   = info.name;
         parameter.symbol = info.key;
         parameter.hints  = info.integer ? kParameterIsInteger : 0;
-        parameter.ranges = {info.min, info.max, info.def};
+        parameter.ranges = {info.def, info.min, info.max};
     }
 
     void initState(uint32_t index, State& state) override

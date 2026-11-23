@@ -127,26 +127,26 @@ protected:
     {
         parameter.hints = 0;
         switch (index) {
-        case kParamMode:        parameter.name = "Mode";        parameter.symbol = "mode";        parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 2.0f, 0.0f }; break;
-        case kParamSensitivity: parameter.name = "Sensitivity"; parameter.symbol = "sensitivity"; parameter.ranges = { 0.0f, 1.0f, 0.6f }; break;
-        case kParamDepth:       parameter.name = "Depth";       parameter.symbol = "depth";       parameter.ranges = { 0.0f, 1.0f, 0.7f }; break;
-        case kParamResonance:   parameter.name = "Resonance";   parameter.symbol = "resonance";   parameter.ranges = { 0.5f, 12.0f, 4.0f }; break;
-        case kParamBaseFreq:    parameter.name = "Base Freq";   parameter.symbol = "base_freq";   parameter.ranges = { 100.0f, 2000.0f, 400.0f }; break;
-        case kParamDivision:    parameter.name = "Division";    parameter.symbol = "division";    parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 3.0f, 2.0f }; break;
-        case kParamGateBeats:   parameter.name = "Gate Beats";  parameter.symbol = "gate_beats";  parameter.hints = kParameterIsInteger; parameter.ranges = { 1.0f, 8.0f, 2.0f }; break;
-        case kParamAttack:      parameter.name = "Attack";      parameter.symbol = "attack";      parameter.ranges = { 1.0f, 500.0f, 20.0f }; break;
-        case kParamDecay:       parameter.name = "Decay";       parameter.symbol = "decay";       parameter.ranges = { 5.0f, 1000.0f, 150.0f }; break;
-        case kParamSustain:     parameter.name = "Sustain";     parameter.symbol = "sustain";     parameter.ranges = { 0.0f, 1.0f, 0.7f }; break;
-        case kParamRelease:     parameter.name = "Release";     parameter.symbol = "release";     parameter.ranges = { 5.0f, 2000.0f, 200.0f }; break;
-        case kParamInvert:      parameter.name = "Invert";      parameter.symbol = "invert";      parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 1.0f, 0.0f }; break;
-        case kParamMix:         parameter.name = "Mix";         parameter.symbol = "mix";         parameter.ranges = { 0.0f, 100.0f, 100.0f }; break;
-        case kParamTrim:        parameter.name = "Trim";        parameter.symbol = "trim";        parameter.ranges = { -12.0f, 12.0f, 0.0f }; break;
-        case kParamBypass:      parameter.name = "Bypass";      parameter.symbol = "bypass";      parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 1.0f, 0.0f }; break;
-        case kParamCCSensitivity: parameter.name = "CC Sens";   parameter.symbol = "cc_sensitivity"; parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 127.0f, downspout::helterskelter::kDefaultCCSensitivity }; break;
-        case kParamCCDepth:       parameter.name = "CC Depth";  parameter.symbol = "cc_depth";    parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 127.0f, downspout::helterskelter::kDefaultCCDepth }; break;
-        case kParamCCResonance:   parameter.name = "CC Res";    parameter.symbol = "cc_resonance"; parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 127.0f, downspout::helterskelter::kDefaultCCResonance }; break;
-        case kParamCCMix:         parameter.name = "CC Mix";    parameter.symbol = "cc_mix";      parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 127.0f, downspout::helterskelter::kDefaultCCMix }; break;
-        case kParamCCChannel:     parameter.name = "CC Channel"; parameter.symbol = "cc_channel"; parameter.hints = kParameterIsInteger; parameter.ranges = { 1.0f, 16.0f, 1.0f }; break;
+        case kParamMode:        parameter.name = "Mode";        parameter.symbol = "mode";        parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 0.0f, 2.0f }; break;
+        case kParamSensitivity: parameter.name = "Sensitivity"; parameter.symbol = "sensitivity"; parameter.ranges = { 0.6f, 0.0f, 1.0f }; break;
+        case kParamDepth:       parameter.name = "Depth";       parameter.symbol = "depth";       parameter.ranges = { 0.7f, 0.0f, 1.0f }; break;
+        case kParamResonance:   parameter.name = "Resonance";   parameter.symbol = "resonance";   parameter.ranges = { 4.0f, 0.5f, 12.0f }; break;
+        case kParamBaseFreq:    parameter.name = "Base Freq";   parameter.symbol = "base_freq";   parameter.ranges = { 400.0f, 100.0f, 2000.0f }; break;
+        case kParamDivision:    parameter.name = "Division";    parameter.symbol = "division";    parameter.hints = kParameterIsInteger; parameter.ranges = { 2.0f, 0.0f, 3.0f }; break;
+        case kParamGateBeats:   parameter.name = "Gate Beats";  parameter.symbol = "gate_beats";  parameter.hints = kParameterIsInteger; parameter.ranges = { 2.0f, 1.0f, 8.0f }; break;
+        case kParamAttack:      parameter.name = "Attack";      parameter.symbol = "attack";      parameter.ranges = { 20.0f, 1.0f, 500.0f }; break;
+        case kParamDecay:       parameter.name = "Decay";       parameter.symbol = "decay";       parameter.ranges = { 150.0f, 5.0f, 1000.0f }; break;
+        case kParamSustain:     parameter.name = "Sustain";     parameter.symbol = "sustain";     parameter.ranges = { 0.7f, 0.0f, 1.0f }; break;
+        case kParamRelease:     parameter.name = "Release";     parameter.symbol = "release";     parameter.ranges = { 200.0f, 5.0f, 2000.0f }; break;
+        case kParamInvert:      parameter.name = "Invert";      parameter.symbol = "invert";      parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 0.0f, 1.0f }; break;
+        case kParamMix:         parameter.name = "Mix";         parameter.symbol = "mix";         parameter.ranges = { 100.0f, 0.0f, 100.0f }; break;
+        case kParamTrim:        parameter.name = "Trim";        parameter.symbol = "trim";        parameter.ranges = { 0.0f, -12.0f, 12.0f }; break;
+        case kParamBypass:      parameter.name = "Bypass";      parameter.symbol = "bypass";      parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 0.0f, 1.0f }; break;
+        case kParamCCSensitivity: parameter.name = "CC Sens";   parameter.symbol = "cc_sensitivity"; parameter.hints = kParameterIsInteger; parameter.ranges = { downspout::helterskelter::kDefaultCCSensitivity, 0.0f, 127.0f }; break;
+        case kParamCCDepth:       parameter.name = "CC Depth";  parameter.symbol = "cc_depth";    parameter.hints = kParameterIsInteger; parameter.ranges = { downspout::helterskelter::kDefaultCCDepth, 0.0f, 127.0f }; break;
+        case kParamCCResonance:   parameter.name = "CC Res";    parameter.symbol = "cc_resonance"; parameter.hints = kParameterIsInteger; parameter.ranges = { downspout::helterskelter::kDefaultCCResonance, 0.0f, 127.0f }; break;
+        case kParamCCMix:         parameter.name = "CC Mix";    parameter.symbol = "cc_mix";      parameter.hints = kParameterIsInteger; parameter.ranges = { downspout::helterskelter::kDefaultCCMix, 0.0f, 127.0f }; break;
+        case kParamCCChannel:     parameter.name = "CC Channel"; parameter.symbol = "cc_channel"; parameter.hints = kParameterIsInteger; parameter.ranges = { 1.0f, 1.0f, 16.0f }; break;
         }
     }
 

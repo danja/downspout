@@ -35,6 +35,10 @@ enum StateIndex : uint32_t {
 
 constexpr const char* kStateKeyParameters = "parameters";
 
+// DPF requires custom port-group ids to start at 0 and be sequential; ids that
+// do not satisfy that rule never reach initPortGroup().
+constexpr uint32_t kSidechainPortGroup = 0;
+
 using CoreAudioBlock = downspout::pmix::AudioBlock;
 using CoreEngineState = downspout::pmix::EngineState;
 using CoreParameters = downspout::pmix::Parameters;
@@ -117,15 +121,30 @@ protected:
     {
         Plugin::initAudioPort(input, index, port);
 
+        if (input && index >= 2) {
+            // Inputs 3-4 feed Oppose. Without the sidechain hint VST3/CLAP hosts
+            // expose them as a second main input bus, so REAPER cannot offer a
+            // real sidechain route. Match Gate, Glue, Trio, Bassops and
+            // Interleaver: a named port group plus the audio-port hint.
+            port.groupId = kSidechainPortGroup;
+            port.hints  |= kAudioPortIsSidechain;
+            port.name   = index == 2 ? String("Sidechain L") : String("Sidechain R");
+            port.symbol = index == 2 ? String("sc_l") : String("sc_r");
+            return;
+        }
+
         if (index < 2)
             port.groupId = kPortGroupStereo;
 
-        if (input && index >= 2) {
-            port.name   = index == 2 ? String("Sidechain L") : String("Sidechain R");
-            port.symbol = index == 2 ? String("sidechain_l") : String("sidechain_r");
-        } else {
-            port.name   = String(input ? "Input " : "Output ") + String(static_cast<int>(index + 1));
-            port.symbol = String(input ? "in_" : "out_") + String(static_cast<int>(index + 1));
+        port.name   = String(input ? "Input " : "Output ") + String(static_cast<int>(index + 1));
+        port.symbol = String(input ? "in_" : "out_") + String(static_cast<int>(index + 1));
+    }
+
+    void initPortGroup(const uint32_t groupId, PortGroup& portGroup) override
+    {
+        if (groupId == kSidechainPortGroup) {
+            portGroup.name   = "Sidechain";
+            portGroup.symbol = "sidechain";
         }
     }
 

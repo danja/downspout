@@ -101,58 +101,58 @@ protected:
             parameter.name   = "Bit Depth";
             parameter.symbol = "bit_depth";
             parameter.hints  = kParameterIsInteger;
-            parameter.ranges = { 1.0f, 16.0f, 8.0f };
+            parameter.ranges = { 8.0f, 1.0f, 16.0f };
             break;
         case kParamRateDiv:
             parameter.name   = "Rate Divisor";
             parameter.symbol = "rate_div";
             parameter.hints  = kParameterIsInteger;
-            parameter.ranges = { 1.0f, 64.0f, 8.0f };
+            parameter.ranges = { 8.0f, 1.0f, 64.0f };
             break;
         case kParamJitter:
             parameter.name   = "Jitter";
             parameter.symbol = "jitter";
-            parameter.ranges = { 0.0f, 1.0f, 0.0f };
+            parameter.ranges = { 0.0f, 0.0f, 1.0f };
             break;
         case kParamMix:
             parameter.name   = "Mix";
             parameter.symbol = "mix";
-            parameter.ranges = { 0.0f, 100.0f, 100.0f };
+            parameter.ranges = { 100.0f, 0.0f, 100.0f };
             break;
         case kParamOutputGain:
             parameter.name   = "Output Gain";
             parameter.symbol = "output_gain";
-            parameter.ranges = { -12.0f, 12.0f, 0.0f };
+            parameter.ranges = { 0.0f, -12.0f, 12.0f };
             break;
         case kParamCCBitDepth:
             parameter.name   = "CC Bit Depth";
             parameter.symbol = "cc_bit_depth";
             parameter.hints  = kParameterIsInteger;
-            parameter.ranges = { 0.0f, 127.0f, downspout::chipper::kDefaultCCBitDepth };
+            parameter.ranges = { downspout::chipper::kDefaultCCBitDepth, 0.0f, 127.0f };
             break;
         case kParamCCRateDiv:
             parameter.name   = "CC Rate Div";
             parameter.symbol = "cc_rate_div";
             parameter.hints  = kParameterIsInteger;
-            parameter.ranges = { 0.0f, 127.0f, downspout::chipper::kDefaultCCRateDiv };
+            parameter.ranges = { downspout::chipper::kDefaultCCRateDiv, 0.0f, 127.0f };
             break;
         case kParamCCJitter:
             parameter.name   = "CC Jitter";
             parameter.symbol = "cc_jitter";
             parameter.hints  = kParameterIsInteger;
-            parameter.ranges = { 0.0f, 127.0f, downspout::chipper::kDefaultCCJitter };
+            parameter.ranges = { downspout::chipper::kDefaultCCJitter, 0.0f, 127.0f };
             break;
         case kParamCCMix:
             parameter.name   = "CC Mix";
             parameter.symbol = "cc_mix";
             parameter.hints  = kParameterIsInteger;
-            parameter.ranges = { 0.0f, 127.0f, downspout::chipper::kDefaultCCMix };
+            parameter.ranges = { downspout::chipper::kDefaultCCMix, 0.0f, 127.0f };
             break;
         case kParamCCChannel:
             parameter.name   = "CC Channel";
             parameter.symbol = "cc_channel";
             parameter.hints  = kParameterIsInteger;
-            parameter.ranges = { 1.0f, 16.0f, 1.0f };
+            parameter.ranges = { 1.0f, 1.0f, 16.0f };
             break;
         }
     }
