@@ -39,6 +39,9 @@ enum ParameterIndex : uint32_t {
     kParamCCChannel,
     kParamAttackDb,
     kParamSustainDb,
+    kControlParameterCount,
+    // Appended after the 64 read-only spectrum outputs so the original 19 indices and the spectrum block stay fixed.
+    kParamAnalyzerSource = kControlParameterCount + core::kSpectrumBins,
     kParameterCount
 };
 
@@ -65,10 +68,11 @@ constexpr const char* kStateAnalyzerSource = "analyser_source";
 
 constexpr uint32_t kStateCount = 20;
 
-// The original 19 control parameters keep their indices. Spectrum bins are read-only outputs; the analyser source is
-// UI state so switching it never becomes an automation event.
-inline constexpr uint32_t kSpectrumFirst = kParameterCount;
-inline constexpr uint32_t kTotalParameterCount = kSpectrumFirst + core::kSpectrumBins;
+// The original 19 control parameters keep their indices, followed by 64 read-only spectrum outputs. The analyser source
+// is a real appended parameter because DPF's UI->component state message is not reliable in every VST3 host.
+inline constexpr uint32_t kSpectrumFirst = kControlParameterCount;
+inline constexpr uint32_t kSpectrumLast = kSpectrumFirst + core::kSpectrumBins;
+inline constexpr uint32_t kTotalParameterCount = kParameterCount;
 
 float ccToUnit(uint8_t v) noexcept
 {
@@ -144,8 +148,14 @@ protected:
         case kParamCCChannel:     parameter.name = "CC Channel"; parameter.symbol = "cc_channel"; parameter.hints |= kParameterIsInteger; parameter.ranges = { 1.0f, 1.0f, 16.0f }; break;
         case kParamAttackDb:      parameter.name = "Attack";     parameter.symbol = "attack_db";  parameter.ranges = { 0.0f, -15.0f, 15.0f }; break;
         case kParamSustainDb:     parameter.name = "Sustain";    parameter.symbol = "sustain_db"; parameter.ranges = { 0.0f, -24.0f, 24.0f }; break;
+        case kParamAnalyzerSource:
+            parameter.name = "Analyser Source";
+            parameter.symbol = kStateAnalyzerSource;
+            parameter.hints = kParameterIsAutomatable | kParameterIsInteger;
+            parameter.ranges = { 1.0f, 0.0f, 2.0f };
+            break;
         default:
-            if (index >= kSpectrumFirst && index < kTotalParameterCount) {
+            if (index >= kSpectrumFirst && index < kSpectrumLast) {
                 char symbol[24], name[32];
                 const int band = static_cast<int>(index - kSpectrumFirst) + 1;
                 std::snprintf(symbol, sizeof(symbol), "spectrum_%02d", band);
@@ -195,7 +205,7 @@ protected:
 
     float getParameterValue(uint32_t index) const override
     {
-        if (index >= kSpectrumFirst && index < kTotalParameterCount)
+        if (index >= kSpectrumFirst && index < kSpectrumLast)
             return spectrum_[index - kSpectrumFirst].load(std::memory_order_relaxed);
         switch (index) {
         case kParamMode:        return params_.mode;
@@ -217,6 +227,7 @@ protected:
         case kParamCCChannel:     return params_.ccChannel;
         case kParamAttackDb:      return params_.attackDb;
         case kParamSustainDb:     return params_.sustainDb;
+        case kParamAnalyzerSource: return static_cast<float>(analyserSource_);
         default: return 0.0f;
         }
     }
@@ -246,6 +257,9 @@ protected:
         case kParamCCChannel:     params_.ccChannel     = value; break;
         case kParamAttackDb:      params_.attackDb      = value; break;
         case kParamSustainDb:     params_.sustainDb     = value; break;
+        case kParamAnalyzerSource:
+            setAnalyzerSource(static_cast<int>(std::lround(value)));
+            return;
         default: return;
         }
         params_ = downspout::spliff::clampParameters(params_);
@@ -308,10 +322,7 @@ protected:
         else if (std::strcmp(key, kStateAttackDb)      == 0) { params_.attackDb = f(); }
         else if (std::strcmp(key, kStateSustainDb)     == 0) { params_.sustainDb = f(); }
         else if (std::strcmp(key, kStateAnalyzerSource) == 0) {
-            analyserSource_ = static_cast<core::SpectrumSource>(
-                std::clamp(static_cast<int>(std::lround(f())), 0, 2));
-            core::resetSpectrum(analyser_);
-            publishSpectrum();
+            setAnalyzerSource(static_cast<int>(std::lround(f())));
         }
         params_ = downspout::spliff::clampParameters(params_);
     }
@@ -405,6 +416,13 @@ protected:
     }
 
 private:
+    void setAnalyzerSource(const int source)
+    {
+        analyserSource_ = static_cast<core::SpectrumSource>(std::clamp(source, 0, 2));
+        core::resetSpectrum(analyser_);
+        publishSpectrum();
+    }
+
     void publishSpectrum()
     {
         for (std::size_t k = 0; k < spectrum_.size(); ++k)

@@ -39,15 +39,16 @@ enum ParameterIndex : uint32_t {
     kParamCCChannel,
     kParamAttackDb,
     kParamSustainDb,
+    kControlParameterCount,
+    // Appended after the 64 read-only spectrum outputs; the original 19 indices and spectrum block never move.
+    kParamAnalyzerSource = kControlParameterCount + spectrum::kSpectrumBins,
     kParameterCount,
 };
 
-// Spectrum outputs start at 19: the analyser source is state, not a host parameter. The UI keeps one extra local slot
-// for the source value so the existing stateChanged plumbing can share `values_`.
-inline constexpr uint32_t kSpectrumFirst = kParameterCount;
+inline constexpr uint32_t kSpectrumFirst = kControlParameterCount;
 inline constexpr uint32_t kSpectrumLast = kSpectrumFirst + spectrum::kSpectrumBins;
-inline constexpr uint32_t kUiValueCount = kSpectrumLast;
-inline constexpr uint32_t kAnalyzerSourceValue = kParameterCount;
+inline constexpr uint32_t kUiValueCount = kParameterCount;
+inline constexpr uint32_t kAnalyzerSourceValue = kParamAnalyzerSource;
 
 struct Rect {
     float x, y, w, h;
@@ -292,7 +293,7 @@ public:
 protected:
     void parameterChanged(uint32_t index, float value) override
     {
-        if (demo_ && index >= kSpectrumFirst)
+        if (demo_ && index >= kSpectrumFirst && index < kSpectrumLast)
             return;  // keep the demo spectrum
         if (index >= kSpectrumFirst && index < kSpectrumLast) {
             spectrum_[index - kSpectrumFirst] = value;
@@ -388,7 +389,7 @@ protected:
 
         if (activeTab_ == 0) {
             if (sourceAt(mx, my) >= 0) {
-                commitParam(kAnalyzerSourceValue, "analyser_source",
+                commitParam(kParamAnalyzerSource, "analyser_source",
                             static_cast<float>(sourceAt(mx, my)));
                 return true;
             }
@@ -574,7 +575,8 @@ private:
         std::snprintf(buf, sizeof(buf), "%.6g", v);
         // State keeps the patch stable across hosts that ignore automation; setParameterValue makes
         // the edit visible to the host too (automation lanes, parameter reporting, saved projects).
-        if (index < kParameterCount)
+        // Spectrum bins are read-only outputs and are never committed from the UI.
+        if (index < kSpectrumFirst || index == kParamAnalyzerSource)
             setParameterValue(index, v);
         setState(key, buf);
         values_[index] = v;

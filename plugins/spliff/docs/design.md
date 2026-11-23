@@ -126,19 +126,23 @@ lower half holds the mode selector, Bypass/Delta switches and the main controls
 at half their former track length in two short columns. **DRIFT CC** owns all
 five routing dropdowns and the explanatory copy.
 
-The source is the state key `analyser_source` (0/1/2, default 1 = Output), not
-an automatable parameter, so switching views never writes host automation.
-The 19 original control parameter indices are unchanged; 64 read-only output
-parameters (`spectrum_01`…`spectrum_64`) carry the band levels in dB. The
-analyser is a Spliff-local copy of Octet's portable implementation so no shared
-framework code changed. The spectrum outputs use a `-90..6 dB` range
-(`def,min,max` order in DPF); a missing right input channel is folded into the
-left instead of leaving the display empty.
+The source is the automatable parameter `analyser_source` (0/1/2, default 1 =
+Output) appended after the spectrum block at index 83. The matching text state
+key is still written and restored so older patches keep their source. The UI
+switch now goes through `setParameterValue()`; the previous state-only message
+could be dropped by REAPER's separate VST3 controller, leaving all three views
+showing the same spectrum. The 19 original control indices and the 64 read-only
+outputs (`spectrum_01`…`spectrum_64`, indices 19–82) are unchanged. The analyser
+is a Spliff-local copy of Octet's portable implementation so no shared framework
+code changed. Spectrum outputs use a `-90..6 dB` range (`def,min,max` order in
+DPF); a missing right input channel is folded into the left instead of leaving
+the display empty.
 
 Host wiring: every control is `kParameterIsAutomatable`, integer controls add
 `kParameterIsInteger` with `|=`, and `setParameterValue()` writes the 19 controls
-into `params_` (spectrum indices ignored). The UI mirrors host parameter changes
-and pushes its own edits through `setParameterValue()` as well as text state. A
+into `params_` or the analyser source into `analyserSource_` (spectrum indices
+ignored). The UI mirrors host parameter changes and pushes its own edits through
+`setParameterValue()` as well as text state. A
 REAPER ReaScript probe confirms the declared defaults and that host writes stick.
 A custom VST3 host probe then confirmed real audio processing, the new audible
 defaults and distinct input/output/delta spectra. Core tests alone cannot see

@@ -6,6 +6,11 @@ Format: what happened, root cause, prevention.
 
 ## Open
 
+## spliff: analyser source switch did not reach the DSP in REAPER (2026-11-23)
+- **What happened:** the user reported that Input, Output and Delta all drew the same spectrum. Direct component `setState()` in a custom VST3 host produced distinct spectra, so the DSP and analyser were correct; the UI click was not reaching the processor in the live host.
+- **Root cause:** `analyser_source` was a text-state-only key written by `UIVst3::setState()` as a `state-set` message. With a separate VST3 controller the message is not guaranteed to reach the component; the UI also used a fake parameter index that was not a host parameter, so no `perform_edit` path existed.
+- **Prevention:** expose UI controls that affect DSP as real automatable parameters, appended after read-only outputs so saved indices stay stable, and route `commitParam()` through `setParameterValue()` as well as text state. Keep the state key for patch compatibility, and verify with a VST3 probe that writes to the parameter index change the processor's effective source.
+
 ## spliff: default Depth/Sensitivity made steady material effectively dry (2026-11-23)
 - **What happened:** after the host-range fix, a custom VST3 host probe showed real audio processing and source-specific spectra, but a 1 kHz sine at the default 0.5/0.5 settings passed at 98.9 % of its input level. This made Input/Output/Delta look alike and the plugin sound like bypass in normal listening.
 - **Root cause:** the detector threshold `2.0 − 1.8·sensitivity` was 0.95 at the default sensitivity, above the fast/slow envelope ratio of steady material, so the computed weight was almost zero; Depth 0.5 then halved an already tiny gain movement. The defaults were chosen qualitatively from the manual without measuring steady-tone audibility.
@@ -34,7 +39,7 @@ Format: what happened, root cause, prevention.
 ## spliff: analyser source and spectrum parameters shared indices (2026-11-23)
 - **What happened:** the UI treated the analyser source as parameter 19 and the 64 spectrum bins as parameters 20-83, but the wrapper makes the bins 19-82 and stores the source as state only.
 - **Root cause:** the local `ParameterIndex` enum was copied from the control-only layout and then given an extra parameter that does not exist in the host-facing list.
-- **Prevention:** keep one explicit `kAnalyzerSourceValue` slot for the UI's local state mirror, start `kSpectrumFirst` at the real 19 control parameters, and document that the 83 UI values are 19 controls plus 64 outputs.
+- **Prevention:** start `kSpectrumFirst` at the real 19 control parameters and append the source after the 64 outputs (index 83) as a real host parameter. The UI's values array is therefore 19 controls + 64 spectrum mirrors + 1 source, with spectrum values kept in their own array.
 
 ## spliff: analyser looked dead and PARAMETERS footer overlapped the last slider (2026-11-23)
 - **What happened:** the 64-band display appeared empty/hugging the floor in the capture, and the PARAMETERS explanatory sentence was drawn across the last slider track.

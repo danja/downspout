@@ -62,6 +62,7 @@ full link), so gain changes never shift the stereo image.
 | Attack       | −15 to +15 dB  | 0 dB          | Designer only; fast envelope (onsets)                      |
 | Sustain      | −24 to +24 dB  | 0 dB          | Designer only; slow envelope (body/tails)                  |
 | CC Channel   | 1–16           | 1             | MIDI channel for all four CC overrides                     |
+| Analyser Source | Input/Output/Delta | Output    | Appended after spectrum outputs; also saved as text state  |
 
 ### Drift routing
 
@@ -75,8 +76,8 @@ uses panel Attack/Sustain; only CC 4 Mix reaches that mode.
 The **PROCESS** tab shows a 64-band log-frequency analyser above the shortened
 main controls. Its switch selects **Input**, **Output** or **Delta** (the signal
 the processor removed or added, before the Delta monitoring mix). The selection
-is stored as the `analyser_source` state key, not host automation; the band
-levels are exposed as 64 read-only output parameters for the panel.
+is an automatable `analyser_source` parameter appended after the 64 read-only
+band outputs; the same-named state key is also saved for patch compatibility.
 
 ### Status
 

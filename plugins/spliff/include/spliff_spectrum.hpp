@@ -14,7 +14,8 @@ inline constexpr int kFftSize = 4096;
 inline constexpr float kSpectrumFloorDb = -90.0f;
 inline constexpr float kSpectrumFallDbPerSecond = 40.0f;
 
-// Which signal the analyser shows. Chosen by UI state, not an automatable parameter.
+// Which signal the analyser shows. The wrapper persists it as text state but exposes it as a real
+// appended host parameter so UI switches reach the processor in every VST3 host.
 enum class SpectrumSource : int { Input = 0, Output, Delta };
 
 struct SpectrumState {

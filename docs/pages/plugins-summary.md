@@ -1135,8 +1135,9 @@ band detector with a threshold-free, level-independent fast/slow envelope ratio:
 Attack ±15 dB for onsets, Sustain ±24 dB for body/tails, both inert at 0 dB. Mix,
 Trim, Delta and Bypass apply in all modes; the mono detector keeps the stereo image
 intact. The **PROCESS** tab carries a 64-band Input/Output/Delta analyser above short
-control rows; **DRIFT CC** holds the routing dropdowns. The analyser source is the
-`analyser_source` state key (default Output), with 64 read-only spectrum outputs.
+control rows; **DRIFT CC** holds the routing dropdowns. The appended automatable
+`analyser_source` parameter (default Output, mirrored as text state) selects the
+view, with 64 read-only spectrum outputs before it.
 
 ### treatment
 Physically modelled acoustic treatment panel: facing sheet (mass), porous fill (flow
