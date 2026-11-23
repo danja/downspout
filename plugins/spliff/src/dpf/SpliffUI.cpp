@@ -1,5 +1,6 @@
 #include "DistrhoUI.hpp"
 #include "downspout/look_and_feel.hpp"
+#include "spliff_core.hpp"
 #include "spliff_spectrum.hpp"
 
 #include <algorithm>
@@ -241,8 +242,8 @@ public:
     SpliffUI() : UI(DISTRHO_UI_DEFAULT_WIDTH, DISTRHO_UI_DEFAULT_HEIGHT)
     {
         values_[kParamMode] = 0.0f;
-        values_[kParamDepth] = 0.5f;
-        values_[kParamSensitivity] = 0.5f;
+        values_[kParamDepth] = downspout::spliff::kDefaultDepth;
+        values_[kParamSensitivity] = downspout::spliff::kDefaultSensitivity;
         values_[kParamSharpness] = 0.7f;
         values_[kParamDecay] = 0.25f;
         values_[kParamDecayTilt] = 0.0f;

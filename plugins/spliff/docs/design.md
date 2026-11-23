@@ -24,11 +24,11 @@ src/dpf/SpliffUI.cpp      PROCESS/DRIFT CC tabs, analyser, shorter control rows
 - **Mode cut/boost (§3.1):** `mode` 0/1. A third choice, 2, is the separate
   level-independent Designer described below; it does not alter either Spiff
   mode.
-- **Depth (§3.2):** `depth` 0–1. Cut targets `−30·depth·w` dB; boost targets
-  `+18·depth·w` dB. Both bite in ~0.1 ms so short transients hear the full
-  setting; gain returns toward unity with the Decay-controlled release.
-- **Sensitivity (§3.2):** `sensitivity` 0–1 → fast/slow-ratio threshold
-  `2.0 − 1.8·sens`, normalised as `w = (ratio − thr)/1.5`.
+- **Depth (§3.2):** `depth` 0–1, default 0.7. Cut targets `−30·depth·w` dB;
+  boost targets `+18·depth·w` dB. Both bite in ~0.1 ms so short transients hear
+  the full setting; gain returns toward unity with the Decay-controlled release.
+- **Sensitivity (§3.2):** `sensitivity` 0–1, default 0.7 → fast/slow-ratio
+  threshold `2.0 − 1.8·sens`, normalised as `w = (ratio − thr)/1.5`.
 - **Sharpness (§3.2):** `sharpness` 0–1 blends per-band weights with their mean
   — low is the manual's "natural on drums", high the "harmonic/wide" setting.
   The default is 0.7 so the split-driven band differences are audible out of
@@ -102,6 +102,13 @@ manual's `window` control governs).
 Boost, then return with the Decay-controlled τ. Previously Boost used the slow
 release to rise, which made it almost inaudible on short transients.
 
+**Default audibility.** Depth and Sensitivity both default to 0.7. The original
+0.5/0.5 pair put the ratio threshold at 0.95, above the envelope ratio of steady
+material, so a 1 kHz sine passed at 98.9 % of its input level. At 0.7/0.7 the
+same probe passes at 62.9 %, which is audible without being extreme. The shared
+`kDefaultDepth`/`kDefaultSensitivity` constants drive the core, wrapper and UI;
+`testDefaultsAudibleOnSteadyTone()` guards the bound.
+
 **Denormals.** Gains snap to exactly 1.0 below 1e-7 so long quiet tails cost
 nothing; outputs are `isfinite`-guarded per sample.
 
@@ -132,8 +139,11 @@ Host wiring: every control is `kParameterIsAutomatable`, integer controls add
 `kParameterIsInteger` with `|=`, and `setParameterValue()` writes the 19 controls
 into `params_` (spectrum indices ignored). The UI mirrors host parameter changes
 and pushes its own edits through `setParameterValue()` as well as text state. A
-REAPER ReaScript probe confirms the declared defaults and that host writes stick;
-core tests alone cannot see this layer.
+REAPER ReaScript probe confirms the declared defaults and that host writes stick.
+A custom VST3 host probe then confirmed real audio processing, the new audible
+defaults and distinct input/output/delta spectra. Core tests alone cannot see
+this layer, and headless Xvfb REAPER neither paints the view nor feeds audio, so
+live ears/eyes remain the final gate.
 
 ## Visual acceptance
 
@@ -146,10 +156,11 @@ switches and dropdown selections. The analyser accent changes with the source
 The original redesigned panel capture was accepted and copied to
 `docs/pages/assets/plugins/spliff.png` (720×680, verified with `identify`).
 The demo spectrum was then raised from a −72 dB floor to a −22 dB programme
-curve so the 64 bars are visible, and the PARAMETERS footer that overlapped the
-last slider track was removed. A fresh 720×680 capture of that fix is in
-`/tmp/opencode/spliff-shots/spliff.png`; pixel checks show populated bars and a
-clear last slider row, but this agent cannot view PNG pixels, so catalog
+curve so the 64 bars are visible, the PARAMETERS footer that overlapped the
+last slider track was removed, and the Depth/Sensitivity readouts moved to 70 %.
+A fresh 720×680 capture of all of those changes is in
+`/tmp/opencode/spliff-shots/spliff.png`. This model cannot view PNG pixels, so
+the user must accept the image before it replaces the stale catalog copy; visual
 acceptance is pending. Recapture with
 `scripts/capture-plugin-screenshots.sh spliff` after any further UI change. The
 four-octave reduction graph from the manual remains deferred — the analyser is

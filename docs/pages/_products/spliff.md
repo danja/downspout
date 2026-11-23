@@ -30,7 +30,9 @@ the recovery time with an LF/HF tilt; Split Low/High steer the detector
 (sidechain weighting, not EQ). The two crossovers are two-pole and each band
 has a fixed detector weight (low 0.35, mid 1.0, high 0.45), so moving a split
 really does change the processed sound. Full Cut reaches −30 dB and full Boost
-+18 dB on a transient; both bite in about 0.1 ms.
++18 dB on a transient; both bite in about 0.1 ms. Depth, Sensitivity and
+Sharpness all default to 70 %, so steady material is audibly processed without
+first moving a knob.
 
 In **Designer**, a shared fast/slow envelope pair replaces the three-band
 detector. Their dB ratio drives Attack (±15 dB, onsets where fast > slow) or
@@ -46,8 +48,8 @@ full link), so gain changes never shift the stereo image.
 | Parameter    | Range          | Default       | Notes                                                      |
 |--------------|----------------|---------------|------------------------------------------------------------|
 | Mode         | Cut, Boost, Designer | Cut     | Designer swaps the rows for Attack/Sustain                |
-| Depth        | 0–100 %        | 50 %          | Amount of cut/boost; CC 1; Cut/Boost only                  |
-| Sensitivity  | 0–100 %        | 50 %          | Higher catches more transients; CC 2; Cut/Boost only       |
+| Depth        | 0–100 %        | 70 %          | Amount of cut/boost; CC 1; Cut/Boost only                  |
+| Sensitivity  | 0–100 %        | 70 %          | Higher catches more transients; CC 2; Cut/Boost only       |
 | Sharpness    | 0–100 %        | 70 %          | Per-band independence; low = natural; Cut/Boost only       |
 | Decay        | 0–100 %        | 25 %          | Recovery; 0 = onset only; CC 3; Cut/Boost only             |
 | Decay LF/HF  | LF … HF        | equal         | Which end of the spectrum decays longer                    |

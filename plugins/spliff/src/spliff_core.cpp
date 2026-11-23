@@ -148,8 +148,8 @@ Parameters clampParameters(const Parameters& p) noexcept
 {
     Parameters out = p;
     out.mode        = std::round(safe(out.mode, 0.0f, 2.0f, 0.0f));
-    out.depth       = safe(out.depth, 0.0f, 1.0f, 0.5f);
-    out.sensitivity = safe(out.sensitivity, 0.0f, 1.0f, 0.5f);
+    out.depth       = safe(out.depth, 0.0f, 1.0f, kDefaultDepth);
+    out.sensitivity = safe(out.sensitivity, 0.0f, 1.0f, kDefaultSensitivity);
     out.sharpness   = safe(out.sharpness, 0.0f, 1.0f, 0.7f);
     out.decay       = safe(out.decay, 0.0f, 1.0f, 0.25f);
     out.decayTilt   = safe(out.decayTilt, -1.0f, 1.0f, 0.0f);

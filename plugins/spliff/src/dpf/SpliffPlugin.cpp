@@ -126,8 +126,8 @@ protected:
         // silently invert a range (an inverted range makes VST3 hosts report every control as 0).
         switch (index) {
         case kParamMode:        parameter.name = "Mode";        parameter.symbol = "mode";        parameter.hints |= kParameterIsInteger; parameter.ranges = { 0.0f, 0.0f, 2.0f }; break;
-        case kParamDepth:       parameter.name = "Depth";       parameter.symbol = "depth";       parameter.ranges = { 0.5f, 0.0f, 1.0f }; break;
-        case kParamSensitivity: parameter.name = "Sensitivity"; parameter.symbol = "sensitivity"; parameter.ranges = { 0.5f, 0.0f, 1.0f }; break;
+        case kParamDepth:       parameter.name = "Depth";       parameter.symbol = "depth";       parameter.ranges = { downspout::spliff::kDefaultDepth, 0.0f, 1.0f }; break;
+        case kParamSensitivity: parameter.name = "Sensitivity"; parameter.symbol = "sensitivity"; parameter.ranges = { downspout::spliff::kDefaultSensitivity, 0.0f, 1.0f }; break;
         case kParamSharpness:   parameter.name = "Sharpness";   parameter.symbol = "sharpness";   parameter.ranges = { 0.7f, 0.0f, 1.0f }; break;
         case kParamDecay:       parameter.name = "Decay";       parameter.symbol = "decay";       parameter.ranges = { 0.25f, 0.0f, 1.0f }; break;
         case kParamDecayTilt:   parameter.name = "Decay Tilt";  parameter.symbol = "decay_tilt";  parameter.ranges = { 0.0f, -1.0f, 1.0f }; break;
@@ -165,8 +165,8 @@ protected:
         struct Info { const char* key; const char* label; const char* def; };
         static constexpr Info kInfo[kStateCount] = {
             { kStateMode,          "Mode",           "0"    },
-            { kStateDepth,         "Depth",          "0.5"  },
-            { kStateSensitivity,   "Sensitivity",    "0.5"  },
+            { kStateDepth,         "Depth",          "0.7"  },
+            { kStateSensitivity,   "Sensitivity",    "0.7"  },
             { kStateSharpness,     "Sharpness",      "0.7"  },
             { kStateDecay,         "Decay",          "0.25" },
             { kStateDecayTilt,     "Decay Tilt",     "0"    },

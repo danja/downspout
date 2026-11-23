@@ -616,6 +616,35 @@ static void testSerialization()
     check("garbage deserialises to nullopt", !deserializeParameters("nonsense\n").has_value());
 }
 
+// A sustained note must be processed at the default settings; the old 0.5/0.5 defaults
+// left the detector threshold above a constant envelope, so ordinary material passed dry.
+static void testDefaultsAudibleOnSteadyTone()
+{
+    constexpr std::uint32_t kBlocks = 24;
+    Parameters p;
+    EngineState s;
+    check("default depth is audible", p.depth >= 0.65f);
+    check("default sensitivity is audible", p.sensitivity >= 0.65f);
+
+    double inSq = 0.0, outSq = 0.0;
+    for (std::uint32_t block = 0; block < kBlocks; ++block) {
+        Block b {};
+        for (std::uint32_t i = 0; i < kFrames; ++i) {
+            const float v = 0.5f * std::sin(2.0f * 3.14159265f * 1000.0f
+                                           * static_cast<float>(block * kFrames + i) / kSr);
+            b.inL[i] = b.inR[i] = v;
+            inSq += static_cast<double>(v) * v;
+        }
+        run(s, p, b);
+        for (std::uint32_t i = 0; i < kFrames; ++i)
+            outSq += static_cast<double>(b.outL[i]) * b.outL[i];
+    }
+    const double ratio = std::sqrt(outSq / inSq);
+    check("steady tone is audibly cut by default", ratio < 0.85);
+    check("steady tone is not annihilated by default", ratio > 0.25);
+    std::printf("default steady-tone ratio %.4f\n", ratio);
+}
+
 int main()
 {
     testSilence();
@@ -640,6 +669,7 @@ int main()
     testDeltaBufferIsWetMinusDry();
     testClamp();
     testSerialization();
+    testDefaultsAudibleOnSteadyTone();
 
     std::printf("\n%d passed, %d failed\n", gPassed, gFailed);
     return gFailed == 0 ? 0 : 1;

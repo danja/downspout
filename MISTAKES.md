@@ -6,6 +6,11 @@ Format: what happened, root cause, prevention.
 
 ## Open
 
+## spliff: default Depth/Sensitivity made steady material effectively dry (2026-11-23)
+- **What happened:** after the host-range fix, a custom VST3 host probe showed real audio processing and source-specific spectra, but a 1 kHz sine at the default 0.5/0.5 settings passed at 98.9 % of its input level. This made Input/Output/Delta look alike and the plugin sound like bypass in normal listening.
+- **Root cause:** the detector threshold `2.0 − 1.8·sensitivity` was 0.95 at the default sensitivity, above the fast/slow envelope ratio of steady material, so the computed weight was almost zero; Depth 0.5 then halved an already tiny gain movement. The defaults were chosen qualitatively from the manual without measuring steady-tone audibility.
+- **Prevention:** share `kDefaultDepth`/`kDefaultSensitivity = 0.7` across core, wrapper, UI and stated defaults, and add `testDefaultsAudibleOnSteadyTone()` asserting the rendered ratio is between 0.25 and 0.85 (currently 0.629). Measure default audibility on sustained material before choosing detector thresholds, and re-run core tests after any default change.
+
 ## spliff: inverted ParameterRanges made every host control inert (2026-11-23)
 - **What happened:** in REAPER the 19 controls reported normalized 0 and ignored writes, the analyser showed no bars, and the audio seemed to bypass the processor. A fresh VST3 build and cache rescan changed nothing.
 - **Root cause:** `DPF::ParameterRanges` is `{ def, min, max }`, but `initParameter()` initialised it with `{ min, max, def }`. The inverted range made VST3 report garbage/defaults, clamp effective Depth/Mix to values that bypassed the DSP, and give the spectrum outputs a meaningless range. `setParameterValue()` was also an empty no-op, and `parameter.hints` omitted `kParameterIsAutomatable`, so even a correct write could not reach `params_`.

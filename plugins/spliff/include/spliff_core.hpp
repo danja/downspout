@@ -21,6 +21,11 @@ namespace downspout::spliff {
 //
 // The four most-playable controls map 1:1 to Drift's default lane CCs so that
 // routing Drift MIDI out -> Spliff MIDI in just works (chipper convention).
+// Defaults are deliberately audible on steady material: at 0.5/0.5 the detector threshold
+// sits above a constant envelope, so ordinary sustained notes pass through almost untouched.
+inline constexpr float kDefaultDepth         = 0.7f;
+inline constexpr float kDefaultSensitivity   = 0.7f;
+
 inline constexpr float kDefaultCCDepth       = 1.0f;
 inline constexpr float kDefaultCCSensitivity = 2.0f;
 inline constexpr float kDefaultCCDecay       = 3.0f;
@@ -28,8 +33,8 @@ inline constexpr float kDefaultCCMix         = 4.0f;
 
 struct Parameters {
     float mode        = 0.0f;    // 0 = Cut transients, 1 = Boost, 2 = level-independent designer
-    float depth       = 0.5f;    // 0-1 amount of cut/boost
-    float sensitivity = 0.5f;    // 0-1 detection threshold (higher = more caught)
+    float depth       = kDefaultDepth;       // 0-1 amount of cut/boost
+    float sensitivity = kDefaultSensitivity; // 0-1 detection threshold (higher = more caught)
     float sharpness   = 0.7f;    // 0-1 per-band independence (low = natural)
     float decay       = 0.25f;   // 0-1 recovery time (0 = onset only)
     float decayTilt   = 0.0f;    // -1..1 LF vs HF decay balance (0 = equal)

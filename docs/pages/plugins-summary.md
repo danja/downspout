@@ -1128,8 +1128,9 @@ Blend takes whichever opens further. Sensitivity, Depth, Resonance, Mix read Dri
 Adaptive transient processor. **Cut** tames clicks and harsh sticks (late in a chain,
 down to −30 dB) and **Boost** lifts drum and piano attacks (before compression, up to
 +18 dB), using a two-pole 3-band detector with fixed 0.35/1.0/0.45 band weights so
-**Split Low/High** audibly steer which frequencies are treated. Sharpness defaults to
-70 %, and Drift CC 1-4 override Depth/Sensitivity/Decay/Mix. **Designer** replaces the
+**Split Low/High** audibly steer which frequencies are treated. Depth, Sensitivity and
+Sharpness all default to 70 %, so sustained material is processed out of the box;
+Drift CC 1-4 override Depth/Sensitivity/Decay/Mix. **Designer** replaces the
 band detector with a threshold-free, level-independent fast/slow envelope ratio:
 Attack ±15 dB for onsets, Sustain ±24 dB for body/tails, both inert at 0 dB. Mix,
 Trim, Delta and Bypass apply in all modes; the mono detector keeps the stereo image
