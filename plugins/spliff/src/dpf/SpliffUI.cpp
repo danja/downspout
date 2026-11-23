@@ -268,8 +268,12 @@ public:
             for (int k = 0; k < spectrum::kSpectrumBins; ++k) {
                 const double hz = std::sqrt(spectrum::spectrumBandEdgeHz(k)
                                           * spectrum::spectrumBandEdgeHz(k + 1));
-                double db = -72.0 - 8.0 * std::log10(hz / 100.0)
-                          + 9.0 * std::sin(k * 0.51) * std::sin(k * 0.17)
+                // A plausible programme curve centred near -22 dB at 100 Hz and rolling off gently; the old -72 dB
+                // start made every bar hug the floor and looked like a dead analyser in the screenshot.
+                const double octaves = std::log2(hz / 100.0);
+                double db = (octaves < 0.0 ? -22.0 + 4.0 * octaves
+                                           : -22.0 - 8.0 * octaves)
+                          + 6.0 * std::sin(k * 0.51) * std::sin(k * 0.17)
                           + (std::fabs(std::log2(hz / 250.0)) < 0.3 ? 6.0 : 0.0)
                           + (std::fabs(std::log2(hz / 4000.0)) < 0.25 ? 5.0 : 0.0);
                 spectrum_[static_cast<std::size_t>(k)] =
@@ -497,21 +501,21 @@ private:
     // Main controls are half their former track length, in two columns in the lower half of the panel.
     [[nodiscard]] Rect sliderTrack(const int s) const noexcept
     {
-        constexpr float kW = 220.0f, kRowH = 42.0f;
+        constexpr float kW = 220.0f, kRowH = 39.0f;
         const int column = s < 5 ? 0 : 1;
         const int row = s < 5 ? s : s - 5;
         const float x = column == 0 ? 44.0f : 372.0f;
-        const float y = 466.0f + static_cast<float>(row) * kRowH;
+        const float y = 476.0f + static_cast<float>(row) * kRowH;
         return { x, y, kW, 12.0f };
     }
 
-    [[nodiscard]] Rect modeBox() const noexcept { return { 44.0f, 408.0f, 300.0f, 26.0f }; }
+    [[nodiscard]] Rect modeBox() const noexcept { return { 44.0f, 412.0f, 300.0f, 26.0f }; }
 
     [[nodiscard]] Rect sourceBox() const noexcept { return { 392.0f, 150.0f, 276.0f, 24.0f }; }
 
     [[nodiscard]] Rect switchBox(int which) const noexcept
     {
-        return { 540.0f, 404.0f + static_cast<float>(which) * 30.0f, 132.0f, 26.0f };
+        return { 540.0f, 404.0f + static_cast<float>(which) * 28.0f, 132.0f, 26.0f };
     }
 
     [[nodiscard]] Rect tabBox(int index) const noexcept
@@ -838,9 +842,9 @@ private:
 
     void drawProcessPanel()
     {
-        drawPanel(kProcessPanel, "PARAMETERS", kMainAccent, "shorter controls \xc2\xb7 two columns");
+        drawPanel(kProcessPanel, "PARAMETERS", kMainAccent, "cut -30 dB \xc2\xb7 boost +18 dB");
 
-        drawLabelValue(modeBox().x, modeBox().y - 14.0f, modeBox().w, "Mode",
+        drawLabelValue(modeBox().x, modeBox().y - 12.0f, modeBox().w, "Mode",
                        kModeChoices[std::clamp(static_cast<int>(std::lround(values_[kParamMode])), 0, 2)]);
         drawSegments(kParamMode, kModeChoices, 3, modeBox(), kMainAccent);
 
@@ -862,15 +866,6 @@ private:
             const float norm = clampf((values_[def.index] - def.min) / (def.max - def.min), 0.0f, 1.0f);
             drawSliderRow(tr, def.label, formatSlider(def, values_[def.index]).c_str(), norm);
         }
-
-        const auto& t = theme();
-        fc(t.textDisabled);
-        fontSize(9.5f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        text(kProcessPanel.x + 12.0f, kProcessPanel.y + kProcessPanel.h - 16.0f,
-             designerMode()
-                 ? "Attack lifts onsets; Sustain lifts the body. Gain follows the fast/slow ratio."
-                 : "Splits set the three detector bands. Cut reaches -30 dB; Boost reaches +18 dB.", nullptr);
     }
 
     void drawDriftPanel()

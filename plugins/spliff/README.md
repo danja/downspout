@@ -72,8 +72,9 @@ ratio (no threshold), and block-split determinism.
 ## Status
 
 Core DSP (both Spiff modes and Designer), deterministic tests, the VST3 target
-and the redesigned panel are complete. The catalog screenshot has been accepted
-after the analyser/tab layout change. Host validation in REAPER remains.
-Deliberately deferred to follow-ups: M/S stereo modes, parametric
-sensitivity-curve bands, resolution / oversample / window / phase controls, and
-live gain-reduction metering in the panel.
+and the redesigned panel are complete. A further capture after the analyser
+visibility and parameter-layout fix is pending visual acceptance; see
+`docs/screenshots.md`. Host validation in REAPER remains. Deliberately deferred
+to follow-ups: M/S stereo modes, parametric sensitivity-curve bands, resolution /
+oversample / window / phase controls, and live gain-reduction metering in the
+panel.

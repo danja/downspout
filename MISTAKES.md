@@ -26,6 +26,11 @@ Format: what happened, root cause, prevention.
 - **Root cause:** the local `ParameterIndex` enum was copied from the control-only layout and then given an extra parameter that does not exist in the host-facing list.
 - **Prevention:** keep one explicit `kAnalyzerSourceValue` slot for the UI's local state mirror, start `kSpectrumFirst` at the real 19 control parameters, and document that the 83 UI values are 19 controls plus 64 outputs.
 
+## spliff: analyser looked dead and PARAMETERS footer overlapped the last slider (2026-11-23)
+- **What happened:** the 64-band display appeared empty/hugging the floor in the capture, and the PARAMETERS explanatory sentence was drawn across the last slider track.
+- **Root cause:** the screenshot's demo spectrum was authored around -72 dB, which maps to a normalised height near 0.1; the footer was positioned at `panel.y + panel.h - 16`, the same y band as the final track at 632..644.
+- **Prevention:** author demo data at a realistic programme level (the replacement curve is centred near -22 dB at 100 Hz) and measure its normalised heights before accepting; keep explanatory text out of the slider geometry and verify track/label bounds from the capture. The fresh 720x680 capture was pixel-checked (bars span the plot, last track is clear) but still needs visual acceptance.
+
 ## conductor: new weighted test assumed defaults from a mutated fixture (2026-11-23)
 - **What happened:** the late-palette case expected Theme at block 9 but failed, because the same test had already overwritten blocks 1-3 with Null/Theme/Break.
 - **Root cause:** a case that asserts default slot positions reused a params array mutated by earlier cases in the same function.

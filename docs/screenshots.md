@@ -163,13 +163,18 @@ screenshots in `docs/pages/assets/plugins/`.
 
 ## Visual acceptance
 
-The refreshed `melevolve.png`, `conductor.png` and `spliff.png` captures were
-accepted and copied into `docs/pages/assets/plugins/` at the dimensions declared
-in each plugin's `DistrhoPluginInfo.h`:
+The refreshed `melevolve.png` and `conductor.png` captures were accepted and
+copied into `docs/pages/assets/plugins/` at the dimensions declared in each
+plugin's `DistrhoPluginInfo.h`:
 
 - `conductor` — 960x820, 16-block editor in two rows of eight.
 - `melevolve` — 920x700, two-tab Melogen-style panel with a Favourite row.
-- `spliff` — 720x680, PROCESS/DRIFT CC tabs with a 64-band analyser.
 - `padseq` — 980x720, SysEx-only LED feedback.
 - `fontana` — 1280x800, browser scroll gutter and lazy preview.
 - `bassgen` and `drumgen` — accepted captures copied into the catalog.
+
+The Spliff panel was then changed again to make the analyser visible and to
+remove the overlapping parameter-box footer. A fresh 720x680 capture is in
+`/tmp/opencode/spliff-shots/spliff.png`; its analyser bars and slider rows were
+pixel-checked, but this agent cannot view PNG pixels, so catalog acceptance is
+pending. The catalog `spliff.png` is still the previous accepted capture.

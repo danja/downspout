@@ -20,7 +20,8 @@ Open work only. Completed builds are recorded in plugin docs; resolved lessons g
 - [x] Conductor: raise the block limit from 8 to 16 with a second row in the panel; append block 9-16 type parameters so saved host indices stay valid.
 - [x] Conductor: accepted the fresh 960x820 screenshot showing all 16 blocks and copied it into the catalog.
 - [x] Spliff redesign: separate Drift CC tab, half-length lower controls, upper 64-band Input/Output/Delta analyser, stronger Cut/Boost, audible Split Low/High, tests, docs and profile.
-- [x] Spliff: accepted the fresh 720x680 screenshot after the final source-switch placement and copied it into the catalog.
+- [x] Spliff: accepted the 720x680 screenshot after the final source-switch placement and copied it into the catalog.
+- [ ] Spliff: visually accept the fresh 720x680 capture after the analyser-visibility and parameter-overlap fix (`/tmp/opencode/spliff-shots/spliff.png`), then copy it into the catalog.
 - [x] Fontana: persist the file browser directory as DPF state so it survives editor/focus loss; add a global Pan offset so hard-left SoundFont presets can be rebalanced (core test covers the audible effect).
 - [ ] Refresh `docs/pages/assets/plugins/fontana.png` from the fresh 1280x800 capture and visually review the PLAYER mixer row (Pan label/value fit) before marking the screenshot accepted.
 - [ ] Review `https://gardenfx.uk/v4/` for extensions and new-plugin ideas.

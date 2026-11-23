@@ -79,6 +79,7 @@ levels are exposed as 64 read-only output parameters for the panel.
 ### Status
 
 Core DSP (including Designer), deterministic tests, the VST3 target and the
-redesigned panel are complete. The refreshed 720×680 catalog screenshot has
-been accepted. Host validation in REAPER is pending. M/S operation, parametric
-sensitivity bands, and a live reduction display are deferred.
+redesigned panel are complete. A further 720×680 capture after the analyser
+visibility and parameter-layout fix is pending visual acceptance; see
+`docs/screenshots.md`. Host validation in REAPER is pending. M/S operation,
+parametric sensitivity bands, and a live reduction display are deferred.

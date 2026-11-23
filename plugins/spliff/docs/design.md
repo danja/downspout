@@ -134,8 +134,14 @@ strip, a cold-steel DRIFT CC strip and accent fills for sliders, segments,
 switches and dropdown selections. The analyser accent changes with the source
 (steel for Input, amber for Output, red for Delta).
 
-The redesigned panel capture has been accepted and copied to
+The original redesigned panel capture was accepted and copied to
 `docs/pages/assets/plugins/spliff.png` (720×680, verified with `identify`).
-Recapture with `scripts/capture-plugin-screenshots.sh spliff` after any further
-UI change. The four-octave reduction graph from the manual remains deferred —
-the analyser is a spectrum display, not a live transfer-function plot.
+The demo spectrum was then raised from a −72 dB floor to a −22 dB programme
+curve so the 64 bars are visible, and the PARAMETERS footer that overlapped the
+last slider track was removed. A fresh 720×680 capture of that fix is in
+`/tmp/opencode/spliff-shots/spliff.png`; pixel checks show populated bars and a
+clear last slider row, but this agent cannot view PNG pixels, so catalog
+acceptance is pending. Recapture with
+`scripts/capture-plugin-screenshots.sh spliff` after any further UI change. The
+four-octave reduction graph from the manual remains deferred — the analyser is
+a spectrum display, not a live transfer-function plot.
