@@ -17,12 +17,14 @@ public:
     ConductorUI()
         : GenerativePanelUI(
             "Conductor",
-            "Edit up to eight blocks; scene commands leave graph routing to the host",
+            "Edit up to 16 blocks; scene commands leave graph routing to the host",
             downspout::conductor::kParameterSpecs.data(),
             downspout::conductor::kParameterCount, 220, 154, 78) {}
 
 private:
     const laf::Theme& t_ { laf::defaultTheme() };
+    static constexpr int kBlocksPerRow = 8;
+
     void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
     void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
 
@@ -37,7 +39,9 @@ private:
 
     [[nodiscard]] Box blockBox(const int index) const noexcept
     {
-        return {38.0f + static_cast<float>(index) * 110.0f, 140.0f, 104.0f, 58.0f};
+        const float column = static_cast<float>(index % kBlocksPerRow);
+        const float row = static_cast<float>(index / kBlocksPerRow);
+        return {38.0f + column * 110.0f, 140.0f + row * 64.0f, 104.0f, 58.0f};
     }
 
     void parameterChanged(uint32_t index, float v) override
@@ -92,11 +96,12 @@ private:
     {
         using namespace downspout::conductor;
         const int count = blockCount();
-        const int current = std::clamp(static_cast<int>(std::lround(value(kStatusBlock))), -1, 7);
+        const int current = std::clamp(static_cast<int>(std::lround(value(kStatusBlock))),
+                                       -1, protocol::kMaxBlocks - 1);
         const int barsLeft = std::max(0, static_cast<int>(std::lround(value(kStatusBarsLeft))));
         const int currentType = std::clamp(static_cast<int>(std::lround(value(kStatusSection))), 0, 6);
 
-        drawSection(24, 104, 912, 132, "FORM BLOCKS",
+        drawSection(24, 104, 912, 200, "FORM BLOCKS",
                     "click to edit · Jump here queues a change at the next bar");
         for (int i = 0; i < count; ++i) {
             const Box box = blockBox(i);
@@ -167,8 +172,8 @@ private:
         fc(t_.textDim);
         fontSize(10.5f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        text(38.0f, 206.0f, status, nullptr);
-        drawAction(778, 812.0f, 204.0f, 110.0f, 27.0f, "Jump here",
+        text(38.0f, 270.0f, status, nullptr);
+        drawAction(778, 812.0f, 268.0f, 110.0f, 27.0f, "Jump here",
                    "Queue the selected block for the next bar boundary.");
     }
 
@@ -178,50 +183,50 @@ private:
         static constexpr const char* typeChoices[] {
             "Null", "Intro", "Theme", "Dev", "Break", "Rep", "Coda",
         };
-        drawSection(24, 248, 574, 440, "STRUCTURE", "weighted form uses the block types as a palette");
-        drawSlider(kBlockCount, 38, 280, 264, "Block count", "",
-                   "Number of editable blocks in the repeating form.", 0);
+        drawSection(24, 316, 574, 440, "STRUCTURE", "weighted form uses the block types as a palette");
+        drawSlider(kBlockCount, 38, 348, 264, "Block count", "",
+                   "Number of editable blocks in the repeating form (1-16), shown as two rows of eight.", 0);
 
         char typeLabel[32] {};
         std::snprintf(typeLabel, sizeof(typeLabel), "Block %d type", selectedBlock_ + 1);
-        drawChoice(blockTypeParam(selectedBlock_), 310, 280, 274, typeLabel,
+        drawChoice(blockTypeParam(selectedBlock_), 310, 348, 274, typeLabel,
                    typeChoices, protocol::kBlockTypeCount,
                    "Type emitted when this block is reached (Dev = Develop, Rep = Reprise).", true);
 
-        drawSlider(kMinBars, 38, 339, 264, "Minimum section", " bars", "Shortest block duration.", 0);
-        drawSlider(kMaxBars, 310, 339, 274, "Maximum section", " bars", "Longest block duration.", 0);
+        drawSlider(kMinBars, 38, 407, 264, "Minimum section", " bars", "Shortest block duration.", 0);
+        drawSlider(kMaxBars, 310, 407, 274, "Maximum section", " bars", "Longest block duration.", 0);
 
-        drawWeight(kNullWeight, 38, 398, 264, "Null");
-        drawWeight(kIntroWeight, 38, 455, 264, "Intro");
-        drawWeight(kThemeWeight, 38, 512, 264, "Theme");
-        drawWeight(kDevelopWeight, 38, 569, 264, "Develop");
-        drawWeight(kBreakWeight, 310, 398, 274, "Break");
-        drawWeight(kRepriseWeight, 310, 455, 274, "Reprise");
-        drawWeight(kCodaWeight, 310, 512, 274, "Coda");
-        drawChoice(kMode, 38, 624, 546, "Form generation", modes, 2,
+        drawWeight(kNullWeight, 38, 466, 264, "Null");
+        drawWeight(kIntroWeight, 38, 523, 264, "Intro");
+        drawWeight(kThemeWeight, 38, 580, 264, "Theme");
+        drawWeight(kDevelopWeight, 38, 637, 264, "Develop");
+        drawWeight(kBreakWeight, 310, 466, 274, "Break");
+        drawWeight(kRepriseWeight, 310, 523, 274, "Reprise");
+        drawWeight(kCodaWeight, 310, 580, 274, "Coda");
+        drawChoice(kMode, 38, 692, 546, "Form generation", modes, 2,
                    "Fixed follows the edited block order; Weighted picks from the active block types.");
     }
 
     void drawMidiCommands()
     {
         using namespace downspout::conductor;
-        drawSection(612, 248, 324, 440, "MIDI COMMANDS", "advanced routing");
-        drawNoteSlider(kBaseNote, 626, 280, 143, "Section note", "Base note used for block commands.");
-        drawChannelSlider(kChannel, 777, 280, 145, "Output", "MIDI command channel.");
-        drawCcSlider(kSceneCc, 626, 336, 143, "Scene", "CC carrying the current block type.");
-        drawCcSlider(kDensityCc, 777, 336, 145, "Density", "CC carrying the block density.");
-        drawCcSlider(kEnergyCc, 626, 392, 143, "Energy", "CC carrying the block energy.");
-        drawCcSlider(kMutationCc, 777, 392, 145, "Mutation", "CC requesting generative mutation.");
-        drawCcSlider(kResetCc, 626, 448, 296, "Reset", "CC requesting downstream reset.");
-        drawSlider(kSeed, 626, 504, 180, "Form seed", "", "Deterministic form identity.", 0);
-        drawAction(777, 814, 504, 108, 48, "Reroll", "Pick a new form seed.");
+        drawSection(612, 316, 324, 440, "MIDI COMMANDS", "advanced routing");
+        drawNoteSlider(kBaseNote, 626, 348, 143, "Section note", "Base note used for block commands.");
+        drawChannelSlider(kChannel, 777, 348, 145, "Output", "MIDI command channel.");
+        drawCcSlider(kSceneCc, 626, 404, 143, "Scene", "CC carrying the current block type.");
+        drawCcSlider(kDensityCc, 777, 404, 145, "Density", "CC carrying the block density.");
+        drawCcSlider(kEnergyCc, 626, 460, 143, "Energy", "CC carrying the block energy.");
+        drawCcSlider(kMutationCc, 777, 460, 145, "Mutation", "CC requesting generative mutation.");
+        drawCcSlider(kResetCc, 626, 516, 296, "Reset", "CC requesting downstream reset.");
+        drawSlider(kSeed, 626, 572, 180, "Form seed", "", "Deterministic form identity.", 0);
+        drawAction(777, 814, 572, 108, 48, "Reroll", "Pick a new form seed.");
 
         fc(t_.textDim);
         fontSize(9.5f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
-        text(626, 568, "Scene: Null 1 · Intro 0 · Theme 16 · Devel 32", nullptr);
-        text(626, 584, "Break 64 · Reprise 96 · Coda 127", nullptr);
-        text(626, 606, "CC 21–24 drive the matching receiver masters.", nullptr);
+        text(626, 636, "Scene: Null 1 · Intro 0 · Theme 16 · Devel 32", nullptr);
+        text(626, 652, "Break 64 · Reprise 96 · Coda 127", nullptr);
+        text(626, 674, "CC 21–24 drive the matching receiver masters.", nullptr);
     }
 
     void actionTriggered(const int action) override

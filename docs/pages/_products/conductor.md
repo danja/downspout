@@ -20,8 +20,8 @@ type; fixed and weighted modes can be compared without changing routing.
 
 ## Functionality
 
-Conductor repeats up to eight blocks chosen from Null, Intro, Theme, Develop,
-Break, Reprise and Coda. Fixed mode plays the edited order; weighted mode picks
+Conductor repeats up to 16 blocks shown in two rows of eight, chosen from Null,
+Intro, Theme, Develop, Break, Reprise and Coda. Fixed mode plays the edited order; weighted mode picks
 from the active block types using the seven weight controls. A queued jump takes
 effect at the next bar, and scene/density/energy/mutation/reset CC values follow
 the shared Conductor protocol. Null is a rest that emits no section note.

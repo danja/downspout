@@ -6,6 +6,11 @@ Format: what happened, root cause, prevention.
 
 ## Open
 
+## conductor: new weighted test assumed defaults from a mutated fixture (2026-11-23)
+- **What happened:** the late-palette case expected Theme at block 9 but failed, because the same test had already overwritten blocks 1-3 with Null/Theme/Break.
+- **Root cause:** a case that asserts default slot positions reused a params array mutated by earlier cases in the same function.
+- **Prevention:** start from a fresh `defaults()` fixture whenever a case depends on default slot positions; only mutate a shared fixture when the case explicitly overrides every slot it asserts.
+
 ## melevolve: carried-over + vote was drawn white on white (2026-11-23)
 - **What happened:** the `+` looked missing on rows carried over from the previous generation, even though all three vote buttons were still registered and clickable.
 - **Root cause:** a carried entry arrives with rating `+1`; the UI gave its selected vote a white face to mimic Melogen's outlined style but kept the glyph white too, so the glyph had no contrast.

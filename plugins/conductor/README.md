@@ -1,8 +1,8 @@
 # Conductor
 
 Conductor emits bar-aligned block notes and scene, density, energy, mutation,
-and reset CC values. Edit up to eight blocks from Null, Intro, Theme, Develop,
-Break, Reprise and Coda; choose a fixed repeating form or seeded weighted
+and reset CC values. Edit up to 16 blocks (two rows of eight) from Null, Intro,
+Theme, Develop, Break, Reprise and Coda; choose a fixed repeating form or seeded weighted
 selection from the active block types. Durations are bounded and the form is
 rebuilt deterministically after a seek. It never changes the host graph.
 

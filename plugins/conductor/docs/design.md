@@ -2,16 +2,19 @@
 
 ## Editable block form
 
-The portable core holds a repeating list of up to eight blocks. Block 1 is
-always at bar 0, and each block has one of seven types: Null, Intro, Theme,
-Develop, Break, Reprise or Coda. `block_count` (1–8) selects how many of the
-eight stored blocks are active; the remaining slots are kept so raising the
-count does not discard a user's work. The default eight-block form reproduces
-the old Intro/Develop/Develop/Break/Develop/Reprise/Develop/Coda arc.
+The portable core holds a repeating list of up to 16 blocks (two rows of eight
+in the panel). Block 1 is always at bar 0, and each block has one of seven
+types: Null, Intro, Theme, Develop, Break, Reprise or Coda. `block_count` (1–16)
+selects how many of the 16 stored blocks are active; the remaining slots are kept
+so raising the count does not discard a user's work. The default eight-block
+form reproduces the old Intro/Develop/Develop/Break/Develop/Reprise/Develop/Coda
+arc; slots 9-16 default to Theme/Develop/Theme/Develop/Break/Develop/Reprise/Coda.
 
-`block_count` and the eight type parameters are ordinary host-automatable
+`block_count` and the 16 type parameters are ordinary host-automatable
 parameters, not plugin state, so project save/recall and automation work without
-a state contract. Status outputs expose the current block index, its type and
+a state contract. The eight new type parameters (`block_9_type` to
+`block_16_type`, indices 31-38) were appended after `status_block` so older
+projects keep their saved parameter indices. Status outputs expose the current block index, its type and
 the bars remaining. A queued jump carries both a block index and an absolute
 target bar, so it fires at the next bar even when the current block is longer.
 

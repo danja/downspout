@@ -101,6 +101,28 @@ void testProtocolTable()
     assert(protocol::noteOffset(protocol::BlockType::Coda) == 4);
 }
 
+void testSixteenBlockParameters()
+{
+    assert(kParameterSpecs[kBlockCount].minimum == 1.0f);
+    assert(kParameterSpecs[kBlockCount].maximum == 16.0f);
+    assert(kParameterSpecs[kBlockCount].defaultValue == 8.0f);
+    assert(kParameterSpecs[kPendingSection].maximum == 16.0f);
+    assert(kParameterSpecs[kStatusBlock].maximum == 15.0f);
+
+    std::array<bool, kParameterCount> seen {};
+    for (int i = 0; i < protocol::kMaxBlocks; ++i) {
+        const Param parameter = blockTypeParam(i);
+        assert(parameter >= kBlock1Type && parameter <= kBlock16Type);
+        assert(!seen[static_cast<std::size_t>(parameter)]);
+        seen[static_cast<std::size_t>(parameter)] = true;
+        assert(kParameterSpecs[parameter].minimum == 0.0f);
+        assert(kParameterSpecs[parameter].maximum == 6.0f);
+        assert(kParameterSpecs[parameter].integer);
+    }
+    assert(blockTypeParam(-1) == kBlock1Type);
+    assert(blockTypeParam(protocol::kMaxBlocks) == kBlock16Type);
+}
+
 void testFixedFormAndBlockCount()
 {
     auto p = defaults();
@@ -112,6 +134,19 @@ void testFixedFormAndBlockCount()
         const auto block = process(state, p, atBar(bar), 1024, 48000);
         assert(ccValue(block, 20) == expected[static_cast<std::size_t>(bar)]);
         assert(state.blockIndex == bar % 8);
+    }
+
+    auto sixteen = defaults();
+    sixteen[kBlockCount] = 16.0f;
+    sixteen[kMinBars] = 1.0f;
+    sixteen[kMaxBars] = 1.0f;
+    constexpr std::array<int, 16> expectedSixteen {{0, 32, 32, 64, 32, 96, 32, 127,
+                                                   16, 32, 16, 32, 64, 32, 96, 127}};
+    State sixteenState;
+    for (int bar = 0; bar < 17; ++bar) {
+        const auto block = process(sixteenState, sixteen, atBar(bar), 1024, 48000);
+        assert(ccValue(block, 20) == expectedSixteen[static_cast<std::size_t>(bar % 16)]);
+        assert(sixteenState.blockIndex == bar % 16);
     }
 
     auto one = defaults();
@@ -128,14 +163,14 @@ void testFixedFormAndBlockCount()
     }
 
     auto many = defaults();
-    many[kBlockCount] = 99.0f; // clamps to eight blocks
+    many[kBlockCount] = 99.0f; // clamps to sixteen blocks
     many[kMinBars] = 1.0f;
     many[kMaxBars] = 1.0f;
-    State eight;
-    for (int bar = 0; bar < 8; ++bar) {
-        const auto block = process(eight, many, atBar(bar), 1024, 48000);
+    State clamped;
+    for (int bar = 0; bar < 16; ++bar) {
+        const auto block = process(clamped, many, atBar(bar), 1024, 48000);
         assert(block.count > 0);
-        assert(eight.blockIndex == bar);
+        assert(clamped.blockIndex == bar);
     }
 }
 
@@ -190,6 +225,19 @@ void testWeightedPalette()
         assert(noteOn(block) < 0);
         assert(nullState.blockIndex == 0);
     }
+
+    // Block 9 is the first Theme slot in the default sixteen-block palette.
+    auto late = defaults();
+    setAllWeights(late, 0.0f);
+    late[kMode] = 1.0f;
+    late[kBlockCount] = 16.0f;
+    late[kThemeWeight] = 1.0f;
+    State lateTheme;
+    for (int bar = 0; bar < 12; ++bar) {
+        const auto block = process(lateTheme, late, atBar(bar), 1024, 48000);
+        assert(ccValue(block, 20) == 16);
+        assert(lateTheme.blockIndex == 8);
+    }
 }
 
 void testPendingJump()
@@ -207,6 +255,19 @@ void testPendingJump()
     assert(state.blockIndex == 3);
     assert(state.section == protocol::toInt(protocol::BlockType::Break));
     assert(state.pendingSection == -1);
+
+    auto sixteen = defaults();
+    sixteen[kBlockCount] = 16.0f;
+    sixteen[kMinBars] = 1.0f;
+    sixteen[kMaxBars] = 1.0f;
+    State lateState;
+    process(lateState, sixteen, atBar(0), 1024, 48000);
+    lateState.pendingSection = 15; // block 16: Coda
+    lateState.pendingBar = 1;
+    const auto late = process(lateState, sixteen, atBar(1), 1024, 48000);
+    assert(ccValue(late, 20) == 127);
+    assert(lateState.blockIndex == 15);
+    assert(lateState.section == protocol::toInt(protocol::BlockType::Coda));
 }
 
 void testReleaseChannelAndLifecycle()
@@ -233,6 +294,7 @@ void testReleaseChannelAndLifecycle()
 int main()
 {
     testProtocolTable();
+    testSixteenBlockParameters();
     testFixedFormAndBlockCount();
     testNullBlock();
     testWeightedPalette();

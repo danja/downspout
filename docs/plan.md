@@ -556,7 +556,7 @@ Per-plugin usability targets:
 
 - **Harmonic Atlas:** named movement/voicing choices, musical pitch-class
   labels, clear routing, and a live root/keyboard view.
-- **Conductor:** a visible eight-block editor with current/queued indication,
+- **Conductor:** a visible 16-block editor in two rows with current/queued indication,
   named form modes, coherent per-type weights, and separately grouped advanced
   MIDI commands using the shared scene protocol.
 - **Drift:** four complete lane cards with named sources, shape previews,

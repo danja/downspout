@@ -163,13 +163,13 @@ screenshots in `docs/pages/assets/plugins/`.
 
 ## Visual acceptance
 
-All current catalog captures are accepted except `melevolve.png`, which needs visual
-acceptance after the carried-vote fix (a fresh 920x700 capture is in the scratchpad;
-the green `+` on a carried row was pixel-checked). Screenshots recaptured after UI
-changes are copied into `docs/pages/assets/plugins/` at the dimensions declared in
-each plugin's `DistrhoPluginInfo.h`:
+`melevolve.png` and `conductor.png` need visual acceptance after their UI changes
+(fresh captures are in the scratchpad; the carried `+` colour and the 16-block second
+row were pixel-checked). Screenshots recaptured after UI changes are copied into
+`docs/pages/assets/plugins/` at the dimensions declared in each plugin's
+`DistrhoPluginInfo.h`:
 
-- `conductor` — 960x820, eight-block editor.
+- `conductor` — 960x820, 16-block editor in two rows of eight.
 - `padseq` — 980x720, SysEx-only LED feedback.
 - `fontana` — 1280x800, browser scroll gutter and lazy preview.
 - `melevolve` — 920x700, two-tab Melogen-style panel with a Favourite row.

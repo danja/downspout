@@ -40,7 +40,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
   Upward limit), octet (one band's Frequency, Gain and Q, chosen by CC Band, and
   Output) and mouth (Vowel X, Vowel Y, Shift, Resonance) use a **CC Channel**
   parameter (default 1, 0 = off). Conductor emits CC 20-24 on channel 16
-  (Scene, Density, Energy, Mutation, Reset) from up to eight editable blocks
+  (Scene, Density, Energy, Mutation, Reset) from up to 16 editable blocks
   (Null, Intro, Theme, Develop, Break, Reprise, Coda); the scene values and per-block
   control table live in `include/downspout/conductor_protocol.hpp`. bassgen, drumgen,
   ground, melgen, worms, bubbles, floozy, harmonic-atlas, sprout, lifeform, luma,
@@ -369,7 +369,7 @@ played as seeded free-time phrasing through a small polyphonic internal synth, w
 also emitting ordinary MIDI. Text and tuning data are persistent state.
 
 ### conductor
-Arrangement controller. Edits up to eight repeating blocks from Null, Intro, Theme,
+Arrangement controller. Edits up to 16 repeating blocks in two rows from Null, Intro, Theme,
 Develop, Break, Reprise and Coda, then emits bar-aligned block notes plus scene,
 density, energy, mutation and reset CC values on a configurable channel (default 16).
 Fixed mode follows the edited order; weighted mode picks from the active block types

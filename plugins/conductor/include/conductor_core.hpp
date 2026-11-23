@@ -10,6 +10,7 @@ using downspout::generative::MidiBlock;
 using downspout::generative::ParamSpec;
 using downspout::generative::Transport;
 using downspout::conductor_protocol::BlockType;
+using downspout::conductor_protocol::kMaxBlocks;
 
 enum Param : std::uint32_t {
     kMode, kMinBars, kMaxBars, kIntroWeight, kDevelopWeight, kBreakWeight,
@@ -22,6 +23,9 @@ enum Param : std::uint32_t {
     kBlock5Type, kBlock6Type, kBlock7Type, kBlock8Type,
     kNullWeight, kThemeWeight,
     kStatusBlock,
+    // Appended after the existing parameters so saved host indices stay valid.
+    kBlock9Type, kBlock10Type, kBlock11Type, kBlock12Type,
+    kBlock13Type, kBlock14Type, kBlock15Type, kBlock16Type,
     kParameterCount
 };
 
@@ -36,8 +40,8 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs {{
     {"reset_cc","Reset CC",0,127,24,true}, {"seed","Seed",1,65535,2909,true},
     {"status_section","Current block type",-1,6,-1,true,true},
     {"status_bars_left","Bars remaining",0,64,0,true,true},
-    {"pending_section","Pending block jump",0,8,0,true},
-    {"block_count","Block count",1,8,8,true},
+    {"pending_section","Pending block jump",0,16,0,true},
+    {"block_count","Block count",1,16,8,true},
     {"block_1_type","Block 1 type",0,6,1,true},
     {"block_2_type","Block 2 type",0,6,3,true},
     {"block_3_type","Block 3 type",0,6,3,true},
@@ -48,13 +52,25 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs {{
     {"block_8_type","Block 8 type",0,6,6,true},
     {"null_weight","Null weight",0,1,0.0f},
     {"theme_weight","Theme weight",0,1,0.0f},
-    {"status_block","Current block",-1,7,-1,true,true},
+    {"status_block","Current block",-1,15,-1,true,true},
+    {"block_9_type","Block 9 type",0,6,2,true},
+    {"block_10_type","Block 10 type",0,6,3,true},
+    {"block_11_type","Block 11 type",0,6,2,true},
+    {"block_12_type","Block 12 type",0,6,3,true},
+    {"block_13_type","Block 13 type",0,6,4,true},
+    {"block_14_type","Block 14 type",0,6,3,true},
+    {"block_15_type","Block 15 type",0,6,5,true},
+    {"block_16_type","Block 16 type",0,6,6,true},
 }};
 
+// The second set of eight type parameters is appended after the original ones,
+// so map 8..15 onto it without shifting any existing host parameter index.
 [[nodiscard]] constexpr Param blockTypeParam(const int blockIndex) noexcept
 {
-    return static_cast<Param>(static_cast<std::uint32_t>(kBlock1Type)
-                              + static_cast<std::uint32_t>(blockIndex));
+    const int index = blockIndex < 0 ? 0 : (blockIndex >= kMaxBlocks ? kMaxBlocks - 1 : blockIndex);
+    const Param base = index < 8 ? kBlock1Type : kBlock9Type;
+    return static_cast<Param>(static_cast<std::uint32_t>(base)
+                              + static_cast<std::uint32_t>(index % 8));
 }
 
 struct State {

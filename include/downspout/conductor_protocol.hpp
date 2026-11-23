@@ -10,7 +10,7 @@
 // insert Theme and Null between them.
 namespace downspout::conductor_protocol {
 
-inline constexpr int kMaxBlocks = 8;
+inline constexpr int kMaxBlocks = 16;
 inline constexpr int kBlockTypeCount = 7;
 
 enum class BlockType : int {

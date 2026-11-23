@@ -9,7 +9,6 @@ namespace {
 
 using downspout::conductor_protocol::BlockType;
 using downspout::conductor_protocol::kBlockTypeCount;
-using downspout::conductor_protocol::kMaxBlocks;
 using downspout::conductor_protocol::toInt;
 
 int iv(const std::array<float,kParameterCount>& p, const Param id) noexcept
