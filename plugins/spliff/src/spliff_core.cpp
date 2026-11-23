@@ -62,12 +62,22 @@ float timeCoeff(double seconds, double sampleRate) noexcept
 // cannot exceed the knob's stated range.
 constexpr float kDesignerFloor = 1e-30f;   // only flushes denormals
 constexpr float kDesignerEpsilonRel = 1e-12f;  // relative to envelope scale
-constexpr float kDesignerDriveDb = 9.0f;
+constexpr float kDesignerDriveDb = 6.0f;
+
+// Manual §4 sensitivity curve: the low and high regions are de-emphasised in the detector, the mid region is the focus.
+// Because the split controls decide which part of the signal feeds each detector band, moving a crossover audibly moves
+// energy between differently weighted bands instead of only changing an inaudible filter phase.
+constexpr float kDetectBandWeight[3] = { 0.35f, 1.0f, 0.45f };
 constexpr double kDesignerFastAttackS = 0.0002;
 constexpr double kDesignerFastReleaseS = 0.030;
 constexpr double kDesignerSlowAttackS = 0.020;
 constexpr double kDesignerSlowReleaseS = 0.250;
 constexpr double kDesignerGainSmoothS = 0.0005;
+
+void writeDelta(float* const* delta, int c, std::uint32_t f, float value) noexcept
+{
+    if (delta && delta[c]) delta[c][f] = value;
+}
 
 void processDesigner(EngineState&          state,
                      const Parameters&     cp,
@@ -75,7 +85,8 @@ void processDesigner(EngineState&          state,
                      double                sampleRate,
                      const float* const*   inputs,
                      float* const*         outputs,
-                     float                 mixFrac) noexcept
+                     float                 mixFrac,
+                     float* const*         wetMinusDry) noexcept
 {
     const float fastAtt = 1.0f - timeCoeff(kDesignerFastAttackS, sampleRate);
     const float fastRel = 1.0f - timeCoeff(kDesignerFastReleaseS, sampleRate);
@@ -116,6 +127,7 @@ void processDesigner(EngineState&          state,
 
         for (int c = 0; c < 2; ++c) {
             const float wet = in[c] * d.gain * trimGain;
+            writeDelta(wetMinusDry, c, f, wet - in[c]);
             float y;
             if (bypassed) {
                 y = in[c];
@@ -138,7 +150,7 @@ Parameters clampParameters(const Parameters& p) noexcept
     out.mode        = std::round(safe(out.mode, 0.0f, 2.0f, 0.0f));
     out.depth       = safe(out.depth, 0.0f, 1.0f, 0.5f);
     out.sensitivity = safe(out.sensitivity, 0.0f, 1.0f, 0.5f);
-    out.sharpness   = safe(out.sharpness, 0.0f, 1.0f, 0.3f);
+    out.sharpness   = safe(out.sharpness, 0.0f, 1.0f, 0.7f);
     out.decay       = safe(out.decay, 0.0f, 1.0f, 0.25f);
     out.decayTilt   = safe(out.decayTilt, -1.0f, 1.0f, 0.0f);
     out.splitLow    = safe(out.splitLow, 20.0f, 2000.0f, 250.0f);
@@ -168,7 +180,8 @@ void processBlock(EngineState&        state,
                   float               effectiveDepth,
                   float               effectiveSensitivity,
                   float               effectiveDecay,
-                  float               effectiveMix) noexcept
+                  float               effectiveMix,
+                  float* const*       wetMinusDry) noexcept
 {
     const Parameters cp = clampParameters(params);
     const float depth = std::clamp(effectiveDepth, 0.0f, 1.0f);
@@ -181,7 +194,7 @@ void processBlock(EngineState&        state,
     const double sr = (sampleRate > 0.0) ? sampleRate : 48000.0;
 
     if (cp.mode >= 1.5f) {
-        processDesigner(state, cp, frames, sr, inputs, outputs, mixFrac);
+        processDesigner(state, cp, frames, sr, inputs, outputs, mixFrac, wetMinusDry);
         return;
     }
 
@@ -199,11 +212,13 @@ void processBlock(EngineState&        state,
     const float relHi = timeCoeff(tauHi, sr);
     const float relBands[3] = { relLo, relMid, relHi };
     const float attFast = timeCoeff(0.0002, sr);   // detector attack ~0.2 ms
-    const float attGain = timeCoeff(0.001, sr);    // gain clamps down in ~1 ms
-    const float attSlow = timeCoeff(0.010, sr);    // reference floor attack
-    const float relSlow = timeCoeff(0.250, sr);    // reference floor release
+    const float attGain = timeCoeff(0.0001, sr);   // gain clamps down in ~0.1 ms so full depth is audible on short transients
+    const float attSlow = timeCoeff(0.002, sr);    // reference floor attack, fast enough for Decay to control the tail
+    const float relSlow = timeCoeff(0.030, sr);    // reference floor release, shorter than Decay's longest tail
     const float trimGain = std::pow(10.0f, cp.trim / 20.0f);
 
+    // Two cascaded one-poles per crossover: complementary bands still sum to the dry signal, but the split frequencies
+    // now produce a clearly different detector and gain distribution.
     // Shared mono detector: both channels use the averaged transient weight,
     // which is the fixed-100%-link behaviour (no image shift on transients).
     for (std::uint32_t f = 0; f < frames; ++f) {
@@ -214,26 +229,28 @@ void processBlock(EngineState&        state,
         }
         const float mono = 0.5f * (in[0] + in[1]);
 
-        // Per-channel split (keeps stereo content intact through the bands).
+        // Per-channel split (keeps stereo content intact through the bands). The two stored poles make each crossover
+        // steeper than the original single pole, so moving a split audibly moves energy between detector bands.
         float band[2][3] = {};
         for (int c = 0; c < 2; ++c) {
             ChannelState& ch = state.channels[static_cast<std::size_t>(c)];
             ch.lowMem += aLow * (in[c] - ch.lowMem);
+            ch.lowMem2 += aLow * (ch.lowMem - ch.lowMem2);
             ch.highMem += aHigh * (in[c] - ch.highMem);
-            band[c][0] = ch.lowMem;
-            band[c][2] = in[c] - ch.highMem;
-            band[c][1] = ch.highMem - ch.lowMem;
+            ch.highMem2 += aHigh * (ch.highMem - ch.highMem2);
+            band[c][0] = ch.lowMem2;
+            band[c][2] = in[c] - ch.highMem2;
+            band[c][1] = ch.highMem2 - ch.lowMem2;
         }
 
-        // Mono detector on the averaged bands, with its own crossover
-        // memories and per-band fast/slow envelopes.
+        // Mono detector on the averaged bands, with its own crossover memories and per-band fast/slow envelopes.
         state.detLowMem += aLow * (mono - state.detLowMem);
+        state.detLowMem2 += aLow * (state.detLowMem - state.detLowMem2);
         state.detHighMem += aHigh * (mono - state.detHighMem);
-        const float monoBand[3] = {
-            state.detLowMem,
-            state.detHighMem - state.detLowMem,
-            mono - state.detHighMem,
-        };
+        state.detHighMem2 += aHigh * (state.detHighMem - state.detHighMem2);
+        const float monoBand[3] = { state.detLowMem2,
+                                    state.detHighMem2 - state.detLowMem2,
+                                    mono - state.detHighMem2 };
         float weight[3];
         for (int b = 0; b < 3; ++b) {
             float& fast = state.detFast[static_cast<std::size_t>(b)];
@@ -242,7 +259,7 @@ void processBlock(EngineState&        state,
             fast += (mag - fast) * (mag > fast ? (1.0f - attFast) : (1.0f - relBands[b]));
             slow += (mag - slow) * (mag > slow ? (1.0f - attSlow) : (1.0f - relSlow));
             const float ratio = fast / (slow + 1e-6f);
-            weight[b] = std::clamp((ratio - threshold) / 1.5f, 0.0f, 1.0f);
+            weight[b] = std::clamp((ratio - threshold) / 1.5f, 0.0f, 1.0f) * kDetectBandWeight[b];
         }
         const float wAvg = (weight[0] + weight[1] + weight[2]) / 3.0f;
         float wEff[3];
@@ -255,11 +272,13 @@ void processBlock(EngineState&        state,
             for (int b = 0; b < 3; ++b) {
                 float target;
                 if (boost)
-                    target = 1.0f + depth * wEff[b] * 3.0f;  // up to ~+12 dB
+                    target = std::pow(10.0f, (18.0f * depth * wEff[b]) / 20.0f);  // up to +18 dB
                 else
-                    target = 1.0f - depth * wEff[b];
+                    target = std::pow(10.0f, (-30.0f * depth * wEff[b]) / 20.0f); // down to -30 dB
                 float& g = ch.gain[static_cast<std::size_t>(b)];
-                const float coeff = (target < g) ? attGain : relBands[b];
+                // Move away from unity quickly for either Cut or Boost; return to unity with the Decay-controlled release.
+                const bool bite = (target > 1.0f && target > g) || (target < 1.0f && target < g);
+                const float coeff = bite ? attGain : relBands[b];
                 g += (target - g) * (1.0f - coeff);
                 // Flush denormals that build up in long quiet tails.
                 if (std::fabs(g - 1.0f) < 1e-7f) g = 1.0f;
@@ -267,6 +286,9 @@ void processBlock(EngineState&        state,
             }
             wet[c] *= trimGain;
         }
+
+        for (int c = 0; c < 2; ++c)
+            writeDelta(wetMinusDry, c, f, wet[c] - in[c]);
 
         for (int c = 0; c < 2; ++c) {
             float y;

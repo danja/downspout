@@ -1,12 +1,20 @@
 #include "DistrhoPlugin.hpp"
 
 #include "spliff_core.hpp"
+#include "spliff_spectrum.hpp"
 
+#include <algorithm>
+#include <array>
+#include <atomic>
+#include <cmath>
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <vector>
 
 START_NAMESPACE_DISTRHO
+
+namespace core = downspout::spliff;
 
 namespace {
 
@@ -53,8 +61,14 @@ constexpr const char* kStateCCMix         = "cc_mix";
 constexpr const char* kStateCCChannel     = "cc_channel";
 constexpr const char* kStateAttackDb      = "attack_db";
 constexpr const char* kStateSustainDb     = "sustain_db";
+constexpr const char* kStateAnalyzerSource = "analyser_source";
 
-constexpr uint32_t kStateCount = 19;
+constexpr uint32_t kStateCount = 20;
+
+// The original 19 control parameters keep their indices. Spectrum bins are read-only outputs; the analyser source is
+// UI state so switching it never becomes an automation event.
+inline constexpr uint32_t kSpectrumFirst = kParameterCount;
+inline constexpr uint32_t kTotalParameterCount = kSpectrumFirst + core::kSpectrumBins;
 
 float ccToUnit(uint8_t v) noexcept
 {
@@ -72,9 +86,11 @@ class SpliffPlugin : public Plugin
 {
 public:
     SpliffPlugin()
-        : Plugin(kParameterCount, 0, kStateCount)
+        : Plugin(kTotalParameterCount, 0, kStateCount)
     {
         params_ = downspout::spliff::clampParameters(params_);
+        core::resetSpectrum(analyser_);
+        publishSpectrum();
     }
 
 protected:
@@ -108,7 +124,7 @@ protected:
         case kParamMode:        parameter.name = "Mode";        parameter.symbol = "mode";        parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 2.0f, 0.0f }; break;
         case kParamDepth:       parameter.name = "Depth";       parameter.symbol = "depth";       parameter.ranges = { 0.0f, 1.0f, 0.5f }; break;
         case kParamSensitivity: parameter.name = "Sensitivity"; parameter.symbol = "sensitivity"; parameter.ranges = { 0.0f, 1.0f, 0.5f }; break;
-        case kParamSharpness:   parameter.name = "Sharpness";   parameter.symbol = "sharpness";   parameter.ranges = { 0.0f, 1.0f, 0.3f }; break;
+        case kParamSharpness:   parameter.name = "Sharpness";   parameter.symbol = "sharpness";   parameter.ranges = { 0.0f, 1.0f, 0.7f }; break;
         case kParamDecay:       parameter.name = "Decay";       parameter.symbol = "decay";       parameter.ranges = { 0.0f, 1.0f, 0.25f }; break;
         case kParamDecayTilt:   parameter.name = "Decay Tilt";  parameter.symbol = "decay_tilt";  parameter.ranges = { -1.0f, 1.0f, 0.0f }; break;
         case kParamSplitLow:    parameter.name = "Split Low";   parameter.symbol = "split_low";   parameter.ranges = { 20.0f, 2000.0f, 250.0f }; break;
@@ -124,6 +140,19 @@ protected:
         case kParamCCChannel:     parameter.name = "CC Channel"; parameter.symbol = "cc_channel"; parameter.hints = kParameterIsInteger; parameter.ranges = { 1.0f, 16.0f, 1.0f }; break;
         case kParamAttackDb:      parameter.name = "Attack";     parameter.symbol = "attack_db";  parameter.ranges = { -15.0f, 15.0f, 0.0f }; break;
         case kParamSustainDb:     parameter.name = "Sustain";    parameter.symbol = "sustain_db"; parameter.ranges = { -24.0f, 24.0f, 0.0f }; break;
+        default:
+            if (index >= kSpectrumFirst && index < kTotalParameterCount) {
+                char symbol[24], name[32];
+                const int band = static_cast<int>(index - kSpectrumFirst) + 1;
+                std::snprintf(symbol, sizeof(symbol), "spectrum_%02d", band);
+                std::snprintf(name, sizeof(name), "Spectrum Band %02d", band);
+                parameter.name = name;
+                parameter.symbol = symbol;
+                parameter.unit = "dB";
+                parameter.hints = kParameterIsOutput;
+                parameter.ranges = { core::kSpectrumFloorDb, 6.0f, core::kSpectrumFloorDb };
+            }
+            break;
         }
     }
 
@@ -134,7 +163,7 @@ protected:
             { kStateMode,          "Mode",           "0"    },
             { kStateDepth,         "Depth",          "0.5"  },
             { kStateSensitivity,   "Sensitivity",    "0.5"  },
-            { kStateSharpness,     "Sharpness",      "0.3"  },
+            { kStateSharpness,     "Sharpness",      "0.7"  },
             { kStateDecay,         "Decay",          "0.25" },
             { kStateDecayTilt,     "Decay Tilt",     "0"    },
             { kStateSplitLow,      "Split Low",      "250"  },
@@ -150,6 +179,7 @@ protected:
             { kStateCCChannel,     "CC Channel",     "1"    },
             { kStateAttackDb,      "Attack",         "0"    },
             { kStateSustainDb,     "Sustain",        "0"    },
+            { kStateAnalyzerSource, "Analyser source", "1"   },
         };
         if (index < kStateCount) {
             state.key          = kInfo[index].key;
@@ -161,6 +191,8 @@ protected:
 
     float getParameterValue(uint32_t index) const override
     {
+        if (index >= kSpectrumFirst && index < kTotalParameterCount)
+            return spectrum_[index - kSpectrumFirst].load(std::memory_order_relaxed);
         switch (index) {
         case kParamMode:        return params_.mode;
         case kParamDepth:       return params_.depth;
@@ -216,6 +248,7 @@ protected:
         else if (std::strcmp(key, kStateCCChannel)     == 0) return text(params_.ccChannel);
         else if (std::strcmp(key, kStateAttackDb)      == 0) return text(params_.attackDb);
         else if (std::strcmp(key, kStateSustainDb)     == 0) return text(params_.sustainDb);
+        else if (std::strcmp(key, kStateAnalyzerSource) == 0) return text(static_cast<float>(analyserSource_));
         return String();
     }
 
@@ -242,12 +275,20 @@ protected:
         else if (std::strcmp(key, kStateCCChannel)     == 0) { params_.ccChannel = f(); }
         else if (std::strcmp(key, kStateAttackDb)      == 0) { params_.attackDb = f(); }
         else if (std::strcmp(key, kStateSustainDb)     == 0) { params_.sustainDb = f(); }
+        else if (std::strcmp(key, kStateAnalyzerSource) == 0) {
+            analyserSource_ = static_cast<core::SpectrumSource>(
+                std::clamp(static_cast<int>(std::lround(f())), 0, 2));
+            core::resetSpectrum(analyser_);
+            publishSpectrum();
+        }
         params_ = downspout::spliff::clampParameters(params_);
     }
 
     void sampleRateChanged(double) override
     {
         engine_ = downspout::spliff::EngineState{};  // runtime only; patch untouched
+        core::resetSpectrum(analyser_);
+        publishSpectrum();
     }
 
     void activate() override
@@ -257,6 +298,8 @@ protected:
         ccSensOverride_    = -1.0f;
         ccDecayOverride_   = -1.0f;
         ccMixOverride_     = -1.0f;
+        core::resetSpectrum(analyser_);
+        publishSpectrum();
     }
 
     void run(const float** inputs, float** outputs, uint32_t frames,
@@ -293,17 +336,50 @@ protected:
         if (ccDecayNum == 0) ccDecayOverride_ = -1.0f;
         if (ccMixNum   == 0) ccMixOverride_   = -1.0f;
 
+        if (analyserSource_ == core::SpectrumSource::Input)
+            core::analyseBlock(analyser_, static_cast<float>(getSampleRate()), frames,
+                               inputs[0], inputs[1]);
+
+        float* delta[2] = { nullptr, nullptr };
+        if (analyserSource_ == core::SpectrumSource::Delta) {
+            if (deltaL_.size() < frames) {
+                deltaL_.resize(frames);
+                deltaR_.resize(frames);
+            }
+            delta[0] = deltaL_.data();
+            delta[1] = deltaR_.data();
+        }
+
         downspout::spliff::processBlock(
             engine_, params_, frames, getSampleRate(), inputs, outputs,
             ccDepthOverride_ >= 0.0f ? ccDepthOverride_ : params_.depth,
             ccSensOverride_  >= 0.0f ? ccSensOverride_  : params_.sensitivity,
             ccDecayOverride_ >= 0.0f ? ccDecayOverride_ : params_.decay,
-            ccMixOverride_   >= 0.0f ? ccMixOverride_   : params_.mix);
+            ccMixOverride_   >= 0.0f ? ccMixOverride_   : params_.mix,
+            delta);
+
+        if (analyserSource_ == core::SpectrumSource::Output)
+            core::analyseBlock(analyser_, static_cast<float>(getSampleRate()), frames,
+                               outputs[0], outputs[1]);
+        else if (analyserSource_ == core::SpectrumSource::Delta)
+            core::analyseBlock(analyser_, static_cast<float>(getSampleRate()), frames,
+                               deltaL_.data(), deltaR_.data());
+        publishSpectrum();
     }
 
 private:
+    void publishSpectrum()
+    {
+        for (std::size_t k = 0; k < spectrum_.size(); ++k)
+            spectrum_[k].store(analyser_.levelDb[k], std::memory_order_relaxed);
+    }
+
     downspout::spliff::Parameters  params_ {};
     downspout::spliff::EngineState engine_ {};
+    core::SpectrumSource analyserSource_ = core::SpectrumSource::Output;
+    core::SpectrumState analyser_ {};
+    std::array<std::atomic<float>, core::kSpectrumBins> spectrum_ {};
+    std::vector<float> deltaL_ {}, deltaR_ {};
     float ccDepthOverride_ = -1.0f;
     float ccSensOverride_  = -1.0f;
     float ccDecayOverride_ = -1.0f;

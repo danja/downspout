@@ -7,7 +7,7 @@
 
 dsp:spliff a trn:PluginProfile ;
     rdfs:label "Spliff" ;
-    rdfs:comment "Adaptive transient processor with 3-band Spiff-style Cut/Boost and a third level-independent Designer mode: two envelopes form a threshold-free dB ratio driving Attack +/-15 dB and Sustain +/-24 dB." ;
+    rdfs:comment "Adaptive transient processor with 3-band Spiff-style Cut/Boost (up to -30 dB/+18 dB) plus a third level-independent Designer mode. Split Low/High steer the sensitivity curve, Drift CC routing lives on its own tab, and a 64-band analyser shows the input, output or wet-minus-dry delta signal." ;
     trn:bundleName "spliff.vst3" ;
     trn:vendor "danja" ;
     trn:role trn:AudioEffect ;

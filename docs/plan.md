@@ -434,7 +434,7 @@ Progress as of 2026-05-27:
   VST3 wrapper target with UI via vendored DPF;
 - `chipper` now exists as an original stereo lo-fi processor with bitwise quantization, sample-rate reduction via sample-and-hold, clock jitter, dry/wet mix, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `ghost` now exists as an original audio-triggered ghost-note generator with BBT-quantised 16th-grid ghosts, drum (ch 10) and note modes, four Drift-CC feel controls, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
-- `spliff` now exists as a Spiff-manner adaptive transient processor with a 3-band detector, cut/boost modes, sensitivity, sharpness, decay with LF/HF tilt, mix/trim/delta/bypass, Drift-CC control, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
+- `spliff` now exists as a Spiff-manner adaptive transient processor with a two-pole 3-band detector, audible Cut (−30 dB)/Boost (+18 dB), a threshold-free Designer mode, decay with LF/HF tilt, mix/trim/delta/bypass, Drift-CC routing on its own tab, a 64-band Input/Output/Delta spectrum analyser, deterministic tests, and a VST3 wrapper target with UI via vendored DPF;
 - `helterskelter` now exists as an automatic wah pedal with a resonant lowpass driven by the input envelope and/or a BBT-synced ADSR cycle, full ADSR, gate invert, Drift-CC control, deterministic tests, and a first VST3 wrapper target with UI via vendored DPF;
 - `treatment` now exists as a physically modelled acoustic treatment panel: a
   mass-air-mass absorber whose resonance follows `w0 = c*sqrt(rho0/(m*D))` and

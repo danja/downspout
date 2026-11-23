@@ -12,9 +12,11 @@ section it implements.
 
 ```
 include/spliff_core.hpp   Parameters, EngineState (incl. DesignerState), text state
+include/spliff_spectrum.hpp  portable 64-band analyser API
 src/spliff_core.cpp       3-band Cut/Boost + threshold-free Designer, state I/O
-src/dpf/SpliffPlugin.cpp  state-driven wrapper, Drift CC 1-4 overrides
-src/dpf/SpliffUI.cpp      two-column NanoVG panel (mode-swapped rows + CC routing)
+src/spliff_spectrum.cpp   Hann-windowed FFT and peak-hold bands
+src/dpf/SpliffPlugin.cpp  state-driven wrapper, Drift CC 1-4 overrides, spectrum outputs
+src/dpf/SpliffUI.cpp      PROCESS/DRIFT CC tabs, analyser, shorter control rows
 ```
 
 ## Manual mapping (§-references to `docs/reference/spiff manual.html`)
@@ -22,20 +24,28 @@ src/dpf/SpliffUI.cpp      two-column NanoVG panel (mode-swapped rows + CC routin
 - **Mode cut/boost (§3.1):** `mode` 0/1. A third choice, 2, is the separate
   level-independent Designer described below; it does not alter either Spiff
   mode.
-- **Depth (§3.2):** `depth` 0–1. Cut target `1 − depth·w`; boost target
-  `1 + 3·depth·w` (up to ~+12 dB).
+- **Depth (§3.2):** `depth` 0–1. Cut targets `−30·depth·w` dB; boost targets
+  `+18·depth·w` dB. Both bite in ~0.1 ms so short transients hear the full
+  setting; gain returns toward unity with the Decay-controlled release.
 - **Sensitivity (§3.2):** `sensitivity` 0–1 → fast/slow-ratio threshold
   `2.0 − 1.8·sens`, normalised as `w = (ratio − thr)/1.5`.
 - **Sharpness (§3.2):** `sharpness` 0–1 blends per-band weights with their mean
   — low is the manual's "natural on drums", high the "harmonic/wide" setting.
+  The default is 0.7 so the split-driven band differences are audible out of
+  the box.
 - **Decay (§3.2):** `decay` 0–1 → recovery τ 5 ms…300 ms exponential.
   0 is onset-only; the manual's "<5 most natural" sits near the default 0.25.
+  The detector's reference floor attacks in 2 ms and releases in 30 ms, short
+  enough that Decay genuinely controls the tail rather than being masked by the
+  reference envelope.
 - **Decay LF/HF (§3.2):** `decayTilt` −1…1 scales τ per band
   (`lo ×(1−tilt)`, `hi ×(1+tilt)`); 0 is the manual's centre detent.
 - **Sensitivity curve / 5 bands (§4):** reduced to **two crossover frequencies**
   (`splitLow` 250 Hz, `splitHigh` 4 kHz). The curve is sidechain weighting, not
-  EQ, and two splits give the same three-region steering (ignore lows, focus
-  mids, ignore highs) without a node editor. Parametric bands are deferred.
+  EQ: the low/mid/high detectors are scaled 0.35 / 1.0 / 0.45, so moving a
+  crossover moves signal between differently weighted detectors and audibly
+  changes the transient shape. Each crossover uses two cascaded one-poles while
+  remaining complementary. Parametric bands are deferred.
 - **Stereo link/balance (§3.3):** fixed at full link — one mono detector drives
   both channels, so transients never shift the image. M/S is deferred.
 - **Mix/trim/delta/bypass (§3.4):** all four implemented; delta is
@@ -75,19 +85,22 @@ rows for the two Designer rows and keeps all parameter indices stable.
 
 ## Assumptions
 
-**One-pole crossover split.** `lo = LP(low)`, `hi = x − LP(high)`,
-`mid = LP(high) − LP(low)`; recombination is algebraically exact, so Depth 0
-is bit-near transparent (asserted in tests). Phase distortion between bands is
-accepted — Spiff's own filter topology is proprietary and the manual gives no
-latency/phase targets to match.
+**Two-pole crossover split.** Each crossover is a cascade of two one-poles:
+`lo = LP₂(low)`, `hi = x − LP₂(high)`, `mid = LP₂(high) − LP₂(low)`.
+Recombination is still algebraically exact, so Depth 0 is bit-near transparent
+(asserted in tests). The steeper split plus the fixed 0.35 / 1.0 / 0.45 detector
+weighting makes Split Low and Split High audibly effective. Phase distortion
+between bands is accepted — Spiff's own filter topology is proprietary and the
+manual gives no latency/phase targets to match.
 
 **Detector envelopes.** Fast attack 0.2 ms with per-band release τ; slow
-reference 10 ms / 250 ms. The very first sample of a transient passes before
-the gain reacts (no lookahead in v1 — same audibility trade the manual's
-`window` control governs).
+reference 2 ms attack / 30 ms release. The very first sample of a transient
+passes before the gain reacts (no lookahead in v1 — same audibility trade the
+manual's `window` control governs).
 
-**Gain smoothing asymmetry.** Gains clamp down in ~1 ms and release with τ, so
-cuts bite on time and recover musically; boost uses the same path.
+**Gain smoothing.** Gains move away from unity in ~0.1 ms for both Cut and
+Boost, then return with the Decay-controlled τ. Previously Boost used the slow
+release to rise, which made it almost inaudible on short transients.
 
 **Denormals.** Gains snap to exactly 1.0 below 1e-7 so long quiet tails cost
 nothing; outputs are `isfinite`-guarded per sample.
@@ -96,19 +109,33 @@ nothing; outputs are `isfinite`-guarded per sample.
 workflow touches first); 0 disables. Follows chipper, not Spiff (which has no
 MIDI at all) — the INBOX brief explicitly wants Drift correspondence.
 
+## Analyser and layout
+
+The 720×680 panel has two tabs. **PROCESS** puts a 64-band log-frequency
+analyser in the upper half (20 Hz–20 kHz, Hann FFT, 30 Hz refresh, fast attack
+and 40 dB/s fall). A segmented switch selects **Input**, **Output** or
+**Delta** (`wet − dry`, captured before the Delta monitoring/bypass mix). The
+lower half holds the mode selector, Bypass/Delta switches and the main controls
+at half their former track length in two short columns. **DRIFT CC** owns all
+five routing dropdowns and the explanatory copy.
+
+The source is the state key `analyser_source` (0/1/2, default 1 = Output), not
+an automatable parameter, so switching views never writes host automation.
+The 19 original control parameter indices are unchanged; 64 read-only output
+parameters (`spectrum_01`…`spectrum_64`) carry the band levels in dB. The
+analyser is a Spliff-local copy of Octet's portable implementation so no shared
+framework code changed.
+
 ## Visual acceptance
 
 Panel follows the magneto color scheme: light test-equipment panel by default
-with a LIGHT/DARK header toggle, theme tokens throughout, an amber PARAMETERS
-strip and cold-steel DRIFT CC ROUTING strip, and accent fills for sliders,
-segments, switches and dropdown selections.
-The catalogue screenshot predates the three-way mode selector and must be
-recaptured after visual acceptance. Fresh captures are in the scratchpad:
-`/tmp/opencode/spliff-ui-screenshot/spliff.png` (Cut default) and
-`/tmp/opencode/spliff-ui-screenshot/spliff-designer.png` (third segment selected,
-two rows). Both are 720x680. This agent cannot open PNG pixels, so visual
-acceptance is explicitly pending; a human should review them before copying
-either over `docs/pages/assets/plugins/spliff.png`. Recapture with
-`scripts/capture-plugin-screenshots.sh spliff` after any further UI change. A
-live reduction curve (the manual's centrepiece graph) remains deferred — the UI
-is state editors only.
+with a LIGHT/DARK header toggle, theme tokens throughout, an amber PROCESS
+strip, a cold-steel DRIFT CC strip and accent fills for sliders, segments,
+switches and dropdown selections. The analyser accent changes with the source
+(steel for Input, amber for Output, red for Delta).
+
+The redesigned panel capture has been accepted and copied to
+`docs/pages/assets/plugins/spliff.png` (720×680, verified with `identify`).
+Recapture with `scripts/capture-plugin-screenshots.sh spliff` after any further
+UI change. The four-octave reduction graph from the manual remains deferred —
+the analyser is a spectrum display, not a live transfer-function plot.

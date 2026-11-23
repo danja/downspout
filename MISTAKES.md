@@ -6,6 +6,26 @@ Format: what happened, root cause, prevention.
 
 ## Open
 
+## spliff: Split Low/High were inaudible (2026-11-23)
+- **What happened:** moving either split produced a RMS difference of about 1e-5 in a broadband probe, and the peak was unchanged.
+- **Root cause:** all three detector bands saturated to the same gain, so which band a frequency landed in made no practical difference. The single-pole crossovers also moved energy only slightly between them.
+- **Prevention:** cascaded each crossover to two poles and gave the bands fixed 0.35/1.0/0.45 detector weights. Tests now assert the observable rendered-audio difference for a broadband burst and for a 500 Hz tone whose band changes with Split Low, rather than inspecting intermediate gains.
+
+## spliff: Boost used the slow release to rise (2026-11-23)
+- **What happened:** full Boost changed a short transient's peak by only about 1.4x while Cut clearly reduced it; Boost was much weaker than the manual-style setting implied.
+- **Root cause:** gain smoothing used `target < gain` to choose the fast coefficient, which is correct for Cut but made Boost approach its target through the Decay-controlled release.
+- **Prevention:** choose the fast coefficient whenever the target moves away from unity in either direction, and keep the slow coefficient for the return. The strength test now asserts a full-Boost transient peak above 4x dry.
+
+## spliff: Decay was masked by the reference envelope (2026-11-23)
+- **What happened:** changing Decay from 0 to 1 left the tail level identical inside the measured windows even though the band gains differed.
+- **Root cause:** the detector's slow reference floor attacked in 10 ms and released in 250 ms, so it changed more slowly than the Decay-controlled fast envelope and hid its effect in the ratio.
+- **Prevention:** use a 2 ms reference attack and 30 ms release, both shorter than the Decay tail. The test now renders a burst and asserts that the long-Decay tail is measurably lower than the short-Decay tail.
+
+## spliff: analyser source and spectrum parameters shared indices (2026-11-23)
+- **What happened:** the UI treated the analyser source as parameter 19 and the 64 spectrum bins as parameters 20-83, but the wrapper makes the bins 19-82 and stores the source as state only.
+- **Root cause:** the local `ParameterIndex` enum was copied from the control-only layout and then given an extra parameter that does not exist in the host-facing list.
+- **Prevention:** keep one explicit `kAnalyzerSourceValue` slot for the UI's local state mirror, start `kSpectrumFirst` at the real 19 control parameters, and document that the 83 UI values are 19 controls plus 64 outputs.
+
 ## conductor: new weighted test assumed defaults from a mutated fixture (2026-11-23)
 - **What happened:** the late-palette case expected Theme at block 9 but failed, because the same test had already overwritten blocks 1-3 with Null/Theme/Break.
 - **Root cause:** a case that asserts default slot positions reused a params array mutated by earlier cases in the same function.
@@ -14,7 +34,7 @@ Format: what happened, root cause, prevention.
 ## melevolve: carried-over + vote was drawn white on white (2026-11-23)
 - **What happened:** the `+` looked missing on rows carried over from the previous generation, even though all three vote buttons were still registered and clickable.
 - **Root cause:** a carried entry arrives with rating `+1`; the UI gave its selected vote a white face to mimic Melogen's outlined style but kept the glyph white too, so the glyph had no contrast.
-- **Prevention:** when a selected control changes its fill, set the foreground from the same state (here: vote-colour glyph and 2px border on the hollow button). Verify state colours from captured pixels, not from code inspection alone; a fresh screenshot is pending visual acceptance.
+- **Prevention:** when a selected control changes its fill, set the foreground from the same state (here: vote-colour glyph and 2px border on the hollow button). Verify state colours from captured pixels, not from code inspection alone; the refreshed screenshot was accepted and copied into the catalog.
 
 ## fontana: test used a harness-only scratch path (2026-11-22)
 - **What happened:** `downspout_fontana_core_tests` aborted at `testWavLoadingAndPeaks` (`assert(loaded.error.empty())`) on a machine where `/tmp/opencode` did not exist. `writeBytes` silently failed to create the WAV, so `loadSampleSource` returned "Could not open WAV file".

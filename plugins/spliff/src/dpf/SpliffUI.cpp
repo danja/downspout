@@ -1,5 +1,6 @@
 #include "DistrhoUI.hpp"
 #include "downspout/look_and_feel.hpp"
+#include "spliff_spectrum.hpp"
 
 #include <algorithm>
 #include <array>
@@ -12,10 +13,11 @@
 START_NAMESPACE_DISTRHO
 
 namespace laf = downspout::laf;
+namespace spectrum = downspout::spliff;
 
 namespace {
 
-// Must match SpliffPlugin.cpp exactly — indices are stable across saves.
+// Must match SpliffPlugin.cpp exactly — the original 19 controls keep their indices.
 enum ParameterIndex : uint32_t {
     kParamMode = 0,
     kParamDepth,
@@ -36,8 +38,15 @@ enum ParameterIndex : uint32_t {
     kParamCCChannel,
     kParamAttackDb,
     kParamSustainDb,
-    kParameterCount
+    kParameterCount,
 };
+
+// Spectrum outputs start at 19: the analyser source is state, not a host parameter. The UI keeps one extra local slot
+// for the source value so the existing stateChanged plumbing can share `values_`.
+inline constexpr uint32_t kSpectrumFirst = kParameterCount;
+inline constexpr uint32_t kSpectrumLast = kSpectrumFirst + spectrum::kSpectrumBins;
+inline constexpr uint32_t kUiValueCount = kSpectrumLast;
+inline constexpr uint32_t kAnalyzerSourceValue = kParameterCount;
 
 struct Rect {
     float x, y, w, h;
@@ -63,11 +72,10 @@ constexpr std::array<SliderDef, 9> kMainSliders = {{
     { kParamSplitLow,    "Split Low",    20.0f,   2000.0f, false, "split_low"   },
     { kParamSplitHigh,   "Split High",   500.0f,  12000.0f,false, "split_high"  },
     { kParamMix,         "Mix",          0.0f,    100.0f,  false, "mix"         },
-    { kParamTrim,        "Trim",         -12.0f,  12.0f,  false, "trim"        },
+    { kParamTrim,        "Trim",         -12.0f,  12.0f,   false, "trim"        },
 }};
 
-// Designer mode replaces the Spiff-specific rows with the two level-independent
-// controls; its state is appended so Cut/Boost projects keep their layout.
+// Designer mode replaces the Spiff-specific rows; its state is appended so Cut/Boost projects keep their layout.
 constexpr std::array<SliderDef, 2> kDesignerSliders = {{
     { kParamAttackDb,  "Attack",  -15.0f, 15.0f, false, "attack_db"  },
     { kParamSustainDb, "Sustain", -24.0f, 24.0f, false, "sustain_db" },
@@ -94,6 +102,8 @@ constexpr std::array<DropDef, 5> kCCDropDefs = {{
 }};
 
 constexpr const char* kModeChoices[3] = { "Cut", "Boost", "Designer" };
+constexpr const char* kSourceNames[3] = { "Input", "Output", "Delta" };
+constexpr const char* kTabNames[2] = { "PROCESS", "DRIFT CC" };
 
 [[nodiscard]] float clampf(float v, float lo, float hi) noexcept
 {
@@ -200,29 +210,28 @@ struct Accent {
     int b;
 };
 
-// Section accents from the magneto palette: amber for parameters,
-// cold steel for CC routing plumbing.
+// Section accents from the magneto palette: amber for processing, cold steel for Drift plumbing and the input spectrum.
 constexpr Accent kMainAccent {198, 132, 58};
 constexpr Accent kCcAccent {92, 140, 156};
+constexpr Accent kInputAccent {132, 154, 168};
+constexpr Accent kDeltaAccent {214, 100, 82};
 
 constexpr int kCreamR = 250;
 constexpr int kCreamG = 248;
 constexpr int kCreamB = 242;
 
-constexpr float kPad      = 16.0f;
-constexpr float kDivX     = 430.0f;
-constexpr float kMainX    = kPad;
-constexpr float kCCX      = kDivX + 12.0f;
-constexpr float kSlidersY = 76.0f;
+constexpr float kPad = 20.0f;
+constexpr float kHeaderH = 70.0f;
+constexpr float kTabY = 72.0f;
+constexpr float kTabH = 32.0f;
+constexpr float kContentY = 116.0f;
+constexpr float kItemH = 20.0f;
+constexpr int kMaxRows = 10;
+constexpr int kTwoColLimit = 20;
 
-constexpr float kSliderH = 44.0f;
-constexpr float kSegH    = 48.0f;
-constexpr float kDropH   = 48.0f;
-constexpr float kSwitchH = 40.0f;
-
-constexpr float kItemH       = 20.0f;
-constexpr int   kMaxRows     = 10;
-constexpr int   kTwoColLimit = 20;
+constexpr Rect kAnalyserPanel {kPad, kContentY, 680.0f, 244.0f};
+constexpr Rect kProcessPanel {kPad, 372.0f, 680.0f, 286.0f};
+constexpr Rect kDriftPanel {kPad, kContentY, 680.0f, 542.0f};
 
 }  // namespace
 
@@ -234,7 +243,7 @@ public:
         values_[kParamMode] = 0.0f;
         values_[kParamDepth] = 0.5f;
         values_[kParamSensitivity] = 0.5f;
-        values_[kParamSharpness] = 0.3f;
+        values_[kParamSharpness] = 0.7f;
         values_[kParamDecay] = 0.25f;
         values_[kParamDecayTilt] = 0.0f;
         values_[kParamSplitLow] = 250.0f;
@@ -250,6 +259,23 @@ public:
         values_[kParamCCChannel] = 1.0f;
         values_[kParamAttackDb] = 0.0f;
         values_[kParamSustainDb] = 0.0f;
+        values_[kAnalyzerSourceValue] = 1.0f;  // output
+        spectrum_.fill(spectrum::kSpectrumFloorDb);
+
+        // The standalone used for screenshots has no audio. Show a plausible spectrum so the analyser is legible.
+        if (std::getenv("DOWNSPOUT_SCREENSHOT_DEMO") != nullptr) {
+            demo_ = true;
+            for (int k = 0; k < spectrum::kSpectrumBins; ++k) {
+                const double hz = std::sqrt(spectrum::spectrumBandEdgeHz(k)
+                                          * spectrum::spectrumBandEdgeHz(k + 1));
+                double db = -72.0 - 8.0 * std::log10(hz / 100.0)
+                          + 9.0 * std::sin(k * 0.51) * std::sin(k * 0.17)
+                          + (std::fabs(std::log2(hz / 250.0)) < 0.3 ? 6.0 : 0.0)
+                          + (std::fabs(std::log2(hz / 4000.0)) < 0.25 ? 5.0 : 0.0);
+                spectrum_[static_cast<std::size_t>(k)] =
+                    static_cast<float>(std::clamp(db, -90.0, 0.0));
+            }
+        }
 
        #ifdef DGL_NO_SHARED_RESOURCES
         createFontFromFile("sans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
@@ -259,31 +285,42 @@ public:
     }
 
 protected:
-    void parameterChanged(uint32_t, float) override {}  // state-driven; ignore
+    void parameterChanged(uint32_t index, float value) override
+    {
+        if (demo_ && index >= kSpectrumFirst)
+            return;  // keep the demo spectrum
+        if (index >= kSpectrumFirst && index < kSpectrumLast) {
+            spectrum_[index - kSpectrumFirst] = value;
+            repaint();
+        }
+    }
 
     void stateChanged(const char* key, const char* value) override
     {
         if (!value) return;
         const float fv = static_cast<float>(std::atof(value));
-        if      (std::strcmp(key, "mode")           == 0) { values_[kParamMode] = fv; }
-        else if (std::strcmp(key, "depth")          == 0) { values_[kParamDepth] = fv; }
-        else if (std::strcmp(key, "sensitivity")    == 0) { values_[kParamSensitivity] = fv; }
-        else if (std::strcmp(key, "sharpness")      == 0) { values_[kParamSharpness] = fv; }
-        else if (std::strcmp(key, "decay")          == 0) { values_[kParamDecay] = fv; }
-        else if (std::strcmp(key, "decay_tilt")     == 0) { values_[kParamDecayTilt] = fv; }
-        else if (std::strcmp(key, "split_low")      == 0) { values_[kParamSplitLow] = fv; }
-        else if (std::strcmp(key, "split_high")     == 0) { values_[kParamSplitHigh] = fv; }
-        else if (std::strcmp(key, "mix")            == 0) { values_[kParamMix] = fv; }
-        else if (std::strcmp(key, "trim")           == 0) { values_[kParamTrim] = fv; }
-        else if (std::strcmp(key, "bypass")         == 0) { values_[kParamBypass] = fv; }
-        else if (std::strcmp(key, "delta")          == 0) { values_[kParamDelta] = fv; }
-        else if (std::strcmp(key, "cc_depth")       == 0) { values_[kParamCCDepth] = fv; }
-        else if (std::strcmp(key, "cc_sensitivity") == 0) { values_[kParamCCSensitivity] = fv; }
-        else if (std::strcmp(key, "cc_decay")       == 0) { values_[kParamCCDecay] = fv; }
-        else if (std::strcmp(key, "cc_mix")         == 0) { values_[kParamCCMix] = fv; }
-        else if (std::strcmp(key, "cc_channel")     == 0) { values_[kParamCCChannel] = fv; }
-        else if (std::strcmp(key, "attack_db")      == 0) { values_[kParamAttackDb] = fv; }
-        else if (std::strcmp(key, "sustain_db")     == 0) { values_[kParamSustainDb] = fv; }
+        if      (std::strcmp(key, "mode")            == 0) { values_[kParamMode] = fv; }
+        else if (std::strcmp(key, "depth")           == 0) { values_[kParamDepth] = fv; }
+        else if (std::strcmp(key, "sensitivity")     == 0) { values_[kParamSensitivity] = fv; }
+        else if (std::strcmp(key, "sharpness")       == 0) { values_[kParamSharpness] = fv; }
+        else if (std::strcmp(key, "decay")           == 0) { values_[kParamDecay] = fv; }
+        else if (std::strcmp(key, "decay_tilt")      == 0) { values_[kParamDecayTilt] = fv; }
+        else if (std::strcmp(key, "split_low")       == 0) { values_[kParamSplitLow] = fv; }
+        else if (std::strcmp(key, "split_high")      == 0) { values_[kParamSplitHigh] = fv; }
+        else if (std::strcmp(key, "mix")             == 0) { values_[kParamMix] = fv; }
+        else if (std::strcmp(key, "trim")            == 0) { values_[kParamTrim] = fv; }
+        else if (std::strcmp(key, "bypass")          == 0) { values_[kParamBypass] = fv; }
+        else if (std::strcmp(key, "delta")           == 0) { values_[kParamDelta] = fv; }
+        else if (std::strcmp(key, "cc_depth")        == 0) { values_[kParamCCDepth] = fv; }
+        else if (std::strcmp(key, "cc_sensitivity")  == 0) { values_[kParamCCSensitivity] = fv; }
+        else if (std::strcmp(key, "cc_decay")        == 0) { values_[kParamCCDecay] = fv; }
+        else if (std::strcmp(key, "cc_mix")          == 0) { values_[kParamCCMix] = fv; }
+        else if (std::strcmp(key, "cc_channel")      == 0) { values_[kParamCCChannel] = fv; }
+        else if (std::strcmp(key, "attack_db")       == 0) { values_[kParamAttackDb] = fv; }
+        else if (std::strcmp(key, "sustain_db")      == 0) { values_[kParamSustainDb] = fv; }
+        else if (std::strcmp(key, "analyser_source") == 0) {
+            values_[kAnalyzerSourceValue] = clampf(fv, 0.0f, 2.0f);
+        }
         repaint();
     }
 
@@ -293,10 +330,13 @@ protected:
         const float H = static_cast<float>(getHeight());
         drawBackground(W, H);
         drawHeader(W);
-        drawDivider(H);
-        drawMainColumn();
-        drawCCColumn(W);
-        drawFooterNote();
+        drawTabs();
+        if (activeTab_ == 0) {
+            drawAnalyser();
+            drawProcessPanel();
+        } else {
+            drawDriftPanel();
+        }
         if (openDrop_ >= 0)
             drawPopup(W, H);
     }
@@ -323,48 +363,54 @@ protected:
                                          static_cast<float>(getHeight()));
             if (popup.contains(mx, my)) {
                 const int item = popupItemAt(mx, my, popup);
-                if (item >= 0)
-                    commitDrop(item);
+                if (item >= 0) commitDrop(item);
                 closePopup();
                 return true;
             }
             closePopup();
-            if (dropHeaderAt(mx, my) < 0 && segAt(mx, my) < 0 && switchAt(mx, my) < 0) {
-                for (int s = 0; s < visibleSliderCount(); ++s) {
-                    if (mainTrack(s).contains(mx, my))
-                        return true;  // swallow: no drag on the closing click
-                }
-                return false;
-            }
         }
 
-        for (int s = 0; s < visibleSliderCount(); ++s) {
-            if (mainTrack(s).contains(mx, my)) {
-                dragSlider_ = s;
-                updateSlider(s, mx);
+        if (tabAt(mx, my) >= 0) {
+            activeTab_ = tabAt(mx, my);
+            dragSlider_ = -1;
+            repaint();
+            return true;
+        }
+
+        if (activeTab_ == 0) {
+            if (sourceAt(mx, my) >= 0) {
+                commitParam(kAnalyzerSourceValue, "analyser_source",
+                            static_cast<float>(sourceAt(mx, my)));
                 return true;
             }
+            for (int s = 0; s < visibleSliderCount(); ++s) {
+                if (sliderTrack(s).contains(mx, my)) {
+                    dragSlider_ = s;
+                    updateSlider(s, mx);
+                    return true;
+                }
+            }
+            if (segAt(mx, my) >= 0) {
+                const Rect box = modeBox();
+                const float t = clampf((mx - box.x) / box.w, 0.0f, 0.9999f);
+                const int mode = std::min(2, static_cast<int>(std::floor(t * 3.0f)));
+                dragSlider_ = -1;  // the row under the cursor changes with the mode
+                commitParam(kParamMode, "mode", static_cast<float>(mode));
+                return true;
+            }
+            if (switchAt(mx, my) == 0) {
+                commitParam(kParamBypass, "bypass",
+                            values_[kParamBypass] >= 0.5f ? 0.0f : 1.0f);
+                return true;
+            }
+            if (switchAt(mx, my) == 1) {
+                commitParam(kParamDelta, "delta",
+                            values_[kParamDelta] >= 0.5f ? 0.0f : 1.0f);
+                return true;
+            }
+            return false;
         }
-        if (segAt(mx, my) >= 0) {
-            const Rect box = segBox();
-            const float t = clampf((mx - box.x) / box.w, 0.0f, 0.9999f);
-            constexpr int kModeCount = static_cast<int>(sizeof(kModeChoices) / sizeof(kModeChoices[0]));
-            const int mode = std::min(kModeCount - 1,
-                                      static_cast<int>(std::floor(t * static_cast<float>(kModeCount))));
-            dragSlider_ = -1;  // the row under the cursor changes with the mode
-            commitParam(kParamMode, "mode", static_cast<float>(mode));
-            return true;
-        }
-        if (switchAt(mx, my) == 0) {
-            commitParam(kParamBypass, "bypass",
-                        values_[kParamBypass] >= 0.5f ? 0.0f : 1.0f);
-            return true;
-        }
-        if (switchAt(mx, my) == 1) {
-            commitParam(kParamDelta, "delta",
-                        values_[kParamDelta] >= 0.5f ? 0.0f : 1.0f);
-            return true;
-        }
+
         if (dropHeaderAt(mx, my) >= 0) {
             openDrop(dropHeaderAt(mx, my));
             return true;
@@ -412,7 +458,10 @@ private:
     void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
     void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
 
-    std::array<float, kParameterCount> values_ {};
+    std::array<float, kUiValueCount> values_ {};
+    std::array<float, spectrum::kSpectrumBins> spectrum_ {};
+    bool demo_ = false;
+    int activeTab_ = 0;
     int dragSlider_ = -1;
 
     int openDrop_ = -1;  // index into kCCDropDefs, or -1
@@ -445,40 +494,48 @@ private:
                               : kMainSliders[static_cast<std::size_t>(s)];
     }
 
-    // Left column rows: Mode segment, mode-specific sliders, Bypass, Delta.
-    [[nodiscard]] float mainRowY(int row) const noexcept
+    // Main controls are half their former track length, in two columns in the lower half of the panel.
+    [[nodiscard]] Rect sliderTrack(const int s) const noexcept
     {
-        const int sliderRows = visibleSliderCount();
-        float y = kSlidersY;
-        for (int r = 0; r < row; ++r) {
-            if (r == 0) y += kSegH;
-            else if (r <= sliderRows) y += kSliderH;
-            else y += kSwitchH;
-        }
-        return y;
+        constexpr float kW = 220.0f, kRowH = 42.0f;
+        const int column = s < 5 ? 0 : 1;
+        const int row = s < 5 ? s : s - 5;
+        const float x = column == 0 ? 44.0f : 372.0f;
+        const float y = 466.0f + static_cast<float>(row) * kRowH;
+        return { x, y, kW, 12.0f };
     }
 
-    [[nodiscard]] Rect mainTrack(int s) const noexcept
+    [[nodiscard]] Rect modeBox() const noexcept { return { 44.0f, 408.0f, 300.0f, 26.0f }; }
+
+    [[nodiscard]] Rect sourceBox() const noexcept { return { 392.0f, 150.0f, 276.0f, 24.0f }; }
+
+    [[nodiscard]] Rect switchBox(int which) const noexcept
     {
-        const float trackW = kDivX - kMainX - kPad;
-        return { kMainX, mainRowY(1 + s) + 20.0f, trackW, 12.0f };
+        return { 540.0f, 404.0f + static_cast<float>(which) * 30.0f, 132.0f, 26.0f };
     }
 
-    [[nodiscard]] Rect segBox() const noexcept
+    [[nodiscard]] Rect tabBox(int index) const noexcept
     {
-        const float trackW = kDivX - kMainX - kPad;
-        return { kMainX, mainRowY(0) + 20.0f, trackW, 22.0f };
+        return { kPad + static_cast<float>(index) * 132.0f, kTabY, 132.0f, kTabH };
+    }
+
+    [[nodiscard]] int tabAt(float mx, float my) const noexcept
+    {
+        for (int i = 0; i < 2; ++i)
+            if (tabBox(i).contains(mx, my)) return i;
+        return -1;
     }
 
     [[nodiscard]] int segAt(float mx, float my) const noexcept
     {
-        return segBox().contains(mx, my) ? 0 : -1;
+        return modeBox().contains(mx, my) ? 0 : -1;
     }
 
-    [[nodiscard]] Rect switchBox(int which) const noexcept
+    [[nodiscard]] int sourceAt(float mx, float my) const noexcept
     {
-        const float trackW = kDivX - kMainX - kPad;
-        return { kMainX, mainRowY(1 + visibleSliderCount() + which), trackW, kSwitchH };
+        if (!sourceBox().contains(mx, my)) return -1;
+        const float n = clampf((mx - sourceBox().x) / sourceBox().w, 0.0f, 0.9999f);
+        return std::min(2, static_cast<int>(std::floor(n * 3.0f)));
     }
 
     [[nodiscard]] int switchAt(float mx, float my) const noexcept
@@ -490,13 +547,12 @@ private:
 
     [[nodiscard]] Rect ccDropBox(int d) const noexcept
     {
-        const float W      = static_cast<float>(getWidth());
-        const float trackW = W - kCCX - kPad;
-        return { kCCX, kSlidersY + d * kDropH + 20.0f, trackW, 22.0f };
+        return { 60.0f, 168.0f + static_cast<float>(d) * 74.0f, 360.0f, 26.0f };
     }
 
     [[nodiscard]] int dropHeaderAt(float mx, float my) const noexcept
     {
+        if (activeTab_ != 1) return -1;
         for (int d = 0; d < static_cast<int>(kCCDropDefs.size()); ++d)
             if (ccDropBox(d).contains(mx, my))
                 return d;
@@ -515,7 +571,7 @@ private:
     void updateSlider(int s, float mx)
     {
         const SliderDef& def = visibleSlider(s);
-        const Rect tr        = mainTrack(s);
+        const Rect tr        = sliderTrack(s);
         const float t        = clampf((mx - tr.x) / tr.w, 0.0f, 1.0f);
         float v              = def.min + t * (def.max - def.min);
         if (def.integer) v   = std::round(v);
@@ -601,12 +657,37 @@ private:
 
     void drawBackground(float W, float H)
     {
-        const auto& t = theme();
         beginPath();
-        fc(t.background);
+        fc(theme().background);
         rect(0, 0, W, H);
         fill();
         closePath();
+    }
+
+    void drawPanel(const Rect& b, const char* title, const Accent& accent, const char* right = nullptr)
+    {
+        const auto& t = theme();
+        beginPath();
+        fc(t.surface);
+        roundedRect(b.x, b.y, b.w, b.h, 4.0f);
+        fill();
+        closePath();
+        beginPath();
+        fillColor(accent.r, accent.g, accent.b, 255);
+        roundedRect(b.x, b.y, b.w, 28.0f, 4.0f);
+        fill();
+        rect(b.x, b.y + 18.0f, b.w, 10.0f);
+        fill();
+        closePath();
+        fillColor(kCreamR, kCreamG, kCreamB, 255);
+        fontSize(12.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        text(b.x + 10.0f, b.y + 14.0f, title, nullptr);
+        if (right) {
+            fontSize(10.0f);
+            textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
+            text(b.x + b.w - 10.0f, b.y + 14.0f, right, nullptr);
+        }
     }
 
     void drawHeader(float W)
@@ -614,34 +695,21 @@ private:
         const auto& t = theme();
         beginPath();
         fc(t.panel);
-        rect(0, 0, W, 58.0f);
+        rect(0, 0, W, kHeaderH);
         fill();
         closePath();
 
         fontSize(24.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         fc(t.textPrimary);
-        text(kPad, 27.0f, "SPLIFF", nullptr);
+        text(kPad, 28.0f, "SPLIFF", nullptr);
 
         fontSize(11.0f);
-        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         fc(t.textDim);
-        text(kPad + 110.0f, 27.0f,
+        text(kPad + 110.0f, 28.0f,
              "adaptive transient processor \xc2\xb7 cut / boost / designer \xc2\xb7 Drift CC", nullptr);
 
-        beginPath();
-        sc(t.controlTrack);
-        strokeWidth(1.0f);
-        moveTo(0, 58.0f);
-        lineTo(W, 58.0f);
-        stroke();
-        closePath();
-
-        drawColumnStrip(kMainX, kDivX - kMainX - kPad, "PARAMETERS", kMainAccent);
-        drawColumnStrip(kCCX, W - kCCX - kPad, "DRIFT CC ROUTING", kCcAccent);
-
-        // Theme toggle, magneto style: light panel by default.
-        themeRect_ = {W - 90.0f, 16.0f, 74.0f, 26.0f};
+        themeRect_ = {W - 94.0f, 22.0f, 74.0f, 26.0f};
         beginPath();
         fc(t.buttonFace);
         roundedRect(themeRect_.x, themeRect_.y, themeRect_.w, themeRect_.h, 2.0f);
@@ -654,106 +722,128 @@ private:
              darkTheme_ ? "DARK" : "LIGHT", nullptr);
     }
 
-    void drawDivider(float H)
+    void drawTabs()
     {
         const auto& t = theme();
+        for (int i = 0; i < 2; ++i) {
+            const Rect b = tabBox(i);
+            const bool on = activeTab_ == i;
+            beginPath();
+            if (on) fillColor(kMainAccent.r, kMainAccent.g, kMainAccent.b, 255);
+            else fc(t.buttonFace);
+            roundedRect(b.x, b.y, b.w, b.h, 3.0f);
+            fill();
+            closePath();
+            fontSize(11.0f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            if (on) fillColor(kCreamR, kCreamG, kCreamB, 255);
+            else fc(t.textDim);
+            text(b.x + b.w * 0.5f, b.y + b.h * 0.5f, kTabNames[i], nullptr);
+        }
+    }
+
+    [[nodiscard]] const Accent& sourceAccent() const noexcept
+    {
+        const int source = std::clamp(static_cast<int>(std::lround(values_[kAnalyzerSourceValue])), 0, 2);
+        if (source == 0) return kInputAccent;
+        if (source == 2) return kDeltaAccent;
+        return kMainAccent;
+    }
+
+    void drawAnalyser()
+    {
+        const Accent& accent = sourceAccent();
+        drawPanel(kAnalyserPanel, "SPECTRUM", accent,
+                  "64 log bands \xc2\xb7 20 Hz - 20 kHz \xc2\xb7 input / output / delta");
+
+        drawSegments(kAnalyzerSourceValue, kSourceNames, 3, sourceBox(), accent);
+
+        const auto& t = theme();
+        const Rect plot { kAnalyserPanel.x + 46.0f, kAnalyserPanel.y + 66.0f,
+                          kAnalyserPanel.w - 76.0f, kAnalyserPanel.h - 96.0f };
         beginPath();
-        sc(t.panel);
+        fc(t.panel);
+        roundedRect(plot.x, plot.y, plot.w, plot.h, 2.0f);
+        fill();
+        closePath();
+        beginPath();
+        sc(t.border);
         strokeWidth(1.0f);
-        moveTo(kDivX, 58.0f);
-        lineTo(kDivX, H);
+        roundedRect(plot.x, plot.y, plot.w, plot.h, 2.0f);
         stroke();
         closePath();
-    }
 
-    void drawColumnStrip(float x, float w, const char* title, const Accent& accent)
-    {
-        beginPath();
-        fillColor(accent.r, accent.g, accent.b, 255);
-        roundedRect(x, 59.0f, w, 18.0f, 2.0f);
-        fill();
-        closePath();
-        fillColor(kCreamR, kCreamG, kCreamB, 255);
-        fontSize(10.0f);
-        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-        text(x + 8.0f, 68.0f, title, nullptr);
-    }
-
-    void drawTrack(const Rect& tr, float norm)
-    {
-        const auto& t = theme();
-        beginPath();
-        roundedRect(tr.x, tr.y, tr.w, tr.h, 6.0f);
-        fc(t.controlTrack);
-        fill();
-        closePath();
-
-        if (norm > 0.0f) {
+        // dB grid.
+        static constexpr int kDbMarks[] = { -80, -60, -40, -20, 0 };
+        for (const int db : kDbMarks) {
+            const float y = plot.y + (static_cast<float>(-db) / 90.0f) * plot.h;
             beginPath();
-            roundedRect(tr.x, tr.y, std::max(tr.h, tr.w * norm), tr.h, 6.0f);
-            fillColor(kMainAccent.r, kMainAccent.g, kMainAccent.b, 255);
+            sc(db == 0 ? t.textDim : t.border);
+            strokeWidth(db == 0 ? 1.2f : 0.7f);
+            moveTo(plot.x, y);
+            lineTo(plot.x + plot.w, y);
+            stroke();
+            closePath();
+            char buf[8];
+            std::snprintf(buf, sizeof(buf), "%d", db);
+            fc(t.textDisabled);
+            fontSize(9.0f);
+            textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
+            text(plot.x - 6.0f, y, buf, nullptr);
+        }
+        static constexpr float kFreqMarks[] = { 50.0f, 100.0f, 200.0f, 500.0f, 1000.0f, 2000.0f, 5000.0f, 10000.0f };
+        for (const float hz : kFreqMarks) {
+            const float n = std::log(hz / 20.0f) / std::log(20000.0f / 20.0f);
+            const float x = plot.x + n * plot.w;
+            beginPath();
+            sc(t.border);
+            strokeWidth(0.7f);
+            moveTo(x, plot.y);
+            lineTo(x, plot.y + plot.h);
+            stroke();
+            closePath();
+            char buf[16];
+            if (hz >= 1000.0f) std::snprintf(buf, sizeof(buf), "%gk", hz / 1000.0f);
+            else std::snprintf(buf, sizeof(buf), "%g", hz);
+            fc(t.textDisabled);
+            fontSize(9.0f);
+            textAlign(ALIGN_CENTER | ALIGN_TOP);
+            text(x, plot.y + plot.h + 4.0f, buf, nullptr);
+        }
+
+        // 64 log-spaced bars, matching Octet's analyser scale.
+        const float barW = plot.w / static_cast<float>(spectrum::kSpectrumBins);
+        for (int k = 0; k < spectrum::kSpectrumBins; ++k) {
+            const float db = spectrum_[static_cast<std::size_t>(k)];
+            const float n = clampf((db - spectrum::kSpectrumFloorDb) / (-spectrum::kSpectrumFloorDb), 0.0f, 1.0f);
+            if (n <= 0.0f) continue;
+            const float h = n * plot.h * 0.96f;
+            beginPath();
+            rect(plot.x + static_cast<float>(k) * barW + 0.5f,
+                 plot.y + plot.h - h, std::max(1.0f, barW - 1.0f), h);
+            fillColor(accent.r, accent.g, accent.b, 150);
             fill();
             closePath();
         }
-    }
 
-    void drawLabelValue(float x, float y, float w, const char* label, const char* value)
-    {
-        const auto& t = theme();
-        fontSize(11.0f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fc(t.textDim);
-        text(x, y, label, nullptr);
-
+        const int source = std::clamp(static_cast<int>(std::lround(values_[kAnalyzerSourceValue])), 0, 2);
+        fillColor(accent.r, accent.g, accent.b, 255);
         fontSize(10.0f);
-        textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        fc(t.textPrimary);
-        text(x + w, y, value, nullptr);
+        textAlign(ALIGN_LEFT | ALIGN_BOTTOM);
+        text(kAnalyserPanel.x + 12.0f, kAnalyserPanel.y + kAnalyserPanel.h - 8.0f,
+             source == 0 ? "Input: before transient shaping"
+             : source == 1 ? "Output: after transient shaping"
+                           : "Delta: what the processor added or removed", nullptr);
     }
 
-    void drawMainColumn()
+    void drawProcessPanel()
     {
-        const auto& t = theme();
-        const float trackW = kDivX - kMainX - kPad;
+        drawPanel(kProcessPanel, "PARAMETERS", kMainAccent, "shorter controls \xc2\xb7 two columns");
 
-        // Mode: three-way segment; Designer swaps the rows below it.
-        {
-            const Rect box = segBox();
-            const int selected = std::clamp(static_cast<int>(std::lround(values_[kParamMode])),
-                                            0, 2);
-            drawLabelValue(kMainX, box.y - 17.0f, trackW, "Mode", kModeChoices[selected]);
-            constexpr int kModeCount = static_cast<int>(sizeof(kModeChoices) / sizeof(kModeChoices[0]));
-            for (int i = 0; i < kModeCount; ++i) {
-                const float segW = box.w / static_cast<float>(kModeCount);
-                const float sx = box.x + i * segW;
-                beginPath();
-                roundedRect(sx + 1.0f, box.y, segW - 2.0f, box.h, 4.0f);
-                if (i == selected)
-                    fillColor(kMainAccent.r, kMainAccent.g, kMainAccent.b, 255);
-                else
-                    fc(t.buttonFace);
-                fill();
-                closePath();
-                fontSize(i == 2 ? 10.0f : 11.0f);
-                textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-                if (i == selected)
-                    fillColor(kCreamR, kCreamG, kCreamB, 255);
-                else
-                    fc(t.textPrimary);
-                text(sx + segW * 0.5f, box.y + box.h * 0.5f, kModeChoices[i], nullptr);
-            }
-        }
+        drawLabelValue(modeBox().x, modeBox().y - 14.0f, modeBox().w, "Mode",
+                       kModeChoices[std::clamp(static_cast<int>(std::lround(values_[kParamMode])), 0, 2)]);
+        drawSegments(kParamMode, kModeChoices, 3, modeBox(), kMainAccent);
 
-        for (int s = 0; s < visibleSliderCount(); ++s) {
-            const SliderDef& def = visibleSlider(s);
-            const Rect tr        = mainTrack(s);
-            drawLabelValue(kMainX, tr.y - 17.0f, trackW, def.label,
-                           formatSlider(def, values_[def.index]).c_str());
-            const float norm = clampf((values_[def.index] - def.min) / (def.max - def.min), 0.0f, 1.0f);
-            drawTrack(tr, norm);
-        }
-
-        // Bypass + Delta: toggle switches.
         struct SwitchRow { uint32_t index; const char* label; const char* onText; const char* offText; };
         constexpr std::array<SwitchRow, 2> kSwitches = {{
             { kParamBypass, "Bypass", "bypassed", "active" },
@@ -762,32 +852,143 @@ private:
         for (int i = 0; i < 2; ++i) {
             const auto& sw = kSwitches[static_cast<std::size_t>(i)];
             const Rect row = switchBox(i);
-            const bool on = values_[sw.index] >= 0.5f;
+            drawSwitchRow(row, sw.label, values_[sw.index] >= 0.5f ? sw.onText : sw.offText,
+                          values_[sw.index] >= 0.5f);
+        }
+
+        for (int s = 0; s < visibleSliderCount(); ++s) {
+            const SliderDef& def = visibleSlider(s);
+            const Rect tr = sliderTrack(s);
+            const float norm = clampf((values_[def.index] - def.min) / (def.max - def.min), 0.0f, 1.0f);
+            drawSliderRow(tr, def.label, formatSlider(def, values_[def.index]).c_str(), norm);
+        }
+
+        const auto& t = theme();
+        fc(t.textDisabled);
+        fontSize(9.5f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        text(kProcessPanel.x + 12.0f, kProcessPanel.y + kProcessPanel.h - 16.0f,
+             designerMode()
+                 ? "Attack lifts onsets; Sustain lifts the body. Gain follows the fast/slow ratio."
+                 : "Splits set the three detector bands. Cut reaches -30 dB; Boost reaches +18 dB.", nullptr);
+    }
+
+    void drawDriftPanel()
+    {
+        drawPanel(kDriftPanel, "DRIFT CC ROUTING", kCcAccent,
+                  "Drift MIDI out \xe2\x86\x92 Spliff MIDI in");
+
+        const auto& t = theme();
+        for (int d = 0; d < static_cast<int>(kCCDropDefs.size()); ++d) {
+            const DropDef& def = kCCDropDefs[static_cast<std::size_t>(d)];
+            const Rect box = ccDropBox(d);
+            char current[32];
+            dropItemText(def.kind, dropCurrentItem(def.kind, values_[def.index]),
+                         current, sizeof(current));
+            const bool isOff = def.kind == DropKind::CcNumber
+                && static_cast<int>(std::lround(values_[def.index])) == 0;
             fontSize(11.0f);
-            textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+            textAlign(ALIGN_LEFT | ALIGN_TOP);
             fc(t.textDim);
-            text(kMainX, row.y + row.h * 0.5f, sw.label, nullptr);
+            text(box.x, box.y - 15.0f, def.label, nullptr);
             fontSize(10.0f);
-            textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
-            fc(t.textPrimary);
-            text(row.x + row.w - 52.0f, row.y + row.h * 0.5f, on ? sw.onText : sw.offText, nullptr);
-            drawSwitch(row.x + row.w - 44.0f, row.y + (row.h - 20.0f) * 0.5f, on);
+            textAlign(ALIGN_RIGHT | ALIGN_TOP);
+            fc(isOff ? t.textDisabled : t.textPrimary);
+            text(box.x + box.w, box.y - 15.0f, current, nullptr);
+            drawDropBox(box, current);
+        }
+
+        const float x = 470.0f;
+        fc(t.textDim);
+        fontSize(11.0f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        text(x, 176.0f, "Drift's four lanes default to CC 1-4.", nullptr);
+        text(x, 196.0f, "CC Depth / Sens / Decay shape Cut and Boost.", nullptr);
+        text(x, 216.0f, "CC Mix applies in every mode.", nullptr);
+        text(x, 250.0f, "off disables an override.", nullptr);
+        text(x, 270.0f, "CC Channel selects which MIDI channel", nullptr);
+        text(x, 290.0f, "Spliff listens on.", nullptr);
+        fc(t.textDisabled);
+        fontSize(9.5f);
+        text(x, 330.0f, "The analyser source is stored with the patch.", nullptr);
+        text(x, 346.0f, "Drift tab routing is persistent state too.", nullptr);
+    }
+
+    void drawLabelValue(float x, float y, float w, const char* label, const char* value)
+    {
+        const auto& t = theme();
+        fontSize(10.5f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fc(t.textDim);
+        text(x, y, label, nullptr);
+        fontSize(10.0f);
+        textAlign(ALIGN_RIGHT | ALIGN_TOP);
+        fc(t.textPrimary);
+        text(x + w, y, value, nullptr);
+    }
+
+    void drawSliderRow(const Rect& tr, const char* label, const char* value, float norm)
+    {
+        const auto& t = theme();
+        drawLabelValue(tr.x, tr.y - 15.0f, tr.w, label, value);
+        beginPath();
+        fc(t.controlTrack);
+        roundedRect(tr.x, tr.y, tr.w, tr.h, 6.0f);
+        fill();
+        closePath();
+        if (norm > 0.0f) {
+            beginPath();
+            fillColor(kMainAccent.r, kMainAccent.g, kMainAccent.b, 255);
+            roundedRect(tr.x, tr.y, std::max(tr.h, tr.w * norm), tr.h, 6.0f);
+            fill();
+            closePath();
         }
     }
 
-    void drawSwitch(float x, float y, bool on)
+    void drawSegments(uint32_t index, const char* const* names, int count, const Rect& box, const Accent& accent)
     {
         const auto& t = theme();
+        const int selected = std::clamp(static_cast<int>(std::lround(values_[index])), 0, count - 1);
+        const float gap = 5.0f;
+        const float w = (box.w - gap * static_cast<float>(count - 1)) / static_cast<float>(count);
+        for (int i = 0; i < count; ++i) {
+            const float x = box.x + static_cast<float>(i) * (w + gap);
+            beginPath();
+            if (i == selected) fillColor(accent.r, accent.g, accent.b, 255);
+            else fc(t.buttonFace);
+            roundedRect(x, box.y, w, box.h, 3.0f);
+            fill();
+            closePath();
+            fontSize(10.5f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            if (i == selected) fillColor(kCreamR, kCreamG, kCreamB, 255);
+            else fc(t.textPrimary);
+            text(x + w * 0.5f, box.y + box.h * 0.5f, names[i], nullptr);
+        }
+    }
+
+    void drawSwitchRow(const Rect& row, const char* label, const char* state, bool on)
+    {
+        const auto& t = theme();
+        fontSize(10.5f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        fc(t.textDim);
+        text(row.x, row.y + row.h * 0.5f, label, nullptr);
+        fontSize(10.0f);
+        textAlign(ALIGN_RIGHT | ALIGN_MIDDLE);
+        fc(t.textPrimary);
+        text(row.x + row.w - 48.0f, row.y + row.h * 0.5f, state, nullptr);
+
+        const float x = row.x + row.w - 42.0f;
+        const float y = row.y + (row.h - 18.0f) * 0.5f;
         beginPath();
-        roundedRect(x, y, 44.0f, 20.0f, 10.0f);
-        if (on)
-            fillColor(kMainAccent.r, kMainAccent.g, kMainAccent.b, 255);
-        else
-            fc(t.controlTrack);
+        roundedRect(x, y, 42.0f, 18.0f, 9.0f);
+        if (on) fillColor(kMainAccent.r, kMainAccent.g, kMainAccent.b, 255);
+        else fc(t.controlTrack);
         fill();
         closePath();
         beginPath();
-        circle(x + (on ? 33.0f : 11.0f), y + 10.0f, 7.0f);
+        circle(x + (on ? 31.0f : 10.0f), y + 9.0f, 6.0f);
         fc(t.controlKnob);
         fill();
         closePath();
@@ -818,60 +1019,7 @@ private:
         text(box.x + box.w - 8.0f, box.y + box.h * 0.5f, "\xe2\x96\xbe", nullptr);
     }
 
-    void drawCCColumn(float W)
-    {
-        const auto& t = theme();
-        const float trackW = W - kCCX - kPad;
-
-        for (int d = 0; d < static_cast<int>(kCCDropDefs.size()); ++d) {
-            const DropDef& def = kCCDropDefs[static_cast<std::size_t>(d)];
-            const Rect box = ccDropBox(d);
-            char current[32];
-            dropItemText(def.kind, dropCurrentItem(def.kind, values_[def.index]),
-                         current, sizeof(current));
-            const bool isOff = def.kind == DropKind::CcNumber
-                && static_cast<int>(std::lround(values_[def.index])) == 0;
-            fontSize(11.0f);
-            textAlign(ALIGN_LEFT | ALIGN_TOP);
-            fc(t.textDim);
-            text(kCCX, box.y - 17.0f, def.label, nullptr);
-            fontSize(10.0f);
-            textAlign(ALIGN_RIGHT | ALIGN_TOP);
-            fc(isOff ? t.textDisabled : t.textPrimary);
-            text(kCCX + trackW, box.y - 17.0f, current, nullptr);
-            drawDropBox(box, current);
-        }
-
-        const float hintY = kSlidersY + kCCDropDefs.size() * kDropH + 8.0f;
-        fontSize(9.5f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fc(t.textDisabled);
-        text(kCCX, hintY, "Route Drift MIDI out \xe2\x86\x92 Spliff MIDI in.", nullptr);
-        text(kCCX, hintY + 14.0f, "off disables the override for that control.", nullptr);
-        text(kCCX, hintY + 38.0f, "CC 1-3 shape Cut/Boost; Mix applies in all modes.", nullptr);
-        text(kCCX, hintY + 52.0f, "Designer uses its own Attack/Sustain rows.", nullptr);
-    }
-
-    void drawFooterNote()
-    {
-        const auto& t = theme();
-        fontSize(9.5f);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        fc(t.textDisabled);
-        const float noteY = mainRowY(3 + visibleSliderCount()) + 10.0f;
-        text(kMainX, noteY,
-             designerMode()
-                 ? "Attack + lifts onsets \xc2\xb7 Sustain + lifts body \xc2\xb7 two envelopes, no threshold."
-                 : "Cut last in the chain \xc2\xb7 Boost early, before compression.", nullptr);
-        if (designerMode())
-            text(kMainX, noteY + 16.0f,
-                 "Gain follows the fast/slow ratio, so input level does not matter.", nullptr);
-    }
-
-    [[nodiscard]] const Accent& popupAccent() const noexcept
-    {
-        return kCcAccent;  // all spliff dropdowns live in the CC column
-    }
+    [[nodiscard]] const Accent& popupAccent() const noexcept { return kCcAccent; }
 
     void drawPopup(float W, float H)
     {
@@ -920,10 +1068,8 @@ private:
                     beginPath();
                     roundedRect(cx, cy, cw, kItemH, 3.0f);
                     const Accent& accent = popupAccent();
-                    if (selected)
-                        fillColor(accent.r, accent.g, accent.b, 255);
-                    else
-                        fillColor(accent.r, accent.g, accent.b, 90);
+                    if (selected) fillColor(accent.r, accent.g, accent.b, 255);
+                    else fillColor(accent.r, accent.g, accent.b, 90);
                     fill();
                     closePath();
                 }
@@ -931,10 +1077,8 @@ private:
                 dropItemText(kind, item, itemText, sizeof(itemText));
                 fontSize(11.0f);
                 textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
-                if (selected)
-                    fillColor(kCreamR, kCreamG, kCreamB, 255);
-                else
-                    fc(t.textPrimary);
+                if (selected) fillColor(kCreamR, kCreamG, kCreamB, 255);
+                else fc(t.textPrimary);
                 text(cx + 8.0f, cy + kItemH * 0.5f, itemText, nullptr);
             }
         }
@@ -949,8 +1093,7 @@ private:
             fill();
             closePath();
             const float thumbH = std::max(16.0f, trackH * rows / count);
-            const float thumbY = trackY + (trackH - thumbH) * dropScroll_
-                / std::max(1, count - rows);
+            const float thumbY = trackY + (trackH - thumbH) * dropScroll_ / std::max(1, count - rows);
             beginPath();
             roundedRect(trackX, thumbY, 5.0f, thumbH, 2.0f);
             const Accent& accent = popupAccent();

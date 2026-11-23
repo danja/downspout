@@ -30,7 +30,7 @@ struct Parameters {
     float mode        = 0.0f;    // 0 = Cut transients, 1 = Boost, 2 = level-independent designer
     float depth       = 0.5f;    // 0-1 amount of cut/boost
     float sensitivity = 0.5f;    // 0-1 detection threshold (higher = more caught)
-    float sharpness   = 0.3f;    // 0-1 per-band independence (low = natural)
+    float sharpness   = 0.7f;    // 0-1 per-band independence (low = natural)
     float decay       = 0.25f;   // 0-1 recovery time (0 = onset only)
     float decayTilt   = 0.0f;    // -1..1 LF vs HF decay balance (0 = equal)
     float splitLow    = 250.0f;  // Hz, low/mid crossover
@@ -49,8 +49,10 @@ struct Parameters {
 };
 
 struct ChannelState {
-    float lowMem = 0.0f;   // low crossover one-pole memory
-    float highMem = 0.0f;  // high crossover one-pole memory
+    float lowMem = 0.0f;   // low crossover pole 1
+    float lowMem2 = 0.0f;  // low crossover pole 2
+    float highMem = 0.0f;  // high crossover pole 1
+    float highMem2 = 0.0f; // high crossover pole 2
     std::array<float, 3> gain { 1.0f, 1.0f, 1.0f };  // smoothed per-band gain
 };
 
@@ -65,7 +67,9 @@ struct EngineState {
     // Shared mono detector (fixed 100% link): its own crossover memories and
     // per-band fast/slow envelopes, independent of the audio-path splits.
     float detLowMem = 0.0f;
+    float detLowMem2 = 0.0f;
     float detHighMem = 0.0f;
+    float detHighMem2 = 0.0f;
     std::array<float, 3> detFast {};
     std::array<float, 3> detSlow {};
     DesignerState designer {};
@@ -83,7 +87,8 @@ void processBlock(EngineState&        state,
                   float               effectiveDepth,
                   float               effectiveSensitivity,
                   float               effectiveDecay,
-                  float               effectiveMix) noexcept;
+                  float               effectiveMix,
+                  float* const*       wetMinusDry = nullptr) noexcept;
 
 [[nodiscard]] std::string               serializeParameters(const Parameters& p);
 [[nodiscard]] std::optional<Parameters> deserializeParameters(const std::string& text);

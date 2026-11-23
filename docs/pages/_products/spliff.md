@@ -8,7 +8,7 @@ group: dynamics
 role: Adaptive transient processor
 screenshot: /assets/plugins/spliff.png
 capabilities: [audio input and output, MIDI CC input]
-summary: Transient processing with 3-band Spiff-style Cut/Boost plus a level-independent, threshold-free Attack/Sustain Designer, with Drift CC control.
+summary: Transient processing with 3-band Spiff-style Cut/Boost (−30/+18 dB), a threshold-free Attack/Sustain Designer, a switchable input/output/delta spectrum analyser and Drift CC control.
 ---
 
 ## Opinion
@@ -27,7 +27,10 @@ In **Cut/Boost**, Spliff detects transients per frequency band and applies
 dynamic gain only where transient energy exists. Depth sets the amount;
 Sensitivity the detection threshold; Sharpness the per-band independence; Decay
 the recovery time with an LF/HF tilt; Split Low/High steer the detector
-(sidechain weighting, not EQ).
+(sidechain weighting, not EQ). The two crossovers are two-pole and each band
+has a fixed detector weight (low 0.35, mid 1.0, high 0.45), so moving a split
+really does change the processed sound. Full Cut reaches −30 dB and full Boost
++18 dB on a transient; both bite in about 0.1 ms.
 
 In **Designer**, a shared fast/slow envelope pair replaces the three-band
 detector. Their dB ratio drives Attack (±15 dB, onsets where fast > slow) or
@@ -45,7 +48,7 @@ full link), so gain changes never shift the stereo image.
 | Mode         | Cut, Boost, Designer | Cut     | Designer swaps the rows for Attack/Sustain                |
 | Depth        | 0–100 %        | 50 %          | Amount of cut/boost; CC 1; Cut/Boost only                  |
 | Sensitivity  | 0–100 %        | 50 %          | Higher catches more transients; CC 2; Cut/Boost only       |
-| Sharpness    | 0–100 %        | 30 %          | Per-band independence; low = natural; Cut/Boost only       |
+| Sharpness    | 0–100 %        | 70 %          | Per-band independence; low = natural; Cut/Boost only       |
 | Decay        | 0–100 %        | 25 %          | Recovery; 0 = onset only; CC 3; Cut/Boost only             |
 | Decay LF/HF  | LF … HF        | equal         | Which end of the spectrum decays longer                    |
 | Split Low    | 20–2000 Hz     | 250 Hz        | Detector low/mid crossover                                 |
@@ -65,9 +68,17 @@ four Drift lanes map directly: CC 1 → Depth, CC 2 → Sensitivity, CC 3 →
 Decay, CC 4 → Mix. CC 0 disables the override for that parameter. Designer
 uses panel Attack/Sustain; only CC 4 Mix reaches that mode.
 
+### Analyser
+
+The **PROCESS** tab shows a 64-band log-frequency analyser above the shortened
+main controls. Its switch selects **Input**, **Output** or **Delta** (the signal
+the processor removed or added, before the Delta monitoring mix). The selection
+is stored as the `analyser_source` state key, not host automation; the band
+levels are exposed as 64 read-only output parameters for the panel.
+
 ### Status
 
 Core DSP (including Designer), deterministic tests, the VST3 target and the
-panel are complete. The fresh Cut capture was copied into the catalogue and
-accepted. Host validation in REAPER is pending. M/S operation, parametric
+redesigned panel are complete. The refreshed 720×680 catalog screenshot has
+been accepted. Host validation in REAPER is pending. M/S operation, parametric
 sensitivity bands, and a live reduction display are deferred.

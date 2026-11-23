@@ -92,6 +92,6 @@ an explicit button press, and host BBT match/restart/rewind/tempo/loop edge case
 registered through `downspout_add_core_test`; the `melevolve-vst3` target builds the DSP and NanoVG UI.
 
 Headless REAPER load/save/reopen passed. The captured two-tab panel was accepted. The carried-vote
-`+` was verified by pixel inspection of a standalone capture after voting and evolving; a fresh
-catalog screenshot still needs visual acceptance here. Live listening and timing-source observation
-in REAPER remain pending in this environment.
+`+` was verified by pixel inspection of a standalone capture after voting and evolving, and the
+refreshed catalog screenshot has been accepted. Live listening and timing-source observation in
+REAPER remain pending in this environment.

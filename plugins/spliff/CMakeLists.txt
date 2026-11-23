@@ -1,4 +1,4 @@
-add_library(downspout_spliff_core STATIC src/spliff_core.cpp)
+add_library(downspout_spliff_core STATIC src/spliff_core.cpp src/spliff_spectrum.cpp)
 target_link_libraries(downspout_spliff_core PUBLIC downspout-project-options)
 target_include_directories(downspout_spliff_core PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
@@ -31,5 +31,8 @@ endif()
 if(BUILD_TESTING)
     downspout_add_core_test(downspout_spliff_core_tests
         SOURCES tests/spliff_core_tests.cpp
+        LIBS downspout_spliff_core)
+    downspout_add_core_test(downspout_spliff_spectrum_tests
+        SOURCES tests/spliff_spectrum_tests.cpp
         LIBS downspout_spliff_core)
 endif()

@@ -107,6 +107,6 @@ independence, looping, outgoing clock, MIDI Start/Continue/Stop, favourite selec
 without a button press, and host BBT rewind/tempo/loop edge cases. Headless host load/save/reopen
 in REAPER 7.85 verified that distinctive settings, parameters and a regenerated 24-entry
 population from `action=new` persist (the action key is not saved). The carried-over `+` fix was
-checked from a standalone capture, but the refreshed 920x700 catalog screenshot still needs
-visual acceptance in this environment. Live listening, render validation and timing-source
-observation in REAPER remain pending here.
+checked from a standalone capture, and the refreshed 920x700 catalog screenshot has been
+accepted. Live listening, render validation and timing-source observation in REAPER remain
+pending here.

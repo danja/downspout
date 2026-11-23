@@ -1125,12 +1125,17 @@ Automatic wah: resonant low-pass (Q 0.5-12) whose cutoff follows the input envel
 Blend takes whichever opens further. Sensitivity, Depth, Resonance, Mix read Drift CC 1-4.
 
 ### spliff
-Adaptive transient processor. **Cut** tames clicks and harsh sticks (late in a chain),
-**Boost** lifts drum and piano attacks (before compression), using a 3-band detector
-and Drift CC 1-4 for Depth/Sensitivity/Decay/Mix. **Designer** replaces that with a
-threshold-free, level-independent fast/slow envelope ratio: Attack ±15 dB for onsets,
-Sustain ±24 dB for body/tails, both inert at 0 dB. Mix, Trim, Delta and Bypass apply
-in all modes; the mono detector keeps the stereo image intact.
+Adaptive transient processor. **Cut** tames clicks and harsh sticks (late in a chain,
+down to −30 dB) and **Boost** lifts drum and piano attacks (before compression, up to
++18 dB), using a two-pole 3-band detector with fixed 0.35/1.0/0.45 band weights so
+**Split Low/High** audibly steer which frequencies are treated. Sharpness defaults to
+70 %, and Drift CC 1-4 override Depth/Sensitivity/Decay/Mix. **Designer** replaces the
+band detector with a threshold-free, level-independent fast/slow envelope ratio:
+Attack ±15 dB for onsets, Sustain ±24 dB for body/tails, both inert at 0 dB. Mix,
+Trim, Delta and Bypass apply in all modes; the mono detector keeps the stereo image
+intact. The **PROCESS** tab carries a 64-band Input/Output/Delta analyser above short
+control rows; **DRIFT CC** holds the routing dropdowns. The analyser source is the
+`analyser_source` state key (default Output), with 64 read-only spectrum outputs.
 
 ### treatment
 Physically modelled acoustic treatment panel: facing sheet (mass), porous fill (flow

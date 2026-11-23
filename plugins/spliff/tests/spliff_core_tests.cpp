@@ -119,6 +119,40 @@ static float meanAbs(const Block& b, std::uint32_t from, std::uint32_t to)
     return n ? static_cast<float>(sum / n) : 0.0f;
 }
 
+static void fillBroadband(Block& b)
+{
+    for (std::uint32_t i = 0; i < kFrames; ++i) {
+        float v = 0.0f;
+        if (i < 128) {
+            v = 0.5f * std::sin(2.0f * 3.14159f * 120.0f * i / kSr)
+              + 0.5f * std::sin(2.0f * 3.14159f * 900.0f * i / kSr)
+              + 0.5f * std::sin(2.0f * 3.14159f * 6000.0f * i / kSr);
+        }
+        b.inL[i] = b.inR[i] = v;
+    }
+}
+
+static void runWithDelta(EngineState& s, const Parameters& p, Block& b,
+                         std::array<float, kFrames>& deltaL,
+                         std::array<float, kFrames>& deltaR)
+{
+    const float* ins[] = { b.inL.data(), b.inR.data() };
+    float* outs[] = { b.outL.data(), b.outR.data() };
+    float* deltas[] = { deltaL.data(), deltaR.data() };
+    processBlock(s, p, kFrames, kSr, ins, outs,
+                 p.depth, p.sensitivity, p.decay, p.mix, deltas);
+}
+
+static float rmsDiff(const Block& a, const Block& b)
+{
+    double sum = 0.0;
+    for (std::uint32_t i = 0; i < kFrames; ++i) {
+        const float d = a.outL[i] - b.outL[i];
+        sum += d * d;
+    }
+    return static_cast<float>(std::sqrt(sum / kFrames));
+}
+
 static void testSilence()
 {
     Block b;
@@ -423,6 +457,86 @@ static void testDesignerBlockSplitDeterminism()
     check("designer split blocks match single block", same);
 }
 
+static void testEffectsAreStrong()
+{
+    Block dry, cut, boost;
+    fillBurst(dry);
+    fillBurst(cut);
+    fillBurst(boost);
+    { EngineState s; Parameters p; p.depth = 0.0f; run(s, p, dry); }
+    { EngineState s; Parameters p; p.depth = 1.0f; p.sensitivity = 1.0f; run(s, p, cut); }
+    { EngineState s; Parameters p; p.mode = 1.0f; p.depth = 1.0f; p.sensitivity = 1.0f; run(s, p, boost); }
+
+    const float dryPeak = peakAfter(dry, 8, 64);
+    check("full Cut reaches at least -8 dB on a transient",
+          peakAfter(cut, 8, 64) < dryPeak * 0.4f);
+    check("full Boost reaches at least +12 dB on a transient",
+          peakAfter(boost, 8, 64) > dryPeak * 4.0f);
+    check("Cut and Boost are audibly far apart",
+          peakAfter(boost, 8, 64) > peakAfter(cut, 8, 64) * 8.0f);
+}
+
+static void testSplitControlsChangeAudio()
+{
+    Block lowSplit, highSplit;
+    fillBroadband(lowSplit);
+    fillBroadband(highSplit);
+
+    Parameters p;
+    p.depth = 1.0f;
+    p.sensitivity = 1.0f;
+    p.sharpness = 1.0f;
+    p.decay = 0.5f;
+    p.splitLow = 20.0f;
+    p.splitHigh = 500.0f;
+    { EngineState s; run(s, p, lowSplit); }
+    p.splitLow = 1500.0f;
+    p.splitHigh = 1650.0f;
+    { EngineState s; run(s, p, highSplit); }
+
+    check("moving both splits audibly changes the processed audio",
+          rmsDiff(lowSplit, highSplit) > 0.02f);
+
+    // A single 500 Hz tone moves from the high band to the low band as Split Low crosses it.
+    Block lowTone, highTone;
+    for (std::uint32_t i = 0; i < kFrames; ++i) {
+        const float v = i < 128 ? std::sin(2.0f * 3.14159f * 500.0f * i / kSr) : 0.0f;
+        lowTone.inL[i] = lowTone.inR[i] = highTone.inL[i] = highTone.inR[i] = v;
+    }
+    p.splitLow = 20.0f;
+    p.splitHigh = 500.0f;
+    { EngineState s; run(s, p, lowTone); }
+    p.splitLow = 1500.0f;
+    p.splitHigh = 1650.0f;
+    { EngineState s; run(s, p, highTone); }
+    check("moving Split Low changes a 500 Hz transient's level",
+          std::fabs(peakAfter(lowTone, 0, 128) - peakAfter(highTone, 0, 128)) > 0.02f);
+}
+
+static void testDeltaBufferIsWetMinusDry()
+{
+    Block dry, wet;
+    std::array<float, kFrames> deltaL {}, deltaR {};
+    fillBurst(dry);
+    fillBurst(wet);
+    { EngineState s; Parameters p; p.depth = 0.0f; run(s, p, dry); }
+    {
+        EngineState s;
+        Parameters p;
+        p.depth = 1.0f;
+        p.sensitivity = 1.0f;
+        runWithDelta(s, p, wet, deltaL, deltaR);
+    }
+
+    float worst = 0.0f;
+    for (std::uint32_t i = 0; i < kFrames; ++i)
+        worst = std::max(worst, std::fabs(deltaL[static_cast<std::size_t>(i)] -
+                                         (wet.outL[i] - dry.inL[i])));
+    check("the analyser Delta buffer is wet minus dry", worst < 1e-5f);
+    check("the Delta buffer carries real energy",
+          peakAfter(wet, 0, 128) > 1e-3f);
+}
+
 static void testClamp()
 {
     Parameters extreme;
@@ -521,6 +635,9 @@ int main()
     testDesignerLevelIndependence();
     testDesignerNoThreshold();
     testDesignerBlockSplitDeterminism();
+    testEffectsAreStrong();
+    testSplitControlsChangeAudio();
+    testDeltaBufferIsWetMinusDry();
     testClamp();
     testSerialization();
 

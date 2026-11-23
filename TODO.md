@@ -5,6 +5,7 @@ Open work only. Completed builds are recorded in plugin docs; resolved lessons g
 ## Validation queue
 
 - [ ] Host passes for recent work: Fontana (SF2/SF3, WAV/Ogg slices, browser, save/reopen), Melevolve (live MIDI render/listening and timing-source observation; core host-BBT play edge now covered), Gate, Tilt, Polyscribe, Splay CC, Bassops input delay and new aux sidechain bus, Plank, Treatment, Prism, Mouth and NAM. Melevolve save/reopen and Fresco's silent-input default REAPER render already passed.
+- [ ] Spliff in REAPER: audition Split Low/High and full Cut/Boost, then change the analyser source, save and reopen to confirm `analyser_source` and the 64 spectrum outputs.
 - [ ] Save/reopen sweep for non-parameter state: chipper, damiano, ghost, helterskelter, skream, spliff, lifeform, luma, paunchlad. Check patch retention across activation and sample-rate changes for gremlin, gremlin-driver and flues-synth-driver.
 - [ ] Sam: decide whether the unlicensed vendored engine may ship; validate both modes with a real transport and save/reopen; listen to upper-keyboard tuning, aliasing and Keys-mode speaking.
 - [ ] Ear checks where only tests/builds exist: melgen and counterpointer Inertia, Silken, Skream Morph LP-HP, Damiano Linked/Split, voxmod, Sinevox, Beards, Pratt, Mouth, Bassops delay, Syrinx presets, NAM captures/IRs, Treatment bank/sweep.
@@ -15,9 +16,11 @@ Open work only. Completed builds are recorded in plugin docs; resolved lessons g
 - [x] Melevolve Settings: fix Line: Melody/Bass reversed UI and selection mapping so clicking a choice selects that line.
 - [x] Melevolve transport: emit MIDI when REAPER plays in BBT/host-clock mode; cover stopped transport, loop boundaries, rewind and tempo/bar changes.
 - [x] Melevolve UI: keep the `+` vote visible on carried-over rows using Melogen's outlined style.
-- [ ] Melevolve: visually accept a fresh 920x700 screenshot after the carried-vote fix (capture in the scratchpad was pixel-checked; image inspection is unavailable here, so catalog copy is pending).
+- [x] Melevolve: accepted the fresh 920x700 screenshot after the carried-vote fix and copied it into the catalog.
 - [x] Conductor: raise the block limit from 8 to 16 with a second row in the panel; append block 9-16 type parameters so saved host indices stay valid.
-- [ ] Conductor: visually accept a fresh 960x820 screenshot showing all 16 blocks (capture in the scratchpad was pixel-checked; catalog copy is pending).
+- [x] Conductor: accepted the fresh 960x820 screenshot showing all 16 blocks and copied it into the catalog.
+- [x] Spliff redesign: separate Drift CC tab, half-length lower controls, upper 64-band Input/Output/Delta analyser, stronger Cut/Boost, audible Split Low/High, tests, docs and profile.
+- [x] Spliff: accepted the fresh 720x680 screenshot after the final source-switch placement and copied it into the catalog.
 - [x] Fontana: persist the file browser directory as DPF state so it survives editor/focus loss; add a global Pan offset so hard-left SoundFont presets can be rebalanced (core test covers the audible effect).
 - [ ] Refresh `docs/pages/assets/plugins/fontana.png` from the fresh 1280x800 capture and visually review the PLAYER mixer row (Pan label/value fit) before marking the screenshot accepted.
 - [ ] Review `https://gardenfx.uk/v4/` for extensions and new-plugin ideas.
