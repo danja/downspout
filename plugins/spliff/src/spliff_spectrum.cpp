@@ -131,10 +131,13 @@ void resetSpectrum(SpectrumState& state) noexcept
 void analyseBlock(SpectrumState& state, const float sampleRate, const std::uint32_t frames,
                   const float* left, const float* right) noexcept
 {
-    if (!(sampleRate > 0.0f) || !left || !right) return;
+    if (!(sampleRate > 0.0f) || !left) return;
+    // A mono / partially connected bus is common in hosts; fold it into the analyser rather than
+    // silently producing an all-floor spectrum.
+    const float* const r = right != nullptr ? right : left;
     const int hop = std::max(1, static_cast<int>(sampleRate / kUpdatesPerSecond));
     for (std::uint32_t i = 0; i < frames; ++i) {
-        state.ring[static_cast<std::size_t>(state.writePos)] = 0.5f * (left[i] + right[i]);
+        state.ring[static_cast<std::size_t>(state.writePos)] = 0.5f * (left[i] + r[i]);
         state.writePos = (state.writePos + 1) % kFftSize;
         if (++state.sinceUpdate >= hop) {
             state.sinceUpdate = 0;

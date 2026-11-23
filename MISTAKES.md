@@ -6,6 +6,11 @@ Format: what happened, root cause, prevention.
 
 ## Open
 
+## spliff: inverted ParameterRanges made every host control inert (2026-11-23)
+- **What happened:** in REAPER the 19 controls reported normalized 0 and ignored writes, the analyser showed no bars, and the audio seemed to bypass the processor. A fresh VST3 build and cache rescan changed nothing.
+- **Root cause:** `DPF::ParameterRanges` is `{ def, min, max }`, but `initParameter()` initialised it with `{ min, max, def }`. The inverted range made VST3 report garbage/defaults, clamp effective Depth/Mix to values that bypassed the DSP, and give the spectrum outputs a meaningless range. `setParameterValue()` was also an empty no-op, and `parameter.hints` omitted `kParameterIsAutomatable`, so even a correct write could not reach `params_`.
+- **Prevention:** assign `ranges.def/.min/.max` explicitly (as Octet does) instead of using aggregate initialisers; give every control `kParameterIsAutomatable` while preserving integer flags with `|=`; implement `setParameterValue()` and sync it both ways with the UI. Verify with a REAPER ReaScript probe that defaults are correct and writes stick — core tests never touch the DPF wrapper. A repo-wide grep found the same `{ min, max, def }` pattern in several other plugins; audit them before trusting their host automation.
+
 ## spliff: Split Low/High were inaudible (2026-11-23)
 - **What happened:** moving either split produced a RMS difference of about 1e-5 in a broadband probe, and the peak was unchanged.
 - **Root cause:** all three detector bands saturated to the same gain, so which band a frequency landed in made no practical difference. The single-pole crossovers also moved energy only slightly between them.

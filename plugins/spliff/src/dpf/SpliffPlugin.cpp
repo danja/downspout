@@ -119,27 +119,31 @@ protected:
 
     void initParameter(uint32_t index, Parameter& parameter) override
     {
-        parameter.hints = 0;
+        // Controls must be automatable: without this flag VST3 hosts (notably REAPER) treat them as
+        // read-only, ignore writes and report zero instead of the declared default.
+        parameter.hints = kParameterIsAutomatable;
+        // ParameterRanges is { def, min, max } — set the fields explicitly so a future edit cannot
+        // silently invert a range (an inverted range makes VST3 hosts report every control as 0).
         switch (index) {
-        case kParamMode:        parameter.name = "Mode";        parameter.symbol = "mode";        parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 2.0f, 0.0f }; break;
-        case kParamDepth:       parameter.name = "Depth";       parameter.symbol = "depth";       parameter.ranges = { 0.0f, 1.0f, 0.5f }; break;
-        case kParamSensitivity: parameter.name = "Sensitivity"; parameter.symbol = "sensitivity"; parameter.ranges = { 0.0f, 1.0f, 0.5f }; break;
-        case kParamSharpness:   parameter.name = "Sharpness";   parameter.symbol = "sharpness";   parameter.ranges = { 0.0f, 1.0f, 0.7f }; break;
-        case kParamDecay:       parameter.name = "Decay";       parameter.symbol = "decay";       parameter.ranges = { 0.0f, 1.0f, 0.25f }; break;
-        case kParamDecayTilt:   parameter.name = "Decay Tilt";  parameter.symbol = "decay_tilt";  parameter.ranges = { -1.0f, 1.0f, 0.0f }; break;
-        case kParamSplitLow:    parameter.name = "Split Low";   parameter.symbol = "split_low";   parameter.ranges = { 20.0f, 2000.0f, 250.0f }; break;
-        case kParamSplitHigh:   parameter.name = "Split High";  parameter.symbol = "split_high";  parameter.ranges = { 500.0f, 12000.0f, 4000.0f }; break;
-        case kParamMix:         parameter.name = "Mix";         parameter.symbol = "mix";         parameter.ranges = { 0.0f, 100.0f, 100.0f }; break;
-        case kParamTrim:        parameter.name = "Trim";        parameter.symbol = "trim";        parameter.ranges = { -12.0f, 12.0f, 0.0f }; break;
-        case kParamBypass:      parameter.name = "Bypass";      parameter.symbol = "bypass";      parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 1.0f, 0.0f }; break;
-        case kParamDelta:       parameter.name = "Delta";       parameter.symbol = "delta";       parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 1.0f, 0.0f }; break;
-        case kParamCCDepth:       parameter.name = "CC Depth";  parameter.symbol = "cc_depth";    parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 127.0f, downspout::spliff::kDefaultCCDepth }; break;
-        case kParamCCSensitivity: parameter.name = "CC Sens";   parameter.symbol = "cc_sensitivity"; parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 127.0f, downspout::spliff::kDefaultCCSensitivity }; break;
-        case kParamCCDecay:       parameter.name = "CC Decay";  parameter.symbol = "cc_decay";    parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 127.0f, downspout::spliff::kDefaultCCDecay }; break;
-        case kParamCCMix:         parameter.name = "CC Mix";    parameter.symbol = "cc_mix";      parameter.hints = kParameterIsInteger; parameter.ranges = { 0.0f, 127.0f, downspout::spliff::kDefaultCCMix }; break;
-        case kParamCCChannel:     parameter.name = "CC Channel"; parameter.symbol = "cc_channel"; parameter.hints = kParameterIsInteger; parameter.ranges = { 1.0f, 16.0f, 1.0f }; break;
-        case kParamAttackDb:      parameter.name = "Attack";     parameter.symbol = "attack_db";  parameter.ranges = { -15.0f, 15.0f, 0.0f }; break;
-        case kParamSustainDb:     parameter.name = "Sustain";    parameter.symbol = "sustain_db"; parameter.ranges = { -24.0f, 24.0f, 0.0f }; break;
+        case kParamMode:        parameter.name = "Mode";        parameter.symbol = "mode";        parameter.hints |= kParameterIsInteger; parameter.ranges = { 0.0f, 0.0f, 2.0f }; break;
+        case kParamDepth:       parameter.name = "Depth";       parameter.symbol = "depth";       parameter.ranges = { 0.5f, 0.0f, 1.0f }; break;
+        case kParamSensitivity: parameter.name = "Sensitivity"; parameter.symbol = "sensitivity"; parameter.ranges = { 0.5f, 0.0f, 1.0f }; break;
+        case kParamSharpness:   parameter.name = "Sharpness";   parameter.symbol = "sharpness";   parameter.ranges = { 0.7f, 0.0f, 1.0f }; break;
+        case kParamDecay:       parameter.name = "Decay";       parameter.symbol = "decay";       parameter.ranges = { 0.25f, 0.0f, 1.0f }; break;
+        case kParamDecayTilt:   parameter.name = "Decay Tilt";  parameter.symbol = "decay_tilt";  parameter.ranges = { 0.0f, -1.0f, 1.0f }; break;
+        case kParamSplitLow:    parameter.name = "Split Low";   parameter.symbol = "split_low";   parameter.ranges = { 250.0f, 20.0f, 2000.0f }; break;
+        case kParamSplitHigh:   parameter.name = "Split High";  parameter.symbol = "split_high";  parameter.ranges = { 4000.0f, 500.0f, 12000.0f }; break;
+        case kParamMix:         parameter.name = "Mix";         parameter.symbol = "mix";         parameter.ranges = { 100.0f, 0.0f, 100.0f }; break;
+        case kParamTrim:        parameter.name = "Trim";        parameter.symbol = "trim";        parameter.ranges = { 0.0f, -12.0f, 12.0f }; break;
+        case kParamBypass:      parameter.name = "Bypass";      parameter.symbol = "bypass";      parameter.hints |= kParameterIsInteger; parameter.ranges = { 0.0f, 0.0f, 1.0f }; break;
+        case kParamDelta:       parameter.name = "Delta";       parameter.symbol = "delta";       parameter.hints |= kParameterIsInteger; parameter.ranges = { 0.0f, 0.0f, 1.0f }; break;
+        case kParamCCDepth:       parameter.name = "CC Depth";  parameter.symbol = "cc_depth";    parameter.hints |= kParameterIsInteger; parameter.ranges = { downspout::spliff::kDefaultCCDepth, 0.0f, 127.0f }; break;
+        case kParamCCSensitivity: parameter.name = "CC Sens";   parameter.symbol = "cc_sensitivity"; parameter.hints |= kParameterIsInteger; parameter.ranges = { downspout::spliff::kDefaultCCSensitivity, 0.0f, 127.0f }; break;
+        case kParamCCDecay:       parameter.name = "CC Decay";  parameter.symbol = "cc_decay";    parameter.hints |= kParameterIsInteger; parameter.ranges = { downspout::spliff::kDefaultCCDecay, 0.0f, 127.0f }; break;
+        case kParamCCMix:         parameter.name = "CC Mix";    parameter.symbol = "cc_mix";      parameter.hints |= kParameterIsInteger; parameter.ranges = { downspout::spliff::kDefaultCCMix, 0.0f, 127.0f }; break;
+        case kParamCCChannel:     parameter.name = "CC Channel"; parameter.symbol = "cc_channel"; parameter.hints |= kParameterIsInteger; parameter.ranges = { 1.0f, 1.0f, 16.0f }; break;
+        case kParamAttackDb:      parameter.name = "Attack";     parameter.symbol = "attack_db";  parameter.ranges = { 0.0f, -15.0f, 15.0f }; break;
+        case kParamSustainDb:     parameter.name = "Sustain";    parameter.symbol = "sustain_db"; parameter.ranges = { 0.0f, -24.0f, 24.0f }; break;
         default:
             if (index >= kSpectrumFirst && index < kTotalParameterCount) {
                 char symbol[24], name[32];
@@ -150,7 +154,7 @@ protected:
                 parameter.symbol = symbol;
                 parameter.unit = "dB";
                 parameter.hints = kParameterIsOutput;
-                parameter.ranges = { core::kSpectrumFloorDb, 6.0f, core::kSpectrumFloorDb };
+                parameter.ranges = { core::kSpectrumFloorDb, core::kSpectrumFloorDb, 6.0f };
             }
             break;
         }
@@ -217,7 +221,35 @@ protected:
         }
     }
 
-    void setParameterValue(uint32_t, float) override {}
+    // Host automation / UI edits must actually reach the DSP. Spectrum indices are read-only outputs.
+    void setParameterValue(uint32_t index, float value) override
+    {
+        if (index >= kParameterCount || !std::isfinite(value))
+            return;
+        switch (index) {
+        case kParamMode:          params_.mode          = value; break;
+        case kParamDepth:         params_.depth         = value; break;
+        case kParamSensitivity:   params_.sensitivity   = value; break;
+        case kParamSharpness:     params_.sharpness     = value; break;
+        case kParamDecay:         params_.decay         = value; break;
+        case kParamDecayTilt:     params_.decayTilt     = value; break;
+        case kParamSplitLow:      params_.splitLow      = value; break;
+        case kParamSplitHigh:     params_.splitHigh     = value; break;
+        case kParamMix:           params_.mix           = value; break;
+        case kParamTrim:          params_.trim          = value; break;
+        case kParamBypass:        params_.bypass        = value; break;
+        case kParamDelta:         params_.delta         = value; break;
+        case kParamCCDepth:       params_.ccDepth       = value; break;
+        case kParamCCSensitivity: params_.ccSensitivity = value; break;
+        case kParamCCDecay:       params_.ccDecay       = value; break;
+        case kParamCCMix:         params_.ccMix         = value; break;
+        case kParamCCChannel:     params_.ccChannel     = value; break;
+        case kParamAttackDb:      params_.attackDb      = value; break;
+        case kParamSustainDb:     params_.sustainDb     = value; break;
+        default: return;
+        }
+        params_ = downspout::spliff::clampParameters(params_);
+    }
 
     // The inverse of setState(). Without it (and DISTRHO_PLUGIN_WANT_FULL_STATE)
     // the host never asks the plugin for its values and saves the defaults from
@@ -336,9 +368,14 @@ protected:
         if (ccDecayNum == 0) ccDecayOverride_ = -1.0f;
         if (ccMixNum   == 0) ccMixOverride_   = -1.0f;
 
+        // Some hosts hand us a mono or partially connected bus. analyseBlock() folds a missing right
+        // channel into the left, but the left pointer itself must be valid.
+        const float* const inLeft  = inputs[0]  != nullptr ? inputs[0]  : outputs[0];
+        const float* const outLeft = outputs[0] != nullptr ? outputs[0] : inputs[0];
+
         if (analyserSource_ == core::SpectrumSource::Input)
             core::analyseBlock(analyser_, static_cast<float>(getSampleRate()), frames,
-                               inputs[0], inputs[1]);
+                               inLeft, inputs[1]);
 
         float* delta[2] = { nullptr, nullptr };
         if (analyserSource_ == core::SpectrumSource::Delta) {
@@ -360,7 +397,7 @@ protected:
 
         if (analyserSource_ == core::SpectrumSource::Output)
             core::analyseBlock(analyser_, static_cast<float>(getSampleRate()), frames,
-                               outputs[0], outputs[1]);
+                               outLeft, outputs[1]);
         else if (analyserSource_ == core::SpectrumSource::Delta)
             core::analyseBlock(analyser_, static_cast<float>(getSampleRate()), frames,
                                deltaL_.data(), deltaR_.data());

@@ -296,6 +296,10 @@ protected:
         if (index >= kSpectrumFirst && index < kSpectrumLast) {
             spectrum_[index - kSpectrumFirst] = value;
             repaint();
+        } else if (index < kParameterCount) {
+            // Reflect host automation (and our own setParameterValue round-trip) in the panel.
+            values_[index] = value;
+            repaint();
         }
     }
 
@@ -567,6 +571,10 @@ private:
     {
         char buf[32];
         std::snprintf(buf, sizeof(buf), "%.6g", v);
+        // State keeps the patch stable across hosts that ignore automation; setParameterValue makes
+        // the edit visible to the host too (automation lanes, parameter reporting, saved projects).
+        if (index < kParameterCount)
+            setParameterValue(index, v);
         setState(key, buf);
         values_[index] = v;
         repaint();

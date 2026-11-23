@@ -124,7 +124,16 @@ an automatable parameter, so switching views never writes host automation.
 The 19 original control parameter indices are unchanged; 64 read-only output
 parameters (`spectrum_01`…`spectrum_64`) carry the band levels in dB. The
 analyser is a Spliff-local copy of Octet's portable implementation so no shared
-framework code changed.
+framework code changed. The spectrum outputs use a `-90..6 dB` range
+(`def,min,max` order in DPF); a missing right input channel is folded into the
+left instead of leaving the display empty.
+
+Host wiring: every control is `kParameterIsAutomatable`, integer controls add
+`kParameterIsInteger` with `|=`, and `setParameterValue()` writes the 19 controls
+into `params_` (spectrum indices ignored). The UI mirrors host parameter changes
+and pushes its own edits through `setParameterValue()` as well as text state. A
+REAPER ReaScript probe confirms the declared defaults and that host writes stick;
+core tests alone cannot see this layer.
 
 ## Visual acceptance
 
