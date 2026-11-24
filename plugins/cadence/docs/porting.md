@@ -22,8 +22,15 @@ Learning and reset behavior:
 - Cadence learns continuously while transport is playing. At each cycle
   boundary, the current capture updates the base progression and the capture is
   cleared for the next cycle.
+- The DPF wrapper preserves the LV2 host-position fallbacks: a reported meter
+  of zero or less becomes 4/4, and BPM of 1 or less becomes 120. Some hosts
+  report a valid BBT with a zero meter; without the fallback, Beat and Bar
+  collapse to one segment while Half Bar still appears to work.
 - The explicit `Learn` action and timing-grid changes (`Cycle`, `Segment`) reset
-  learned material because they change the capture contract.
+  learned material because they change the capture contract. `Learn` is exposed
+  as an ordinary integer request counter (0-1048576) rather than a trigger
+  parameter, because DPF's VST3 bridge suppresses UI writes to trigger
+  parameters; each panel press increments the counter.
 - Harmony and voicing changes rebuild from the last learned capture when
   available, or revoice a restored saved progression when raw capture is not
   available. This keeps the plugin ready instead of dropping into an empty

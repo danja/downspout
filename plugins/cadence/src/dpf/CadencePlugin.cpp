@@ -2,8 +2,10 @@
 
 #include "cadence_engine.hpp"
 #include "cadence_serialization.hpp"
+#include "cadence_transport.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 START_NAMESPACE_DISTRHO
@@ -46,6 +48,11 @@ constexpr const char* kStateKeyControls = "controls";
 constexpr const char* kStateKeyProgression = "progression";
 constexpr const char* kStateKeyVariation = "variation";
 
+// Match the core's action_learn clamp. This is an ordinary integer request
+// counter, not kParameterIsTrigger: DPF's VST3 bridge suppresses UI writes to
+// trigger parameters, so a trigger cannot request a re-learn from the panel.
+constexpr int kMaxLearnCount = 1048576;
+
 ParameterEnumerationValue kScaleEnumValues[] = {
     {0.0f, "Chrom"},
     {1.0f, "Major"},
@@ -84,13 +91,18 @@ CoreTransport toCoreTransport(const TimePosition& timePos)
 
     if (timePos.bbt.valid)
     {
+        // DPF can report a valid BBT with a zero meter/tempo. Preserve the LV2
+        // source's fallbacks so all three Segment modes keep distinct grids.
+        const double beatsPerBar = downspout::cadence::cadence_valid_beats_per_bar(timePos.bbt.beatsPerBar);
+        const double bpm = downspout::cadence::cadence_valid_bpm(timePos.bbt.beatsPerMinute);
+
         transport.bar = static_cast<double>(timePos.bbt.bar - 1);
         transport.barBeat = static_cast<double>(timePos.bbt.beat - 1)
             + (timePos.bbt.ticksPerBeat > 0.0 ? (timePos.bbt.tick / timePos.bbt.ticksPerBeat) : 0.0);
-        transport.beatsPerBar = timePos.bbt.beatsPerBar;
+        transport.beatsPerBar = beatsPerBar;
         transport.beatType = timePos.bbt.beatType;
-        transport.bpm = timePos.bbt.beatsPerMinute;
-        transport.meter = downspout::meterFromTimeSignature(timePos.bbt.beatsPerBar, timePos.bbt.beatType);
+        transport.bpm = bpm;
+        transport.meter = downspout::meterFromTimeSignature(beatsPerBar, timePos.bbt.beatType);
     }
 
     return transport;
@@ -292,9 +304,9 @@ protected:
         case kParamActionLearn:
             parameter.name = "Learn";
             parameter.symbol = "learn";
-            parameter.hints = kParameterIsAutomatable|kParameterIsBoolean|kParameterIsInteger|kParameterIsTrigger;
+            parameter.hints = kParameterIsAutomatable|kParameterIsInteger;
             parameter.ranges.min = 0.0f;
-            parameter.ranges.max = 1.0f;
+            parameter.ranges.max = static_cast<float>(kMaxLearnCount);
             parameter.ranges.def = 0.0f;
             break;
         case kParamStatusReady:
@@ -400,7 +412,7 @@ protected:
         case kParamStatusReady: return readyStatus_;
         case kParamStatusInput: return midiInputStatus_;
         case kParamStatusOutput: return midiOutputStatus_;
-        case kParamActionLearn:
+        case kParamActionLearn: return static_cast<float>(controls_.action_learn);
         default:
             return 0.0f;
         }
@@ -423,7 +435,7 @@ protected:
         case kParamPassInput: controls_.pass_input = value >= 0.5f; break;
         case kParamOutputChannel: controls_.output_channel = static_cast<int>(value); break;
         case kParamConductorChannel: conductorChannel_ = static_cast<int>(value); break;
-        case kParamActionLearn: if (value > 0.5f) ++controls_.action_learn; break;
+        case kParamActionLearn: controls_.action_learn = static_cast<int>(std::lround(value)); break;
         case kParamVary: controls_.vary = value / 100.0f; break;
         case kParamComp: controls_.comp = value / 100.0f; break;
         case kParamColor: controls_.color = value; break;

@@ -2,6 +2,7 @@
 #include "cadence_engine.hpp"
 #include "cadence_harmony.hpp"
 #include "cadence_serialization.hpp"
+#include "cadence_transport.hpp"
 
 #include <array>
 #include "downspout/test_assert.h"
@@ -334,6 +335,29 @@ void testStoppedTransportPassThrough()
     assert(result.events[0].data[2] == 100);
 }
 
+void testTransportFallbackKeepsSegmentModesDistinct()
+{
+    Controls controls = defaultControls();
+    controls.cycle_bars = 2;
+
+    // DPF can report a valid BBT with zero meter/tempo. The source plugin
+    // falls back to 4/4 at 120 BPM; all three grids must stay distinct.
+    const double beatsPerBar = cadence_valid_beats_per_bar(0.0);
+    const double bpm = cadence_valid_bpm(0.0);
+    assert(beatsPerBar == 4.0);
+    assert(bpm == 120.0);
+
+    controls.granularity = GRANULARITY_BEAT;
+    assert(cadence_segment_count_for_controls(controls, beatsPerBar) == 8);
+    controls.granularity = GRANULARITY_HALF_BAR;
+    assert(cadence_segment_count_for_controls(controls, beatsPerBar) == 4);
+    controls.granularity = GRANULARITY_BAR;
+    assert(cadence_segment_count_for_controls(controls, beatsPerBar) == 2);
+
+    assert(cadence_valid_beats_per_bar(3.0) == 3.0);
+    assert(cadence_valid_bpm(90.0) == 90.0);
+}
+
 void testEngineLearnsAndEmitsOnNextCycle()
 {
     EngineState state;
@@ -395,6 +419,65 @@ void testEngineLearnsAndEmitsOnNextCycle()
         }
     }
     assert(sawNoteOn);
+}
+
+void testLearnCounterRetriggersLearning()
+{
+    EngineState state;
+    activate(state);
+
+    Controls controls = defaultControls();
+    controls.cycle_bars = 1;
+    controls.granularity = GRANULARITY_BEAT;
+    controls.pass_input = false;
+    controls.output_channel = 1;
+
+    constexpr std::uint32_t frameCount = 96000;
+    const std::array<InputMidiEvent, 8> cycle = {{
+        makeEvent(0, 0x90, 60, 100),
+        makeEvent(24000, 0x80, 60, 0),
+        makeEvent(24000, 0x90, 64, 100),
+        makeEvent(48000, 0x80, 64, 0),
+        makeEvent(48000, 0x90, 67, 100),
+        makeEvent(72000, 0x80, 67, 0),
+        makeEvent(72000, 0x90, 69, 100),
+        makeEvent(95999, 0x80, 69, 0),
+    }};
+
+    TransportSnapshot transport;
+    transport.valid = true;
+    transport.playing = true;
+    transport.bar = 0.0;
+    transport.barBeat = 0.0;
+    transport.beatsPerBar = 4.0;
+    transport.bpm = 120.0;
+
+    const BlockResult learned = processBlock(state,
+                                             controls,
+                                             transport,
+                                             frameCount,
+                                             48000.0,
+                                             cycle.data(),
+                                             static_cast<std::uint32_t>(cycle.size()));
+    assert(learned.ready);
+    assert(state.haveLearnedCapture);
+
+    // The panel sends a monotonically increasing Learn request rather than a
+    // trigger pulse (VST3 suppresses UI writes to trigger parameters).
+    ++controls.action_learn;
+    transport.bar = 1.0;
+    transport.barBeat = 0.0;
+
+    const BlockResult cleared = processBlock(state,
+                                             controls,
+                                             transport,
+                                             24000,
+                                             48000.0,
+                                             nullptr,
+                                             0);
+    assert(!cleared.ready);
+    assert(!state.ready);
+    assert(!state.haveLearnedCapture);
 }
 
 void testEngineLearnsFromSparseBassInput()
@@ -641,7 +724,9 @@ int main()
     testAiStateSummaryIncludesProgressionContext();
     testSpreadControlWidensVoicings();
     testStoppedTransportPassThrough();
+    testTransportFallbackKeepsSegmentModesDistinct();
     testEngineLearnsAndEmitsOnNextCycle();
+    testLearnCounterRetriggersLearning();
     testEngineLearnsFromSparseBassInput();
     testHarmonyChangeKeepsLearnedProgressionReady();
     testRestoredProgressionSurvivesVoicingChange();

@@ -9,6 +9,19 @@ double cadence_note_length_fraction(const Controls& controls)
     return clampd(static_cast<double>(controls.note_length), 0.10, 1.0);
 }
 
+double cadence_valid_beats_per_bar(const double beatsPerBar) noexcept
+{
+    // Hosts can report a valid BBT with a zero meter. The LV2 source falls back
+    // to 4/4 here; without it Beat and Bar collapse to one segment while Half
+    // Bar still divides the fallback bar in two.
+    return beatsPerBar > 0.0 ? beatsPerBar : 4.0;
+}
+
+double cadence_valid_bpm(const double bpm) noexcept
+{
+    return bpm > 1.0 ? bpm : 120.0;
+}
+
 double cadence_cycle_beats_for_controls(const Controls& controls, const double beatsPerBar)
 {
     return clampd(static_cast<double>(controls.cycle_bars) * beatsPerBar,

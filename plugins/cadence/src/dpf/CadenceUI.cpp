@@ -126,6 +126,8 @@ constexpr const char* kConductorChNames[] = {
     "9", "10", "11", "12", "13", "14", "15", "16"
 };
 
+constexpr int kMaxLearnCount = 1048576;
+
 constexpr SelectorDef kSelectors[] = {
     {kParamKey, "Key", kNoteNames, 12, 0},
     {kParamScale, "Scale", kScaleNames, 24, 0},
@@ -687,10 +689,19 @@ private:
     void triggerButton(const int buttonIndex)
     {
         const uint32_t index = kButtons[static_cast<std::size_t>(buttonIndex)].index;
+
+        // DPF's VST3 bridge suppresses kParameterIsTrigger writes from the UI,
+        // so Learn is an ordinary integer request counter. Incrementing it is
+        // the one-shot; the core sees the change as a fresh learn request.
+        const int current = static_cast<int>(std::lround(values_[index]));
+        int next = current + 1;
+        if (next > kMaxLearnCount)
+            next = 1;
+
         editParameter(index, true);
-        setParameterValue(index, 1.0f);
-        setParameterValue(index, 0.0f);
+        setParameterValue(index, static_cast<float>(next));
         editParameter(index, false);
+        values_[index] = static_cast<float>(next);
         values_[kParamStatusReady] = 0.0f;
         learnPulse_ = 8;
         repaint();

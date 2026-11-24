@@ -54,7 +54,7 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - Embedded VST3 UIs under Carla: Carla focuses its own X11 wrapper, not DPF/pugl's deeper view, so a UI that needs typing must grab focus on click (`getWindow().focus()`). Verify by typing with XTEST and reading the engine text; `xdotool getwindowfocus` reports the wrapper even when typing works.
 - Recursive filters on idle voices decay into denormals (4x CPU): skip idle voices, zero their state, flush tiny values per block, and time new recursive DSP over a long decay.
 - `DPF::ParameterRanges` is `{def, min, max}`: assign `.def/.min/.max` explicitly and set `kParameterIsAutomatable`; implement `setParameterValue()` and sync both ways with the UI.
-- DPF's VST3 bridge suppresses `kParameterIsTrigger` writes; UI one-shots (Randomise, presets) must commit ordinary parameter values like HeavyVerb, with a read-only count if the panel needs feedback.
+- DPF's VST3 bridge suppresses `kParameterIsTrigger` writes; UI one-shots (Randomise, presets, Learn/reset actions) must commit ordinary parameter values like HeavyVerb, with a read-only count if the panel needs feedback.
 - Propagate every `ParamSpec` flag (logarithmic, integer, trigger, output) into DPF parameter hints; UI normalisation must match host normalisation.
 - UI state that must survive editor recreation (browser directory, selected view) needs a DPF state key; persist in the navigation handler, not in refresh paths that run during construction.
 - Controls that affect DSP must be real automatable parameters appended after read-only outputs; text-state-only messages are unreliable with a separate VST3 controller.
@@ -74,7 +74,7 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 **Process**
 - Never `pkill -f` / `pgrep -f` with a pattern that appears in your own command line; use `ps` or the bracket trick (`foo[.]bar`).
 - Rerun a timing-based test ("renders faster than real time") alone before treating it as a regression: it failed under a load average of 37 and passed alone. A CPU figure taken on a busy machine is an upper bound; say so.
-- `cmake --build --target <plugin>` does not compile the UI (it builds a stub library). Build `<plugin>-vst3` and check the exit status; after changing a shared header such as `MagnetoKit.hpp`, build `-vst3` for every plugin that includes it (`grep -rl MagnetoKit.hpp plugins`). Include what a UI file uses (`<string>`): the screenshot (jack) build can hide a missing include.
+- `cmake --build --target <plugin>` does not compile the UI (it builds a stub library). Build `<plugin>-vst3` and check the exit status; after changing a shared header such as `MagnetoKit.hpp`, build `-vst3` for every plugin that includes it (`grep -rl MagnetoKit.hpp plugins`). Include what each wrapper/UI file uses (`<string>`, a plugin-local helper header): core tests can compile while the VST3 target fails, and the screenshot (jack) build can hide a missing include.
 - Scripted batch edits: `continue` in every branch, diff the result. For non-unique lines anchor on context, not first match.
 - Port a DSP core a function at a time and build after each; do not draft the whole thing in one pass.
 - Cross-repo scripts: read the dataclass before constructing it positionally, and distrust a large mismatch on only some cases.

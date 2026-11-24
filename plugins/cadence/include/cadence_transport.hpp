@@ -5,6 +5,8 @@
 namespace downspout::cadence {
 
 double cadence_note_length_fraction(const Controls& controls);
+double cadence_valid_beats_per_bar(double beatsPerBar) noexcept;
+double cadence_valid_bpm(double bpm) noexcept;
 double cadence_cycle_beats_for_controls(const Controls& controls, double beatsPerBar);
 double cadence_segment_beats_for_controls(const Controls& controls, double beatsPerBar);
 int cadence_segment_count_for_controls(const Controls& controls, double beatsPerBar);
