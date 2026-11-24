@@ -6,7 +6,15 @@ Format: what happened, root cause, prevention.
 
 ## Open
 
-_None._
+## drumgen: mixed-type `std::max` velocity boost (2026-11-24)
+- **What happened:** the standalone core probe failed to compile with `no matching function for call to 'max(uint8_t&, const int&)'` while adding continuous backbeat velocity.
+- **Root cause:** `std::max` deduces one template type from both arguments; `uint8_t` velocity and an `int` boost cannot be deduced together.
+- **Prevention:** cast both operands to `int` before `std::max`, then cast back; compile the standalone probe before the CMake build.
+
+## docs: exact-match replacement used stale text (2026-11-24)
+- **What happened:** the `plugins-summary.md` DrumGen paragraph replacement failed because the assumed line break after "CC 24 =" was not in the file.
+- **Root cause:** the replacement text was composed from an earlier read rather than the current file contents.
+- **Prevention:** read the exact target lines immediately before an exact-match edit; anchor on a short, verified unique snippet.
 
 ## Template
 

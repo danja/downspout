@@ -9,8 +9,10 @@
 #include "drumgen_variation.hpp"
 
 #include "downspout/test_assert.h"
+#include <algorithm>
 #include <cmath>
 #include <set>
+#include <utility>
 #include <vector>
 #include <string>
 
@@ -118,6 +120,56 @@ int countAllHits(const PatternState& pattern) {
         }
     }
     return count;
+}
+
+// (note, velocity) in emission order. Core tests never touch the DPF wrapper,
+// so assert the observable MIDI output rather than intermediate pattern fields.
+using NoteEvents = std::vector<std::pair<int, int>>;
+
+NoteEvents renderNoteOns(const Controls& rawControls,
+                         int loops = 1,
+                         int collectFromLoop = 0,
+                         int actionIndex = -1) {
+    const Controls controls = clampControls(rawControls);
+    EngineState state;
+    activate(state, controls);
+
+    NoteEvents notes;
+    // 120 BPM, 4/4: one bar is 2 s. A block boundary lands on a 16th-grid slot.
+    const int loopFrames = static_cast<int>(std::lround(static_cast<double>(controls.bars) * 96000.0));
+    const int totalFrames = loopFrames * loops;
+    constexpr int kBlock = 2400;
+
+    bool actionApplied = false;
+    for (int frame = 0; frame < totalFrames; frame += kBlock) {
+        const int n = std::min(kBlock, totalFrames - frame);
+        Controls blockControls = controls;
+        if (actionIndex >= 0 && !actionApplied) {
+            switch (actionIndex) {
+            case 0: ++blockControls.actionNew; break;
+            case 1: ++blockControls.actionMutate; break;
+            case 2: ++blockControls.actionFill; break;
+            default: break;
+            }
+            actionApplied = true;
+        }
+
+        const double absBeats = static_cast<double>(frame) / 24000.0;
+        TransportSnapshot transport = makePlayingTransport(0.0);
+        transport.bar = std::floor(absBeats / 4.0);
+        transport.barBeat = absBeats - transport.bar * 4.0;
+        const auto result = processBlock(state, blockControls, transport, n, 48000.0);
+
+        if (frame / loopFrames < collectFromLoop) {
+            continue;
+        }
+        for (int i = 0; i < result.eventCount; ++i) {
+            if (result.events[i].type == MidiEventType::noteOn) {
+                notes.emplace_back(result.events[i].data1, result.events[i].data2);
+            }
+        }
+    }
+    return notes;
 }
 
 void testDeterministicGeneration() {
@@ -1346,6 +1398,74 @@ void testConductorSceneMapIsOptInAndAudible() {
     assert(patternsDiffer(introPattern, breakPattern));
 }
 
+void testMixControlsChangeEmittedMidiNotes() {
+    struct Case {
+        const char* name;
+        void (*set)(Controls&, float);
+        float low;
+        float high;
+    };
+
+    const Case cases[] = {
+        {"Density", [](Controls& c, float v) { c.density = v; }, 0.05f, 0.95f},
+        {"Variation", [](Controls& c, float v) { c.variation = v; }, 0.0f, 1.0f},
+        {"Fill", [](Controls& c, float v) { c.fill = v; }, 0.0f, 1.0f},
+        {"Seed", [](Controls& c, float v) { c.seed = static_cast<std::uint32_t>(std::lround(v)); }, 1.0f, 2.0f},
+        {"Kick", [](Controls& c, float v) { c.kickAmt = v; }, 0.05f, 1.0f},
+        {"Backbeat", [](Controls& c, float v) { c.backbeatAmt = v; }, 0.0f, 1.0f},
+        {"Hat", [](Controls& c, float v) { c.hatAmt = v; }, 0.0f, 1.0f},
+        {"Percussion", [](Controls& c, float v) { c.auxAmt = v; }, 0.0f, 1.0f},
+        {"Fill Tom", [](Controls& c, float v) { c.tomAmt = v; }, 0.0f, 1.0f},
+        {"Crash/Bash", [](Controls& c, float v) { c.metalAmt = v; }, 0.0f, 1.0f},
+    };
+
+    for (const Case& test : cases) {
+        Controls low = clampControls(Controls {});
+        Controls high = low;
+        test.set(low, test.low);
+        test.set(high, test.high);
+
+        const NoteEvents lowNotes = renderNoteOns(low);
+        const NoteEvents highNotes = renderNoteOns(high);
+        assert(!lowNotes.empty() && "Mix control rendered no notes");
+        assert(lowNotes != highNotes && "Mix control did not change emitted MIDI notes");
+    }
+}
+
+void testVaryChangesEmittedNotesAcrossLoops() {
+    Controls still = clampControls(Controls {});
+    still.bars = 2;
+    still.vary = 0.0f;
+    Controls varying = still;
+    varying.vary = 1.0f;
+
+    // Vary only acts at the loop boundary, so compare the second loop.
+    const NoteEvents unchanged = renderNoteOns(still, 2, 1);
+    const NoteEvents mutated = renderNoteOns(varying, 2, 1);
+    assert(!unchanged.empty() && !mutated.empty());
+    assert(unchanged != mutated && "Vary did not change emitted MIDI notes at the loop boundary");
+}
+
+void testActionCountersRetriggerNotesAndFill() {
+    Controls base = clampControls(Controls {});
+    base.bars = 2;
+    const NoteEvents baseline = renderNoteOns(base);
+    assert(!baseline.empty());
+
+    // The UI writes an incremented counter (New/Mutate/Fill are no longer
+    // trigger parameters, which VST3 hosts suppress). Every request must be
+    // observable in the emitted MIDI.
+    for (int action = 0; action < 3; ++action) {
+        const NoteEvents triggered = renderNoteOns(base, 1, 0, action);
+        assert(!triggered.empty());
+        assert(triggered != baseline && "action counter did not change emitted MIDI notes");
+    }
+
+    Controls wild = base;
+    wild.actionNew = 2000000;
+    assert(clampControls(wild).actionNew == 1048576);
+}
+
 }  // namespace
 
 int main() {
@@ -1363,6 +1483,9 @@ int main() {
     testQuarterResolutionUsesOneStepPerBeat();
     testLowestDensityIsSparse();
     testConductorSceneMapIsOptInAndAudible();
+    testMixControlsChangeEmittedMidiNotes();
+    testVaryChangesEmittedNotesAcrossLoops();
+    testActionCountersRetriggerNotesAndFill();
     testExplicitStyleModesChangePatternShape();
     testDiddleyStylePinsShaveAndHaircutPattern();
     testAmenGenrePinsBreakSignature();

@@ -20,7 +20,11 @@ Likely reusable source modules:
 Current wrapper choice:
 
 - the first DPF/VST3 wrapper now has a thin custom control UI with explicit
-  `New`, `Mutate`, and `Fill` buttons;
+  `New`, `Mutate`, and `Fill` buttons. These are ordinary integer request counters
+  (`0..1048576`) rather than `kParameterIsTrigger`: DPF's VST3 bridge suppresses
+  UI writes to trigger parameters, so the buttons would not reach the DSP. Each
+  click writes the next value; the core treats every change as a fresh request.
+  The symbols (`new`, `mutate`, `fill`) are unchanged;
 - the wrapper now also exposes explicit `Style` modes for `Auto`, `Straight`,
   `Reel`, `Waltz`, `Jig`, and `Slip Jig`, and those modes drive core timing
   behavior rather than only post-generation labels;
@@ -58,5 +62,26 @@ Current wrapper choice:
   `count=17`. The stability pins in `testFugueGenrePinsSparsePulse` cover this,
   and inserting a genre anywhere but the end would silently reinterpret saved
   host state;
+- the "Mix" panel is deliberately named **Pattern Mix**: none of its sliders
+  are audio levels. They place notes or change their probability. To say so in
+  the host automation view too, the parameter names are now `Kick Hits`,
+  `Snare/Clap Hits`, `Hat Hits`, `Percussion Hits`, `Fill Tom Hits` and
+  `Crash/Bash Hits`. Symbols are preserved (`kick_amt`, `backbeat_amt`,
+  `hat_amt`, `aux_amt`, `tom_amt`, `metal_amt`) so saved projects keep working;
+- the `backbeat_amt` default dropped from `0.76` to `0.28`, below the
+  `cleanupPattern` reinforcement threshold of `0.30`. At the old default the
+  upper half of the control was masked because genre signatures already pinned
+  the backbeat notes. It now has continuous velocity and ghost-snare behavior
+  above the threshold. Kick, Percussion and Fill Tom gained matching
+  deterministic ghosts/velocity lifts so their high ends remain audible too;
+- the source `aux_amt` lane family now covers bash as well as bell/clave:
+  `laneMacro` and the bash probabilities use `max(metalAmt, auxAmt)`. This makes
+  `Percussion Hits` an honest label while keeping `Crash/Bash Hits` useful on
+  its own;
+- because MIDI output is easy to miss (the plugin's audio outputs are silent),
+  the UI flashes `UPDATED` and shows a local `Gen N` count on regeneration.
+  This is UI-local feedback, not a DSP output parameter. `testMixControlsChangeEmittedMidiNotes`,
+  `testVaryChangesEmittedNotesAcrossLoops` and `testActionCountersRetriggerNotesAndFill`
+  verify every Mix control and action against emitted `(note, velocity)` pairs;
 - the port preserves exact control/state behavior first and still leaves any
   preview-grid UI as follow-up work after host validation.

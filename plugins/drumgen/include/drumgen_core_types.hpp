@@ -96,7 +96,10 @@ struct Controls {
     float vary = 0.0f;
     std::uint32_t seed = 1u;
     float kickAmt = 0.78f;
-    float backbeatAmt = 0.76f;
+    // Below the cleanupPattern reinforcement threshold (0.30): the genre
+    // signature still provides the backbeat, and raising the control now has a
+    // continuous effect instead of being masked from the default upwards.
+    float backbeatAmt = 0.28f;
     float hatAmt = 0.82f;
     float auxAmt = 0.28f;
     float tomAmt = 0.30f;

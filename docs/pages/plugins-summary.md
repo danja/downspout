@@ -197,6 +197,12 @@ basilico or any bass instrument. Requires host transport.
 Meter-aware MIDI drum generator with pattern variation and fills; genre vocabulary
 includes Breakbeat, Amen, Jungle and Hip Hop. Emits drum MIDI (default channel 10)
 aimed at drumkit's note map; MIDI input exists only for control (Conductor CCs).
+The **Pattern Mix** sliders set hit placement/probability rather than levels: Kick Hits,
+Snare/Clap Hits, Hat Hits, Percussion Hits (bell/clave and bash), Fill Tom Hits and
+Crash/Bash Hits, plus Density, Variation, Fill Amount, Vary and Seed. The panel flashes
+`UPDATED` and shows a local generation count when the pattern regenerates. **New**,
+**Mutate** and **Fill** are ordinary integer request counters (0–1048576), not trigger
+parameters, so VST3 hosts forward UI clicks to the DSP.
 **Conductor Ch** maps CC 21 to density, 22 to variation, 23 to mutation rate and CC 24 =
 127 to a new pattern. **Conductor Scene** (appended, default Off) opts CC 20 into
 block-to-Fill mapping: Intro 0.10, Theme 0.30, Develop 0.65, Break 1.0, Reprise 0.50,

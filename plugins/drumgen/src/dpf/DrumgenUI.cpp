@@ -48,6 +48,10 @@ enum ParameterIndex : uint32_t {
 
 constexpr const char* kStateKeyTemplateLoad = "template_load";
 
+// Matches DrumgenPlugin.cpp. New/Mutate/Fill are request counters, not trigger
+// parameters, so VST3 hosts actually forward clicks from the UI to the DSP.
+constexpr int kMaxActionCount = 1048576;
+
 namespace ui_layout = downspout::drumgen::ui_layout;
 using Rect = ui_layout::Rect;
 constexpr float kSelectorItemHeight = ui_layout::kSelectorItemHeight;
@@ -81,12 +85,12 @@ constexpr std::array<SliderDef, 11> kSliders = {{
     {kParamVariation, "Variation", 0.0f, 1.0f, false},
     {kParamFillAmount, "Fill Amount", 0.0f, 1.0f, false},
     {kParamVary, "Vary", 0.0f, 100.0f, true},
-    {kParamKickAmount, "Kick Amount", 0.0f, 1.0f, false},
-    {kParamBackbeatAmount, "Backbeat", 0.0f, 1.0f, false},
-    {kParamHatAmount, "Hat Amount", 0.0f, 1.0f, false},
-    {kParamAuxAmount, "Perc Amount", 0.0f, 1.0f, false},
-    {kParamTomAmount, "Tom Amount", 0.0f, 1.0f, false},
-    {kParamMetalAmount, "Metal Amount", 0.0f, 1.0f, false},
+    {kParamKickAmount, "Kick Hits", 0.0f, 1.0f, false},
+    {kParamBackbeatAmount, "Snare/Clap Hits", 0.0f, 1.0f, false},
+    {kParamHatAmount, "Hat Hits", 0.0f, 1.0f, false},
+    {kParamAuxAmount, "Percussion Hits", 0.0f, 1.0f, false},
+    {kParamTomAmount, "Fill Tom Hits", 0.0f, 1.0f, false},
+    {kParamMetalAmount, "Crash/Bash Hits", 0.0f, 1.0f, false},
     {kParamSeed, "Seed", 0.0f, 65535.0f, true},
 }};
 
@@ -205,6 +209,28 @@ constexpr std::array<ButtonDef, 3> kButtons = {{
     return nullptr;
 }
 
+[[nodiscard]] bool isPatternMixControl(const uint32_t index) noexcept
+{
+    switch (index) {
+    case kParamDensity:
+    case kParamVariation:
+    case kParamFillAmount:
+    case kParamSeed:
+    case kParamKickAmount:
+    case kParamBackbeatAmount:
+    case kParamHatAmount:
+    case kParamAuxAmount:
+    case kParamTomAmount:
+    case kParamMetalAmount:
+    case kParamActionNew:
+    case kParamActionMutate:
+    case kParamActionFill:
+        return true;
+    default:
+        return false;
+    }
+}
+
 }  // namespace
 
 class DrumgenUI : public UI
@@ -247,7 +273,7 @@ public:
         values_[kParamFillAmount] = 0.30f;
         values_[kParamSeed] = 1.0f;
         values_[kParamKickAmount] = 0.78f;
-        values_[kParamBackbeatAmount] = 0.76f;
+        values_[kParamBackbeatAmount] = 0.28f;
         values_[kParamHatAmount] = 0.82f;
         values_[kParamAuxAmount] = 0.28f;
         values_[kParamTomAmount] = 0.30f;
@@ -259,7 +285,13 @@ protected:
     void parameterChanged(uint32_t index, float value) override
     {
         if (index < values_.size()) {
+            const bool externalChange = std::fabs(values_[index] - value) > 0.0001f;
             values_[index] = value;
+            // Host automation of a Mix control also regenerates the pattern;
+            // UI-originated writes already set values_ and marked it.
+            if (externalChange && isPatternMixControl(index)) {
+                markPatternUpdated();
+            }
             repaint();
         }
     }
@@ -272,6 +304,10 @@ protected:
                 --pulse;
                 needsRepaint = true;
             }
+        }
+        if (regenPulse_ > 0) {
+            --regenPulse_;
+            needsRepaint = true;
         }
         if (needsRepaint) {
             repaint();
@@ -441,6 +477,8 @@ private:
     std::array<Rect, kSelectors.size()> selectorRects_ {};
     std::array<Rect, kButtons.size()> buttonRects_ {};
     std::array<int, kButtons.size()> buttonPulse_ {};
+    int regenPulse_ = 0;
+    int patternGeneration_ = 0;
     int draggingSlider_ = -1;
     int openSelector_ = -1;
 
@@ -618,7 +656,22 @@ private:
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fc(t_.textPrimary);
-        text(x + 20.0f, y + 18.0f, "Mix", nullptr);
+        text(x + 20.0f, y + 18.0f, "Pattern Mix", nullptr);
+
+        // Sliders and actions change which notes are emitted, which is easy to
+        // miss when only MIDI out is wired to a drum instrument. Show a short
+        // flash and a local generation count whenever the pattern regenerates.
+        const bool justUpdated = regenPulse_ > 0;
+        drawPill(x + w - 156.0f, y + 14.0f, 80.0f, 22.0f,
+                 justUpdated ? "UPDATED" : "LIVE",
+                 justUpdated ? 62 : 108, justUpdated ? 148 : 122, justUpdated ? 112 : 138);
+
+        char status[48];
+        std::snprintf(status, sizeof(status), "Gen %d", patternGeneration_);
+        fontSize(11.0f);
+        textAlign(ALIGN_RIGHT | ALIGN_TOP);
+        fc(t_.textDim);
+        text(x + w - 20.0f, y + 19.0f, status, nullptr);
 
         const float innerX = x + 20.0f;
         const float innerY = y + 52.0f;
@@ -817,13 +870,30 @@ private:
         setParameter(def.index, static_cast<float>(next + def.valueOffset));
     }
 
+    void markPatternUpdated()
+    {
+        ++patternGeneration_;
+        regenPulse_ = 30;
+    }
+
     void triggerButton(const int buttonIndex)
     {
         const uint32_t index = kButtons[buttonIndex].index;
+
+        // DPF's VST3 bridge suppresses kParameterIsTrigger writes from the UI.
+        // Write an ordinary integer request counter instead; each increment is
+        // the one-shot and the core sees a fresh New/Mutate/Fill request.
+        const int current = static_cast<int>(std::lround(values_[index]));
+        int next = current + 1;
+        if (next > kMaxActionCount)
+            next = 1;
+
         editParameter(index, true);
-        setParameterValue(index, 1.0f);
+        setParameterValue(index, static_cast<float>(next));
         editParameter(index, false);
+        values_[index] = static_cast<float>(next);
         buttonPulse_[buttonIndex] = 8;
+        markPatternUpdated();
         if (index == kParamActionNew) {
             templateIsLoaded_ = false;
         }
@@ -843,6 +913,9 @@ private:
         setParameterValue(index, value);
         editParameter(index, false);
         values_[index] = value;
+        if (isPatternMixControl(index)) {
+            markPatternUpdated();
+        }
         repaint();
     }
 

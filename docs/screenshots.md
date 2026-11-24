@@ -179,3 +179,9 @@ remove the overlapping parameter-box footer. A fresh 720x680 capture is in
 `/tmp/opencode/spliff-shots/spliff.png`; its analyser bars and slider rows were
 pixel-checked, but this agent cannot view PNG pixels, so catalog acceptance is
 pending. The catalog `spliff.png` is still the previous accepted capture.
+
+DrumGen's Mix panel was renamed to **Pattern Mix** and gained a `UPDATED`/`LIVE`
+pill plus a `Gen N` indicator. A fresh 1024x940 capture is in
+`/tmp/opencode/drumgen-shots/drumgen.png`; its dimensions and pill pixels were
+checked, but this agent cannot view PNG pixels, so catalog acceptance is
+pending. The catalog `drumgen.png` is still the previous accepted capture.

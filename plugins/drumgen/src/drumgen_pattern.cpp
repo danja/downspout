@@ -440,8 +440,12 @@ struct StylePulseInfo {
     case LANE_HIGH_TOM:
         return controls.tomAmt;
     case LANE_CRASH:
-    case LANE_BASH:
         return controls.metalAmt;
+    case LANE_BASH:
+        // Bash sits between the crash/metal and percussion families: raising
+        // either Metal or Percussion should add bash hits, so "Percussion" is
+        // an honest label for the aux slider and Metal remains useful too.
+        return std::max(controls.metalAmt, controls.auxAmt);
     case LANE_COWBELL:
     case LANE_CLAVE:
     default:
@@ -839,6 +843,7 @@ struct StylePulseInfo {
     const float tom = controls.tomAmt;
     const float metal = controls.metalAmt;
     const float perc = controls.auxAmt;
+    const float bashAmount = std::max(metal, perc);
     const float fill = controls.fill;
 
     switch (lane) {
@@ -1066,25 +1071,25 @@ struct StylePulseInfo {
         case GENRE_BREAKBEAT:
         case GENRE_AMEN:
         case GENRE_JUNGLE:
-            if (beatStart && beatIndex == 0) return 0.10f + 0.18f * metal;
-            if (lateSub && (onQ1 || onQ3)) return 0.10f + 0.16f * metal;
-            if (fillBar && beatIndex >= q2Beat && (offbeat || lateSub)) return 0.10f + 0.22f * fill * metal;
+            if (beatStart && beatIndex == 0) return 0.10f + 0.18f * bashAmount;
+            if (lateSub && (onQ1 || onQ3)) return 0.10f + 0.16f * bashAmount;
+            if (fillBar && beatIndex >= q2Beat && (offbeat || lateSub)) return 0.10f + 0.22f * fill * bashAmount;
             break;
         case GENRE_ELECTRO:
-            if (beatStart && beatIndex == 0) return 0.14f + 0.16f * metal;
-            if (fillBar && beatIndex >= q2Beat && (beatStart || lateSub)) return 0.10f + 0.26f * fill * metal;
+            if (beatStart && beatIndex == 0) return 0.14f + 0.16f * bashAmount;
+            if (fillBar && beatIndex >= q2Beat && (beatStart || lateSub)) return 0.10f + 0.26f * fill * bashAmount;
             if (lateSub && onQ3) return 0.08f + 0.14f * controls.variation;
             break;
         case GENRE_MOTORIK:
-            if (beatStart && beatIndex == 0) return 0.12f + 0.18f * metal;
-            if (fillBar && onQ3 && beatStart) return 0.10f + 0.22f * fill * metal;
+            if (beatStart && beatIndex == 0) return 0.12f + 0.18f * bashAmount;
+            if (fillBar && onQ3 && beatStart) return 0.10f + 0.22f * fill * bashAmount;
             break;
         case GENRE_DUB:
-            if ((offbeat && onQ3) || (lateSub && onQ2)) return 0.10f + 0.18f * metal;
-            if (fillBar && onQ3) return 0.10f + 0.18f * fill * metal;
+            if ((offbeat && onQ3) || (lateSub && onQ2)) return 0.10f + 0.18f * bashAmount;
+            if (fillBar && onQ3) return 0.10f + 0.18f * fill * bashAmount;
             break;
         default:
-            if (fillBar && beatIndex >= q3Beat && (offbeat || lateSub)) return 0.06f + 0.18f * fill * metal;
+            if (fillBar && beatIndex >= q3Beat && (offbeat || lateSub)) return 0.06f + 0.18f * fill * bashAmount;
             break;
         }
         break;
@@ -2162,6 +2167,14 @@ void cleanupPattern(PatternState& pattern, const Controls& controls) {
     const int stepsPerBar = pattern.stepsPerBar;
     const int stepsPerBeat = pattern.stepsPerBeat;
 
+    // The stochastic stage saturates near the published defaults, so the upper
+    // half of these sliders used to be inaudible. These deterministic ghosts
+    // keep the high end of Kick, Backbeat, Percussion and Fill Tom useful.
+    const float backbeatOver = clampf((controls.backbeatAmt - 0.30f) / 0.70f, 0.0f, 1.0f);
+    const float kickOver = clampf((controls.kickAmt - 0.62f) / 0.38f, 0.0f, 1.0f);
+    const float percussionOver = clampf((controls.auxAmt - 0.30f) / 0.70f, 0.0f, 1.0f);
+    const float tomOver = clampf((controls.tomAmt - 0.55f) / 0.45f, 0.0f, 1.0f);
+
     for (int step = 0; step < pattern.totalSteps; ++step) {
         DrumStepCell& closed = pattern.lanes[LANE_CLOSED_HAT].steps[step];
         DrumStepCell& open = pattern.lanes[LANE_OPEN_HAT].steps[step];
@@ -2205,6 +2218,34 @@ void cleanupPattern(PatternState& pattern, const Controls& controls) {
         for (int step = 0; step < stepsPerBar && (barStart + step) < pattern.totalSteps; ++step) {
             DrumStepCell& crash = pattern.lanes[LANE_CRASH].steps[barStart + step];
             DrumStepCell& bash = pattern.lanes[LANE_BASH].steps[barStart + step];
+
+            const int beatInBar = stepsPerBeat > 0 ? step / stepsPerBeat : 0;
+            const int beatSub = stepsPerBeat > 0 ? step % stepsPerBeat : 0;
+            const bool offbeatSlot = stepsPerBeat > 1 && beatSub == stepsPerBeat / 2;
+
+            DrumStepCell& kick = pattern.lanes[LANE_KICK].steps[barStart + step];
+            if (kickOver > 0.0f && offbeatSlot && kick.velocity == 0 &&
+                kickOver >= (beatInBar % 2 == 0 ? 0.30f : 0.70f)) {
+                kick.velocity = static_cast<std::uint8_t>(52 + std::lround(28.0f * kickOver));
+                kick.flags = 0;
+            }
+            if (percussionOver > 0.0f && offbeatSlot && bash.velocity == 0 &&
+                beatInBar % 2 == 1 && percussionOver >= 0.45f) {
+                bash.velocity = static_cast<std::uint8_t>(58 + std::lround(24.0f * percussionOver));
+                bash.flags = 0;
+            }
+            const bool backbeatStyle = controls.styleMode != StyleModeId::diddley &&
+                                       !isClaveFamily(controls.genre) &&
+                                       controls.genre != GENRE_TOWNSHIP_JIVE;
+            DrumStepCell& ghostSnare = pattern.lanes[LANE_SNARE].steps[barStart + step];
+            if (backbeatOver > 0.0f && backbeatStyle && offbeatSlot &&
+                ghostSnare.velocity == 0 &&
+                pattern.lanes[LANE_CLAP].steps[barStart + step].velocity == 0 &&
+                backbeatOver >= (beatInBar % 2 == 0 ? 0.45f : 0.80f)) {
+                ghostSnare.velocity = static_cast<std::uint8_t>(50 + std::lround(22.0f * backbeatOver));
+                ghostSnare.flags = 0;
+            }
+
             if (crash.velocity > 0) {
                 crashHits += 1;
                 if (crashHits > maxCrashHits) {
@@ -2221,6 +2262,21 @@ void cleanupPattern(PatternState& pattern, const Controls& controls) {
             }
 
             if (isFillZoneStep(step, stepsPerBar, stepsPerBeat, pattern.meter, controls.fill)) {
+                for (int laneIndex = 0; laneIndex < 2; ++laneIndex) {
+                    DrumStepCell& tom = pattern.lanes[laneIndex == 0 ? LANE_LOW_TOM : LANE_HIGH_TOM]
+                                            .steps[barStart + step];
+                    if (tomOver > 0.0f && tom.velocity > 0) {
+                        tom.velocity = static_cast<std::uint8_t>(
+                            std::max(tom.velocity, static_cast<std::uint8_t>(88 + std::lround(30.0f * tomOver))));
+                    }
+                    if (tomOver > 0.0f && tom.velocity == 0 && offbeatSlot &&
+                        (laneIndex == (beatInBar % 2)) &&
+                        tomOver >= (beatInBar % 2 == 0 ? 0.25f : 0.65f)) {
+                        tom.velocity = static_cast<std::uint8_t>(64 + std::lround(26.0f * tomOver));
+                        tom.flags = STEP_FLAG_FILL;
+                    }
+                }
+
                 const bool fillActivity =
                     pattern.lanes[LANE_LOW_TOM].steps[barStart + step].velocity > 0 ||
                     pattern.lanes[LANE_HIGH_TOM].steps[barStart + step].velocity > 0 ||
@@ -2250,11 +2306,23 @@ void cleanupPattern(PatternState& pattern, const Controls& controls) {
             const int backbeatCount = collectAccentBeatsForStyle(controls.styleMode, pattern.meter, backbeatBeats);
             for (int index = 0; index < backbeatCount; ++index) {
                 const int backbeatStep = barStart + (backbeatBeats[static_cast<std::size_t>(index)] * stepsPerBeat);
-                if (backbeatStep < pattern.totalSteps &&
-                    pattern.lanes[LANE_SNARE].steps[backbeatStep].velocity == 0 &&
-                    pattern.lanes[LANE_CLAP].steps[backbeatStep].velocity == 0) {
-                    pattern.lanes[LANE_SNARE].steps[backbeatStep].velocity = static_cast<std::uint8_t>(102 + (index * 2));
-                    pattern.lanes[LANE_SNARE].steps[backbeatStep].flags = STEP_FLAG_ACCENT;
+                if (backbeatStep < pattern.totalSteps) {
+                    DrumStepCell& snare = pattern.lanes[LANE_SNARE].steps[backbeatStep];
+                    DrumStepCell& clap = pattern.lanes[LANE_CLAP].steps[backbeatStep];
+                    if (snare.velocity == 0 && clap.velocity == 0) {
+                        // Continuous above the 0.30 threshold instead of one
+                        // fixed stamp: the control changes velocity as well as
+                        // placement.
+                        const int velocity = clampi(86 + std::lround(28.0f * backbeatOver) + (index * 2), 1, 127);
+                        snare.velocity = static_cast<std::uint8_t>(velocity);
+                        snare.flags = STEP_FLAG_ACCENT;
+                    } else {
+                        // Genre signatures pin these steps, so without this
+                        // the top half of Backbeat would be completely inert.
+                        DrumStepCell& existing = snare.velocity > 0 ? snare : clap;
+                        const int boosted = clampi(102 + std::lround(25.0f * backbeatOver), 1, 127);
+                        existing.velocity = static_cast<std::uint8_t>(std::max(static_cast<int>(existing.velocity), boosted));
+                    }
                 }
             }
         }

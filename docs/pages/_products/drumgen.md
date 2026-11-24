@@ -22,6 +22,16 @@ create new patterns, mutate the current pattern, target fills, and switch
 between straight, folk-oriented, breakbeat-inspired, Jazz, and sparse Fugue
 metrical vocabularies.
 
+### Pattern Mix
+
+The right-hand **Pattern Mix** sliders place hits or change their probability;
+none are audio levels. **Kick Hits**, **Snare/Clap Hits**, **Hat Hits**,
+**Percussion Hits** (bell/clave/bash), **Fill Tom Hits** and **Crash/Bash Hits**
+shape the corresponding lanes, alongside Density, Variation, Fill Amount, Vary
+and Seed. **New**, **Mutate** and **Fill** regenerate the pattern: the panel
+flashes `UPDATED` and shows a local `Gen N` count so a change is visible even
+when only MIDI out is connected.
+
 ### Conductor integration
 
 DrumGen accepts MIDI input for Conductor CC control. Set **Conductor Ch**

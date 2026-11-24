@@ -6,6 +6,7 @@
 #include "drumgen_serialization.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 START_NAMESPACE_DISTRHO
@@ -48,6 +49,11 @@ enum StateIndex : uint32_t {
     kStateTemplateLoad,
     kStateCount
 };
+
+// DPF's VST3 bridge suppresses UI writes to kParameterIsTrigger parameters.
+// New/Mutate/Fill are ordinary integer request counters instead: each click
+// writes the next value, and the core sees the change as a fresh request.
+constexpr int kMaxActionCount = 1048576;
 
 constexpr const char* kStateKeyControls      = "controls";
 constexpr const char* kStateKeyPattern       = "pattern";
@@ -236,28 +242,28 @@ protected:
             parameter.ranges.def = 1.0f;
             break;
         case kParamKickAmount:
-            parameter.name = "Kick Amount";
+            parameter.name = "Kick Hits";
             parameter.symbol = "kick_amt";
             parameter.ranges.min = 0.0f;
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = 0.78f;
             break;
         case kParamBackbeatAmount:
-            parameter.name = "Backbeat Amount";
+            parameter.name = "Snare/Clap Hits";
             parameter.symbol = "backbeat_amt";
             parameter.ranges.min = 0.0f;
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = 0.76f;
             break;
         case kParamHatAmount:
-            parameter.name = "Hat Amount";
+            parameter.name = "Hat Hits";
             parameter.symbol = "hat_amt";
             parameter.ranges.min = 0.0f;
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = 0.82f;
             break;
         case kParamAuxAmount:
-            parameter.name = "Perc Amount";
+            parameter.name = "Percussion Hits";
             parameter.symbol = "aux_amt";
             parameter.ranges.min = 0.0f;
             parameter.ranges.max = 1.0f;
@@ -266,36 +272,36 @@ protected:
         case kParamActionNew:
             parameter.name = "New";
             parameter.symbol = "new";
-            parameter.hints = kParameterIsAutomatable|kParameterIsBoolean|kParameterIsInteger|kParameterIsTrigger;
+            parameter.hints = kParameterIsAutomatable|kParameterIsInteger;
             parameter.ranges.min = 0.0f;
-            parameter.ranges.max = 1.0f;
+            parameter.ranges.max = static_cast<float>(kMaxActionCount);
             parameter.ranges.def = 0.0f;
             break;
         case kParamActionMutate:
             parameter.name = "Mutate";
             parameter.symbol = "mutate";
-            parameter.hints = kParameterIsAutomatable|kParameterIsBoolean|kParameterIsInteger|kParameterIsTrigger;
+            parameter.hints = kParameterIsAutomatable|kParameterIsInteger;
             parameter.ranges.min = 0.0f;
-            parameter.ranges.max = 1.0f;
+            parameter.ranges.max = static_cast<float>(kMaxActionCount);
             parameter.ranges.def = 0.0f;
             break;
         case kParamActionFill:
             parameter.name = "Fill";
             parameter.symbol = "fill";
-            parameter.hints = kParameterIsAutomatable|kParameterIsBoolean|kParameterIsInteger|kParameterIsTrigger;
+            parameter.hints = kParameterIsAutomatable|kParameterIsInteger;
             parameter.ranges.min = 0.0f;
-            parameter.ranges.max = 1.0f;
+            parameter.ranges.max = static_cast<float>(kMaxActionCount);
             parameter.ranges.def = 0.0f;
             break;
         case kParamTomAmount:
-            parameter.name = "Tom Amount";
+            parameter.name = "Fill Tom Hits";
             parameter.symbol = "tom_amt";
             parameter.ranges.min = 0.0f;
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = 0.30f;
             break;
         case kParamMetalAmount:
-            parameter.name = "Metal Amount";
+            parameter.name = "Crash/Bash Hits";
             parameter.symbol = "metal_amt";
             parameter.ranges.min = 0.0f;
             parameter.ranges.max = 1.0f;
@@ -406,10 +412,9 @@ protected:
         case kParamCaRule: return static_cast<float>(controls_.caRule);
         case kParamCaTarget: return static_cast<float>(controls_.caTarget);
         case kParamCaEvery: return static_cast<float>(controls_.caEvery);
-        case kParamActionNew:
-        case kParamActionMutate:
-        case kParamActionFill:
-            return 0.0f;
+        case kParamActionNew: return static_cast<float>(controls_.actionNew);
+        case kParamActionMutate: return static_cast<float>(controls_.actionMutate);
+        case kParamActionFill: return static_cast<float>(controls_.actionFill);
         default:
             return 0.0f;
         }
@@ -441,9 +446,9 @@ protected:
         case kParamCaRule: controls_.caRule = static_cast<int>(value); break;
         case kParamCaTarget: controls_.caTarget = static_cast<int>(value); break;
         case kParamCaEvery: controls_.caEvery = static_cast<int>(value); break;
-        case kParamActionNew: if (value > 0.5f) ++controls_.actionNew; break;
-        case kParamActionMutate: if (value > 0.5f) ++controls_.actionMutate; break;
-        case kParamActionFill: if (value > 0.5f) ++controls_.actionFill; break;
+        case kParamActionNew: controls_.actionNew = static_cast<int>(std::lround(value)); break;
+        case kParamActionMutate: controls_.actionMutate = static_cast<int>(std::lround(value)); break;
+        case kParamActionFill: controls_.actionFill = static_cast<int>(std::lround(value)); break;
         }
 
         controls_ = downspout::drumgen::clampControls(controls_);

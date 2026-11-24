@@ -10,6 +10,8 @@ dsp:drumgen a trn:PluginProfile ;
     rdfs:comment """Transport- and meter-aware MIDI drum generator with fills, style modes,
 Breakbeat/Jazz/Fugue genres, sparse pulse options, Conductor CC control, and an optional
 cellular-automaton layer that evolves chosen lanes (hats, percussion, toms) each loop.
+The Pattern Mix sliders set hit placement/probability (Kick Hits, Snare/Clap Hits, Hat Hits,
+Percussion Hits for bell/clave/bash, Fill Tom Hits, Crash/Bash Hits) — none are audio levels.
 Its stereo audio output is a silent compatibility stub; route MIDI output to DrumKit
 or another drum instrument.""" ;
     trn:bundleName "drumgen.vst3" ;
@@ -22,7 +24,7 @@ or another drum instrument.""" ;
     trn:genre "Breakbeat", "Amen", "Jungle", "Hip Hop", "Jazz", "Rock", "Dub", "Fugue", "Rumba", "Samba", "Township Jive" ;
     trn:conductorChannelParam "conductor_ch" ;
     trn:recommendedBefore dsp:drumkit ;
-    trn:caution "The stereo audio output is intentionally silent; connect MIDI output to an instrument." ;
+    trn:caution "The stereo audio output is intentionally silent; connect MIDI output to an instrument. Pattern Mix sliders change generated hits, not levels." ;
 
     ## Conductor CC input — enable by setting conductor_ch (1–16) to match Conductor's output channel
     trn:conductorSceneParam "conductor_scene" ;
