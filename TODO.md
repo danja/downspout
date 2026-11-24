@@ -23,7 +23,7 @@ Open work only. Completed builds are recorded in plugin docs; resolved lessons g
 - [ ] DrumGen: remember Conductor CC 21-23 overwrite DSP density/variation/vary without updating the UI; decide whether to add output status parameters or document the one-way mapping in a host probe.
 - [ ] Markov: refresh `docs/pages/assets/plugins/markov.png` after the learned-count readout moved to the output parameter, and visually accept it. A headless pixel probe confirmed the first digit changes 0→7 after a rendered MIDI line, but this model cannot view PNGs.
 - [ ] Cadence: capture a fresh screenshot into the catalog after the Learn button became an ordinary integer request counter. `scripts/capture-plugin-screenshots.sh` already includes `cadence:cadence`; inspect the image at full resolution before accepting.
-- [ ] DrumGen: capture a fresh screenshot after the Pattern Mix relabel and `UPDATED`/`Gen N` indicator; inspect at full resolution (layout, contrast, clipped labels) before copying into `docs/pages/assets/plugins/drumgen.png`.
+- [ ] DrumGen: capture a fresh screenshot after the Pattern Mix relabel, `UPDATED`/`Gen N` indicator and spacing rebalance (`/tmp/opencode/drumgen-shots-v2/drumgen.png`); inspect at full resolution (layout, contrast, clipped labels) before copying into `docs/pages/assets/plugins/drumgen.png`.
 - [ ] Review `https://gardenfx.uk/v4/` for extensions and new-plugin ideas.
 - [ ] PadGen: choose scope (pad synth vs MIDI generator) and build if distinct from Basilico, Canticle, Moka, Quartet, Strata, Monochord.
 - [ ] MIDI filter/router (channel/note filter and remap); lower-priority ADT/doubler, Inflator, spectral compressor, dynamic tilt and channel strip.

@@ -29,15 +29,19 @@ int main()
     assert(selectorColumnCount(4) == 1);
     assert(selectorRowCount(4) == 4);
 
-    // After moving the automaton selectors right, Conductor Ch sits near y=500;
-    // its 17-value menu still fits below the selector in the 940 px panel.
-    const Rect conductorBase {22.0f, 500.0f, 349.12f, 46.0f};
+    // The left selectors are spread over the full 940 px panel. Conductor Ch
+    // now sits near y=650, so its 17-value menu flips above the selector.
+    const Rect conductorBase {22.0f, 650.0f, 349.12f, 46.0f};
     const Rect conductorMenu = selectorMenuRect(conductorBase, 17, 940.0f);
     assert(near(conductorMenu.x, conductorBase.x));
     assert(near(conductorMenu.w, conductorBase.w));
-    assert(near(conductorMenu.y, 552.0f));
+    assert(near(conductorMenu.y, 374.0f));
     assert(near(conductorMenu.h, 9.0f * kSelectorItemHeight));
-    assert(conductorMenu.y + conductorMenu.h <= 940.0f - kSelectorMargin);
+    assert(conductorMenu.y + conductorMenu.h <= conductorBase.y - kSelectorGap);
+
+    // Eight 46 px selectors on an 82 px step, plus the conductor and Actions
+    // headers and the 50 px buttons, end 24 px above the panel bottom.
+    assert(near(140.0f + 8.0f * 82.0f + 18.0f + 30.0f + 50.0f, 894.0f));
 
     // The right-hand automaton selectors are low in the panel, so their menus flip upward.
     const Rect ruleBase {453.12f, 732.0f, 528.88f, 46.0f};

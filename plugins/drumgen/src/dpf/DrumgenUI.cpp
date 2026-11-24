@@ -560,7 +560,22 @@ private:
         fc(t_.textPrimary);
         text(x + 20.0f, y + 18.0f, "Pattern", nullptr);
 
-        float cy = y + 48.0f;
+        // Distribute the pattern selectors across the full panel height. The
+        // old fixed step left a large empty band below Actions in the 940 px
+        // layout; derive the step from the panel so shorter hosts stay sane.
+        constexpr float kTopInset = 48.0f;
+        constexpr float kBottomInset = 24.0f;
+        constexpr float kSelectorHeight = 46.0f;
+        constexpr float kConductorHeader = 18.0f;
+        constexpr float kActionsHeader = 30.0f;
+        constexpr float kButtonHeight = 50.0f;
+        constexpr int kPatternSelectorCount = 8;  // indices 0-5, 9-10
+        const float selectorStep = clampf(
+            (h - kTopInset - kBottomInset - kConductorHeader - kActionsHeader - kButtonHeight)
+                / static_cast<float>(kPatternSelectorCount),
+            57.0f, 86.0f);
+
+        float cy = y + kTopInset;
         for (std::size_t i = 0; i < kSelectors.size(); ++i) {
             if (i >= kAutomatonRuleSelector && i <= kAutomatonEverySelector) {
                 continue;  // Drawn in the right-hand Automaton section.
@@ -573,21 +588,22 @@ private:
                 text(x + 20.0f, cy, "Conductor \xc2\xb7 CC 20\xe2\x80\x93" "24", nullptr);
                 cy += 14.0f;
             }
-            selectorRects_[i] = {x + 20.0f, cy, w - 40.0f, 46.0f};
+            selectorRects_[i] = {x + 20.0f, cy, w - 40.0f, kSelectorHeight};
             drawSelector(static_cast<int>(i), kSelectors[i], selectorRects_[i]);
-            cy += 57.0f;
+            cy += selectorStep;
         }
 
         fontSize(15.0f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fc(t_.textPrimary);
         text(x + 20.0f, cy + 2.0f, "Actions", nullptr);
-        cy += 30.0f;
+        cy += kActionsHeader;
 
         const float buttonGap = 10.0f;
         const float buttonW = (w - 40.0f - buttonGap * 2.0f) / 3.0f;
         for (std::size_t i = 0; i < kButtons.size(); ++i) {
-            buttonRects_[i] = {x + 20.0f + static_cast<float>(i) * (buttonW + buttonGap), cy, buttonW, 50.0f};
+            buttonRects_[i] = {x + 20.0f + static_cast<float>(i) * (buttonW + buttonGap),
+                               cy, buttonW, kButtonHeight};
             drawButton(static_cast<int>(i), kButtons[i], buttonRects_[i]);
         }
     }
@@ -700,9 +716,9 @@ private:
 
         // Seed slider bottom: innerY + 5*(rowH+rowGap) + 22
         const float templateY = innerY + 5.0f * (rowH + rowGap) + 22.0f + 22.0f;
-        if (templateLibrary_.count() > 0) {
-            drawTemplateSection(x, templateY, w);
-        }
+        // Always draw the section. With no saved patterns it renders an empty
+        // state, so Automaton does not float in the middle of a blank band.
+        drawTemplateSection(x, templateY, w);
         drawAutomatonSection(x, templateY + 150.0f, w);
     }
 
@@ -941,11 +957,14 @@ private:
         }
         tmplY += 28.0f;
 
-        // Template selector button (opens popup)
-        const std::string tmplName = (selectedTemplate_ >= 0 && templateLibrary_.get(selectedTemplate_))
-            ? templateLibrary_.get(selectedTemplate_)->name + "  (" +
-              templateLibrary_.get(selectedTemplate_)->timeSig + ")"
-            : "— select —";
+        // Template selector button (opens popup when patterns exist)
+        const bool hasTemplates = templateLibrary_.count() > 0;
+        const downspout::drumgen::PatternTemplate* selected = hasTemplates && selectedTemplate_ >= 0
+            ? templateLibrary_.get(selectedTemplate_)
+            : nullptr;
+        const std::string tmplName = selected != nullptr
+            ? selected->name + "  (" + selected->timeSig + ")"
+            : (hasTemplates ? "— select —" : "— no saved patterns —");
 
         templateSelectorRect_ = {x + 20.0f, tmplY, w - 40.0f, 40.0f};
         {
@@ -985,7 +1004,7 @@ private:
             text(r.x + r.w * 0.5f, r.y + r.h * 0.5f, label, nullptr);
         };
 
-        const bool hasSelection = selectedTemplate_ >= 0;
+        const bool hasSelection = selected != nullptr;
         drawTmplBtn(templateLoadRect_,    "Load",    hasSelection, 62, 148, 112);
         drawTmplBtn(templatePreviewRect_, "Preview", hasSelection, 74, 126, 188);
     }

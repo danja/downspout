@@ -181,7 +181,10 @@ pixel-checked, but this agent cannot view PNG pixels, so catalog acceptance is
 pending. The catalog `spliff.png` is still the previous accepted capture.
 
 DrumGen's Mix panel was renamed to **Pattern Mix** and gained a `UPDATED`/`LIVE`
-pill plus a `Gen N` indicator. A fresh 1024x940 capture is in
-`/tmp/opencode/drumgen-shots/drumgen.png`; its dimensions and pill pixels were
-checked, but this agent cannot view PNG pixels, so catalog acceptance is
-pending. The catalog `drumgen.png` is still the previous accepted capture.
+pill plus a `Gen N` indicator. The left selectors were spread over the full
+panel height and the Templates section now renders an empty state, removing the
+blank bands reported in the first capture. A fresh 1024x940 capture is in
+`/tmp/opencode/drumgen-shots-v2/drumgen.png`; its dimensions, pill pixels and
+row-density distribution were checked, but this agent cannot view PNG pixels,
+so catalog acceptance is pending. The catalog `drumgen.png` is still the previous
+accepted capture.
