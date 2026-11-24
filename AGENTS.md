@@ -70,6 +70,7 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - Probe list scrolling with more entries than fit in the list; a wheel/drag screenshot diff is meaningless when the sample directory has fewer rows than the visible area.
 - When the user explicitly accepts captured images, copy them into the catalog and remove acceptance-pending wording from docs.
 - For popup/dropdown clicks, pass the open index into the commit helper; clearing it before the handler silently discards the selection.
+- Leave a generous lower margin (~60–80 px) in fixed-size panels. A layout ending only ~24 px above the nominal bottom can look half-clipped when a host or image viewer crops window chrome; distribute spacing upward instead.
 
 **Process**
 - Never `pkill -f` / `pgrep -f` with a pattern that appears in your own command line; use `ps` or the bracket trick (`foo[.]bar`).

@@ -564,7 +564,10 @@ private:
         // old fixed step left a large empty band below Actions in the 940 px
         // layout; derive the step from the panel so shorter hosts stay sane.
         constexpr float kTopInset = 48.0f;
-        constexpr float kBottomInset = 24.0f;
+        // Keep a generous lower margin: some hosts/viewers crop the last few
+        // pixels of a fixed-size UI, and half-clipped action buttons are easy
+        // to miss.
+        constexpr float kBottomInset = 64.0f;
         constexpr float kSelectorHeight = 46.0f;
         constexpr float kConductorHeader = 18.0f;
         constexpr float kActionsHeader = 30.0f;
@@ -719,7 +722,7 @@ private:
         // Always draw the section. With no saved patterns it renders an empty
         // state, so Automaton does not float in the middle of a blank band.
         drawTemplateSection(x, templateY, w);
-        drawAutomatonSection(x, templateY + 150.0f, w);
+        drawAutomatonSection(x, templateY + 135.0f, w);
     }
 
     void drawAutomatonSection(const float x, float y, const float w)
@@ -742,11 +745,11 @@ private:
         fc(t_.textDim);
         text(x + 116.0f, y + 1.0f, "CA rewrites selected lanes every N loops", nullptr);
 
-        y += 30.0f;
+        y += 26.0f;
         for (std::size_t i = kAutomatonRuleSelector; i <= kAutomatonEverySelector; ++i) {
             selectorRects_[i] = {x + 20.0f, y, w - 40.0f, 46.0f};
             drawSelector(static_cast<int>(i), kSelectors[i], selectorRects_[i]);
-            y += 57.0f;
+            y += 50.0f;
         }
     }
 

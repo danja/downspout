@@ -29,32 +29,34 @@ int main()
     assert(selectorColumnCount(4) == 1);
     assert(selectorRowCount(4) == 4);
 
-    // The left selectors are spread over the full 940 px panel. Conductor Ch
-    // now sits near y=650, so its 17-value menu flips above the selector.
-    const Rect conductorBase {22.0f, 650.0f, 349.12f, 46.0f};
+    // The left selectors are spread over the panel with a generous lower
+    // margin. Conductor Ch now sits near y=620, so its 17-value menu flips
+    // above the selector.
+    const Rect conductorBase {22.0f, 620.0f, 349.12f, 46.0f};
     const Rect conductorMenu = selectorMenuRect(conductorBase, 17, 940.0f);
     assert(near(conductorMenu.x, conductorBase.x));
     assert(near(conductorMenu.w, conductorBase.w));
-    assert(near(conductorMenu.y, 374.0f));
+    assert(near(conductorMenu.y, 344.0f));
     assert(near(conductorMenu.h, 9.0f * kSelectorItemHeight));
     assert(conductorMenu.y + conductorMenu.h <= conductorBase.y - kSelectorGap);
 
-    // Eight 46 px selectors on an 82 px step, plus the conductor and Actions
-    // headers and the 50 px buttons, end 24 px above the panel bottom.
-    assert(near(140.0f + 8.0f * 82.0f + 18.0f + 30.0f + 50.0f, 894.0f));
+    // Eight 46 px selectors on a 77 px step, plus the conductor and Actions
+    // headers and the 50 px buttons, end 64 px above the panel bottom.
+    assert(near(140.0f + 8.0f * 77.0f + 18.0f + 30.0f + 50.0f, 854.0f));
 
     // The right-hand automaton selectors are low in the panel, so their menus flip upward.
-    const Rect ruleBase {453.12f, 732.0f, 528.88f, 46.0f};
+    const Rect ruleBase {453.12f, 713.0f, 528.88f, 46.0f};
     const Rect ruleMenu = selectorMenuRect(ruleBase, 11, 940.0f);
-    assert(near(ruleMenu.y, 546.0f));
+    assert(near(ruleMenu.y, 527.0f));
     assert(near(ruleMenu.h, 6.0f * kSelectorItemHeight));
     assert(ruleMenu.y + ruleMenu.h <= ruleBase.y - kSelectorGap);
 
-    const Rect everyBase {453.12f, 846.0f, 528.88f, 46.0f};
+    const Rect everyBase {453.12f, 813.0f, 528.88f, 46.0f};
     const Rect everyMenu = selectorMenuRect(everyBase, 8, 940.0f);
-    assert(near(everyMenu.y, 720.0f));
+    assert(near(everyMenu.y, 687.0f));
     assert(near(everyMenu.h, 4.0f * kSelectorItemHeight));
     assert(everyMenu.y + everyMenu.h <= everyBase.y - kSelectorGap);
+    assert(near(everyBase.y + everyBase.h, 859.0f));
 
     // A host window too short for either side keeps the menu at the top margin.
     const Rect shortMenu = selectorMenuRect({0.0f, 0.0f, 100.0f, 46.0f}, 17, 200.0f);
