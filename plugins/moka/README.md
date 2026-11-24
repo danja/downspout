@@ -51,6 +51,10 @@ factory preset list that shows `Custom` once any control is tweaked.
 | 8 | Release | 30ms–1.5s | 97ms | Note-off ring-out, choke to long tail |
 | 9 | Width | 0–100 % | 70 % | Stereo spread of the modal partials |
 
+Incoming note velocity scales both the modal partial level and the mallet transient;
+velocity 0 is treated as note-off. See `docs/midi-velocity.md` for the repository-wide
+matrix.
+
 ## Presets
 
 Xylophone, Glockenspiel, Temple Blocks, Glass Bowl, Frost Glass,

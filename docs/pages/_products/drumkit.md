@@ -18,7 +18,8 @@ I am sick of the cowbell sound! Having said that, the peculiarity of the voices 
 
 DrumKit ports the flues drum synth into a DPF instrument. It responds to a fixed
 MIDI drum map and provides mixer-style strips plus focused voice editing for
-the individual synthesized drum sounds.
+the individual synthesized drum sounds. All eleven voices scale with note
+velocity; velocity 0 is note-off.
 
 ### Status
 

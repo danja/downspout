@@ -58,6 +58,11 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
   when Pitch range = 0), strata, quartet and monochord (Bend range control, no RPN; voices keyed by
   channel and note). Canticle, moka, floozy, syrinx, basilico and gremlin also accept
   RPN 0 to set the range per channel. Other instruments ignore or globally apply bend.
+- **Note-on velocity.** Velocity support is explicit in `docs/midi-velocity.md`.
+  Instruments marked **Full** scale level/timbre with incoming `data2`; **Modifier**
+  means velocity steers a control rather than note level; **Gate only** plugins use
+  note-on as an on/off event; **Generated** plugins use their own Velocity/Energy
+  parameter; **Preserved** plugins pass or record the byte without interpreting it.
 
 ## Quick reference
 
@@ -190,8 +195,11 @@ auto-variation rate and CC 24 = 127 to a fresh pattern. **Conductor Scene** (app
 default Off) opts CC 20 into block-to-Color mapping: Intro 0.25, Theme 0.45, Develop
 0.85, Break 1.0, Reprise 0.65, Coda 0.30, Null unchanged. The **Descending** genre plays one line down the scale
 across the pattern (top of the line at the start, the root at the end), with **Color** as the amount of
-wander (0 = strict staircase); **Descend/bar** restarts it in every bar. Pair with
-basilico or any bass instrument. Requires host transport.
+wander (0 = strict staircase); **Descend/bar** restarts it in every bar. Incoming
+note velocity blends into emitted velocity when Follow/Dodge matches the input,
+both for injected notes and at matched pattern-note boundaries; unmatched notes
+keep their pattern velocity. Pair with basilico or any bass instrument. Requires
+host transport.
 
 ### drumgen
 Meter-aware MIDI drum generator with pattern variation and fills; genre vocabulary
@@ -483,7 +491,8 @@ Stereo synthesised drum instrument with one MIDI input and a mixer-style panel, 
 instrument per note: eleven instruments (Kick, Clap, Snare, Crash, Closed HH, Tom 1,
 Open HH, Tom 2, Bash, Cowbell, Clave), each with a mute. Natural target of drumgen,
 xoxolo, luma drum output and GM-style drum MIDI. Notes select unpitched drums, so
-pitch bend has no effect. Settings are parameters only.
+pitch bend has no effect; note velocity scales every voice. Settings are parameters
+only.
 
 ### basilico
 Monophonic bass with five core models Upright, Electric, Dub, Acid and Industrial plus
@@ -762,7 +771,9 @@ Autonomous, Both). Seeded slice selection, grain size, slice size, reverse chanc
 stereo spread, attack/release, 16 voices, zero-crossing boundary snapping. **Pitch range**
 (default 7) gives each slice a random transposition within the range and ignores the
 note; at 0 the note sets pitch (note - 60) and **Pitch bend range** (1-24, default 2)
-applies per channel. Sample paths are state. Requires transport for autonomous mode.
+applies per channel. Incoming note velocity scales slice gain
+`0.25 + 0.75 * vel/127`; autonomous triggers use a fixed 96. Sample paths are
+state. Requires transport for autonomous mode.
 
 ### plank
 Eight-voice touch-synth derived from Plinky, driven from a Launchpad grid (each column a
@@ -773,7 +784,8 @@ note MIDI (note-on/off on a base channel, with a MIDI thru switch). 32 scales: t
 original 24 plus eight appended Plinky scales (Hirajoshi, Insen, Iwato, Minyo, major/minor
 triads, fifths and Romanian), with ordering governed by `docs/scales.md`. Input notes
 are grid presses, not pitches, so pitch bend is
-not applicable. Persistent state; host validation pending.
+not applicable. Incoming velocity scales the pluck and is preserved in MIDI-thru
+note-ons. Persistent state; host validation pending.
 
 ### padseq
 Paged 8x8 MIDI step sequencer for a Launchpad, also usable from the UI. Columns
@@ -921,7 +933,7 @@ at its peak on each beat). **Range** (0-40 dB, default 3) is how far the VCA fal
 Tape stop and start (a new plugin, clean-room from the general behaviour of a tape transport; the JSFX `Analog Jam` port of cStop, GPLv3, was only read as a reference). Stereo in and out, MIDI in, reads the host transport, no plugin state. The input is written to a ring buffer and read back by a head whose speed is the tape speed, so pitch and time fall together as the tape slows. **Stop Time** (20-4000 ms) takes the speed from 1 to 0 as `(1 - t/T)^Curve` (**Curve** 0.5-4, default 1.5); **Start Time** (20-4000 ms) brings it back, and a stop released part-way restarts from the speed it reached. When the tape is up to speed the output crossfades (12 ms) from the lagging head to the live input; idle, the output is the input sample for sample with no latency. **Trigger**: *Manual* (the automatable **Stop** switch), *MIDI* (any held note stops the tape, all notes released start it, sample-accurate; CC 123 clears hung notes) or *Cycle* (the tape is stopped for the last **Length** beats, 0.25-16, of every 1, 2, 4 or 8 bars, from the transport position, only while the transport plays). Controllers on the **CC Channel** (0 = off, default 1): CC 1 Stop Time, CC 2 Start Time (both logarithmic, 20-4000 ms), CC 3 Curve, CC 4 Stop (64+); a CC takes the control over until the panel or host moves that parameter again, so Drift CC 1-3 modulate it unconfigured. Two output parameters (`status_speed`, `status_delay`) drive the panel (10 parameters). See `plugins/spindown/docs/design.md`.
 
 ### wheelhouse
-Tonewheel organ (a new plugin, clean-room from the published behaviour of a tonewheel organ; the JSFX `Lord of the Rinks` port of setBfree, GPL, was only read as a reference). MIDI in, stereo out, no audio input, no plugin state. Ninety-one equal-tempered tone wheels (MIDI notes 24-114) turn all the time; a held key connects nine footages to the bus through that division's **drawbars** (0-8, 3 dB per step, off at 0): 16', 5 1/3', 8', 4', 2 2/3', 2', 1 3/5', 1 1/3', 1'. Footages that would need a wheel above the top one fold back by octaves. **Upper** and **Lower** manuals (C2-C7, nine drawbars each, default 888000000 and 008530000) and the **Pedals** (C2-G4, 16' and 8') answer **Upper/Lower/Pedal Channel** (default 1, 2, 3; 0 = off); velocity is ignored, as on an organ. **Percussion** (upper only, on or off, 2nd or 3rd harmonic, fast 0.35 s or slow 1.5 s to -60 dB, soft or normal) fires on the first key of a legato run and silences the 1' drawbar. The **scanner** gives V1-V3 vibrato and C1-C3 chorus (a delay swinging +-0.20/0.35/0.55 ms) at **Scanner Rate** 4-9 Hz (6.9), applied to the upper and/or lower manual (**Vibrato Upper/Lower**); the pedals bypass it and **Width** offsets the right channel's scanner. **Key Click** adds a noise burst on every key movement, **Drive** is a preamp tanh (0 is a bypass), **Tone** a low-pass (1.5-16 kHz, 100% is open), **Volume** the output. CC 11 is the swell pedal (squared); CC 123/120 release the keys on that channel. 36 parameters, no outputs. Not built: a Leslie (use a rotary effect after it), reverb, hardware drawbar CCs, tonewheel leakage, key transpose. See `plugins/wheelhouse/docs/design.md`.
+Tonewheel organ (a new plugin, clean-room from the published behaviour of a tonewheel organ; the JSFX `Lord of the Rinks` port of setBfree, GPL, was only read as a reference). MIDI in, stereo out, no audio input, no plugin state. Ninety-one equal-tempered tone wheels (MIDI notes 24-114) turn all the time; a held key connects nine footages to the bus through that division's **drawbars** (0-8, 3 dB per step, off at 0): 16', 5 1/3', 8', 4', 2 2/3', 2', 1 3/5', 1 1/3', 1'. Footages that would need a wheel above the top one fold back by octaves. **Upper** and **Lower** manuals (C2-C7, nine drawbars each, default 888000000 and 008530000) and the **Pedals** (C2-G4, 16' and 8') answer **Upper/Lower/Pedal Channel** (default 1, 2, 3; 0 = off); velocity accents the key click and percussion, while drawbar sustain stays velocity-independent as on an organ. **Percussion** (upper only, on or off, 2nd or 3rd harmonic, fast 0.35 s or slow 1.5 s to -60 dB, soft or normal) fires on the first key of a legato run and silences the 1' drawbar. The **scanner** gives V1-V3 vibrato and C1-C3 chorus (a delay swinging +-0.20/0.35/0.55 ms) at **Scanner Rate** 4-9 Hz (6.9), applied to the upper and/or lower manual (**Vibrato Upper/Lower**); the pedals bypass it and **Width** offsets the right channel's scanner. **Key Click** adds a noise burst on every key movement, **Drive** is a preamp tanh (0 is a bypass), **Tone** a low-pass (1.5-16 kHz, 100% is open), **Volume** the output. CC 11 is the swell pedal (squared); CC 123/120 release the keys on that channel. 36 parameters, no outputs. Not built: a Leslie (use a rotary effect after it), reverb, hardware drawbar CCs, tonewheel leakage, key transpose. See `plugins/wheelhouse/docs/design.md`.
 
 ### whirligig
 Rotary speaker (a new plugin, clean-room from the geometry of a rotating directional source; the JSFX `Dizzy` port, GPL, was only a reference). Stereo in (summed to mono) and out, MIDI in for CC 1 (64+ Fast, else Slow) and CC 2 (64+ Stop, else Slow) on **CC Channel** (default 1), no MIDI out. A Linkwitz-Riley crossover (**Crossover**, default 800 Hz) feeds a drum and a horn rotor, each with Slow and Fast rates, **Accel** inertia, **Depth** (swell) and **Doppler**, heard by two microphones **Mic Angle** apart. **Sync: Beat** reads the host tempo and BBT position (stopped or no transport: 120 BPM, free-running) and locks each rotor at a chosen number of beats per turn, with **Sync Phase**. Settings are parameters; no state; wet and dry both sit about 0.7 ms behind the input (not reported). Key parameters: Speed, Sync, rates, Crossover, Depth, Doppler, Mic Angle, Mix.
@@ -1137,7 +1149,8 @@ mode needs a carrier with harmonics.
 Up to twelve bounded damped resonators (Voice limit 1-12) tuned by held MIDI notes (HarmonyMidi) or
 an internal scale picked from a dropdown of BassGen's 23 scales plus a root, turning arbitrary audio
 into pitched evolving material: damping, inharmonicity, freeze, bounded feedback and deterministic
-voice replacement.
+voice replacement. Held-note velocity scales the wet voice `0.25 + 0.75 * vel/127`;
+internal fallback voices keep unit gain.
 
 ### orbit
 Ordinary stereo spatial processor (no HRTF or binaural claim): seeded orbit, pendulum,

@@ -4,6 +4,11 @@ Mosaic is a four-slot WAV sampler with MIDI and autonomous triggering. Seeded
 slice selection, pitch variation, reverse probability, stereo spread, and
 transient-safe envelopes produce repeatable variations.
 
+## Velocity
+
+Incoming note velocity scales slice gain as `0.25 + 0.75 * vel/127`; velocity 0
+is note-off. Autonomous triggers use a fixed velocity of 96.
+
 ## Pitch bend
 
 Mosaic follows MIDI pitch bend **per channel**, so it can be driven by a per-channel

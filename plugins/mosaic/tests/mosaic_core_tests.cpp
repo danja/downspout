@@ -202,6 +202,30 @@ static void testPitchBendIsPerChannel()
            && "full bend down should lower by the bend range");
 }
 
+static void testVelocityScalesSlice()
+{
+    auto p = defaultParams();
+    Pool pool;
+    pool.samples[0] = makeSineSample();
+
+    const auto energyFor = [&](const int velocity) {
+        MidiEvent e;
+        e.size = 3;
+        e.data = {0x90, 60, static_cast<unsigned char>(velocity), 0};
+        std::array<float, 1024> l {}, r {};
+        State s;
+        process(s, p, {}, l.size(), 48000.0, &pool, &e, 1, l.data(), r.data());
+        float energy = 0.0f;
+        for (const float v : l)
+            energy += std::fabs(v);
+        return energy;
+    };
+
+    const float soft = energyFor(28);
+    const float loud = energyFor(122);
+    assert(soft > 0.0f && loud > soft * 1.5f);
+}
+
 int main()
 {
     testSmoke();
@@ -209,5 +233,6 @@ int main()
     testForwardPositionMatchesStart();
     testReversePositionAtEnd();
     testPitchBendIsPerChannel();
+    testVelocityScalesSlice();
     return 0;
 }

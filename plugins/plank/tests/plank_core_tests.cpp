@@ -154,6 +154,28 @@ Render renderBlocks(Processor& processor,
     return false;
 }
 
+[[nodiscard]] float energyOf(const Render& out)
+{
+    float energy = 0.0f;
+    for (const float sample : out.left)
+        energy += std::fabs(sample);
+    return energy;
+}
+
+[[nodiscard]] int firstMusicalNoteOnVelocity(const ProcessResult& result)
+{
+    for (std::uint32_t i = 0; i < result.eventCount; ++i)
+    {
+        const std::uint8_t status = result.events[i].data[0];
+        if (result.events[i].size == 3 && (status & 0xf0u) == 0x90u &&
+            (status & 0x0fu) >= 3u && result.events[i].data[2] > 0u)
+        {
+            return result.events[i].data[2];
+        }
+    }
+    return -1;
+}
+
 // ── Grid mapping ────────────────────────────────────────────────────────────
 
 void testGridNoteMapping()
@@ -269,6 +291,26 @@ void testGridPluckProducesAudio()
     require(!out.silent(), "plucking a grid pad should produce audio");
     require(out.peak > 0.001f, "plucking a grid pad should produce a meaningful peak");
     require(out.result.status.activeStrings >= 1.0f, "one plucked string should report as active");
+}
+
+void testNoteVelocityScalesPluckAndThru()
+{
+    const auto pluck = [](const std::uint8_t velocity) {
+        Processor processor;
+        processor.init(48000.0);
+        processor.setParameter(static_cast<std::uint32_t>(ParamId::ledFeedback), 0.0f);
+        processor.setParameter(static_cast<std::uint32_t>(ParamId::midiThru), 1.0f);
+        const MidiMessage input[] = { noteOn(gridToNote(3, 2), velocity) };
+        return renderBlocks(processor, 12, input, 1u);
+    };
+
+    const Render soft = pluck(24);
+    const Render loud = pluck(124);
+    require(energyOf(soft) > 0.0f && energyOf(loud) > energyOf(soft) * 1.4f,
+            "note velocity should scale the pluck");
+    require(firstMusicalNoteOnVelocity(soft.result) == 24 &&
+            firstMusicalNoteOnVelocity(loud.result) == 124,
+            "MIDI thru should preserve the incoming velocity");
 }
 
 void testEachColumnIsItsOwnString()
@@ -1816,6 +1858,7 @@ int main()
     testGridNoteMapping();
     testScaleLadder();
     testGridPluckProducesAudio();
+    testNoteVelocityScalesPluckAndThru();
     testEachColumnIsItsOwnString();
     testAllEightColumnsSoundTogether();
     testReleaseStopsTheString();

@@ -22,7 +22,8 @@ tighter embouchure can let an upper mode catch, including occasional
 clarinet-like squawks that fall back to the played note. The summed voices are
 made up to a usable level and softly limited. It is a compact physical
 sound-design model, not a calibrated trumpet simulation. There are eight MIDI voices, an Attack/Release envelope,
-velocity sensitivity and a channel filter.
+a channel filter, and a **Velocity** sensitivity control (default 65 %) that scales
+incoming note-on velocity into reed pressure and voice level; 0 makes velocity inert.
 
 CC 1-6 control Pressure, Embouchure, Bell, Breath, Reed Instability and Register
 Capture; CC 7 controls Level.

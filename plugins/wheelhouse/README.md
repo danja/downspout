@@ -21,8 +21,9 @@ click, overdrive and a swell pedal. Design and assumptions are in [docs/design.m
 | Volume | 0-100 % | 70 % | |
 | Upper / Lower / Pedal Channel | 0 (off), 1-16 | 1 / 2 / 3 | |
 
-Keys: upper and lower C2-C7 (MIDI 36-96), pedals C2-G4 (36-67); notes outside are ignored. Velocity is ignored. CC 11 is the
-swell pedal (squared); CC 123 and CC 120 release the keys on their channel.
+Keys: upper and lower C2-C7 (MIDI 36-96), pedals C2-G4 (36-67); notes outside are ignored. Velocity accents the key click
+and percussion; drawbar sustain stays velocity-independent, as on an organ. CC 11 is the swell pedal (squared); CC 123 and
+CC 120 release the keys on their channel.
 
 Audio: no input, stereo out. MIDI in. The organ itself is mono: the two channels differ only through the scanner's Width.
 Settings are ordinary automatable parameters; there is no plugin state. There are no output parameters.

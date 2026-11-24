@@ -108,6 +108,25 @@ void allNotesOffStopsVoices()
     assert(renderEnergy(engine, 256) < 0.0001f);
 }
 
+void fixedVelocityVoicesRespondToNoteOnVelocity()
+{
+    constexpr std::array<std::uint8_t, 4> notes {{39, 41, 42, 46}};  // clap, crash, closed/open hats
+    for (const std::uint8_t note : notes)
+    {
+        downspout::drumkit::Engine soft {48000.0f};
+        soft.setParameter(downspout::drumkit::kParamMasterReverb, 0.0f);
+        noteOn(soft, note, 24);
+        const float softEnergy = renderEnergy(soft, 1024);
+
+        downspout::drumkit::Engine loud {48000.0f};
+        loud.setParameter(downspout::drumkit::kParamMasterReverb, 0.0f);
+        noteOn(loud, note, 124);
+        const float loudEnergy = renderEnergy(loud, 1024);
+
+        assert(softEnergy > 0.0f && loudEnergy > softEnergy * 1.5f);
+    }
+}
+
 void metalDefaultsToDryTone()
 {
     constexpr std::array<std::pair<std::uint8_t, std::uint32_t>, 9> targets {{
@@ -187,6 +206,7 @@ int main()
     kickTransientAddsAttackEnergy();
     closedHatChokesOpenHatEvenWhenClosedHatMuted();
     allNotesOffStopsVoices();
+    fixedVelocityVoicesRespondToNoteOnVelocity();
     metalDefaultsToDryTone();
     metalChangesTargetVoices();
 

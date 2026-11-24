@@ -85,6 +85,7 @@ void Voice::reset() noexcept
     glideSmoother.reset(1.0f);
     noise = 0.0f;
     level = 0.0f;
+    velocity = 1.0f;
     pitchSemitones = 0.0f;
     phaseOffset = 0.0f;
     held = false;

@@ -7,4 +7,5 @@ a dropdown of BassGen's 23 scales and the root from the Internal root slider: vo
 1 sits on the root (C3 plus root) and each further voice on the next scale degree,
 climbing through the octaves. The bank sustains on that scale while no note is held;
 a held note takes over a voice, and a released voice returns to the scale once its
-tail has died away.
+tail has died away. Held-note velocity scales the wet resonator gain
+`0.25 + 0.75 * vel/127`; internal fallback voices stay at unit gain.

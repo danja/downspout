@@ -28,7 +28,9 @@ episode, and tonic pedal/cadence shape for Bach-like continuo movement.
 Moroder mode makes short, bright, repetitive subdivision-pulse bass lines with
 slider-shaped holes and color turns. Descending mode plays one line down the
 scale across the pattern, ending on the root; Color sets how much it wanders
-from a strict staircase. Descend/bar restarts that line in every bar.
+from a strict staircase. Descend/bar restarts that line in every bar. Incoming
+note velocity blends into emitted velocity when Follow/Dodge matches the input,
+both at matched pattern-note boundaries and for injected notes.
 
 ### Conductor integration
 

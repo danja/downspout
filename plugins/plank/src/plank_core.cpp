@@ -375,8 +375,10 @@ void Processor::startNote(Voice& voice,
                           const std::size_t col,
                           const std::size_t row,
                           ProcessResult& result,
-                          const std::uint32_t frame)
+                          const std::uint32_t frame,
+                          const std::uint8_t velocity)
 {
+    voice.velocity = 0.25f + 0.75f * clampValue(static_cast<float>(velocity) / 127.0f, 0.0f, 1.0f);
     setDegree(voice, row, col);
     voice.held = true;
     voice.sounding = true;
@@ -400,7 +402,7 @@ void Processor::startNote(Voice& voice,
     if (parameters_[static_cast<std::size_t>(ParamId::midiThru)] >= 0.5f)
     {
         const auto status = static_cast<std::uint8_t>(0x90u | baseChannel());
-        appendMidi(result, frame, status, midiNoteFor(voice), 100);
+        appendMidi(result, frame, status, midiNoteFor(voice), velocity);
     }
 }
 
@@ -432,7 +434,8 @@ void Processor::stopNote(Voice& voice,
     }
 }
 
-void Processor::pressGrid(const std::size_t row, const std::size_t col, ProcessResult& result, const std::uint32_t frame)
+void Processor::pressGrid(const std::size_t row, const std::size_t col, ProcessResult& result,
+                          const std::uint32_t frame, const std::uint8_t velocity)
 {
     Voice& voice = voices_[col];
     const bool latched = parameters_[static_cast<std::size_t>(ParamId::latch)] >= 0.5f;
@@ -449,7 +452,7 @@ void Processor::pressGrid(const std::size_t row, const std::size_t col, ProcessR
     }
 
     const std::uint8_t previous = (voice.held && voice.degree == row) ? holdCount_[col] : 0;
-    startNote(voice, col, row, result, frame);
+    startNote(voice, col, row, result, frame, velocity);
     cellPlucked_[col] = false;
     holdCount_[col] = static_cast<std::uint8_t>(std::min(previous + 1, 255));
 }
@@ -499,7 +502,7 @@ bool Processor::handleMidi(const MidiMessage& event, ProcessResult& result)
     if ((status == 0x90u || status == 0x80u) && noteToGrid(data1, row, col))
     {
         if (status == 0x90u && data2 > 0u)
-            pressGrid(row, col, result, event.frame);
+            pressGrid(row, col, result, event.frame, data2);
         else
             releaseGrid(row, col, result, event.frame);
 
@@ -811,7 +814,7 @@ void Processor::renderVoice(const std::size_t index,
         voice.amplitude.advance(attackStep, decayStep, releaseStep, sustain);
         voice.modulation.advance(modAttackStep, modDecayStep, modReleaseStep, modSustain);
 
-        const float amplitude = voice.amplitude.level() * envLevel;
+        const float amplitude = voice.amplitude.level() * envLevel * voice.velocity;
         if (amplitude <= 0.0f && !voice.amplitude.active())
             voice.sounding = false;
 

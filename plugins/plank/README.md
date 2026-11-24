@@ -20,7 +20,8 @@ Both feed the same delay, reverb, stereo width and output stage.
 Plinky calls its eight voices "strings", because on that instrument each is a
 touch strip you slide a finger along. Plank keeps the word for the columns, but
 only the `String` engine actually sounds like one. Holding six pads gives six
-voices, each keeping its own pitch and timbre.
+voices, each keeping its own pitch and timbre. Incoming note velocity scales the
+pluck, and MIDI-thru note-ons preserve the incoming velocity.
 
 ## The interface
 

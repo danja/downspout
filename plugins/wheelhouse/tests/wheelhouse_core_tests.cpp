@@ -30,7 +30,7 @@ constexpr double kPi = 3.14159265358979323846;
 
 struct Timed { std::uint32_t frame; MidiEvent ev; };
 
-static Timed noteOn(std::uint32_t frame, int key, int channel = 0) { return {frame, {0, static_cast<std::uint8_t>(0x90 | channel), static_cast<std::uint8_t>(key), 100}}; }
+static Timed noteOn(std::uint32_t frame, int key, int channel = 0, int velocity = 100) { return {frame, {0, static_cast<std::uint8_t>(0x90 | channel), static_cast<std::uint8_t>(key), static_cast<std::uint8_t>(velocity)}}; }
 static Timed noteOff(std::uint32_t frame, int key, int channel = 0) { return {frame, {0, static_cast<std::uint8_t>(0x80 | channel), static_cast<std::uint8_t>(key), 0}}; }
 static Timed controller(std::uint32_t frame, int number, int value, int channel = 0)
 {
@@ -371,6 +371,35 @@ static void testKeyClick()
     check("no click before the key", allZero(o.l, 0, 1000));
 }
 
+static void testVelocityAccentsClickAndPercussion()
+{
+    Parameters click = bare();
+    click.click = 0.5f;
+    const Out softClick = render(click, {noteOn(0, 48, 0, 24)}, 0.05f);
+    const Out loudClick = render(click, {noteOn(0, 48, 0, 124)}, 0.05f);
+    check("note velocity scales the key click",
+          peak(loudClick.l, 0, 2400) > peak(softClick.l, 0, 2400) * 1.4);
+
+    Parameters perc = bare();
+    perc.percOn = 1.0f;
+    perc.percHarmonic = 1.0f;
+    perc.percDecay = 0.0f;
+    const double third = freqOfMidi(48 + kPercussionThird);
+    const Out softPerc = render(perc, {noteOn(0, 48, 0, 24)}, 0.5f);
+    const Out loudPerc = render(perc, {noteOn(0, 48, 0, 124)}, 0.5f);
+    const double softAmp = toneAmp(softPerc.l, 960, 2400, third);
+    const double loudAmp = toneAmp(loudPerc.l, 960, 2400, third);
+    check("note velocity scales percussion", softAmp > 0.001 && loudAmp > softAmp * 1.4);
+
+    Parameters sustain = bare();
+    sustain.upper[2] = 8.0f;
+    const double f = freqOfMidi(48);
+    const double softSustain = steady(render(sustain, {noteOn(0, 48, 0, 24)}, 1.0f), f);
+    const double loudSustain = steady(render(sustain, {noteOn(0, 48, 0, 124)}, 1.0f), f);
+    check("velocity leaves drawbar sustain unchanged",
+          std::fabs(softSustain / loudSustain - 1.0) < 0.02);
+}
+
 // Overdrive: a linear signal path at 0, harmonics above it, bounded output.
 static void testDrive()
 {
@@ -542,6 +571,7 @@ int main()
     testPercussion();
     testScanner();
     testKeyClick();
+    testVelocityAccentsClickAndPercussion();
     testDrive();
     testTone();
     testLevels();

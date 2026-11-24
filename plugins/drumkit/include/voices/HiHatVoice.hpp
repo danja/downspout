@@ -134,7 +134,7 @@ public:
         sample = std::tanh(sample * (1.08f + 0.45f * brightnessParam + m * 1.55f));
         sample *= env.process();
 
-        return sample * (isClosed ? 0.66f : 0.74f) * level * (0.9f + 0.1f * velocity);
+        return sample * (isClosed ? 0.66f : 0.74f) * level * velocity;
     }
 
     bool isActive() const { return env.isActive(); }

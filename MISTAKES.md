@@ -6,6 +6,11 @@ Format: what happened, root cause, prevention.
 
 ## Open
 
+## bassgen: velocity test hit the wrong transport boundary (2026-11-24)
+- **What happened:** `emittedVelocityFor(30) == 77` failed because the test used `playingTransport(0.249)` with `lastTransportStep = 0`; that block exercised the follow-injected note path, not the matched pattern-note boundary.
+- **Root cause:** barBeat was treated as a local step index. At four steps per beat, 0.249 beat sits near local step 1 while the pattern note starts at step 4.
+- **Prevention:** derive the transport position from the target step (`(step + small delta) / stepsPerBeat`) and set the previous step accordingly; assert the emitted note pitch before asserting its velocity.
+
 ## drumgen: mixed-type `std::max` velocity boost (2026-11-24)
 - **What happened:** the standalone core probe failed to compile with `no matching function for call to 'max(uint8_t&, const int&)'` while adding continuous backbeat velocity.
 - **Root cause:** `std::max` deduces one template type from both arguments; `uint8_t` velocity and an `int` boost cannot be deduced together.

@@ -15,6 +15,11 @@ float clampf(const float v, const float lo, const float hi) noexcept
     return v < lo ? lo : (v > hi ? hi : v);
 }
 
+float velocityGain(const int velocity) noexcept
+{
+    return 0.25f + 0.75f * clampf(static_cast<float>(velocity) / 127.0f, 0.0f, 1.0f);
+}
+
 float roundClamp(const float v, const float lo, const float hi) noexcept
 {
     return std::round(clampf(v, lo, hi));
@@ -131,6 +136,7 @@ void resetState(EngineState& s) noexcept
     for (auto& row : s.gain) row.fill(0.0f);
     for (auto& row : s.target) row.fill(0.0f);
     for (auto& row : s.keyDown) row.fill(false);
+    for (auto& row : s.keyVelocity) row.fill(1.0f);
     s.upperHeld = 0;
     s.percEnv = 0.0f;
     s.swell = 1.0f;
@@ -203,15 +209,19 @@ void processBlock(EngineState& s, const Parameters& rawParams, const float sampl
                 for (int d = 0; d < kDivisionCount; ++d) {
                     if (channel[static_cast<std::size_t>(d)] != ch || !keyInRange(d, e.data1)) continue;
                     bool& down = s.keyDown[static_cast<std::size_t>(d)][e.data1];
+                    float& velocity = s.keyVelocity[static_cast<std::size_t>(d)][e.data1];
                     if (on && !down) {
+                        velocity = velocityGain(e.data2);
                         if (d == kUpper) {
-                            if (s.upperHeld == 0) s.percEnv = 1.0f;   // percussion fires on the first key of a legato run
+                            if (s.upperHeld == 0) s.percEnv = velocity;  // percussion fires on the first key of a legato run
                             ++s.upperHeld;
                         }
-                        down = true; s.clickEnv = 1.0f; changed = true;
+                        down = true; s.clickEnv = velocity; changed = true;
+                    } else if (on && down) {
+                        velocity = velocityGain(e.data2);  // a repeat has no new click, but remembers its strength for release
                     } else if (off && down) {
                         if (d == kUpper) --s.upperHeld;
-                        down = false; s.clickEnv = 1.0f; changed = true;
+                        down = false; s.clickEnv = velocity; changed = true;
                     }
                 }
             } else if (kind == 0xB0 && (e.data1 == 120 || e.data1 == 123)) {

@@ -77,6 +77,7 @@ struct EngineState {
     std::array<std::array<float, kWheelCount>, 4> gain {};     // upper, lower, pedal, percussion
     std::array<std::array<float, kWheelCount>, 4> target {};
     std::array<std::array<bool, 128>, kDivisionCount> keyDown {};
+    std::array<std::array<float, 128>, kDivisionCount> keyVelocity {};  // last note-on strength, for release clicks
     int upperHeld = 0;
     float percEnv = 0.0f;
     float swell = 1.0f;

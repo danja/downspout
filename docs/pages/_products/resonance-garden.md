@@ -25,4 +25,5 @@ The bank holds up to twelve resonators (**Voice limit**). With no MIDI it sustai
 internal scale: pick one of 23 scales (BassGen's list) from the **Internal scale** dropdown
 and a root with **Internal root**; voice 1 is the root and the rest climb the scale. A held
 note takes over a voice, and a released voice returns to the scale once its tail has died
-away.
+away. Held-note velocity scales the wet resonator gain `0.25 + 0.75 * vel/127`;
+internal fallback voices stay at unit gain.

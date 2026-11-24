@@ -362,9 +362,12 @@ void processBoundary(EngineState& state,
         if (dodge) {
             return;
         }
-        const int velocity = matchedInput && state.controls.followDodge > 0.001f
-            ? clampi(startEvent->velocity + static_cast<int>(std::lround(responseAmount * 16.0f)), 1, 127)
-            : startEvent->velocity;
+        int velocity = startEvent->velocity;
+        if (matchedInput && state.controls.followDodge > 0.001f) {
+            velocity = clampi((velocity + state.inputTriggerVelocity) / 2 +
+                                  static_cast<int>(std::lround(responseAmount * 16.0f)),
+                              1, 127);
+        }
         emitNoteOn(result, state, onFrame, startEvent->note, velocity);
         state.activeNote = startEvent->note;
     } else if (matchedInput && state.controls.followDodge > 0.001f &&

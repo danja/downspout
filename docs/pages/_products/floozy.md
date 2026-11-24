@@ -19,7 +19,9 @@ This thing is rather eccentric, the controls not altogether intuitive. But it ca
 Floozy is a playable stereo instrument derived from `floozy-poly`. It exposes
 source algorithm, interface/body model, quantized body tuning, feedback,
 filter, modulation, reverb, and output controls while keeping the voice engine
-deterministic and bounded.
+deterministic and bounded. Incoming velocity scales the attack transient and body
+excitation; unlike most instruments here, velocity 0 starts a silent note rather
+than a note-off.
 
 **Pitch bend** is applied per MIDI channel (2 semitones by default, set per channel with
 RPN 0) and voices are keyed by channel and note, so it follows the one-note-per-channel

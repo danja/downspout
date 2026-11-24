@@ -107,10 +107,12 @@ private:
     static constexpr std::size_t kReverbMaxSeconds = 4;
 
     // ── Grid / string control ──
-    void pressGrid(std::size_t row, std::size_t col, ProcessResult& result, std::uint32_t frame);
+    void pressGrid(std::size_t row, std::size_t col, ProcessResult& result, std::uint32_t frame,
+                   std::uint8_t velocity = 100);
     void releaseGrid(std::size_t row, std::size_t col, ProcessResult& result, std::uint32_t frame);
     void releaseAllStrings(ProcessResult& result, std::uint32_t frame);
-    void startNote(Voice& voice, std::size_t col, std::size_t row, ProcessResult& result, std::uint32_t frame);
+    void startNote(Voice& voice, std::size_t col, std::size_t row, ProcessResult& result, std::uint32_t frame,
+                   std::uint8_t velocity = 100);
     void stopNote(Voice& voice, std::size_t col, ProcessResult& result, std::uint32_t frame, bool immediate);
     void setDegree(Voice& voice, std::size_t row, std::size_t col);
 

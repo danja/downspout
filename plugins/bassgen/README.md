@@ -23,7 +23,10 @@ companion interval above the incoming guide pitch.
 Channel 10 keeps the exact listen-note trigger behavior used for drum-style
 hits. Channel 1 note-ons are also accepted as musical guides: when follow
 injection happens, their pitch steers the injected note toward a related
-bass-register pitch instead of acting only as a trigger.
+bass-register pitch instead of acting only as a trigger. Incoming note velocity
+blends into emitted velocity when Follow/Dodge matches the input, both for
+injected notes and at matched pattern-note boundaries; unmatched notes keep
+their pattern velocity.
 The `Color` control adjusts harmonic tension: for Jazz it moves dominant bars
 from inside/bebop material toward altered, diminished, and whole-tone colors,
 for Fugue it adds leading-tone pickup behavior, while other genres use it for

@@ -52,7 +52,7 @@ upper bus (+ percussion)   lower bus   pedal bus
   checked; the wheel set here is simply notes 24-114.
 - **Voicing constants are by ear:** the percussion times and levels, the scanner depths, the click level, the master gain, the
   tone range and the drive law. They are not measurements of a Hammond.
-- **Velocity** is ignored. **Sustain pedal** (CC 64) is ignored: an organ has none.
+- **Velocity** accents the key click and percussion (`0.25 + 0.75 * vel/127`); drawbar sustain stays velocity-independent, as on an organ. **Sustain pedal** (CC 64) is ignored: an organ has none.
 - **MIDI.** One MIDI input. Each division reads its own channel; a channel set to 0 turns it off, and two divisions may share a
   channel. Note-on with velocity 0 is a note-off. CC 11 from any channel is the swell. CC 123 and 120 release the keys of
   their channel's divisions.

@@ -25,7 +25,8 @@ set 0 to 8 in 3 dB steps. The **upper** and **lower** manuals have nine drawbars
 harmonic on the first key of a legato phrase. **Vibrato/Chorus** is a scanner: V1-V3 vibrato and C1-C3 chorus at 4-9 Hz on the upper and/or lower manual. **Key Click**,
 **Drive**, **Tone**, **Width** and **Volume** finish the sound, and CC 11 is the swell pedal.
 
-Keys: upper and lower C2-C7, pedals C2-G4. Velocity is ignored, as on an organ.
+Keys: upper and lower C2-C7, pedals C2-G4. Velocity accents the key click and
+percussion; drawbar sustain stays velocity-independent, as on an organ.
 
 ### Parameters
 

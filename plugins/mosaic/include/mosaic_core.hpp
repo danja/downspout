@@ -17,7 +17,7 @@ struct Sample{std::vector<float>data;std::uint32_t channels=0;double sampleRate=
 struct Pool{std::array<Sample,kPoolSize>samples{};};
 struct LoadResult{Sample sample;std::string error;};
 LoadResult loadWav(const std::string&path);
-struct Voice{const Sample*sample=nullptr;double position=0,increment=1;std::uint32_t start=0,end=0;float envelope=0,pan=0;bool reverse=false,active=false,releasing=false;std::uint8_t channel=0;};
+struct Voice{const Sample*sample=nullptr;double position=0,increment=1;std::uint32_t start=0,end=0;float envelope=0,pan=0,velocity=1;bool reverse=false,active=false,releasing=false;std::uint8_t channel=0;};
 struct State{std::array<Voice,kVoiceCount>voices{};std::array<float,16>bend{}; /* per-channel pitch bend, -1..1 */std::uint64_t triggerSerial=0;std::int64_t lastAutoStep=-1;int statusLoaded=0,statusVoices=0;bool statusMissing=true;};
 void reset(State&)noexcept;
 void process(State&,const std::array<float,kParameterCount>&,const Transport&,std::uint32_t,double,const Pool*,const MidiEvent*,std::uint32_t,float*,float*)noexcept;

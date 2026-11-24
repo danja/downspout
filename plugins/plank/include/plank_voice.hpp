@@ -246,6 +246,7 @@ struct Voice {
     Smoother glideSmoother;
     float noise = 0.0f;
     float level = 0.0f;  // smooth amplitude follower, drives the LEDs
+    float velocity = 1.0f;  // scaled note-on strength
     float pitchSemitones = 0.0f;
     float phaseOffset = 0.0f;
     bool held = false;   // pad still down, or latched

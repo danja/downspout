@@ -40,3 +40,5 @@ Current MIDI map:
 - Bash 51
 - Cowbell 52
 - Clave 53
+
+All eleven voices scale with note velocity; velocity 0 is note-off.

@@ -1138,6 +1138,44 @@ void testIncomingMidiFollowInjectsMatchedStep() {
     assert(engine.activeNote == -1);
 }
 
+void testIncomingMidiVelocityScalesMatchedPatternNote() {
+    const auto emittedVelocityFor = [](const int inputVelocity) {
+        Controls controls;
+        controls.followDodge = 1.0f;
+        controls.listenChannel = 10;
+        controls.listenNote = 36;
+
+        EngineState engine;
+        activate(engine, controls);
+
+        engine.patternValid = true;
+        engine.pattern.patternSteps = 16;
+        engine.pattern.stepsPerBeat = 4;
+        engine.pattern.stepsPerBar = 16;
+        engine.pattern.meter = ::downspout::Meter {};
+        engine.pattern.eventCount = 1;
+        engine.pattern.events[0] = NoteEvent{4, 2, 48, 92};
+        engine.wasPlaying = true;
+        engine.lastTransportStep = 3;
+
+        const InputMidiEvent input = noteOn(0, 10, 36, inputVelocity);
+        const BlockResult result = processBlock(engine,
+                                                controls,
+                                                playingTransport(0.999),
+                                                1024,
+                                                48000.0,
+                                                &input,
+                                                1);
+        assert(result.eventCount == 1);
+        assert(result.events[0].type == MidiEventType::noteOn);
+        assert(result.events[0].data1 == 48);
+        return static_cast<int>(result.events[0].data2);
+    };
+
+    assert(emittedVelocityFor(30) == 77);
+    assert(emittedVelocityFor(120) == 122);
+}
+
 void testIncomingMidiChannelGuideInjectsCompanionNote() {
     Controls controls;
     controls.followDodge = 1.0f;
@@ -1557,6 +1595,7 @@ int main() {
     testEngineBoundaryEndThenStartScheduling();
     testIncomingMidiDodgeSuppressesMatchedStep();
     testIncomingMidiFollowInjectsMatchedStep();
+    testIncomingMidiVelocityScalesMatchedPatternNote();
     testIncomingMidiChannelGuideInjectsCompanionNote();
     testIncomingMidiChannelOneGuidesMusicalBassNote();
     testIncomingMidiChannelTenExactTriggerStaysNonPitchGuided();

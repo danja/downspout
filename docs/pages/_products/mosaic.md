@@ -19,3 +19,5 @@ an AI invention. Needs investigating.
 
 Mosaic loads samples outside the audio callback and uses sixteen fixed playback
 voices. Invalid or missing files produce silence and a visible status value.
+Incoming note velocity scales slice gain `0.25 + 0.75 * vel/127`; autonomous
+triggers use a fixed 96.

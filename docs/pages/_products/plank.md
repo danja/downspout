@@ -38,7 +38,8 @@ A voice is one of two things, chosen with `Engine`:
 Both go through the same tape delay, shimmer reverb, mid/side width and soft output stage.
 Top buttons on the Launchpad step octave and morph, engage latch, raise drive and
 resonance, toggle LED feedback, and panic; side buttons pick a performance scale. Selectors
-in the UI open drop-down lists. See `plugins/plank/docs/layout.md` for the full surface.
+in the UI open drop-down lists. Incoming note velocity scales the pluck and is preserved
+in MIDI-thru note-ons. See `plugins/plank/docs/layout.md` for the full surface.
 
 The strings are tuned against each other by `Spread`. The default, `Stride`, is Plinky's own
 rule: each string a set number of semitones above the last (7 by default, roughly a fifth),

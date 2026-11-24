@@ -26,6 +26,7 @@ private:
     float toneParam;
     float metalParam;
     float level;
+    float velocity;
 
     // Multi-impulse state
     int impulseCount;
@@ -50,6 +51,7 @@ public:
         , toneParam(0.45f)
         , metalParam(0.0f)
         , level(1.0f)
+        , velocity(1.0f)
         , impulseCount(5)
         , currentImpulse(0)
         , samplesUntilNext(0)
@@ -86,7 +88,8 @@ public:
         level = std::clamp(value, 0.0f, 1.5f);
     }
 
-    void trigger(float /*vel*/ = 1.0f) {
+    void trigger(float vel = 1.0f) {
+        velocity = std::clamp(vel, 0.0f, 1.0f);
         currentImpulse = 0;
         samplesUntilNext = 0;
         burstSamples = 0;
@@ -129,7 +132,7 @@ public:
         }
         sample *= env.process();
 
-        return sample * 0.8f * level;  // Higher output level
+        return sample * 0.8f * level * velocity;  // Higher output level
     }
 
     bool isActive() const { return env.isActive(); }

@@ -255,6 +255,7 @@ The skills point at `CLAUDE.md` and `docs/` instead of copying them, so when a r
 ## Reference Docs
 
 - [docs/pages/plugins-summary.md](docs/pages/plugins-summary.md): per-plugin ports, MIDI roles, CC maps and wiring, written for automated agents (also on the Pages site as "Reference")
+- [docs/midi-velocity.md](docs/midi-velocity.md): what incoming note velocity actually controls in each plugin
 - [docs/process.md](docs/process.md): the AI-assisted workflow, skills, testing, builds, publishing and definition of done
 - [docs/architecture.md](docs/architecture.md): build graph, layering, state, transport, UI, install and release conventions
 - [docs/install.md](docs/install.md) and [docs/release.md](docs/release.md): local installs, release artifacts and the GitHub Actions workflow

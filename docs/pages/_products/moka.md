@@ -25,7 +25,8 @@ resonance, ring-out, and stereo spread around that table.
 Every note ramps in over the mallet's contact time, 1.5 ms on a hard beater
 up to 6 ms on a soft one, so a note starts from silence instead of stepping
 straight to full amplitude. Retriggering a held note crossfades its tail
-rather than cutting it.
+rather than cutting it. Incoming velocity scales the modal partial level and the
+mallet transient, and also seeds the burst; velocity 0 is note-off.
 
 The panel plots the eight partial slots live, at the ratios and levels the
 engine is actually using, and reads the fundamental's ring time on a dial —

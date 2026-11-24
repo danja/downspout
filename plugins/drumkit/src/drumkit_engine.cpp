@@ -129,7 +129,7 @@ void Engine::handleNoteOn(const std::uint8_t note, const std::uint8_t velocity)
     case 39:
         fireTrig(InstrumentId::Clap);
         if (!isInstrumentMuted(InstrumentId::Clap))
-            clap_->trigger(1.0f);
+            clap_->trigger(vel);
         break;
     case 40:
         fireTrig(InstrumentId::Snare);
@@ -139,13 +139,13 @@ void Engine::handleNoteOn(const std::uint8_t note, const std::uint8_t velocity)
     case 41:
         fireTrig(InstrumentId::Crash);
         if (!isInstrumentMuted(InstrumentId::Crash))
-            crash_->trigger(1.0f);
+            crash_->trigger(vel);
         break;
     case 42:
         fireTrig(InstrumentId::ClosedHH);
         openHH_->kill();
         if (!isInstrumentMuted(InstrumentId::ClosedHH))
-            closedHH_->trigger(1.0f);
+            closedHH_->trigger(vel);
         break;
     case 45:
         fireTrig(InstrumentId::Tom1);
@@ -155,7 +155,7 @@ void Engine::handleNoteOn(const std::uint8_t note, const std::uint8_t velocity)
     case 46:
         fireTrig(InstrumentId::OpenHH);
         if (!isInstrumentMuted(InstrumentId::OpenHH))
-            openHH_->trigger(1.0f);
+            openHH_->trigger(vel);
         break;
     case 50:
         fireTrig(InstrumentId::Tom2);

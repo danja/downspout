@@ -134,6 +134,30 @@ void testChangingScaleRetunesLive()
     assert(s.voices[2].note == 53);     // D minor's third is F
 }
 
+void testNoteVelocityScalesTheWetVoice()
+{
+    Params p = defaults();
+    p[kVoiceLimit] = 1;
+    p[kMix] = 1.0f;
+    p[kExcitation] = 1.0f;
+
+    const auto energyFor = [&](const int velocity) {
+        State s; prepare(s, 48000); reset(s);
+        std::vector<float> in(4096, 0.0f), l(4096), r(4096);
+        in[0] = 1.0f;
+        MidiEvent on; on.frame = 0; on.size = 3;
+        on.data = {0x90, 72, static_cast<std::uint8_t>(velocity), 0};
+        process(s, p, 4096, 48000, in.data(), in.data(), l.data(), r.data(), &on, 1);
+        double energy = 0.0;
+        for (const float sample : l) energy += std::fabs(sample);
+        return energy;
+    };
+
+    const double soft = energyFor(28);
+    const double loud = energyFor(122);
+    assert(soft > 1e-4 && loud > soft * 1.4);
+}
+
 void testInternalBankSustains()
 {
     // With no MIDI the bank should still be there long after the start-up, not fade out.
@@ -159,6 +183,7 @@ int main()
     testTwelveNotesRing();
     testMidiOverridesTheScaleAndTheScaleReturns();
     testChangingScaleRetunesLive();
+    testNoteVelocityScalesTheWetVoice();
     testInternalBankSustains();
     return 0;
 }

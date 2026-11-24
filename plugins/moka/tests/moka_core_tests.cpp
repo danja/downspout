@@ -182,6 +182,19 @@ void defaultSingleNotesHaveUsefulLevel()
     }
 }
 
+void velocityAffectsOutput()
+{
+    MokaEngine soft {48000.0f};
+    soft.noteOn(60, 28);
+    const float softEnergy = renderEnergy(soft, 4096);
+
+    MokaEngine loud {48000.0f};
+    loud.noteOn(60, 122);
+    const float loudEnergy = renderEnergy(loud, 4096);
+
+    require(loudEnergy > softEnergy * 1.5f, "moka velocity should scale strike and partial level");
+}
+
 void defaultPolyphonyIsFour()
 {
     MokaEngine engine {48000.0f};
@@ -610,6 +623,7 @@ int main()
     defaultsAndClamping();
     allModelsRender();
     defaultSingleNotesHaveUsefulLevel();
+    velocityAffectsOutput();
     defaultPolyphonyIsFour();
     polyphonyIsSelectable();
     noteOffReleases();

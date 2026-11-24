@@ -27,6 +27,7 @@ private:
     float brightnessParam;
     float metalParam;
     float level;
+    float velocity;
 
     static float expoMap(float value, float min, float max) {
         return min * std::pow(max / min, std::clamp(value, 0.0f, 1.0f));
@@ -45,6 +46,7 @@ public:
         , brightnessParam(0.65f)
         , metalParam(0.0f)
         , level(1.0f)
+        , velocity(1.0f)
     {
         // Initial bandpass cascade (2.5kHz, 5kHz, 8kHz)
         bp1.setParameters(2500.0f, 2.0f);
@@ -82,7 +84,8 @@ public:
         metalParam = std::clamp(value, 0.0f, 1.0f);
     }
 
-    void trigger(float /*vel*/ = 1.0f) {
+    void trigger(float vel = 1.0f) {
+        velocity = std::clamp(vel, 0.0f, 1.0f);
         env.trigger();
         bp1.reset();
         bp2.reset();
@@ -113,7 +116,7 @@ public:
         // Envelope
         sample *= env.process();
 
-        return sample * 0.5f * level;
+        return sample * 0.5f * level * velocity;
     }
 
     bool isActive() const { return env.isActive(); }
