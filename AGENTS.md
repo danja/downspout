@@ -30,7 +30,8 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - Assert the observable effect, not an intermediate (e.g. the emitted note, not `noteForCell`). To make a parameter inert, assert its default is inert rather than zeroing it. Test that every control has an audible/visible effect.
 - Re-run a plugin's tests after changing any parameter default.
 - Table-driven data (scales, ladders): hold an independent expected set in the test, diff against existing tables elsewhere in the repo first, and generate docs from the source enum, not from the reference it was derived from.
-- Transport-quantised emitters need a schedule queue in absolute quarters; events outside the current block must not be dropped.
+- Transport-quantised emitters need a schedule queue in absolute quarters; events outside the current block must not be dropped. For a step-targeted case, derive the transport position from that step (`(step + delta) / stepsPerBeat`), not from a barBeat treated as a local step index; assert the emitted pitch before its velocity.
+- `std::max`/`std::min` deduce one type from every operand: cast mixed integer operands (e.g. `uint8_t` velocity and an `int` boost) to a common type before comparing. Compile a standalone probe before the CMake build.
 - Probes must advance the input pointer per block, and be sanity-checked against the raw input.
 - A doc that quotes a "worst case over a range" needs a test sweeping the whole range, asserting the documented bound.
 - Measure before building: write the accuracy probe (pitch ratio, filter response across the whole parameter space) before wiring DSP. Use a Goertzel magnitude, not zero-crossings, on spliced signals. Read the reference function (e.g. `plinky.c` `stride()`) before describing it.
@@ -77,6 +78,8 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - Rerun a timing-based test ("renders faster than real time") alone before treating it as a regression: it failed under a load average of 37 and passed alone. A CPU figure taken on a busy machine is an upper bound; say so.
 - `cmake --build --target <plugin>` does not compile the UI (it builds a stub library). Build `<plugin>-vst3` and check the exit status; after changing a shared header such as `MagnetoKit.hpp`, build `-vst3` for every plugin that includes it (`grep -rl MagnetoKit.hpp plugins`). Include what each wrapper/UI file uses (`<string>`, a plugin-local helper header): core tests can compile while the VST3 target fails, and the screenshot (jack) build can hide a missing include.
 - Scripted batch edits: `continue` in every branch, diff the result. For non-unique lines anchor on context, not first match.
+- Re-read the exact target lines immediately before an exact-match edit; anchor on a short verified snippet instead of prose composed from an earlier read.
+- Qualify plugin-namespace types in DPF UI code (`START_NAMESPACE_DISTRHO` does not import them) and rebuild `<plugin>-vst3` after UI edits, not just the core tests.
 - Port a DSP core a function at a time and build after each; do not draft the whole thing in one pass.
 - Cross-repo scripts: read the dataclass before constructing it positionally, and distrust a large mismatch on only some cases.
 

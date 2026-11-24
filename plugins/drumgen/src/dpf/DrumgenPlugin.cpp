@@ -4,6 +4,7 @@
 #include "drumgen_engine.hpp"
 #include "drumgen_pattern.hpp"
 #include "drumgen_serialization.hpp"
+#include "drumgen_status_params.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -39,7 +40,12 @@ enum ParameterIndex : uint32_t {
     kParamCaTarget,
     kParamCaEvery,
     kParamConductorScene,  // appended: indices above are saved in projects
-    kParameterCount
+    // Appended read-only mirrors of the effective controls: DPF/VST3 only pushes
+    // output parameters to the UI, so Conductor CC writes stay visible there.
+    kParamStatusDensity   = downspout::drumgen::status_params::kDensity,
+    kParamStatusVariation = downspout::drumgen::status_params::kVariation,
+    kParamStatusVary      = downspout::drumgen::status_params::kVary,
+    kParameterCount       = downspout::drumgen::status_params::kParameterCount
 };
 
 enum StateIndex : uint32_t {
@@ -355,6 +361,30 @@ protected:
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = downspout::drumgen::conductor_scene::kDefaultEnabled ? 1.0f : 0.0f;
             break;
+        case kParamStatusDensity:
+            parameter.name = "Live Density";
+            parameter.symbol = "status_density";
+            parameter.hints = kParameterIsOutput;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.58f;
+            break;
+        case kParamStatusVariation:
+            parameter.name = "Live Variation";
+            parameter.symbol = "status_variation";
+            parameter.hints = kParameterIsOutput;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.35f;
+            break;
+        case kParamStatusVary:
+            parameter.name = "Live Vary";
+            parameter.symbol = "status_vary";
+            parameter.hints = kParameterIsOutput | kParameterIsInteger;
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 100.0f;
+            parameter.ranges.def = 0.0f;
+            break;
         }
     }
 
@@ -415,6 +445,9 @@ protected:
         case kParamActionNew: return static_cast<float>(controls_.actionNew);
         case kParamActionMutate: return static_cast<float>(controls_.actionMutate);
         case kParamActionFill: return static_cast<float>(controls_.actionFill);
+        case kParamStatusDensity: return controls_.density;
+        case kParamStatusVariation: return controls_.variation;
+        case kParamStatusVary: return controls_.vary * 100.0f;
         default:
             return 0.0f;
         }
@@ -422,6 +455,17 @@ protected:
 
     void setParameterValue(uint32_t index, float value) override
     {
+        // Status outputs mirror controls_; hosts and the UI must not write them.
+        switch (index)
+        {
+        case kParamStatusDensity:
+        case kParamStatusVariation:
+        case kParamStatusVary:
+            return;
+        default:
+            break;
+        }
+
         switch (index)
         {
         case kParamGenre: controls_.genre = static_cast<downspout::drumgen::GenreId>(static_cast<int>(value)); break;

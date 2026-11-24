@@ -1,3 +1,4 @@
+#include "drumgen_status_params.hpp"
 #include "drumgen_ui_layout.hpp"
 
 #include "downspout/test_assert.h"
@@ -61,6 +62,16 @@ int main()
     // A host window too short for either side keeps the menu at the top margin.
     const Rect shortMenu = selectorMenuRect({0.0f, 0.0f, 100.0f, 46.0f}, 17, 200.0f);
     assert(near(shortMenu.y, kSelectorMargin));
+
+    // The live status mirrors are appended after the saved parameters and draw
+    // on their matching Pattern Mix sliders. An ordinary index passes through.
+    namespace status = downspout::drumgen::status_params;
+    assert(status::kDensity == 25 && status::kVariation == 26 && status::kVary == 27);
+    assert(status::kParameterCount == 28);
+    assert(status::displayControlFor(status::kDensity) == status::kDensityControl);
+    assert(status::displayControlFor(status::kVariation) == status::kVariationControl);
+    assert(status::displayControlFor(status::kVary) == status::kVaryControl);
+    assert(status::displayControlFor(status::kDensityControl) == status::kDensityControl);
 
     return 0;
 }

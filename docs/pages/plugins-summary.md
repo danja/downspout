@@ -212,7 +212,7 @@ Crash/Bash Hits, plus Density, Variation, Fill Amount, Vary and Seed. The panel 
 **Mutate** and **Fill** are ordinary integer request counters (0–1048576), not trigger
 parameters, so VST3 hosts forward UI clicks to the DSP.
 **Conductor Ch** maps CC 21 to density, 22 to variation, 23 to mutation rate and CC 24 =
-127 to a new pattern. **Conductor Scene** (appended, default Off) opts CC 20 into
+127 to a new pattern; read-only **Live Density / Live Variation / Live Vary** outputs mirror the CC-driven values onto the sliders. **Conductor Scene** (appended, default Off) opts CC 20 into
 block-to-Fill mapping: Intro 0.10, Theme 0.30, Develop 0.65, Break 1.0, Reprise 0.50,
 Coda 0.20, Null unchanged. Persistent patterns. Requires transport. **Automaton layer** (off by default;
 appended parameters `ca_rule` 0-10, `ca_target` 0-4, `ca_every` 1-8 loops per generation): the generated

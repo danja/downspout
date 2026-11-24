@@ -2,6 +2,7 @@
 #include "downspout/look_and_feel.hpp"
 
 #include "drumgen_serialization.hpp"
+#include "drumgen_status_params.hpp"
 #include "drumgen_template.hpp"
 #include "drumgen_ui_layout.hpp"
 
@@ -43,7 +44,11 @@ enum ParameterIndex : uint32_t {
     kParamCaTarget,
     kParamCaEvery,
     kParamConductorScene,
-    kParameterCount
+    // Same read-only mirrors as DrumgenPlugin.cpp; the UI draws the live value.
+    kParamStatusDensity   = downspout::drumgen::status_params::kDensity,
+    kParamStatusVariation = downspout::drumgen::status_params::kVariation,
+    kParamStatusVary      = downspout::drumgen::status_params::kVary,
+    kParameterCount       = downspout::drumgen::status_params::kParameterCount
 };
 
 constexpr const char* kStateKeyTemplateLoad = "template_load";
@@ -284,12 +289,16 @@ public:
 protected:
     void parameterChanged(uint32_t index, float value) override
     {
-        if (index < values_.size()) {
-            const bool externalChange = std::fabs(values_[index] - value) > 0.0001f;
-            values_[index] = value;
+        // Output parameters are the only reliable DSP->UI channel in VST3.
+        // Conductor CCs move the live mirrors, not the ordinary parameters, so
+        // draw their values on the matching Pattern Mix slider.
+        const uint32_t displayIndex = downspout::drumgen::status_params::displayControlFor(index);
+        if (displayIndex < values_.size()) {
+            const bool externalChange = std::fabs(values_[displayIndex] - value) > 0.0001f;
+            values_[displayIndex] = value;
             // Host automation of a Mix control also regenerates the pattern;
             // UI-originated writes already set values_ and marked it.
-            if (externalChange && isPatternMixControl(index)) {
+            if (externalChange && isPatternMixControl(displayIndex)) {
                 markPatternUpdated();
             }
             repaint();

@@ -83,5 +83,11 @@ Current wrapper choice:
   This is UI-local feedback, not a DSP output parameter. `testMixControlsChangeEmittedMidiNotes`,
   `testVaryChangesEmittedNotesAcrossLoops` and `testActionCountersRetriggerNotesAndFill`
   verify every Mix control and action against emitted `(note, velocity)` pairs;
+- Conductor CC 21–23 mutate `controls_` inside `run()`, bypassing `setParameterValue()`,
+  so ordinary parameter notifications never reach the UI. Appended read-only parameters
+  `status_density`, `status_variation` and `status_vary` (25–27) expose the effective
+  values; `DrumgenUI::parameterChanged()` mirrors them onto the Pattern Mix sliders.
+  `tests/wrapper_probe.cpp` injects the CCs through `PluginExporter` and checks the
+  mirrors, the read-only hints and that writes to them are ignored;
 - the port preserves exact control/state behavior first and still leaves any
   preview-grid UI as follow-up work after host validation.

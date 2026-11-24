@@ -40,19 +40,19 @@ or another drum instrument.""" ;
         trn:ccNumber 21 ;
         trn:ccRole "Density" ;
         trn:targetParameter "density" ;
-        rdfs:comment "0–127 → 0.0–1.0 overall hit density."
+        rdfs:comment "0–127 → 0.0–1.0 overall hit density; the effective value is exposed as status_density."
     ] ;
     trn:ccMapping [
         trn:ccNumber 22 ;
         trn:ccRole "Energy" ;
         trn:targetParameter "variation" ;
-        rdfs:comment "0–127 → 0.0–1.0 pattern busyness/variation."
+        rdfs:comment "0–127 → 0.0–1.0 pattern busyness/variation; the effective value is exposed as status_variation."
     ] ;
     trn:ccMapping [
         trn:ccNumber 23 ;
         trn:ccRole "Mutation" ;
         trn:targetParameter "vary" ;
-        rdfs:comment "0–127 → 0.0–1.0 auto-mutation rate."
+        rdfs:comment "0–127 → 0.0–1.0 auto-mutation rate; the effective value is exposed as status_vary."
     ] ;
     trn:ccMapping [
         trn:ccNumber 24 ;
@@ -61,4 +61,7 @@ or another drum instrument.""" ;
         trn:ccTriggerValue 127 ;
         rdfs:comment "Value 127 generates a fresh drum pattern."
     ] ;
+    trn:parameter [ rdfs:label "Live Density" ; trn:symbol "status_density" ; trn:range "0-1" ; rdfs:comment "Read-only: effective Density, including Conductor CC 21. Mirrored on the Density slider." ] ;
+    trn:parameter [ rdfs:label "Live Variation" ; trn:symbol "status_variation" ; trn:range "0-1" ; rdfs:comment "Read-only: effective Variation, including Conductor CC 22. Mirrored on the Variation slider." ] ;
+    trn:parameter [ rdfs:label "Live Vary" ; trn:symbol "status_vary" ; trn:range "0-100%" ; rdfs:comment "Read-only: effective Vary, including Conductor CC 23. Mirrored on the Vary slider." ] ;
     pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

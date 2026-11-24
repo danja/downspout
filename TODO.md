@@ -20,11 +20,11 @@ Open work only. Completed builds are recorded in plugin docs; resolved lessons g
 - [ ] Refresh `docs/pages/assets/plugins/fontana.png` from the fresh 1280x800 capture and visually review the PLAYER mixer row (Pan label/value fit) before marking the screenshot accepted.
 - [ ] Cadence in REAPER: after changing Segment to Beat or Bar, press Learn again and confirm the progression changes rather than staying constant; check save/reopen of the Learn counter and that the host exposes Learn over 0..1048576. Core tests cover the same segment counts with the zero-meter fallback and the Learn-counter retrigger.
 - [ ] DrumGen in REAPER: route MIDI out to DrumKit, press New/Mutate/Fill and confirm emitted hits change (the `UPDATED`/`Gen N` pill should flash); check each Pattern Mix slider has an audible effect, the counter parameters expose 0..1048576, and save/reopen retains the pattern and counters. Core tests compare emitted `(note, velocity)` pairs for every Mix control. A DPF wrapper probe confirms `new`/`mutate`/`fill` are automatable integers over 0..1048576 with no trigger flag and round-trip `setParameterValue`/`getParameterValue`; the UI click path and host automation still need a live host.
-- [ ] DrumGen: remember Conductor CC 21-23 overwrite DSP density/variation/vary without updating the UI; decide whether to add output status parameters or document the one-way mapping in a host probe.
+- [ ] DrumGen in REAPER: set Conductor Ch and confirm CC 21-23 move the Density/Variation/Vary sliders through the new `status_*` outputs; check the read-only outputs in the host automation list. Appended output params, UI mirroring, profile/docs, a UI mapping assertion and a wrapper probe injecting the CCs are done; only the live host check remains.
+- [ ] DrumGen: after that host check, consider a Hierophant-style odd-meter generator (Seed/Density/Variation/Lilt plus an editable step grid) in the portable core, not a new plugin.
 - [ ] Markov: refresh `docs/pages/assets/plugins/markov.png` after the learned-count readout moved to the output parameter, and visually accept it. A headless pixel probe confirmed the first digit changes 0→7 after a rendered MIDI line, but this model cannot view PNGs.
 - [ ] Cadence: capture a fresh screenshot into the catalog after the Learn button became an ordinary integer request counter. `scripts/capture-plugin-screenshots.sh` already includes `cadence:cadence`; inspect the image at full resolution before accepting.
-- [ ] DrumGen: capture a fresh screenshot after the Pattern Mix relabel, `UPDATED`/`Gen N` indicator and spacing rebalance (`/tmp/opencode/drumgen-shots-v4/drumgen.png`); inspect at full resolution (layout, contrast, lower margin) before copying into `docs/pages/assets/plugins/drumgen.png`.
-- [ ] Review `https://gardenfx.uk/v4/` for extensions and new-plugin ideas.
+- [ ] DrumGen: visually accept the fresh 1024x940 capture at `/tmp/opencode/drumgen-live-shots/drumgen.png` (Pattern Mix relabel, `UPDATED`/`Gen N` indicator, spacing rebalance and live status mirroring), then copy it into `docs/pages/assets/plugins/drumgen.png`. This session cannot view PNGs, so acceptance remains with the user.
 - [ ] PadGen: choose scope (pad synth vs MIDI generator) and build if distinct from Basilico, Canticle, Moka, Quartet, Strata, Monochord.
 - [ ] MIDI filter/router (channel/note filter and remap); lower-priority ADT/doubler, Inflator, spectral compressor, dynamic tilt and channel strip.
 - [ ] Add Launchpad support to `xoxolo`, reusing PadSeq's control scheme.
@@ -45,6 +45,10 @@ Open work only. Completed builds are recorded in plugin docs; resolved lessons g
 - [ ] Noise-reduction plugin: STFT gate/subtraction, learned/automatic noise profile, controls, musical-noise suppression, reported latency, stereo linking, Magneto UI, deterministic probes before DSP, docs/release wiring. Ask before reusing Prism/Qune STFT as shared code.
 - [ ] Audio-driven string/comb (extended Karplus-Strong): damping, pick position, stiffness, MIDI/pitch tracking.
 - [ ] Envelope-follower multimode filter (auto-wah).
+- [ ] Six-circuit saturator wheel (Garden FX Kiln): continuously blend adjacent circuits, LEAN by playing level, slow MOTION, SIDEBAR peaks and harmonics-only tone shaping; write the response probe before DSP.
+- [ ] Ducking compressor with a filtered external key (Garden FX DUK34): check against Gate/Glue first, then add threshold/ratio/recovery and sidechain audition.
+- [ ] Phase/time-align utility (Garden FX Align): per-channel delay and polarity with a correlation readout; verify with a known impulse pair before UI.
+- [ ] Tape colour processor (Garden FX Pinch/Tape Push): saturation, wow/flutter, head bump, auto-bias and reported latency.
 
 ## Recurring checks
 

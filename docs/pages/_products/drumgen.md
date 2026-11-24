@@ -42,7 +42,10 @@ rate, and CC 24 (value 127) triggers a new pattern on each section boundary.
 CC 20 maps Conductor's editable blocks to Fill: Intro 0.10, Theme 0.30,
 Develop 0.65, Break 1.0, Reprise 0.50 and Coda 0.20; Null leaves Fill
 unchanged. It is ignored by default so existing projects behave exactly as before.
-See [MIDI Mapping](../../midi-mapping.md).
+The effective values of CC 21–23 appear as the read-only **Live Density**, **Live Variation**
+and **Live Vary** parameters (`status_density`, `status_variation`, `status_vary`), which the
+panel mirrors onto the matching sliders; DPF/VST3 does not push ordinary DSP parameter
+changes to the UI. See [MIDI Mapping](../../midi-mapping.md).
 
 ### Automaton layer
 
