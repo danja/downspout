@@ -18,6 +18,7 @@ Open work only. Completed builds are recorded in plugin docs; resolved lessons g
 - [ ] Box: visually accept the refreshed `docs/pages/assets/plugins/box.png` (960x720) from a first-time-user perspective; this session could not display the PNG, so check labels, hierarchy, contrast, clipping, the smaller Randomise button and the response plot in an image-capable viewer before marking it final.
 - [ ] Spliff: visually accept the fresh 720x680 capture after the analyser-visibility, parameter-overlap and 70 % default-text fixes (`/tmp/opencode/spliff-shots/spliff.png`), then copy it into the catalog. This model cannot view PNG pixels; acceptance remains with the user.
 - [ ] Refresh `docs/pages/assets/plugins/fontana.png` from the fresh 1280x800 capture and visually review the PLAYER mixer row (Pan label/value fit) before marking the screenshot accepted.
+- [ ] Markov: refresh `docs/pages/assets/plugins/markov.png` after the learned-count readout moved to the output parameter, and visually accept it. A headless pixel probe confirmed the first digit changes 0→7 after a rendered MIDI line, but this model cannot view PNGs.
 - [ ] Review `https://gardenfx.uk/v4/` for extensions and new-plugin ideas.
 - [ ] PadGen: choose scope (pad synth vs MIDI generator) and build if distinct from Basilico, Canticle, Moka, Quartet, Strata, Monochord.
 - [ ] MIDI filter/router (channel/note filter and remap); lower-priority ADT/doubler, Inflator, spectral compressor, dynamic tilt and channel strip.

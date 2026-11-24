@@ -130,6 +130,7 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - When an LV2 plugin has separate note/control MIDI ports that do not map cleanly to VST3, prefer one primary MIDI input in the DPF wrapper and keep role-detection inside the portable processor.
 - For audio sidechains, a port group named "Sidechain" is not enough: also set `kAudioPortIsSidechain` so VST3/CLAP hosts expose an aux bus rather than a second main input bus. DPF custom port-group ids must start at 0 and be sequential or `initPortGroup()` is skipped; p-mix is the corrected reference alongside Gate, Glue, Trio, Bassops and Interleaver.
 - For controller-heavy ports, expose output status parameters for the UI so the panel can reflect the processor’s effective live state rather than only the last host automation value.
+- DPF's VST3 bridge has no DSP→UI state callback: live counters and status readouts must come from output parameters, not mirrored plugin state. Verify in a host with the UI open.
 
 ## Documentation expectations
 

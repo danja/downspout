@@ -533,7 +533,10 @@ private:
         drawPanel(b, "LEARN AND CONDUCTOR", kLearnAccent);
         char buf[48];
         drawDropdown(core::kLearn, "Learn from MIDI input", cellOf(b, 0, 0));
-        std::snprintf(buf, sizeof(buf), "%u transition%s heard", static_cast<unsigned>(model_.learnedTotal), model_.learnedTotal == 1 ? "" : "s");
+        // The count comes from the output parameter, not the model state: DPF's VST3 bridge has no
+        // DSP-to-UI state path, but it does forward output parameter changes on idle.
+        const int learned = std::max(0, intValue(core::kStatusLearned));
+        std::snprintf(buf, sizeof(buf), "%u transition%s heard", static_cast<unsigned>(learned), learned == 1 ? "" : "s");
         const Rect heard = cellOf(b, 1, 0);
         label(heard.x, heard.y + 19.0f, buf, true, 11.0f);
 
