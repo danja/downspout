@@ -24,9 +24,11 @@ namespace downspout::voxmod {
 // 3/4 right now.
 //
 // All three engines run in parallel: Mix balances ring vs vocoder and Conv Mix
-// fades that pair against the convolver. The ring mod also feeds the vocoder's
-// carrier when Sync selects the internal oscillator, which is what makes a
-// single input (a drum loop, say) usable.
+// fades that pair against the convolver. Each engine has its own Level control,
+// and the convolution branch has its own peak limiter so feedback cannot push
+// the wet signal into overload without squashing the legacy engines. The ring
+// mod also feeds the vocoder's carrier when Sync selects the internal oscillator,
+// which is what makes a single input (a drum loop, say) usable.
 
 enum class ParamId : std::uint32_t {
     // Mix
@@ -75,9 +77,15 @@ enum class ParamId : std::uint32_t {
     convMix,
     convSourceFeedback,
     convIrFeedback,
+
+    // Per-engine levels, appended for the same reason. The panel puts these at
+    // the top of their engine columns.
+    ringLevel,
+    vocoderLevel,
+    convLevel,
 };
 
-inline constexpr std::size_t kParameterCount = 30;
+inline constexpr std::size_t kParameterCount = 33;
 
 struct ParamSpec {
     const char* symbol;
@@ -129,6 +137,10 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"conv_mix", "Conv Mix", "%", 0.0f, 100.0f, 0.0f, false, false, false},
     {"conv_source_feedback", "Src Feedback", "%", 0.0f, 95.0f, 0.0f, false, false, false},
     {"conv_ir_feedback", "IR Feedback", "%", 0.0f, 95.0f, 0.0f, false, false, false},
+
+    {"ring_level", "Ring Level", "%", 0.0f, 100.0f, 100.0f, false, false, false},
+    {"vocoder_level", "Vocoder Level", "%", 0.0f, 100.0f, 100.0f, false, false, false},
+    {"conv_level", "Conv Level", "%", 0.0f, 100.0f, 100.0f, false, false, false},
 }};
 
 // ── Ring modulator ──────────────────────────────────────────────────────────
@@ -174,6 +186,14 @@ inline constexpr float kMaxTiltDbPerOct = 12.0f;
 // A band's gain is held at unity when its envelope is this small, so silence in
 // the carrier does not turn the modulator's noise floor up.
 inline constexpr float kBandGate = 1.0e-4f;
+
+// ── Convolution limiting ────────────────────────────────────────────────────
+//
+// Convolution feedback is deliberately recirculative, so the wet branch gets an
+// instant-attack peak limiter before it joins the mix. The threshold leaves a
+// little headroom and does not touch the ring/vocoder paths at their defaults.
+inline constexpr float kConvolutionLimiterThreshold = 0.89f;
+inline constexpr double kConvolutionLimiterReleaseSeconds = 0.08;
 
 // ── Envelope follower ──────────────────────────────────────────────────────
 //

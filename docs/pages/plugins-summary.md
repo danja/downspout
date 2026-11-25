@@ -1133,10 +1133,12 @@ ratio quantised to 16 steps from -12 to +35 semitones, Ring Depth, polyBLEP saw/
 Vocoder: logarithmic filter bank across Spread octaves with asymmetric envelope
 followers; Sync feeds the ring-modulated signal back as the vocoder carrier. Convolver:
 1024-sample Hann windows on both pairs every 256 samples, 2048-point FFT frames multiplied
-and overlap-added at 4x; Src Feedback and IR Feedback recirculate output one frame back
-into either pair, capped at 95%. MIDI CC input. A panel XY pad maps X to Mix, Y to ring
-frequency. The vocoder/ring engines want a modulator with harmonics; convolution needs
-signal on both pairs.
+and overlap-added at 4x, normalised by both frame and FFT lengths; Src Feedback and IR
+Feedback recirculate output one frame back into either pair, capped at 95%, soft-limited
+in the loop, with a peak limiter on the wet branch. Ring Level, Vocoder Level and Conv
+Level trim each engine at unity by default. MIDI CC input. A panel XY pad maps X to Mix,
+Y to ring frequency. The vocoder/ring engines want a modulator with harmonics; convolution
+needs signal on both pairs.
 
 ### sinevox
 Formant tracker with two voices. Inputs 1-2 (speech) are summed to mono and analysed

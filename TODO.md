@@ -15,7 +15,7 @@ Open work only. Completed builds are recorded in plugin docs; resolved lessons g
 
 ## Plugin work
 
-- [ ] Voxmod: audition the new convolution engine in a host with an instrument on 1/2 and a moving voice/texture on 3/4; sweep Conv Mix and both feedback controls, then save/reopen to confirm the new state keys. Core tests, the VST3 build and visual acceptance of the refreshed three-column panel pass.
+- [ ] Voxmod: audition the new convolution engine in a host with an instrument on 1/2 and a moving voice/texture on 3/4; sweep the three new Levels, Conv Mix and both feedback controls, then save/reopen to confirm the new state keys. Core tests, the VST3 build and the refreshed catalog screenshot pass; visual acceptance of the panel with Levels at the top of each column is complete.
 
 - [ ] Box: visually accept the refreshed `docs/pages/assets/plugins/box.png` (960x720) from a first-time-user perspective; this session could not display the PNG, so check labels, hierarchy, contrast, clipping, the smaller Randomise button and the response plot in an image-capable viewer before marking it final.
 - [ ] Spliff: visually accept the fresh 720x680 capture after the analyser-visibility, parameter-overlap and 70 % default-text fixes (`/tmp/opencode/spliff-shots/spliff.png`), then copy it into the catalog. This model cannot view PNG pixels; acceptance remains with the user.

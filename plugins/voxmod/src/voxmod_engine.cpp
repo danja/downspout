@@ -288,6 +288,10 @@ Parameters clampParameters(const Parameters& raw) noexcept
     out.convSourceFeedback = safeValue(raw.convSourceFeedback, 0.0f, 95.0f, 0.0f);
     out.convIrFeedback = safeValue(raw.convIrFeedback, 0.0f, 95.0f, 0.0f);
 
+    out.ringLevel = safeValue(raw.ringLevel, 0.0f, 100.0f, 100.0f);
+    out.vocoderLevel = safeValue(raw.vocoderLevel, 0.0f, 100.0f, 100.0f);
+    out.convLevel = safeValue(raw.convLevel, 0.0f, 100.0f, 100.0f);
+
     out.ccMix = std::round(safeValue(raw.ccMix, 0.0f, 127.0f, 1.0f));
     out.ccRingFreq = std::round(safeValue(raw.ccRingFreq, 0.0f, 127.0f, 2.0f));
     out.ccRingRatio = std::round(safeValue(raw.ccRingRatio, 0.0f, 127.0f, 3.0f));
@@ -310,6 +314,7 @@ void activate(EngineState& state) noexcept
     state.carrierHz = 0.0f;
     state.carrierEnv = 0.0f;
     state.modulatorEnv = 0.0f;
+    state.convLimiterEnv = 0.0f;
     for (LiveConvolver& convolver : state.convolvers)
         convolver.clear();
 }
@@ -405,6 +410,8 @@ void processBlock(EngineState& state,
 
     const float envAttack = attackCoeff(params.attackMs, sr);
     const float envRelease = releaseCoeff(params.releaseMs, sr);
+    const float convLimiterRelease = static_cast<float>(
+        std::exp(-1.0 / (kConvolutionLimiterReleaseSeconds * sr)));
 
     const bool bypassed = params.bypass > 0.5f;
     // Conv Mix is a third parallel engine: it fades the ring/vocoder pair down
@@ -416,6 +423,9 @@ void processBlock(EngineState& state,
     const float ringAmount = legacyAmount * std::clamp(1.0f - params.mix * 0.01f, 0.0f, 1.0f);
     const float convSrcFeedback = std::clamp(params.convSourceFeedback * 0.01f, 0.0f, 0.95f);
     const float convIrFeedback = std::clamp(params.convIrFeedback * 0.01f, 0.0f, 0.95f);
+    const float ringLevel = std::clamp(params.ringLevel * 0.01f, 0.0f, 1.0f);
+    const float vocoderLevel = std::clamp(params.vocoderLevel * 0.01f, 0.0f, 1.0f);
+    const float convLevel = std::clamp(params.convLevel * 0.01f, 0.0f, 1.0f);
     const float ringDepth = std::clamp(params.ringDepth * 0.01f, 0.0f, 1.0f);
 
     const RingShapeId shape = static_cast<RingShapeId>(
@@ -463,6 +473,17 @@ void processBlock(EngineState& state,
                                         convSrcFeedback, convIrFeedback);
             state.convolvers[1].process(&mxR, &irR, &convR, 1,
                                         convSrcFeedback, convIrFeedback);
+
+            // Peak-limit only the wet branch. Legacy ring/vocoder levels stay
+            // untouched, while a feedback loop that wants to run away is held
+            // below the threshold before it reaches the mix.
+            const float rawPeak = std::max(std::fabs(convL), std::fabs(convR));
+            const float peak = std::isfinite(rawPeak) ? rawPeak : 0.0f;
+            state.convLimiterEnv = std::max(peak, state.convLimiterEnv * convLimiterRelease);
+            const float limiterGain = state.convLimiterEnv > kConvolutionLimiterThreshold
+                ? kConvolutionLimiterThreshold / state.convLimiterEnv : 1.0f;
+            convL *= limiterGain;
+            convR *= limiterGain;
         }
 
         // Carrier for analysis: the internal oscillator when selected, otherwise
@@ -549,13 +570,15 @@ void processBlock(EngineState& state,
         // ── Output ──────────────────────────────────────────────────────
         // Width steers the two engines apart: the ring mod keeps the modulator's
         // own stereo image while the vocoder is inherently mono, so widening
-        // pushes the ring mod out and leaves the vocoder centred.
+        // pushes the ring mod out and leaves the vocoder centred. Each engine's
+        // Level is applied only here, so turning one down cannot change what an
+        // engine feeds into another (Sync takes the pre-level ring signal).
         const float ringMid = 0.5f * (ringedL + ringedR);
         const float ringSide = 0.5f * (ringedL - ringedR) * width;
-        const float outL = ringAmount * (ringMid + ringSide)
-            + vocoderAmount * vocoded + convAmount * convL;
-        const float outR = ringAmount * (ringMid - ringSide)
-            + vocoderAmount * vocoded + convAmount * convR;
+        const float outL = ringLevel * ringAmount * (ringMid + ringSide)
+            + vocoderLevel * vocoderAmount * vocoded + convLevel * convAmount * convL;
+        const float outR = ringLevel * ringAmount * (ringMid - ringSide)
+            + vocoderLevel * vocoderAmount * vocoded + convLevel * convAmount * convR;
 
         if (outputs && outputs[0])
             outputs[0][frame] = std::isfinite(outL) ? outL : 0.0f;
@@ -575,7 +598,7 @@ void processBlock(EngineState& state,
 std::string serializeParameters(const Parameters& raw)
 {
     const Parameters p = clampParameters(raw);
-    return "version=2\n"
+    return "version=3\n"
            "mix=" + std::to_string(p.mix) + "\n"
            "bypass=" + std::to_string(p.bypass) + "\n"
            "seed=" + std::to_string(p.seed) + "\n"
@@ -596,6 +619,9 @@ std::string serializeParameters(const Parameters& raw)
            "conv_mix=" + std::to_string(p.convMix) + "\n"
            "conv_source_feedback=" + std::to_string(p.convSourceFeedback) + "\n"
            "conv_ir_feedback=" + std::to_string(p.convIrFeedback) + "\n"
+           "ring_level=" + std::to_string(p.ringLevel) + "\n"
+           "vocoder_level=" + std::to_string(p.vocoderLevel) + "\n"
+           "conv_level=" + std::to_string(p.convLevel) + "\n"
            "cc_mix=" + std::to_string(p.ccMix) + "\n"
            "cc_ring_freq=" + std::to_string(p.ccRingFreq) + "\n"
            "cc_ring_ratio=" + std::to_string(p.ccRingRatio) + "\n"
@@ -639,6 +665,9 @@ std::optional<Parameters> deserializeParameters(const std::string& text)
         else if (key == "conv_mix" && parseFloat(value, v)) p.convMix = v;
         else if (key == "conv_source_feedback" && parseFloat(value, v)) p.convSourceFeedback = v;
         else if (key == "conv_ir_feedback" && parseFloat(value, v)) p.convIrFeedback = v;
+        else if (key == "ring_level" && parseFloat(value, v)) p.ringLevel = v;
+        else if (key == "vocoder_level" && parseFloat(value, v)) p.vocoderLevel = v;
+        else if (key == "conv_level" && parseFloat(value, v)) p.convLevel = v;
         else if (key == "cc_mix" && parseFloat(value, v)) p.ccMix = v;
         else if (key == "cc_ring_freq" && parseFloat(value, v)) p.ccRingFreq = v;
         else if (key == "cc_ring_ratio" && parseFloat(value, v)) p.ccRingRatio = v;

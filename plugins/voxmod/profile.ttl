@@ -7,7 +7,7 @@
 
 dsp:voxmod a trn:PluginProfile ;
     rdfs:label "Voxmod" ;
-    rdfs:comment "Vocoder, ring modulator and live convolution cross-synthesis. Inputs 1/2 are the modulator/source, inputs 3/4 the analysed carrier and live IR feed. Mix balances ring against vocoder; Conv Mix fades that pair against sliding-window FFT frame multiplication with source and IR feedback. Five CCs drive the legacy engines." ;
+    rdfs:comment "Vocoder, ring modulator and live convolution cross-synthesis. Inputs 1/2 are the modulator/source, inputs 3/4 the analysed carrier and live IR feed. Mix balances ring against vocoder; Conv Mix fades that pair against sliding-window FFT frame multiplication with source and IR feedback. Ring, vocoder and convolution each have a Level control at unity by default; the convolution branch is peak-limited to keep feedback stable. Five CCs drive the legacy engines." ;
     trn:bundleName "voxmod.vst3" ;
     trn:vendor "danja" ;
     trn:role trn:AudioEffect ;

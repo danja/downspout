@@ -66,6 +66,9 @@ void testParameterClamp() {
     p.convMix = 500.0f;
     p.convSourceFeedback = -20.0f;
     p.convIrFeedback = std::nanf("");
+    p.ringLevel = -10.0f;
+    p.vocoderLevel = 400.0f;
+    p.convLevel = std::nanf("");
 
     const Parameters c = clampParameters(p);
     assert(c.mix == 100.0f);
@@ -77,6 +80,9 @@ void testParameterClamp() {
     assert(c.convMix == 100.0f);
     assert(c.convSourceFeedback == 0.0f);
     assert(c.convIrFeedback == 0.0f);
+    assert(c.ringLevel == 0.0f);
+    assert(c.vocoderLevel == 100.0f);
+    assert(c.convLevel == 100.0f);
 
     // NaN must fall back to the default rather than propagating.
     Parameters bad;
@@ -478,6 +484,9 @@ void testSerializationRoundTrip() {
     p.convMix = 42.0f;
     p.convSourceFeedback = 33.0f;
     p.convIrFeedback = 21.0f;
+    p.ringLevel = 72.0f;
+    p.vocoderLevel = 63.0f;
+    p.convLevel = 81.0f;
     p.ccChannel = 9.0f;
 
     const std::string text = serializeParameters(p);
@@ -494,6 +503,9 @@ void testSerializationRoundTrip() {
     assert(std::fabs(back->convMix - p.convMix) < 1e-3f);
     assert(std::fabs(back->convSourceFeedback - p.convSourceFeedback) < 1e-3f);
     assert(std::fabs(back->convIrFeedback - p.convIrFeedback) < 1e-3f);
+    assert(std::fabs(back->ringLevel - p.ringLevel) < 1e-3f);
+    assert(std::fabs(back->vocoderLevel - p.vocoderLevel) < 1e-3f);
+    assert(std::fabs(back->convLevel - p.convLevel) < 1e-3f);
     assert(back->sync == 1.0f);
 
     // A v1 patch saved before the convolver existed must load with it disabled.
@@ -503,6 +515,19 @@ void testSerializationRoundTrip() {
         assert(legacy->convMix == 0.0f);
         assert(legacy->convSourceFeedback == 0.0f);
         assert(legacy->convIrFeedback == 0.0f);
+        assert(legacy->ringLevel == 100.0f);
+        assert(legacy->vocoderLevel == 100.0f);
+        assert(legacy->convLevel == 100.0f);
+    }
+
+    // A v2 patch has the convolver but not the Levels; those must load at unity.
+    const auto v2 = deserializeParameters("version=2\nconv_mix=25\n");
+    assert(v2.has_value());
+    if (v2.has_value()) {
+        assert(v2->convMix == 25.0f);
+        assert(v2->ringLevel == 100.0f);
+        assert(v2->vocoderLevel == 100.0f);
+        assert(v2->convLevel == 100.0f);
     }
 
     // Garbage must be rejected rather than half-applied.
@@ -573,12 +598,17 @@ void testConvolutionFramePairIsFrameMultiplication() {
     for (int i = delay; i < kConvolutionFrame; ++i) {
         const float window = 0.5f - 0.5f * static_cast<float>(
             std::cos(2.0 * M_PI * (i - delay) / kConvolutionFrame));
-        const double expected = 0.5 * window * source[static_cast<std::size_t>(i - delay)];
+        // A delta IR has a flat spectrum, so the inverse leaves the windowed
+        // source divided by the frame length used for normalisation.
+        const double expected = static_cast<double>(window)
+            * source[static_cast<std::size_t>(i - delay)]
+            * kConvolutionMakeupGain / static_cast<double>(kConvolutionFrame);
         const double actual = block[static_cast<std::size_t>(i)];
         err += (actual - expected) * (actual - expected);
         energy += expected * expected;
     }
-    assert(energy > 1.0);
+    // The normalised block is small by design; pin the shape, not the gain.
+    assert(energy > 1.0e-6);
     assert(std::sqrt(err / energy) < 1.0e-3);
 }
 
@@ -677,6 +707,116 @@ void testConvolutionFeedbackControlsAreAudible() {
     assert(std::fabs(irFb - dry) > 0.02f * dry);
 }
 
+void testEngineLevelControlsCanMuteEachEngine() {
+    Parameters ring;
+    ring.mix = 0.0f;
+    ring.convMix = 0.0f;
+    ring.ringDepth = 100.0f;
+    ring.carrierSource = 1.0f;
+    ring.drift = 0.0f;
+
+    auto ringRms = [&](const float level) {
+        Parameters p = ring;
+        p.ringLevel = level;
+        Bus b;
+        fillSine(b.modL.data(), 300.0, kSr, 0.5f);
+        fillSine(b.modR.data(), 300.0, kSr, 0.5f);
+        EngineState s;
+        activate(s);
+        run(s, p, b);
+        return rms(b.outL.data(), 0, kFrames);
+    };
+
+    Parameters voc;
+    voc.mix = 100.0f;
+    voc.convMix = 0.0f;
+
+    auto vocoderRms = [&](const float level) {
+        Parameters p = voc;
+        p.vocoderLevel = level;
+        Bus b;
+        fillSine(b.modL.data(), 300.0, kSr, 0.5f);
+        fillSine(b.modR.data(), 300.0, kSr, 0.5f);
+        fillSine(b.carrierL.data(), 900.0, kSr, 0.5f);
+        fillSine(b.carrierR.data(), 900.0, kSr, 0.5f);
+        EngineState s;
+        activate(s);
+        for (int i = 0; i < 8; ++i)
+            run(s, p, b);
+        return rms(b.outL.data(), 256, kFrames);
+    };
+
+    Parameters conv;
+    conv.convMix = 100.0f;
+
+    auto convRms = [&](const float level) {
+        Parameters p = conv;
+        p.convLevel = level;
+        Bus b;
+        fillSine(b.modL.data(), 440.0, kSr, 0.4f);
+        fillSine(b.modR.data(), 440.0, kSr, 0.4f);
+        fillSine(b.carrierL.data(), 330.0, kSr, 0.4f);
+        fillSine(b.carrierR.data(), 330.0, kSr, 0.4f);
+        EngineState s;
+        activate(s);
+        for (int i = 0; i < 12; ++i)
+            run(s, p, b);
+        return rms(b.outL.data(), 256, kFrames);
+    };
+
+    const Parameters defaults {};
+    assert(defaults.ringLevel == 100.0f);
+    assert(defaults.vocoderLevel == 100.0f);
+    assert(defaults.convLevel == 100.0f);
+
+    assert(ringRms(0.0f) < 1.0e-6f);
+    assert(ringRms(100.0f) > 0.005f);
+    assert(ringRms(50.0f) < ringRms(100.0f));
+
+    assert(vocoderRms(0.0f) < 1.0e-6f);
+    assert(vocoderRms(100.0f) > 0.005f);
+    assert(vocoderRms(50.0f) < vocoderRms(100.0f));
+
+    assert(convRms(0.0f) < 1.0e-6f);
+    assert(convRms(100.0f) > 1.0e-4f);
+    assert(convRms(50.0f) < convRms(100.0f));
+}
+
+void testConvolutionIsNormalizedAndFeedbackIsLimited() {
+    auto render = [&](const float sourceFb, const float irFb, const bool tone) {
+        Parameters p;
+        p.convMix = 100.0f;
+        p.convSourceFeedback = sourceFb;
+        p.convIrFeedback = irFb;
+        Bus b;
+        for (std::uint32_t i = 0; i < kFrames; ++i) {
+            if (tone) {
+                b.modL[i] = b.modR[i] = static_cast<float>(std::sin(2.0 * M_PI * 440.0 * i / kSr));
+                b.carrierL[i] = b.carrierR[i] =
+                    static_cast<float>(std::sin(2.0 * M_PI * 330.0 * i / kSr));
+            } else {
+                b.modL[i] = b.modR[i] = 1.0f;
+                b.carrierL[i] = b.carrierR[i] = 1.0f;
+            }
+        }
+        EngineState s;
+        activate(s);
+        for (int block = 0; block < 64; ++block)
+            run(s, p, b);
+        return peak(b.outL.data(), kFrames);
+    };
+
+    // A pair of full-scale tones used to reach a peak of ~33; the normalised
+    // engine must stay inside the output limiter's threshold.
+    assert(render(0.0f, 0.0f, true) <= kConvolutionLimiterThreshold + 1.0e-3f);
+    assert(render(0.0f, 0.0f, false) <= kConvolutionLimiterThreshold + 1.0e-3f);
+
+    // Even both feedbacks at maximum must not send the track into overload.
+    const float limited = render(95.0f, 95.0f, true);
+    assert(std::isfinite(limited));
+    assert(limited <= kConvolutionLimiterThreshold + 1.0e-3f);
+}
+
 void testConvolutionDefaultsKeepLegacyPassThrough() {
     const ParamSpec& mixSpec = kParameterSpecs[index(ParamId::convMix)];
     assert(mixSpec.minimum == 0.0f && mixSpec.maximum == 100.0f && mixSpec.defaultValue == 0.0f);
@@ -768,6 +908,8 @@ int main() {
     testConvolutionUsesInputs34AsLiveIr();
     testConvolutionIrShapesTheSource();
     testConvolutionFeedbackControlsAreAudible();
+    testEngineLevelControlsCanMuteEachEngine();
+    testConvolutionIsNormalizedAndFeedbackIsLimited();
     testConvolutionDefaultsKeepLegacyPassThrough();
     testConvolutionSurvivesNonFiniteInputAndActivation();
     testZeroFramesIsSafe();

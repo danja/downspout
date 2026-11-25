@@ -43,6 +43,11 @@ struct Parameters {
     float convSourceFeedback = 0.0f; // %, output recirculated into the source frames
     float convIrFeedback = 0.0f;   // %, output recirculated into the IR frames
 
+    // Per-engine trim. Unity by default so old patches sound unchanged.
+    float ringLevel = 100.0f;
+    float vocoderLevel = 100.0f;
+    float convLevel = 100.0f;
+
     // Drift CC routing
     float ccMix = 1.0f;
     float ccRingFreq = 2.0f;
@@ -113,6 +118,9 @@ struct EngineState {
     // Envelope followers used for the reduction meter.
     float carrierEnv = 0.0f;
     float modulatorEnv = 0.0f;
+
+    // Peak envelope for the convolution branch limiter.
+    float convLimiterEnv = 0.0f;
 
     std::uint32_t randomiseSerial = 0;
     std::uint32_t bankSerial = 0;  // bumped when the filter bank is rebuilt

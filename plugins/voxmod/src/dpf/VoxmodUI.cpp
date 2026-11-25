@@ -66,13 +66,16 @@ constexpr int kCreamB = 242;
 // pad below, which owns them. Duplicating them as sliders would give the user
 // two controls for the same values and risk them disagreeing.
 enum SliderId : std::uint32_t {
-    kSliderRingDepth = 0,
+    kSliderRingLevel = 0,
+    kSliderRingDepth,
     kSliderWidth,
     kSliderDrift,
+    kSliderVocoderLevel,
     kSliderAttack,
     kSliderRelease,
     kSliderFormant,
     kSliderTilt,
+    kSliderConvLevel,
     kSliderConvMix,
     kSliderConvSrcFb,
     kSliderConvIrFb,
@@ -80,33 +83,40 @@ enum SliderId : std::uint32_t {
 };
 
 constexpr std::array<std::uint32_t, kSliderCount> kSliderParams = {
+    index(ParamId::ringLevel),
     index(ParamId::ringDepth),
     index(ParamId::stereoWidth),
     index(ParamId::drift),
+    index(ParamId::vocoderLevel),
     index(ParamId::attackMs),
     index(ParamId::releaseMs),
     index(ParamId::formantShift),
     index(ParamId::tilt),
+    index(ParamId::convLevel),
     index(ParamId::convMix),
     index(ParamId::convSourceFeedback),
     index(ParamId::convIrFeedback),
 };
 
 constexpr std::array<const char*, kSliderCount> kSliderLabels = {
-    "Ring Depth", "Width", "Drift", "Attack", "Release", "Formant", "Tilt",
-    "Conv Mix", "Src Feedback", "IR Feedback",
+    "Ring Level", "Ring Depth", "Width", "Drift",
+    "Vocoder Level", "Attack", "Release", "Formant", "Tilt",
+    "Conv Level", "Conv Mix", "Src Feedback", "IR Feedback",
 };
 
 // Which engine each slider belongs to, so the columns and the accent follow the
-// same split the audio does.
+// same split the audio does. Level is the first row in every column.
 constexpr std::array<Accent, kSliderCount> kSliderAccents = {
     kRingAccent,
     kRingAccent,
     kRingAccent,
+    kRingAccent,
     kVoxAccent,
     kVoxAccent,
     kVoxAccent,
     kVoxAccent,
+    kVoxAccent,
+    kConvAccent,
     kConvAccent,
     kConvAccent,
     kConvAccent,
@@ -145,9 +155,12 @@ constexpr std::array<Accent, kSliderCount> kSliderAccents = {
     char buf[48];
     const double v = value;
     switch (slider) {
+    case kSliderRingLevel:
     case kSliderRingDepth:
     case kSliderWidth:
     case kSliderDrift:
+    case kSliderVocoderLevel:
+    case kSliderConvLevel:
     case kSliderConvMix:
     case kSliderConvSrcFb:
     case kSliderConvIrFb:
@@ -369,8 +382,8 @@ constexpr int kTwoColLimit = 20;
 constexpr float kTrackH = 12.0f;
 
 constexpr float kXYSize = 150.0f;
-// Placed below every row of sliders so the pad cannot collide with the fifth
-// column row or the Bypass switch.
+// Placed below all five vocoder rows and the Bypass switch so the pad cannot
+// collide with either.
 constexpr float kXYTop = kBodyY + 6.0f * kSliderH + 30.0f;
 
 }  // namespace
@@ -576,18 +589,18 @@ private:
     // always matches the column it sits in: ring mod, vocoder, convolution.
     [[nodiscard]] std::uint32_t sliderColumn(const std::uint32_t slider) const noexcept
     {
-        if (slider < 3)
+        if (slider < 4)
             return 0u;
-        if (slider < 7)
+        if (slider < 9)
             return 1u;
         return 2u;
     }
 
     [[nodiscard]] float sliderRowY(const std::uint32_t slider) const noexcept
     {
-        const std::uint32_t row = slider < 3
+        const std::uint32_t row = slider < 4
             ? slider
-            : (slider < 7 ? slider - 3 : slider - 7);
+            : (slider < 9 ? slider - 4 : slider - 9);
         return kBodyY + static_cast<float>(row) * kSliderH;
     }
 
@@ -604,10 +617,10 @@ private:
         return { sliderColX(slider), sliderRowY(slider) + 19.0f, sliderColW(), kTrackH };
     }
 
-    // Bypass sits directly under the taller of the two slider columns.
+    // Bypass sits directly under the taller of the three slider columns.
     [[nodiscard]] Rect bypassBox() const noexcept
     {
-        return { kVoxX, kBodyY + 4.0f * kSliderH + 20.0f, kVoxW, 32.0f };
+        return { kVoxX, kBodyY + 5.0f * kSliderH + 20.0f, kVoxW, 32.0f };
     }
 
     [[nodiscard]] Rect xyBox() const noexcept
@@ -855,9 +868,9 @@ private:
             drawTrack(track, valueToSlider(s, values_[parameter]), kSliderAccents[s]);
         }
 
-        // The convolution column has room under its three sliders for the
+        // The convolution column has room under its four sliders for the
         // routing contract; it is the part first-time users need to see.
-        const float hintY = kBodyY + 3.0f * kSliderH + 22.0f;
+        const float hintY = kBodyY + 4.0f * kSliderH + 22.0f;
         fontSize(8.5f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fc(th.textDim);
@@ -1060,7 +1073,7 @@ private:
         text(kCcX, hintY + 30.0f, "Conv Mix multiplies their FFT", nullptr);
         text(kCcX, hintY + 45.0f, "frames; feedback recirculates.", nullptr);
 
-        const float mapY = hintY + 74.0f;
+        const float mapY = hintY + 62.0f;
         fc(th.textDim);
         text(kCcX, mapY, "Drift lanes 1-4, then 5:", nullptr);
         for (std::size_t m = 0; m < kControllerMap.size(); ++m) {
@@ -1069,7 +1082,7 @@ private:
                           static_cast<int>(kControllerMap[m].controller),
                           kControllerMap[m].label);
             fc(th.textPrimary);
-            text(kCcX + 10.0f, mapY + 14.0f + static_cast<float>(m) * 13.0f, line, nullptr);
+            text(kCcX + 10.0f, mapY + 14.0f + static_cast<float>(m) * 12.0f, line, nullptr);
         }
     }
 

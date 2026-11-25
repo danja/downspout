@@ -12,7 +12,10 @@ outputs.
 | out 1/2 | Processed result |
 
 Three engines run in parallel. `Mix` balances the first two, and `Conv Mix`
-fades that pair against the convolver:
+fades that pair against the convolver. Each engine has a `Level` control at the
+top of its column, defaulting to 100 %. The convolution branch has its own peak
+limiter, so `Src Feedback` and `IR Feedback` can be pushed without overloading
+the mix:
 
 - **Mix 0%** — ring modulation. The source is multiplied by the internal
   oscillator at `Ring Freq × Ring Ratio`.
@@ -28,6 +31,8 @@ With both, a source alone on 1/2 is enough to make those two engines sound.
 
 ## Controls
 
+- **Ring Level / Vocoder Level / Conv Level** — per-engine trim, 0–100 %, at the
+  top of each column; 100 % is unity, 0 % mutes just that engine
 - **Ring Freq** — oscillator frequency, 5 Hz to 5 kHz
 - **Ring Ratio** — transposes the carrier in semitones, quantised to 16 steps
   from −12 to +35, so a move changes the sidebands musically and repeatably
@@ -47,14 +52,15 @@ With both, a source alone on 1/2 is enough to make those two engines sound.
 - **Conv Mix** — fades the ring/vocoder pair against live convolution, 0–100%;
   at the 0% default the plugin behaves exactly as before
 - **Src Feedback / IR Feedback** — recirculate the convolution output one frame
-  back into the source (1/2) or IR (3/4) frames; capped at 95%
+  back into the source (1/2) or IR (3/4) frames; capped at 95 %, soft-limited in
+  the loop, and followed by a peak limiter on the wet branch
 
 ## Randomise
 
 Draws carrier frequency, ratio, shape, band count, spread, formant and tilt from
-plausible territory, rounded so the values read as deliberate. `Mix`, `Conv Mix`
-and `Bypass` are preserved so a sweep does not jump the balance. Deterministic
-from the `Seed` parameter.
+plausible territory, rounded so the values read as deliberate. `Mix`, `Conv Mix`,
+the three Levels and `Bypass` are preserved so a sweep does not jump the balance.
+Deterministic from the `Seed` parameter.
 
 ## MIDI CC
 

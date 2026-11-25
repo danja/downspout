@@ -20,8 +20,9 @@ coloured by the voice's formants with the ring modulator underneath filling the
 gaps. Push Mix left and the ring mod takes over; push it right and the voice
 takes over. Raise Conv Mix and the two fade down as sliding FFT frames of the
 two inputs are multiplied — the voice on 3/4 becomes a live impulse response for
-the instrument on 1/2. The x-y pad is X for Mix and Y for ring frequency; the
-convolution column owns Conv Mix and its two feedback taps.
+the instrument on 1/2. The x-y pad is X for Mix and Y for ring frequency; each
+engine's column starts with its own Level, and the convolution column then owns
+Conv Mix and its two feedback taps.
 
 It wants a modulator with harmonics. A clean synth pad through the vocoder sounds
 like a filtered version of itself, because there is nothing in it for the carrier's
@@ -66,14 +67,20 @@ The **convolver** has no stored impulse response. Every 256 samples it windows
 overlap-adds the inverse transform. Re-analysing the IR feed on every hop is what
 makes it live: a moving voice or texture on 3/4 becomes a moving filter on 1/2.
 `Src Feedback` and `IR Feedback` recirculate the output one frame back into
-either frame buffer; both are capped at 95 % and default to off.
+either frame buffer; both are capped at 95 %, soft-limited inside the loop and
+default to off. The frame product is normalised by both transform lengths, and a
+peak limiter on the wet branch stops feedback from pushing the track into
+overload without compressing the ring or vocoder paths.
 
 ### Parameters
 
-| Parameter    | Range        | Default | Notes                                        |
-|--------------|--------------|---------|----------------------------------------------|
-| Mix          | 0–100 %      | 50 %    | Vocoder at 100, ring mod at 0; CC 1          |
-| Ring Freq    | 5–5000 Hz    | 220 Hz  | Oscillator frequency; CC 2. Pad Y axis       |
+| Parameter      | Range        | Default | Notes                                        |
+|----------------|--------------|---------|----------------------------------------------|
+| Ring Level     | 0–100 %      | 100 %   | Top of the ring column; unity by default     |
+| Vocoder Level  | 0–100 %      | 100 %   | Top of the vocoder column                    |
+| Conv Level     | 0–100 %      | 100 %   | Top of the convolution column                |
+| Mix            | 0–100 %      | 50 %    | Vocoder at 100, ring mod at 0; CC 1          |
+| Ring Freq      | 5–5000 Hz    | 220 Hz  | Oscillator frequency; CC 2. Pad Y axis       |
 | Ring Ratio   | 0.5–8        | 2.0     | 16 musical steps, −12 to +35 st; CC 3        |
 | Ring Shape   | sine…square  | sine    | Band-limited with polyBLEP                   |
 | Ring Depth   | 0–100 %      | 100 %   | 0 % is a clean pass-through                  |
@@ -111,9 +118,9 @@ listened to.
 
 Draws carrier frequency, ratio, shape, band count, spread, formant and tilt from
 the seed, rounded to values someone would actually pick. It advances the seed so
-a second press differs, and it is reproducible from the seed alone. Mix and
-Bypass are left alone, so randomising mid-performance does not change the
-balance between the two engines.
+a second press differs, and it is reproducible from the seed alone. Mix, Conv
+Mix, the three Levels and Bypass are left alone, so randomising mid-performance
+does not change the balance between the engines.
 
 ### Status
 

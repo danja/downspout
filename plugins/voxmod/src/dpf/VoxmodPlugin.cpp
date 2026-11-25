@@ -48,9 +48,12 @@ constexpr const char* kStateKeySeed = "seed";
 constexpr const char* kStateKeyConvMix = "conv_mix";
 constexpr const char* kStateKeyConvSourceFeedback = "conv_source_feedback";
 constexpr const char* kStateKeyConvIrFeedback = "conv_ir_feedback";
+constexpr const char* kStateKeyRingLevel = "ring_level";
+constexpr const char* kStateKeyVocoderLevel = "vocoder_level";
+constexpr const char* kStateKeyConvLevel = "conv_level";
 constexpr const char* kStateKeyCCs = "cc_map";
 
-constexpr std::uint32_t kStateCount = 22;
+constexpr std::uint32_t kStateCount = 25;
 
 [[nodiscard]] float clampValue(const float value, const float lo, const float hi) noexcept
 {
@@ -86,8 +89,10 @@ protected:
         return "Vocoder, ring modulator and live convolution cross-synthesis. "
                "Inputs 1/2 are the modulator/source; inputs 3/4 are the analysed "
                "carrier and live IR feed. Mix balances ring and vocoder, Conv Mix "
-               "fades that pair against sliding-window FFT convolution with "
-               "source and IR feedback; five CCs drive the legacy engines.";
+               "fades that pair against sliding-window FFT convolution, and each "
+               "engine has its own level. Source and IR feedback feed a bounded "
+               "loop and the convolution branch is peak-limited. Five CCs drive "
+               "the legacy engines.";
     }
     const char* getMaker() const override { return "danja"; }
     const char* getHomePage() const override { return "https://danja.github.io/downspout/"; }
@@ -158,13 +163,15 @@ protected:
             kStateKeyBandSpread, kStateKeyAttackMs, kStateKeyReleaseMs, kStateKeyFormantShift,
             kStateKeyTilt, kStateKeyCarrierSource, kStateKeySync, kStateKeyStereoWidth,
             kStateKeyDrift, kStateKeySeed, kStateKeyConvMix, kStateKeyConvSourceFeedback,
-            kStateKeyConvIrFeedback, kStateKeyCCs,
+            kStateKeyConvIrFeedback, kStateKeyRingLevel, kStateKeyVocoderLevel,
+            kStateKeyConvLevel, kStateKeyCCs,
         };
         static constexpr const char* kLabels[kStateCount] = {
             "Parameters", "Mix", "Bypass", "Ring Freq", "Ring Ratio", "Ring Shape",
             "Ring Depth", "Bands", "Spread", "Attack", "Release", "Formant", "Tilt",
             "Carrier", "Sync", "Width", "Drift", "Seed", "Conv Mix",
-            "Src Feedback", "IR Feedback", "CC Map",
+            "Src Feedback", "IR Feedback", "Ring Level", "Vocoder Level",
+            "Conv Level", "CC Map",
         };
 
         if (index >= kStateCount)
@@ -263,6 +270,9 @@ protected:
         if (std::strcmp(key, kStateKeyConvMix) == 0) return num(p.convMix);
         if (std::strcmp(key, kStateKeyConvSourceFeedback) == 0) return num(p.convSourceFeedback);
         if (std::strcmp(key, kStateKeyConvIrFeedback) == 0) return num(p.convIrFeedback);
+        if (std::strcmp(key, kStateKeyRingLevel) == 0) return num(p.ringLevel);
+        if (std::strcmp(key, kStateKeyVocoderLevel) == 0) return num(p.vocoderLevel);
+        if (std::strcmp(key, kStateKeyConvLevel) == 0) return num(p.convLevel);
 
         if (std::strcmp(key, kStateKeyCCs) == 0) {
             std::snprintf(buf, sizeof(buf), "%d,%d,%d,%d,%d,%d",
@@ -315,6 +325,9 @@ protected:
         else if (std::strcmp(key, kStateKeyConvMix) == 0) p.convMix = f;
         else if (std::strcmp(key, kStateKeyConvSourceFeedback) == 0) p.convSourceFeedback = f;
         else if (std::strcmp(key, kStateKeyConvIrFeedback) == 0) p.convIrFeedback = f;
+        else if (std::strcmp(key, kStateKeyRingLevel) == 0) p.ringLevel = f;
+        else if (std::strcmp(key, kStateKeyVocoderLevel) == 0) p.vocoderLevel = f;
+        else if (std::strcmp(key, kStateKeyConvLevel) == 0) p.convLevel = f;
         else if (std::strcmp(key, kStateKeyCCs) == 0) {
             int n[6] = {0, 0, 0, 0, 0, 0};
             std::sscanf(value, "%d,%d,%d,%d,%d,%d", &n[0], &n[1], &n[2], &n[3], &n[4], &n[5]);
@@ -382,6 +395,9 @@ private:
         kParamConvMix,
         kParamConvSourceFeedback,
         kParamConvIrFeedback,
+        kParamRingLevel,
+        kParamVocoderLevel,
+        kParamConvLevel,
     };
 
     // These mirror ParamId exactly; the static_asserts keep them honest.
@@ -413,7 +429,7 @@ private:
     static_assert(kParamStereoWidth == index(ParamId::stereoWidth));
     static_assert(kParamDrift == index(ParamId::drift));
     static_assert(kParamRandomise == index(ParamId::randomise));
-    static_assert(kParameterCount == 30, "the enum above must cover every spec");
+    static_assert(kParameterCount == 33, "the enum above must cover every spec");
 
     [[nodiscard]] std::uint32_t ccParameter(const ParamId target) const noexcept
     {
@@ -427,7 +443,7 @@ private:
         }
     }
 
-    // State keys 1..20 map onto the musical parameters in declaration order.
+    // State keys 1..23 map onto the musical parameters in declaration order.
     [[nodiscard]] std::uint32_t indexForState(const std::uint32_t stateIndex) const noexcept
     {
         switch (stateIndex) {
@@ -451,6 +467,9 @@ private:
         case 18: return kParamConvMix;
         case 19: return kParamConvSourceFeedback;
         case 20: return kParamConvIrFeedback;
+        case 21: return kParamRingLevel;
+        case 22: return kParamVocoderLevel;
+        case 23: return kParamConvLevel;
         default: return 0;
         }
     }
@@ -478,6 +497,9 @@ private:
         p.convMix = values_[kParamConvMix];
         p.convSourceFeedback = values_[kParamConvSourceFeedback];
         p.convIrFeedback = values_[kParamConvIrFeedback];
+        p.ringLevel = values_[kParamRingLevel];
+        p.vocoderLevel = values_[kParamVocoderLevel];
+        p.convLevel = values_[kParamConvLevel];
         p.ccMix = values_[kCcMix];
         p.ccRingFreq = values_[kCcRingFreq];
         p.ccRingRatio = values_[kCcRingRatio];
@@ -510,6 +532,9 @@ private:
         values_[kParamConvMix] = c.convMix;
         values_[kParamConvSourceFeedback] = c.convSourceFeedback;
         values_[kParamConvIrFeedback] = c.convIrFeedback;
+        values_[kParamRingLevel] = c.ringLevel;
+        values_[kParamVocoderLevel] = c.vocoderLevel;
+        values_[kParamConvLevel] = c.convLevel;
         values_[kCcMix] = c.ccMix;
         values_[kCcRingFreq] = c.ccRingFreq;
         values_[kCcRingRatio] = c.ccRingRatio;

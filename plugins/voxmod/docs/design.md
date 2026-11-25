@@ -19,8 +19,11 @@ in 1/2 ────────────────────────�
 
 `Mix` crossfades the ring mod and the vocoder. `Conv Mix` fades that pair
 against the convolution engine, so the three engines form a three-way blend and
-the legacy defaults are unchanged at `Conv Mix = 0`. The DSP keeps running in
-every position, so `Bypass` is a true bypass rather than a branch around it.
+the legacy defaults are unchanged at `Conv Mix = 0`. Each engine has a `Level`
+trim applied only at the mix point: turning one down cannot change what it feeds
+into another, so `Sync` still takes the pre-level ring signal. The DSP keeps
+running in every position, so `Bypass` is a true bypass rather than a branch
+around it.
 
 ## Why the band edges are logarithmic
 
@@ -57,9 +60,12 @@ The third engine treats both input pairs as live signals. Every 256 samples a
 1024-sample Hann window is taken from inputs 1/2 (the source) and from inputs
 3/4 (the "IR" feed); each is zero-padded to 2048, transformed, multiplied bin
 by bin, inverse-transformed and overlap-added into the output with fourfold
-overlap. The Hann windows sum to two at that overlap, so the block is scaled by
-a half. There is no stored impulse response: re-analysing the IR feed on every
-hop is what makes the convolution move with the performance.
+overlap. The product is normalised by both the FFT and frame lengths: eight
+frame-pair blocks overlap at a 256-sample hop, and the old half-window scale let
+a pair of unit signals reach a gain of 512, which sounded like a clipper. A 6×
+make-up gain brings ordinary tone pairs back to a useful level after that
+correction. There is no stored impulse response: re-analysing the IR feed on
+every hop is what makes the convolution move with the performance.
 
 The 2048-point transform makes each frame pair a *linear* convolution of the
 two windows instead of a circular one, so an impulse in the IR frame delays the
@@ -77,9 +83,12 @@ around intermediate `Conv Mix` settings.
 
 `Src Feedback` and `IR Feedback` mix the output one frame back into the source
 and IR frame buffers respectively. The one-frame tap avoids an algebraic loop
-inside a frame, and both controls are capped at 95 % with non-finite guards so
-the recirculation cannot latch. Their defaults are zero, which leaves the
-convolution strictly feed-forward.
+inside a frame, and both controls are capped at 95 %. The tap is driven up for
+audibility and then soft-limited to ±1, the overlap-add history is bounded, and
+the wet branch has an instant-attack peak limiter before it joins the mix. Those
+three stages stop the loop accumulating without flattening the ring/vocoder
+paths, which are deliberately hotter and untouched by the limiter. Defaults are
+zero, which leaves the convolution strictly feed-forward.
 
 ## Band-limited oscillator
 

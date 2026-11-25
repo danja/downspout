@@ -18,13 +18,25 @@ namespace downspout::voxmod {
 // re-analysed on every hop, a moving IR feed becomes a moving filter.
 //
 // The FFT is twice the frame length, so a frame pair produces a linear (not
-// circular) convolution of the two 1024-sample windows. At fourfold overlap
-// the Hann windows sum to two, hence kAnalysisGain.
+// circular) convolution of the two 1024-sample windows. Eight frame-pair blocks
+// overlap at a 256-sample hop, so the product has to be normalised by both frame
+// length and FFT length; without that a pair of unit signals produces a gain of
+// 512 and sounds like a hard clipper. A modest make-up gain then puts ordinary
+// tone pairs at a useful level. Feedback taps are soft-limited before they
+// re-enter the frames and the overlap-add history is bounded, so the loop cannot
+// accumulate without limit.
 
 inline constexpr int kConvolutionFrame = 1024;
 inline constexpr int kConvolutionHop = 256;
 inline constexpr int kConvolutionFft = 2 * kConvolutionFrame;
-inline constexpr float kConvolutionAnalysisGain = 0.5f;
+inline constexpr float kConvolutionMakeupGain = 6.0f;
+inline constexpr float kConvolutionScale =
+    kConvolutionMakeupGain / static_cast<float>(kConvolutionFft * kConvolutionFrame);
+inline constexpr float kConvolutionStateLimit = 8.0f;
+// The normalised wet signal is much smaller than the raw inputs, so the tap is
+// driven up before the soft limiter. This keeps the feedback controls audible
+// without letting a loud tap re-enter the frames at full amplitude.
+inline constexpr float kConvolutionFeedbackDrive = 8.0f;
 
 // In-place radix-2 complex FFT. Twiddles and bit reversal are precomputed once
 // and reused by every frame; the inverse transform is unnormalised.
@@ -137,7 +149,7 @@ public:
             workA_[static_cast<std::size_t>(i)] *= workB_[static_cast<std::size_t>(i)];
         fft_.inverse(workA_.data());
 
-        const float scale = kConvolutionAnalysisGain / static_cast<float>(kFft);
+        const float scale = kConvolutionScale;
         for (int i = 0; i < kFft; ++i) {
             const float v = workA_[static_cast<std::size_t>(i)].real() * scale;
             out[i] = std::isfinite(v) ? v : 0.0f;
@@ -156,7 +168,11 @@ public:
             const float x = std::isfinite(source[s]) ? source[s] : 0.0f;
             const float h = std::isfinite(ir[s]) ? ir[s] : 0.0f;
             const int delayed = (outPos_ - kFrame + kRing) % kRing;
-            const float fb = outRing_[static_cast<std::size_t>(delayed)];
+            // The tap is a bounded copy of the wet output: unity slope near zero
+            // so quiet feedback still sounds linear, asymptotic at +-1 so a loud
+            // frame cannot re-enter the loop at full amplitude.
+            const float fb = softLimit(kConvolutionFeedbackDrive
+                                       * outRing_[static_cast<std::size_t>(delayed)]);
 
             const float srcIn = finiteOrZero(x + srcFb * fb);
             const float irIn = finiteOrZero(h + irFb * fb);
@@ -181,13 +197,12 @@ public:
                 const int start = (outPos_ - kFrame + 1 + kRing) % kRing;
                 for (int i = 0; i < kFft; ++i) {
                     const int idx = (start + i) % kRing;
-                    outRing_[static_cast<std::size_t>(idx)] =
-                        finiteOrZero(outRing_[static_cast<std::size_t>(idx)] + block_[static_cast<std::size_t>(i)]);
+                    outRing_[static_cast<std::size_t>(idx)] = bounded(
+                        outRing_[static_cast<std::size_t>(idx)] + block_[static_cast<std::size_t>(i)]);
                 }
             }
 
-            out[s] = std::isfinite(outRing_[static_cast<std::size_t>(outPos_)])
-                ? outRing_[static_cast<std::size_t>(outPos_)] : 0.0f;
+            out[s] = bounded(outRing_[static_cast<std::size_t>(outPos_)]);
             outRing_[static_cast<std::size_t>(outPos_)] = 0.0f;
             ++outPos_;
             if (outPos_ == kRing)
@@ -201,6 +216,15 @@ private:
         return std::isfinite(v) ? std::clamp(v, 0.0f, 0.95f) : 0.0f;
     }
     static float finiteOrZero(const float v) noexcept { return std::isfinite(v) ? v : 0.0f; }
+    static float softLimit(const float v) noexcept
+    {
+        const float safe = finiteOrZero(v);
+        return safe / (1.0f + std::fabs(safe));
+    }
+    static float bounded(const float v) noexcept
+    {
+        return std::clamp(finiteOrZero(v), -kConvolutionStateLimit, kConvolutionStateLimit);
+    }
 
     VoxmodFft fft_;
     std::array<float, kFrame> window_ {};
