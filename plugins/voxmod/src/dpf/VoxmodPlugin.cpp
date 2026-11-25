@@ -45,9 +45,12 @@ constexpr const char* kStateKeySync = "sync";
 constexpr const char* kStateKeyStereoWidth = "stereo_width";
 constexpr const char* kStateKeyDrift = "drift";
 constexpr const char* kStateKeySeed = "seed";
+constexpr const char* kStateKeyConvMix = "conv_mix";
+constexpr const char* kStateKeyConvSourceFeedback = "conv_source_feedback";
+constexpr const char* kStateKeyConvIrFeedback = "conv_ir_feedback";
 constexpr const char* kStateKeyCCs = "cc_map";
 
-constexpr std::uint32_t kStateCount = 19;
+constexpr std::uint32_t kStateCount = 22;
 
 [[nodiscard]] float clampValue(const float value, const float lo, const float hi) noexcept
 {
@@ -80,11 +83,11 @@ protected:
     const char* getLabel() const override { return "Voxmod"; }
     const char* getDescription() const override
     {
-        return "Combined vocoder and ring modulator. The carrier on inputs 1/2 is "
-               "analysed and its spectral envelope is re-imposed on the modulator "
-               "from inputs 3/4, while the same modulator is multiplied by an "
-               "independent oscillator. Mix blends the two engines; five CCs drive "
-               "them.";
+        return "Vocoder, ring modulator and live convolution cross-synthesis. "
+               "Inputs 1/2 are the modulator/source; inputs 3/4 are the analysed "
+               "carrier and live IR feed. Mix balances ring and vocoder, Conv Mix "
+               "fades that pair against sliding-window FFT convolution with "
+               "source and IR feedback; five CCs drive the legacy engines.";
     }
     const char* getMaker() const override { return "danja"; }
     const char* getHomePage() const override { return "https://danja.github.io/downspout/"; }
@@ -105,12 +108,12 @@ protected:
         if (input && index < kAudioInputs) {
             // The routing contract is the plugin's main gotcha, so the port names
             // and groups have to state it rather than leaving it to the manual.
-            // Ports 0/1 are the carrier pair, 2/3 the modulator pair.
+            // Ports 0/1 are the source/modulator pair, 2/3 the carrier/live IR.
             port.groupId = index / 2;
             if (index < 2)
-                port.name = index == 0 ? "Carrier L" : "Carrier R";
+                port.name = index == 0 ? "Modulator L" : "Modulator R";
             else
-                port.name = index == 2 ? "Modulator L" : "Modulator R";
+                port.name = index == 2 ? "Carrier/IR L" : "Carrier/IR R";
             port.symbol = String("in_") + String(static_cast<int>(index + 1));
         }
     }
@@ -118,9 +121,9 @@ protected:
     void initPortGroup(const std::uint32_t groupId, PortGroup& group) override
     {
         if (groupId == 0)
-            group.name = "Carrier (analysed)";
+            group.name = "Modulator / source";
         else if (groupId == 1)
-            group.name = "Modulator";
+            group.name = "Carrier / live IR";
     }
 
     void initParameter(std::uint32_t index, Parameter& parameter) override
@@ -154,12 +157,14 @@ protected:
             kStateKeyRingRatio, kStateKeyRingShape, kStateKeyRingDepth, kStateKeyBandCount,
             kStateKeyBandSpread, kStateKeyAttackMs, kStateKeyReleaseMs, kStateKeyFormantShift,
             kStateKeyTilt, kStateKeyCarrierSource, kStateKeySync, kStateKeyStereoWidth,
-            kStateKeyDrift, kStateKeySeed, kStateKeyCCs,
+            kStateKeyDrift, kStateKeySeed, kStateKeyConvMix, kStateKeyConvSourceFeedback,
+            kStateKeyConvIrFeedback, kStateKeyCCs,
         };
         static constexpr const char* kLabels[kStateCount] = {
             "Parameters", "Mix", "Bypass", "Ring Freq", "Ring Ratio", "Ring Shape",
             "Ring Depth", "Bands", "Spread", "Attack", "Release", "Formant", "Tilt",
-            "Carrier", "Sync", "Width", "Drift", "Seed", "CC Map",
+            "Carrier", "Sync", "Width", "Drift", "Seed", "Conv Mix",
+            "Src Feedback", "IR Feedback", "CC Map",
         };
 
         if (index >= kStateCount)
@@ -255,6 +260,9 @@ protected:
         if (std::strcmp(key, kStateKeySync) == 0) return integer(p.sync);
         if (std::strcmp(key, kStateKeyStereoWidth) == 0) return num(p.stereoWidth);
         if (std::strcmp(key, kStateKeyDrift) == 0) return num(p.drift);
+        if (std::strcmp(key, kStateKeyConvMix) == 0) return num(p.convMix);
+        if (std::strcmp(key, kStateKeyConvSourceFeedback) == 0) return num(p.convSourceFeedback);
+        if (std::strcmp(key, kStateKeyConvIrFeedback) == 0) return num(p.convIrFeedback);
 
         if (std::strcmp(key, kStateKeyCCs) == 0) {
             std::snprintf(buf, sizeof(buf), "%d,%d,%d,%d,%d,%d",
@@ -304,6 +312,9 @@ protected:
         else if (std::strcmp(key, kStateKeySync) == 0) p.sync = f;
         else if (std::strcmp(key, kStateKeyStereoWidth) == 0) p.stereoWidth = f;
         else if (std::strcmp(key, kStateKeyDrift) == 0) p.drift = f;
+        else if (std::strcmp(key, kStateKeyConvMix) == 0) p.convMix = f;
+        else if (std::strcmp(key, kStateKeyConvSourceFeedback) == 0) p.convSourceFeedback = f;
+        else if (std::strcmp(key, kStateKeyConvIrFeedback) == 0) p.convIrFeedback = f;
         else if (std::strcmp(key, kStateKeyCCs) == 0) {
             int n[6] = {0, 0, 0, 0, 0, 0};
             std::sscanf(value, "%d,%d,%d,%d,%d,%d", &n[0], &n[1], &n[2], &n[3], &n[4], &n[5]);
@@ -368,6 +379,9 @@ private:
         kParamOutCarrierHz,
         kParamOutSibilance,
         kParamOutReduction,
+        kParamConvMix,
+        kParamConvSourceFeedback,
+        kParamConvIrFeedback,
     };
 
     // These mirror ParamId exactly; the static_asserts keep them honest.
@@ -399,7 +413,7 @@ private:
     static_assert(kParamStereoWidth == index(ParamId::stereoWidth));
     static_assert(kParamDrift == index(ParamId::drift));
     static_assert(kParamRandomise == index(ParamId::randomise));
-    static_assert(kParameterCount == 27, "the enum above must cover every spec");
+    static_assert(kParameterCount == 30, "the enum above must cover every spec");
 
     [[nodiscard]] std::uint32_t ccParameter(const ParamId target) const noexcept
     {
@@ -413,7 +427,7 @@ private:
         }
     }
 
-    // State keys 1..17 map onto the musical parameters in declaration order.
+    // State keys 1..20 map onto the musical parameters in declaration order.
     [[nodiscard]] std::uint32_t indexForState(const std::uint32_t stateIndex) const noexcept
     {
         switch (stateIndex) {
@@ -434,6 +448,9 @@ private:
         case 15: return kParamStereoWidth;
         case 16: return kParamDrift;
         case 17: return kParamSeed;
+        case 18: return kParamConvMix;
+        case 19: return kParamConvSourceFeedback;
+        case 20: return kParamConvIrFeedback;
         default: return 0;
         }
     }
@@ -458,6 +475,9 @@ private:
         p.sync = values_[kParamSync];
         p.stereoWidth = values_[kParamStereoWidth];
         p.drift = values_[kParamDrift];
+        p.convMix = values_[kParamConvMix];
+        p.convSourceFeedback = values_[kParamConvSourceFeedback];
+        p.convIrFeedback = values_[kParamConvIrFeedback];
         p.ccMix = values_[kCcMix];
         p.ccRingFreq = values_[kCcRingFreq];
         p.ccRingRatio = values_[kCcRingRatio];
@@ -487,6 +507,9 @@ private:
         values_[kParamSync] = c.sync;
         values_[kParamStereoWidth] = c.stereoWidth;
         values_[kParamDrift] = c.drift;
+        values_[kParamConvMix] = c.convMix;
+        values_[kParamConvSourceFeedback] = c.convSourceFeedback;
+        values_[kParamConvIrFeedback] = c.convIrFeedback;
         values_[kCcMix] = c.ccMix;
         values_[kCcRingFreq] = c.ccRingFreq;
         values_[kCcRingRatio] = c.ccRingRatio;

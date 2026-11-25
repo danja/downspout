@@ -14,7 +14,9 @@ namespace {
 constexpr std::uint32_t kFrames = 512;
 constexpr double kSr = 48000.0;
 
-// Four inputs, two outputs, matching the plugin's bus layout.
+// Four inputs, two outputs, matching the plugin's bus layout. The field names
+// keep the signal roles; run() wires the modulator pair to ports 1/2 and the
+// carrier/live IR pair to 3/4.
 struct Bus {
     std::array<float, kFrames> carrierL {};
     std::array<float, kFrames> carrierR {};
@@ -26,7 +28,7 @@ struct Bus {
 
 void run(EngineState& state, const Parameters& p, Bus& b)
 {
-    const float* ins[] = { b.carrierL.data(), b.carrierR.data(), b.modL.data(), b.modR.data() };
+    const float* ins[] = { b.modL.data(), b.modR.data(), b.carrierL.data(), b.carrierR.data() };
     float* outs[] = { b.outL.data(), b.outR.data() };
     processBlock(state, p, kFrames, kSr, ins, outs);
 }
@@ -61,6 +63,9 @@ void testParameterClamp() {
     p.tilt = 99.0f;
     p.ccChannel = 0.0f;
     p.ringShape = 17.0f;
+    p.convMix = 500.0f;
+    p.convSourceFeedback = -20.0f;
+    p.convIrFeedback = std::nanf("");
 
     const Parameters c = clampParameters(p);
     assert(c.mix == 100.0f);
@@ -69,6 +74,9 @@ void testParameterClamp() {
     assert(std::fabs(c.tilt - kMaxTiltDbPerOct) < 1e-4f);
     assert(c.ccChannel == 1.0f);
     assert(c.ringShape == 3.0f);
+    assert(c.convMix == 100.0f);
+    assert(c.convSourceFeedback == 0.0f);
+    assert(c.convIrFeedback == 0.0f);
 
     // NaN must fall back to the default rather than propagating.
     Parameters bad;
@@ -287,7 +295,7 @@ void testSampleRateIndependence() {
         EngineState s;
         activate(s);
         for (int i = 0; i < 10; ++i) {
-            const float* ins[] = { b.carrierL.data(), b.carrierR.data(), b.modL.data(), b.modR.data() };
+            const float* ins[] = { b.modL.data(), b.modR.data(), b.carrierL.data(), b.carrierR.data() };
             float* outs[] = { b.outL.data(), b.outR.data() };
             processBlock(s, p, kFrames, sr, ins, outs);
         }
@@ -467,6 +475,9 @@ void testSerializationRoundTrip() {
     p.formantShift = -4.0f;
     p.carrierSource = 1.0f;
     p.sync = 1.0f;
+    p.convMix = 42.0f;
+    p.convSourceFeedback = 33.0f;
+    p.convIrFeedback = 21.0f;
     p.ccChannel = 9.0f;
 
     const std::string text = serializeParameters(p);
@@ -480,7 +491,19 @@ void testSerializationRoundTrip() {
     assert(std::fabs(back->bandCount - p.bandCount) < 1e-3f);
     assert(std::fabs(back->formantShift - p.formantShift) < 1e-3f);
     assert(std::fabs(back->ccChannel - p.ccChannel) < 1e-3f);
+    assert(std::fabs(back->convMix - p.convMix) < 1e-3f);
+    assert(std::fabs(back->convSourceFeedback - p.convSourceFeedback) < 1e-3f);
+    assert(std::fabs(back->convIrFeedback - p.convIrFeedback) < 1e-3f);
     assert(back->sync == 1.0f);
+
+    // A v1 patch saved before the convolver existed must load with it disabled.
+    const auto legacy = deserializeParameters("version=1\nmix=25\n");
+    assert(legacy.has_value());
+    if (legacy.has_value()) {
+        assert(legacy->convMix == 0.0f);
+        assert(legacy->convSourceFeedback == 0.0f);
+        assert(legacy->convIrFeedback == 0.0f);
+    }
 
     // Garbage must be rejected rather than half-applied.
     assert(!deserializeParameters("this is not a parameter block").has_value());
@@ -529,13 +552,191 @@ void testActivateResetsState() {
     assert(rms(c.outL.data(), 256, kFrames) > 0.005f);
 }
 
+void testConvolutionFramePairIsFrameMultiplication() {
+    // A delta in the IR frame is a unity spectrum, so the overlap-add block
+    // must be the Hann-weighted source frame delayed by the delta position.
+    LiveConvolver convolver;
+    std::vector<float> source(static_cast<std::size_t>(kConvolutionFrame));
+    std::vector<float> ir(static_cast<std::size_t>(kConvolutionFrame));
+    std::vector<float> block(static_cast<std::size_t>(kConvolutionFft));
+
+    for (int i = 0; i < kConvolutionFrame; ++i) {
+        source[static_cast<std::size_t>(i)] = 0.5f * static_cast<float>(
+            std::sin(2.0 * M_PI * 440.0 * i / kSr));
+        ir[static_cast<std::size_t>(i)] = i == kConvolutionFrame / 2 ? 1.0f : 0.0f;
+    }
+    convolver.renderFramePair(source.data(), ir.data(), block.data());
+
+    const int delay = kConvolutionFrame / 2;
+    double err = 0.0;
+    double energy = 0.0;
+    for (int i = delay; i < kConvolutionFrame; ++i) {
+        const float window = 0.5f - 0.5f * static_cast<float>(
+            std::cos(2.0 * M_PI * (i - delay) / kConvolutionFrame));
+        const double expected = 0.5 * window * source[static_cast<std::size_t>(i - delay)];
+        const double actual = block[static_cast<std::size_t>(i)];
+        err += (actual - expected) * (actual - expected);
+        energy += expected * expected;
+    }
+    assert(energy > 1.0);
+    assert(std::sqrt(err / energy) < 1.0e-3);
+}
+
+void testConvolutionUsesInputs34AsLiveIr() {
+    Parameters p;
+    p.convMix = 100.0f;  // convolution only; both legacy engines faded out
+    p.ringDepth = 0.0f;
+
+    Bus live;
+    fillSine(live.modL.data(), 440.0, kSr, 0.5f);
+    fillSine(live.modR.data(), 440.0, kSr, 0.5f);
+    fillSine(live.carrierL.data(), 330.0, kSr, 0.5f);
+    fillSine(live.carrierR.data(), 370.0, kSr, 0.5f);
+
+    Bus silent;
+    fillSine(silent.modL.data(), 440.0, kSr, 0.5f);
+    fillSine(silent.modR.data(), 440.0, kSr, 0.5f);
+
+    EngineState withIr;
+    activate(withIr);
+    EngineState withoutIr;
+    activate(withoutIr);
+    for (int i = 0; i < 12; ++i) {
+        run(withIr, p, live);
+        run(withoutIr, p, silent);
+    }
+
+    const float level = rms(live.outL.data(), 256, kFrames);
+    const float noIr = rms(silent.outL.data(), 256, kFrames);
+    assert(level > 0.001f);
+    // Conv Mix 100 leaves no path for the source on its own.
+    assert(noIr < 1.0e-6f);
+
+    // Frame multiplication is commutative, so swapping the two signals is not
+    // a direction test. Silence on 3/4 above is what proves the IR comes from
+    // the carrier pair: with no IR there is no output at all.
+}
+
+void testConvolutionIrShapesTheSource() {
+    Parameters p;
+    p.convMix = 100.0f;
+
+    auto render = [&](const double irHz) {
+        Bus b;
+        fillSine(b.modL.data(), 440.0, kSr, 0.5f);
+        fillSine(b.modR.data(), 440.0, kSr, 0.5f);
+        fillSine(b.carrierL.data(), irHz, kSr, 0.5f);
+        fillSine(b.carrierR.data(), irHz, kSr, 0.5f);
+        EngineState s;
+        activate(s);
+        for (int i = 0; i < 12; ++i)
+            run(s, p, b);
+        return b.outL;
+    };
+
+    const auto low = render(220.0);
+    const auto high = render(1800.0);
+    double diff = 0.0;
+    for (std::uint32_t i = 0; i < kFrames; ++i) {
+        const double d = static_cast<double>(low[i]) - high[i];
+        diff += d * d;
+    }
+    assert(std::sqrt(diff / kFrames) > 1.0e-4f);
+}
+
+void testConvolutionFeedbackControlsAreAudible() {
+    Parameters p;
+    p.convMix = 100.0f;
+
+    auto levelAt = [&](const float sourceFb, const float irFb) {
+        p.convSourceFeedback = sourceFb;
+        p.convIrFeedback = irFb;
+        Bus b;
+        fillSine(b.modL.data(), 440.0, kSr, 0.4f);
+        fillSine(b.modR.data(), 440.0, kSr, 0.4f);
+        fillSine(b.carrierL.data(), 330.0, kSr, 0.4f);
+        fillSine(b.carrierR.data(), 330.0, kSr, 0.4f);
+        EngineState s;
+        activate(s);
+        for (int i = 0; i < 32; ++i)
+            run(s, p, b);
+        assert(std::isfinite(b.outL[0]) && std::isfinite(b.outR[0]));
+        return rms(b.outL.data(), 256, kFrames);
+    };
+
+    Parameters defaults;
+    assert(defaults.convMix == 0.0f);
+    assert(defaults.convSourceFeedback == 0.0f);
+    assert(defaults.convIrFeedback == 0.0f);
+
+    const float dry = levelAt(0.0f, 0.0f);
+    const float sourceFb = levelAt(60.0f, 0.0f);
+    const float irFb = levelAt(0.0f, 60.0f);
+    assert(dry > 1.0e-4f);
+    assert(std::fabs(sourceFb - dry) > 0.02f * dry);
+    assert(std::fabs(irFb - dry) > 0.02f * dry);
+}
+
+void testConvolutionDefaultsKeepLegacyPassThrough() {
+    const ParamSpec& mixSpec = kParameterSpecs[index(ParamId::convMix)];
+    assert(mixSpec.minimum == 0.0f && mixSpec.maximum == 100.0f && mixSpec.defaultValue == 0.0f);
+    assert(!mixSpec.output && !mixSpec.trigger);
+
+    Parameters p;
+    p.ringDepth = 0.0f;  // ring path is a clean pass-through at zero depth
+    p.mix = 0.0f;
+    p.drift = 0.0f;
+
+    Bus b;
+    fillSine(b.modL.data(), 300.0, kSr, 0.4f);
+    fillSine(b.modR.data(), 300.0, kSr, 0.4f);
+    fillSine(b.carrierL.data(), 900.0, kSr, 0.8f);
+    EngineState s;
+    activate(s);
+    run(s, p, b);
+    for (std::uint32_t i = 0; i < kFrames; ++i)
+        assert(std::fabs(b.outL[i] - b.modL[i]) < 1.0e-4f);
+}
+
+void testConvolutionSurvivesNonFiniteInputAndActivation() {
+    Parameters p;
+    p.convMix = 100.0f;
+    p.convSourceFeedback = 95.0f;
+    p.convIrFeedback = 95.0f;
+
+    Bus b;
+    for (std::uint32_t i = 0; i < kFrames; ++i) {
+        b.modL[i] = std::nanf("");
+        b.modR[i] = INFINITY;
+        b.carrierL[i] = std::nanf("");
+        b.carrierR[i] = 1.0f;
+    }
+    EngineState s;
+    activate(s);
+    for (int i = 0; i < 8; ++i)
+        run(s, p, b);
+    for (std::uint32_t i = 0; i < kFrames; ++i) {
+        assert(std::isfinite(b.outL[i]));
+        assert(std::isfinite(b.outR[i]));
+    }
+
+    // activate() must clear the convolution history, not just the filters.
+    Bus silent;
+    activate(s);
+    run(s, p, silent);
+    for (std::uint32_t i = 0; i < kFrames; ++i) {
+        assert(silent.outL[i] == 0.0f);
+        assert(silent.outR[i] == 0.0f);
+    }
+}
+
 void testZeroFramesIsSafe() {
     Parameters p;
     Bus b;
     EngineState state;
     activate(state);
 
-    const float* ins[] = { b.carrierL.data(), b.carrierR.data(), b.modL.data(), b.modR.data() };
+    const float* ins[] = { b.modL.data(), b.modR.data(), b.carrierL.data(), b.carrierR.data() };
     float* outs[] = { b.outL.data(), b.outR.data() };
     processBlock(state, p, 0, kSr, ins, outs);
     processBlock(state, p, 0, 0.0, nullptr, nullptr);
@@ -563,6 +764,12 @@ int main() {
     testRandomiseIsSeededAndKeepsMixAndBypass();
     testSerializationRoundTrip();
     testActivateResetsState();
+    testConvolutionFramePairIsFrameMultiplication();
+    testConvolutionUsesInputs34AsLiveIr();
+    testConvolutionIrShapesTheSource();
+    testConvolutionFeedbackControlsAreAudible();
+    testConvolutionDefaultsKeepLegacyPassThrough();
+    testConvolutionSurvivesNonFiniteInputAndActivation();
     testZeroFramesIsSafe();
 
     std::printf("voxmod core tests passed\n");

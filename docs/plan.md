@@ -463,17 +463,19 @@ Progress as of 2026-05-27:
   Shift, Q Scale and Tilt reshape the tracks; MIDI CC and held notes control it;
   the tracks can be emitted as CCs or notes. All settings are parameters, so it has
   no plugin state. Design notes in `plugins/sinevox/docs/design.md`.
-- `voxmod` now exists as a combined vocoder and ring modulator sharing one
-  four-input bus: a filter-bank vocoder that analyses the carrier on inputs 1/2
-  and re-imposes its spectral envelope on the modulator from 3/4, running in
-  parallel with a polyBLEP-band-limited ring modulator over the same modulator,
-  blended by a single `Mix` parameter rather than a mode switch. Band edges are
+- `voxmod` now exists as a vocoder, ring modulator and live convolution engine
+  sharing one four-input bus: inputs 1/2 carry the modulator/source and inputs
+  3/4 the carrier/live IR feed. A filter-bank vocoder analyses the carrier and
+  re-imposes its spectral envelope on the source, running alongside a
+  polyBLEP-band-limited ring modulator; `Mix` blends those two and `Conv Mix`
+  fades the pair against sliding-window FFT frame multiplication with source and
+  IR feedback. Band edges are
   logarithmic so the bank does not starve the formants, and are constant-skirt
   so resynthesis gain does not tilt with band width. `Ring Ratio` is quantised to
   16 musical steps so sideband moves are repeatable, and `Formant` transposes
   the modulator side of the bank only, which relocates the envelope rather than
   transposing the whole signal. `Sync` routes the ring-modulated signal back as
-  the vocoder's carrier so inputs 3/4 alone are sufficient. Five Drift-CC lanes;
+  the vocoder's carrier so inputs 1/2 alone are sufficient. Five Drift-CC lanes;
   read-only status parameters report the effective carrier frequency, carrier
   sibilance and band-gate reduction; deterministic tests, and a first VST3
   wrapper target with a NanoVG UI via vendored DPF;

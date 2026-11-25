@@ -48,6 +48,7 @@ struct Accent {
 // the vocoder, olive for the derived readout, violet for the CC routing column.
 constexpr Accent kRingAccent { 198, 132, 58 };
 constexpr Accent kVoxAccent { 92, 140, 156 };
+constexpr Accent kConvAccent { 172, 104, 126 };
 constexpr Accent kCcAccent { 138, 116, 168 };
 constexpr Accent kReadoutAccent { 124, 148, 104 };
 constexpr int kCreamR = 250;
@@ -72,6 +73,9 @@ enum SliderId : std::uint32_t {
     kSliderRelease,
     kSliderFormant,
     kSliderTilt,
+    kSliderConvMix,
+    kSliderConvSrcFb,
+    kSliderConvIrFb,
     kSliderCount,
 };
 
@@ -83,10 +87,14 @@ constexpr std::array<std::uint32_t, kSliderCount> kSliderParams = {
     index(ParamId::releaseMs),
     index(ParamId::formantShift),
     index(ParamId::tilt),
+    index(ParamId::convMix),
+    index(ParamId::convSourceFeedback),
+    index(ParamId::convIrFeedback),
 };
 
 constexpr std::array<const char*, kSliderCount> kSliderLabels = {
     "Ring Depth", "Width", "Drift", "Attack", "Release", "Formant", "Tilt",
+    "Conv Mix", "Src Feedback", "IR Feedback",
 };
 
 // Which engine each slider belongs to, so the columns and the accent follow the
@@ -99,6 +107,9 @@ constexpr std::array<Accent, kSliderCount> kSliderAccents = {
     kVoxAccent,
     kVoxAccent,
     kVoxAccent,
+    kConvAccent,
+    kConvAccent,
+    kConvAccent,
 };
 
 // Log-scale mapping where the range spans a decade or more.
@@ -137,6 +148,9 @@ constexpr std::array<Accent, kSliderCount> kSliderAccents = {
     case kSliderRingDepth:
     case kSliderWidth:
     case kSliderDrift:
+    case kSliderConvMix:
+    case kSliderConvSrcFb:
+    case kSliderConvIrFb:
         std::snprintf(buf, sizeof(buf), "%.0f%%", v);
         break;
     case kSliderAttack:
@@ -267,7 +281,7 @@ constexpr const char* kRingShapeNames(int shape)
 
 constexpr const char* kCarrierNames(int source)
 {
-    return source == 1 ? "internal osc" : "input 1/2";
+    return source == 1 ? "internal osc" : "input 3/4";
 }
 
 constexpr const char* kSyncNames(int on)
@@ -343,7 +357,9 @@ constexpr float kRingX = kPad;
 constexpr float kRingW = 176.0f;
 constexpr float kVoxX = kRingX + kRingW + 14.0f;
 constexpr float kVoxW = 176.0f;
-constexpr float kCcX = kVoxX + kVoxW + 14.0f;
+constexpr float kConvX = kVoxX + kVoxW + 14.0f;
+constexpr float kConvW = 176.0f;
+constexpr float kCcX = kConvX + kConvW + 14.0f;
 constexpr float kBodyY = kHeaderH + kStripH + 14.0f;
 constexpr float kSliderH = 44.0f;
 constexpr float kDropH = 44.0f;
@@ -556,25 +572,29 @@ private:
 
     // ── Hit geometry ─────────────────────────────────────────────────────
 
-    // Sliders are laid out in two engine columns, so the accent on each track
-    // always matches the column it sits in. Ring mod owns the first three
-    // sliders, the vocoder the rest.
+    // Sliders are laid out in three engine columns, so the accent on each track
+    // always matches the column it sits in: ring mod, vocoder, convolution.
     [[nodiscard]] std::uint32_t sliderColumn(const std::uint32_t slider) const noexcept
     {
-        return slider < 3 ? 0u : 1u;
+        if (slider < 3)
+            return 0u;
+        if (slider < 7)
+            return 1u;
+        return 2u;
     }
 
     [[nodiscard]] float sliderRowY(const std::uint32_t slider) const noexcept
     {
-        const std::uint32_t row = sliderColumn(slider) == 0
+        const std::uint32_t row = slider < 3
             ? slider
-            : (slider - 3);
+            : (slider < 7 ? slider - 3 : slider - 7);
         return kBodyY + static_cast<float>(row) * kSliderH;
     }
 
     [[nodiscard]] float sliderColX(const std::uint32_t slider) const noexcept
     {
-        return sliderColumn(slider) == 0 ? kRingX : kVoxX;
+        const std::uint32_t column = sliderColumn(slider);
+        return column == 0 ? kRingX : (column == 1 ? kVoxX : kConvX);
     }
 
     [[nodiscard]] float sliderColW() const noexcept { return kVoxW; }
@@ -587,8 +607,7 @@ private:
     // Bypass sits directly under the taller of the two slider columns.
     [[nodiscard]] Rect bypassBox() const noexcept
     {
-        return { kVoxX, kBodyY + static_cast<float>(kSliderCount - 3) * kSliderH + 20.0f,
-                 kVoxW, 32.0f };
+        return { kVoxX, kBodyY + 4.0f * kSliderH + 20.0f, kVoxW, 32.0f };
     }
 
     [[nodiscard]] Rect xyBox() const noexcept
@@ -751,7 +770,7 @@ private:
         fontSize(11.0f);
         fc(th.textDim);
         text(kPad + 132.0f, 27.0f,
-             "vocoder + ring mod \xc2\xb7 carrier in 1/2 \xc2\xb7 modulator in 3/4 \xc2\xb7 Drift CC",
+             "vocoder \xc2\xb7 ring \xc2\xb7 live convolution \xc2\xb7 source in 1/2 \xc2\xb7 IR in 3/4",
              nullptr);
 
         beginPath();
@@ -770,7 +789,8 @@ private:
     {
         drawColumnStrip(kRingX, kRingW, "RING MODULATOR", kRingAccent);
         drawColumnStrip(kVoxX, kVoxW, "VOCODER", kVoxAccent);
-        drawColumnStrip(kCcX, W - kCcX - kPad, "ROUTING + DRIFT CC", kCcAccent);
+        drawColumnStrip(kConvX, kConvW, "LIVE CONVOLUTION", kConvAccent);
+        drawColumnStrip(kCcX, W - kCcX - kPad, "ROUTING", kCcAccent);
     }
 
     void drawColumnStrip(const float x, const float w, const char* title, const Accent& accent)
@@ -821,6 +841,7 @@ private:
 
     void drawEngineColumns()
     {
+        const auto& th = theme();
         for (std::uint32_t s = 0; s < kSliderCount; ++s) {
             const Rect track = sliderTrack(s);
             const std::uint32_t parameter = kSliderParams[s];
@@ -833,6 +854,16 @@ private:
                            formatSlider(s, values_[parameter]).c_str());
             drawTrack(track, valueToSlider(s, values_[parameter]), kSliderAccents[s]);
         }
+
+        // The convolution column has room under its three sliders for the
+        // routing contract; it is the part first-time users need to see.
+        const float hintY = kBodyY + 3.0f * kSliderH + 22.0f;
+        fontSize(8.5f);
+        textAlign(ALIGN_LEFT | ALIGN_TOP);
+        fc(th.textDim);
+        text(kConvX, hintY, "1/2 source x 3/4 IR", nullptr);
+        text(kConvX, hintY + 13.0f, "FFT frames, 4x overlap", nullptr);
+        text(kConvX, hintY + 26.0f, "Conv Mix fades legacy pair", nullptr);
 
         drawSwitchRow(bypassBox(), "Bypass",
                       values_[index(ParamId::bypass)] >= 0.5f, "bypassed", "active");
@@ -1024,10 +1055,10 @@ private:
         fontSize(9.5f);
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fc(th.textDim);
-        text(kCcX, hintY, "in 1/2 = carrier to analyse", nullptr);
-        text(kCcX, hintY + 15.0f, "in 3/4 = modulator to colour", nullptr);
-        text(kCcX, hintY + 30.0f, "Sync makes the ring mod feed", nullptr);
-        text(kCcX, hintY + 45.0f, "the vocoder, so 3/4 alone works.", nullptr);
+        text(kCcX, hintY, "in 1/2 = source / modulator", nullptr);
+        text(kCcX, hintY + 15.0f, "in 3/4 = carrier / live IR", nullptr);
+        text(kCcX, hintY + 30.0f, "Conv Mix multiplies their FFT", nullptr);
+        text(kCcX, hintY + 45.0f, "frames; feedback recirculates.", nullptr);
 
         const float mapY = hintY + 74.0f;
         fc(th.textDim);

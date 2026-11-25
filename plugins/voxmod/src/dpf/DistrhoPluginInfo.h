@@ -16,7 +16,7 @@
 
 #define DISTRHO_PLUGIN_HAS_UI           1
 #define DISTRHO_PLUGIN_IS_RT_SAFE       1
-// Four inputs: 1/2 are the carrier to analyse, 3/4 are the modulator.
+// Four inputs: 1/2 are the modulator/source, 3/4 are the carrier/live IR feed.
 #define DISTRHO_PLUGIN_NUM_INPUTS       4
 #define DISTRHO_PLUGIN_NUM_OUTPUTS      2
 #define DISTRHO_PLUGIN_WANT_MIDI_INPUT  1

@@ -3,23 +3,24 @@
 ## Signal flow
 
 ```
-in 1/2 ─┬─────────────────────────────► carrier (analysed)
-        │                                     │
-        │                          ┌──────────┴──────────┐
-        │                          │  filter bank, N bands│
-        │                          │  envelope follower   │
-        │                          └──────────┬──────────┘
-        │                                     │ gains
-in 3/4 ─┼────────────────────────────────────┴──► resynthesised modulator
-        │                                                    │
-        └──► × internal oscillator ──► ring mod ────────────┤
-                                                             ▼
-                                                        out 1/2
+in 1/2 (modulator / source) ─┬─► × internal oscillator ──► ring mod ──┐
+                             │                                       │
+                             └─► filter bank ──► envelope gains ─────┤
+                                      ▲                              │
+in 3/4 (carrier / live IR) ───────────┘                              ├─► out 1/2
+                             │                                       │
+                             └─► live IR frames ──► FFT multiply ────┘
+in 1/2 ─────────────────────────► source frames ──► FFT multiply
+                                                    │
+                                          IFFT + overlap-add
+                                                    │
+                                          feedback taps ──► 1/2, 3/4
 ```
 
-`Mix` crossfades the two engines. At 0% only the ring-modulated path is live;
-at 100% only the vocoder is. The DSP keeps running either way, so `Bypass` is a
-true bypass rather than a branch around the processing.
+`Mix` crossfades the ring mod and the vocoder. `Conv Mix` fades that pair
+against the convolution engine, so the three engines form a three-way blend and
+the legacy defaults are unchanged at `Conv Mix = 0`. The DSP keeps running in
+every position, so `Bypass` is a true bypass rather than a branch around it.
 
 ## Why the band edges are logarithmic
 
@@ -49,6 +50,36 @@ interesting sideband relationships sit in a small part of the track. It is
 therefore quantised to 16 steps across −12 to +35 semitones, so a move of the
 knob changes the sidebands in semitones and is repeatable. `quantiseRatio` is
 tested to produce exactly `kRatioSteps` distinct values across the range.
+
+## Live convolution cross-synthesis
+
+The third engine treats both input pairs as live signals. Every 256 samples a
+1024-sample Hann window is taken from inputs 1/2 (the source) and from inputs
+3/4 (the "IR" feed); each is zero-padded to 2048, transformed, multiplied bin
+by bin, inverse-transformed and overlap-added into the output with fourfold
+overlap. The Hann windows sum to two at that overlap, so the block is scaled by
+a half. There is no stored impulse response: re-analysing the IR feed on every
+hop is what makes the convolution move with the performance.
+
+The 2048-point transform makes each frame pair a *linear* convolution of the
+two windows instead of a circular one, so an impulse in the IR frame delays the
+source without wrapping the frame tail into its head. `testConvolutionFramePairIsFrameMultiplication`
+pins that with a delta IR, and the streaming tests check that a silent IR gives
+no output and that changing the IR changes the result. Frame multiplication is
+commutative, so this is cross-synthesis rather than a directional filter: the
+contract that matters is that a signal must be present on *both* pairs.
+
+At fourfold overlap the earliest contribution from a frame appears almost one
+frame before its newest sample, so the dry ring/vocoder path is not time-aligned
+with the wet convolution. The convolution engine is a colouration effect and
+the two are faded rather than summed at equal level, so this is audible only
+around intermediate `Conv Mix` settings.
+
+`Src Feedback` and `IR Feedback` mix the output one frame back into the source
+and IR frame buffers respectively. The one-frame tap avoids an algebraic loop
+inside a frame, and both controls are capped at 95 % with non-finite guards so
+the recirculation cannot latch. Their defaults are zero, which leaves the
+convolution strictly feed-forward.
 
 ## Band-limited oscillator
 

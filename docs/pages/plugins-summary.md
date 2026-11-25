@@ -173,7 +173,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | treatment | treatment.vst3 | audio effect (acoustic) | 2/2 | yes/no | no |
 | tuney-vst | tuney_vst.vst3 | instrument + MIDI | 0/2 | yes/yes | yes |
 | sinevox | sinevox.vst3 | audio effect (formant vocoder / sine wave speech) | 4/2 | yes/yes | no |
-| voxmod | voxmod.vst3 | audio effect (vocoder) | 4/2 | yes/no | no |
+| voxmod | voxmod.vst3 | audio effect (vocoder / live convolution) | 4/2 | yes/no | no |
 | worms | worms.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | xoxolo | xoxolo.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 
@@ -1125,13 +1125,18 @@ Feedforward latency equals the grain window and is reported; in-loop latency is 
 compensated, so composites arrive late.
 
 ### voxmod
-Vocoder and band-limited ring modulator in parallel, blended by Mix. Inputs 1-2 carry the
-carrier (selectable: inputs 1/2 or internal oscillator) and inputs 3-4 the modulator.
-Ring modulator frequency = Ring Freq x Ring Ratio, ratio quantised to 16 steps from -12
-to +35 semitones, Ring Depth, polyBLEP saw/square. Vocoder: logarithmic filter bank across
-Spread octaves with asymmetric envelope followers; Sync feeds the ring-modulated signal
-back as the vocoder carrier. MIDI CC input. A panel XY pad maps X to Mix, Y to ring
-frequency. Needs a modulator with harmonics.
+Vocoder, band-limited ring modulator and live convolution cross-synthesis, blended by Mix
+(ring vs vocoder) and Conv Mix (that pair vs convolution). Inputs 1-2 carry the
+modulator/source; inputs 3-4 carry the carrier (selectable: inputs 3/4 or internal
+oscillator) and the live IR feed. Ring modulator frequency = Ring Freq x Ring Ratio,
+ratio quantised to 16 steps from -12 to +35 semitones, Ring Depth, polyBLEP saw/square.
+Vocoder: logarithmic filter bank across Spread octaves with asymmetric envelope
+followers; Sync feeds the ring-modulated signal back as the vocoder carrier. Convolver:
+1024-sample Hann windows on both pairs every 256 samples, 2048-point FFT frames multiplied
+and overlap-added at 4x; Src Feedback and IR Feedback recirculate output one frame back
+into either pair, capped at 95%. MIDI CC input. A panel XY pad maps X to Mix, Y to ring
+frequency. The vocoder/ring engines want a modulator with harmonics; convolution needs
+signal on both pairs.
 
 ### sinevox
 Formant tracker with two voices. Inputs 1-2 (speech) are summed to mono and analysed

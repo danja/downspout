@@ -1,26 +1,30 @@
 # Voxmod
 
-Combined vocoder and ring modulator, four inputs, two outputs.
+Vocoder, ring modulator and live convolution cross-synthesis, four inputs, two
+outputs.
 
 ## Routing
 
 | Port | Purpose |
 |---|---|
-| in 1/2 | **Carrier** — the signal that gets analysed |
-| in 3/4 | **Modulator** — the signal that gets coloured |
+| in 1/2 | **Modulator / source** — the signal that gets coloured |
+| in 3/4 | **Carrier / live IR** — analysed by the vocoder, multiplied by the convolver |
 | out 1/2 | Processed result |
 
-The two engines run in parallel and `Mix` blends them:
+Three engines run in parallel. `Mix` balances the first two, and `Conv Mix`
+fades that pair against the convolver:
 
-- **Mix 0%** — pure ring modulation. The modulator is multiplied by the
-  internal oscillator at `Ring Freq × Ring Ratio`.
-- **Mix 100%** — pure vocoder. The carrier is split into a filter bank; each
-  band's envelope drives the same band of the modulator, so the modulator
-  inherits the carrier's spectral shape.
+- **Mix 0%** — ring modulation. The source is multiplied by the internal
+  oscillator at `Ring Freq × Ring Ratio`.
+- **Mix 100%** — vocoder. The carrier is split into a filter bank; each band's
+  envelope drives the same band of the source.
+- **Conv Mix 100%** — live convolution. Sliding FFT frames of 1/2 and 3/4 are
+  multiplied and overlap-added. Feed a voice or an evolving texture on 3/4 to
+  act as a live impulse response; silence there means no convolution output.
 
-`Carrier = internal osc` makes the plugin analyse its own oscillator, and
-`Sync = ring → vocoder` feeds the ring-modulated signal back as the vocoder's
-carrier. With both, a modulator alone on 3/4 is enough to make sound.
+`Carrier = internal osc` makes the vocoder analyse its own oscillator, and
+`Sync = ring → vocoder` feeds the ring-modulated signal back as its carrier.
+With both, a source alone on 1/2 is enough to make those two engines sound.
 
 ## Controls
 
@@ -40,13 +44,17 @@ carrier. With both, a modulator alone on 3/4 is enough to make sound.
 - **Width** — steers the two engines apart; the vocoder is inherently mono, so
   widening pushes the ring mod out and leaves the vocoder centred
 - **Drift** — a slow ±40 cent wobble on the carrier at full depth
+- **Conv Mix** — fades the ring/vocoder pair against live convolution, 0–100%;
+  at the 0% default the plugin behaves exactly as before
+- **Src Feedback / IR Feedback** — recirculate the convolution output one frame
+  back into the source (1/2) or IR (3/4) frames; capped at 95%
 
 ## Randomise
 
 Draws carrier frequency, ratio, shape, band count, spread, formant and tilt from
-plausible territory, rounded so the values read as deliberate. `Mix` and
-`Bypass` are preserved so a sweep does not jump the balance. Deterministic from
-the `Seed` parameter.
+plausible territory, rounded so the values read as deliberate. `Mix`, `Conv Mix`
+and `Bypass` are preserved so a sweep does not jump the balance. Deterministic
+from the `Seed` parameter.
 
 ## MIDI CC
 

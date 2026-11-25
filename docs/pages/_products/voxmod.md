@@ -5,37 +5,39 @@ bundle: voxmod.vst3
 kind: Audio effect
 category: processor
 group: spectral
-role: Vocoder and ring modulator
+role: Vocoder, ring modulator and live convolution
 screenshot: /assets/plugins/voxmod.png
 capabilities: [audio input and output, MIDI CC input]
-summary: Combined vocoder and ring modulator — a filter-bank vocoder and a band-limited ring modulator run in parallel and blend with Mix.
+summary: Three parallel engines — a filter-bank vocoder, a band-limited ring modulator and sliding-window FFT convolution cross-synthesis with source and IR feedback.
 ---
 
 ## Opinion
 
-Voxmod is one plugin with two engines that share a bus rather than a mode switch,
-which is the whole point of it. Put a voice on inputs 1/2, an instrument on 3/4,
-and start at Mix 50: you get the instrument coloured by the voice's formants with
-the ring modulator underneath filling the gaps. Push Mix left and the ring mod
-takes over and the voice stops mattering; push it right and the instrument
-disappears into the voice. The x-y pad on the panel is X for that balance and Y
-for the ring carrier frequency, because those two are how you actually explore
-this effect — dragging the dot around the pad changes both at once.
+Voxmod is one plugin with three engines that share a bus rather than a mode
+switch, which is the whole point of it. Put an instrument on inputs 1/2 and a
+voice on 3/4, and start at Mix 50 with Conv Mix at 0: you get the instrument
+coloured by the voice's formants with the ring modulator underneath filling the
+gaps. Push Mix left and the ring mod takes over; push it right and the voice
+takes over. Raise Conv Mix and the two fade down as sliding FFT frames of the
+two inputs are multiplied — the voice on 3/4 becomes a live impulse response for
+the instrument on 1/2. The x-y pad is X for Mix and Y for ring frequency; the
+convolution column owns Conv Mix and its two feedback taps.
 
 It wants a modulator with harmonics. A clean synth pad through the vocoder sounds
 like a filtered version of itself, because there is nothing in it for the carrier's
 envelope to grab. A drum bus, a distorted guitar, a bowed string, anything with
-partials, comes alive.
+partials, comes alive. Convolution is different: it needs energy on *both*
+pairs, and silence on 3/4 means no wet output at all.
 
-Carrier is set to `input 1/2` by default, which is the correct default for a
+Carrier is set to `input 3/4` by default, which is the correct default for a
 two-source setup. If you have only one thing, switch Carrier to `internal osc`
-and the plugin analyses its own oscillator, or turn Sync on so the ring-modulated
-signal feeds back as the vocoder's carrier — either way inputs 3/4 alone are
-enough.
+and the vocoder analyses its own oscillator, or turn Sync on so the ring-modulated
+signal feeds back as its carrier — either way inputs 1/2 alone are enough for
+those two engines.
 
 ## Functionality
 
-Two engines, one blend parameter.
+Three engines, two blend parameters.
 
 The **ring modulator** multiplies the modulator by a band-limited oscillator at
 `Ring Freq × Ring Ratio`. Ring Ratio is quantised to 16 musical steps from −12 to
@@ -59,6 +61,13 @@ one frequency and resynthesising the modulator at a transposed one is what
 relocates the envelope that shapes the output — moving both sides together would
 just transpose everything and change nothing about the vowel.
 
+The **convolver** has no stored impulse response. Every 256 samples it windows
+1024 samples from each input pair, multiplies their 2048-point FFT frames, and
+overlap-adds the inverse transform. Re-analysing the IR feed on every hop is what
+makes it live: a moving voice or texture on 3/4 becomes a moving filter on 1/2.
+`Src Feedback` and `IR Feedback` recirculate the output one frame back into
+either frame buffer; both are capped at 95 % and default to off.
+
 ### Parameters
 
 | Parameter    | Range        | Default | Notes                                        |
@@ -74,10 +83,13 @@ just transpose everything and change nothing about the vowel.
 | Release      | 20–1000 ms   | 180 ms  | Envelope follower, time-based                |
 | Formant      | −12–+12 st   | 0 st    | Moves formants, not the band grid            |
 | Tilt         | ±12 dB/oct   | 0       | Per-band gain, leans the spectrum            |
-| Carrier      | input/osc    | input   | What the vocoder analyses; CC 5             |
+| Carrier      | input/osc    | input   | What the vocoder analyses (3/4); CC 5       |
 | Sync         | off/on       | off     | Ring mod feeds the vocoder's carrier        |
 | Width        | 0–100 %      | 50 %    | Ring mod widens, vocoder stays centred      |
 | Drift        | 0–50 %       | 4 %     | Slow ±40 cent wobble on the carrier         |
+| Conv Mix     | 0–100 %      | 0 %     | Fades ring/vocoder pair against convolution |
+| Src Feedback | 0–95 %       | 0 %     | Output recirculated into the 1/2 frames     |
+| IR Feedback  | 0–95 %       | 0 %     | Output recirculated into the 3/4 frames     |
 | Bypass       | off/on       | off     | DSP keeps running                            |
 | Randomise    | trigger      | —       | Builds a new plausible patch                 |
 

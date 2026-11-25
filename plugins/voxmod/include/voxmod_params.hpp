@@ -11,19 +11,22 @@ namespace downspout::voxmod {
 // Voxmod is a carrier generator plus two parallel colouration engines that
 // share one 4-in / 2-out bus:
 //
-//   in 1,2  the carrier to be analysed  (typically a voice)
-//   in 3,4  the modulator             (typically an instrument or drum bus)
+//   in 1,2  the modulator / source to be coloured (typically an instrument)
+//   in 3,4  the carrier to be analysed / live IR feed (typically a voice)
 //   out 1,2 the processed result
 //
 // The vocoder path measures the carrier's spectral envelope and re-imposes it
 // on the modulator's partials, so the modulator sounds like the carrier is
 // "talking" it. The ring-mod path multiplies the modulator by a sine carrier
 // at a chosen ratio, producing the inharmonic sidebands of a ring modulator.
+// The convolution path multiplies sliding FFT frames of 1/2 and 3/4 and
+// overlap-adds the product: live cross-synthesis whose "IR" is whatever is on
+// 3/4 right now.
 //
-// Both engines run in parallel into the Mix parameter, so the plugin can be a
-// plain ring mod, a plain vocoder, or anywhere between. The ring mod also
-// feeds the vocoder's carrier when Sync selects the internal oscillator,
-// which is what makes a single input (a drum loop, say) usable.
+// All three engines run in parallel: Mix balances ring vs vocoder and Conv Mix
+// fades that pair against the convolver. The ring mod also feeds the vocoder's
+// carrier when Sync selects the internal oscillator, which is what makes a
+// single input (a drum loop, say) usable.
 
 enum class ParamId : std::uint32_t {
     // Mix
@@ -66,9 +69,15 @@ enum class ParamId : std::uint32_t {
     outCarrierHz,
     outSibilance,
     outReduction,
+
+    // Live convolver controls, appended after the outputs so existing host
+    // automation IDs stay stable.
+    convMix,
+    convSourceFeedback,
+    convIrFeedback,
 };
 
-inline constexpr std::size_t kParameterCount = 27;
+inline constexpr std::size_t kParameterCount = 30;
 
 struct ParamSpec {
     const char* symbol;
@@ -116,6 +125,10 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"out_carrier_hz", "Carrier", "Hz", 0.0f, 20000.0f, 0.0f, false, true, false},
     {"out_sibilance", "Sibilance", "", 0.0f, 1.0f, 0.0f, false, true, false},
     {"out_reduction", "Reduction", "dB", -60.0f, 0.0f, 0.0f, false, true, false},
+
+    {"conv_mix", "Conv Mix", "%", 0.0f, 100.0f, 0.0f, false, false, false},
+    {"conv_source_feedback", "Src Feedback", "%", 0.0f, 95.0f, 0.0f, false, false, false},
+    {"conv_ir_feedback", "IR Feedback", "%", 0.0f, 95.0f, 0.0f, false, false, false},
 }};
 
 // ── Ring modulator ──────────────────────────────────────────────────────────
@@ -199,9 +212,12 @@ inline constexpr std::array<ControllerMapping, 5> kControllerMap = {{
 
 // ── Bus layout ─────────────────────────────────────────────────────────────
 //
-// Four inputs: 0,1 the carrier, 2,3 the modulator. Two outputs.
+// Four inputs: 0,1 the modulator/source, 2,3 the carrier/live IR feed.
+// Two outputs. The names below describe the signal roles, not port order.
 inline constexpr std::size_t kCarrierChannels = 2;
 inline constexpr std::size_t kModulatorChannels = 2;
+inline constexpr std::size_t kSourceChannels = kModulatorChannels;
+inline constexpr std::size_t kIrChannels = kCarrierChannels;
 inline constexpr std::size_t kAudioInputs = 4;
 inline constexpr std::size_t kAudioOutputs = 2;
 

@@ -284,6 +284,10 @@ Parameters clampParameters(const Parameters& raw) noexcept
     out.stereoWidth = safeValue(raw.stereoWidth, 0.0f, 100.0f, 50.0f);
     out.drift = safeValue(raw.drift, 0.0f, 50.0f, 4.0f);
 
+    out.convMix = safeValue(raw.convMix, 0.0f, 100.0f, 0.0f);
+    out.convSourceFeedback = safeValue(raw.convSourceFeedback, 0.0f, 95.0f, 0.0f);
+    out.convIrFeedback = safeValue(raw.convIrFeedback, 0.0f, 95.0f, 0.0f);
+
     out.ccMix = std::round(safeValue(raw.ccMix, 0.0f, 127.0f, 1.0f));
     out.ccRingFreq = std::round(safeValue(raw.ccRingFreq, 0.0f, 127.0f, 2.0f));
     out.ccRingRatio = std::round(safeValue(raw.ccRingRatio, 0.0f, 127.0f, 3.0f));
@@ -306,6 +310,8 @@ void activate(EngineState& state) noexcept
     state.carrierHz = 0.0f;
     state.carrierEnv = 0.0f;
     state.modulatorEnv = 0.0f;
+    for (LiveConvolver& convolver : state.convolvers)
+        convolver.clear();
 }
 
 Parameters randomiseParameters(const Parameters& raw) noexcept
@@ -401,8 +407,15 @@ void processBlock(EngineState& state,
     const float envRelease = releaseCoeff(params.releaseMs, sr);
 
     const bool bypassed = params.bypass > 0.5f;
-    const float vocoderAmount = bypassed ? 0.0f : std::clamp(params.mix * 0.01f, 0.0f, 1.0f);
-    const float ringAmount = bypassed ? 0.0f : std::clamp(1.0f - params.mix * 0.01f, 0.0f, 1.0f);
+    // Conv Mix is a third parallel engine: it fades the ring/vocoder pair down
+    // as it brings the live convolution up. At its default of zero the two
+    // legacy engines behave exactly as before.
+    const float convAmount = bypassed ? 0.0f : std::clamp(params.convMix * 0.01f, 0.0f, 1.0f);
+    const float legacyAmount = bypassed ? 0.0f : 1.0f - convAmount;
+    const float vocoderAmount = legacyAmount * std::clamp(params.mix * 0.01f, 0.0f, 1.0f);
+    const float ringAmount = legacyAmount * std::clamp(1.0f - params.mix * 0.01f, 0.0f, 1.0f);
+    const float convSrcFeedback = std::clamp(params.convSourceFeedback * 0.01f, 0.0f, 0.95f);
+    const float convIrFeedback = std::clamp(params.convIrFeedback * 0.01f, 0.0f, 0.95f);
     const float ringDepth = std::clamp(params.ringDepth * 0.01f, 0.0f, 1.0f);
 
     const RingShapeId shape = static_cast<RingShapeId>(
@@ -424,16 +437,33 @@ void processBlock(EngineState& state,
     const double driftInc = kTwoPi * 0.13 / sr;
 
     for (std::uint32_t frame = 0; frame < frames; ++frame) {
-        const float carrierL = (inputs && inputs[0]) ? inputs[0][frame] : 0.0f;
-        const float carrierR = (inputs && inputs[1]) ? inputs[1][frame] : 0.0f;
-        const float modL = (inputs && inputs[2]) ? inputs[2][frame] : 0.0f;
-        const float modR = (inputs && inputs[3]) ? inputs[3][frame] : 0.0f;
+        // Ports 1/2 are the modulator/source; ports 3/4 are the carrier that
+        // the vocoder analyses and the live IR feed the convolver multiplies.
+        const float modL = (inputs && inputs[0]) ? inputs[0][frame] : 0.0f;
+        const float modR = (inputs && inputs[1]) ? inputs[1][frame] : 0.0f;
+        const float carrierL = (inputs && inputs[2]) ? inputs[2][frame] : 0.0f;
+        const float carrierR = (inputs && inputs[3]) ? inputs[3][frame] : 0.0f;
 
         const float cx = std::isfinite(0.5f * (carrierL + carrierR))
             ? 0.5f * (carrierL + carrierR) : 0.0f;
         const float mxL = std::isfinite(modL) ? modL : 0.0f;
         const float mxR = std::isfinite(modR) ? modR : 0.0f;
+        const float irL = std::isfinite(carrierL) ? carrierL : 0.0f;
+        const float irR = std::isfinite(carrierR) ? carrierR : 0.0f;
         const float mMono = 0.5f * (mxL + mxR);
+
+        // ── Live convolution ─────────────────────────────────────────────
+        // A frame of 1/2 is multiplied by a frame of 3/4 in the frequency
+        // domain. The feedback taps are one frame old, so there is no
+        // within-frame algebraic loop; both are capped below unity.
+        float convL = 0.0f;
+        float convR = 0.0f;
+        if (convAmount > 0.0f) {
+            state.convolvers[0].process(&mxL, &irL, &convL, 1,
+                                        convSrcFeedback, convIrFeedback);
+            state.convolvers[1].process(&mxR, &irR, &convR, 1,
+                                        convSrcFeedback, convIrFeedback);
+        }
 
         // Carrier for analysis: the internal oscillator when selected, otherwise
         // the input. With Sync on, the ring modulator's own output becomes the
@@ -522,8 +552,10 @@ void processBlock(EngineState& state,
         // pushes the ring mod out and leaves the vocoder centred.
         const float ringMid = 0.5f * (ringedL + ringedR);
         const float ringSide = 0.5f * (ringedL - ringedR) * width;
-        const float outL = ringAmount * (ringMid + ringSide) + vocoderAmount * vocoded;
-        const float outR = ringAmount * (ringMid - ringSide) + vocoderAmount * vocoded;
+        const float outL = ringAmount * (ringMid + ringSide)
+            + vocoderAmount * vocoded + convAmount * convL;
+        const float outR = ringAmount * (ringMid - ringSide)
+            + vocoderAmount * vocoded + convAmount * convR;
 
         if (outputs && outputs[0])
             outputs[0][frame] = std::isfinite(outL) ? outL : 0.0f;
@@ -543,7 +575,7 @@ void processBlock(EngineState& state,
 std::string serializeParameters(const Parameters& raw)
 {
     const Parameters p = clampParameters(raw);
-    return "version=1\n"
+    return "version=2\n"
            "mix=" + std::to_string(p.mix) + "\n"
            "bypass=" + std::to_string(p.bypass) + "\n"
            "seed=" + std::to_string(p.seed) + "\n"
@@ -561,6 +593,9 @@ std::string serializeParameters(const Parameters& raw)
            "sync=" + std::to_string(p.sync) + "\n"
            "stereo_width=" + std::to_string(p.stereoWidth) + "\n"
            "drift=" + std::to_string(p.drift) + "\n"
+           "conv_mix=" + std::to_string(p.convMix) + "\n"
+           "conv_source_feedback=" + std::to_string(p.convSourceFeedback) + "\n"
+           "conv_ir_feedback=" + std::to_string(p.convIrFeedback) + "\n"
            "cc_mix=" + std::to_string(p.ccMix) + "\n"
            "cc_ring_freq=" + std::to_string(p.ccRingFreq) + "\n"
            "cc_ring_ratio=" + std::to_string(p.ccRingRatio) + "\n"
@@ -601,6 +636,9 @@ std::optional<Parameters> deserializeParameters(const std::string& text)
         else if (key == "sync" && parseFloat(value, v)) p.sync = v;
         else if (key == "stereo_width" && parseFloat(value, v)) p.stereoWidth = v;
         else if (key == "drift" && parseFloat(value, v)) p.drift = v;
+        else if (key == "conv_mix" && parseFloat(value, v)) p.convMix = v;
+        else if (key == "conv_source_feedback" && parseFloat(value, v)) p.convSourceFeedback = v;
+        else if (key == "conv_ir_feedback" && parseFloat(value, v)) p.convIrFeedback = v;
         else if (key == "cc_mix" && parseFloat(value, v)) p.ccMix = v;
         else if (key == "cc_ring_freq" && parseFloat(value, v)) p.ccRingFreq = v;
         else if (key == "cc_ring_ratio" && parseFloat(value, v)) p.ccRingRatio = v;

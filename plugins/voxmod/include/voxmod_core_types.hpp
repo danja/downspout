@@ -1,5 +1,6 @@
 #pragma once
 
+#include "voxmod_convolver.hpp"
 #include "voxmod_params.hpp"
 
 #include <array>
@@ -34,6 +35,13 @@ struct Parameters {
     float sync = 0.0f;          // 0 free, 1 ring mod drives the vocoder
     float stereoWidth = 50.0f;  // %
     float drift = 4.0f;         // %
+
+    // Live cross-synthesis convolver: inputs 1/2 are the source, inputs 3/4 the
+    // live IR feed. Conv Mix also scales the two legacy engines, so it is a true
+    // three-way blend.
+    float convMix = 0.0f;          // %, 0 keeps the original ring/vocoder behavior
+    float convSourceFeedback = 0.0f; // %, output recirculated into the source frames
+    float convIrFeedback = 0.0f;   // %, output recirculated into the IR frames
 
     // Drift CC routing
     float ccMix = 1.0f;
@@ -93,6 +101,7 @@ struct EngineState {
     int activeBands = 0;
     float bankFormantShift = -999.0f;  // forces a rebuild on the first block
     RingState ring {};
+    std::array<LiveConvolver, kAudioOutputs> convolvers {};
     double sampleRate = 0.0;
     double ringRatioHz = 0.0; // modulator fundamental the ratio is measured against
 
