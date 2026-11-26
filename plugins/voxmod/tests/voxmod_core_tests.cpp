@@ -5,6 +5,7 @@
 #include "downspout/test_assert.h"
 #include <cmath>
 #include <cstdio>
+#include <utility>
 #include <vector>
 
 using namespace downspout::voxmod;
@@ -53,6 +54,37 @@ float peak(const float* data, const std::uint32_t count)
     for (std::uint32_t i = 0; i < count; ++i)
         p = std::max(p, std::fabs(data[i]));
     return p;
+}
+
+// Single-bin Goertzel magnitude, used to prove which input pair a path actually
+// resynthesises rather than just that it made some sound.
+double toneMagnitude(const float* data, const std::uint32_t count, const double sr,
+                     const double hz) noexcept
+{
+    const double coeff = 2.0 * std::cos(2.0 * M_PI * hz / sr);
+    double s1 = 0.0;
+    double s2 = 0.0;
+    for (std::uint32_t i = 0; i < count; ++i) {
+        const double s = static_cast<double>(data[i]) + coeff * s1 - s2;
+        s2 = s1;
+        s1 = s;
+    }
+    const double power = s1 * s1 + s2 * s2 - coeff * s1 * s2;
+    return std::sqrt(std::max(0.0, power)) / static_cast<double>(count);
+}
+
+// Zero-crossing rate over a settled render, for checking the ring oscillator's
+// generated frequency against the host sample rate.
+double crossingRate(const float* data, const std::uint32_t count, const double sr) noexcept
+{
+    int crossings = 0;
+    for (std::uint32_t i = 1; i < count; ++i) {
+        const bool wasNegative = data[i - 1] < 0.0f;
+        const bool isNegative = data[i] < 0.0f;
+        if (wasNegative != isNegative)
+            ++crossings;
+    }
+    return static_cast<double>(crossings) * sr / (2.0 * static_cast<double>(count - 1));
 }
 
 void testParameterClamp() {
@@ -212,6 +244,33 @@ void testVocoderFollowsCarrierEnvelope() {
     assert(withoutCarrier < withCarrier * 0.5f);
 }
 
+void testVocoderResynthesisesInput12AnalysedFrom34() {
+    // Distinct frequencies make the roles observable: the output must contain
+    // the modulator from 1/2, with 3/4 supplying only the envelope. If the pairs
+    // were swapped the 900 Hz tone would dominate instead.
+    Parameters p;
+    p.mix = 100.0f;
+    p.ringDepth = 0.0f;
+    p.carrierSource = 0.0f;
+    p.convMix = 0.0f;
+
+    Bus b;
+    fillSine(b.modL.data(), 220.0, kSr, 0.4f);
+    fillSine(b.modR.data(), 220.0, kSr, 0.4f);
+    fillSine(b.carrierL.data(), 900.0, kSr, 0.6f);
+    fillSine(b.carrierR.data(), 900.0, kSr, 0.6f);
+
+    EngineState s;
+    activate(s);
+    for (int i = 0; i < 8; ++i)
+        run(s, p, b);
+
+    const double modulatorTone = toneMagnitude(b.outL.data(), kFrames, kSr, 220.0);
+    const double carrierTone = toneMagnitude(b.outL.data(), kFrames, kSr, 900.0);
+    assert(modulatorTone > 0.01);
+    assert(modulatorTone > carrierTone * 3.0);
+}
+
 void testMixCrossfadesBetweenEngines() {
     // Mix 0 is ring only, Mix 100 is vocoder only. Both must be live, and the
     // blend must be monotonic.
@@ -245,7 +304,7 @@ void testMixCrossfadesBetweenEngines() {
     assert(mid <= std::max(ringOnly, vocoderOnly) * 1.5f);
 }
 
-void testBypassIsTransparent() {
+void testBypassMutesAllEngines() {
     Parameters p;
     p.mix = 50.0f;
     p.bypass = 1.0f;
@@ -313,6 +372,46 @@ void testSampleRateIndependence() {
     assert(a > 0.005f);
     assert(b > 0.005f);
     assert(std::fabs(a - b) / std::max(a, b) < 0.35f);
+}
+
+void testRingOscTracksHostSampleRate() {
+    // The ring oscillator advances by freq / sampleRate. A hard-coded 48 kHz
+    // made the same control produce different pitches at 44.1 and 96 kHz.
+    auto rateAt = [&](const double sr) {
+        Parameters p;
+        p.mix = 0.0f;
+        p.ringFreq = 220.0f;
+        p.ringRatio = 2.0f;
+        p.ringDepth = 100.0f;
+        p.drift = 0.0f;
+        p.convMix = 0.0f;
+
+        Bus b;
+        for (std::uint32_t i = 0; i < kFrames; ++i) {
+            b.modL[i] = b.modR[i] = 0.5f;
+            b.carrierL[i] = b.carrierR[i] = 0.0f;
+        }
+
+        std::vector<float> tail(kFrames * 8);
+        EngineState s;
+        activate(s);
+        for (int block = 0; block < 32; ++block) {
+            const float* ins[] = { b.modL.data(), b.modR.data(),
+                                   b.carrierL.data(), b.carrierR.data() };
+            float* outs[] = { b.outL.data(), b.outR.data() };
+            processBlock(s, p, kFrames, sr, ins, outs);
+            if (block >= 24)
+                std::copy(b.outL.begin(), b.outL.end(),
+                          tail.begin() + static_cast<std::ptrdiff_t>(block - 24) * kFrames);
+        }
+        return crossingRate(tail.data(), static_cast<std::uint32_t>(tail.size()), sr);
+    };
+
+    const double expected = 220.0 * quantiseRatio(2.0f);
+    for (const double sr : { 44100.0, 48000.0, 96000.0 }) {
+        const double measured = rateAt(sr);
+        assert(std::fabs(measured - expected) / expected < 0.03);
+    }
 }
 
 void testBandCountChangeRebuildsBank() {
@@ -647,6 +746,40 @@ void testConvolutionUsesInputs34AsLiveIr() {
     // the carrier pair: with no IR there is no output at all.
 }
 
+void testConvolutionKeepsStereoChannelsPaired() {
+    // Each convolver multiplies its own source channel by its own IR channel.
+    // A source on 1 only must appear on out 1 only, and an IR on 4 alone must
+    // have nothing to multiply with on that side.
+    Parameters p;
+    p.convMix = 100.0f;
+    p.ringDepth = 0.0f;
+
+    auto render = [&](const bool irOnLeft) {
+        Bus b;
+        fillSine(b.modL.data(), 440.0, kSr, 0.4f);
+        std::fill(b.modR.begin(), b.modR.end(), 0.0f);
+        if (irOnLeft)
+            fillSine(b.carrierL.data(), 330.0, kSr, 0.4f);
+        else
+            fillSine(b.carrierR.data(), 330.0, kSr, 0.4f);
+
+        EngineState s;
+        activate(s);
+        for (int i = 0; i < 12; ++i)
+            run(s, p, b);
+        return std::pair<float, float> { rms(b.outL.data(), 256, kFrames),
+                                         rms(b.outR.data(), 256, kFrames) };
+    };
+
+    const auto left = render(true);
+    assert(left.first > 1.0e-4f);
+    assert(left.second < 1.0e-6f);
+
+    const auto crossed = render(false);
+    assert(crossed.first < 1.0e-6f);
+    assert(crossed.second < 1.0e-6f);
+}
+
 void testConvolutionIrShapesTheSource() {
     Parameters p;
     p.convMix = 100.0f;
@@ -892,10 +1025,12 @@ int main() {
     testRingModProducesSidebands();
     testRingDepthZeroIsPassThrough();
     testVocoderFollowsCarrierEnvelope();
+    testVocoderResynthesisesInput12AnalysedFrom34();
     testMixCrossfadesBetweenEngines();
-    testBypassIsTransparent();
+    testBypassMutesAllEngines();
     testNullAndNonFiniteInputsAreSafe();
     testSampleRateIndependence();
+    testRingOscTracksHostSampleRate();
     testBandCountChangeRebuildsBank();
     testFormantShiftChangesOutput();
     testSyncRoutesRingModIntoVocoder();
@@ -906,6 +1041,7 @@ int main() {
     testActivateResetsState();
     testConvolutionFramePairIsFrameMultiplication();
     testConvolutionUsesInputs34AsLiveIr();
+    testConvolutionKeepsStereoChannelsPaired();
     testConvolutionIrShapesTheSource();
     testConvolutionFeedbackControlsAreAudible();
     testEngineLevelControlsCanMuteEachEngine();

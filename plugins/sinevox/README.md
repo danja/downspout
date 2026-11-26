@@ -12,8 +12,9 @@ Formant tracker with two voices: a **vocoder** and a **sine-wave-speech generato
 | MIDI in | CC and note control |
 | MIDI out | Tracked formants as CCs or notes (off by default) |
 
-This is the same slot layout as Voxmod (analysed signal on 1/2, coloured signal on
-3/4), but Sinevox calls them speech and carrier.
+This is the opposite slot layout to Voxmod: Sinevox analyses 1/2 and colours 3/4,
+while Voxmod colours 1/2 from the analysis/carrier signal on 3/4. The names also
+differ — Sinevox calls them speech and carrier.
 
 ## What it does
 

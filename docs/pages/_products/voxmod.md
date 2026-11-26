@@ -124,11 +124,13 @@ does not change the balance between the engines.
 
 ### Status
 
-The panel reports the effective carrier frequency, a Sibilance meter showing the
-share of carrier energy in the top bands, and the band gate's reduction in dB.
-Sibilance is worth watching: a carrier with a lot of energy above the top of the
-bank cannot be analysed well, and the meter switches to a warning colour above
-0.7 because a bright carrier will produce a thin, hissy result.
+The panel reports the generated ring-oscillator frequency, a Sibilance meter
+showing the share of carrier energy in the top bands, and the band gate's
+reduction in dB. The frequency is the vocoder carrier only with `Carrier = internal
+osc` and `Sync` off; it is not a pitch estimate of the signal on 3/4. Sibilance
+is worth watching: a carrier with a lot of energy above the top of the bank
+cannot be analysed well, and the meter switches to a warning colour above 0.7
+because a bright carrier will produce a thin, hissy result.
 
 Core DSP, deterministic tests, the VST3 target, the panel and the catalog
 screenshot are complete. Host validation in REAPER is pending.

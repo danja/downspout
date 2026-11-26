@@ -11,6 +11,11 @@ outputs.
 | in 3/4 | **Carrier / live IR** — analysed by the vocoder, multiplied by the convolver |
 | out 1/2 | Processed result |
 
+The ANALYSIS panel's frequency readout reports the generated ring oscillator
+(`Ring Freq` × quantised `Ring Ratio`). It is the vocoder carrier only when
+`Carrier = internal osc` and `Sync` is off; it is not a pitch estimate of the
+signal on 3/4.
+
 Three engines run in parallel. `Mix` balances the first two, and `Conv Mix`
 fades that pair against the convolver. Each engine has a `Level` control at the
 top of its column, defaulting to 100 %. The convolution branch has its own peak

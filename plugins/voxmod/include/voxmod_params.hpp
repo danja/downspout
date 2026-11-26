@@ -38,7 +38,7 @@ enum class ParamId : std::uint32_t {
 
     // Ring modulator
     ringFreq,         // Hz, carrier frequency
-    ringRatio,        // ratio to the modulator: 0.5 - 8, 16 steps
+    ringRatio,        // multiplier applied to Ring Freq: 0.5 - 8, 16 steps
     ringShape,        // 0 sine, 1 triangle, 2 saw, 3 square
     ringDepth,        // %, how much of the modulator is multiplied
 
@@ -51,9 +51,9 @@ enum class ParamId : std::uint32_t {
     tilt,             // dB/oct spectral tilt
 
     // Routing
-    carrierSource,    // 0 = input 1/2, 1 = internal oscillator
+    carrierSource,    // 0 = input 3/4, 1 = internal oscillator; sync overrides
     sync,             // 0 = free, 1 = ring mod drives the vocoder
-    stereoWidth,      // % modulation of the analyser/carrier split
+    stereoWidth,      // % broadening of the ring-mod stereo image
     drift,            // % carrier pitch drift
 
     // Drift CC routing

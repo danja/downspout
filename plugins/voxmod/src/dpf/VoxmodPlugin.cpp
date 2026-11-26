@@ -120,15 +120,21 @@ protected:
             else
                 port.name = index == 2 ? "Carrier/IR L" : "Carrier/IR R";
             port.symbol = String("in_") + String(static_cast<int>(index + 1));
+        } else if (!input && index < kAudioOutputs) {
+            port.name = index == 0 ? "Out L" : "Out R";
+            port.symbol = String("out_") + String(static_cast<int>(index + 1));
         }
     }
 
     void initPortGroup(const std::uint32_t groupId, PortGroup& group) override
     {
-        if (groupId == 0)
+        if (groupId == 0) {
             group.name = "Modulator / source";
-        else if (groupId == 1)
+            group.symbol = "mod_source";
+        } else if (groupId == 1) {
             group.name = "Carrier / live IR";
+            group.symbol = "carrier_ir";
+        }
     }
 
     void initParameter(std::uint32_t index, Parameter& parameter) override
@@ -608,7 +614,11 @@ private:
 
     void publishStatus() noexcept
     {
-        values_[kOutCarrierHz] = downspout::voxmod::estimateCarrierHz(core());
+        // After the first block, report the smoothed oscillator the core actually
+        // generated; before it, fall back to the parameter-derived value.
+        values_[kOutCarrierHz] = engine_.carrierHz > 0.0f
+            ? engine_.carrierHz
+            : downspout::voxmod::estimateCarrierHz(core());
         // Sibilance and reduction are measured, not derived from the parameters,
         // so they keep whatever the last processed block found.
         values_[kOutSibilance] = engine_.sibilance;

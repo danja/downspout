@@ -41,6 +41,16 @@ Format: what happened, root cause, prevention.
 - **Root cause:** the old expectation baked in the previous `0.5 / kFft` scale instead of the new inverse-transform algebra: a delta IR gives the windowed source divided by the frame length.
 - **Prevention:** derive test expectations from the transform definition after changing a normalisation constant; render one probe point by hand before loosening tolerances.
 
+## voxmod: ring oscillator phase used a hard-coded 48 kHz (2026-11-26)
+- **What happened:** the ring carrier shifted pitch with the host sample rate and the new sample-rate test failed at 44.1/96 kHz.
+- **Root cause:** `oscillatorSample()` divided frequency by a literal 48000 instead of the block's sample rate, so its phase advance and polyBLEP width were wrong off 48 kHz.
+- **Prevention:** pass the sample rate into every phase-incrementing oscillator and pin the generated frequency across 44.1/48/96 kHz with a settled zero-crossing test.
+
+## voxmod: routing audit relied on comments and a symmetric test (2026-11-26)
+- **What happened:** the DSP, port metadata and UI agreed on 1/2 source and 3/4 carrier/IR, but `carrierSource` was commented as input 1/2, Sinevox's README described Voxmod's slots backwards, and the vocoder carrier test passed even with the pairs swapped.
+- **Root cause:** routing was documented in prose rather than pinned by a distinguishable signal, and stale comments survived the earlier input swap.
+- **Prevention:** add frequency-discriminating tests for vocoder carrier/source roles and stereo channel pairing; keep port comments, README cross-references and UI labels in the same audit whenever routing changes.
+
 ## Template
 
 ## <plugin/area>: <short description> (YYYY-MM-DD)

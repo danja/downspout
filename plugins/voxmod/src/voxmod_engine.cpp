@@ -115,10 +115,13 @@ double polyBlep(const double t, const double dt) noexcept
     return 0.0;
 }
 
-double oscillatorSample(RingState& ring, const RingShapeId shape, const double freq) noexcept
+double oscillatorSample(RingState& ring, const RingShapeId shape, const double freq,
+                        const double sampleRate) noexcept
 {
-    // dt is the normalised phase advance for this sample.
-    const double dt = std::clamp(freq / 48000.0, 0.0, 0.49);
+    // dt is the normalised phase advance for this sample. It must use the host's
+    // sample rate, otherwise the ring carrier shifts pitch at 44.1/96 kHz.
+    const double safeRate = sampleRate > 0.0 ? sampleRate : 48000.0;
+    const double dt = std::clamp(freq / safeRate, 0.0, 0.49);
     double value = 0.0;
 
     switch (shape) {
@@ -229,15 +232,12 @@ std::array<float, kMaxBands> bandEdges(const Parameters& raw) noexcept
 
 float estimateCarrierHz(const Parameters& raw) noexcept
 {
+    // Parameter-derived fallback for the status readout before the first block.
+    // The ring oscillator always runs at Ring Freq x Ring Ratio, independent of
+    // which signal feeds the vocoder's analyser.
     const Parameters p = clampParameters(raw);
-    // With an internal carrier the frequency is exactly what the user set.
-    if (p.carrierSource >= 0.5f)
-        return std::clamp(p.ringFreq, 1.0f, 20000.0f);
-
-    // Otherwise fall back to the ring frequency as the best available estimate
-    // from the parameter set; the live estimate comes from the envelope followers
-    // during processing.
-    return std::clamp(p.ringFreq, 1.0f, 20000.0f);
+    return std::clamp(static_cast<double>(p.ringFreq) * quantiseRatio(p.ringRatio),
+                      1.0, 20000.0);
 }
 
 float sibilanceOf(const EngineState& state) noexcept
@@ -512,7 +512,7 @@ void processBlock(EngineState& state,
         // Smooth the frequency so a Ring Freq move glides rather than clicks.
         state.ring.freq += (targetFreq - state.ring.freq) * 0.002;
 
-        const double osc = oscillatorSample(state.ring, shape, state.ring.freq);
+        const double osc = oscillatorSample(state.ring, shape, state.ring.freq, sr);
         const float carrierWave = static_cast<float>(osc);
 
         // The ring-modulated signal: modulator * carrier. Depth scales the
@@ -586,9 +586,9 @@ void processBlock(EngineState& state,
             outputs[1][frame] = std::isfinite(outR) ? outR : 0.0f;
     }
 
-    state.carrierHz = useInternal
-        ? static_cast<float>(std::clamp(state.ring.freq, 0.0, 20000.0))
-        : estimateCarrierHz(params);
+    // The status readout tracks the oscillator that actually drives the ring
+    // modulator, whether or not that oscillator is also the vocoder carrier.
+    state.carrierHz = static_cast<float>(std::clamp(state.ring.freq, 0.0, 20000.0));
     state.sibilance = sibilanceOf(state);
     // How hard the band gate is pulling the modulator down, as a dB figure.
     state.reductionDb = static_cast<float>(std::clamp(

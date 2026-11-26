@@ -189,7 +189,8 @@ current Downspout plugins.
   all-to-all through a short delay and damping low-pass, so 4x, 6x, 8x, 9x, 10x emerge
   from feedback. Feedback is capped at 0.90.
 - [`Voxmod`]({{ '/plugins/voxmod/' | relative_url }}): a filter-bank vocoder and a band-limited ring modulator in parallel, blended
-  by Mix; Sync feeds the ring-modulated signal back as the vocoder carrier.
+  by Mix, plus live convolution cross-synthesis of the 1/2 source with the 3/4 IR feed;
+  Sync feeds the ring-modulated signal back as the vocoder carrier.
 - [`Sinevox`]({{ '/plugins/sinevox/' | relative_url }}): LPC analysis of the speech input finds up to eight formants; these drive a
   parallel band-pass vocoder bank on the carrier, one sine per formant (sine-wave
   speech), or both.
