@@ -66,10 +66,13 @@ For every plugin:
 - **Orbit:** use a sustained stereo source. Compare all four trajectory views,
   tempo changes, width, distance, and conservative Doppler. Confirm the marker
   moves smoothly and the effect is described as stereo rather than binaural.
-- **Guardian:** place last on a deliberately hot signal chain. Confirm
-  look-ahead latency, ceiling, gain-reduction and true-peak meters, soft
-  clipping, silence indication, overload latch, and diagnostic reset. Feed a
-  controlled non-finite test source only in a disposable test project.
+- **Guardian:** place last on a deliberately hot signal chain. Confirm the
+  reported latency (look-ahead plus the 5 ms interpolation window), ceiling,
+  soft clipping, and that the protection-density meter rises only when peaks
+  are caught. A/B the Clip interpolation switch on a hot transient and confirm
+  clean samples are untouched by that stage; try Auto drive with a target,
+  Program release and the 4x true-peak guard. Feed a controlled non-finite test
+  source only in a disposable test project.
 
 ## Ready criteria
 

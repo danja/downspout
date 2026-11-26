@@ -182,7 +182,7 @@ The [plugin reference](docs/pages/plugins-summary.md) has the ports, MIDI roles 
 | [Mosaic](plugins/mosaic/README.md) | `mosaic.vst3` | Sampler instrument | Four-slot WAV sampler with deterministic slicing and autonomous triggering. |
 | [Resonance Garden](plugins/resonance-garden/README.md) | `resonance_garden.vst3` | Audio effect | MIDI-tuned damped resonator bank (up to 12 voices) with a 23-scale internal fallback. |
 | [Orbit](plugins/orbit/README.md) | `orbit.vst3` | Audio effect | Seeded transport-aware stereo trajectories, distance filtering, and conservative Doppler. |
-| [Guardian](plugins/guardian/README.md) | `guardian.vst3` | Safety effect | DC removal, look-ahead limiting, true-peak protection, and latched diagnostics. |
+| [Guardian](plugins/guardian/README.md) | `guardian.vst3` | Safety effect | Clip interpolation, look-ahead limiting, auto drive, 4x true-peak guard and protection-density meter. |
 | [Skream](plugins/skream/README.md) | `skream.vst3` | Audio effect | Scream filter: SVF lowpass/highpass with ADAA2 feedback saturation for dubstep growl. Ten presets, MIDI CC control via Drift. |
 | [Chipper](plugins/chipper/README.md) | `chipper.vst3` | Audio effect | 1980s video game lo-fi processor: bitwise quantization, sample-rate reduction, and clock jitter. |
 | [magneto](plugins/magneto/README.md) | `magneto.vst3` | Instrument | Physically informed combustion engine generator: four-stroke cycle, waveguide cylinders, intake runners, extractors, muffler and tailpipe. RPM follows notes (two octaves down), CC, automation or host tempo. |

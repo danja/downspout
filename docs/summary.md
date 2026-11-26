@@ -498,14 +498,16 @@ Four-input sidechain ducker with mid/side EQ. Inputs 3-4 are an aux sidechain bu
 
 ### Guardian (`guardian.vst3`)
 
-Output safety processor intended for the end of autonomous signal chains. An
-input gain control (±24 dB) drives the limiter harder or reserves headroom.
-Look-ahead limiting with configurable attack and release catches peaks before
-they reach the ceiling. A clipper shape parameter sweeps from no saturation
-through gentle tanh coloring up to a near-hard clip, with the transfer curve
-displayed in real time. DC removal, true-peak guard, silence detection, bypass,
-and latched fault diagnostics complete the picture. The ceiling and reported
-latency are broadcast to the host.
+Output safety processor intended for the end of autonomous signal chains. Its
+default-on input interpolater passes non-clipped samples untouched and rebuilds
+a run of samples above the ceiling as a ramp between the clean samples entering
+and exiting the run. Input gain (±24 dB) can be trimmed automatically to hold a
+target reduction; look-ahead limiting with attack, optional program-dependent
+release and a 4x inter-sample peak guard catches what remains. A clipper shape
+parameter sweeps from no saturation through gentle tanh coloring to a near-hard
+clip, with the transfer curve displayed in real time. DC removal, bypass and a
+live protection-density meter complete the panel. Reported latency includes the
+fixed 5 ms interpolation window. No MIDI; place last.
 
 ### Rift (`rift.vst3`)
 

@@ -111,7 +111,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | quartet | quartet.vst3 | instrument (FM) | 0/2 | yes/no | no |
 | monochord | monochord.vst3 | instrument (string) | 0/2 | yes/no | no |
 | nam | nam.vst3 | audio effect (neural amp + cab IR) | 2/2 | no/no | no |
-| guardian | guardian.vst3 | audio utility (limiter) | 2/2 | no/no | no |
+| guardian | guardian.vst3 | audio utility (clip interpolater + limiter) | 2/2 | no/no | no |
 | harmonic-atlas | harmonic_atlas.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | helterskelter | helterskelter.vst3 | audio effect (wah) | 2/2 | yes/no | yes |
 | keyframe | keyframe.vst3 | audio effect (time stretch) | 2/2 | yes/no | no |
@@ -972,10 +972,15 @@ delays the audio, not the detector, and is reported to the host as latency. No t
 and reduction history. Not a limiter; put Guardian after it.
 
 ### guardian
-Output safety processor for the end of autonomous chains: input gain (+-24 dB),
-look-ahead limiter with attack/release, clipper shape (none through gentle tanh to near
-hard clip), DC removal, true-peak guard, silence detection, bypass and latched fault
-diagnostics. Reports ceiling and latency to the host. No MIDI. Place last.
+Output safety processor for the end of autonomous chains. Key parameters: `input_db`
+(+-24 dB), `ceiling_db` (-24 to -0.1 dBFS), `attack_ms` (0-50), `release_ms` (10-1000),
+`lookahead_ms` (0-20), `dc_remove`, `true_peak` (4x inter-sample estimate),
+`clipper_shape` (limiter-only to near-hard clip), `interpolate` (default on; rebuilds
+clipped input runs between the last and next clean samples), `auto_drive` with
+`auto_target_db` (0-12 dB), `program_release`, and `bypass`. `status_density` is a
+read-only output reporting the percentage of samples protected in the current block.
+Reported latency is look-ahead plus a fixed 5 ms interpolation window when enabled.
+No MIDI. Place last.
 
 ### beards
 Granular texture processor after Mutable Instruments Beads: stereo input is recorded

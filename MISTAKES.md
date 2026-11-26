@@ -6,6 +6,21 @@ Format: what happened, root cause, prevention.
 
 ## Open
 
+## guardian: clip-ramp denominator used the remaining run only (2026-11-26)
+- **What happened:** the interpolation test would have seen ramp values beyond the ceiling for the last samples of a clipped run; the formula was corrected before the test run.
+- **Root cause:** the denominator was `exitOffset + 1` (samples remaining) instead of the whole run, `run + exitOffset + 1`.
+- **Prevention:** derive the ramp from total run length, then assert every intermediate ramp point (not just the first) against the endpoints.
+
+## guardian: program release affected attack, not recovery (2026-11-26)
+- **What happened:** the first draft chose the fast release coefficient from the current limiting state, so it never applied while the gain was recovering after a peak.
+- **Root cause:** attack and release directions were collapsed into one coefficient; recovery starts after `target` returns to 1.
+- **Prevention:** branch on `target < gain` for attack and compare internal `gain` after a short transient for release; keep the hold counter through recovery.
+
+## guardian: core tests forgot the look-ahead delay (2026-11-26)
+- **What happened:** the single-sample input-gain and instant-attack assertions failed because the default 5 ms look-ahead delayed the first output.
+- **Root cause:** the old tests explicitly zeroed look-ahead; the new fixture inherited the default.
+- **Prevention:** derive single-sample fixtures from the parameters under test and set every delay-producing control explicitly.
+
 ## voxmod: bypass stopped muting during the three-way blend (2026-11-25)
 - **What happened:** `testBypassIsTransparent` failed after adding Conv Mix; the bypassed plugin still passed the ring and vocoder engines.
 - **Root cause:** the new `legacyAmount` was derived only from `1 - convAmount`, dropping the existing `bypassed ? 0 : ...` condition when the amounts were refactored.

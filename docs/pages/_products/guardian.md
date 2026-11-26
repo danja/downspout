@@ -7,19 +7,29 @@ category: processor
 group: dynamics
 role: Output safety
 screenshot: /assets/plugins/guardian.png
-capabilities: [audio input, audio output, bypass, input gain, attack/release, variable clipper, reported latency, diagnostics]
-summary: Input gain, look-ahead limiting with attack and release, variable-curve clipping (soft to hard), DC removal, true-peak protection, bypass, and latched fault recovery.
+capabilities: [audio input, audio output, bypass, input gain, clip interpolation, auto drive, attack/release, variable clipper, reported latency, protection density meter]
+summary: Input-stage clip interpolation, look-ahead limiting with attack/release, 4x inter-sample peak guard, optional auto drive to a target reduction, variable clipping, DC removal and bypass.
 ---
 
 ## Opinion
 
-Still testing, but so far seems a good alternative to pre-existing limiters and clippers.
+Still testing, but the input interpolater makes hot mixes noticeably smoother
+than flat-topping the ceiling. Use the protection-density meter to dial input
+gain: a few percent means you are just catching peaks; a sustained high reading
+means the limiter is doing the mix.
 
 ## Functionality
 
-Guardian is intended for the end of autonomous graphs. An input gain control
-drives the limiter harder or preserves headroom. The clipper shape parameter
-sweeps continuously from no clipping through gentle tanh saturation to a
-near-hard clip. A transfer-curve graph shows the full input-to-output response
-in real time. Bypass, overload, silence, and fault diagnostics complete the
-safety picture.
+Guardian is intended for the end of autonomous graphs. With **Clip
+interpolation** on (the default), runs of input samples above the ceiling are
+rebuilt as a straight line between the last clean sample before the run and the
+first clean sample after it; every other sample is untouched by that stage.
+The stage adds a fixed 5 ms delay, reported to the host together with the
+user's look-ahead.
+
+The limiter then catches what remains, with attack, release and an optional
+program-dependent faster recovery. **Auto drive** slowly trims the input to
+hold a chosen peak reduction, and the 4x true-peak guard watches for
+inter-sample overshoot. **Clipper shape** sweeps from limiter-only to near-hard
+clip, with a transfer-curve graph. Bypass and a live protection-density readout
+complete the panel. No MIDI. Place last.

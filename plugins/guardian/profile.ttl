@@ -7,7 +7,7 @@
 
 dsp:guardian a trn:PluginProfile ;
     rdfs:label "Guardian" ;
-    rdfs:comment "Output-safety processor with input gain, look-ahead limiting (attack + release), variable-curve clipping (soft to hard), DC removal, true-peak protection, bypass, and latched diagnostics." ;
+    rdfs:comment "Output-safety processor with default-on clip interpolation, input gain, look-ahead limiting (attack + program release), optional auto drive to a target reduction, variable-curve clipping, DC removal, 4x inter-sample peak guard, bypass, and a protection-density output." ;
     trn:bundleName "guardian.vst3" ;
     trn:vendor "danja" ;
     foaf:homepage <https://danja.github.io/downspout/plugins/guardian/> ;
@@ -15,5 +15,5 @@ dsp:guardian a trn:PluginProfile ;
     trn:accepts trn:Audio ;
     trn:produces trn:Audio ;
     trn:recommendedAfter dsp:orbit ;
-    trn:caution "Guardian is intended for the end of autonomous audio chains and reports processing latency to the host." ;
+    trn:caution "Guardian is intended for the end of autonomous audio chains and reports look-ahead plus the 5 ms interpolation window as latency when interpolation is enabled." ;
     pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

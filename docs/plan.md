@@ -553,7 +553,8 @@ The approved UI-readiness pass for these ten plugins is:
 3. Give Harmonic Atlas a current-chord/keyboard view; Conductor a section
    timeline; Mnemosyne a reservoir view; Oracle an analysis dashboard;
    Resonance Garden a resonator-energy view; Orbit a trajectory view; and
-   Guardian conventional safety meters and diagnostic lamps.
+   Guardian a distinct input-stage area and one live protection-density meter
+   (the old read-only diagnostic lamps were removed).
 4. Give Drift and Polymeter consistent four-lane layouts with per-lane mode or
    pattern previews rather than splitting lanes across unrelated columns.
 5. Give Mosaic a complete four-slot sample workflow with visible load,
@@ -584,8 +585,9 @@ Per-plugin usability targets:
   twelve-voice pitch/energy view (voice limit 1-12, internal scale as a 23-scale dropdown).
 - **Orbit:** named trajectories, musical timing, contextual seed control, and
   a live path/position view.
-- **Guardian:** conventional limiter meters, protection switches, neutral
-  diagnostics, reported look-ahead, and a real diagnostic-reset button.
+- **Guardian:** a labelled input stage with default-on clip interpolation,
+  peak-guard and DC switches, auto-drive and program-release controls, one live
+  protection-density meter, and reported look-ahead plus interpolation latency.
 
 The shared implementation remains local to `plugins/generative-common`; it is
 not a replacement for established plugin UIs elsewhere in the repository.

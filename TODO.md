@@ -15,6 +15,8 @@ Open work only. Completed builds are recorded in plugin docs; resolved lessons g
 
 ## Plugin work
 
+- [ ] Guardian in REAPER: audition the default-on clip interpolater on a deliberately hot signal (A/B the switch), check the reported latency of look-ahead plus 5 ms, sweep Auto drive / target reduction, Program release, 4x true-peak guard and the protection-density meter, then save/reopen. Core tests and the VST3 build pass.
+- [ ] Guardian: visually accept the refreshed `docs/pages/assets/plugins/guardian.png` (960x780) from a first-time-user perspective. This model cannot view PNGs; pixel checks confirmed the sections render and the Activity title is not covered, but label fit, hierarchy and contrast need human eyes.
 - [ ] Voxmod: audition the new convolution engine in a host with an instrument on 1/2 and a moving voice/texture on 3/4; sweep the three new Levels, Conv Mix and both feedback controls, then save/reopen to confirm the new state keys. Core tests, the VST3 build and the refreshed catalog screenshot pass; visual acceptance of the panel with Levels at the top of each column is complete.
 
 - [ ] Box: visually accept the refreshed `docs/pages/assets/plugins/box.png` (960x720) from a first-time-user perspective; this session could not display the PNG, so check labels, hierarchy, contrast, clipping, the smaller Randomise button and the response plot in an image-capable viewer before marking it final.
@@ -56,5 +58,6 @@ Open work only. Completed builds are recorded in plugin docs; resolved lessons g
 
 - [ ] Read `INBOX.md` and the read-only `dim` tools; promote relevant tasks here and clear the inbox.
 - [ ] After parameter/default/MIDI/routing changes: update `profile.ttl`, `plugins-summary.md`, tests and screenshots; rebuild the plugin's `-vst3` target and rerun its core tests.
+- [ ] Fix `scripts/capture-plugin-screenshots.sh`: `jack_wait -c` prints "not running" but exits 0, so the script skips starting its dummy JACK server and capture times out. Workaround used here: start `jackd -r -d dummy -r 48000 -p 256` manually and set `DOWNSPOUT_SCREENSHOT_START_JACK=0`. Shared script left unchanged pending approval.
 - [ ] Run shell syntax checks and `scripts/check-bundle-lists.sh` when install/release wiring changes.
 - [ ] Promote new recurring lessons from `MISTAKES.md` to `AGENTS.md`.

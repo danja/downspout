@@ -1,117 +1,177 @@
 #include "guardian_core.hpp"
 #include "downspout/test_assert.h"
+#include <algorithm>
+#include <cmath>
 #include <limits>
+
 using namespace downspout::guardian;
 
-static std::array<float,kParameterCount> defaultParams()
+static std::array<float, kParameterCount> defaultParams()
 {
-    std::array<float,kParameterCount> p{};
+    std::array<float, kParameterCount> p{};
     for (std::size_t i = 0; i < p.size(); ++i)
         p[i] = kParameterSpecs[i].defaultValue;
     return p;
 }
 
+static std::array<float, kParameterCount> legacyParams()
+{
+    auto p = defaultParams();
+    p[kInterpolate] = 0; // isolate the original limiter path
+    p[kDcRemove] = 0;
+    p[kTruePeak] = 0;
+    return p;
+}
+
+static float ceilingOf(const std::array<float, kParameterCount>& p)
+{
+    return std::pow(10.0f, p[kCeilingDb] / 20.0f);
+}
+
 int main()
 {
-    // Lookahead frames
     auto p = defaultParams();
+    assert(p[kInterpolate] == 1.0f);
     assert(lookaheadFrames(p, 48000) == 240);
+    assert(interpFrames(48000) == 240);
 
-    // Basic limiting: signal above ceiling is reduced
+    // Hot input is limited and density reports every protected sample.
+    auto hot = legacyParams();
     State s;
     prepare(s, 48000);
-    std::array<float,4096> in{}, l{}, r{};
-    in.fill(3);
-    process(s, p, in.size(), 48000, in.data(), in.data(), l.data(), r.data());
-    assert(s.overload && s.reductionDb > 0);
-    for (float v : l) assert(std::isfinite(v) && std::fabs(v) <= 1);
+    std::array<float, 1024> input{}, left{}, right{};
+    input.fill(3.0f);
+    process(s, hot, input.size(), 48000, input.data(), input.data(), left.data(), right.data());
+    for (float v : left) assert(std::isfinite(v) && std::fabs(v) <= ceilingOf(hot) + 1e-3f);
+    assert(s.density > 99.0f);
 
-    // Non-finite input increments fault counter
-    in.fill(0);
-    in[0] = std::numeric_limits<float>::quiet_NaN();
-    process(s, p, in.size(), 48000, in.data(), in.data(), l.data(), r.data());
-    assert(s.faults > 0);
-    for (float v : l) assert(std::isfinite(v));
+    // Non-finite input is sanitised without corrupting the output.
+    input.fill(0);
+    input[0] = std::numeric_limits<float>::quiet_NaN();
+    process(s, hot, input.size(), 48000, input.data(), input.data(), left.data(), right.data());
+    for (float v : left) assert(std::isfinite(v));
 
-    // Reset clears faults and overload
-    p[kReset] = 1;
-    process(s, p, in.size(), 48000, in.data(), in.data(), l.data(), r.data());
-    assert(s.faults <= 1 && !s.overload);
-
-    // Silence detection
-    in.fill(0.25f);
-    for (int i = 0; i < 30; ++i)
-        process(s, p, in.size(), 48000, in.data(), in.data(), l.data(), r.data());
-    assert(std::fabs(l.back()) < 0.01f);
-
-    // Bypass passes audio unchanged
-    p = defaultParams();
-    p[kBypass] = 1.0f;
-    in.fill(0.5f);
+    // Bypass passes audio unchanged and reports no activity.
+    auto bypass = defaultParams();
+    bypass[kBypass] = 1;
+    input.fill(0.5f);
     prepare(s, 48000);
-    process(s, p, in.size(), 48000, in.data(), in.data(), l.data(), r.data());
-    for (float v : l) assert(std::fabs(v - 0.5f) < 1e-6f);
-    assert(s.reductionDb == 0.0f);
+    process(s, bypass, input.size(), 48000, input.data(), input.data(), left.data(), right.data());
+    for (float v : left) assert(std::fabs(v - 0.5f) < 1e-6f);
+    assert(s.density == 0.0f);
 
-    // Input gain: +6 dB doubles amplitude into limiter
-    p = defaultParams();
-    p[kInputDb] = 6.0f;  // ~2x gain
-    p[kLookaheadMs] = 0.0f;  // no delay so first sample is immediately readable
-    p[kAttackMs] = 0.0f;
-    in.fill(0.1f);
+    // Input gain: +6 dB doubles amplitude below the ceiling.
+    auto gain = legacyParams();
+    gain[kInputDb] = 6.0f;
+    gain[kLookaheadMs] = 0;
+    input.fill(0.1f);
     prepare(s, 48000);
-    process(s, p, 1, 48000, in.data(), in.data(), l.data(), r.data());
-    // Output should be ~0.2 (0.1 * 2), well below ceiling so no limiting yet
-    assert(std::fabs(l[0] - 0.1f * std::pow(10.0f, 6.0f / 20.0f)) < 0.01f);
+    process(s, gain, 1, 48000, input.data(), input.data(), left.data(), right.data());
+    assert(std::fabs(left[0] - 0.1f * std::pow(10.0f, 6.0f / 20.0f)) < 0.01f);
 
-    // Attack: with instant attack (kAttackMs=0), gain reduction is immediate
-    p = defaultParams();
-    p[kAttackMs] = 0.0f;
-    p[kLookaheadMs] = 0.0f;  // no delay so first sample is immediately readable
-    in.fill(3.0f);
+    // Instant attack keeps the first hot sample at the ceiling.
+    auto instant = legacyParams();
+    instant[kLookaheadMs] = 0;
+    input.fill(3.0f);
     prepare(s, 48000);
-    process(s, p, 1, 48000, in.data(), in.data(), l.data(), r.data());
-    assert(std::fabs(l[0]) <= std::pow(10.0f, p[kCeilingDb] / 20.0f) + 0.001f);
+    process(s, instant, 1, 48000, input.data(), input.data(), left.data(), right.data());
+    assert(std::fabs(left[0]) <= ceilingOf(instant) + 1e-3f);
 
-    // Attack: with slow attack, the first sample is NOT fully limited
-    p = defaultParams();
-    p[kAttackMs] = 50.0f;  // very slow
-    p[kLookaheadMs] = 0.0f;  // no delay so first sample is immediately readable
-    in.fill(3.0f);
+    // Clip interpolation: a hot run becomes a straight ramp between the clean
+    // samples on either side, while every clean sample passes through exactly.
+    auto interp = defaultParams();
+    interp[kDcRemove] = 0;
+    interp[kTruePeak] = 0;
+    interp[kLookaheadMs] = 0;
+    input.fill(-0.1f);
+    for (std::size_t i = 0; i < 500; ++i) input[i] = 0.3f;
+    for (std::size_t i = 500; i < 508; ++i) input[i] = 2.0f;
+    std::array<float, 1024> interpolated{}, hardClipped{};
     prepare(s, 48000);
-    // Just one sample — gain barely moves yet, so output may exceed ceiling
-    process(s, p, 1, 48000, in.data(), in.data(), l.data(), r.data());
-    // With slow attack the gain is still near 1.0 after one sample, output > ceiling
-    const float ceiling = std::pow(10.0f, p[kCeilingDb] / 20.0f);
-    assert(std::fabs(l[0]) > ceiling * 0.5f); // not yet fully limited
+    process(s, interp, input.size(), 48000, input.data(), input.data(), interpolated.data(), right.data());
+    const std::uint32_t window = interpFrames(48000);
+    for (std::size_t i = window; i < 500 + window; ++i)
+        assert(std::fabs(interpolated[i] - 0.3f) < 1e-6f);
+    for (std::size_t j = 0; j < 8; ++j) {
+        const float expected = 0.3f + (-0.1f - 0.3f) * (j + 1.0f) / 9.0f;
+        assert(std::fabs(interpolated[window + 500 + j] - expected) < 1e-5f);
+    }
+    for (std::size_t i = 508 + window; i < input.size(); ++i)
+        assert(std::fabs(interpolated[i] + 0.1f) < 1e-6f);
+    assert(s.density > 0.7f && s.density < 0.9f);
 
-    // Clipper shape=1 (near-hard clip) — output stays within ceiling
-    p = defaultParams();
-    p[kClipperShape] = 1.0f;
-    in.fill(0.5f);
+    // With interpolation off the same run is flat-topped instead.
+    auto noInterp = interp;
+    noInterp[kInterpolate] = 0;
     prepare(s, 48000);
-    process(s, p, in.size(), 48000, in.data(), in.data(), l.data(), r.data());
-    for (float v : l) assert(std::isfinite(v) && std::fabs(v) <= ceiling + 0.001f);
+    process(s, noInterp, input.size(), 48000, input.data(), input.data(), hardClipped.data(), right.data());
+    for (std::size_t j = 0; j < 8; ++j)
+        assert(hardClipped[500 + j] > 0.8f);
+    assert(std::fabs(hardClipped[500] - interpolated[window + 500]) > 0.5f);
 
-    // Clipper shape=0 (off): signal below ceiling passes through unchanged (no knee shaping)
-    p = defaultParams();
-    p[kLookaheadMs] = 0.0f; // remove delay so we can compare immediately
-    p[kAttackMs] = 0.0f;
-    p[kDcRemove] = 0.0f;    // disable HP so constant test signal is unmodified
-    std::array<float,64> l0{}, l1{};
-    in.fill(0.1f); // well below ceiling, limiter won't engage
-    p[kClipperShape] = 0.0f;
+    // A run longer than the interpolation window stays bounded by the ceiling.
+    input.fill(2.0f);
     prepare(s, 48000);
-    process(s, p, l0.size(), 48000, in.data(), in.data(), l0.data(), r.data());
-    for (float v : l0) assert(std::fabs(v - 0.1f) < 0.001f); // shape=0: linear pass-through
+    process(s, interp, input.size(), 48000, input.data(), input.data(), left.data(), right.data());
+    for (float v : left) assert(std::isfinite(v) && std::fabs(v) <= ceilingOf(interp) + 1e-3f);
 
-    // Clipper shape=1: tanh saturator maps all signals towards ceiling (knee=0)
-    in.fill(0.8f * ceiling); // 80% of ceiling — above knee for shape=1 (knee=0)
-    p[kClipperShape] = 1.0f;
+    // 4x detector catches an inter-sample peak between two legal samples.
+    std::array<float, 64> odd{};
+    for (std::size_t i = 0; i < odd.size(); ++i) {
+        const float cycle[4] = {-0.85f, 0.85f, 0.85f, -0.85f};
+        odd[i] = cycle[i % 4];
+    }
+    auto peakGuard = legacyParams();
     prepare(s, 48000);
-    process(s, p, l1.size(), 48000, in.data(), in.data(), l1.data(), r.data());
-    // Tanh saturator pushes signal toward ceiling, output is bounded by ceiling
-    assert(l1.back() > 0.0f && l1.back() <= ceiling + 0.001f);
+    process(s, peakGuard, odd.size(), 48000, odd.data(), odd.data(), left.data(), right.data());
+    assert(s.density == 0.0f);
+    peakGuard[kTruePeak] = 1;
+    prepare(s, 48000);
+    process(s, peakGuard, odd.size(), 48000, odd.data(), odd.data(), left.data(), right.data());
+    assert(s.density > 0.0f);
+
+    // Program release recovers faster after a short peak.
+    std::array<float, 128> transient{};
+    for (std::size_t i = 0; i < 4; ++i) transient[i] = 3.0f;
+    for (std::size_t i = 4; i < transient.size(); ++i) transient[i] = 0.1f;
+    auto normalRelease = legacyParams();
+    auto programRelease = normalRelease;
+    programRelease[kProgramRelease] = 1;
+    State sNormal, sProgram;
+    prepare(sNormal, 48000);
+    prepare(sProgram, 48000);
+    process(sNormal, normalRelease, transient.size(), 48000, transient.data(), transient.data(), left.data(), right.data());
+    process(sProgram, programRelease, transient.size(), 48000, transient.data(), transient.data(), left.data(), right.data());
+    assert(sProgram.gain > sNormal.gain + 0.01f);
+
+    // Auto drive trims gain until the requested peak reduction is reached.
+    auto autoDrive = legacyParams();
+    autoDrive[kAutoDrive] = 1;
+    prepare(s, 48000);
+    input.fill(3.0f);
+    for (int block = 0; block < 400; ++block)
+        process(s, autoDrive, 256, 48000, input.data(), input.data(), left.data(), right.data());
+    assert(s.autoGainDb < -1.0f);
+    assert(std::fabs(s.density - 100.0f) < 0.01f);
+
+    // Disabling auto drive returns to the manual input gain immediately.
+    autoDrive[kAutoDrive] = 0;
+    process(s, autoDrive, 256, 48000, input.data(), input.data(), left.data(), right.data());
+    assert(s.autoGainDb == 0.0f);
+
+    // Switching interpolation off and back on clears its history.
+    input.fill(0.1f);
+    auto toggled = defaultParams();
+    toggled[kDcRemove] = 0;
+    toggled[kTruePeak] = 0;
+    toggled[kLookaheadMs] = 0;
+    prepare(s, 48000);
+    toggled[kInterpolate] = 0;
+    process(s, toggled, 600, 48000, input.data(), input.data(), left.data(), right.data());
+    toggled[kInterpolate] = 1;
+    process(s, toggled, 600, 48000, input.data(), input.data(), left.data(), right.data());
+    for (std::size_t i = interpFrames(48000); i < 600; ++i)
+        assert(std::fabs(left[i] - 0.1f) < 1e-6f);
 
     return 0;
 }

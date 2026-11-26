@@ -108,8 +108,8 @@ current Downspout plugins.
   click-smoothed transient gain multipliers over the saved faders.
 - [`Loopdelay`]({{ '/plugins/loopdelay/' | relative_url }}): stereo delay and capture looper, time free (20-4000 ms) or BBT-synced.
 - [`Lightverb`]({{ '/plugins/lightverb/' | relative_url }}): fixed-cost stereo feedback-delay-network reverb.
-- [`Guardian`]({{ '/plugins/guardian/' | relative_url }}): output safety chain: gain, look-ahead limiter, selectable clipper, DC
-  removal, true-peak guard, silence detection and latched fault diagnostics.
+- [`Guardian`]({{ '/plugins/guardian/' | relative_url }}): output safety chain: default-on input interpolation of clipped runs, gain,
+  look-ahead limiter with optional auto drive and program release, selectable clipper, DC removal, 4x true-peak guard and a density meter.
 - [`Beards`]({{ '/plugins/beards/' | relative_url }}): granular processor after Mutable Instruments Beads. Input is recorded into
   a 4 s buffer and replayed by up to 32 overlapping grains (position, size, shape,
   pitch, density, scatter), with feedback, a Griesinger reverb, freeze, and optional

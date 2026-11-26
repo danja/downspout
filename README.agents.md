@@ -64,7 +64,7 @@ Downspout is a suite of VST3 plugins for autonomous music generation and process
 | [Orbit](plugins/orbit/) | Transport-aware stereo motion effect with orbit, pendulum, random-walk, and figure-eight modes | [profile.ttl](plugins/orbit/profile.ttl) |
 | [Gater](plugins/gater/) | MIDI-controlled stereo switcher routing input to one of two outputs by note parity | [profile.ttl](plugins/gater/profile.ttl) |
 | [PaunchLad](plugins/paunchlad/) | Launchpad dub performance effect with echo throws, splashes, chops, and freezes | [profile.ttl](plugins/paunchlad/profile.ttl) |
-| [Guardian](plugins/guardian/) | Output-safety processor with DC removal, look-ahead limiting, and true-peak protection | [profile.ttl](plugins/guardian/profile.ttl) |
+| [Guardian](plugins/guardian/) | Output-safety processor with clip interpolation, look-ahead limiting, auto drive and 4x true-peak protection | [profile.ttl](plugins/guardian/profile.ttl) |
 
 ### Instruments
 
