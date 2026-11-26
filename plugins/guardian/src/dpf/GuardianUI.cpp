@@ -3,6 +3,7 @@
 #include "guardian_core.hpp"
 
 #include <cmath>
+#include <cstdlib>
 
 START_NAMESPACE_DISTRHO
 
@@ -15,9 +16,16 @@ public:
             "Guardian",
             "Interpolate · Limit · Protect — bypass toggle top-right",
             downspout::guardian::kParameterSpecs.data(),
-            downspout::guardian::kParameterCount, 230, 112, 94) {}
+            downspout::guardian::kParameterCount, 230, 112, 94)
+    {
+        // The standalone used for screenshots has no audio; show where the
+        // live input-peak marker would sit.
+        if (std::getenv("DOWNSPOUT_SCREENSHOT_DEMO") != nullptr)
+            demo_ = true;
+    }
 
 private:
+    bool demo_ = false;
     const laf::Theme& t_ { laf::defaultTheme() };
     void fc(const laf::Colour& c) { fillColor(c.r, c.g, c.b, c.a); }
     void sc(const laf::Colour& c) { strokeColor(c.r, c.g, c.b, c.a); }
@@ -167,6 +175,18 @@ private:
         strokeColor(accentR(), accentG(), accentB(), 230);
         strokeWidth(2.0f);
         stroke();
+
+        // Current input peak marker — raw input level, before input gain.
+        const float peakLin = demo_ ? 0.85f : value(kStatusPeak);
+        if (peakLin > 1e-9f) {
+            const float peakDb = std::clamp(20.0f * std::log10(peakLin), minDb, maxDb);
+            beginPath();
+            strokeColor(220, 200, 80, 200);
+            strokeWidth(1.5f);
+            moveTo(dbToX(peakDb), y);
+            lineTo(dbToX(peakDb), y + h);
+            stroke();
+        }
     }
 };
 

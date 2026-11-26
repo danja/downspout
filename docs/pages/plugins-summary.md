@@ -978,7 +978,8 @@ Output safety processor for the end of autonomous chains. Key parameters: `input
 `clipper_shape` (limiter-only to near-hard clip), `interpolate` (default on; rebuilds
 clipped input runs between the last and next clean samples), `auto_drive` with
 `auto_target_db` (0-12 dB), `program_release`, and `bypass`. `status_density` is a
-read-only output reporting the percentage of samples protected in the current block.
+read-only output reporting the percentage of samples protected in the current block;
+`status_input_peak` is the pre-gain input peak that drives the transfer-curve marker.
 Reported latency is look-ahead plus a fixed 5 ms interpolation window when enabled.
 No MIDI. Place last.
 

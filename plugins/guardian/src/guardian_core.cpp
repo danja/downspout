@@ -36,10 +36,10 @@ float declip(float x,std::vector<float>&ring,std::uint32_t&wr,std::uint32_t wind
 }
 std::uint32_t interpFrames(double sr)noexcept{return static_cast<std::uint32_t>(std::max(32.0,static_cast<double>(std::lround(0.005*std::max(1.0,sr)))));}
 void prepare(State&s,double sr){sr=std::max(8000.0,sr);const auto size=static_cast<std::size_t>(std::ceil(sr*0.021))+4;const auto isize=interpFrames(sr)+2;if(s.sampleRate!=sr||s.delayL.size()!=size||s.interpL.size()!=isize){s.sampleRate=sr;s.delayL.assign(size,0);s.delayR.assign(size,0);s.interpL.assign(isize,0);s.interpR.assign(isize,0);}resetAudio(s);}
-void resetAudio(State&s)noexcept{std::fill(s.delayL.begin(),s.delayL.end(),0);std::fill(s.delayR.begin(),s.delayR.end(),0);std::fill(s.interpL.begin(),s.interpL.end(),0);std::fill(s.interpR.begin(),s.interpR.end(),0);s.write=0;s.interpWriteL=0;s.interpWriteR=0;s.interpEntryL=s.interpEntryR=0;s.interpRunL=s.interpRunR=0;s.interpActive=false;s.gain=1;s.dcXL=s.dcYL=s.dcXR=s.dcYR=0;for(float&v:s.tpL)v=0;for(float&v:s.tpR)v=0;s.limitHold=0;s.autoGainDb=0;s.density=0;}
+void resetAudio(State&s)noexcept{std::fill(s.delayL.begin(),s.delayL.end(),0);std::fill(s.delayR.begin(),s.delayR.end(),0);std::fill(s.interpL.begin(),s.interpL.end(),0);std::fill(s.interpR.begin(),s.interpR.end(),0);s.write=0;s.interpWriteL=0;s.interpWriteR=0;s.interpEntryL=s.interpEntryR=0;s.interpRunL=s.interpRunR=0;s.interpActive=false;s.gain=1;s.dcXL=s.dcYL=s.dcXR=s.dcYR=0;for(float&v:s.tpL)v=0;for(float&v:s.tpR)v=0;s.limitHold=0;s.autoGainDb=0;s.density=0;s.inputPeak=0;}
 std::uint32_t lookaheadFrames(const std::array<float,kParameterCount>&p,double sr)noexcept{return static_cast<std::uint32_t>(std::lround(pv(p,kLookaheadMs)*0.001*std::max(1.0,sr)));}
 void process(State&s,const std::array<float,kParameterCount>&p,std::uint32_t n,double sr,const float*l,const float*r,float*ol,float*orr)noexcept{
- if(pv(p,kBypass)>=0.5f){if(ol&&l)std::copy_n(l,n,ol);else if(ol)std::fill_n(ol,n,0);if(orr&&r)std::copy_n(r,n,orr);else if(orr)std::fill_n(orr,n,0);s.density=0;s.interpActive=false;return;}
+ if(pv(p,kBypass)>=0.5f){if(ol&&l)std::copy_n(l,n,ol);else if(ol)std::fill_n(ol,n,0);if(orr&&r)std::copy_n(r,n,orr);else if(orr)std::fill_n(orr,n,0);s.density=0;s.inputPeak=0;for(std::uint32_t i=0;i<n;++i){if(l&&std::isfinite(l[i]))s.inputPeak=std::max(s.inputPeak,std::fabs(l[i]));if(r&&std::isfinite(r[i]))s.inputPeak=std::max(s.inputPeak,std::fabs(r[i]));}s.interpActive=false;return;}
  if(s.sampleRate!=sr||s.delayL.empty()||s.interpL.empty()){if(ol)std::fill_n(ol,n,0);if(orr)std::fill_n(orr,n,0);return;}
  const bool autoOn=pv(p,kAutoDrive)>=0.5f,interpOn=pv(p,kInterpolate)>=0.5f,tpOn=pv(p,kTruePeak)>=0.5f,programOn=pv(p,kProgramRelease)>=0.5f;
  if(!autoOn)s.autoGainDb=0;
@@ -61,10 +61,12 @@ void process(State&s,const std::array<float,kParameterCount>&p,std::uint32_t n,d
   return std::copysign(clipThreshold+clipRange*std::tanh(t*clipK)/clipTanhK,v);};
  const auto latency=std::min<std::size_t>(lookaheadFrames(p,sr),s.delayL.size()-1);
  const std::uint32_t window=interpFrames(sr);
- float minimumGain=1;float blockPeak=0;std::uint32_t touched=0;
+ float minimumGain=1;float blockPeak=0,blockInputPeak=0;std::uint32_t touched=0;
  for(std::uint32_t i=0;i<n;++i){
-  float a=(l?l[i]:0)*inputGain,b=(r?r[i]:0)*inputGain;
-  if(!std::isfinite(a)){a=0;}if(!std::isfinite(b)){b=0;}
+  float rawL=l?l[i]:0,rawR=r?r[i]:0;
+  if(!std::isfinite(rawL)){rawL=0;}if(!std::isfinite(rawR)){rawR=0;}
+  blockInputPeak=std::max(blockInputPeak,std::max(std::fabs(rawL),std::fabs(rawR)));
+  float a=rawL*inputGain,b=rawR*inputGain;
   if(dcOn){a=hp(a,s.dcXL,s.dcYL,sr);b=hp(b,s.dcXR,s.dcYR,sr);}
   bool modifiedL=false,modifiedR=false;
   if(interpOn){a=declip(a,s.interpL,s.interpWriteL,window,s.interpEntryL,s.interpRunL,ceiling,modifiedL);b=declip(b,s.interpR,s.interpWriteR,window,s.interpEntryR,s.interpRunR,ceiling,modifiedR);}
@@ -98,5 +100,6 @@ void process(State&s,const std::array<float,kParameterCount>&p,std::uint32_t n,d
   s.autoGainDb=std::clamp(s.autoGainDb+(error>0?-step:step),-24.0f,24.0f);
  }
  s.density=n?100.0f*static_cast<float>(touched)/static_cast<float>(n):0;
+ s.inputPeak=blockInputPeak;
 }
 } // namespace downspout::guardian

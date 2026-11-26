@@ -59,6 +59,7 @@ int main()
     process(s, bypass, input.size(), 48000, input.data(), input.data(), left.data(), right.data());
     for (float v : left) assert(std::fabs(v - 0.5f) < 1e-6f);
     assert(s.density == 0.0f);
+    assert(std::fabs(s.inputPeak - 0.5f) < 1e-6f);
 
     // Input gain: +6 dB doubles amplitude below the ceiling.
     auto gain = legacyParams();
@@ -68,6 +69,7 @@ int main()
     prepare(s, 48000);
     process(s, gain, 1, 48000, input.data(), input.data(), left.data(), right.data());
     assert(std::fabs(left[0] - 0.1f * std::pow(10.0f, 6.0f / 20.0f)) < 0.01f);
+    assert(std::fabs(s.inputPeak - 0.1f) < 1e-6f); // marker uses pre-gain peak
 
     // Instant attack keeps the first hot sample at the ceiling.
     auto instant = legacyParams();

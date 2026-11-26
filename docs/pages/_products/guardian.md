@@ -7,7 +7,7 @@ category: processor
 group: dynamics
 role: Output safety
 screenshot: /assets/plugins/guardian.png
-capabilities: [audio input, audio output, bypass, input gain, clip interpolation, auto drive, attack/release, variable clipper, reported latency, protection density meter]
+capabilities: [audio input, audio output, bypass, input gain, clip interpolation, auto drive, attack/release, variable clipper, reported latency, protection density meter, input-peak marker]
 summary: Input-stage clip interpolation, look-ahead limiting with attack/release, 4x inter-sample peak guard, optional auto drive to a target reduction, variable clipping, DC removal and bypass.
 ---
 

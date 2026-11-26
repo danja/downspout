@@ -6,6 +6,11 @@ Format: what happened, root cause, prevention.
 
 ## Open
 
+## guardian: removing diagnostics also removed the curve marker (2026-11-26)
+- **What happened:** the transfer-curve peak marker disappeared because it read `status_peak`, which was deleted with the Safety Monitor outputs.
+- **Root cause:** the marker's data dependency was not traced before removing the output parameter; no test or screenshot check covered a live marker.
+- **Prevention:** grep the UI for every output parameter before deleting it, and check that a fresh screenshot still shows the marker (with a demo value when the standalone has no audio).
+
 ## guardian: clip-ramp denominator used the remaining run only (2026-11-26)
 - **What happened:** the interpolation test would have seen ramp values beyond the ceiling for the last samples of a clipped run; the formula was corrected before the test run.
 - **Root cause:** the denominator was `exitOffset + 1` (samples remaining) instead of the whole run, `run + exitOffset + 1`.

@@ -15,7 +15,7 @@ protected:
  std::uint32_t getVersion()const override{return d_version(0,2,0);}
  std::int64_t getUniqueId()const override{return d_cconst('G','r','d','n');}
  void initParameter(std::uint32_t i,Parameter&q)override{auto&s=kParameterSpecs[i];q.name=s.name;q.symbol=s.symbol;q.hints=s.output?kParameterIsOutput:kParameterIsAutomatable;if(s.integer)q.hints|=kParameterIsInteger;q.ranges={s.defaultValue,s.minimum,s.maximum};}
- float getParameterValue(std::uint32_t i)const override{return i==kStatusDensity?s_.density:p_[i];}
+ float getParameterValue(std::uint32_t i)const override{return i==kStatusDensity?s_.density:(i==kStatusPeak?s_.inputPeak:p_[i]);}
  void setParameterValue(std::uint32_t i,float v)override{if(i<kParameterCount&&!kParameterSpecs[i].output){p_[i]=downspout::generative::clampParam(v,kParameterSpecs[i]);if(i==kLookaheadMs||i==kInterpolate)reportLatency();}}
  void sampleRateChanged(double sr)override{prepare(s_,sr);reportLatency();}
  void activate()override{prepare(s_,getSampleRate());resetAudio(s_);}

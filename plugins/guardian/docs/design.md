@@ -81,9 +81,11 @@ the ceiling, even with slow attack.
 The UI draws a per-pixel transfer function curve — X=input dB, Y=output dB —
 from the current input gain, ceiling and clipper shape. It models the
 instantaneous limiter and clipper, not attack/release smoothing or the
-interpolater. The live **Protection density** output shows the percentage of
-samples in the current block touched by interpolation, limiting or clamping;
-this is the one output parameter, needed because DPF's VST3 bridge has no
+interpolater. The yellow vertical marker comes from the `status_input_peak`
+output: the raw input peak **before** input gain, so the marker is independent
+of manual gain and auto drive. The live **Protection density** output shows the
+percentage of samples in the current block touched by interpolation, limiting
+or clamping. Both are output parameters because DPF's VST3 bridge has no
 DSP-to-UI callback.
 
 The former Safety Monitor read-only outputs (gain reduction, fault count,
