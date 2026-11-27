@@ -128,9 +128,13 @@ void Processor::resetRuntime()
 
 void Processor::clampPatch()
 {
-    for (std::uint32_t i = 0; i < kInputParameterCount; ++i)
+    // The LED Out control is appended after the read-only status block to keep
+    // existing host indices stable, so it is not inside kInputParameterCount.
+    for (std::uint32_t i = 0; i < kParameterCount; ++i)
     {
         const auto& range = rangeFor(static_cast<ParamId>(i));
+        if (range.output)
+            continue;
         float value = clampValue(parameters_[i], range.minimum, range.maximum);
         if (range.integer)
             value = std::round(value);
@@ -194,7 +198,10 @@ void Processor::updateStatus()
 
 void Processor::setParameter(const std::uint32_t index, const float value)
 {
-    if (index >= kInputParameterCount)
+    // LED Out lives after the status outputs for index compatibility, but is a
+    // normal writable control. Everything else in the status block stays read-only.
+    const bool appendedInput = index == static_cast<std::uint32_t>(ParamId::ledTransport);
+    if (index >= kInputParameterCount && !appendedInput)
         return;
 
     const auto cellBase = static_cast<std::uint32_t>(ParamId::cellStart);
@@ -270,10 +277,10 @@ void Processor::setParameter(const std::uint32_t index, const float value)
 
     if (applied != parameters_[index] && id != ParamId::clear)
         releaseLedReset();
-    if (id == ParamId::ledFeedback && applied != parameters_[index])
+    if ((id == ParamId::ledFeedback || id == ParamId::ledTransport) && applied != parameters_[index])
     {
-        // Re-enabling must paint the full state even if the cached colours
-        // happen to match what the Launchpad had before it was switched off.
+        // Re-enabling or changing transport must paint the full state even if
+        // the cached colours happen to match what the Launchpad already had.
         lastCellLeds_.fill(255u);
         lastTopLeds_.fill(255u);
         lastSideLeds_.fill(255u);
@@ -936,10 +943,14 @@ void Processor::emitLedFeedback(ProcessResult& result, const bool force)
     if (parameters_[static_cast<std::size_t>(ParamId::ledFeedback)] < 0.5f)
         return;
 
-    // Plank's working Launchpad path paints colours with ordinary channel-1
-    // note-ons and CCs. Some hosts drop large or model-specific lighting SysEx,
-    // while these short messages always reach a programmer-mode Launchpad.
-    // Generated notes stay on `channel` (default 4), clear of LED channels 1-3.
+    const auto transport = static_cast<LedTransport>(std::lround(
+        parameters_[static_cast<std::size_t>(ParamId::ledTransport)]));
+    if (transport == LedTransport::off)
+        return;
+
+    // Both transports paint the same colour state. Note+CC matches Plank's
+    // working path; SysEx is the workaround when a synth shares the MIDI output
+    // and must not hear channel-1 grid notes or button CCs.
     std::array<std::uint8_t, kGridCellCount> grid {};
     std::array<std::uint8_t, kTopButtonCCs.size()> top {};
     std::array<std::uint8_t, kGridWidth> side {};
@@ -961,24 +972,40 @@ void Processor::emitLedFeedback(ProcessResult& result, const bool force)
     for (std::size_t note = 0; note < side.size(); ++note)
         side[note] = sideColor(note);
 
-    for (std::size_t note = 0; note < kGridHeight; ++note)
+    if (transport == LedTransport::sysex)
     {
-        for (std::size_t stepColumn = 0; stepColumn < kGridWidth; ++stepColumn)
+        bool changed = force;
+        for (std::size_t i = 0; i < grid.size() && !changed; ++i)
+            changed = grid[i] != lastCellLeds_[i];
+        for (std::size_t i = 0; i < top.size() && !changed; ++i)
+            changed = top[i] != lastTopLeds_[i];
+        for (std::size_t i = 0; i < side.size() && !changed; ++i)
+            changed = side[i] != lastSideLeds_[i];
+        if (!changed)
+            return;
+        appendLedBulkSysex(result, grid, side, top);
+    }
+    else
+    {
+        for (std::size_t note = 0; note < kGridHeight; ++note)
         {
-            const std::size_t index = note * kGridWidth + stepColumn;
-            if (force || grid[index] != lastCellLeds_[index])
-                appendMidi(result, 0u, 0x90u, gridToNote(note, stepColumn), grid[index]);
+            for (std::size_t stepColumn = 0; stepColumn < kGridWidth; ++stepColumn)
+            {
+                const std::size_t index = note * kGridWidth + stepColumn;
+                if (force || grid[index] != lastCellLeds_[index])
+                    appendMidi(result, 0u, 0x90u, gridToNote(note, stepColumn), grid[index]);
+            }
         }
-    }
-    for (std::size_t i = 0; i < side.size(); ++i)
-    {
-        if (force || side[i] != lastSideLeds_[i])
-            appendMidi(result, 0u, 0xb0u, kSideButtonCCs[i], side[i]);
-    }
-    for (std::size_t i = 0; i < top.size(); ++i)
-    {
-        if (force || top[i] != lastTopLeds_[i])
-            appendMidi(result, 0u, 0xb0u, kTopButtonCCs[i], top[i]);
+        for (std::size_t i = 0; i < side.size(); ++i)
+        {
+            if (force || side[i] != lastSideLeds_[i])
+                appendMidi(result, 0u, 0xb0u, kSideButtonCCs[i], side[i]);
+        }
+        for (std::size_t i = 0; i < top.size(); ++i)
+        {
+            if (force || top[i] != lastTopLeds_[i])
+                appendMidi(result, 0u, 0xb0u, kTopButtonCCs[i], top[i]);
+        }
     }
 
     lastCellLeds_ = grid;
@@ -998,8 +1025,18 @@ void Processor::emitPanic(ProcessResult& result)
         appendMidi(result, 0, static_cast<std::uint8_t>(0x80u | channel), static_cast<std::uint8_t>(note), 0u);
 
     appendSysex(result, kProgrammerModeSysex.data(), kProgrammerModeSysex.size());
-    appendClearAllSysex(result);
-    appendClearAllMidi(result);
+
+    // Clear must obey the same LED transport as a refresh. In SysEx mode no
+    // channel-1 note/CC LED-off burst should reach a shared synth output.
+    const bool feedbackOn = parameters_[static_cast<std::size_t>(ParamId::ledFeedback)] >= 0.5f;
+    const auto transport = static_cast<LedTransport>(std::lround(
+        parameters_[static_cast<std::size_t>(ParamId::ledTransport)]));
+    if (feedbackOn && transport != LedTransport::off)
+    {
+        appendClearAllSysex(result);
+        if (transport == LedTransport::noteCc)
+            appendClearAllMidi(result);
+    }
 
     pendingNoteOffs_.fill({});
     lastCellLeds_.fill(255u);
@@ -1048,7 +1085,7 @@ void Processor::appendClearAllSysex(ProcessResult& result)
 
 void Processor::appendClearAllMidi(ProcessResult& result)
 {
-    // Plank clears the same way: the SysEx reset is model-specific and may be
+    // Used only by Note+CC mode: the SysEx reset is model-specific and may be
     // filtered, while channel-1 note/CC LED-off messages always reach the pad.
     for (std::size_t note = 0; note < kGridHeight; ++note)
         for (std::size_t col = 0; col < kGridWidth; ++col)

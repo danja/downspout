@@ -217,7 +217,7 @@ void testDefaultsAndOrdinals()
     checkEq(static_cast<int>(ScaleId::romanian), 32, "romanian ordinal");
     checkEq(static_cast<int>(ScaleId::count), 33, "scale count");
     checkEq(kScaleNames.size(), 33, "scale name table size");
-    checkEq(static_cast<int>(kParameterCount), 348, "parameter count");
+    checkEq(static_cast<int>(kParameterCount), 349, "parameter count");
 
     Processor processor;
     processor.init(48000.0);
@@ -231,6 +231,9 @@ void testDefaultsAndOrdinals()
     checkNear(processor.getParameter(p(ParamId::seed)), 12345.0, 1e-6, "default seed");
     checkNear(processor.getParameter(p(ParamId::ledFeedback)), 1.0, 1e-6,
               "LED feedback defaults on so a connected Launchpad responds like Plank");
+    checkNear(processor.getParameter(p(ParamId::ledTransport)),
+              static_cast<double>(LedTransport::noteCc), 1e-6,
+              "LED output defaults to Plank-style note/CC so the Launchpad lights up");
     checkNear(processor.getParameter(p(ParamId::passInput)), 0.0, 1e-6, "default pass-through");
     checkNear(processor.getParameter(p(ParamId::statusStep)), -1.0, 1e-6, "default step status");
 }
@@ -717,6 +720,46 @@ void testPassInputAndLedFeedback()
           "the first block also enters programmer mode");
 }
 
+void testLedTransportModes()
+{
+    TransportSnapshot transport {};
+    Processor processor;
+    processor.init(48000.0);
+    processor.activate();
+    processor.setParameter(p(ParamId::cellStart), 1.0f);
+    processor.setParameter(p(ParamId::ledTransport), static_cast<float>(LedTransport::sysex));
+
+    const ProcessResult bulk = processor.processBlock(100, transport, nullptr, 0);
+    check(anyEvent(bulk, isProgrammerModeSysex),
+          "changing LED transport re-enters programmer mode");
+    check(anyEvent(bulk, isLedSysex), "SysEx mode paints with one bulk lighting message");
+    checkEq(countLedMessages(bulk), 0,
+            "SysEx mode keeps channel-1 note/CC LEDs off a shared MIDI output");
+    check(sysexLedHasColor(bulk, gridToNote(0, 0), kLedGreen),
+          "SysEx mode still lights active cells green");
+
+    processor.setParameter(p(ParamId::clear), 1.0f);
+    const ProcessResult cleared = processor.processBlock(100, transport, nullptr, 0);
+    check(sysexLedHasColor(cleared, gridToNote(0, 0), kLedOff),
+          "SysEx clear blacks out all LEDs");
+    checkEq(countLedMessages(cleared), 0,
+            "SysEx clear does not broadcast note/CC LED-off messages");
+
+    processor.setParameter(p(ParamId::clear), 0.0f);
+    processor.setParameter(p(ParamId::cellStart), 1.0f);
+    processor.setParameter(p(ParamId::ledTransport), static_cast<float>(LedTransport::noteCc));
+    const ProcessResult shortMessages = processor.processBlock(100, transport, nullptr, 0);
+    check(countLedMessages(shortMessages) >= 81,
+          "switching back to Note+CC repaints every grid, side and top LED");
+    check(!anyEvent(shortMessages, isLedSysex),
+          "Note+CC refresh does not send a bulk lighting message");
+
+    processor.setParameter(p(ParamId::ledTransport), static_cast<float>(LedTransport::off));
+    const ProcessResult off = processor.processBlock(100, transport, nullptr, 0);
+    checkEq(countLedMessages(off), 0, "LED Out Off suppresses note/CC lighting");
+    check(!anyEvent(off, isLedSysex), "LED Out Off suppresses bulk lighting");
+}
+
 void testProgrammerModeHandshake()
 {
     TransportSnapshot transport {};
@@ -818,6 +861,17 @@ void testEveryControlHasAnEffect()
     const ProcessResult noLeds = dark.processBlock(6000, transport, nullptr, 0);
     checkEq(countLedMessages(noLeds), 0,
             "LED feedback control has a visible effect when disabled");
+
+    Processor ledOut;
+    ledOut.init(48000.0);
+    ledOut.activate();
+    ledOut.setParameter(p(ParamId::clockMode), static_cast<float>(ClockMode::free));
+    ledOut.setParameter(p(ParamId::cellStart), 1.0f);
+    ledOut.setParameter(p(ParamId::ledTransport), static_cast<float>(LedTransport::sysex));
+    const ProcessResult bulk = ledOut.processBlock(6000, transport, nullptr, 0);
+    check(anyEvent(bulk, isLedSysex), "LED Out control switches to bulk SysEx");
+    checkEq(countLedMessages(bulk), 0,
+            "LED Out control can remove note/CC LED traffic from the output");
 }
 
 } // namespace
@@ -836,6 +890,7 @@ int main()
     testTopButtonsAndStatus();
     testRandomiseAndClear();
     testPassInputAndLedFeedback();
+    testLedTransportModes();
     testProgrammerModeHandshake();
     testLifecycleRetainsPatch();
     testEveryControlHasAnEffect();

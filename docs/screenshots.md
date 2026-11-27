@@ -170,13 +170,15 @@ plugin's `DistrhoPluginInfo.h`:
 
 - `conductor` — 960x820, 16-block editor in two rows of eight.
 - `melevolve` — 920x700, two-tab Melogen-style panel with a Favourite row.
-- `padseq` — 980x720, catalog capture predates the LED Feedback default changing to On.
+- `padseq` — 980x720, catalog capture predates the LED Feedback default change.
 - `fontana` — 1280x800, browser scroll gutter and lazy preview.
-
-PadSeq's LED Feedback default changed to On after its catalog capture, so
-`padseq.png` still shows the old value. A fresh capture and visual acceptance are
-pending.
 - `bassgen` and `drumgen` — accepted captures copied into the catalog.
+
+PadSeq's LED Feedback default changed to On and gained an **LED Out** selector
+after its catalog capture, so the catalog `padseq.png` is stale. A fresh 980x720
+capture was made in `/tmp/opencode/padseq-shots/padseq.png`, but image inspection
+was unavailable in that session and the file was not copied into the catalog;
+visual acceptance remains pending.
 
 The Spliff panel was then changed again to make the analyser visible and to
 remove the overlapping parameter-box footer. A fresh 720x680 capture is in

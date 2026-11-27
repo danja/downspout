@@ -6,6 +6,16 @@ Format: what happened, root cause, prevention.
 
 ## Open
 
+## padseq: appended LED Out parameter collided with status cell 1 (2026-11-27)
+- **What happened:** appending `ParamId::ledTransport` at `statusCellStart` shifted the read-only status block and produced 29 test failures (`parameter count` 286 instead of 349); after moving it after all 64 status cells, writes still had no effect and six LED-mode tests failed.
+- **Root cause:** the enum was inserted at the status base instead of past the full 64-cell block, and `setParameter()`/`clampPatch()` only traversed `kInputParameterCount`, which stops before the status block and therefore skipped the appended control.
+- **Prevention:** when preserving host indices, append at `statusCellStart + kGridCellCount` and add a parameter-count assertion; any control appended after read-only outputs needs an explicit writable index check and clamp pass (or a shared predicate) so it still behaves like an ordinary input.
+
+## padseq: channel-1 LED traffic reached a shared synth (2026-11-27)
+- **What happened:** after adopting Plank's note/CC LED path, the Launchpad lit correctly but the MIDI output broadcast channel-1 LED notes/CCs, so a downstream instrument heard the scan as music.
+- **Root cause:** one MIDI output carried both generated notes and LED commands, and the receiving instrument accepted all channels by default. The earlier bulk-SysEx transport avoided this but was filtered by the host.
+- **Prevention:** expose an LED transport choice (`Off`, `SysEx`, `Note+CC`) with `Note+CC` as the hardware-friendly default; make refresh *and* Clear respect it so SysEx mode emits no channel-1 note/CC messages at all. Document the channel-filter fallback for hosts using the default mode.
+
 ## padseq: Launchpad stayed in session mode and then did not light (2026-11-27)
 - **What happened:** a connected Launchpad stayed in session mode and its pads/top/side buttons did nothing with LED Feedback at its old default Off. After moving the handshake out of the LED-off guard, it still behaved differently from Plank because lighting relied on a model-specific bulk SysEx that the host may drop.
 - **Root cause:** two divergences from the known-working Plank path: the handshake was gated by LED feedback (fixed first), and PadSeq's LED transport/default was not Plank's channel-1 note/CC with feedback on.

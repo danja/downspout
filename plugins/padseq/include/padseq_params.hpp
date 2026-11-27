@@ -81,6 +81,15 @@ enum class ClockMode : std::uint32_t {
     count,
 };
 
+// LED transport. Note+CC matches Plank but broadcasts channel-1 notes/CCs to
+// every MIDI destination; SysEx keeps those colours away from a shared synth.
+enum class LedTransport : std::uint32_t {
+    off = 0,
+    sysex,
+    noteCc,
+    count,
+};
+
 inline constexpr std::array<const char*, static_cast<std::size_t>(ScaleId::count)> kScaleNames = {{
     "Chromatic",
     "Major",
@@ -126,6 +135,12 @@ inline constexpr std::array<const char*, static_cast<std::size_t>(ClockMode::cou
     "Auto",
     "Host",
     "Free",
+}};
+
+inline constexpr std::array<const char*, static_cast<std::size_t>(LedTransport::count)> kLedTransportNames = {{
+    "Off",
+    "SysEx",
+    "Note+CC",
 }};
 
 // GM drum notes (General MIDI level 1): kick, snare, closed/open hat, low/mid/high
@@ -235,7 +250,10 @@ enum class ParamId : std::uint32_t {
     // Read-only mirror of the 8x8 cells on the currently visible page.
     statusCellStart,
 
-    count = statusCellStart + kGridCellCount,
+    // Appended after all 64 status cells so every existing host index is stable.
+    ledTransport = statusCellStart + kGridCellCount,
+
+    count = ledTransport + 1,
 };
 
 inline constexpr std::uint32_t kInputParameterCount = static_cast<std::uint32_t>(ParamId::statusStep);
@@ -273,10 +291,14 @@ struct ParamRange {
     case ParamId::seed:         return {1.0f, 65535.0f, 12345.0f, true, false, false, false};
     case ParamId::randomise:    return {0.0f, 1.0f, 0.0f, true, true, true, false};
     case ParamId::clear:        return {0.0f, 1.0f, 0.0f, true, true, true, false};
-    // LED colours follow Plank: channel-1 note-ons for the grid and channel-1
-    // CCs for buttons. On by default so a connected Launchpad responds; generated
-    // notes default to channel 4, clear of the LED channels.
+    // Master LED switch. `ledTransport` chooses how colours are sent; On by
+    // default so a connected Launchpad responds.
     case ParamId::ledFeedback:  return {0.0f, 1.0f, 1.0f, true, true, false, false};
+    // Note+CC matches Plank; SysEx is the workaround for a shared MIDI output
+    // where a synth must not hear channel-1 grid notes or button CCs.
+    case ParamId::ledTransport: return {0.0f, static_cast<float>(static_cast<int>(LedTransport::count) - 1),
+                                        static_cast<float>(static_cast<int>(LedTransport::noteCc)),
+                                        true, false, false, false};
     case ParamId::passInput:    return {0.0f, 1.0f, 0.0f, true, true, false, false};
     case ParamId::cellStart:    return {0.0f, 1.0f, 0.0f, true, true, false, false};
     case ParamId::statusStep:   return {-1.0f, kMaxSteps - 1.0f, -1.0f, true, false, false, true};

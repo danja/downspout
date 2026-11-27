@@ -49,6 +49,17 @@ ParameterEnumerationValue* clockEnumValues()
     return values->data();
 }
 
+ParameterEnumerationValue* ledTransportEnumValues()
+{
+    static auto* values = [] {
+        auto* array = new std::array<ParameterEnumerationValue, kLedTransportNames.size()> {};
+        for (std::size_t i = 0; i < kLedTransportNames.size(); ++i)
+            (*array)[i] = {static_cast<float>(i), kLedTransportNames[i]};
+        return array;
+    }();
+    return values->data();
+}
+
 MidiMessage toCoreMidiMessage(const MidiEvent& event)
 {
     MidiMessage message {};
@@ -274,6 +285,11 @@ protected:
         case ParamId::ledFeedback:
             parameter.name = "LED Feedback";
             parameter.symbol = "led_feedback";
+            break;
+        case ParamId::ledTransport:
+            parameter.name = "LED Out";
+            parameter.symbol = "led_out";
+            setEnumeration(parameter, ledTransportEnumValues(), kLedTransportNames.size());
             break;
         case ParamId::passInput:
             parameter.name = "Pass Input";

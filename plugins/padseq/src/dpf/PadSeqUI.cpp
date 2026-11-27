@@ -375,8 +375,9 @@ private:
         label(684.0f, 340.0f, "UI buttons and side CCs trigger that note row.", true, 10.0f);
 
         const char* const clockNames[] = {"Auto", "Host", "Free"};
-        const char* const mapNames[] = {"Scale", "GM Drums"};
+        const char* const mapNames[] = {"Scale", "GM"};
         const char* const onOff[] = {"Off", "On"};
+        const char* const ledOutNames[] = {"Off", "Sys", "N+C"};
 
         std::snprintf(bufSteps_, sizeof(bufSteps_), "%d", iv(ParamId::steps));
         std::snprintf(bufPage_, sizeof(bufPage_), "%d/%d", iv(ParamId::page) + 1,
@@ -412,12 +413,17 @@ private:
         drawStepper(static_cast<uint32_t>(ParamId::channel), "MIDI Ch",
                     bufChannel_, Rect {814.0f, 544.0f, 126.0f, 38.0f});
 
+        label(676.0f, 586.0f, "Note Map", false, 9.0f);
+        label(778.0f, 586.0f, "LED", false, 9.0f);
+        label(840.0f, 586.0f, "LED Out", false, 9.0f);
         drawSegments(static_cast<uint32_t>(ParamId::noteMap), mapNames, 2,
-                     Rect {676.0f, 594.0f, 126.0f, 24.0f}, kTriggerAccent);
+                     Rect {676.0f, 598.0f, 96.0f, 22.0f}, kTriggerAccent);
         drawSegments(static_cast<uint32_t>(ParamId::ledFeedback), onOff, 2,
-                     Rect {814.0f, 594.0f, 126.0f, 24.0f}, kGridAccent);
+                     Rect {778.0f, 598.0f, 56.0f, 22.0f}, kGridAccent);
+        drawSegments(static_cast<uint32_t>(ParamId::ledTransport), ledOutNames, 3,
+                     Rect {840.0f, 598.0f, 100.0f, 22.0f}, kTopAccent);
         drawSlider(static_cast<uint32_t>(ParamId::seed), "Random Seed",
-                   bufSeed_, Rect {676.0f, 632.0f, 264.0f, 30.0f}, kTopAccent);
+                   bufSeed_, Rect {676.0f, 628.0f, 264.0f, 30.0f}, kTopAccent);
     }
 
     std::array<kit::Range, 64> ranges_ = makeRanges();
