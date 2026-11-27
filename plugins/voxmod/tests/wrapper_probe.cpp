@@ -118,7 +118,9 @@ int main()
     const std::uint32_t mix = findParam(plugin, "mix");
     const std::uint32_t bypass = findParam(plugin, "bypass");
     const std::uint32_t ringDepth = findParam(plugin, "ring_depth");
+    const std::uint32_t attackMs = findParam(plugin, "attack_ms");
     const std::uint32_t carrierSource = findParam(plugin, "carrier_source");
+    const std::uint32_t stereoWidth = findParam(plugin, "stereo_width");
     const std::uint32_t convMix = findParam(plugin, "conv_mix");
     const std::uint32_t ringLevel = findParam(plugin, "ring_level");
     const std::uint32_t vocoderLevel = findParam(plugin, "vocoder_level");
@@ -222,6 +224,35 @@ int main()
         render(noIr, silentIr, block);
     }
     CHECK(rms(silentIr.outL.data(), kFrames) < 1.0e-6f);
+
+    // Ring: with the default Carrier = input 3/4, the wrapper must feed that
+    // bus into the ring multiplier. Full depth/width makes the output the exact
+    // per-channel product; the internal oscillator would not match it.
+    PluginExporter ring(nullptr, nullptr, nullptr, nullptr);
+    ring.setBufferSize(kFrames, true);
+    ring.setSampleRate(kSampleRate, true);
+    ring.setParameterValue(mix, 0.0f);
+    ring.setParameterValue(bypass, 0.0f);
+    ring.setParameterValue(ringDepth, 100.0f);
+    ring.setParameterValue(attackMs, 200.0f);
+    ring.setParameterValue(carrierSource, 0.0f);
+    ring.setParameterValue(stereoWidth, 100.0f);
+    ring.setParameterValue(convMix, 0.0f);
+    ring.activate();
+
+    Bus externalRing;
+    for (std::uint32_t block = 0; block < 4; ++block) {
+        fillSine(externalRing.modL, 300.0, 0.4, block * kFrames);
+        fillSine(externalRing.modR, 500.0, 0.35, block * kFrames);
+        fillSine(externalRing.carrierL, 700.0, 0.08, block * kFrames);
+        fillSine(externalRing.carrierR, 900.0, 0.07, block * kFrames);
+        render(ring, externalRing, block);
+    }
+    CHECK(rms(externalRing.outL.data(), kFrames) > 0.01f);
+    for (std::uint32_t i = 0; i < kFrames; ++i) {
+        CHECK(near(externalRing.outL[i], externalRing.modL[i] * externalRing.carrierL[i]));
+        CHECK(near(externalRing.outR[i], externalRing.modR[i] * externalRing.carrierR[i]));
+    }
 
     std::printf("ok\n");
     return 0;

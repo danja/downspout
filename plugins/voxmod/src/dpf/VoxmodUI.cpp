@@ -783,7 +783,7 @@ private:
         fontSize(11.0f);
         fc(th.textDim);
         text(kPad + 132.0f, 27.0f,
-             "vocoder \xc2\xb7 ring \xc2\xb7 live convolution \xc2\xb7 source in 1/2 \xc2\xb7 IR in 3/4",
+             "vocoder \xc2\xb7 ring \xc2\xb7 live convolution \xc2\xb7 source in 1/2 \xc2\xb7 carrier/IR in 3/4",
              nullptr);
 
         beginPath();
@@ -1069,10 +1069,10 @@ private:
         textAlign(ALIGN_LEFT | ALIGN_TOP);
         fc(th.textDim);
         text(kCcX, hintY, "in 1/2 = source / modulator", nullptr);
-        text(kCcX, hintY + 15.0f, "in 3/4 = carrier / live IR", nullptr);
+        text(kCcX, hintY + 15.0f, "in 3/4 = ring + voc carrier / IR", nullptr);
 
         // The live bus meters turn "no sound" into an obvious routing problem:
-        // a silent 3/4 bus explains both a quiet vocoder and no convolution.
+        // a silent 3/4 bus explains the oscillator fallback and no convolution.
         const auto drawBusLevel = [&](const char* label, const float db, const float y) {
             char line[48];
             if (db <= -59.5f)
@@ -1135,7 +1135,7 @@ private:
         fc(th.textPrimary);
         char line[80];
 
-        std::snprintf(line, sizeof(line), "Carrier  %.1f Hz",
+        std::snprintf(line, sizeof(line), "Ring osc  %.1f Hz",
                       static_cast<double>(carrierHz));
         text(box.x + 8.0f, box.y + 26.0f, line, nullptr);
 

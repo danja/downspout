@@ -451,9 +451,46 @@ void processBlock(EngineState& state,
     const double driftInc = kTwoPi * 0.13 / sr;
 
     // Bus meters are independent of Bypass and Mix: they exist to show whether a
-    // host has routed each stereo pair into the plugin at all.
+    // host has routed each stereo pair into the plugin at all. Measure the block
+    // before the sample loop so the ring carrier can be chosen once per block.
     double modBusPower = 0.0;
     double irBusPower = 0.0;
+    float irBlockDb = -60.0f;
+    if (inputs != nullptr) {
+        for (std::uint32_t frame = 0; frame < frames; ++frame) {
+            const float a = inputs[0] != nullptr ? inputs[0][frame] : 0.0f;
+            const float b = inputs[1] != nullptr ? inputs[1][frame] : 0.0f;
+            const float c = inputs[2] != nullptr ? inputs[2][frame] : 0.0f;
+            const float d = inputs[3] != nullptr ? inputs[3][frame] : 0.0f;
+            if (std::isfinite(a) && std::isfinite(b))
+                modBusPower += 0.5 * (static_cast<double>(a) * a + static_cast<double>(b) * b);
+            if (std::isfinite(c) && std::isfinite(d))
+                irBusPower += 0.5 * (static_cast<double>(c) * c + static_cast<double>(d) * d);
+        }
+    }
+    const auto dbOf = [](const float envelope) noexcept {
+        return static_cast<float>(std::clamp(
+            20.0 * std::log10(std::max(static_cast<double>(envelope), 1.0e-6)), -60.0, 0.0));
+    };
+    if (frames > 0) {
+        const double modRms = std::sqrt(modBusPower / static_cast<double>(frames));
+        const double irRms = std::sqrt(irBusPower / static_cast<double>(frames));
+        // Routing detection is deliberately independent of the vocoder's Attack
+        // setting: a carrier present in this block must drive the ring now. The
+        // smoothed envelope below is only for the panel's meter.
+        irBlockDb = dbOf(static_cast<float>(irRms));
+        state.modBusEnv += (static_cast<float>(modRms) - state.modBusEnv)
+            * (modRms > state.modBusEnv ? envAttack : envRelease);
+        state.irBusEnv += (static_cast<float>(irRms) - state.irBusEnv)
+            * (irRms > state.irBusEnv ? envAttack : envRelease);
+        state.modLevelDb = dbOf(state.modBusEnv);
+        state.irLevelDb = dbOf(state.irBusEnv);
+    }
+
+    // The ring mod follows the same Carrier selection as the vocoder. When the
+    // input is selected but silent, the internal oscillator remains available so
+    // a source on 1/2 alone still produces ring-modulated sidebands.
+    const bool ringUsesExternal = !useInternal && irBlockDb > kExternalCarrierGateDb;
 
     for (std::uint32_t frame = 0; frame < frames; ++frame) {
         // Ports 1/2 are the modulator/source; ports 3/4 are the carrier that
@@ -470,11 +507,6 @@ void processBlock(EngineState& state,
         const float irL = std::isfinite(carrierL) ? carrierL : 0.0f;
         const float irR = std::isfinite(carrierR) ? carrierR : 0.0f;
         const float mMono = 0.5f * (mxL + mxR);
-
-        modBusPower += 0.5 * (static_cast<double>(mxL) * mxL
-                              + static_cast<double>(mxR) * mxR);
-        irBusPower += 0.5 * (static_cast<double>(irL) * irL
-                            + static_cast<double>(irR) * irR);
 
         // ── Live convolution ─────────────────────────────────────────────
         // A frame of 1/2 is multiplied by a frame of 3/4 in the frequency
@@ -529,12 +561,17 @@ void processBlock(EngineState& state,
         const double osc = oscillatorSample(state.ring, shape, state.ring.freq, sr);
         const float carrierWave = static_cast<float>(osc);
 
-        // The ring-modulated signal: modulator * carrier. Depth scales the
-        // oscillator toward unity rather than the output toward zero, so 0% is
-        // a clean pass-through and 100% is full multiplication.
-        const float ringOsc = 1.0f + ringDepth * (carrierWave - 1.0f);
-        const float ringedL = mxL * ringOsc;
-        const float ringedR = mxR * ringOsc;
+        // The ring-modulated signal: modulator * carrier. With Carrier = input,
+        // the two carrier channels multiply the matching source channels; the
+        // internal oscillator is the fallback for a silent second bus. Depth
+        // scales the carrier toward unity rather than the output toward zero, so
+        // 0% is a clean pass-through and 100% is full multiplication.
+        const float ringOscL = 1.0f + ringDepth
+            * ((ringUsesExternal ? irL : carrierWave) - 1.0f);
+        const float ringOscR = 1.0f + ringDepth
+            * ((ringUsesExternal ? irR : carrierWave) - 1.0f);
+        const float ringedL = mxL * ringOscL;
+        const float ringedR = mxR * ringOscR;
 
         if (useInternal)
             carrier = carrierWave;
@@ -600,24 +637,8 @@ void processBlock(EngineState& state,
             outputs[1][frame] = std::isfinite(outR) ? outR : 0.0f;
     }
 
-    if (frames > 0) {
-        const double modRms = std::sqrt(modBusPower / static_cast<double>(frames));
-        const double irRms = std::sqrt(irBusPower / static_cast<double>(frames));
-        state.modBusEnv += (static_cast<float>(modRms) - state.modBusEnv)
-            * (modRms > state.modBusEnv ? envAttack : envRelease);
-        state.irBusEnv += (static_cast<float>(irRms) - state.irBusEnv)
-            * (irRms > state.irBusEnv ? envAttack : envRelease);
-
-        const auto dbOf = [](const float envelope) noexcept {
-            return static_cast<float>(std::clamp(
-                20.0 * std::log10(std::max(static_cast<double>(envelope), 1.0e-6)), -60.0, 0.0));
-        };
-        state.modLevelDb = dbOf(state.modBusEnv);
-        state.irLevelDb = dbOf(state.irBusEnv);
-    }
-
-    // The status readout tracks the oscillator that actually drives the ring
-    // modulator, whether or not that oscillator is also the vocoder carrier.
+    // The status readout always reports the generated oscillator. It drives the
+    // ring mod only when Carrier = internal osc or inputs 3/4 are below the gate.
     state.carrierHz = static_cast<float>(std::clamp(state.ring.freq, 0.0, 20000.0));
     state.sibilance = sibilanceOf(state);
     // How hard the band gate is pulling the modulator down, as a dB figure.

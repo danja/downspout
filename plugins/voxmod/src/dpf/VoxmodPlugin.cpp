@@ -88,8 +88,8 @@ protected:
     const char* getDescription() const override
     {
         return "Vocoder, ring modulator and live convolution cross-synthesis. "
-               "Inputs 1/2 are the modulator/source; inputs 3/4 are the analysed "
-               "carrier and live IR feed. Mix balances ring and vocoder, Conv Mix "
+               "Inputs 1/2 are the modulator/source; inputs 3/4 are the ring and "
+               "vocoder carrier and live IR feed. Mix balances ring and vocoder, Conv Mix "
                "fades that pair against sliding-window FFT convolution, and each "
                "engine has its own level. Source and IR feedback feed a bounded "
                "loop and the convolution branch is peak-limited. Five CCs drive "

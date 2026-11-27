@@ -8,15 +8,15 @@ outputs.
 | Port | Purpose |
 |---|---|
 | in 1/2 | **Modulator / source** — the signal that gets coloured |
-| in 3/4 | **Carrier / live IR** — analysed by the vocoder, multiplied by the convolver |
+| in 3/4 | **Carrier / live IR** — ring-mod and vocoder carrier, convolution IR feed |
 | out 1/2 | Processed result |
 
 The ANALYSIS panel's frequency readout reports the generated ring oscillator
-(`Ring Freq` × quantised `Ring Ratio`). It is the vocoder carrier only when
-`Carrier = internal osc` and `Sync` is off; it is not a pitch estimate of the
-signal on 3/4. The routing column also shows live `1/2 in` and `3/4 in` level
-meters: if `3/4 in` reads `silent`, the host has not routed a second stereo bus,
-which explains both a quiet vocoder and no convolution output.
+(`Ring Freq` × quantised `Ring Ratio`). With `Carrier = internal osc` it is also
+the ring and vocoder carrier; with `Carrier = input 3/4` it is only the fallback
+when that bus is silent. The routing column shows live `1/2 in` and `3/4 in`
+level meters: if `3/4 in` reads `silent`, the host has not routed a second stereo
+bus, so the vocoder, ring mod and convolution all fall back or go quiet.
 
 Three engines run in parallel. `Mix` balances the first two, and `Conv Mix`
 fades that pair against the convolver. Each engine has a `Level` control at the
@@ -24,28 +24,32 @@ top of its column, defaulting to 100 %. The convolution branch has its own peak
 limiter, so `Src Feedback` and `IR Feedback` can be pushed without overloading
 the mix:
 
-- **Mix 0%** — ring modulation. The source is multiplied by the internal
-  oscillator at `Ring Freq × Ring Ratio`.
+- **Mix 0%** — ring modulation. The source on 1/2 is multiplied by the carrier
+  on 3/4 when that bus is routed; otherwise by the internal oscillator at
+  `Ring Freq × Ring Ratio`.
 - **Mix 100%** — vocoder. The carrier is split into a filter bank; each band's
   envelope drives the same band of the source.
 - **Conv Mix 100%** — live convolution. Sliding FFT frames of 1/2 and 3/4 are
   multiplied and overlap-added. Feed a voice or an evolving texture on 3/4 to
   act as a live impulse response; silence there means no convolution output.
 
-`Carrier = internal osc` makes the vocoder analyse its own oscillator, and
-`Sync = ring → vocoder` feeds the ring-modulated signal back as its carrier.
-With both, a source alone on 1/2 is enough to make those two engines sound.
+`Carrier` selects the ring and vocoder carrier together: `input 3/4` (default)
+uses the routed second bus, `internal osc` uses Ring Freq / Ratio / Shape.
+`Sync = ring → vocoder` feeds the ring-modulated signal back as the vocoder's
+carrier. A source alone on 1/2 is still enough: the ring mod falls back to the
+internal oscillator and `internal osc` or `Sync` gives the vocoder a carrier.
 
 ## Controls
 
 - **Ring Level / Vocoder Level / Conv Level** — per-engine trim, 0–100 %, at the
   top of each column; 100 % is unity, 0 % mutes just that engine
-- **Ring Freq** — oscillator frequency, 5 Hz to 5 kHz
-- **Ring Ratio** — transposes the carrier in semitones, quantised to 16 steps
+- **Ring Freq** — internal-oscillator frequency, 5 Hz to 5 kHz; used when
+  `Carrier = internal osc` or inputs 3/4 are silent
+- **Ring Ratio** — transposes that oscillator in semitones, quantised to 16 steps
   from −12 to +35, so a move changes the sidebands musically and repeatably
 - **Ring Shape** — sine, triangle, saw or square, band-limited with polyBLEP so
-  the shapes do not spray aliases across the modulator
-- **Ring Depth** — scales the oscillator toward unity, so 0% is a clean
+  the shapes do not spray aliases across the modulator; internal fallback only
+- **Ring Depth** — scales the carrier toward unity, so 0% is a clean
   pass-through
 - **Bands / Spread** — filter bank size and how many octaves it covers
 - **Attack / Release** — envelope follower, time-based so the response does not

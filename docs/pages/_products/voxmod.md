@@ -31,24 +31,28 @@ partials, comes alive. Convolution is different: it needs energy on *both*
 pairs, and silence on 3/4 means no wet output at all.
 
 Carrier is set to `input 3/4` by default, which is the correct default for a
-two-source setup. If you have only one thing, switch Carrier to `internal osc`
-and the vocoder analyses its own oscillator, or turn Sync on so the ring-modulated
-signal feeds back as its carrier — either way inputs 1/2 alone are enough for
-those two engines.
+two-source setup: that bus multiplies the source in the ring mod *and* supplies
+the vocoder's analysis signal. If you have only one thing, switch Carrier to
+`internal osc` and both the ring mod and vocoder use the oscillator, or turn Sync
+on so the ring-modulated signal feeds back as the vocoder's carrier — either way
+inputs 1/2 alone are enough for those two engines.
 
 ## Functionality
 
 Three engines, two blend parameters.
 
-The **ring modulator** multiplies the modulator by a band-limited oscillator at
-`Ring Freq × Ring Ratio`. Ring Ratio is quantised to 16 musical steps from −12 to
-+35 semitones, so moving it changes the sidebands in semitones and lands on the
-same ratios every time, rather than sweeping continuously through a four-octave
-range. Ring Depth scales the oscillator toward unity, so 0 % is a clean
-pass-through and 100 % is full multiplication. The saw and square shapes are
-polyBLEP-corrected: the oscillator's job is to produce only the carrier, and
-unwanted aliasing would fold broadband noise across the modulator and drown out
-the discrete sidebands that make a ring modulator sound like one.
+The **ring modulator** multiplies the source on 1/2 by the carrier. With the
+default `Carrier = input 3/4`, left multiplies left and right multiplies right
+whenever that bus is routed; a silent second bus falls back to the internal
+band-limited oscillator at `Ring Freq × Ring Ratio`. Ring Ratio is quantised to
+16 musical steps from −12 to +35 semitones, so moving it changes the sidebands in
+semitones and lands on the same ratios every time, rather than sweeping
+continuously through a four-octave range. Ring Depth scales the carrier toward
+unity, so 0 % is a clean pass-through and 100 % is full multiplication. The
+internal sine, triangle, saw and square shapes are polyBLEP-corrected: that
+oscillator's job is to produce only the carrier, and unwanted aliasing would fold
+broadband noise across the modulator and drown out the discrete sidebands that
+make a ring modulator sound like one.
 
 The **vocoder** splits the carrier into a filter bank and follows each band's
 envelope with an asymmetric follower, then applies those gains to the matching
@@ -80,7 +84,7 @@ overload without compressing the ring or vocoder paths.
 | Vocoder Level  | 0–100 %      | 100 %   | Top of the vocoder column                    |
 | Conv Level     | 0–100 %      | 100 %   | Top of the convolution column                |
 | Mix            | 0–100 %      | 50 %    | Vocoder at 100, ring mod at 0; CC 1          |
-| Ring Freq      | 5–5000 Hz    | 220 Hz  | Oscillator frequency; CC 2. Pad Y axis       |
+| Ring Freq      | 5–5000 Hz    | 220 Hz  | Internal fallback frequency; CC 2. Pad Y axis |
 | Ring Ratio   | 0.5–8        | 2.0     | 16 musical steps, −12 to +35 st; CC 3        |
 | Ring Shape   | sine…square  | sine    | Band-limited with polyBLEP                   |
 | Ring Depth   | 0–100 %      | 100 %   | 0 % is a clean pass-through                  |
@@ -90,10 +94,10 @@ overload without compressing the ring or vocoder paths.
 | Release      | 20–1000 ms   | 180 ms  | Envelope follower, time-based                |
 | Formant      | −12–+12 st   | 0 st    | Moves formants, not the band grid            |
 | Tilt         | ±12 dB/oct   | 0       | Per-band gain, leans the spectrum            |
-| Carrier      | input/osc    | input   | What the vocoder analyses (3/4); CC 5       |
+| Carrier      | input/osc    | input   | Ring + vocoder carrier; 3/4 or oscillator; CC 5 |
 | Sync         | off/on       | off     | Ring mod feeds the vocoder's carrier        |
 | Width        | 0–100 %      | 50 %    | Ring mod widens, vocoder stays centred      |
-| Drift        | 0–50 %       | 4 %     | Slow ±40 cent wobble on the carrier         |
+| Drift        | 0–50 %       | 4 %     | Slow ±40 cent wobble on the internal carrier |
 | Conv Mix     | 0–100 %      | 0 %     | Fades ring/vocoder pair against convolution |
 | Src Feedback | 0–95 %       | 0 %     | Output recirculated into the 1/2 frames     |
 | IR Feedback  | 0–95 %       | 0 %     | Output recirculated into the 3/4 frames     |
@@ -126,11 +130,12 @@ does not change the balance between the engines.
 
 The panel reports the generated ring-oscillator frequency, a Sibilance meter
 showing the share of carrier energy in the top bands, the band gate's reduction
-in dB, and live `1/2 in` / `3/4 in` level meters. The frequency is the vocoder
-carrier only with `Carrier = internal osc` and `Sync` off; it is not a pitch
-estimate of the signal on 3/4. A `3/4 in` meter stuck at `silent` is the usual
-reason the vocoder or convolver stays quiet: the host is not feeding the second
-stereo input bus. Sibilance is worth watching too: a carrier with a lot of energy
+in dB, and live `1/2 in` / `3/4 in` level meters. The frequency is the ring and
+vocoder carrier only with `Carrier = internal osc` and `Sync` off; with the
+default input carrier it is only the fallback, not a pitch estimate of the
+signal on 3/4. A `3/4 in` meter stuck at `silent` is the usual reason the
+vocoder or convolver stays quiet and the ring mod falls back to the oscillator:
+the host is not feeding the second stereo input bus. Sibilance is worth watching too: a carrier with a lot of energy
 above the top of the bank cannot be analysed well, and the meter switches to a
 warning colour above 0.7 because a bright carrier will produce a thin, hissy
 result.

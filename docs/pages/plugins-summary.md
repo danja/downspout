@@ -1131,11 +1131,14 @@ Feedforward latency equals the grain window and is reported; in-loop latency is 
 compensated, so composites arrive late.
 
 ### voxmod
-Vocoder, band-limited ring modulator and live convolution cross-synthesis, blended by Mix
+Vocoder, ring modulator and live convolution cross-synthesis, blended by Mix
 (ring vs vocoder) and Conv Mix (that pair vs convolution). Inputs 1-2 carry the
-modulator/source; inputs 3-4 carry the carrier (selectable: inputs 3/4 or internal
-oscillator) and the live IR feed. Ring modulator frequency = Ring Freq x Ring Ratio,
-ratio quantised to 16 steps from -12 to +35 semitones, Ring Depth, polyBLEP saw/square.
+modulator/source; inputs 3-4 carry the ring/vocoder carrier (selectable: inputs 3/4
+or internal oscillator, with oscillator fallback when that bus is silent) and the
+live IR feed. With the default input carrier, ring out L/R is source L/R multiplied
+by carrier L/R at full Ring Depth. The band-limited oscillator runs at Ring Freq x
+Ring Ratio, ratio quantised to 16 steps from -12 to +35 semitones, with polyBLEP
+saw/square.
 Vocoder: logarithmic filter bank across Spread octaves with asymmetric envelope
 followers; Sync feeds the ring-modulated signal back as the vocoder carrier. Convolver:
 1024-sample Hann windows on both pairs every 256 samples, 2048-point FFT frames multiplied

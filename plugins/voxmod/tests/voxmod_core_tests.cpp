@@ -215,6 +215,75 @@ void testRingDepthZeroIsPassThrough() {
         assert(std::fabs(b.outL[i] - b.modL[i]) < 1e-4f);
 }
 
+void testRingUsesExternalCarrierWhenRouted() {
+    // At full depth and width, out L/R must be the sample product of the
+    // matching 1/2 and 3/4 channels. The internal oscillator would give a
+    // different product, so this pins the carrier source rather than merely
+    // checking that the ring mod made sound.
+    Parameters p;
+    p.mix = 0.0f;
+    p.convMix = 0.0f;
+    p.ringDepth = 100.0f;
+    p.carrierSource = 0.0f;
+    p.stereoWidth = 100.0f;
+    p.sync = 0.0f;
+    p.drift = 0.0f;
+    // Routing detection must not wait for a slow vocoder envelope.
+    p.attackMs = 200.0f;
+
+    Bus b;
+    for (std::uint32_t i = 0; i < kFrames; ++i) {
+        b.modL[i] = 0.4f * static_cast<float>(std::sin(2.0 * M_PI * 300.0 * i / kSr));
+        b.modR[i] = 0.35f * static_cast<float>(std::sin(2.0 * M_PI * 500.0 * i / kSr + 0.4));
+        b.carrierL[i] = 0.08f * static_cast<float>(std::sin(2.0 * M_PI * 700.0 * i / kSr + 0.7));
+        b.carrierR[i] = 0.07f * static_cast<float>(std::sin(2.0 * M_PI * 900.0 * i / kSr + 1.1));
+    }
+
+    EngineState s;
+    activate(s);
+    run(s, p, b);
+
+    assert(rms(b.outL.data(), 0, kFrames) > 0.01f);
+    for (std::uint32_t i = 0; i < kFrames; ++i) {
+        assert(std::fabs(b.outL[i] - b.modL[i] * b.carrierL[i]) < 1.0e-5f);
+        assert(std::fabs(b.outR[i] - b.modR[i] * b.carrierR[i]) < 1.0e-5f);
+    }
+}
+
+void testRingInternalCarrierIgnoresInput34() {
+    // Selecting internal osc must keep 3/4 out of the ring multiplier, and the
+    // same selection must still work when only 1/2 is routed.
+    Parameters p;
+    p.mix = 0.0f;
+    p.convMix = 0.0f;
+    p.ringDepth = 100.0f;
+    p.carrierSource = 1.0f;
+    p.stereoWidth = 100.0f;
+    p.sync = 0.0f;
+    p.drift = 0.0f;
+
+    auto render = [&](const bool routedCarrier) {
+        Bus b;
+        fillSine(b.modL.data(), 300.0, kSr, 0.5f);
+        fillSine(b.modR.data(), 300.0, kSr, 0.5f);
+        if (routedCarrier) {
+            fillSine(b.carrierL.data(), 900.0, kSr, 0.5f);
+            fillSine(b.carrierR.data(), 900.0, kSr, 0.5f);
+        }
+        EngineState s;
+        activate(s);
+        for (int block = 0; block < 8; ++block)
+            run(s, p, b);
+        return b.outL;
+    };
+
+    const auto silentCarrier = render(false);
+    const auto loudCarrier = render(true);
+    assert(rms(silentCarrier.data(), 0, kFrames) > 0.01f);
+    for (std::uint32_t i = 0; i < kFrames; ++i)
+        assert(std::fabs(silentCarrier[i] - loudCarrier[i]) < 1.0e-5f);
+}
+
 void testVocoderFollowsCarrierEnvelope() {
     // With a loud carrier and a steady modulator the vocoder must pass the
     // modulator through; with a silent carrier it must not.
@@ -1049,6 +1118,8 @@ int main() {
     testRatioQuantisesToSixteenSteps();
     testRingModProducesSidebands();
     testRingDepthZeroIsPassThrough();
+    testRingUsesExternalCarrierWhenRouted();
+    testRingInternalCarrierIgnoresInput34();
     testVocoderFollowsCarrierEnvelope();
     testVocoderResynthesisesInput12AnalysedFrom34();
     testMixCrossfadesBetweenEngines();

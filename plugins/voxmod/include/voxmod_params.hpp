@@ -17,8 +17,10 @@ namespace downspout::voxmod {
 //
 // The vocoder path measures the carrier's spectral envelope and re-imposes it
 // on the modulator's partials, so the modulator sounds like the carrier is
-// "talking" it. The ring-mod path multiplies the modulator by a sine carrier
-// at a chosen ratio, producing the inharmonic sidebands of a ring modulator.
+// "talking" it. The ring-mod path multiplies the modulator by the same carrier
+// when 3/4 is routed, falling back to its internal oscillator when that bus is
+// silent or selected explicitly, producing the inharmonic sidebands of a ring
+// modulator.
 // The convolution path multiplies sliding FFT frames of 1/2 and 3/4 and
 // overlap-adds the product: live cross-synthesis whose "IR" is whatever is on
 // 3/4 right now.
@@ -26,9 +28,9 @@ namespace downspout::voxmod {
 // All three engines run in parallel: Mix balances ring vs vocoder and Conv Mix
 // fades that pair against the convolver. Each engine has its own Level control,
 // and the convolution branch has its own peak limiter so feedback cannot push
-// the wet signal into overload without squashing the legacy engines. The ring
-// mod also feeds the vocoder's carrier when Sync selects the internal oscillator,
-// which is what makes a single input (a drum loop, say) usable.
+// the wet signal into overload without squashing the legacy engines. Sync
+// overrides the carrier choice with the ring-modulated signal, which is what
+// makes a single input (a drum loop, say) usable.
 
 enum class ParamId : std::uint32_t {
     // Mix
@@ -135,7 +137,7 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
 
     {"randomise", "Randomise", "", 0.0f, 1.0f, 0.0f, true, false, true},
 
-    {"out_carrier_hz", "Carrier", "Hz", 0.0f, 20000.0f, 0.0f, false, true, false},
+    {"out_carrier_hz", "Ring osc", "Hz", 0.0f, 20000.0f, 0.0f, false, true, false},
     {"out_sibilance", "Sibilance", "", 0.0f, 1.0f, 0.0f, false, true, false},
     {"out_reduction", "Reduction", "dB", -60.0f, 0.0f, 0.0f, false, true, false},
 
@@ -194,6 +196,11 @@ inline constexpr float kMaxTiltDbPerOct = 12.0f;
 // A band's gain is held at unity when its envelope is this small, so silence in
 // the carrier does not turn the modulator's noise floor up.
 inline constexpr float kBandGate = 1.0e-4f;
+
+// External carrier gate for the ring modulator. Above this level on inputs 3/4,
+// the ring mod multiplies by that audio instead of the internal oscillator;
+// below it, the oscillator remains available so one-input setups still work.
+inline constexpr float kExternalCarrierGateDb = -50.0f;
 
 // ── Convolution limiting ────────────────────────────────────────────────────
 //

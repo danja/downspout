@@ -7,12 +7,12 @@
 
 dsp:voxmod a trn:PluginProfile ;
     rdfs:label "Voxmod" ;
-    rdfs:comment "Vocoder, ring modulator and live convolution cross-synthesis. Inputs 1/2 are the modulator/source, inputs 3/4 the analysed carrier and live IR feed. Mix balances ring against vocoder; Conv Mix fades that pair against sliding-window FFT frame multiplication with source and IR feedback. Ring, vocoder and convolution each have a Level control at unity by default; the convolution branch is peak-limited to keep feedback stable. Five CCs drive the legacy engines." ;
+    rdfs:comment "Vocoder, ring modulator and live convolution cross-synthesis. Inputs 1/2 are the modulator/source, inputs 3/4 the ring/vocoder carrier and live IR feed. Mix balances ring against vocoder; Conv Mix fades that pair against sliding-window FFT frame multiplication with source and IR feedback. Ring, vocoder and convolution each have a Level control at unity by default; the convolution branch is peak-limited to keep feedback stable. Five CCs drive the legacy engines." ;
     trn:bundleName "voxmod.vst3" ;
     trn:vendor "danja" ;
     trn:role trn:AudioEffect ;
     trn:accepts trn:Audio, trn:ControlMidi ;
     trn:produces trn:Audio ;
-    trn:caution "The port roles are load-bearing: inputs 1/2 are the source the vocoder colours and inputs 3/4 are the carrier it analyses and the convolver's live IR. The convolver needs a signal on both pairs; silence on 3/4 gives no wet output. Live 1/2 In and 3/4 In meters show whether the host routed both buses. Set Carrier to internal osc, or Sync, to drive the vocoder from inputs 1/2 alone." ;
+    trn:caution "The port roles are load-bearing: inputs 1/2 are the source the vocoder colours and inputs 3/4 are the ring/vocoder carrier and the convolver's live IR. The ring mod multiplies the matching 1/2 and 3/4 channels when that bus is routed; the internal oscillator is a fallback for one-input setups. The convolver needs a signal on both pairs; silence on 3/4 gives no wet output. Live 1/2 In and 3/4 In meters show whether the host routed both buses. Set Carrier to internal osc, or Sync, to drive the vocoder from inputs 1/2 alone." ;
     trn:recommendedAfter dsp:drift ;
     pu:supportedPlatform pu:Windows, pu:MacOS, pu:Linux .

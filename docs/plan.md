@@ -474,8 +474,10 @@ Progress as of 2026-05-27:
   so resynthesis gain does not tilt with band width. `Ring Ratio` is quantised to
   16 musical steps so sideband moves are repeatable, and `Formant` transposes
   the modulator side of the bank only, which relocates the envelope rather than
-  transposing the whole signal. `Sync` routes the ring-modulated signal back as
-  the vocoder's carrier so inputs 1/2 alone are sufficient. Five Drift-CC lanes;
+  transposing the whole signal. `Carrier` selects inputs 3/4 as the ring and
+  vocoder carrier with an internal-oscillator fallback; `Sync` routes the
+  ring-modulated signal back as the vocoder's carrier so inputs 1/2 alone are
+  sufficient. Five Drift-CC lanes;
   read-only status parameters report the generated ring-oscillator frequency,
   carrier sibilance, band-gate reduction and both input-bus levels, so an unrouted
   second bus is visible in the panel; deterministic tests, and a first VST3
