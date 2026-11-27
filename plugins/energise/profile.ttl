@@ -1,0 +1,120 @@
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix dsp:  <http://purl.org/stuff/transmissions/plugins/downspout/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+dsp:energise a trn:PluginProfile ;
+    rdfs:label "Energise" ;
+    rdfs:comment "Offline drum-break re-quantiser. Captures 1-8 s of stereo audio (or loads a built-in demo break), detects and classifies hits into an editable event list, quantises them to a fitted grid, resynthesises the break and lets the user A/B the captured and rendered buffers. Events can be exported as GM drums on MIDI channel 10." ;
+    trn:bundleName "energise.vst3" ;
+    trn:vendor "danja" ;
+    foaf:homepage <https://danja.github.io/downspout/plugins/energise/> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio , trn:Midi ;
+    trn:caution "Offline tool, not a zero-latency insert. Capture is taken from inputs 1/2; MIDI output is an exported event list (note-on messages on channel 10), not a live performance stream. No WAV import or machine-learning model in this pass." ;
+
+    trn:parameter [ rdfs:label "Capture Sec" ; trn:symbol "capture_seconds" ; trn:minimum 1.0 ; trn:maximum 8.0 ; trn:default 4.0 ; trn:unit "s" ;
+                    rdfs:comment "Length of the next capture from inputs 1/2." ] ;
+    trn:parameter [ rdfs:label "Grid" ; trn:symbol "grid" ; trn:minimum 0.0 ; trn:maximum 3.0 ; trn:default 1.0 ;
+                    rdfs:comment "Quantisation grid: 0 = 1/8, 1 = 1/16, 2 = 1/32, 3 = 1/16 triplet." ] ;
+    trn:parameter [ rdfs:label "Quantise" ; trn:symbol "quantise_strength" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.70 ; trn:unit "%" ;
+                    rdfs:comment "Blend between source timing and the fitted grid." ] ;
+    trn:parameter [ rdfs:label "Ghosts" ; trn:symbol "ghost_strength" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.35 ; trn:unit "%" ;
+                    rdfs:comment "Preserve or suppress detected ghost hits." ] ;
+    trn:parameter [ rdfs:label "Swing" ; trn:symbol "swing" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ; trn:unit "%" ;
+                    rdfs:comment "Delay alternate grid steps." ] ;
+    trn:parameter [ rdfs:label "Humanise" ; trn:symbol "humanise" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ; trn:unit "%" ;
+                    rdfs:comment "Deterministic seeded timing spread." ] ;
+    trn:parameter [ rdfs:label "Drift" ; trn:symbol "drift_allowance" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.25 ; trn:unit "%" ;
+                    rdfs:comment "How much local tempo drift the grid fit may follow." ] ;
+    trn:parameter [ rdfs:label "Transient" ; trn:symbol "transient_level" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.60 ; trn:unit "%" ;
+                    rdfs:comment "Level of the rebuilt attack layer." ] ;
+    trn:parameter [ rdfs:label "Body" ; trn:symbol "body_level" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.80 ; trn:unit "%" ;
+                    rdfs:comment "Level of the tuned drum voice." ] ;
+    trn:parameter [ rdfs:label "Residual" ; trn:symbol "residual_level" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.35 ; trn:unit "%" ;
+                    rdfs:comment "Level of the filtered original audio mixed back in." ] ;
+    trn:parameter [ rdfs:label "Saturation" ; trn:symbol "saturation" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.25 ; trn:unit "%" ;
+                    rdfs:comment "Soft clipping after the voice mix." ] ;
+    trn:parameter [ rdfs:label "Variation" ; trn:symbol "variation" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.20 ; trn:unit "%" ;
+                    rdfs:comment "Seeded per-hit timbre variation." ] ;
+    trn:parameter [ rdfs:label "Output" ; trn:symbol "output_trim" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.70 ; trn:unit "%" ;
+                    rdfs:comment "Final output trim." ] ;
+    trn:parameter [ rdfs:label "Class Offset" ; trn:symbol "offset_selected_ms" ; trn:minimum -60.0 ; trn:maximum 60.0 ; trn:default 0.0 ; trn:unit "ms" ;
+                    rdfs:comment "Per-class timing offset for the selected event's class." ] ;
+    trn:parameter [ rdfs:label "Class Gain" ; trn:symbol "gain_selected" ; trn:minimum 0.0 ; trn:maximum 2.0 ; trn:default 1.0 ; trn:unit "x" ;
+                    rdfs:comment "Per-class gain for the selected event's class." ] ;
+    trn:parameter [ rdfs:label "Mutes" ; trn:symbol "mute_mask" ; trn:minimum 0.0 ; trn:maximum 8191.0 ; trn:default 0.0 ;
+                    rdfs:comment "Bit mask of drum classes removed from render and MIDI export." ] ;
+    trn:parameter [ rdfs:label "Solos" ; trn:symbol "solo_mask" ; trn:minimum 0.0 ; trn:maximum 8191.0 ; trn:default 0.0 ;
+                    rdfs:comment "Bit mask of drum classes rendered/exported exclusively." ] ;
+    trn:parameter [ rdfs:label "Event Page" ; trn:symbol "event_page" ; trn:minimum 0.0 ; trn:maximum 42.0 ; trn:default 0.0 ;
+                    rdfs:comment "Twelve-row page of the event list." ] ;
+    trn:parameter [ rdfs:label "Seed" ; trn:symbol "seed" ; trn:minimum 1.0 ; trn:maximum 9999.0 ; trn:default 1.0 ;
+                    rdfs:comment "Seed for demo generation, humanisation and variation." ] ;
+    trn:parameter [ rdfs:label "Selected Event" ; trn:symbol "selected_event" ; trn:minimum 0.0 ; trn:maximum 511.0 ; trn:default 0.0 ;
+                    rdfs:comment "Event index edited by the edit-class/time/velocity/ghost controls." ] ;
+    trn:parameter [ rdfs:label "Edit Class" ; trn:symbol "edit_class" ; trn:minimum 0.0 ; trn:maximum 12.0 ; trn:default 12.0 ;
+                    rdfs:comment "Drum class written to the selected event when Edit Event fires; 12 = Unknown." ] ;
+    trn:parameter [ rdfs:label "Edit Time" ; trn:symbol "edit_time" ; trn:minimum 0.0 ; trn:maximum 8.0 ; trn:default 0.0 ; trn:unit "s" ;
+                    rdfs:comment "Quantised time written to the selected event." ] ;
+    trn:parameter [ rdfs:label "Edit Velocity" ; trn:symbol "edit_velocity" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ; trn:unit "%" ;
+                    rdfs:comment "Velocity written to the selected event." ] ;
+    trn:parameter [ rdfs:label "Edit Ghost" ; trn:symbol "edit_ghost" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+                    rdfs:comment "Ghost flag written to the selected event." ] ;
+
+    trn:parameter [ rdfs:label "Capture" ; trn:symbol "capture_request" ; trn:minimum 0.0 ; trn:maximum 1048576.0 ; trn:default 0.0 ;
+                    rdfs:comment "Integer request counter that starts capturing inputs 1/2." ] ;
+    trn:parameter [ rdfs:label "Analyse" ; trn:symbol "analyse_request" ; trn:minimum 0.0 ; trn:maximum 1048576.0 ; trn:default 0.0 ;
+                    rdfs:comment "Integer request counter that runs onset, tempo and class analysis." ] ;
+    trn:parameter [ rdfs:label "Render" ; trn:symbol "render_request" ; trn:minimum 0.0 ; trn:maximum 1048576.0 ; trn:default 0.0 ;
+                    rdfs:comment "Integer request counter that quantises and renders the break." ] ;
+    trn:parameter [ rdfs:label "A/B" ; trn:symbol "ab_swap" ; trn:minimum 0.0 ; trn:maximum 1048576.0 ; trn:default 0.0 ;
+                    rdfs:comment "Integer request counter that swaps monitored audio between capture and render." ] ;
+    trn:parameter [ rdfs:label "Undo" ; trn:symbol "undo_request" ; trn:minimum 0.0 ; trn:maximum 1048576.0 ; trn:default 0.0 ;
+                    rdfs:comment "Integer request counter that restores the previous edit snapshot." ] ;
+    trn:parameter [ rdfs:label "Redo" ; trn:symbol "redo_request" ; trn:minimum 0.0 ; trn:maximum 1048576.0 ; trn:default 0.0 ;
+                    rdfs:comment "Integer request counter that reapplies the undone snapshot." ] ;
+    trn:parameter [ rdfs:label "Export MIDI" ; trn:symbol "export_midi_request" ; trn:minimum 0.0 ; trn:maximum 1048576.0 ; trn:default 0.0 ;
+                    rdfs:comment "Integer request counter that queues the event list as channel-10 note-ons." ] ;
+    trn:parameter [ rdfs:label "Demo Break" ; trn:symbol "demo_request" ; trn:minimum 0.0 ; trn:maximum 1048576.0 ; trn:default 0.0 ;
+                    rdfs:comment "Integer request counter that loads the synthetic six-second demo break." ] ;
+    trn:parameter [ rdfs:label "Edit Event" ; trn:symbol "event_edit_request" ; trn:minimum 0.0 ; trn:maximum 1048576.0 ; trn:default 0.0 ;
+                    rdfs:comment "Integer request counter that commits the edit parameters to the selected event." ] ;
+
+    trn:parameter [ rdfs:label "Status" ; trn:symbol "status" ; trn:minimum 0.0 ; trn:maximum 5.0 ; trn:default 0.0 ;
+                    rdfs:comment "Read-only processor state: 0 Idle, 1 Captured, 2 Analysed, 3 Quantised, 4 Rendered, 5 Error." ] ;
+    trn:parameter [ rdfs:label "Progress" ; trn:symbol "progress" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ; trn:unit "%" ;
+                    rdfs:comment "Read-only offline-job progress." ] ;
+    trn:parameter [ rdfs:label "Event Count" ; trn:symbol "event_count" ; trn:minimum 0.0 ; trn:maximum 512.0 ; trn:default 0.0 ;
+                    rdfs:comment "Read-only number of detected events." ] ;
+    trn:parameter [ rdfs:label "Selected Class" ; trn:symbol "selected_class" ; trn:minimum 0.0 ; trn:maximum 12.0 ; trn:default 12.0 ;
+                    rdfs:comment "Read-only class of the selected event." ] ;
+    trn:parameter [ rdfs:label "Confidence" ; trn:symbol "selected_confidence" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ; trn:unit "%" ;
+                    rdfs:comment "Read-only classifier confidence for the selected event." ] ;
+    trn:parameter [ rdfs:label "Render Ready" ; trn:symbol "render_ready" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+                    rdfs:comment "Read-only flag showing whether a rendered buffer exists." ] ;
+    trn:parameter [ rdfs:label "A/B Side" ; trn:symbol "ab_side" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+                    rdfs:comment "Read-only flag: 0 = captured audio, 1 = rendered audio." ] ;
+    trn:parameter [ rdfs:label "Tempo" ; trn:symbol "tempo_bpm" ; trn:minimum 0.0 ; trn:maximum 250.0 ; trn:default 120.0 ; trn:unit "bpm" ;
+                    rdfs:comment "Read-only fitted tempo." ] ;
+
+    trn:parameter [ rdfs:label "Waveform Shadow" ; trn:symbol "wave_0..wave_47" ; trn:minimum -1.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+                    rdfs:comment "48 read-only waveform peak parameters for the UI." ] ;
+    trn:parameter [ rdfs:label "Event Time Shadow" ; trn:symbol "ev0_time..ev11_time" ; trn:minimum 0.0 ; trn:maximum 8.0 ; trn:default 0.0 ; trn:unit "s" ;
+                    rdfs:comment "Read-only source time for each of the twelve visible event rows." ] ;
+    trn:parameter [ rdfs:label "Event Class Shadow" ; trn:symbol "ev0_class..ev11_class" ; trn:minimum 0.0 ; trn:maximum 12.0 ; trn:default 0.0 ;
+                    rdfs:comment "Read-only drum class for each visible event row." ] ;
+    trn:parameter [ rdfs:label "Event Velocity Shadow" ; trn:symbol "ev0_velocity..ev11_velocity" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ; trn:unit "%" ;
+                    rdfs:comment "Read-only velocity for each visible event row." ] ;
+    trn:parameter [ rdfs:label "Event Confidence Shadow" ; trn:symbol "ev0_confidence..ev11_confidence" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ; trn:unit "%" ;
+                    rdfs:comment "Read-only classifier confidence for each visible event row." ] ;
+    trn:parameter [ rdfs:label "Event Quantised Time Shadow" ; trn:symbol "ev0_quant..ev11_quant" ; trn:minimum 0.0 ; trn:maximum 8.0 ; trn:default 0.0 ; trn:unit "s" ;
+                    rdfs:comment "Read-only quantised time for each visible event row." ] ;
+    trn:parameter [ rdfs:label "Event Ghost Shadow" ; trn:symbol "ev0_ghost..ev11_ghost" ; trn:minimum 0.0 ; trn:maximum 1.0 ; trn:default 0.0 ;
+                    rdfs:comment "Read-only ghost flag for each visible event row." ] ;
+
+    trn:state [ rdfs:label "Project" ; trn:key "energise_project" ] ;
+    pu:supportedPlatform pu:Windows , pu:MacOS , pu:Linux .

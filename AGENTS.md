@@ -30,6 +30,7 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - Assert the observable effect, not an intermediate (e.g. the emitted note, not `noteForCell`). To make a parameter inert, assert its default is inert rather than zeroing it. Test that every control has an audible/visible effect.
 - Re-run a plugin's tests after changing any parameter default.
 - Table-driven data (scales, ladders): hold an independent expected set in the test, diff against existing tables elsewhere in the repo first, and generate docs from the source enum, not from the reference it was derived from.
+- Request counters fire on any value change, not just 0→1. Test idempotence by calling `takeRequests()` twice without changing the counter, and use one counter increment per undoable action.
 - Transport-quantised emitters need a schedule queue in absolute quarters; events outside the current block must not be dropped. For a step-targeted case, derive the transport position from that step (`(step + delta) / stepsPerBeat`), not from a barBeat treated as a local step index; assert the emitted pitch before its velocity.
 - `std::max`/`std::min` deduce one type from every operand: cast mixed integer operands (e.g. `uint8_t` velocity and an `int` boost) to a common type before comparing. Compile a standalone probe before the CMake build.
 - Probes must advance the input pointer per block, and be sanity-checked against the raw input.

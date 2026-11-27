@@ -65,7 +65,7 @@ Public release packaging is handled separately by
 
 ## Current outputs
 
-The CMake install declarations currently cover 108 VST3 bundles; the authoritative synchronized bundle list is checked by `scripts/check-bundle-lists.sh`.
+The CMake install declarations currently cover 109 VST3 bundles; the authoritative synchronized bundle list is checked by `scripts/check-bundle-lists.sh`.
 
 - `ambo.vst3` with UI
 - `arpgen.vst3` with UI
@@ -89,6 +89,7 @@ The CMake install declarations currently cover 108 VST3 bundles; the authoritati
 - `drumgen.vst3` with UI
 - `drumkit.vst3` with UI
 - `e_mix.vst3` with UI
+- `energise.vst3` with UI
 - `fathom.vst3` with UI
 - `floozy.vst3` with UI
 - `flues_synth_driver.vst3` with UI
@@ -218,6 +219,7 @@ The script has been smoke-tested with a temporary install root under `/tmp`:
 - confirmed `lifeform.vst3` bundle output and install
 - `plank.vst3` builds locally and awaits host-side install validation
 - `padseq.vst3` builds locally and awaits host-side install validation
+- `energise.vst3` builds locally (VST3 and JACK standalone) and awaits host-side install validation
 - `pratt.vst3` builds locally (VST3 and JACK standalone) and awaits host-side install validation
 - `retune.vst3` builds locally (VST3 and JACK standalone) and awaits host-side install validation
 - `sprout.vst3` builds locally (VST3 and JACK standalone) and awaits host-side install validation

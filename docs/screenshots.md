@@ -132,6 +132,7 @@ Current output filenames:
 - `lifeform.png`
 - `plank.png`
 - `padseq.png`
+- `energise.png`
 - `pratt.png`
 - `retune.png`
 - `sprout.png`
@@ -173,6 +174,15 @@ plugin's `DistrhoPluginInfo.h`:
 - `padseq` — 980x720, catalog capture predates the LED Feedback default change.
 - `fontana` — 1280x800, browser scroll gutter and lazy preview.
 - `bassgen` and `drumgen` — accepted captures copied into the catalog.
+
+Energise's first-pass panel was captured at 1120x780 into
+`/tmp/opencode/energise-shots/energise.png` with the synthetic demo preloaded.
+An ASCII luminance render confirmed the header, transport row, left capture/voice
+panels, waveform/event lane, edit strip and event table are present, and the
+capture matches the dimensions declared in `DistrhoPluginInfo.h`. The PNG was
+copied provisionally into `docs/pages/assets/plugins/energise.png` so the catalog
+page is complete. This agent cannot view PNG pixels, so label fit, contrast and
+hierarchy need human eyes and visual acceptance remains pending.
 
 PadSeq's LED Feedback default changed to On, gained an **LED Out** selector and
 then defaulted that selector to `SysEx` after its catalog capture, so the catalog

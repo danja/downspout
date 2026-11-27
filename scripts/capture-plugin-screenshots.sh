@@ -63,6 +63,7 @@ plugins=(
   "lifeform:lifeform"
   "plank:plank"
   "padseq:padseq"
+  "energise:energise"
   "pratt:pratt"
   "retune:retune"
   "sprout:sprout"

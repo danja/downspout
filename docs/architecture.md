@@ -292,6 +292,7 @@ The release script currently expects these bundles:
 - `lifeform.vst3`
 - `plank.vst3`
 - `padseq.vst3`
+- `energise.vst3`
 - `pratt.vst3`
 - `retune.vst3`
 - `sprout.vst3`
