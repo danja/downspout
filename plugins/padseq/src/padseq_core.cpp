@@ -936,9 +936,10 @@ void Processor::emitLedFeedback(ProcessResult& result, const bool force)
     if (parameters_[static_cast<std::size_t>(ParamId::ledFeedback)] < 0.5f)
         return;
 
-    // Launchpad colours must never be channel-1 notes or CCs: on a shared MIDI
-    // output an instrument would hear the scan as held notes. Build the complete
-    // LED state and send it as one Novation lighting SysEx instead.
+    // Plank's working Launchpad path paints colours with ordinary channel-1
+    // note-ons and CCs. Some hosts drop large or model-specific lighting SysEx,
+    // while these short messages always reach a programmer-mode Launchpad.
+    // Generated notes stay on `channel` (default 4), clear of LED channels 1-3.
     std::array<std::uint8_t, kGridCellCount> grid {};
     std::array<std::uint8_t, kTopButtonCCs.size()> top {};
     std::array<std::uint8_t, kGridWidth> side {};
@@ -960,17 +961,25 @@ void Processor::emitLedFeedback(ProcessResult& result, const bool force)
     for (std::size_t note = 0; note < side.size(); ++note)
         side[note] = sideColor(note);
 
-    bool changed = force;
-    for (std::size_t i = 0; i < grid.size() && !changed; ++i)
-        changed = grid[i] != lastCellLeds_[i];
-    for (std::size_t i = 0; i < top.size() && !changed; ++i)
-        changed = top[i] != lastTopLeds_[i];
-    for (std::size_t i = 0; i < side.size() && !changed; ++i)
-        changed = side[i] != lastSideLeds_[i];
-    if (!changed)
-        return;
-
-    appendLedBulkSysex(result, grid, side, top);
+    for (std::size_t note = 0; note < kGridHeight; ++note)
+    {
+        for (std::size_t stepColumn = 0; stepColumn < kGridWidth; ++stepColumn)
+        {
+            const std::size_t index = note * kGridWidth + stepColumn;
+            if (force || grid[index] != lastCellLeds_[index])
+                appendMidi(result, 0u, 0x90u, gridToNote(note, stepColumn), grid[index]);
+        }
+    }
+    for (std::size_t i = 0; i < side.size(); ++i)
+    {
+        if (force || side[i] != lastSideLeds_[i])
+            appendMidi(result, 0u, 0xb0u, kSideButtonCCs[i], side[i]);
+    }
+    for (std::size_t i = 0; i < top.size(); ++i)
+    {
+        if (force || top[i] != lastTopLeds_[i])
+            appendMidi(result, 0u, 0xb0u, kTopButtonCCs[i], top[i]);
+    }
 
     lastCellLeds_ = grid;
     lastTopLeds_ = top;
@@ -990,6 +999,7 @@ void Processor::emitPanic(ProcessResult& result)
 
     appendSysex(result, kProgrammerModeSysex.data(), kProgrammerModeSysex.size());
     appendClearAllSysex(result);
+    appendClearAllMidi(result);
 
     pendingNoteOffs_.fill({});
     lastCellLeds_.fill(255u);
@@ -1034,6 +1044,19 @@ void Processor::appendClearAllSysex(ProcessResult& result)
     top.fill(kLedOff);
     side.fill(kLedOff);
     appendLedBulkSysex(result, grid, side, top);
+}
+
+void Processor::appendClearAllMidi(ProcessResult& result)
+{
+    // Plank clears the same way: the SysEx reset is model-specific and may be
+    // filtered, while channel-1 note/CC LED-off messages always reach the pad.
+    for (std::size_t note = 0; note < kGridHeight; ++note)
+        for (std::size_t col = 0; col < kGridWidth; ++col)
+            appendMidi(result, 0u, 0x90u, gridToNote(note, col), kLedOff);
+    for (const std::uint8_t cc : kSideButtonCCs)
+        appendMidi(result, 0u, 0xb0u, cc, kLedOff);
+    for (const std::uint8_t cc : kTopButtonCCs)
+        appendMidi(result, 0u, 0xb0u, cc, kLedOff);
 }
 
 void Processor::appendLedBulkSysex(

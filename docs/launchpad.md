@@ -43,13 +43,15 @@ back to the device. Launchpad pad/control input should be consumed, not echoed,
 unless a plugin intentionally wants to use it as LED output.
 
 Plugins that use note/CC LED messages still need generated musical MIDI to avoid
-channels 1-3. PadSeq deliberately does not use those messages: its LED feedback
-is a bulk lighting SysEx, so an instrument sharing the output only hears musical
-notes. Lifeform defaults musical output to channel 4 for the legacy note/CC case.
+channels 1-3. PadSeq now follows Plank: LED Feedback defaults on and uses
+channel-1 note/CC messages, with generated notes on channel 4 by default.
+Lifeform also defaults musical output to channel 4 for the legacy note/CC case.
 
 ## Clearing and panic
 
-`padseq` clears the surface with a bulk LED-lighting SysEx:
+`padseq` clears the surface two ways: it sends the bulk LED-lighting SysEx below,
+then mirrors the reset with channel-1 note-on/CC LED-off messages so the blackout
+survives hosts that filter SysEx:
 
 - header: `F0 00 20 29 02 0D`
 - command: `03`
@@ -61,11 +63,10 @@ the 8 side-button CC ids, and the 9 top/logo CC ids. PadSeq also suppresses LED
 feedback after a clear until the user edits or runs the pattern again, so a
 periodic refresh cannot re-light stale buttons.
 
-PadSeq does not fall back to 3-byte note/CC LED-off messages: on a shared
-output those are indistinguishable from musical notes to a synth. If SysEx is
-filtered, LED feedback is unavailable rather than audible. The vendored DPF
-VST3 bridge has been approved for local SysEx forwarding so these messages can
-reach the controller.
+Because routine lighting uses channel 1, a synth sharing the output must listen
+on the generated-note channel (default 4) or be fed through a filter that drops
+channels 1-3. The vendored DPF VST3 bridge has been approved for local SysEx
+forwarding so mode and clear SysEx can reach the controller.
 
 ## DPF/VST3 note
 
@@ -79,6 +80,7 @@ approval before implementation.
 
 For VST3 plugins with one MIDI output carrying both musical MIDI and LED
 feedback, the host must route that output both to the target instrument and to
-the Launchpad hardware. SysEx-only LED feedback (as used by PadSeq) is safe for
-the instrument; older note/CC LED implementations still need separate channels
-or filters so generated musical notes do not drive Launchpad LED channels.
+the Launchpad hardware. Plank and PadSeq keep generated notes on channel 4 (or
+the configured channel), leaving channels 1-3 for LEDs; set the instrument to
+listen on that channel or filter the LED channels before it. Bulk SysEx is used
+only for mode and clear resets, not for routine lighting.

@@ -273,10 +273,10 @@ struct ParamRange {
     case ParamId::seed:         return {1.0f, 65535.0f, 12345.0f, true, false, false, false};
     case ParamId::randomise:    return {0.0f, 1.0f, 0.0f, true, true, true, false};
     case ParamId::clear:        return {0.0f, 1.0f, 0.0f, true, true, true, false};
-    // LED colours are sent as Novation lighting SysEx, so they are inaudible to
-    // instruments on a shared output. Feedback remains opt-in to keep the patch
-    // quiet by default and avoid unnecessary controller traffic.
-    case ParamId::ledFeedback:  return {0.0f, 1.0f, 0.0f, true, true, false, false};
+    // LED colours follow Plank: channel-1 note-ons for the grid and channel-1
+    // CCs for buttons. On by default so a connected Launchpad responds; generated
+    // notes default to channel 4, clear of the LED channels.
+    case ParamId::ledFeedback:  return {0.0f, 1.0f, 1.0f, true, true, false, false};
     case ParamId::passInput:    return {0.0f, 1.0f, 0.0f, true, true, false, false};
     case ParamId::cellStart:    return {0.0f, 1.0f, 0.0f, true, true, false, false};
     case ParamId::statusStep:   return {-1.0f, kMaxSteps - 1.0f, -1.0f, true, false, false, true};

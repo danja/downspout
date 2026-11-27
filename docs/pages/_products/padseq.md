@@ -28,10 +28,11 @@ seeds a new one, and **Clear / Panic** empties it and silences all notes.
 The top Launchpad buttons mirror the UI strip: note view, page, scale,
 randomise and clear. The eight side buttons and their UI equivalents trigger
 note rows with note-offs timed to the next step, including presses that arrive
-just before a step boundary. LED feedback is off by default; when enabled it
-uses Launchpad lighting SysEx only, so a synth sharing the output cannot hear
-the scan as notes. **Clear / Panic** blacks out all LEDs and keeps them dark
-until the next edit or run. Generated MIDI uses channel 4 by default.
+just before a step boundary. LED feedback defaults on and follows Plank's
+channel-1 note/CC LED path; generated notes default to channel 4, so an
+instrument sharing the output must listen on channel 4 or filter channels 1-3.
+**Clear / Panic** blacks out all LEDs over both note/CC and SysEx and keeps them
+dark until the next edit or run.
 
 Clock mode is Auto, Host or Free. Host mode counts absolute sixteenth steps and
 restarts cleanly on start, jump and rewind; free mode follows the internal
@@ -42,11 +43,12 @@ without plugin state.
 
 Route the Launchpad MIDI input into the PadSeq track and that track's MIDI
 output back to the controller. PadSeq sends the programmer-mode handshake
-automatically; LED Feedback is opt-in and SysEx-only.
+automatically; LED Feedback is on by default and uses Plank-style channel-1
+note/CC LEDs, with a bulk SysEx for hard clear.
 
 ### Status
 
 Deterministic core tests cover the scale table, grid mapping, every control,
 host and free clocks, launches, jumps, rewind, Launchpad messages, randomise,
-panic and host lifecycle. The VST3 target builds; host validation and a
-listening check remain.
+panic and host lifecycle. The VST3 target builds; real Launchpad validation and
+a listening check remain.

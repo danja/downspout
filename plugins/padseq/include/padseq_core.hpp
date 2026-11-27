@@ -111,6 +111,7 @@ private:
     void emitLedFeedback(ProcessResult& result, bool force);
     void emitPanic(ProcessResult& result);
     void appendClearAllSysex(ProcessResult& result);
+    void appendClearAllMidi(ProcessResult& result);
     void appendLedBulkSysex(ProcessResult& result,
                             const std::array<std::uint8_t, kGridCellCount>& grid,
                             const std::array<std::uint8_t, kGridWidth>& side,
