@@ -80,6 +80,8 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - Scripted batch edits: `continue` in every branch, diff the result. For non-unique lines anchor on context, not first match.
 - Re-read the exact target lines immediately before an exact-match edit; anchor on a short verified snippet instead of prose composed from an earlier read.
 - Qualify plugin-namespace types in DPF UI code (`START_NAMESPACE_DISTRHO` does not import them) and rebuild `<plugin>-vst3` after UI edits, not just the core tests.
+- `MagnetoUI` mirrors only `kMaxValues` (64) parameters: a control appended after a large output block must be drawn and hit-tested by the plugin against its own full value array and sent with `sendValue()`; `drawSegments()`/`commit()` on a higher index reads out of bounds and appears stuck.
+- Default Launchpad-style lighting on a shared MIDI output to SysEx/off, not channel-1 note/CC; treat note/CC as an explicit opt-in and assert that the default emits no channel-1 LED notes.
 - Port a DSP core a function at a time and build after each; do not draft the whole thing in one pass.
 - Cross-repo scripts: read the dataclass before constructing it positionally, and distrust a large mismatch on only some cases.
 
@@ -135,6 +137,7 @@ Distilled from the retired MISTAKES.md; keep adding new recurring patterns to MI
 - For audio sidechains, a port group named "Sidechain" is not enough: also set `kAudioPortIsSidechain` so VST3/CLAP hosts expose an aux bus rather than a second main input bus. DPF custom port-group ids must start at 0 and be sequential or `initPortGroup()` is skipped; p-mix is the corrected reference alongside Gate, Glue, Trio, Bassops and Interleaver.
 - For controller-heavy ports, expose output status parameters for the UI so the panel can reflect the processor’s effective live state rather than only the last host automation value.
 - DPF's VST3 bridge has no DSP→UI state callback: live counters and status readouts must come from output parameters, not mirrored plugin state. Verify in a host with the UI open.
+- When the UI draws processor-owned data that a trigger changes internally (padseq's Randomise/Clear), map status-output changes back onto the editable cell values and clear locally on the UI's own Clear action; otherwise the button looks inert.
 
 ## Documentation expectations
 

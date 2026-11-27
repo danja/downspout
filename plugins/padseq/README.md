@@ -36,11 +36,11 @@ SysEx on its first processing block, again after activation or a sample-rate
 change, and whenever LED Feedback is toggled — even when LED Feedback is off.
 Without that handshake a connected Launchpad stays in session mode and its pads
 send CCs instead of the grid notes `11..88`, so it looks connected but does
-nothing. LED Feedback defaults on and **LED Out** chooses the transport:
-`Note+CC` (default) matches Plank, `SysEx` is the workaround when a synth shares
-the output and must not hear channel-1 LED notes/CCs, and `Off` disables lighting.
-Generated notes default to channel 4. Clear respects the selected transport, so
-SysEx mode never broadcasts an LED-off note/CC burst.
+nothing. LED Feedback defaults on and **LED Out** defaults to `SysEx`, so routine
+lighting and Clear send no channel-1 LED notes/CCs to a synth sharing the output.
+`Note+CC` selects Plank's path when that traffic is safe, and `Off` disables
+lighting. Generated notes default to channel 4. Clear respects the selected
+transport.
 
 ![PadSeq interface](../../docs/pages/assets/plugins/padseq.png)
 

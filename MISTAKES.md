@@ -6,6 +6,16 @@ Format: what happened, root cause, prevention.
 
 ## Open
 
+## padseq: Clear looked inert in the UI after an edit (2026-11-27)
+- **What happened:** clicking a grid cell and then the top Clear button left the cell visibly active even though the processor had cleared the pattern.
+- **Root cause:** the grid draws editable cell parameters, but Randomise/Clear change the processor's cells internally; DPF does not echo DSP-internal parameter changes back to the UI. The status-cell outputs carried the new values but were not mapped back to the editable cell values.
+- **Prevention:** mirror status-cell changes onto the corresponding editable cell values in `parameterChanged()`, and clear local cell values immediately when the UI sends Clear.
+
+## padseq: LED Out selector did not respond and default still echoed LED notes (2026-11-27)
+- **What happened:** the UI's new LED Out buttons could not be clicked and showed Off, while a fresh plugin still emitted channel-1 LED notes by default.
+- **Root cause:** `MagnetoUI` mirrors only 64 values; `drawSegments()`/`commit()` were used with parameter index 348, so selection was drawn from and committed to an out-of-bounds slot. The default had been left at `Note+CC` to match Plank, which kept the unwanted traffic on a shared MIDI output.
+- **Prevention:** any control above `MagnetoUI::kMaxValues` must be drawn and hit-tested by the plugin against its own full value array and sent with `sendValue()`; default a controller's lighting transport to the shared-output-safe choice (`SysEx`), with note/CC available only as an explicit opt-in.
+
 ## padseq: appended LED Out parameter collided with status cell 1 (2026-11-27)
 - **What happened:** appending `ParamId::ledTransport` at `statusCellStart` shifted the read-only status block and produced 29 test failures (`parameter count` 286 instead of 349); after moving it after all 64 status cells, writes still had no effect and six LED-mode tests failed.
 - **Root cause:** the enum was inserted at the status base instead of past the full 64-cell block, and `setParameter()`/`clampPatch()` only traversed `kInputParameterCount`, which stops before the status block and therefore skipped the appended control.
@@ -14,7 +24,7 @@ Format: what happened, root cause, prevention.
 ## padseq: channel-1 LED traffic reached a shared synth (2026-11-27)
 - **What happened:** after adopting Plank's note/CC LED path, the Launchpad lit correctly but the MIDI output broadcast channel-1 LED notes/CCs, so a downstream instrument heard the scan as music.
 - **Root cause:** one MIDI output carried both generated notes and LED commands, and the receiving instrument accepted all channels by default. The earlier bulk-SysEx transport avoided this but was filtered by the host.
-- **Prevention:** expose an LED transport choice (`Off`, `SysEx`, `Note+CC`) with `Note+CC` as the hardware-friendly default; make refresh *and* Clear respect it so SysEx mode emits no channel-1 note/CC messages at all. Document the channel-filter fallback for hosts using the default mode.
+- **Prevention:** expose an LED transport choice (`Off`, `SysEx`, `Note+CC`) and make refresh *and* Clear respect it so SysEx mode emits no channel-1 note/CC messages at all; default it to `SysEx` for a shared MIDI output and document note/CC plus channel-filter fallbacks for hosts where SysEx is filtered.
 
 ## padseq: Launchpad stayed in session mode and then did not light (2026-11-27)
 - **What happened:** a connected Launchpad stayed in session mode and its pads/top/side buttons did nothing with LED Feedback at its old default Off. After moving the handshake out of the LED-off guard, it still behaved differently from Plank because lighting relied on a model-specific bulk SysEx that the host may drop.

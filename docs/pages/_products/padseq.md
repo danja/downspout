@@ -28,11 +28,11 @@ seeds a new one, and **Clear / Panic** empties it and silences all notes.
 The top Launchpad buttons mirror the UI strip: note view, page, scale,
 randomise and clear. The eight side buttons and their UI equivalents trigger
 note rows with note-offs timed to the next step, including presses that arrive
-just before a step boundary. LED feedback defaults on. **LED Out** selects
-`Note+CC` (Plank-style, default), `SysEx` (for a shared MIDI output where a synth
-must not hear channel-1 LED messages), or `Off`. Generated notes default to
-channel 4. **Clear / Panic** respects that choice and keeps every LED dark until
-the next edit or run.
+just before a step boundary. LED feedback defaults on. **LED Out** defaults to
+`SysEx`, so a synth sharing the output hears no channel-1 LED notes/CCs;
+`Note+CC` selects Plank's path when that traffic is safe, and `Off` disables
+lighting. Generated notes default to channel 4. **Clear / Panic** respects that
+choice and keeps every LED dark until the next edit or run.
 
 Clock mode is Auto, Host or Free. Host mode counts absolute sixteenth steps and
 restarts cleanly on start, jump and rewind; free mode follows the internal
@@ -43,8 +43,8 @@ without plugin state.
 
 Route the Launchpad MIDI input into the PadSeq track and that track's MIDI
 output back to the controller. PadSeq sends the programmer-mode handshake
-automatically; LED Feedback is on by default. Choose `LED Out` = `SysEx` if a
-synth shares that output and must not hear channel-1 LED messages.
+automatically; LED Feedback is on by default and `LED Out` defaults to `SysEx`.
+Switch to `Note+CC` only when channel-1 LED traffic is safe.
 
 ### Status
 

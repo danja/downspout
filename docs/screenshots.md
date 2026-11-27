@@ -174,11 +174,13 @@ plugin's `DistrhoPluginInfo.h`:
 - `fontana` — 1280x800, browser scroll gutter and lazy preview.
 - `bassgen` and `drumgen` — accepted captures copied into the catalog.
 
-PadSeq's LED Feedback default changed to On and gained an **LED Out** selector
-after its catalog capture, so the catalog `padseq.png` is stale. A fresh 980x720
-capture was made in `/tmp/opencode/padseq-shots/padseq.png`, but image inspection
-was unavailable in that session and the file was not copied into the catalog;
-visual acceptance remains pending.
+PadSeq's LED Feedback default changed to On, gained an **LED Out** selector and
+then defaulted that selector to `SysEx` after its catalog capture, so the catalog
+`padseq.png` is stale. A fresh 980x720 capture is
+`/tmp/opencode/padseq-ui-check/before.png`; pixel sampling confirmed `SysEx` is
+selected, clicks move the selection to `N+CC`, `Off` and back, and the top Clear
+button blacks out a clicked cell. Image inspection was unavailable, so the file
+was not copied into the catalog and visual acceptance remains pending.
 
 The Spliff panel was then changed again to make the analyser visible and to
 remove the overlapping parameter-box footer. A fresh 720x680 capture is in

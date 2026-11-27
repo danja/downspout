@@ -232,8 +232,8 @@ void testDefaultsAndOrdinals()
     checkNear(processor.getParameter(p(ParamId::ledFeedback)), 1.0, 1e-6,
               "LED feedback defaults on so a connected Launchpad responds like Plank");
     checkNear(processor.getParameter(p(ParamId::ledTransport)),
-              static_cast<double>(LedTransport::noteCc), 1e-6,
-              "LED output defaults to Plank-style note/CC so the Launchpad lights up");
+              static_cast<double>(LedTransport::sysex), 1e-6,
+              "LED output defaults to SysEx so a shared MIDI output hears no LED notes/CCs");
     checkNear(processor.getParameter(p(ParamId::passInput)), 0.0, 1e-6, "default pass-through");
     checkNear(processor.getParameter(p(ParamId::statusStep)), -1.0, 1e-6, "default step status");
 }
@@ -355,6 +355,7 @@ void testCellsAndGridInput()
 {
     Processor processor;
     processor.init(48000.0);
+    processor.setParameter(p(ParamId::ledTransport), static_cast<float>(LedTransport::noteCc));
     const std::size_t index = cellIndex(2, 3);
     processor.setParameter(p(ParamId::cellStart) + static_cast<std::uint32_t>(index), 1.0f);
     check(processor.cellActive(2, 3), "cell parameter activates grid cell");
@@ -561,6 +562,7 @@ void testTopButtonsAndStatus()
     processor.init(48000.0);
     processor.activate();
     processor.setParameter(p(ParamId::clockMode), static_cast<float>(ClockMode::free));
+    processor.setParameter(p(ParamId::ledTransport), static_cast<float>(LedTransport::noteCc));
     TransportSnapshot transport {};
     const auto press = [&](const std::size_t index) {
         const MidiMessage event = midi(0, 0xb0u, kTopButtonCCs[index], 127u);
@@ -661,6 +663,7 @@ void testRandomiseAndClear()
 
     TransportSnapshot transport {};
     seeded.setParameter(p(ParamId::ledFeedback), 1.0f);
+    seeded.setParameter(p(ParamId::ledTransport), static_cast<float>(LedTransport::noteCc));
     seeded.processBlock(100, transport, nullptr, 0);
     seeded.setParameter(p(ParamId::clear), 1.0f);
     const ProcessResult panicResult = seeded.processBlock(100, transport, nullptr, 0);
@@ -707,6 +710,7 @@ void testPassInputAndLedFeedback()
     lit.init(48000.0);
     lit.activate();
     lit.setParameter(p(ParamId::cellStart), 1.0f);
+    lit.setParameter(p(ParamId::ledTransport), static_cast<float>(LedTransport::noteCc));
     const ProcessResult withLeds = lit.processBlock(100, transport, nullptr, 0);
     check(ledHasColor(withLeds, gridToNote(0, 0), kLedGreen),
           "active cells light green on the Launchpad");
@@ -723,6 +727,14 @@ void testPassInputAndLedFeedback()
 void testLedTransportModes()
 {
     TransportSnapshot transport {};
+    Processor defaults;
+    defaults.init(48000.0);
+    defaults.activate();
+    const ProcessResult first = defaults.processBlock(100, transport, nullptr, 0);
+    checkEq(countLedMessages(first), 0,
+            "default LED transport broadcasts no channel-1 notes/CCs");
+    check(anyEvent(first, isLedSysex), "default LED transport still paints the Launchpad");
+
     Processor processor;
     processor.init(48000.0);
     processor.activate();
@@ -765,10 +777,12 @@ void testProgrammerModeHandshake()
     TransportSnapshot transport {};
     Processor processor;
     processor.init(48000.0);
+    processor.setParameter(p(ParamId::ledFeedback), 0.0f);
 
     const ProcessResult first = processor.processBlock(100, transport, nullptr, 0);
     check(anyEvent(first, isProgrammerModeSysex),
           "first block puts the Launchpad into programmer mode");
+    checkEq(countLedMessages(first), 0, "the handshake sends no channel-1 LED notes/CCs");
     check(!anyEvent(first, isLedSysex), "the handshake does not imply LED feedback");
 
     const ProcessResult second = processor.processBlock(100, transport, nullptr, 0);
@@ -780,11 +794,14 @@ void testProgrammerModeHandshake()
     check(anyEvent(resumed, isProgrammerModeSysex),
           "activation re-enters programmer mode after a host resume");
 
+    processor.setParameter(p(ParamId::ledFeedback), 1.0f);
+    processor.processBlock(100, transport, nullptr, 0);
     processor.setParameter(p(ParamId::ledFeedback), 0.0f);
     const ProcessResult dark = processor.processBlock(100, transport, nullptr, 0);
     check(anyEvent(dark, isProgrammerModeSysex) && countLedMessages(dark) == 0,
           "disabling LED feedback re-handshakes but paints no LEDs");
 
+    processor.setParameter(p(ParamId::ledTransport), static_cast<float>(LedTransport::noteCc));
     processor.setParameter(p(ParamId::ledFeedback), 1.0f);
     const ProcessResult lit = processor.processBlock(100, transport, nullptr, 0);
     check(anyEvent(lit, isProgrammerModeSysex) && countLedMessages(lit) >= 81,
@@ -820,6 +837,7 @@ void testEveryControlHasAnEffect()
     processor.activate();
     processor.setParameter(p(ParamId::clockMode), static_cast<float>(ClockMode::free));
     processor.setParameter(p(ParamId::cellStart), 1.0f);
+    processor.setParameter(p(ParamId::ledTransport), static_cast<float>(LedTransport::noteCc));
     const ProcessResult base = processor.processBlock(6000, transport, nullptr, 0);
 
     Processor velocity;
@@ -850,9 +868,9 @@ void testEveryControlHasAnEffect()
     steps.setParameter(p(ParamId::steps), 8.0f);
     check(!steps.cellActive(31, 0), "shortening length removes later steps");
 
-    check(countLedMessages(base) >= 81, "LED feedback paints the Launchpad by default");
+    check(countLedMessages(base) >= 81, "LED feedback paints the Launchpad in Note+CC mode");
     check(ledHasColor(base, gridToNote(0, 0), kLedGreen),
-          "the active edit is visible on the Launchpad by default");
+          "the active edit is visible on the Launchpad in Note+CC mode");
 
     Processor dark;
     dark.init(48000.0);
@@ -867,6 +885,8 @@ void testEveryControlHasAnEffect()
     ledOut.activate();
     ledOut.setParameter(p(ParamId::clockMode), static_cast<float>(ClockMode::free));
     ledOut.setParameter(p(ParamId::cellStart), 1.0f);
+    ledOut.setParameter(p(ParamId::ledTransport), static_cast<float>(LedTransport::noteCc));
+    ledOut.processBlock(100, transport, nullptr, 0);
     ledOut.setParameter(p(ParamId::ledTransport), static_cast<float>(LedTransport::sysex));
     const ProcessResult bulk = ledOut.processBlock(6000, transport, nullptr, 0);
     check(anyEvent(bulk, isLedSysex), "LED Out control switches to bulk SysEx");

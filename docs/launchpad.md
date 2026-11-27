@@ -43,11 +43,11 @@ back to the device. Launchpad pad/control input should be consumed, not echoed,
 unless a plugin intentionally wants to use it as LED output.
 
 Plugins that use note/CC LED messages still need generated musical MIDI to avoid
-channels 1-3. PadSeq follows Plank: LED Feedback defaults on and **LED Out**
-defaults to `Note+CC`, with generated notes on channel 4. Its `SysEx` mode paints
-the same colours in one bulk message, which is the workaround when a synth shares
-the MIDI output and must not hear channel-1 LED notes/CCs. Lifeform also defaults
-musical output to channel 4 for the legacy note/CC case.
+channels 1-3. PadSeq keeps LED Feedback on, but **LED Out** now defaults to
+`SysEx` so a synth sharing the MIDI output hears no channel-1 LED notes/CCs;
+generated notes remain on channel 4. `Note+CC` still provides Plank's path when
+that traffic is safe. Lifeform also defaults musical output to channel 4 for the
+legacy note/CC case.
 
 ## Clearing and panic
 
@@ -66,8 +66,8 @@ feedback after a clear until the user edits or runs the pattern again, so a
 periodic refresh cannot re-light stale buttons.
 
 In `SysEx` mode both refresh and clear use only the bulk message below, so no
-channel-1 note/CC LED traffic reaches a synth sharing the output. With the
-default `Note+CC` mode, that synth must listen on the generated-note channel
+channel-1 note/CC LED traffic reaches a synth sharing the output. This is the
+default. With `Note+CC`, that synth must listen on the generated-note channel
 (default 4) or be fed through a filter that drops channels 1-3. The vendored DPF
 VST3 bridge has been approved for local SysEx forwarding so mode and clear SysEx
 can reach the controller.
@@ -85,6 +85,6 @@ approval before implementation.
 For VST3 plugins with one MIDI output carrying both musical MIDI and LED
 feedback, the host must route that output both to the target instrument and to
 the Launchpad hardware. Plank and PadSeq keep generated notes on channel 4 (or
-the configured channel), leaving channels 1-3 for LEDs. Set the instrument to
-listen on that channel, filter the LED channels before it, or set PadSeq's LED
-Out to `SysEx` so routine lighting and clear never emit channel-1 notes/CCs.
+the configured channel). PadSeq's default `LED Out` = `SysEx` keeps routine
+lighting and clear free of channel-1 notes/CCs. If `Note+CC` is selected, set the
+instrument to listen on the generated-note channel or filter LED channels 1-3.

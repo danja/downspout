@@ -79,13 +79,45 @@ protected:
     void parameterChanged(const uint32_t index, const float value) override
     {
         if (index < kParameterCount)
+        {
             allValues_[index] = value;
+            // The processor owns the pattern, so Randomise/Clear change cells
+            // without an explicit UI write. Status cells are the DPF bridge for
+            // those changes; mirror them onto the editable cell parameters the
+            // grid draws from.
+            const uint32_t statusBase = static_cast<uint32_t>(ParamId::statusCellStart);
+            if (index >= statusBase && index < statusBase + static_cast<uint32_t>(kGridCellCount))
+            {
+                const uint32_t visible = index - statusBase;
+                const int steps = iv(ParamId::steps);
+                const int page = iv(ParamId::page);
+                const int step = page * kStepsPerPage + static_cast<int>(visible % kGridWidth);
+                const std::size_t note = visible / kGridWidth;
+                if (step >= 0 && step < steps)
+                    allValues_[static_cast<uint32_t>(ParamId::cellStart) +
+                               static_cast<uint32_t>(cellIndex(static_cast<std::size_t>(step), note))] = value;
+            }
+        }
         MagnetoUI::parameterChanged(index, value);
         repaint();
     }
 
     bool onMouse(const MouseEvent& ev) override
     {
+        // LED Out is appended after the status outputs, beyond MagnetoUI's 64
+        // mirrored values, so its segments are hit-tested here rather than by
+        // the base class's commit() path.
+        if (ev.button == 1 && ev.press)
+        {
+            for (std::size_t i = 0; i < ledOutCount_; ++i)
+            {
+                if (!ledOutHits_[i].bounds.contains(static_cast<float>(ev.pos.getX()),
+                                                   static_cast<float>(ev.pos.getY())))
+                    continue;
+                sendClamped(ParamId::ledTransport, static_cast<float>(ledOutHits_[i].index));
+                return true;
+            }
+        }
         if (MagnetoUI::onMouse(ev))
             return true;
         if (ev.button != 1 || !ev.press)
@@ -176,6 +208,13 @@ private:
         sendValue(static_cast<std::uint32_t>(id), 0.0f);
     }
 
+    void clearGridValues()
+    {
+        const std::uint32_t base = static_cast<uint32_t>(ParamId::cellStart);
+        for (std::size_t i = 0; i < kCellCount; ++i)
+            allValues_[base + static_cast<uint32_t>(i)] = 0.0f;
+    }
+
     void handleTopButton(const std::size_t index)
     {
         switch (static_cast<TopButton>(index))
@@ -187,7 +226,10 @@ private:
         case TopButton::scaleBack: sendClamped(ParamId::scale, v(ParamId::scale) - 1.0f); break;
         case TopButton::scaleForward: sendClamped(ParamId::scale, v(ParamId::scale) + 1.0f); break;
         case TopButton::randomise: sendTrigger(ParamId::randomise); break;
-        case TopButton::clear: sendTrigger(ParamId::clear); break;
+        case TopButton::clear:
+            clearGridValues();
+            sendTrigger(ParamId::clear);
+            break;
         case TopButton::logo:
         case TopButton::count:
             break;
@@ -217,6 +259,46 @@ private:
         fontSize(size);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
         text(b.x + b.w * 0.5f, b.y + b.h * 0.5f, name, nullptr);
+    }
+
+    // Same visual language as MagnetoKit's drawSegments, but reads and writes
+    // allValues_ so it can control a parameter beyond the kit's 64-value cap.
+    void drawLedOutSegments(const char* const* names, const int count, const Rect b,
+                            const kit::Accent accent)
+    {
+        const auto& t = theme();
+        const int selected = iv(ParamId::ledTransport);
+        const float gap = 6.0f;
+        const float w = (b.w - gap * static_cast<float>(count - 1)) / static_cast<float>(count);
+        ledOutCount_ = 0;
+        for (int i = 0; i < count; ++i)
+        {
+            const Rect box {b.x + static_cast<float>(i) * (w + gap), b.y, w, b.h};
+            beginPath();
+            if (i == selected)
+                fillColor(accent.r, accent.g, accent.b, 255);
+            else
+                fc(t.buttonFace);
+            roundedRect(box.x, box.y, box.w, box.h, laf::kRadiusSmall);
+            fill();
+            if (i != selected)
+            {
+                beginPath();
+                sc(t.border);
+                strokeWidth(1.0f);
+                roundedRect(box.x, box.y, box.w, box.h, laf::kRadiusSmall);
+                stroke();
+            }
+            if (i == selected)
+                fillColor(250, 248, 242, 255);
+            else
+                fc(t.textPrimary);
+            fontSize(10.0f);
+            textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+            text(box.x + box.w * 0.5f, box.y + box.h * 0.5f, names[i], nullptr);
+            if (ledOutCount_ < ledOutHits_.size())
+                ledOutHits_[ledOutCount_++] = {box, static_cast<std::size_t>(i)};
+        }
     }
 
     void drawTopStrip()
@@ -377,7 +459,7 @@ private:
         const char* const clockNames[] = {"Auto", "Host", "Free"};
         const char* const mapNames[] = {"Scale", "GM"};
         const char* const onOff[] = {"Off", "On"};
-        const char* const ledOutNames[] = {"Off", "Sys", "N+C"};
+        const char* const ledOutNames[] = {"Off", "SysEx", "N+CC"};
 
         std::snprintf(bufSteps_, sizeof(bufSteps_), "%d", iv(ParamId::steps));
         std::snprintf(bufPage_, sizeof(bufPage_), "%d/%d", iv(ParamId::page) + 1,
@@ -420,8 +502,8 @@ private:
                      Rect {676.0f, 598.0f, 96.0f, 22.0f}, kTriggerAccent);
         drawSegments(static_cast<uint32_t>(ParamId::ledFeedback), onOff, 2,
                      Rect {778.0f, 598.0f, 56.0f, 22.0f}, kGridAccent);
-        drawSegments(static_cast<uint32_t>(ParamId::ledTransport), ledOutNames, 3,
-                     Rect {840.0f, 598.0f, 100.0f, 22.0f}, kTopAccent);
+        drawLedOutSegments(ledOutNames, 3,
+                           Rect {840.0f, 598.0f, 100.0f, 22.0f}, kTopAccent);
         drawSlider(static_cast<uint32_t>(ParamId::seed), "Random Seed",
                    bufSeed_, Rect {676.0f, 628.0f, 264.0f, 30.0f}, kTopAccent);
     }
@@ -432,9 +514,11 @@ private:
     std::array<GridHit, kGridCellCount> gridHits_ {};
     std::array<IndexedHit, 8> topHits_ {};
     std::array<IndexedHit, kGridWidth> triggerHits_ {};
+    std::array<IndexedHit, kLedTransportNames.size()> ledOutHits_ {};
     std::size_t gridCount_ = 0;
     std::size_t topCount_ = 0;
     std::size_t triggerCount_ = 0;
+    std::size_t ledOutCount_ = 0;
     int pressedNote_ = -1;
     char bufSteps_[16] {};
     char bufPage_[32] {};

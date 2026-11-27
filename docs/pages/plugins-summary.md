@@ -798,10 +798,11 @@ rows to GM drums, while **Root** and **Note View** move pitched rows. Top CCs
 with note-offs timed to the next step, even for presses late in a block. Clock is
 Auto (host BBT when present, otherwise free), Host (absolute steps with
 restart/jump/rewind handling) or Free (tempo accumulator). MIDI output defaults
-to channel 4, leaving channels 1-3 for LEDs; LED feedback defaults on and **LED
-Out** selects `Note+CC` (Plank-style default), `SysEx` (a shared-output
-workaround with no channel-1 note/CC LED traffic), or `Off`. Clear respects that
-choice and blacks out every LED until the next edit or run. All 256
+to channel 4; LED feedback defaults on and **LED Out** defaults to `SysEx`, so
+routine lighting and Clear emit no channel-1 note/CC LED traffic on a shared
+output. `Note+CC` selects Plank's path when that traffic is safe, and `Off`
+disables lighting. Clear respects that choice and blacks out every LED until the
+next edit or run. All 256
 cells and eight UI triggers are ordinary parameters, so no plugin state is used.
 
 ## Audio effects

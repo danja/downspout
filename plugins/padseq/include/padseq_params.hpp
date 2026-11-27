@@ -294,10 +294,10 @@ struct ParamRange {
     // Master LED switch. `ledTransport` chooses how colours are sent; On by
     // default so a connected Launchpad responds.
     case ParamId::ledFeedback:  return {0.0f, 1.0f, 1.0f, true, true, false, false};
-    // Note+CC matches Plank; SysEx is the workaround for a shared MIDI output
-    // where a synth must not hear channel-1 grid notes or button CCs.
+    // SysEx is the default because a shared MIDI output must not receive
+    // channel-1 LED notes/CCs; Note+CC remains available as Plank's path.
     case ParamId::ledTransport: return {0.0f, static_cast<float>(static_cast<int>(LedTransport::count) - 1),
-                                        static_cast<float>(static_cast<int>(LedTransport::noteCc)),
+                                        static_cast<float>(static_cast<int>(LedTransport::sysex)),
                                         true, false, false, false};
     case ParamId::passInput:    return {0.0f, 1.0f, 0.0f, true, true, false, false};
     case ParamId::cellStart:    return {0.0f, 1.0f, 0.0f, true, true, false, false};

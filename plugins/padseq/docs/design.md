@@ -66,12 +66,12 @@ buttons are colour-coded by function and side buttons light when their note row
 contains notes on the visible page. The UI's side triggers use the eight trigger
 parameters, so a click has the same audible effect as a hardware side CC.
 
-**LED Feedback defaults on**, with **LED Out** set to `Note+CC`: the core builds
-the complete grid/side/top colour state and emits channel-1 note-ons for the grid
-and channel-1 CCs for the top and side buttons. `SysEx` paints the same state with
-one Novation bulk lighting message; it is the workaround for a shared MIDI output
-where a synth must not hear those channel-1 notes/CCs. `Off` suppresses lighting.
-Generated notes stay on `channel` (default 4), clear of LED channels 1-3.
+**LED Feedback defaults on**, with **LED Out** set to `SysEx`: the core builds
+the complete grid/side/top colour state and paints it with one Novation bulk
+lighting message, so a synth sharing the MIDI output hears no channel-1 LED
+notes/CCs. `Note+CC` selects Plank's channel-1 note/CC path when that traffic is
+safe; `Off` suppresses lighting. Generated notes stay on `channel` (default 4),
+clear of LED channels 1-3.
 
 **Clear / Panic** emits all-notes-off on the chosen channel, re-enters
 programmer mode and sends a bulk SysEx that sets all 81 LEDs to colour 0. In
