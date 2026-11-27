@@ -38,6 +38,12 @@ restarts cleanly on start, jump and rewind; free mode follows the internal
 tempo. All cells are ordinary host parameters, so projects save the pattern
 without plugin state.
 
+### Hardware
+
+Route the Launchpad MIDI input into the PadSeq track and that track's MIDI
+output back to the controller. PadSeq sends the programmer-mode handshake
+automatically; LED Feedback is opt-in and SysEx-only.
+
 ### Status
 
 Deterministic core tests cover the scale table, grid mapping, every control,

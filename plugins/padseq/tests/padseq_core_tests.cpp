@@ -85,6 +85,13 @@ bool isLedSysex(const MidiMessage& e)
            e.data[5] == 0x0du && e.data[6] == 0x03u && e.data[e.size - 1u] == 0xf7u;
 }
 
+bool isProgrammerModeSysex(const MidiMessage& e)
+{
+    static constexpr std::uint8_t kMode[] = {0xf0u, 0x00u, 0x20u, 0x29u,
+                                              0x02u, 0x0du, 0x0eu, 0x01u, 0xf7u};
+    return e.size == sizeof(kMode) && std::memcmp(e.data.data(), kMode, sizeof(kMode)) == 0;
+}
+
 bool sysexLedHasColor(const ProcessResult& result,
                       const std::uint8_t id,
                       const std::uint8_t color)
@@ -644,7 +651,10 @@ void testPassInputAndLedFeedback()
     dark.init(48000.0);
     dark.setParameter(p(ParamId::ledFeedback), 0.0f);
     const ProcessResult noLeds = dark.processBlock(100, transport, nullptr, 0);
-    checkEq(noLeds.eventCount, 0, "LED feedback can be disabled entirely");
+    check(anyEvent(noLeds, isProgrammerModeSysex),
+          "a connected Launchpad enters programmer mode even with LED feedback off");
+    checkEq(countLedNoteOrCc(noLeds), 0, "no note or CC LED traffic when feedback is off");
+    check(!anyEvent(noLeds, isLedSysex), "no bulk lighting message when feedback is off");
 
     Processor lit;
     lit.init(48000.0);
@@ -663,6 +673,32 @@ void testPassInputAndLedFeedback()
     check(anyEvent(withLeds, [](const MidiMessage& e) {
               return isLedSysex(e) && static_cast<std::size_t>(e.size) == 7u + 3u * 81u + 1u;
           }), "one bulk SysEx paints all 64 grid, 8 side and 9 top LEDs");
+}
+
+void testProgrammerModeHandshake()
+{
+    TransportSnapshot transport {};
+    Processor processor;
+    processor.init(48000.0);
+
+    const ProcessResult first = processor.processBlock(100, transport, nullptr, 0);
+    check(anyEvent(first, isProgrammerModeSysex),
+          "first block puts the Launchpad into programmer mode");
+    check(!anyEvent(first, isLedSysex), "the handshake does not imply LED feedback");
+
+    const ProcessResult second = processor.processBlock(100, transport, nullptr, 0);
+    check(!anyEvent(second, isProgrammerModeSysex),
+          "programmer mode is sent once, not on every refresh");
+
+    processor.activate();
+    const ProcessResult resumed = processor.processBlock(100, transport, nullptr, 0);
+    check(anyEvent(resumed, isProgrammerModeSysex),
+          "activation re-enters programmer mode after a host resume");
+
+    processor.setParameter(p(ParamId::ledFeedback), 1.0f);
+    const ProcessResult lit = processor.processBlock(100, transport, nullptr, 0);
+    check(anyEvent(lit, isProgrammerModeSysex) && anyEvent(lit, isLedSysex),
+          "enabling LED feedback re-handshakes and paints the grid");
 }
 
 void testLifecycleRetainsPatch()
@@ -753,6 +789,7 @@ int main()
     testTopButtonsAndStatus();
     testRandomiseAndClear();
     testPassInputAndLedFeedback();
+    testProgrammerModeHandshake();
     testLifecycleRetainsPatch();
     testEveryControlHasAnEffect();
 

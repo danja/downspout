@@ -1,1 +1,0 @@
-* Guardian : a crest-factor/headroom readout, per-band density, or target-based auto ceiling.

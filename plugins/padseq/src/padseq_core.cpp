@@ -923,6 +923,16 @@ std::uint8_t Processor::sideColor(const std::size_t note) const noexcept
 
 void Processor::emitLedFeedback(ProcessResult& result, const bool force)
 {
+    // Enter programmer mode on the first block, and again after activation or a
+    // sample-rate change, even when LED feedback is off. A controller left in
+    // session mode sends pad presses as CCs rather than the 11..88 grid notes
+    // the core consumes, so it appears connected but does nothing.
+    if (!ledInitialized_)
+    {
+        appendSysex(result, kProgrammerModeSysex.data(), kProgrammerModeSysex.size());
+        ledInitialized_ = true;
+    }
+
     if (parameters_[static_cast<std::size_t>(ParamId::ledFeedback)] < 0.5f)
         return;
 
@@ -950,7 +960,7 @@ void Processor::emitLedFeedback(ProcessResult& result, const bool force)
     for (std::size_t note = 0; note < side.size(); ++note)
         side[note] = sideColor(note);
 
-    bool changed = force || !ledInitialized_;
+    bool changed = force;
     for (std::size_t i = 0; i < grid.size() && !changed; ++i)
         changed = grid[i] != lastCellLeds_[i];
     for (std::size_t i = 0; i < top.size() && !changed; ++i)
@@ -960,8 +970,6 @@ void Processor::emitLedFeedback(ProcessResult& result, const bool force)
     if (!changed)
         return;
 
-    if (!ledInitialized_)
-        appendSysex(result, kProgrammerModeSysex.data(), kProgrammerModeSysex.size());
     appendLedBulkSysex(result, grid, side, top);
 
     lastCellLeds_ = grid;

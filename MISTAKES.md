@@ -6,6 +6,11 @@ Format: what happened, root cause, prevention.
 
 ## Open
 
+## padseq: programmer mode was gated by LED feedback (2026-11-27)
+- **What happened:** a connected Launchpad stayed in session mode and its pads/top/side buttons did nothing while LED Feedback was left at the default Off.
+- **Root cause:** the only programmer-mode SysEx sat inside `emitLedFeedback()` after the LED-off early return, so the plugin never entered programmer mode unless lights were enabled and the controller's output was not routed back.
+- **Prevention:** send the handshake on the first block and after lifecycle resets regardless of the feedback setting; assert the 9-byte mode SysEx with feedback off and that it is not repeated every refresh.
+
 ## guardian: removing diagnostics also removed the curve marker (2026-11-26)
 - **What happened:** the transfer-curve peak marker disappeared because it read `status_peak`, which was deleted with the Safety Monitor outputs.
 - **Root cause:** the marker's data dependency was not traced before removing the output parameter; no test or screenshot check covered a live marker.

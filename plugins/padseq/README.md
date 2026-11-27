@@ -28,6 +28,17 @@ Clock mode is **Auto** (host transport when available, otherwise free running),
 **Free** (internal tempo). The generated MIDI defaults to channel 4, leaving
 Launchpad's channels 1-3 for LEDs.
 
+## Hardware setup
+
+Route the Launchpad's MIDI input into the track hosting PadSeq, and route that
+track's MIDI output back to the controller. PadSeq sends the programmer-mode
+SysEx on its first processing block, again after activation or a sample-rate
+change, and whenever LED Feedback is toggled — even when LED Feedback is off.
+Without that handshake a connected Launchpad stays in session mode and its pads
+send CCs instead of the grid notes `11..88`, so it looks connected but does
+nothing. LED Feedback remains opt-in; when enabled it is SysEx-only and safe for
+a synth sharing the output.
+
 ![PadSeq interface](../../docs/pages/assets/plugins/padseq.png)
 
 See `plugins/padseq/docs/design.md` for sequencing, state and Launchpad details.

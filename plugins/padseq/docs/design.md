@@ -44,9 +44,12 @@ release only, so they cannot sustain indefinitely.
 
 ## Launchpad contract
 
-Programmer mode is entered with `F0 00 20 29 02 0D 0E 01 F7`. Grid pads are
-notes `11..18` on row 0 (bottom) through `81..88` on row 7. Side buttons are
-CCs `19,29,39,49,59,69,79,89`. Top buttons are CCs `91..99`:
+PadSeq sends the programmer-mode SysEx `F0 00 20 29 02 0D 0E 01 F7` on its first
+block, after activation or a sample-rate change, and whenever LED Feedback is
+toggled, independently of the LED Feedback switch. A controller left in session
+mode sends pad presses as CCs rather than the grid notes below and appears not to
+respond. Grid pads are notes `11..18` on row 0 (bottom) through `81..88` on row
+7. Side buttons are CCs `19,29,39,49,59,69,79,89`. Top buttons are CCs `91..99`:
 
 | CC | Action |
 |---|---|
