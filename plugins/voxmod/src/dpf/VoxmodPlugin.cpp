@@ -80,6 +80,7 @@ public:
                 values_[i] = kParameterSpecs[i].defaultValue;
         }
         applyToCore();
+        publishStatus();
     }
 
 protected:
@@ -404,6 +405,8 @@ private:
         kParamRingLevel,
         kParamVocoderLevel,
         kParamConvLevel,
+        kParamOutModLevel,
+        kParamOutIrLevel,
     };
 
     // These mirror ParamId exactly; the static_asserts keep them honest.
@@ -435,7 +438,9 @@ private:
     static_assert(kParamStereoWidth == index(ParamId::stereoWidth));
     static_assert(kParamDrift == index(ParamId::drift));
     static_assert(kParamRandomise == index(ParamId::randomise));
-    static_assert(kParameterCount == 33, "the enum above must cover every spec");
+    static_assert(kParamOutModLevel == index(ParamId::outModLevel));
+    static_assert(kParamOutIrLevel == index(ParamId::outIrLevel));
+    static_assert(kParameterCount == 35, "the enum above must cover every spec");
 
     [[nodiscard]] std::uint32_t ccParameter(const ParamId target) const noexcept
     {
@@ -623,6 +628,8 @@ private:
         // so they keep whatever the last processed block found.
         values_[kOutSibilance] = engine_.sibilance;
         values_[kOutReduction] = engine_.reductionDb;
+        values_[kParamOutModLevel] = engine_.modLevelDb;
+        values_[kParamOutIrLevel] = engine_.irLevelDb;
     }
 
     std::array<float, kParameterCount> values_ {};

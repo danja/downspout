@@ -14,7 +14,9 @@ outputs.
 The ANALYSIS panel's frequency readout reports the generated ring oscillator
 (`Ring Freq` × quantised `Ring Ratio`). It is the vocoder carrier only when
 `Carrier = internal osc` and `Sync` is off; it is not a pitch estimate of the
-signal on 3/4.
+signal on 3/4. The routing column also shows live `1/2 in` and `3/4 in` level
+meters: if `3/4 in` reads `silent`, the host has not routed a second stereo bus,
+which explains both a quiet vocoder and no convolution output.
 
 Three engines run in parallel. `Mix` balances the first two, and `Conv Mix`
 fades that pair against the convolver. Each engine has a `Level` control at the

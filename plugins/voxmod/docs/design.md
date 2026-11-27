@@ -128,6 +128,9 @@ Three read-only parameters expose live measurements and the generated oscillator
   panel switches the meter to a warning colour.
 - `out_reduction` — the modulator envelope level in dB, used as a proxy for band
   gate activity
+- `out_mod_level` / `out_ir_level` — smoothed RMS of inputs 1/2 and 3/4 in dB.
+  They bypass `Bypass` and the engine levels, so a silent `out_ir_level` directly
+  shows the common host mistake of not routing the second stereo input bus.
 
 ## Bank rebuilds
 

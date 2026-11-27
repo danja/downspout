@@ -1143,8 +1143,9 @@ and overlap-added at 4x, normalised by both frame and FFT lengths; Src Feedback 
 Feedback recirculate output one frame back into either pair, capped at 95%, soft-limited
 in the loop, with a peak limiter on the wet branch. Ring Level, Vocoder Level and Conv
 Level trim each engine at unity by default. MIDI CC input. A panel XY pad maps X to Mix,
-Y to ring frequency. The vocoder/ring engines want a modulator with harmonics; convolution
-needs signal on both pairs.
+Y to ring frequency; live 1/2 and 3/4 input meters expose an unrouted second bus. The
+vocoder/ring engines want a modulator with harmonics; convolution needs signal on both
+pairs.
 
 ### sinevox
 Formant tracker with two voices. Inputs 1-2 (speech) are summed to mono and analysed

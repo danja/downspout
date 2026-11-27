@@ -477,7 +477,8 @@ Progress as of 2026-05-27:
   transposing the whole signal. `Sync` routes the ring-modulated signal back as
   the vocoder's carrier so inputs 1/2 alone are sufficient. Five Drift-CC lanes;
   read-only status parameters report the generated ring-oscillator frequency,
-  carrier sibilance and band-gate reduction; deterministic tests, and a first VST3
+  carrier sibilance, band-gate reduction and both input-bus levels, so an unrouted
+  second bus is visible in the panel; deterministic tests, and a first VST3
   wrapper target with a NanoVG UI via vendored DPF;
 - `keyframe` now exists as an extrema-sampling time stretch after Nielsen's
   DAFx26-26 method: bandlimited B-spline derivative analysis, difference

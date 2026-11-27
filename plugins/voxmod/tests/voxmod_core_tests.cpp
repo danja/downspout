@@ -537,6 +537,31 @@ void testStatusOutputsAreInRange() {
     assert(state.carrierHz > 0.0f);
 }
 
+void testInputBusLevelMetersExposeRouting() {
+    Parameters p;
+    p.mix = 50.0f;
+    p.carrierSource = 1.0f;
+
+    Bus both;
+    fillSine(both.modL.data(), 220.0, kSr, 0.4f);
+    fillSine(both.carrierR.data(), 330.0, kSr, 0.4f);
+    EngineState routed;
+    activate(routed);
+    for (int i = 0; i < 40; ++i)
+        run(routed, p, both);
+    assert(routed.modLevelDb > -20.0f);
+    assert(routed.irLevelDb > -20.0f);
+
+    Bus oneBus;
+    fillSine(oneBus.modL.data(), 220.0, kSr, 0.4f);
+    EngineState unrouted;
+    activate(unrouted);
+    for (int i = 0; i < 40; ++i)
+        run(unrouted, p, oneBus);
+    assert(unrouted.modLevelDb > -20.0f);
+    assert(unrouted.irLevelDb <= -59.5f);
+}
+
 void testRandomiseIsSeededAndKeepsMixAndBypass() {
     Parameters p;
     p.seed = 1234.0f;
@@ -1036,6 +1061,7 @@ int main() {
     testSyncRoutesRingModIntoVocoder();
     testDriftWobblesTheCarrier();
     testStatusOutputsAreInRange();
+    testInputBusLevelMetersExposeRouting();
     testRandomiseIsSeededAndKeepsMixAndBypass();
     testSerializationRoundTrip();
     testActivateResetsState();

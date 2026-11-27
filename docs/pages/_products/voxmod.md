@@ -125,12 +125,15 @@ does not change the balance between the engines.
 ### Status
 
 The panel reports the generated ring-oscillator frequency, a Sibilance meter
-showing the share of carrier energy in the top bands, and the band gate's
-reduction in dB. The frequency is the vocoder carrier only with `Carrier = internal
-osc` and `Sync` off; it is not a pitch estimate of the signal on 3/4. Sibilance
-is worth watching: a carrier with a lot of energy above the top of the bank
-cannot be analysed well, and the meter switches to a warning colour above 0.7
-because a bright carrier will produce a thin, hissy result.
+showing the share of carrier energy in the top bands, the band gate's reduction
+in dB, and live `1/2 in` / `3/4 in` level meters. The frequency is the vocoder
+carrier only with `Carrier = internal osc` and `Sync` off; it is not a pitch
+estimate of the signal on 3/4. A `3/4 in` meter stuck at `silent` is the usual
+reason the vocoder or convolver stays quiet: the host is not feeding the second
+stereo input bus. Sibilance is worth watching too: a carrier with a lot of energy
+above the top of the bank cannot be analysed well, and the meter switches to a
+warning colour above 0.7 because a bright carrier will produce a thin, hissy
+result.
 
 Core DSP, deterministic tests, the VST3 target, the panel and the catalog
 screenshot are complete. Host validation in REAPER is pending.

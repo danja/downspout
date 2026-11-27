@@ -113,10 +113,14 @@ struct EngineState {
     float sibilance = 0.0f;    // top-band share of the carrier, 0-1
     float reductionDb = 0.0f;  // modulator envelope level in dB (gate activity proxy)
     float carrierHz = 0.0f;    // smoothed ring oscillator frequency, Hz
+    float modLevelDb = -60.0f; // smoothed level on inputs 1/2, dB
+    float irLevelDb = -60.0f;  // smoothed level on inputs 3/4, dB
 
-    // Envelope followers used for the reduction meter.
+    // Envelope followers used by the meters.
     float carrierEnv = 0.0f;
     float modulatorEnv = 0.0f;
+    float modBusEnv = 0.0f;
+    float irBusEnv = 0.0f;
 
     // Peak envelope for the convolution branch limiter.
     float convLimiterEnv = 0.0f;

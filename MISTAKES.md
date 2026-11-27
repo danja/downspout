@@ -56,6 +56,11 @@ Format: what happened, root cause, prevention.
 - **Root cause:** routing was documented in prose rather than pinned by a distinguishable signal, and stale comments survived the earlier input swap.
 - **Prevention:** add frequency-discriminating tests for vocoder carrier/source roles and stereo channel pairing; keep port comments, README cross-references and UI labels in the same audit whenever routing changes.
 
+## voxmod: wrapper probe used brace-initialised vectors (2026-11-27)
+- **What happened:** the first wrapper probe aborted with `malloc(): corrupted top size` because the audio buffers had one element each while `run()` wrote 256 frames.
+- **Root cause:** `std::vector<float> v { kFrames }` selects the initializer-list constructor, so it creates one float with value 256 instead of 256 zeroes.
+- **Prevention:** allocate buffers with parentheses (`std::vector<float> v(kFrames)`), and run any new rendering probe through ASan before trusting a heap symptom.
+
 ## Template
 
 ## <plugin/area>: <short description> (YYYY-MM-DD)

@@ -83,9 +83,14 @@ enum class ParamId : std::uint32_t {
     ringLevel,
     vocoderLevel,
     convLevel,
+
+    // Live input-bus levels, appended after every control so automation IDs are
+    // stable. They make an unrouted second bus visible in the panel.
+    outModLevel,
+    outIrLevel,
 };
 
-inline constexpr std::size_t kParameterCount = 33;
+inline constexpr std::size_t kParameterCount = 35;
 
 struct ParamSpec {
     const char* symbol;
@@ -141,6 +146,9 @@ inline constexpr std::array<ParamSpec, kParameterCount> kParameterSpecs = {{
     {"ring_level", "Ring Level", "%", 0.0f, 100.0f, 100.0f, false, false, false},
     {"vocoder_level", "Vocoder Level", "%", 0.0f, 100.0f, 100.0f, false, false, false},
     {"conv_level", "Conv Level", "%", 0.0f, 100.0f, 100.0f, false, false, false},
+
+    {"out_mod_level", "1/2 In", "dB", -60.0f, 0.0f, -60.0f, false, true, false},
+    {"out_ir_level", "3/4 In", "dB", -60.0f, 0.0f, -60.0f, false, true, false},
 }};
 
 // ── Ring modulator ──────────────────────────────────────────────────────────

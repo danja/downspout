@@ -1070,10 +1070,25 @@ private:
         fc(th.textDim);
         text(kCcX, hintY, "in 1/2 = source / modulator", nullptr);
         text(kCcX, hintY + 15.0f, "in 3/4 = carrier / live IR", nullptr);
-        text(kCcX, hintY + 30.0f, "Conv Mix multiplies their FFT", nullptr);
-        text(kCcX, hintY + 45.0f, "frames; feedback recirculates.", nullptr);
 
-        const float mapY = hintY + 62.0f;
+        // The live bus meters turn "no sound" into an obvious routing problem:
+        // a silent 3/4 bus explains both a quiet vocoder and no convolution.
+        const auto drawBusLevel = [&](const char* label, const float db, const float y) {
+            char line[48];
+            if (db <= -59.5f)
+                std::snprintf(line, sizeof(line), "%s  silent", label);
+            else
+                std::snprintf(line, sizeof(line), "%s  %.1f dB", label, static_cast<double>(db));
+            fc(db < -50.0f ? th.warning : th.textPrimary);
+            text(kCcX, y, line, nullptr);
+        };
+        drawBusLevel("1/2 in", values_[index(ParamId::outModLevel)], hintY + 30.0f);
+        drawBusLevel("3/4 in", values_[index(ParamId::outIrLevel)], hintY + 45.0f);
+
+        fc(th.textDim);
+        text(kCcX, hintY + 60.0f, "Conv Mix opens the FFT multiply.", nullptr);
+
+        const float mapY = hintY + 72.0f;
         fc(th.textDim);
         text(kCcX, mapY, "Drift lanes 1-4, then 5:", nullptr);
         for (std::size_t m = 0; m < kControllerMap.size(); ++m) {
@@ -1082,7 +1097,7 @@ private:
                           static_cast<int>(kControllerMap[m].controller),
                           kControllerMap[m].label);
             fc(th.textPrimary);
-            text(kCcX + 10.0f, mapY + 14.0f + static_cast<float>(m) * 12.0f, line, nullptr);
+            text(kCcX + 10.0f, mapY + 14.0f + static_cast<float>(m) * 11.0f, line, nullptr);
         }
     }
 

@@ -314,6 +314,10 @@ void activate(EngineState& state) noexcept
     state.carrierHz = 0.0f;
     state.carrierEnv = 0.0f;
     state.modulatorEnv = 0.0f;
+    state.modBusEnv = 0.0f;
+    state.irBusEnv = 0.0f;
+    state.modLevelDb = -60.0f;
+    state.irLevelDb = -60.0f;
     state.convLimiterEnv = 0.0f;
     for (LiveConvolver& convolver : state.convolvers)
         convolver.clear();
@@ -446,6 +450,11 @@ void processBlock(EngineState& state,
     // rather than as vibrato.
     const double driftInc = kTwoPi * 0.13 / sr;
 
+    // Bus meters are independent of Bypass and Mix: they exist to show whether a
+    // host has routed each stereo pair into the plugin at all.
+    double modBusPower = 0.0;
+    double irBusPower = 0.0;
+
     for (std::uint32_t frame = 0; frame < frames; ++frame) {
         // Ports 1/2 are the modulator/source; ports 3/4 are the carrier that
         // the vocoder analyses and the live IR feed the convolver multiplies.
@@ -461,6 +470,11 @@ void processBlock(EngineState& state,
         const float irL = std::isfinite(carrierL) ? carrierL : 0.0f;
         const float irR = std::isfinite(carrierR) ? carrierR : 0.0f;
         const float mMono = 0.5f * (mxL + mxR);
+
+        modBusPower += 0.5 * (static_cast<double>(mxL) * mxL
+                              + static_cast<double>(mxR) * mxR);
+        irBusPower += 0.5 * (static_cast<double>(irL) * irL
+                            + static_cast<double>(irR) * irR);
 
         // ── Live convolution ─────────────────────────────────────────────
         // A frame of 1/2 is multiplied by a frame of 3/4 in the frequency
@@ -584,6 +598,22 @@ void processBlock(EngineState& state,
             outputs[0][frame] = std::isfinite(outL) ? outL : 0.0f;
         if (outputs && outputs[1])
             outputs[1][frame] = std::isfinite(outR) ? outR : 0.0f;
+    }
+
+    if (frames > 0) {
+        const double modRms = std::sqrt(modBusPower / static_cast<double>(frames));
+        const double irRms = std::sqrt(irBusPower / static_cast<double>(frames));
+        state.modBusEnv += (static_cast<float>(modRms) - state.modBusEnv)
+            * (modRms > state.modBusEnv ? envAttack : envRelease);
+        state.irBusEnv += (static_cast<float>(irRms) - state.irBusEnv)
+            * (irRms > state.irBusEnv ? envAttack : envRelease);
+
+        const auto dbOf = [](const float envelope) noexcept {
+            return static_cast<float>(std::clamp(
+                20.0 * std::log10(std::max(static_cast<double>(envelope), 1.0e-6)), -60.0, 0.0));
+        };
+        state.modLevelDb = dbOf(state.modBusEnv);
+        state.irLevelDb = dbOf(state.irBusEnv);
     }
 
     // The status readout tracks the oscillator that actually drives the ring
