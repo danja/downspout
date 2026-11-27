@@ -1,1 +1,8 @@
-a cutting edge drum resynthesis and automatic re-quantization tool. You give it a low quality potentially unquantized drum break, and the tool will automatically detect and classify the various pieces of the break (snare, kick, high hat, toms, symbols, ghost notes, etc), quantize them to your grid while simultaneously resynthesizing them at a higher quality with more transient detail 
+Possible systematic problem - 
+Hey I'm trying your plugins right now. Bassgen doesn't work on Ableton. Says the VST3 plugin can't be loaded. Just letting you know:)
+User Avatar
+QuirkyAssistant5919
+8:42 AM
+Bubbles, Arpgen, Conductor, Counterpointer, DrumGen, Gater, Gremlin Driver, Ground, Harmonic Atlas, m-mix, markov, mel gen, midiscribe, mnemosyne, Polymeter, Sprout,Xoxolo
+These all don't load
+Im on Ryzen 7, Windows 10 latest version, cracked Ableton 12

@@ -534,6 +534,18 @@ Current main gap:
   validating the expanded release payload, and deeper interaction testing of
   the generative-workstation suite in Transmission.
 
+## Proposed offline drum resynthesis work
+
+`energise` is proposed as an offline drum-break re-quantisation and resynthesis
+tool: capture a low-quality or unquantised break, detect and classify its hits,
+edit the event list, quantise to a groove grid, then render a higher-quality
+version with clearer transients. The concept is in
+`docs/drumloop-energise-overview.md` and the phased implementation plan, data
+model, tests and open decisions are in `docs/energise-plan.md`. The first build
+should be a portable core plus thin DPF shell with a classical analyser and
+hybrid transient/body/residual renderer; ML runtime and model dependencies need
+explicit approval before they are vendored or linked.
+
 ## Generative-workstation UI readiness
 
 The first implementation of Harmonic Atlas, Conductor, Drift, Mnemosyne,

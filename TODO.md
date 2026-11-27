@@ -49,6 +49,7 @@ Open work only. Completed builds are recorded in plugin docs; resolved lessons g
 
 ## New plugin ideas
 
+- [ ] Energise: offline drum-break transcription, re-quantisation and resynthesis tool. Concept in `docs/drumloop-energise-overview.md`; implementation sequence, tests and acceptance criteria in `docs/energise-plan.md`. Next: approve capture source, capture length and ML dependency policy, then build the portable data model and onset/tempo fixtures before DSP.
 - [ ] Noise-reduction plugin: STFT gate/subtraction, learned/automatic noise profile, controls, musical-noise suppression, reported latency, stereo linking, Magneto UI, deterministic probes before DSP, docs/release wiring. Ask before reusing Prism/Qune STFT as shared code.
 - [ ] Audio-driven string/comb (extended Karplus-Strong): damping, pick position, stiffness, MIDI/pitch tracking.
 - [ ] Envelope-follower multimode filter (auto-wah).
