@@ -76,6 +76,7 @@ protected:
         drawHeader(w);
         drawTransport(w);
         drawCaptureAndGroove();
+        drawOutputSync();
         drawSound();
         drawHelp();
         drawWaveform();
@@ -107,8 +108,24 @@ protected:
         }
         if (stepMinus_.contains(x, y) || stepPlus_.contains(x, y)) {
             const float delta = stepMinus_.contains(x, y) ? -1.0f : 1.0f;
-            commit(core::ParamId::captureSeconds,
-                   std::clamp(value(core::ParamId::captureSeconds) + delta, 1.0f, 8.0f));
+            commit(core::ParamId::captureBars,
+                   std::clamp(value(core::ParamId::captureBars) + delta,
+                              static_cast<float>(core::kMinCaptureBars),
+                              static_cast<float>(core::kMaxCaptureBars)));
+            return true;
+        }
+        for (std::size_t i = 0; i < audioOutRects_.size(); ++i) {
+            if (audioOutRects_[i].contains(x, y)) {
+                commit(core::ParamId::audioOut, static_cast<float>(i));
+                return true;
+            }
+        }
+        if (midiOutRect_.contains(x, y)) {
+            commit(core::ParamId::midiOut, value(core::ParamId::midiOut) >= 0.5f ? 0.0f : 1.0f);
+            return true;
+        }
+        if (bbtLoopRect_.contains(x, y)) {
+            commit(core::ParamId::bbtLoop, value(core::ParamId::bbtLoop) >= 0.5f ? 0.0f : 1.0f);
             return true;
         }
         for (std::size_t i = 0; i < gridRects_.size(); ++i) {
@@ -250,6 +267,9 @@ private:
     std::array<float, core::kParameterCount> values_ {};
     std::array<Rect, core::kParameterCount> paramRects_ {};
     std::array<Rect, 4> gridRects_ {};
+    std::array<Rect, core::kAudioOutNames.size()> audioOutRects_ {};
+    Rect midiOutRect_ {};
+    Rect bbtLoopRect_ {};
     std::array<Rect, core::kVisibleEvents> markerRects_ {};
     std::array<Rect, core::kVisibleEvents> rowRects_ {};
     Rect stepMinus_ {};
@@ -275,7 +295,12 @@ private:
 
     [[nodiscard]] float spanSeconds() const noexcept
     {
-        float span = std::max(1.0f, value(core::ParamId::captureSeconds));
+        const float bpm = std::max(1.0f, value(core::ParamId::tempoBpm));
+        const float bars = std::clamp(value(core::ParamId::captureBars),
+                                      static_cast<float>(core::kMinCaptureBars),
+                                      static_cast<float>(core::kMaxCaptureBars));
+        float span = std::min(static_cast<float>(core::kMaxCaptureSeconds),
+                              bars * 4.0f * 60.0f / bpm);
         for (std::size_t slot = 0; slot < core::kVisibleEvents; ++slot) {
             const std::size_t base = idx(core::ParamId::eventStart) + slot * core::kEventFields;
             span = std::max(span, values_[base] + 0.25f);
@@ -374,11 +399,14 @@ private:
 
         const int state = std::clamp(static_cast<int>(std::lround(value(core::ParamId::status))),
                                      0, static_cast<int>(core::kStateNames.size()) - 1);
-        char status[48];
-        std::snprintf(status, sizeof(status), "%s   %.0f BPM  |  %d events",
+        const bool bbtLocked = value(core::ParamId::bbtValid) >= 0.5f
+                               && value(core::ParamId::bbtLoop) >= 0.5f;
+        char status[64];
+        std::snprintf(status, sizeof(status), "%s  %.0f BPM  %d ev  %s",
                       core::kStateNames[static_cast<std::size_t>(state)],
                       value(core::ParamId::tempoBpm),
-                      static_cast<int>(std::lround(value(core::ParamId::eventCount))));
+                      static_cast<int>(std::lround(value(core::ParamId::eventCount))),
+                      bbtLocked ? "BBT" : "FREE");
         beginPath();
         fc(t_.surface);
         roundedRect(w - 290.0f, 13.0f, 270.0f, 32.0f, 5.0f);
@@ -406,7 +434,9 @@ private:
 
         fontSize(12.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
-        fc(active ? t_.accent : t_.textPrimary);
+        // Active faces are amber; accent-on-amber made the label disappear.
+        // The unlit-lamp housing colour is dark in both themes.
+        fc(active ? t_.accentDim : t_.textPrimary);
         text(r.x + r.w * 0.5f, r.y + r.h * 0.5f, label, nullptr);
     }
 
@@ -510,43 +540,87 @@ private:
     {
         const float x = kPad;
         const float y = kPanelTop;
-        drawPanel(x, y, kLeftW, 284.0f, "CAPTURE / GROOVE");
+        drawPanel(x, y, kLeftW, 232.0f, "CAPTURE / GROOVE  —  NEXT BAR");
 
         fontSize(11.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         fc(t_.textDim);
-        text(x + 18.0f, y + 48.0f, "LENGTH", nullptr);
+        text(x + 18.0f, y + 48.0f, "BARS", nullptr);
 
-        stepMinus_ = {x + 104.0f, y + 38.0f, 24.0f, 22.0f};
-        stepPlus_ = {x + 208.0f, y + 38.0f, 24.0f, 22.0f};
+        stepMinus_ = {x + 70.0f, y + 38.0f, 24.0f, 22.0f};
+        stepPlus_ = {x + 174.0f, y + 38.0f, 24.0f, 22.0f};
         drawButton(stepMinus_, "-", false);
         drawButton(stepPlus_, "+", false);
-        char seconds[16];
-        std::snprintf(seconds, sizeof(seconds), "%d s", static_cast<int>(std::lround(value(core::ParamId::captureSeconds))));
+        char length[40];
+        const float bpm = std::max(1.0f, value(core::ParamId::tempoBpm));
+        const float seconds = std::min(static_cast<float>(core::kMaxCaptureSeconds),
+                                       value(core::ParamId::captureBars) * 4.0f * 60.0f / bpm);
+        std::snprintf(length, sizeof(length), "%d bars  %.1f s",
+                      static_cast<int>(std::lround(value(core::ParamId::captureBars))), seconds);
         fontSize(12.0f);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
         fc(t_.textPrimary);
-        text(x + 168.0f, y + 49.0f, seconds, nullptr);
+        text(x + 134.0f, y + 49.0f, length, nullptr);
 
-        const float gridY = y + 72.0f;
-        const float gridW = (kLeftW - 36.0f - 18.0f) / 4.0f;
+        fontSize(10.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        fc(value(core::ParamId::bbtValid) >= 0.5f ? t_.accent : t_.textDim);
+        text(x + 210.0f, y + 49.0f,
+             value(core::ParamId::bbtValid) >= 0.5f ? "BBT OK" : "NO BBT", nullptr);
+
+        fontSize(11.0f);
+        fc(t_.textDim);
+        text(x + 18.0f, y + 86.0f, "GRID", nullptr);
+        const float gridY = y + 76.0f;
+        const float gridW = (kLeftW - 92.0f - 18.0f) / 4.0f;
         for (std::size_t i = 0; i < gridRects_.size(); ++i) {
-            gridRects_[i] = {x + 18.0f + static_cast<float>(i) * (gridW + 6.0f), gridY, gridW, 24.0f};
+            gridRects_[i] = {x + 72.0f + static_cast<float>(i) * (gridW + 4.0f), gridY, gridW, 24.0f};
             drawButton(gridRects_[i], core::kGridNames[i],
                        static_cast<int>(std::lround(value(core::ParamId::grid))) == static_cast<int>(i));
         }
 
-        drawSlider(core::ParamId::quantiseStrength, x + 18.0f, y + 112.0f, kLeftW - 36.0f, "Quantise", nullptr);
-        drawSlider(core::ParamId::ghostStrength, x + 18.0f, y + 142.0f, kLeftW - 36.0f, "Ghosts", nullptr);
-        drawSlider(core::ParamId::swing, x + 18.0f, y + 172.0f, kLeftW - 36.0f, "Swing", nullptr);
-        drawSlider(core::ParamId::humanise, x + 18.0f, y + 202.0f, kLeftW - 36.0f, "Humanise", nullptr);
-        drawSlider(core::ParamId::driftAllowance, x + 18.0f, y + 232.0f, kLeftW - 36.0f, "Drift", nullptr);
+        drawSlider(core::ParamId::quantiseStrength, x + 18.0f, y + 120.0f, kLeftW - 36.0f, "Quantise", nullptr);
+        drawSlider(core::ParamId::ghostStrength, x + 18.0f, y + 148.0f, kLeftW - 36.0f, "Ghosts", nullptr);
+        drawSlider(core::ParamId::swing, x + 18.0f, y + 176.0f, kLeftW - 36.0f, "Swing", nullptr);
+        drawSlider(core::ParamId::humanise, x + 18.0f, y + 204.0f, kLeftW - 36.0f, "Humanise", nullptr);
+    }
+
+    void drawOutputSync()
+    {
+        const float x = kPad;
+        const float y = 376.0f;
+        drawPanel(x, y, kLeftW, 104.0f, "OUTPUT / SYNC");
+
+        fontSize(10.0f);
+        textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
+        fc(t_.textDim);
+        text(x + 16.0f, y + 42.0f, "AUDIO", nullptr);
+        const float segW = (kLeftW - 32.0f - 12.0f) / core::kAudioOutNames.size();
+        const int mode = static_cast<int>(std::lround(value(core::ParamId::audioOut)));
+        for (std::size_t i = 0; i < audioOutRects_.size(); ++i) {
+            audioOutRects_[i] = {x + 16.0f + static_cast<float>(i) * (segW + 6.0f),
+                                 y + 32.0f, segW, 22.0f};
+            drawButton(audioOutRects_[i], core::kAudioOutNames[i], static_cast<int>(i) == mode);
+        }
+
+        fontSize(10.0f);
+        fc(t_.textDim);
+        text(x + 16.0f, y + 74.0f, "MIDI OUT", nullptr);
+        midiOutRect_ = {x + 104.0f, y + 64.0f, 44.0f, 22.0f};
+        const bool midiOn = core::midiOutEnabled(value(core::ParamId::midiOut));
+        drawButton(midiOutRect_, midiOn ? "ON" : "OFF", midiOn);
+
+        fc(t_.textDim);
+        text(x + 172.0f, y + 74.0f, "BBT LOOP", nullptr);
+        bbtLoopRect_ = {x + 260.0f, y + 64.0f, 44.0f, 22.0f};
+        const bool loopOn = core::bbtLoopEnabled(value(core::ParamId::bbtLoop));
+        drawButton(bbtLoopRect_, loopOn ? "ON" : "OFF", loopOn);
     }
 
     void drawSound()
     {
         const float x = kPad;
-        const float y = 428.0f;
+        const float y = 492.0f;
         drawPanel(x, y, kLeftW, 190.0f, "REBUILT VOICES");
 
         drawSlider(core::ParamId::transientLevel, x + 18.0f, y + 34.0f, kLeftW - 36.0f, "Transient", nullptr);
@@ -560,14 +634,14 @@ private:
     void drawHelp()
     {
         const float x = kPad;
-        const float y = 626.0f;
+        const float y = 694.0f;
         drawPanel(x, y, kLeftW, 74.0f, "WORKFLOW");
 
-        fontSize(11.0f);
+        fontSize(10.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         fc(t_.textDim);
-        text(x + 14.0f, y + 44.0f, "1  Demo or Capture   2  Analyse   3  Edit   4  Render", nullptr);
-        text(x + 14.0f, y + 62.0f, "Keys: A/D class   W/S velocity   G ghost   [ ] page", nullptr);
+        text(x + 14.0f, y + 44.0f, "1 Demo/Capture at next bar  2 Analyse  3 Edit  4 Render", nullptr);
+        text(x + 14.0f, y + 62.0f, "Audio Off/Pass/Render  |  MIDI + BBT loop switches  |  A/D W/S G [ ]", nullptr);
     }
 
     void drawWaveform()

@@ -26,6 +26,11 @@ constexpr std::array<std::uint8_t, kClassCount> kMidiNotes = {{
     return std::isfinite(value) ? value : fallback;
 }
 
+[[nodiscard]] double finiteOr(const double value, const double fallback) noexcept
+{
+    return std::isfinite(value) ? value : fallback;
+}
+
 }  // namespace
 
 float clampValue(const float v, const float lo, const float hi) noexcept
@@ -64,6 +69,68 @@ double gridStepSeconds(const GrooveMap& groove) noexcept
     return 60.0 / std::max(1.0, groove.bpm) / std::max(1, groove.gridDivisionsPerBeat);
 }
 
+double beatSeconds(const HostPosition& position) noexcept
+{
+    const double bpm = finiteOr(position.bpm, 120.0);
+    const double beatType = finiteOr(position.beatType, 4.0f);
+    return 60.0 / std::max(1.0, bpm) * 4.0 / std::max(1.0, beatType);
+}
+
+double barSeconds(const HostPosition& position) noexcept
+{
+    const float beatsPerBar = std::isfinite(position.beatsPerBar) ? position.beatsPerBar : 4.0f;
+    return beatSeconds(position) * std::max(1.0, static_cast<double>(beatsPerBar));
+}
+
+double beatInBar(const HostPosition& position) noexcept
+{
+    const float beatsPerBar = std::isfinite(position.beatsPerBar) ? position.beatsPerBar : 4.0f;
+    const double beat = std::clamp(static_cast<double>(position.beat) - 1.0, 0.0,
+                                   std::max(0.0, static_cast<double>(beatsPerBar) - 1.0));
+    const double ticksPerBeat = finiteOr(position.ticksPerBeat, 1920.0);
+    const double tick = std::clamp(finiteOr(position.tick, 0.0), 0.0, std::max(1.0, ticksPerBeat));
+    return std::min(static_cast<double>(beatsPerBar), beat + tick / std::max(1.0, ticksPerBeat));
+}
+
+double secondsToNextBar(const HostPosition& position) noexcept
+{
+    const float beatsPerBar = std::isfinite(position.beatsPerBar) ? position.beatsPerBar : 4.0f;
+    return std::max(0.0, static_cast<double>(beatsPerBar) - beatInBar(position)) * beatSeconds(position);
+}
+
+int effectiveCaptureBars(const HostPosition& position, const int requestedBars) noexcept
+{
+    const int bars = clampInt(requestedBars, kMinCaptureBars, kMaxCaptureBars);
+    const double oneBar = barSeconds(position);
+    if (!(oneBar > 0.0))
+        return bars;
+    const int fitting = static_cast<int>(std::floor(static_cast<double>(kMaxCaptureSeconds) / oneBar));
+    return std::max(1, std::min(bars, fitting));
+}
+
+std::size_t captureFramesForBars(const int sampleRate, const HostPosition& position,
+                                 const int requestedBars) noexcept
+{
+    if (sampleRate <= 0)
+        return 0;
+    const int bars = effectiveCaptureBars(position, requestedBars);
+    const double seconds = std::min(static_cast<double>(kMaxCaptureSeconds), barSeconds(position) * bars);
+    const auto rate = static_cast<std::size_t>(sampleRate);
+    return std::max<std::size_t>(1, static_cast<std::size_t>(std::lround(seconds * static_cast<double>(rate))));
+}
+
+GrooveMap grooveFromHost(const HostPosition& position, const int gridDivisions, const float swing)
+{
+    GrooveMap groove {};
+    groove.bpm = std::clamp(finiteOr(position.bpm, 120.0), 1.0, 400.0);
+    groove.phaseSec = 0.0;  // capture always starts on a bar line
+    groove.gridDivisionsPerBeat = std::clamp(gridDivisions, 1, 32);
+    groove.swing = clampValue(swing, 0.0f, 1.0f);
+    groove.drift.clear();
+    groove.confidence = position.valid ? 1.0f : 0.5f;
+    return groove;
+}
+
 Processor::Processor()
 {
     for (std::size_t i = 0; i < kParameterCount; ++i)
@@ -78,6 +145,7 @@ Processor::Processor()
         lastRequests_[i] = static_cast<std::uint32_t>(std::lround(params_[index(requests[i])]));
 
     groove_.gridDivisionsPerBeat = gridDivisions(static_cast<int>(params_[index(ParamId::grid)]));
+    hostGroove_ = grooveFromHost(HostPosition {}, groove_.gridDivisionsPerBeat, params_[index(ParamId::swing)]);
     settings_.swing = params_[index(ParamId::swing)];
 }
 
@@ -87,6 +155,7 @@ void Processor::reset()
         params_[i] = kParameterSpecs[i].defaultValue;
     groove_ = GrooveMap {};
     groove_.gridDivisionsPerBeat = gridDivisions(static_cast<int>(params_[index(ParamId::grid)]));
+    hostGroove_ = grooveFromHost(HostPosition {}, groove_.gridDivisionsPerBeat, params_[index(ParamId::swing)]);
     settings_ = RenderSettings {};
     settings_.swing = params_[index(ParamId::swing)];
     events_.clear();
@@ -129,6 +198,8 @@ void Processor::syncSettings()
     settings_.outputTrim = params_[index(ParamId::outputTrim)];
     groove_.swing = settings_.swing;
     groove_.gridDivisionsPerBeat = gridDivisions(static_cast<int>(params_[index(ParamId::grid)]));
+    hostGroove_.gridDivisionsPerBeat = groove_.gridDivisionsPerBeat;
+    hostGroove_.swing = settings_.swing;
 }
 
 void Processor::loadClassParamsFromSettings()
@@ -217,7 +288,11 @@ float Processor::parameter(const std::uint32_t id) const
     case ParamId::abSide:
         return showingRender_ ? 1.0f : 0.0f;
     case ParamId::tempoBpm:
-        return static_cast<float>(groove_.bpm);
+        return params_[index(ParamId::bbtValid)] >= 0.5f
+                   ? static_cast<float>(hostGroove_.bpm)
+                   : static_cast<float>(groove_.bpm);
+    case ParamId::bbtValid:
+        return params_[index(ParamId::bbtValid)];
     default:
         break;
     }
@@ -248,6 +323,21 @@ float Processor::parameter(const std::uint32_t id) const
         }
     }
     return 0.0f;
+}
+
+void Processor::setHostGrid(const double bpm, const double phaseSec)
+{
+    hostGroove_.bpm = std::clamp(finiteOr(bpm, 120.0), 1.0, 400.0);
+    hostGroove_.phaseSec = finiteOr(phaseSec, 0.0);
+    hostGroove_.gridDivisionsPerBeat = gridDivisions(static_cast<int>(params_[index(ParamId::grid)]));
+    hostGroove_.swing = params_[index(ParamId::swing)];
+    hostGroove_.drift.clear();
+    hostGroove_.confidence = 1.0f;
+}
+
+void Processor::setHostBbtValid(const bool valid) noexcept
+{
+    params_[index(ParamId::bbtValid)] = valid ? 1.0f : 0.0f;
 }
 
 RequestActions Processor::takeRequests()
@@ -336,8 +426,10 @@ bool Processor::capture(const CaptureBuffer& buffer)
     capture_ = std::move(clipped);
     sampleRate_ = capture_.sampleRate;
     events_.clear();
-    groove_ = GrooveMap {};
+    groove_ = hostGroove_;
     groove_.gridDivisionsPerBeat = gridDivisions(static_cast<int>(params_[index(ParamId::grid)]));
+    groove_.phaseSec = 0.0;  // captured from a bar line
+    groove_.drift.clear();
     settings_ = RenderSettings {};
     syncSettings();
     rendered_ = RenderedBuffer {};
@@ -353,6 +445,8 @@ bool Processor::capture(const CaptureBuffer& buffer)
 
 bool Processor::makeDemo(const int sampleRate, const std::uint32_t seed)
 {
+    // The fixture break is synthesised at 120 BPM, so its locked grid is 120.
+    setHostGrid(120.0, 0.0);
     return capture(makeDemoBreak(sampleRate > 0 ? sampleRate : 48000, seed));
 }
 
@@ -362,9 +456,10 @@ bool Processor::analyse()
         state_ = ProcessorState::Error;
         return false;
     }
-    GrooveMap groove {};
+    GrooveMap groove = groove_;
+    groove.drift.clear();  // hard lock: never refit or drift from host BPM
     std::vector<DrumEvent> events {};
-    if (!analyseCapture(capture_, groove_.gridDivisionsPerBeat, settings_.driftAllowance, groove, events)) {
+    if (!analyseCaptureWithGroove(capture_, groove, events)) {
         state_ = ProcessorState::Error;
         return false;
     }
@@ -598,6 +693,7 @@ bool Processor::deserialize(const std::string& text)
     if (events_.size() > kMaxEvents)
         events_.resize(kMaxEvents);
     groove_ = data.groove;
+    hostGroove_ = data.groove;
     settings_ = data.settings;
     state_ = data.state;
     if (state_ == ProcessorState::Rendered && rendered_.left.empty())

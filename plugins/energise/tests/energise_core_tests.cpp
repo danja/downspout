@@ -105,6 +105,11 @@ void testDefaultsAndParameterClamping()
         assert(spec.symbol != nullptr && spec.name != nullptr);
     }
     Processor processor {};
+    assert(processor.parameter(static_cast<std::uint32_t>(ParamId::captureBars)) == 2.0f);
+    assert(processor.parameter(static_cast<std::uint32_t>(ParamId::audioOut)) == 0.0f);
+    assert(processor.parameter(static_cast<std::uint32_t>(ParamId::midiOut)) == 1.0f);
+    assert(processor.parameter(static_cast<std::uint32_t>(ParamId::bbtLoop)) == 1.0f);
+    assert(processor.parameter(static_cast<std::uint32_t>(ParamId::bbtValid)) == 0.0f);
     processor.setParameter(static_cast<std::uint32_t>(ParamId::quantiseStrength), 4.0f);
     assert(std::fabs(processor.parameter(static_cast<std::uint32_t>(ParamId::quantiseStrength)) - 1.0f) < 1e-6f);
     processor.setParameter(static_cast<std::uint32_t>(ParamId::quantiseStrength), -4.0f);
@@ -138,6 +143,65 @@ void testCaptureClampsToEightSeconds()
     assert(processor.capture(longCapture));
     assert(processor.captureBuffer().left.size() == static_cast<std::size_t>(kSr * kMaxCaptureSeconds));
     assert(processor.state() == ProcessorState::Captured);
+}
+
+void testBbtCaptureMath()
+{
+    HostPosition position {};
+    position.valid = true;
+    position.playing = true;
+    position.bar = 1;
+    position.beat = 1;
+    position.tick = 0.0;
+    position.beatsPerBar = 4.0f;
+    position.beatType = 4.0f;
+    position.bpm = 120.0;
+
+    assert(std::fabs(beatSeconds(position) - 0.5) < 1e-12);
+    assert(std::fabs(barSeconds(position) - 2.0) < 1e-12);
+    assert(std::fabs(secondsToNextBar(position) - 2.0) < 1e-12);
+    assert(captureFramesForBars(kSr, position, 4) == static_cast<std::size_t>(kSr * 8));
+    assert(effectiveCaptureBars(position, 4) == 4);
+
+    position.beat = 3;
+    position.tick = 960.0;
+    assert(std::fabs(beatInBar(position) - 2.5) < 1e-12);
+    assert(std::fabs(secondsToNextBar(position) - 0.75) < 1e-12);
+
+    position.beat = 1;
+    position.tick = 0.0;
+    position.bpm = 60.0;  // two whole bars fit under the eight-second cap
+    assert(effectiveCaptureBars(position, 4) == 2);
+    assert(captureFramesForBars(kSr, position, 4) == static_cast<std::size_t>(kSr * 8));
+
+    position.bpm = 30.0;  // one bar is exactly 8 s; hard cap wins
+    assert(effectiveCaptureBars(position, 4) == 1);
+    assert(captureFramesForBars(kSr, position, 4) == static_cast<std::size_t>(kSr * 8));
+
+    position.beatType = 8.0f;
+    position.bpm = 120.0;
+    assert(std::fabs(beatSeconds(position) - 0.25) < 1e-12);
+}
+
+void testHostLockedAnalysis()
+{
+    const CaptureBuffer demo = makeDemoBreak(kSr, 1789u);
+    Processor processor {};
+    processor.setHostBbtValid(true);
+    processor.setHostGrid(137.5, 0.0);
+    assert(processor.capture(demo));
+    assert(processor.analyse());
+    assert(std::fabs(processor.groove().bpm - 137.5) < 1e-9);
+    assert(std::fabs(processor.groove().phaseSec) < 1e-12);
+    assert(processor.groove().drift.empty());
+    assert(processor.parameter(static_cast<std::uint32_t>(ParamId::bbtValid)) == 1.0f);
+
+    assert(processor.quantise());
+    assert(processor.render());
+    const std::string text = processor.serialize();
+    Processor reopened {};
+    assert(reopened.deserialize(text));
+    assert(std::fabs(reopened.groove().bpm - 137.5) < 1e-9);
 }
 
 void testDemoIsDeterministic()
@@ -476,6 +540,28 @@ void testEventEditsThroughRequestParameters()
     assert(processor.events()[0].ghost == before.ghost);
 }
 
+void testOutputSwitchSemantics()
+{
+    assert(audioOutMode(0.0f) == AudioOutMode::Off);
+    assert(audioOutMode(0.4f) == AudioOutMode::Off);
+    assert(audioOutMode(1.0f) == AudioOutMode::Pass);
+    assert(audioOutMode(1.4f) == AudioOutMode::Pass);
+    assert(audioOutMode(1.6f) == AudioOutMode::Render);
+    assert(audioOutMode(2.0f) == AudioOutMode::Render);
+    assert(!midiOutEnabled(0.0f));
+    assert(midiOutEnabled(1.0f));
+    assert(!bbtLoopEnabled(0.0f));
+    assert(bbtLoopEnabled(1.0f));
+
+    Processor processor {};
+    processor.setHostBbtValid(true);
+    assert(processor.parameter(static_cast<std::uint32_t>(ParamId::bbtValid)) == 1.0f);
+    processor.setHostGrid(96.0, 0.0);
+    assert(std::fabs(processor.parameter(static_cast<std::uint32_t>(ParamId::tempoBpm)) - 96.0f) < 1e-6f);
+    processor.setHostBbtValid(false);
+    assert(std::fabs(processor.parameter(static_cast<std::uint32_t>(ParamId::tempoBpm)) - 120.0f) < 1e-6f);
+}
+
 }  // namespace
 
 int main()
@@ -483,6 +569,9 @@ int main()
     testDefaultsAndParameterClamping();
     testStateMachineAndRequestCounters();
     testCaptureClampsToEightSeconds();
+    testBbtCaptureMath();
+    testHostLockedAnalysis();
+    testOutputSwitchSemantics();
     testDemoIsDeterministic();
     testOnsetsMatchSyntheticBreak();
     testSimultaneousHitStaysOneMultiLabelEvent();

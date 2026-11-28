@@ -175,14 +175,14 @@ plugin's `DistrhoPluginInfo.h`:
 - `fontana` — 1280x800, browser scroll gutter and lazy preview.
 - `bassgen` and `drumgen` — accepted captures copied into the catalog.
 
-Energise's first-pass panel was captured at 1120x780 into
-`/tmp/opencode/energise-shots/energise.png` with the synthetic demo preloaded.
-An ASCII luminance render confirmed the header, transport row, left capture/voice
-panels, waveform/event lane, edit strip and event table are present, and the
-capture matches the dimensions declared in `DistrhoPluginInfo.h`. The PNG was
-copied provisionally into `docs/pages/assets/plugins/energise.png` so the catalog
-page is complete. This agent cannot view PNG pixels, so label fit, contrast and
-hierarchy need human eyes and visual acceptance remains pending.
+Energise's BBT/output-switch revision changed the panel to 1120x840 and
+invalidated the provisionally copied catalog image. A fresh demo-preloaded capture
+is in `/tmp/opencode/energise-shots/energise.png`: `identify` confirms 1120x840,
+and pixel sampling confirms selected buttons use dark text on their amber faces
+instead of the previous invisible amber-on-amber labels. The PNG has not been
+copied into `docs/pages/assets/plugins/energise.png`; this agent cannot view PNG
+pixels, so label fit, contrast and hierarchy need human eyes and visual acceptance
+remains pending.
 
 PadSeq's LED Feedback default changed to On, gained an **LED Out** selector and
 then defaulted that selector to `SysEx` after its catalog capture, so the catalog

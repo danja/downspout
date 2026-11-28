@@ -141,7 +141,7 @@ prose and example chains see `docs/summary.md`; for scale tables see `docs/scale
 | paunchlad | paunchlad.vst3 | effect/instrument (Launchpad) | 2/2 | yes/yes | no |
 | plank | plank.vst3 | instrument (Launchpad) | 0/2 | yes/yes | yes |
 | padseq | padseq.vst3 | MIDI generator (Launchpad step sequencer) | 0/2 | yes/yes | yes |
-| energise | energise.vst3 | audio effect (offline drum-break re-quantiser) | 2/2 | no/yes | no |
+| energise | energise.vst3 | audio effect (offline drum-break re-quantiser) | 2/2 | no/yes | yes (BBT capture/loop) |
 | p-mix | p_mix.vst3 | audio effect (gate) | 4/2 | no/no | yes |
 | polymeter | polymeter.vst3 | MIDI generator | 0/2 | yes/yes | yes |
 | polyscribe | polyscribe.vst3 | audio-to-MIDI generator | 2/2 | no/yes | no |
@@ -870,24 +870,28 @@ faders stay as the saved balance. Passes producer MIDI through.
 
 ### energise
 Offline drum-break re-quantiser and resynthesiser. Audio: 2 in, 2 out. No MIDI input;
-MIDI output is an offline **Export MIDI** of the event list as GM drums on channel 10,
-not a live play mode, and it respects the mute/solo class masks. Record 1-8 s (default
-4 s) from inputs 1/2 or load the built-in six-second **Demo** break; there is no WAV
-import in this pass. **Analyse** detects onsets, fits a tempo and grid (1/8, 1/16,
-1/32 or 1/16 triplet), and labels hits with a portable rule/feature classifier over
-kick, snare, clap, rim, hats, cymbals, toms, percussion and unknown. The waveform
-shows source hits, quantised targets and move arrows; the event table shows class,
-velocity, confidence, quantised time and ghost status. Click a marker or row to select
-an event, then use **Edit Class/Time/Velocity/Ghost** plus the **Edit Event** ordinary
-integer counter (VST3 suppresses trigger writes); `A`/`D`, `W`/`S`, `G` and `[`/`]`
-are keyboard equivalents. **Render** rebuilds each hit from a transient, tuned body
-and filtered residual with Quantise, Ghosts, Swing, Humanise, Drift, voice levels,
-Saturation, Variation and Output controls; **A/B** swaps the monitored buffer between
-capture and render instead of replacing the host input. Mute/solo masks, request
-counters and settings are ordinary parameters; read-only outputs carry status, tempo,
-event count, render/A-B flags, waveform peaks and the twelve visible event fields to
-the UI, and the project is versioned text state. No transport, CC map or ML runtime;
-classifier and voice implementations are swappable behind portable interfaces.
+MIDI output is an **Export MIDI** of the event list as GM drums on channel 10, gated
+by **MIDI Out** and repeated with **BBT Loop** when enabled; it respects the mute/solo
+class masks but is not a live play mode. Arm **Capture** for 1-4 bars (default 2) from
+the next host bar line on inputs 1/2, or load the built-in six-second **Demo** break;
+host BPM/phase hard-lock the analysis grid and a hard 8 s cap may shorten slow bars.
+There is no WAV import in this pass. **Analyse** detects onsets on that grid and labels
+hits with a portable rule/feature classifier over kick, snare, clap, rim, hats,
+cymbals, toms, percussion and unknown. The waveform shows source hits, quantised
+targets and move arrows; the event table shows class, velocity, confidence, quantised
+time and ghost status. Click a marker or row to select an event, then use **Edit
+Class/Time/Velocity/Ghost** plus the **Edit Event** ordinary integer counter (VST3
+suppresses trigger writes); `A`/`D`, `W`/`S`, `G` and `[`/`]` are keyboard equivalents.
+**Render** rebuilds each hit from a transient, tuned body and filtered residual with
+Quantise, Ghosts, Swing, Humanise, voice levels, Saturation, Variation and Output
+controls; the independent tempo/drift fitter is retained only as a swappable offline
+utility and does not drive the processor. **Audio Out** selects Off (default), Pass
+(input monitoring) or Render (loop); **A/B** swaps which buffer Render loops, and
+**BBT Loop** locks audio/MIDI loop phase to host bars. Mute/solo masks, switches,
+request counters and settings are ordinary parameters; read-only outputs carry status,
+host/locked tempo, BBT validity, event count, render/A-B flags, waveform peaks and
+the twelve visible event fields to the UI, and the project is versioned text state.
+No CC map or ML runtime; classifier and voice implementations are swappable.
 
 ### loopdelay
 Stereo delay and capture looper. Time is free (20-4000 ms) or follows host BBT from a

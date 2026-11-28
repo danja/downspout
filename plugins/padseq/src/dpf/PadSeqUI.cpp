@@ -81,6 +81,14 @@ protected:
         if (index < kParameterCount)
         {
             allValues_[index] = value;
+            // Hardware top buttons and pattern length changes are applied by the
+            // processor, so the status outputs are the source of truth for the
+            // effective page/scale/view. Mirror them back onto the editable
+            // parameters the controls draw and hit-test from.
+            mirrorStatus(ParamId::statusPage, ParamId::page, index, value);
+            mirrorStatus(ParamId::statusScale, ParamId::scale, index, value);
+            mirrorStatus(ParamId::statusNoteView, ParamId::noteView, index, value);
+
             // The processor owns the pattern, so Randomise/Clear change cells
             // without an explicit UI write. Status cells are the DPF bridge for
             // those changes; mirror them onto the editable cell parameters the
@@ -99,6 +107,49 @@ protected:
             }
         }
         MagnetoUI::parameterChanged(index, value);
+        repaint();
+    }
+
+    // MagnetoUI only mirrors the first 64 parameters and its commit() updates
+    // its own values_ array. PadSeq draws from allValues_, so every UI write
+    // must be reflected here too (the JACK standalone does not echo UI writes
+    // back through parameterChanged()).
+    void sendValue(const uint32_t parameter, const float value) override
+    {
+        float applied = value;
+        const auto stepsId = static_cast<uint32_t>(ParamId::steps);
+        const auto pageId = static_cast<uint32_t>(ParamId::page);
+        if (parameter == stepsId)
+        {
+            const auto range = rangeFor(ParamId::steps);
+            applied = std::round(std::clamp(applied, range.minimum, range.maximum));
+        }
+        const int steps = static_cast<int>(std::lround(parameter == stepsId
+                                                          ? applied
+                                                          : v(ParamId::steps)));
+
+        if (parameter == pageId)
+        {
+            applied = std::clamp(applied, 0.0f, static_cast<float>(maxPage(steps)));
+        }
+        else if (parameter == stepsId)
+        {
+            // The processor clamps the page when the pattern gets shorter; keep
+            // the UI and the host parameter in step with that effective value.
+            const int currentPage = iv(ParamId::page);
+            const int clampedPage = std::min(currentPage, maxPage(steps));
+            if (clampedPage != currentPage)
+            {
+                const float pageValue = static_cast<float>(clampedPage);
+                allValues_[pageId] = pageValue;
+                setValue(pageId, pageValue);
+                MagnetoUI::sendValue(pageId, pageValue);
+            }
+        }
+
+        allValues_[parameter] = applied;
+        setValue(parameter, applied);
+        MagnetoUI::sendValue(parameter, applied);
         repaint();
     }
 
@@ -193,13 +244,26 @@ private:
         return static_cast<int>(std::lround(v(id)));
     }
 
+    static int maxPage(const int steps) noexcept
+    {
+        return std::max(0, pageCount(steps) - 1);
+    }
+
+    void mirrorStatus(const ParamId status, const ParamId control,
+                      const uint32_t index, const float value)
+    {
+        if (index != static_cast<uint32_t>(status))
+            return;
+        const auto controlId = static_cast<uint32_t>(control);
+        allValues_[controlId] = value;
+        setValue(controlId, value);
+    }
+
     void sendClamped(const ParamId id, const float value)
     {
         const auto range = rangeFor(id);
-        const float clamped = std::clamp(value, range.minimum, range.maximum);
-        sendValue(static_cast<std::uint32_t>(id), clamped);
-        allValues_[static_cast<std::uint32_t>(id)] = clamped;
-        repaint();
+        sendValue(static_cast<std::uint32_t>(id),
+                  std::clamp(value, range.minimum, range.maximum));
     }
 
     void sendTrigger(const ParamId id)

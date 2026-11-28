@@ -18,7 +18,7 @@ namespace downspout::energise {
 // the waveform shadow and event-list shadow follow them.
 
 enum class ParamId : std::uint32_t {
-    captureSeconds = 0,
+    captureBars = 0,
     grid,
     quantiseStrength,
     ghostStrength,
@@ -37,6 +37,9 @@ enum class ParamId : std::uint32_t {
     soloMask,
     eventPage,
     seed,
+    audioOut,
+    midiOut,
+    bbtLoop,
 
     // Event edits use ordinary values plus a request counter. Event shadow
     // parameters below are read-only and host polling is not a reliable edit path.
@@ -64,21 +67,46 @@ enum class ParamId : std::uint32_t {
     renderReady,
     abSide,
     tempoBpm,
+    bbtValid,
 
     waveStart,
-    eventStart = 89,
-    count = 161,
+    eventStart = 93,
+    count = 165,
 };
 
 inline constexpr std::size_t kWaveformPoints = 48;
 inline constexpr std::size_t kVisibleEvents = 12;
 inline constexpr std::size_t kEventFields = 6;
-inline constexpr std::size_t kInputParameterCount = 33;
+inline constexpr std::size_t kInputParameterCount = 36;
 inline constexpr std::size_t kRequestCount = 9;
-inline constexpr std::size_t kStatusParameterCount = 8;
+inline constexpr std::size_t kStatusParameterCount = 9;
 inline constexpr std::size_t kParameterCount = static_cast<std::size_t>(ParamId::count);
 inline constexpr float kMaxRequestCount = 1048576.0f;
 
+enum class AudioOutMode : std::uint8_t {
+    Off = 0,
+    Pass,
+    Render,
+};
+
+inline constexpr std::array<const char*, 3> kAudioOutNames = {{
+    "Off", "Pass", "Render",
+}};
+
+constexpr AudioOutMode audioOutMode(const float value) noexcept
+{
+    const int index = static_cast<int>(value + 0.5f);
+    if (index == 1)
+        return AudioOutMode::Pass;
+    if (index == 2)
+        return AudioOutMode::Render;
+    return AudioOutMode::Off;
+}
+
+constexpr bool midiOutEnabled(const float value) noexcept { return value >= 0.5f; }
+constexpr bool bbtLoopEnabled(const float value) noexcept { return value >= 0.5f; }
+
+static_assert(kParameterCount == 165, "Processor::params_ storage must match this table");
 static_assert(static_cast<std::size_t>(ParamId::waveStart) + kWaveformPoints == static_cast<std::size_t>(ParamId::eventStart));
 static_assert(static_cast<std::size_t>(ParamId::eventStart) + kVisibleEvents * kEventFields == kParameterCount);
 
@@ -129,7 +157,7 @@ inline const std::array<ParamSpec, kParameterCount>& makeParameterSpecs()
     static const std::array<ParamSpec, kParameterCount> specs = [] {
         SpecBuilder builder;
         std::array<ParamSpec, kParameterCount> specs {};
-    specs[static_cast<std::size_t>(ParamId::captureSeconds)] = {"capture_seconds", "Capture Sec", "s", 1.0f, 8.0f, 4.0f, true, false};
+    specs[static_cast<std::size_t>(ParamId::captureBars)] = {"capture_bars", "Capture Bars", "bars", 1.0f, 4.0f, 2.0f, true, false};
     specs[static_cast<std::size_t>(ParamId::grid)] = {"grid", "Grid", "", 0.0f, 3.0f, 1.0f, true, false};
     specs[static_cast<std::size_t>(ParamId::quantiseStrength)] = {"quantise_strength", "Quantise", "%", 0.0f, 1.0f, 0.70f, false, false};
     specs[static_cast<std::size_t>(ParamId::ghostStrength)] = {"ghost_strength", "Ghosts", "%", 0.0f, 1.0f, 0.35f, false, false};
@@ -148,6 +176,9 @@ inline const std::array<ParamSpec, kParameterCount>& makeParameterSpecs()
     specs[static_cast<std::size_t>(ParamId::soloMask)] = {"solo_mask", "Solos", "", 0.0f, 8191.0f, 0.0f, true, false};
     specs[static_cast<std::size_t>(ParamId::eventPage)] = {"event_page", "Event Page", "", 0.0f, 42.0f, 0.0f, true, false};
     specs[static_cast<std::size_t>(ParamId::seed)] = {"seed", "Seed", "", 1.0f, 9999.0f, 1.0f, true, false};
+    specs[static_cast<std::size_t>(ParamId::audioOut)] = {"audio_out", "Audio Out", "", 0.0f, 2.0f, 0.0f, true, false};
+    specs[static_cast<std::size_t>(ParamId::midiOut)] = {"midi_out", "MIDI Out", "", 0.0f, 1.0f, 1.0f, true, false};
+    specs[static_cast<std::size_t>(ParamId::bbtLoop)] = {"bbt_loop", "BBT Loop", "", 0.0f, 1.0f, 1.0f, true, false};
     specs[static_cast<std::size_t>(ParamId::selectedEvent)] = {"selected_event", "Selected Event", "", 0.0f, 511.0f, 0.0f, true, false};
     specs[static_cast<std::size_t>(ParamId::editClass)] = {"edit_class", "Edit Class", "", 0.0f, 12.0f, 12.0f, true, false};
     specs[static_cast<std::size_t>(ParamId::editTime)] = {"edit_time", "Edit Time", "s", 0.0f, 8.0f, 0.0f, false, false};
@@ -172,6 +203,7 @@ inline const std::array<ParamSpec, kParameterCount>& makeParameterSpecs()
     specs[static_cast<std::size_t>(ParamId::renderReady)] = {"render_ready", "Render Ready", "", 0.0f, 1.0f, 0.0f, true, true};
     specs[static_cast<std::size_t>(ParamId::abSide)] = {"ab_side", "A/B Side", "", 0.0f, 1.0f, 0.0f, true, true};
     specs[static_cast<std::size_t>(ParamId::tempoBpm)] = {"tempo_bpm", "Tempo", "bpm", 0.0f, 250.0f, 120.0f, false, true};
+    specs[static_cast<std::size_t>(ParamId::bbtValid)] = {"bbt_valid", "BBT Valid", "", 0.0f, 1.0f, 0.0f, true, true};
 
     for (std::size_t i = 0; i < kWaveformPoints; ++i) {
         char symbol[16];

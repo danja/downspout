@@ -28,6 +28,12 @@ struct DetectedOnset {
                                                     const std::vector<DetectedOnset>& onsets,
                                                     const GrooveMap& groove);
 
+// Host-locked path: the supplied groove is kept verbatim (BPM, phase, grid) and
+// only onset detection/classification are recomputed.
+[[nodiscard]] bool analyseCaptureWithGroove(const CaptureBuffer& capture,
+                                            const GrooveMap& grooveTemplate,
+                                            std::vector<DrumEvent>& events);
+
 [[nodiscard]] bool analyseCapture(const CaptureBuffer& capture,
                                   const int gridDivisions,
                                   const float driftAllowance,

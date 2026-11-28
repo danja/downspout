@@ -6,6 +6,26 @@ Format: what happened, root cause, prevention.
 
 ## Open
 
+## energise: BBT helper assertions guessed the wrong bar-phase convention (2026-11-28)
+- **What happened:** three new assertions failed in a row: `secondsToNextBar()` at bar start was asserted as zero, two bars at 60 BPM were expected to fit four bars, and a 45 BPM bar was treated as longer than eight seconds.
+- **Root cause:** the test expectations were written from intuition instead of the formula: a bar-start position is a full bar *away* from the next bar, bar length is `4 * 60/BPM`, and the eight-second cap limits the bar count.
+- **Prevention:** derive BBT expectations from `beatSeconds`, `beatsPerBar` and the hard cap, then assert the computed frames against a named BPM/bar case before wiring transport code.
+
+## energise: switch-mapping test assumed truncation, not rounding (2026-11-28)
+- **What happened:** `audioOutMode(1.6f)` was asserted to be `Pass`, but the helper rounds to the nearest enumeration value, so it correctly maps to `Render`.
+- **Root cause:** the test encoded a mental model of integer truncation rather than the helper's published `value + 0.5f` mapping.
+- **Prevention:** write switch-mapping cases from the helper formula and include values on both sides of each boundary.
+
+## energise: activation cleared the loop length along with runtime state (2026-11-28)
+- **What happened:** `activate()`/`sampleRateChanged()` called `stopRuntime()`, which resets `loopFrames_` to zero; the saved break was still in the processor, but Audio Out = Render passed the inputs instead of looping the patch until another action rebuilt the loop.
+- **Root cause:** `stopRuntime()` mixes patch-derived playback state with purely transport state, and neither lifecycle hook re-synced the loop length from the stored buffers.
+- **Prevention:** after clearing runtime state in host lifecycle hooks, re-derive loop state from the persisted processor buffers; keep patch data untouched in `activate()`.
+
+## padseq: Page stepper and top Page buttons looked inert (2026-11-27)
+- **What happened:** clicking the Page stepper or top Page buttons left the displayed page unchanged, so page selection appeared broken even though the processor changed pages.
+- **Root cause:** `MagnetoUI::commit()` updates only its private 64-value array, and the JACK standalone does not echo UI writes through `parameterChanged()`. PadSeq's controls draw from a separate `allValues_` mirror that was never updated by UI writes. The fixed 0-3 page range also disagreed with the processor's effective `pageCount(steps)-1` bound.
+- **Prevention:** override `sendValue()` to mirror every UI write into the plugin's own value array (and the base mirror), clamp page against the current Steps value there, and treat processor-owned status outputs as the source of truth for effective page/scale/view.
+
 ## padseq: Clear looked inert in the UI after an edit (2026-11-27)
 - **What happened:** clicking a grid cell and then the top Clear button left the cell visibly active even though the processor had cleared the pattern.
 - **Root cause:** the grid draws editable cell parameters, but Randomise/Clear change the processor's cells internally; DPF does not echo DSP-internal parameter changes back to the UI. The status-cell outputs carried the new values but were not mapped back to the editable cell values.

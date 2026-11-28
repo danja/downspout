@@ -537,10 +537,11 @@ Current main gap:
 ## Proposed offline drum resynthesis work
 
 `energise` is now built as an offline drum-break re-quantisation and
-resynthesis tool: it captures 1-8 s from inputs 1/2 (or loads a synthetic demo
-break), detects and classifies hits into an editable event list, quantises them
-to a fitted grid, renders a transient/body/residual rebuild and A/B-compares it
-with the capture. The concept is in `docs/drumloop-energise-overview.md`; the
+resynthesis tool: it captures 1-4 whole bars from the next host bar line on
+inputs 1/2 (or loads a synthetic demo break), detects and classifies hits into
+an editable event list, quantises them to the host BPM grid, renders a
+transient/body/residual rebuild and loops it with BBT-locked audio/MIDI output
+and an A/B switch. The concept is in `docs/drumloop-energise-overview.md`; the
 phased implementation plan, data model, tests and decisions are in
 `docs/energise-plan.md` and phase status in `docs/energise-progress.md`. This
 first pass uses a portable rule/feature classifier and renderer with no ML

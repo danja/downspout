@@ -1,15 +1,17 @@
 # Energise implementation plan
 
-Status: proposal only. The product concept is in
-`docs/drumloop-energise-overview.md`; this document turns each part into
-implementation steps, tests and exit criteria. No code has been added yet.
+Status: first implementation exists; Phase 5/6 exit criteria remain pending. The
+product concept is in `docs/drumloop-energise-overview.md`; this document records
+the implementation steps, tests and exit criteria. Current progress is tracked in
+`docs/energise-progress.md`.
 
 ## Scope boundary
 
 The first version is an **offline tool inside a VST3 plugin**, not a
-zero-latency insert. It captures or imports a short drum break, produces an
-editable event list, quantises it, renders a replacement audio buffer, and lets
-the user A/B the result. A neural classifier or neural renderer is an optional
+zero-latency insert. It captures a short drum break from the inputs (or loads a
+built-in demo), produces an editable event list, quantises it to the host BPM
+grid, renders a replacement audio buffer, and loops the result in BBT sync. A
+neural classifier or neural renderer is an optional
 later backend, not part of the first buildable milestone.
 
 Do not vendor a model runtime, WAV library or training data without explicit
@@ -128,38 +130,39 @@ available when the user reviews a hit.
    - `Processor::quantise()`
    - `Processor::render()`
    - `Processor::setEvent(std::uint32_t id, const DrumEvent&)`
-4. For the first capture path, record the next `Capture Seconds` (1–8, default 4)
-   from inputs 1/2. DPF has no reliable host time-selection API, so do not
-   promise to follow a DAW selection. Add WAV import later behind a portable
-   reader if approved.
+4. Arm `Capture Bars` (1–4, default 2) and record inputs 1/2 from the next host
+   bar line, using `getTimePosition()` BBT for the start and host BPM for the
+   grid. DPF has no reliable host time-selection API, so do not promise to follow
+   a DAW selection. Add WAV import later behind a portable reader if approved.
 5. Make analysis/render synchronous in the core. The wrapper may show progress
    through `status_progress`; if it grows beyond a UI-blocking delay, run it in
    bounded idle slices or a worker later. Do not put DSP logic in `exec_idle()`.
 6. Add optional MIDI export from the edited event list, using GM drums on
    channel 10: kick 36, snare 38/40, clap 39, closed hat 42, open hat 46, toms
-   45/47/50, crash 49, ride 51. Emit it from the offline job, not the audio
-   thread.
-7. A/B must swap which buffer is monitored without changing the event list.
-   The host receives rendered audio at the captured region's position; automatic
-   replacement of a DAW media item is out of scope.
+   45/47/50, crash 49, ride 51. MIDI Out gates it; BBT Loop repeats the pattern
+   with the audio loop. Build it offline and flush from `run()`.
+7. Audio Out selects Off (default), Pass (monitor inputs) or Render (loop the
+   buffer); A/B swaps the Render buffer without changing the event list.
+   Automatic replacement of a DAW media item is out of scope.
 
 ### Tests
 
 - state machine rejects `render_request` before a capture;
 - request counters round-trip through `setParameterValue()/getParameterValue()`;
-- capture length clamps to the published range;
+- capture bars clamp to the published range and to the hard 8 s cap;
+- BBT helpers derive bar length, phase and next-bar delay from host tempo;
 - events survive edit → quantise → render with stable IDs;
 - A/B swap changes monitored buffer but not events;
 - MIDI export emits the expected `(note, channel, velocity)` pairs.
 
 ### Exit criteria
 
-A user can get from captured audio to a rendered A/B comparison, and every
-stage is observable from output parameters.
+A user can get from bar-aligned capture to a BBT-locked rendered A/B loop, and
+every stage plus BBT/output-switch state is observable from output parameters.
 
 ---
 
-## Part 2 — Analysis: onset detection, tempo/grid and classification
+## Part 2 — Analysis: onset detection, host-locked grid and classification
 
 ### Steps
 
@@ -175,12 +178,10 @@ stage is observable from output parameters.
    - parabolic interpolation, then waveform-domain attack refinement within
      ±10 ms;
    - merge duplicate onsets inside 8 ms while preserving multi-label scores.
-3. Implement `TempoGridFitter`:
-   - onset-envelope autocorrelation over 60–200 BPM;
-   - score candidate tempi against the grid, not just raw pulse spacing;
-   - circular-mean phase estimate and bar/beat origin;
-   - linear or piecewise drift fit from onset residuals;
-   - confidence from in-grid hit ratio.
+3. Keep `TempoGridFitter` as a swappable offline utility, but do not use it in
+   `Processor::analyse()`: the wrapper supplies the host BPM and bar-line phase
+   and `analyseCaptureWithGroove()` keeps that grid verbatim. Drift fitting is
+   disabled in the processor so the loop cannot wander from the DAW tempo.
 4. Implement `DrumClassifier` with a feature extractor first:
    - band energy and decay slope in 5/20/100 ms windows;
    - spectral centroid, flatness, rolloff and high/low ratios;
@@ -204,8 +205,8 @@ stage is observable from output parameters.
   event;
 - sub-sample refinement beats the raw hop estimate on a deliberately shifted
   click;
-- tempo within ±2 % and grid phase within ±20 ms on synthetic material;
-- drift fixture stays inside tolerance after a tempo change;
+- host-locked analysis keeps the supplied BPM/phase exactly and emits no drift;
+- capture frames and effective bar count respect the 8 s cap at slow tempos;
 - class accuracy at least 80 % on synthetic labels;
 - ghost notes flagged at low velocity while keeping their class;
 - stopped/silent capture produces no events and no NaN confidence.
@@ -316,7 +317,8 @@ and the renderer is deterministic and stable.
    - shift-drag changes velocity;
    - wheel or keys change class;
    - modifier toggles ghost;
-   - A/B button swaps monitored buffer;
+   - A/B button swaps the Render buffer;
+   - Audio Out 3-way switch, MIDI Out and BBT Loop switches, capture-bar stepper;
    - per-class mute/solo chips;
    - undo/redo buttons.
 4. Keep global settings as ordinary automatable parameters appended in a
@@ -362,7 +364,8 @@ events, render and compare are all visible.
 3. Keep global settings in parameters so the host saves them normally; state is
    only for the captured buffer, event list and editor selections.
 4. Emit output parameters for `state`, `progress`, `event_count`,
-   `selected_class`, `selected_confidence` and `render_ready`. DPF's VST3 bridge
+   `selected_class`, `selected_confidence`, `render_ready`, `ab_side`, `tempo_bpm`
+   and `bbt_valid`. DPF's VST3 bridge
    has no general DSP→UI state callback, so live readouts must come from output
    parameters.
 5. Test save/reopen in a real host after the core tests pass. Core tests do not
@@ -436,7 +439,7 @@ When the first buildable plugin exists, complete the new-plugin checklist in
 | --- | --- | --- |
 | 0 | Approve scope: capture path, max capture length, ML dependency policy | Decisions recorded here and in plugin docs |
 | 1 | Core data model, fixtures, state machine | Tests pass with no audio DSP |
-| 2 | Onset + tempo/grid + event list | Synthetic accuracy targets met |
+| 2 | Onset + host-locked grid + event list | Synthetic accuracy targets met; processor keeps host BPM |
 | 3 | Rule classifier + MIDI export | Labels reviewable and editable |
 | 4 | Transient/body/residual renderer | Deterministic, stable A/B render |
 | 5 | Waveform/event UI | First-time-user screenshot review accepted |
@@ -465,19 +468,15 @@ Filter large build logs with `grep -E "error:|Error [0-9]"` and check the exit
 status. After adding a test, confirm the test count or runtime changed before
 claiming it ran.
 
-## Open choices
+## Decisions
 
-- **Capture source:** record N seconds from inputs, import a WAV, or both?
-  Host time selection is not available through DPF.
-- **Maximum capture length:** state size grows with PCM payload; choose a hard
-  limit and test it.
-- **Classifier baseline:** rules only, or a small non-vendored GBT trained on
-  approved data?
-- **ML runtime:** ONNX Runtime or any model file needs explicit approval before
-  it is vendored or linked.
-- **MIDI output:** first-pass export only, or a real-time playable event mode?
-- **Host replacement:** rendered audio comes from the plugin; automatic DAW
-  media-item replacement is not planned.
-
-Until these are decided, implement against the interfaces above so the choices
-remain swappable.
+- **Capture source:** record 1–4 whole bars from the next host bar line on inputs
+  1/2, with a built-in demo break. No WAV import in this pass; host time selection
+  is not available through DPF.
+- **Maximum capture length:** hard 8 s cap on PCM state; slow tempos use fewer bars.
+- **Classifier baseline:** portable rules only; GBT/ONNX backends stay swappable
+  and require explicit approval before any model or runtime is vendored.
+- **MIDI output:** channel-10 export gated by MIDI Out and repeated with the BBT
+  loop; no real-time playable event mode.
+- **Audio output:** Off/Pass/Render with BBT loop sync; automatic DAW media-item
+  replacement is not planned.

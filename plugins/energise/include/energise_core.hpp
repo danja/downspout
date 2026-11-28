@@ -35,6 +35,13 @@ inline constexpr int kMinCaptureSeconds = 1;
 inline constexpr int kMaxCaptureSeconds = 8;
 inline constexpr int kDefaultCaptureSeconds = 4;
 
+// Capture is armed in whole bars from the next host bar line. Four bars is the
+// largest useful request at the default 120 BPM; the core still clips every
+// buffer to the hard eight-second state-size limit.
+inline constexpr int kMinCaptureBars = 1;
+inline constexpr int kMaxCaptureBars = 4;
+inline constexpr int kDefaultCaptureBars = 2;
+
 inline constexpr std::size_t kMaxEvents = 512;
 
 inline constexpr std::array<const char*, kClassCount> kClassNames = {{
@@ -68,6 +75,20 @@ struct GrooveMap {
     float swing = 0.0f;
     std::vector<TempoSegment> drift {};
     float confidence = 0.0f;
+};
+
+// Host transport snapshot. DPF-specific TimePosition conversion stays in the
+// wrapper; the portable core only needs bar/beat/tick and tempo.
+struct HostPosition {
+    bool valid = false;
+    bool playing = false;
+    std::int32_t bar = 1;
+    std::int32_t beat = 1;
+    double tick = 0.0;
+    double ticksPerBeat = 1920.0;
+    float beatsPerBar = 4.0f;
+    float beatType = 4.0f;
+    double bpm = 120.0;
 };
 
 struct RenderSettings {
@@ -142,6 +163,17 @@ struct RequestActions {
 [[nodiscard]] DrumClass classFromIndex(const int index) noexcept;
 [[nodiscard]] std::uint8_t midiNoteForClass(const DrumClass cls) noexcept;
 [[nodiscard]] double gridStepSeconds(const GrooveMap& groove) noexcept;
+[[nodiscard]] double beatSeconds(const HostPosition& position) noexcept;
+[[nodiscard]] double barSeconds(const HostPosition& position) noexcept;
+[[nodiscard]] double beatInBar(const HostPosition& position) noexcept;
+[[nodiscard]] double secondsToNextBar(const HostPosition& position) noexcept;
+[[nodiscard]] int effectiveCaptureBars(const HostPosition& position, const int requestedBars) noexcept;
+[[nodiscard]] std::size_t captureFramesForBars(const int sampleRate,
+                                               const HostPosition& position,
+                                               const int requestedBars) noexcept;
+[[nodiscard]] GrooveMap grooveFromHost(const HostPosition& position,
+                                       const int gridDivisions,
+                                       const float swing);
 
 // The processor owns the captured PCM, editable event list, groove map and
 // rendered buffer. Parameter reads include live status outputs and a downsampled
@@ -156,6 +188,11 @@ public:
 
     void setParameter(const std::uint32_t index, const float value);
     [[nodiscard]] float parameter(const std::uint32_t index) const;
+
+    // The wrapper supplies host BPM/phase at each bar-aligned capture start.
+    // Analysis then locks to this grid instead of fitting an independent tempo.
+    void setHostGrid(const double bpm, const double phaseSec);
+    void setHostBbtValid(const bool valid) noexcept;
 
     // Call once per host block. Returns the one-shot actions requested by the UI.
     [[nodiscard]] RequestActions takeRequests();
@@ -211,7 +248,9 @@ private:
     void updateWaveform();
     void invalidateRender();
 
-    std::array<float, 161> params_ {};
+    // Parameter table is defined in energise_params.hpp; keep the storage size
+    // in sync with ParamId::count via the static_assert in that header.
+    std::array<float, 165> params_ {};
     std::array<std::uint32_t, 9> lastRequests_ {};
     ProcessorState state_ = ProcessorState::Idle;
     float progress_ = 0.0f;
@@ -225,6 +264,7 @@ private:
     RenderedBuffer rendered_ {};
     std::vector<DrumEvent> events_ {};
     GrooveMap groove_ {};
+    GrooveMap hostGroove_ {};
     RenderSettings settings_ {};
     std::vector<Snapshot> undoStack_ {};
     std::vector<Snapshot> redoStack_ {};

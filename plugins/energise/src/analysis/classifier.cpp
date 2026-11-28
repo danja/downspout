@@ -402,6 +402,16 @@ std::vector<DrumEvent> classifyEvents(const CaptureBuffer& capture,
     return events;
 }
 
+bool analyseCaptureWithGroove(const CaptureBuffer& capture, const GrooveMap& grooveTemplate,
+                              std::vector<DrumEvent>& events)
+{
+    if (capture.sampleRate <= 0 || capture.left.empty() || capture.left.size() != capture.right.size())
+        return false;
+    const auto onsets = detectOnsets(capture);
+    events = classifyEvents(capture, onsets, grooveTemplate);
+    return true;
+}
+
 bool analyseCapture(const CaptureBuffer& capture, const int gridDivisions,
                     const float driftAllowance, GrooveMap& groove, std::vector<DrumEvent>& events)
 {
