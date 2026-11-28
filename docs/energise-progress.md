@@ -16,8 +16,9 @@ when a whole phase passes its exit criteria.
 - **Classifier baseline:** portable rule/feature classifier only.
 - **ML runtime:** none. Classifier and voice interfaces stay swappable; no
   vendored model or training data.
-- **MIDI output:** GM-drum export on channel 10 only, toggled by MIDI Out and
-  repeated with the BBT loop when BBT Loop is on. No real-time playable event mode.
+- **MIDI output:** GM-drum note-on/note-off pairs on channel 10 only, toggled by
+  MIDI Out, refreshed after edits, and repeated with the shared audio loop (host
+  BBT when locked, free-running otherwise). No real-time playable event mode.
 - **Audio output:** Off (default), Pass (monitor inputs) or Render (loop the
   captured/rendered buffer); A/B swaps the Render buffer. BBT Loop locks audio and
   MIDI loop phase to host bars.
@@ -33,6 +34,6 @@ when a whole phase passes its exit criteria.
 
 Phase 5 code and state are built and tested. The BBT/output-switch revision
 changed the UI to 1120x840 and invalidated the copied catalog screenshot; a fresh
-capture and human visual acceptance are pending. Phase 6 wiring and docs are in
-place, leaving host transport/listening and save/reopen validation before either
-phase is ticked.
+capture exists at `/tmp/opencode/energise-shots/energise.png`, but human visual
+acceptance is still pending. Phase 6 wiring and docs are in place, leaving host
+transport/listening and save/reopen validation before either phase is ticked.

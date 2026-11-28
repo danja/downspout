@@ -14,7 +14,7 @@ dsp:energise a trn:PluginProfile ;
     trn:role trn:AudioEffect ;
     trn:accepts trn:Audio ;
     trn:produces trn:Audio , trn:Midi ;
-    trn:caution "Offline tool, not a zero-latency insert. Capture is taken from inputs 1/2 and arms at the next host bar line; audio output defaults to Off, with Pass for monitoring and Render for the loop. MIDI output is an exported event list (channel-10 notes) that repeats with the BBT loop when enabled. No WAV import or machine-learning model in this pass." ;
+    trn:caution "Offline tool, not a zero-latency insert. Capture is taken from inputs 1/2 and arms at the next host bar line; audio output defaults to Off, with Pass for monitoring and Render for the loop. MIDI output is an exported event list (channel-10 note-on/note-off pairs) that repeats with the BBT loop when enabled. No WAV import or machine-learning model in this pass." ;
 
     trn:parameter [ rdfs:label "Capture Bars" ; trn:symbol "capture_bars" ; trn:minimum 1.0 ; trn:maximum 4.0 ; trn:default 2.0 ; trn:unit "bars" ;
                     rdfs:comment "Whole bars recorded from the next host bar line; the hard 8 s state cap may reduce the effective count." ] ;
@@ -84,7 +84,7 @@ dsp:energise a trn:PluginProfile ;
     trn:parameter [ rdfs:label "Redo" ; trn:symbol "redo_request" ; trn:minimum 0.0 ; trn:maximum 1048576.0 ; trn:default 0.0 ;
                     rdfs:comment "Integer request counter that reapplies the undone snapshot." ] ;
     trn:parameter [ rdfs:label "Export MIDI" ; trn:symbol "export_midi_request" ; trn:minimum 0.0 ; trn:maximum 1048576.0 ; trn:default 0.0 ;
-                    rdfs:comment "Integer request counter that queues the event list as channel-10 notes; repeats on the BBT loop when enabled." ] ;
+                    rdfs:comment "Integer request counter that re-arms the event list as channel-10 note-on/note-off pairs; Analyse/Render also refresh it automatically and BBT Loop repeats it." ] ;
     trn:parameter [ rdfs:label "Demo Break" ; trn:symbol "demo_request" ; trn:minimum 0.0 ; trn:maximum 1048576.0 ; trn:default 0.0 ;
                     rdfs:comment "Integer request counter that loads the synthetic six-second demo break." ] ;
     trn:parameter [ rdfs:label "Edit Event" ; trn:symbol "event_edit_request" ; trn:minimum 0.0 ; trn:maximum 1048576.0 ; trn:default 0.0 ;

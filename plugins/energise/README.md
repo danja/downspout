@@ -19,9 +19,11 @@ The renderer rebuilds each hit from a transient, a tuned drum body and a
 filtered residual of the original audio. Quantise, Ghosts, Swing, Humanise and
 the voice levels shape the result. **Audio Out** selects Off (default), Pass
 (monitor the inputs) or Render (loop the captured/rendered buffer); **A/B** swaps
-which buffer Render loops. **MIDI Out** gates channel-10 GM drum notes and
-**BBT Loop** locks both audio and MIDI loop phase to the host bars; with it off,
-the loop free-runs. Neither replaces the host's input or media items.
+which buffer Render loops. **Analyse** and **Render** refresh the MIDI pattern
+automatically, and **Export MIDI** re-arms it: each hit is a channel-10 note-on
+plus a short note-off. **MIDI Out** gates that pattern and **BBT Loop** locks both
+audio and MIDI loop phase to the host bars; with it off, the loop free-runs.
+Neither replaces the host's input or media items.
 
 The project is stored as versioned text state. Controls, status, waveform peaks
 and the visible event-list shadow are host parameters, so the UI can show live

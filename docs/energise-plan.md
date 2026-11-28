@@ -139,8 +139,10 @@ available when the user reviews a hit.
    bounded idle slices or a worker later. Do not put DSP logic in `exec_idle()`.
 6. Add optional MIDI export from the edited event list, using GM drums on
    channel 10: kick 36, snare 38/40, clap 39, closed hat 42, open hat 46, toms
-   45/47/50, crash 49, ride 51. MIDI Out gates it; BBT Loop repeats the pattern
-   with the audio loop. Build it offline and flush from `run()`.
+   45/47/50, crash 49, ride 51. Emit a short note-off for every note-on so hosts
+   release the voice. MIDI Out gates it; the wrapper refreshes the pattern after
+   analyse/render/edits, and BBT Loop repeats it with the audio loop while the
+   transport rolls. Build it offline and flush from `run()`.
 7. Audio Out selects Off (default), Pass (monitor inputs) or Render (loop the
    buffer); A/B swaps the Render buffer without changing the event list.
    Automatic replacement of a DAW media item is out of scope.
@@ -153,7 +155,8 @@ available when the user reviews a hit.
 - BBT helpers derive bar length, phase and next-bar delay from host tempo;
 - events survive edit → quantise → render with stable IDs;
 - A/B swap changes monitored buffer but not events;
-- MIDI export emits the expected `(note, channel, velocity)` pairs.
+- MIDI export emits each hit as a channel-10 note-on followed by a note-off,
+  with the expected notes and velocities.
 
 ### Exit criteria
 

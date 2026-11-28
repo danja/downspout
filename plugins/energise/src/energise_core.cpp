@@ -644,22 +644,43 @@ std::vector<MidiMessage> Processor::exportMidi() const
     const std::uint16_t solos = static_cast<std::uint16_t>(std::lround(params_[index(ParamId::soloMask)]));
     const bool anySolo = solos != 0u;
     std::vector<MidiMessage> messages {};
+    if (capture_.sampleRate <= 0 || capture_.left.empty())
+        return messages;
+
+    // Short, grid-aware gates: channel-10 percussion needs a note-off or many
+    // hosts/synths never release the voice and the loop sounds silent or stuck.
+    const double gate = std::clamp(gridStepSeconds(groove_) * 0.75, 0.02, 0.08);
+    const std::uint32_t lastFrame = static_cast<std::uint32_t>(capture_.left.size()) - 1u;
     for (const DrumEvent& event : events_) {
         if (event.muted)
             continue;
         const auto bit = classBit(event.primary);
         if ((solos & bit) == 0u && anySolo)
             continue;
-        MidiMessage message {};
-        message.frame = static_cast<std::uint32_t>(std::max(0.0, event.quantisedTime) * capture_.sampleRate);
-        message.status = 0x99;  // note on, channel 10
-        message.note = midiNoteForClass(event.primary);
+        const double start = std::clamp(event.quantisedTime, 0.0,
+                                        static_cast<double>(lastFrame) / capture_.sampleRate);
+        const double end = std::min(start + gate,
+                                    static_cast<double>(lastFrame) / capture_.sampleRate);
+
+        MidiMessage noteOn {};
+        noteOn.frame = static_cast<std::uint32_t>(std::lround(start * capture_.sampleRate));
+        noteOn.status = 0x99;  // note on, channel 10
+        noteOn.note = midiNoteForClass(event.primary);
         const float velocity = event.velocity * (event.ghost ? 0.6f : 1.0f);
-        message.velocity = static_cast<std::uint8_t>(std::clamp(std::lround(velocity * 127.0f), 1L, 127L));
-        messages.push_back(message);
+        noteOn.velocity = static_cast<std::uint8_t>(std::clamp(std::lround(velocity * 127.0f), 1L, 127L));
+        messages.push_back(noteOn);
+
+        MidiMessage noteOff = noteOn;
+        noteOff.frame = static_cast<std::uint32_t>(std::lround(end * capture_.sampleRate));
+        noteOff.status = 0x89;  // note off, channel 10
+        noteOff.velocity = 0;
+        messages.push_back(noteOff);
     }
     std::sort(messages.begin(), messages.end(), [](const MidiMessage& a, const MidiMessage& b) {
-        return a.frame < b.frame;
+        if (a.frame != b.frame)
+            return a.frame < b.frame;
+        // At an identical frame, note-on must precede note-off.
+        return (a.status & 0xf0) > (b.status & 0xf0);
     });
     return messages;
 }

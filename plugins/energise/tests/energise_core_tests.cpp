@@ -370,18 +370,36 @@ void testMidiExport()
     Processor processor = analysedProcessor();
     const auto messages = processor.exportMidi();
     assert(!messages.empty());
-    for (const MidiMessage& message : messages) {
-        assert(message.status == 0x99);
-        assert(message.note != 0);
-        assert(message.velocity >= 1 && message.velocity <= 127);
-    }
+
+    std::size_t noteOnCount = 0;
+    std::size_t noteOffCount = 0;
+    std::array<std::vector<std::uint32_t>, 128> onFrames {};
+    std::array<std::vector<std::uint32_t>, 128> offFrames {};
     bool kick = false;
     bool snare = false;
     bool hat = false;
     for (const MidiMessage& message : messages) {
-        kick |= message.note == 36;
-        snare |= message.note == 38;
-        hat |= message.note == 42;
+        assert((message.status & 0x0f) == 9);  // GM drums on channel 10
+        assert(message.note != 0);
+        if (message.status == 0x99) {
+            ++noteOnCount;
+            assert(message.velocity >= 1 && message.velocity <= 127);
+            onFrames[message.note].push_back(message.frame);
+            kick |= message.note == 36;
+            snare |= message.note == 38;
+            hat |= message.note == 42;
+        } else {
+            assert(message.status == 0x89);
+            ++noteOffCount;
+            assert(message.velocity == 0);
+            offFrames[message.note].push_back(message.frame);
+        }
+    }
+    assert(noteOnCount > 0 && noteOnCount == noteOffCount);
+    for (std::size_t note = 0; note < onFrames.size(); ++note) {
+        assert(onFrames[note].size() == offFrames[note].size());
+        for (std::size_t i = 0; i < onFrames[note].size(); ++i)
+            assert(offFrames[note][i] >= onFrames[note][i]);
     }
     assert(kick && snare && hat);
 }

@@ -870,9 +870,10 @@ faders stay as the saved balance. Passes producer MIDI through.
 
 ### energise
 Offline drum-break re-quantiser and resynthesiser. Audio: 2 in, 2 out. No MIDI input;
-MIDI output is an **Export MIDI** of the event list as GM drums on channel 10, gated
-by **MIDI Out** and repeated with **BBT Loop** when enabled; it respects the mute/solo
-class masks but is not a live play mode. Arm **Capture** for 1-4 bars (default 2) from
+MIDI output is an **Export MIDI** of the event list as GM drum note-on/note-off pairs
+on channel 10, gated by **MIDI Out**. Analyse/Render refresh it automatically;
+**BBT Loop** locks it to host bars, otherwise its replay free-runs with the audio
+loop, and the mute/solo class masks apply. It is not a live play mode. Arm **Capture** for 1-4 bars (default 2) from
 the next host bar line on inputs 1/2, or load the built-in six-second **Demo** break;
 host BPM/phase hard-lock the analysis grid and a hard 8 s cap may shorten slow bars.
 There is no WAV import in this pass. **Analyse** detects onsets on that grid and labels

@@ -21,6 +21,21 @@ Format: what happened, root cause, prevention.
 - **Root cause:** `stopRuntime()` mixes patch-derived playback state with purely transport state, and neither lifecycle hook re-synced the loop length from the stored buffers.
 - **Prevention:** after clearing runtime state in host lifecycle hooks, re-derive loop state from the persisted processor buffers; keep patch data untouched in `activate()`.
 
+## energise: MIDI export had no note-offs and required an explicit button (2026-11-28)
+- **What happened:** the user heard no MIDI output after rendering. `exportMidi()` emitted only note-on events, and the wrapper did not build a pattern until **Export MIDI** was pressed, so with BBT Loop on nothing was ever flushed to the host.
+- **Root cause:** channel-10 drums were treated as self-releasing triggers, and the output switch defaults were mistaken for automatic pattern generation.
+- **Prevention:** pair every generated note-on with a grid-aware note-off, refresh the pattern automatically whenever the event list changes, and keep an explicit re-arm button. Test exported note-on/note-off counts, not just note numbers.
+
+## energise: "free-run" applied only to audio, not MIDI (2026-11-28)
+- **What happened:** with `BBT Loop` off the audio loop free-ran, but MIDI replayed only once from the fallback queue, contradicting the UI/docs.
+- **Root cause:** the MIDI replay branch was gated on `bbtLoopEnabled()` instead of using the shared playback phase's advance rate.
+- **Prevention:** drive both outputs from the same phase when it is advancing; reserve the one-shot queue for a stopped BBT transport.
+
+## energise: output-switch label overlapped its button and table columns drifted (2026-11-28)
+- **What happened:** the `AUDIO` label was drawn at the same x/y as the first Audio Out button, and event-table rows used one proportional-font string against fixed header x positions, so labels looked out of line.
+- **Root cause:** panel coordinates were copied from the previous layout without rechecking label/button bounds, and proportional text cannot preserve hand-spaced columns.
+- **Prevention:** reserve a dedicated label gutter per button row, and draw each table column with its own fixed x and `textAlign(ALIGN_LEFT)`.
+
 ## padseq: Page stepper and top Page buttons looked inert (2026-11-27)
 - **What happened:** clicking the Page stepper or top Page buttons left the displayed page unchanged, so page selection appeared broken even though the processor changed pages.
 - **Root cause:** `MagnetoUI::commit()` updates only its private 64-value array, and the JACK standalone does not echo UI writes through `parameterChanged()`. PadSeq's controls draw from a separate `allValues_` mirror that was never updated by UI writes. The fixed 0-3 page range also disagreed with the processor's effective `pageCount(steps)-1` bound.

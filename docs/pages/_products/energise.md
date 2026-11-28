@@ -33,8 +33,8 @@ layers. Quantise, Ghosts, Swing, Humanise, voice levels, Saturation, Variation
 and Output shape the result; the independent tempo/drift fitter is not used by
 the processor. **Audio Out** selects Off (default), Pass (monitor inputs) or
 Render (loop the buffer). **A/B** swaps which buffer Render loops. **MIDI Out**
-gates channel-10 events and **BBT Loop** locks both audio and MIDI loop phase to
-host bars; with it off the loop free-runs. Mute/solo masks apply to the render
+gates channel-10 note-on/note-off pairs and **BBT Loop** locks both audio and
+MIDI loop phase to host bars; with it off the loop free-runs. Mute/solo masks apply to the render
 and MIDI export. This is not a host-replacement insert.
 
 This first pass is portable and deterministic: no ML runtime, model, training
@@ -46,7 +46,7 @@ visible event shadow are output parameters.
 
 Core tests cover the demo fixture, onset recall/precision, classification
 accuracy, host-locked analysis, BBT capture math, output-switch semantics,
-quantisation, renderer tails and stability, event edits, undo/redo, MIDI export
-and serialization. The VST3 target builds. The screenshot is stale after the
-output-switch/UI revision; a fresh capture, live host transport/listening and
-final visual acceptance remain.
+quantisation, renderer tails and stability, event edits, undo/redo, MIDI
+note-on/note-off export and serialization. The VST3 target builds. A fresh
+1120x840 capture exists after the output-switch/UI revision; human visual
+acceptance, live host transport/listening and save/reopen validation remain.

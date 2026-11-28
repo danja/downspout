@@ -594,24 +594,24 @@ private:
         fontSize(10.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         fc(t_.textDim);
-        text(x + 16.0f, y + 42.0f, "AUDIO", nullptr);
-        const float segW = (kLeftW - 32.0f - 12.0f) / core::kAudioOutNames.size();
+        text(x + 16.0f, y + 43.0f, "AUDIO", nullptr);
+        const float segW = (kLeftW - 78.0f - 16.0f - 12.0f) / core::kAudioOutNames.size();
         const int mode = static_cast<int>(std::lround(value(core::ParamId::audioOut)));
         for (std::size_t i = 0; i < audioOutRects_.size(); ++i) {
-            audioOutRects_[i] = {x + 16.0f + static_cast<float>(i) * (segW + 6.0f),
+            audioOutRects_[i] = {x + 78.0f + static_cast<float>(i) * (segW + 6.0f),
                                  y + 32.0f, segW, 22.0f};
             drawButton(audioOutRects_[i], core::kAudioOutNames[i], static_cast<int>(i) == mode);
         }
 
         fontSize(10.0f);
         fc(t_.textDim);
-        text(x + 16.0f, y + 74.0f, "MIDI OUT", nullptr);
+        text(x + 16.0f, y + 75.0f, "MIDI OUT", nullptr);
         midiOutRect_ = {x + 104.0f, y + 64.0f, 44.0f, 22.0f};
         const bool midiOn = core::midiOutEnabled(value(core::ParamId::midiOut));
         drawButton(midiOutRect_, midiOn ? "ON" : "OFF", midiOn);
 
         fc(t_.textDim);
-        text(x + 172.0f, y + 74.0f, "BBT LOOP", nullptr);
+        text(x + 172.0f, y + 75.0f, "BBT LOOP", nullptr);
         bbtLoopRect_ = {x + 260.0f, y + 64.0f, 44.0f, 22.0f};
         const bool loopOn = core::bbtLoopEnabled(value(core::ParamId::bbtLoop));
         drawButton(bbtLoopRect_, loopOn ? "ON" : "OFF", loopOn);
@@ -640,8 +640,8 @@ private:
         fontSize(10.0f);
         textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
         fc(t_.textDim);
-        text(x + 14.0f, y + 44.0f, "1 Demo/Capture at next bar  2 Analyse  3 Edit  4 Render", nullptr);
-        text(x + 14.0f, y + 62.0f, "Audio Off/Pass/Render  |  MIDI + BBT loop switches  |  A/D W/S G [ ]", nullptr);
+        text(x + 14.0f, y + 44.0f, "1 Demo/Capture at bar  2 Analyse  3 Edit  4 Render", nullptr);
+        text(x + 14.0f, y + 62.0f, "Audio Off/Pass/Render  MIDI  BBT loop  A/D W/S G", nullptr);
     }
 
     void drawWaveform()
@@ -831,15 +831,23 @@ private:
             const std::size_t base = idx(core::ParamId::eventStart) + slot * core::kEventFields;
             const int cls = std::clamp(static_cast<int>(std::lround(values_[base + 1])), 0,
                                        static_cast<int>(core::kClassCount) - 1);
-            char row[192];
-            std::snprintf(row, sizeof(row), "%3d   %5.3f   %-11s   %4.0f%%   %4.0f%%   %5.3f   %s",
-                          eventIndex + 1, values_[base], core::kClassNames[static_cast<std::size_t>(cls)],
-                          values_[base + 2] * 100.0f, values_[base + 3] * 100.0f,
-                          values_[base + 4], values_[base + 5] >= 0.5f ? "yes" : "-");
+            char cell[48];
             fontSize(10.0f);
             textAlign(ALIGN_LEFT | ALIGN_MIDDLE);
             fc(eventIndex == selected ? t_.textPrimary : t_.textDim);
-            text(x + 16.0f, ry + rowH * 0.5f, row, nullptr);
+            const float cy = ry + rowH * 0.5f;
+            std::snprintf(cell, sizeof(cell), "%d", eventIndex + 1);
+            text(x + 16.0f, cy, cell, nullptr);
+            std::snprintf(cell, sizeof(cell), "%.3f", values_[base]);
+            text(x + 46.0f, cy, cell, nullptr);
+            text(x + 122.0f, cy, core::kClassNames[static_cast<std::size_t>(cls)], nullptr);
+            std::snprintf(cell, sizeof(cell), "%.0f%%", values_[base + 2] * 100.0f);
+            text(x + 274.0f, cy, cell, nullptr);
+            std::snprintf(cell, sizeof(cell), "%.0f%%", values_[base + 3] * 100.0f);
+            text(x + 362.0f, cy, cell, nullptr);
+            std::snprintf(cell, sizeof(cell), "%.3f", values_[base + 4]);
+            text(x + 450.0f, cy, cell, nullptr);
+            text(x + 552.0f, cy, values_[base + 5] >= 0.5f ? "yes" : "-", nullptr);
         }
     }
 };

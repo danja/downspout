@@ -268,6 +268,9 @@ protected:
     void run(const float** inputs, float** outputs, const uint32_t frames) override
     {
         const core::HostPosition host = toHostPosition(getTimePosition());
+        if (lastHostPlaying_ && !host.playing && bbtLoopEnabled())
+            refreshMidiPattern();  // transport stopped: re-arm the one-shot fallback
+        lastHostPlaying_ = host.playing;
         detectSwitchChanges();
         processor_.setHostBbtValid(host.valid && host.playing);
         if (host.valid && host.playing)
@@ -309,6 +312,7 @@ private:
     core::AudioOutMode lastAudioOut_ = core::AudioOutMode::Off;
     bool lastMidiOut_ = true;
     bool lastBbtLoop_ = true;
+    bool lastHostPlaying_ = false;
     uint32_t publishCounter_ = 0;
     bool publishDirty_ = true;
 
@@ -352,6 +356,31 @@ private:
         midiClock_ = 0;
     }
 
+    // Rebuild the export pattern whenever the event list changes. A one-shot
+    // queue is always prepared: BBT loop takes precedence while the transport
+    // rolls, and the queue is the fallback when it is stopped or BBT is off.
+    void refreshMidiPattern()
+    {
+        midiPattern_.clear();
+        midiQueue_.clear();
+        midiClock_ = 0;
+        if (midiOutEnabled())
+            midiPattern_ = processor_.exportMidi();
+        midiPatternReady_ = !midiPattern_.empty();
+        if (!midiPatternReady_)
+            return;
+
+        const int captureRate = processor_.captureBuffer().sampleRate;
+        const double ratio = captureRate > 0
+                                 ? static_cast<double>(std::lround(getSampleRate())) / static_cast<double>(captureRate)
+                                 : 1.0;
+        for (const core::MidiMessage& message : midiPattern_) {
+            core::MidiMessage queued = message;
+            queued.frame = static_cast<std::uint32_t>(std::lround(static_cast<double>(message.frame) * ratio));
+            midiQueue_.push_back(queued);
+        }
+    }
+
     bool midiOutEnabled() const noexcept
     {
         return core::midiOutEnabled(processor_.parameter(static_cast<uint32_t>(core::ParamId::midiOut)));
@@ -379,7 +408,7 @@ private:
         lastBbtLoop_ = loopOn;
         playhead_ = 0;
         loopPhaseFrames_ = 0.0;
-        clearMidiRuntime();
+        refreshMidiPattern();
     }
 
     void handleRequests(const core::HostPosition& host)
@@ -408,36 +437,40 @@ private:
             syncLoopFrames();
             clearMidiRuntime();
         }
-        if (actions.analyse)
+        if (actions.analyse) {
             processor_.analyse();
+            refreshMidiPattern();
+        }
         if (actions.render) {
             processor_.render();
             syncLoopFrames();
-            clearMidiRuntime();
+            refreshMidiPattern();
         }
         if (actions.abSwap) {
             processor_.setAbSide(!processor_.showingRender());
             playhead_ = 0;
             loopPhaseFrames_ = 0.0;
             syncLoopFrames();
-            clearMidiRuntime();
+            refreshMidiPattern();
         }
         if (actions.undo) {
             processor_.undo();
             playhead_ = 0;
             loopPhaseFrames_ = 0.0;
             syncLoopFrames();
-            clearMidiRuntime();
+            refreshMidiPattern();
         }
         if (actions.redo) {
             processor_.redo();
             playhead_ = 0;
             loopPhaseFrames_ = 0.0;
             syncLoopFrames();
-            clearMidiRuntime();
+            refreshMidiPattern();
         }
+        if (actions.eventEdit)
+            refreshMidiPattern();
         if (actions.exportMidi)
-            queueMidi();
+            refreshMidiPattern();  // explicit re-arm of the same pattern
 
         if (actions.capture || actions.analyse || actions.render || actions.abSwap ||
             actions.undo || actions.redo || actions.demo || actions.eventEdit)
@@ -543,25 +576,6 @@ private:
         writeMidiEvent(event);
     }
 
-    void queueMidi()
-    {
-        midiQueue_.clear();
-        midiClock_ = 0;
-        midiPattern_ = processor_.exportMidi();
-        midiPatternReady_ = !midiPattern_.empty();
-        if (bbtLoopEnabled())
-            return;
-        const int captureRate = processor_.captureBuffer().sampleRate;
-        const double ratio = captureRate > 0
-                                 ? static_cast<double>(std::lround(getSampleRate())) / static_cast<double>(captureRate)
-                                 : 1.0;
-        for (const core::MidiMessage& message : midiPattern_) {
-            core::MidiMessage queued = message;
-            queued.frame = static_cast<uint32_t>(std::lround(static_cast<double>(message.frame) * ratio));
-            midiQueue_.push_back(queued);
-        }
-    }
-
     void flushMidi(const uint32_t frames, const core::HostPosition& host, const PlaybackPhase& phase)
     {
         if (!midiOutEnabled()) {
@@ -570,7 +584,11 @@ private:
             return;
         }
 
-        if (midiPatternReady_ && bbtLoopEnabled() && loopFrames_ > 0 && phase.advance > 0.0) {
+        // Replay from the shared phase when either sync mode is advancing: BBT
+        // follows the host bars, while BBT-off free-runs with the audio loop.
+        // With BBT on and the transport stopped, phase.advance is 0 and the
+        // one-shot queue below is the fallback.
+        if (midiPatternReady_ && loopFrames_ > 0 && phase.advance > 0.0) {
             const double loop = static_cast<double>(loopFrames_);
             const std::size_t captured = std::min(processor_.captureBuffer().left.size(),
                                                   processor_.captureBuffer().right.size());
